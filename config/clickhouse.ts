@@ -1,0 +1,48 @@
+import env from '#start/env'
+import { defineConfig } from 'adonisjs-clickhouse'
+
+const clickhouseConfig = defineConfig({
+  connection: 'primary',
+
+  connections: {
+    /**
+     * See https://clickhouse.com/docs/en/integrations/language-clients/javascript#configuration
+     */
+    primary: {
+      /**
+       * ClickHouse JS client configuration
+       */
+      application: 'AdonisJS',
+      url: env.get('CLICKHOUSE_URL'),
+      username: env.get('CLICKHOUSE_USER'),
+      password: env.get('CLICKHOUSE_PASSWORD', ''),
+      database: env.get('CLICKHOUSE_DB'),
+      clickhouse_settings: {},
+      compression: { request: false, response: true },
+      request_timeout: 30e3,
+
+      /**
+       * Debug mode for the connection
+       */
+      debug: false,
+
+      /**
+       * Migrations configuration
+       */
+      migrations: {
+        paths: ['clickhouse/migrations'],
+        disableRollbacksInProduction: true,
+        naturalSort: true,
+      },
+
+      /**
+       * Seeders configuration
+       */
+      seeders: {
+        paths: ['clickhouse/seeders'],
+      },
+    },
+  },
+})
+
+export default clickhouseConfig

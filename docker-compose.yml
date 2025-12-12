@@ -1,0 +1,68 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: invade_postgres
+    restart: unless-stopped
+    env_file:
+      - .env.development
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: invade_redis
+    restart: unless-stopped
+    env_file:
+      - .env.development
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: invade_clickhouse
+    restart: unless-stopped
+    env_file:
+      - .env.development
+    ports:
+      - "8123:8123"
+      - "9002:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+
+  minio:
+    image: minio/minio:latest
+    container_name: invade_minio
+    restart: unless-stopped
+    env_file:
+      - .env.development
+    command: ["server", "/data", "--console-address", ":9001"]
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  minio_init:
+    image: minio/mc:latest
+    container_name: invade_minio_init
+    depends_on:
+      - minio
+    restart: "no"
+    env_file:
+      - .env.development
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD; do sleep 1; done;
+      mc mb -p local/$$R2_BUCKET || true;
+      mc anonymous set download local/$$R2_BUCKET || true;
+      "
+
+volumes:
+  postgres_data:
+  redis_data:
+  clickhouse_data:
+  minio_data:
