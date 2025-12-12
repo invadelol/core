@@ -60,6 +60,7 @@
     "@aws-sdk/client-s3": "^3.948.0",
     "@aws-sdk/s3-request-presigner": "^3.948.0",
     "@clickhouse/client": "^1.14.0",
+    "@fightmegg/riot-api": "^0.0.21",
     "@vinejs/vine": "^3.0.1",
     "adonisjs-clickhouse": "^1.0.2",
     "luxon": "^3.7.2",
