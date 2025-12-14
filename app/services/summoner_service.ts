@@ -1,12 +1,11 @@
 import { DateTime } from 'luxon'
 import { Exception } from '@adonisjs/core/exceptions'
 
-import RiotApiService from '#services/riot_api_service'
+import riotApiService from '#services/riot_api_service'
 import Summoner from '#models/summoner'
 import SummonerHistory from '#models/summoner_history'
 
-
-export class SummonerService {
+class SummonerService {
 
   /**
    * Checks if summoner data (gameName, tagLine, profileIconId) has changed.
@@ -34,20 +33,20 @@ export class SummonerService {
    * @returns Normalized object with gameName and tagLine, or null if invalid
    */
   normalize(summoner: string): { gameName: string; tagLine: string } | null {
-    if (!summoner) return null;
+    if (!summoner) return null
 
     const [gameName, tagLine] = summoner.split('-', 2)
-    if (!gameName || !tagLine) return null;
+    if (!gameName || !tagLine) return null
 
     const decode = (s: string) => {
       try {
-        return decodeURIComponent(s);
+        return decodeURIComponent(s)
       } catch {
-        return s;
+        return s
       }
-    };
+    }
 
-    return { gameName: decode(gameName), tagLine: decode(tagLine) };
+    return { gameName: decode(gameName), tagLine: decode(tagLine) }
   }
 
   /**
@@ -59,10 +58,9 @@ export class SummonerService {
    * - Upserts `riot_player` and appends `riot_player_history` if data changed
    */
   async resolveAndUpsert(
-    riot: RiotApiService,
-    platform: string,
     summoner: string,
-    options: { refresh: boolean } = { refresh: false },
+    platform: string,
+    options: { refresh: boolean } = { refresh: false }
   ): Promise<Summoner> {
     const normalized = this.normalize(summoner)
     if (!normalized) {
@@ -76,9 +74,9 @@ export class SummonerService {
       if (existing) return existing
     }
 
-    const region = riot.platformToRegion(platform)
+    const region = riotApiService.platformToRegion(platform)
 
-    const account = await riot.client.account.getByRiotId({
+    const account = await riotApiService.client.account.getByRiotId({
       region: region as any,
       gameName,
       tagLine,
@@ -89,7 +87,7 @@ export class SummonerService {
       throw new Exception('Summoner not found', { status: 404 })
     }
 
-    const summonerDto = await riot.client.summoner.getByPUUID({
+    const summonerDto = await riotApiService.client.summoner.getByPUUID({
       region: platform as any,
       puuid,
     })
@@ -127,3 +125,5 @@ export class SummonerService {
     return player
   }
 }
+
+export default new SummonerService()

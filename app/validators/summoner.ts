@@ -9,3 +9,15 @@ export const summonerParamsValidator = vine.compile(
   })
 )
 
+export const syncSummonerValidator = vine.compile(
+  vine.object({
+    summoner: vine
+      .string()
+      .trim()
+      .regex(/^[^-]+-[^-]+$/),
+    platform: vine
+      .string()
+      .trim()
+      .toUpperCase(),
+  })
+)

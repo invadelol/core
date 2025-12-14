@@ -11,7 +11,10 @@
     "test": "node ace test",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "clickhouse:migrate": "node ace clickhouse:migration:run",
+    "clickhouse:migrate:status": "node ace clickhouse:migration:status",
+    "clickhouse:migrate:fresh": "node ace clickhouse:migration:fresh"
   },
   "imports": {
     "#controllers/*": "./app/controllers/*.js",
@@ -29,7 +32,8 @@
     "#database/*": "./database/*.js",
     "#start/*": "./start/*.js",
     "#tests/*": "./tests/*.js",
-    "#config/*": "./config/*.js"
+    "#config/*": "./config/*.js",
+    "#types/*": "./app/types/*.js"
   },
   "devDependencies": {
     "@adonisjs/assembler": "^7.8.2",

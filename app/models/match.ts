@@ -11,13 +11,13 @@ export default class Match extends BaseModel {
   declare matchId: string
 
   @column({ columnName: 'routing_region' })
-  declare routingRegion: string
+  declare region: string
 
-  @column()
+  @column({ columnName: 'platform' })
   declare platform: string
 
   @column({ columnName: 's3_key' })
-  declare s3Key: string
+  declare path: string
 
   @column.dateTime({ columnName: 'fetched_at' })
   declare fetchedAt: DateTime | null

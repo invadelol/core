@@ -49,7 +49,6 @@ export default defineConfig({
     () => import('adonisjs-clickhouse/clickhouse_provider'),
     () => import('@adonisjs/cache/cache_provider'),
     () => import('@adonisjs/drive/drive_provider'),
-    () => import('#providers/riot_api_provider')
   ],
 
   /*
