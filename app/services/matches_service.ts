@@ -8,7 +8,7 @@ import type { PlatformId } from '@fightmegg/riot-api'
 
 type MatchCluster = Exclude<RiotAPITypes.Cluster, PlatformId.ESPORTS>
 
-class MatchService {
+class MatchesService {
 
   async update(puuid: string, cluster: MatchCluster) {
     const matchIds = await riotApiService.client.matchV5.getIdsByPuuid({
@@ -59,9 +59,12 @@ class MatchService {
       }
     )
 
+    // add something to process more the matches, like extract the summoner to store them in pg
+    // or process other things like ranks etc..
+
     return match
   }
       
 }
 
-export default new MatchService()
+export default new MatchesService()
