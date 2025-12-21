@@ -68,3 +68,45 @@ platform LowCardinality(String),
 
 il faudrait rajouter des données comme le level, le gameName
 gameTag, rank si disponible etc.. profile icon.
+
+╰─────────────────────────────────────────────────╯
+[17:47:41.993] INFO (15798): started HTTP server on 0.0.0.0:3333
+[17:47:43.089] ERROR (15798): Resolve identifier 'participants.match_id' from parent scope only supported for constants and CTE. Actual default.participants.match_id node type COLUMN. In scope (SELECT team_id FROM my_matches WHERE match_id = participants.match_id).
+request_id: "m6032n7ubh9nlpyqthdrw2bk"
+x-request-id: "m6032n7ubh9nlpyqthdrw2bk"
+err: {
+"type": "ClickHouseError",
+"message": "Resolve identifier 'participants.match_id' from parent scope only supported for constants and CTE. Actual default.participants.match_id node type COLUMN. In scope (SELECT team_id FROM my_matches WHERE match_id = participants.match_id). ",
+"stack":
+Error: Resolve identifier 'participants.match_id' from parent scope only supported for constants and CTE. Actual default.participants.match_id node type COLUMN. In scope (SELECT team_id FROM my_matches WHERE match_id = participants.match_id).
+at parseError (/home/lschvn/Work/invade/api/node_modules/packages/client-common/src/error/error.ts:31:12)
+at ClientRequest.onResponse (/home/lschvn/Work/invade/api/node_modules/packages/client-node/src/connection/node_base_connection.ts:567:25)
+at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+"code": "1",
+"status": 500
+}
+[17:48:07.166] ERROR (15798): Aggregate function avg(kills) AS kills is found inside another aggregate function in query.
+request_id: "nr0yi0rcnizbtxbdl3l8d551"
+x-request-id: "nr0yi0rcnizbtxbdl3l8d551"
+err: {
+"type": "ClickHouseError",
+"message": "Aggregate function avg(kills) AS kills is found inside another aggregate function in query. ",
+"stack":
+Error: Aggregate function avg(kills) AS kills is found inside another aggregate function in query.
+at parseError (/home/lschvn/Work/invade/api/node_modules/packages/client-common/src/error/error.ts:31:12)
+at ClientRequest.onResponse (/home/lschvn/Work/invade/api/node_modules/packages/client-node/src/connection/node_base_connection.ts:567:25)
+at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+"code": "184",
+"status": 500
+}
+
+    [lschvn@louis-arch api]$ curl http://localhost:3333/summoners/g9MMDoUbjLTYuR5xzXqBG9EycNe4S09Csomx9e_6FfFuVfUBjzEJTfIez5vD0UKEOPcPFsfrXWcg7g/friends
+
+curl: (7) Failed to connect to localhost port 3333 after 0 ms: Could not connect to server
+[lschvn@louis-arch api]$ curl http://localhost:3333/summoners/g9MMDoUbjLTYuR5xzXqBG9EycNe4S09Csomx9e_6FfFuVfUBjzEJTfIez5vD0UKEOPcPFsfrXWcg7g/friends
+curl: (7) Failed to connect to localhost port 3333 after 0 ms: Could not connect to server
+[lschvn@louis-arch api]$ curl http://localhost:3333/summoners/g9MMDoUbjLTYuR5xzXqBG9EycNe4S09Csomx9e_6FfFuVfUBjzEJTfIez5vD0UKEOPcPFsfrXWcg7g/friends
+{"message":"Resolve identifier 'participants.match_id' from parent scope only supported for constants and CTE. Actual default.participants.match_id node type COLUMN. In scope (SELECT team_id FROM my_matches WHERE match_id = participants.match_id). ","name":"Error","status":500,"frames":[{"file":"node_modules/packages/client-common/src/error/error.ts","filePath":"/home/lschvn/Work/invade/api/node_modules/packages/client-common/src/error/error.ts","line":31,"callee":"parseError","calleeShort":"parseError","column":12,"context":{},"isModule":true,"isNative":false,"isApp":false},{"file":"node_modules/packages/client-node/src/connection/node_base_connection.ts","filePath":"/home/lschvn/Work/invade/api/node_modules/packages/client-node/src/connection/node_base_connection.ts","line":567,"callee":"ClientRequest.onResponse","calleeShort":"onResponse","column":25,"context":{},"isModule":true,"isNative":false,"isApp":false},{"file":"node:internal/process/task_queues","filePath":"node:internal/process/task_queues","line":103,"callee":"process.processTicksAndRejections","calleeShort":"processTicksAndRejections","column":5,"context":{},"isModule":false,"isNative":false,"isApp":false}]}[lschvn@louis-arch api]$ curl httpcurl http://localhost:3333/summoners/g9MMDoUbjLTYuR5xzXqBG9EycNe4S09Csomx9e_6FfFuVfUBjzEJTfIez5vD0UKEOPcPFsfrXWcg7g/ranks
+{"current":[],"history":[]}[lschvn@louis-arch api]$ curl http://localhost:3333/summoners/g9MMDoUbjLTYuR5xzXqBG9EycNe4S09Csomx9e_6FfFuVfUBjzEJTfIez5vD0UKEOPcPFsfrXWcg7g/stats
+{"global":{"csMin":4.281248841191704,"visionMin":0.46709864816411345,"goldPerMinute":316.23076727092166,"damagePerMinute":531.7634617090015,"kda":1.2445951107715814,"killParticipation":0.38777525900446336,"damageShare":0.20134125911612366,"goldShare":0.18669672290125688,"winrate":0.29411764705882354,"total":"17"},"champions":[{"championId":45,"games":"8","winrate":0.375,"kda":1.0453598484848485},{"championId":99,"games":"3","winrate":0.3333333333333333,"kda":2.1666666666666665},{"championId":86,"games":"2","winrate":0.5,"kda":1.8333333333333333}]}[lschvn@louis-arch api]$ curl http://localhost:3333/summoners/g9MMDoUbjLTYuR5xzXqBG9EycNe4S09Csomx9e_6FfFuVfUBjzEJTfIez5vD0UKEOPcPFsfrXWcg7g/champions
+{"message":"Aggregate function avg(kills) AS kills is found inside another aggregate function in query. ","name":"Error","status":500,"frames":[{"file":"node_modules/packages/client-common/src/error/error.ts","filePath":"/home/lschvn/Work/invade/api/node_modules/packages/client-common/src/error/error.ts","line":31,"callee":"parseError","calleeShort":"parseError","column":12,"context":{},"isModule":true,"isNative":false,"isApp":false},{"file":"node_modules/packages/client-node/src/connection/node_base_connection.ts","filePath":"/home/lschvn/Work/invade/api/node_modules/packages/client-node/src/connection/node_base_connection.ts","line":567,"callee":"ClientRequest.onResponse","calleeShort":"onResponse","column":25,"context":{},"isModule":true,"isNative":false,"isApp":false},{"file":"node:internal/process/task_queues","filePath":"node:internal/process/task_queues","line":103,"callee":"process.processTicksAndRejections","calleeShort":"processTicksAndRejections","column":5,"context":{},"isModule":false,"isNative":false,"isApp":false}]}[lschvn@louis-arch api]$

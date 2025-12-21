@@ -1,5 +1,7 @@
 import riotApiService from '#services/riot_api_service'
 import type { RiotAPITypes } from '#services/riot_api_service'
+import SummonerUpdated from '#events/summoner_updated'
+import Summoner from '#models/summoner'
 import clickhouseService from '#services/clickhouse_service'
 import drive from '@adonisjs/drive/services/main'
 import type { PlatformId } from '@fightmegg/riot-api'
@@ -27,7 +29,16 @@ class MatchesService {
       return []
     }
 
-    return await Promise.all(newIds.map((matchId) => this.fetchAndStoreMatch(matchId, cluster)))
+    const results = await Promise.all(
+      newIds.map((matchId) => this.fetchAndStoreMatch(matchId, cluster))
+    )
+
+    const summoner = await Summoner.find(puuid)
+    if (summoner) {
+      SummonerUpdated.dispatch(puuid, summoner.platform)
+    }
+
+    return results
   }
 
   async fetchAndStoreMatch(matchId: string, cluster: MatchCluster) {
@@ -39,9 +50,6 @@ class MatchesService {
     await drive.use('r2').put(`matches/${matchId}.json`, JSON.stringify(matchData))
 
     const meta = await clickhouseService.ingestMatch(matchId, matchData)
-
-    // add something to process more the matches, like extract the summoner to store them in pg
-    // or process other things like ranks etc..
 
     return {
       matchId,

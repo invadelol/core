@@ -232,14 +232,11 @@ export class ClickhouseService {
         winrate: global.winrate,
         total: global.total,
       },
-      champions
+      champions,
     }
   }
 
-  async getSummonerChampionStats(
-    puuid: string,
-    count: number
-  ): Promise<SummonerChampionStats[]> {
+  async getSummonerChampionStats(puuid: string, count: number): Promise<SummonerChampionStats[]> {
     const query = `
       WITH
         my_matches AS (
@@ -281,6 +278,114 @@ export class ClickhouseService {
     })
 
     return (await result.json<SummonerChampionStats>()) ?? []
+  }
+
+  async getSummonerMatches(
+    puuid: string,
+    filters: {
+      queueIds?: number[] | readonly number[]
+      count?: number
+      offset?: number
+      championId?: number
+      role?: string
+    }
+  ) {
+    const count = filters.count ?? 15
+    const offset = filters.offset ?? 0
+
+    const whereClauses = [`puuid = '${escapeClickhouseString(puuid)}'`]
+
+    if (filters.queueIds?.length) {
+      whereClauses.push(`queue_id IN (${filters.queueIds.join(',')})`)
+    }
+
+    if (filters.championId) {
+      whereClauses.push(`champion_id = ${filters.championId}`)
+    }
+
+    if (filters.role && filters.role !== 'all') {
+      whereClauses.push(`team_position = '${filters.role}'`)
+    }
+
+    const whereSql = whereClauses.join(' AND ')
+
+    const query = `
+      SELECT
+        m.match_id as matchId,
+        m.game_start_ms as gameStartMs,
+        m.duration_sec as duration,
+        m.queue_id as queueId,
+        m.patch as patch,
+        groupArray(
+          (
+            p.puuid,
+            p.riot_id_game_name,
+            p.riot_id_tag_line,
+            p.champion_id,
+            p.team_id,
+            p.win,
+            p.kills,
+            p.deaths,
+            p.assists,
+            p.total_cs,
+            p.summoner_level,
+            p.item0,
+            p.item1,
+            p.item2,
+            p.item3,
+            p.item4,
+            p.item5,
+            p.item6,
+            p.primary_style,
+            p.secondary_style,
+            p.vision_score,
+            p.dmg_taken,
+            p.dmg_to_champ,
+            p.team_position
+          )
+        ) as participants
+      FROM matches m
+      JOIN participants p ON m.match_id = p.match_id
+      WHERE m.match_id IN (
+        SELECT match_id
+        FROM participants
+        WHERE ${whereSql}
+        ORDER BY game_start_ms DESC
+        LIMIT ${count} OFFSET ${offset}
+      )
+      GROUP BY m.match_id, m.game_start_ms, m.duration_sec, m.queue_id, m.patch
+      ORDER BY gameStartMs DESC
+    `
+
+    const result = await clickhouse.query({
+      query,
+      format: 'JSONEachRow',
+    })
+
+    const rows = (await result.json<any>()) ?? []
+
+    return rows.map((row: any) => ({
+      ...row,
+      participants: row.participants.map((p: any) => ({
+        puuid: p[0],
+        gameName: p[1],
+        tagLine: p[2],
+        championId: p[3],
+        teamId: p[4],
+        win: p[5],
+        kills: p[6],
+        deaths: p[7],
+        assists: p[8],
+        cs: p[9],
+        level: p[10],
+        items: [p[11], p[12], p[13], p[14], p[15], p[16], p[17]],
+        perks: { primary: p[18], sub: p[19] },
+        visionScore: p[20],
+        damageTaken: p[21],
+        damageDealt: p[22],
+        position: p[23],
+      })),
+    }))
   }
 }
 

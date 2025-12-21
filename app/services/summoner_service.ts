@@ -6,7 +6,7 @@ import clickhouseService from '#services/clickhouse_service'
 import Summoner from '#models/summoner'
 import SummonerHistory from '#models/summoner_history'
 import Rank from '#models/rank'
-import type { RiotQueueType, RiotRole } from '#utils/riot_constants'
+import { QUEUE_IDS, type RiotQueueType, type RiotRole } from '#utils/riot_constants'
 
 class SummonerService {
   /**
@@ -174,6 +174,27 @@ class SummonerService {
 
   async getChampionStats(puuid: string, count?: number) {
     return clickhouseService.getSummonerChampionStats(puuid, count ?? 30)
+  }
+
+  async getMatches(
+    puuid: string,
+    filters: {
+      type?: RiotQueueType
+      count?: number
+      offset?: number
+      champion?: number
+      role?: RiotRole
+    }
+  ) {
+    const queueIds = filters.type && filters.type !== 'all' ? QUEUE_IDS[filters.type] || [] : []
+
+    return clickhouseService.getSummonerMatches(puuid, {
+      queueIds,
+      count: filters.count ?? 15,
+      offset: filters.offset ?? 0,
+      championId: filters.champion,
+      role: filters.role,
+    })
   }
 }
 
