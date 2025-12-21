@@ -41,9 +41,9 @@ export type SummonerChampionStats = {
   wins: number
   winrate: number
   kda: number
-  kills: number
-  deaths: number
-  assists: number
+  avgKills: number
+  avgDeaths: number
+  avgAssists: number
   csMin: number
   goldMin: number
   damageMin: number

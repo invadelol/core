@@ -93,19 +93,17 @@ export class ClickhouseService {
             WHERE puuid = '${escapeClickhouseString(puuid)}'
           )
         SELECT
-          puuid,
-          argMax(riot_id_game_name, game_start_ms) as gameName,
-          argMax(riot_id_tag_line, game_start_ms) as tagLine,
-          argMax(profile_icon_id, game_start_ms) as profileIconId,
-          argMax(summoner_level, game_start_ms) as level,
+          p.puuid as puuid,
+          argMax(p.riot_id_game_name, p.game_start_ms) as gameName,
+          argMax(p.riot_id_tag_line, p.game_start_ms) as tagLine,
+          argMax(p.profile_icon_id, p.game_start_ms) as profileIconId,
+          argMax(p.summoner_level, p.game_start_ms) as level,
           count() as games,
-          sum(win) as wins
-        FROM participants
-        WHERE
-          match_id IN (SELECT match_id FROM my_matches)
-          AND team_id IN (SELECT team_id FROM my_matches WHERE match_id = participants.match_id)
-          AND puuid != '${escapeClickhouseString(puuid)}'
-        GROUP BY puuid
+          sum(p.win) as wins
+        FROM participants p
+        INNER JOIN my_matches m ON p.match_id = m.match_id AND p.team_id = m.team_id
+        WHERE p.puuid != '${escapeClickhouseString(puuid)}'
+        GROUP BY p.puuid
         ORDER BY games DESC
         LIMIT 20
       `,
@@ -264,9 +262,9 @@ export class ClickhouseService {
         sum(win) as wins,
         avg(win) as winrate,
         avg((kills + assists) / if(deaths = 0, 1, deaths)) as kda,
-        avg(kills) as kills,
-        avg(deaths) as deaths,
-        avg(assists) as assists,
+        avg(kills) as avgKills,
+        avg(deaths) as avgDeaths,
+        avg(assists) as avgAssists,
         avg(total_cs / (duration_sec / 60)) as csMin,
         avg(gold_earned / (duration_sec / 60)) as goldMin,
         avg(dmg_to_champ / (duration_sec / 60)) as damageMin
