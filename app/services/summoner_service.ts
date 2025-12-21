@@ -2,8 +2,11 @@ import { DateTime } from 'luxon'
 import { Exception } from '@adonisjs/core/exceptions'
 
 import riotApiService from '#services/riot_api_service'
+import clickhouseService from '#services/clickhouse_service'
 import Summoner from '#models/summoner'
 import SummonerHistory from '#models/summoner_history'
+import Rank from '#models/rank'
+import type { RiotQueueType, RiotRole } from '#utils/riot_constants'
 
 class SummonerService {
   /**
@@ -122,6 +125,55 @@ class SummonerService {
     }
 
     return player
+  }
+
+  async getActivity(puuid: string) {
+    return clickhouseService.getSummonerActivity(puuid)
+  }
+
+  async getFriends(puuid: string) {
+    return clickhouseService.getSummonerFriends(puuid)
+  }
+
+  async getRanks(puuid: string) {
+    const history = await Rank.query().where('puuid', puuid).orderBy('fetchedAt', 'desc')
+
+    const currentMap = new Map<string, Rank>()
+    for (const rank of history) {
+      if (!currentMap.has(rank.queueType)) {
+        currentMap.set(rank.queueType, rank)
+      }
+    }
+
+    return {
+      current: Array.from(currentMap.values()),
+      history,
+    }
+  }
+
+  async getStats(
+    puuid: string,
+    filters: {
+      type?: RiotQueueType
+      count?: number
+      champion?: number
+      role?: RiotRole
+    }
+  ) {
+    const { QUEUE_IDS } = await import('#utils/riot_constants')
+
+    const queueIds = filters.type && filters.type !== 'all' ? QUEUE_IDS[filters.type] || [] : []
+
+    return clickhouseService.getSummonerStats(puuid, {
+      queueIds,
+      count: filters.count ?? 30,
+      championId: filters.champion,
+      role: filters.role,
+    })
+  }
+
+  async getChampionStats(puuid: string, count?: number) {
+    return clickhouseService.getSummonerChampionStats(puuid, count ?? 30)
   }
 }
 

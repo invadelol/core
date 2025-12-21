@@ -18,3 +18,11 @@ router.get('/', async () => {
 })
 
 router.post('/summoners/sync', [SummonersController, 'sync'])
+
+router.get('/summoner/:summoner', [SummonersController, 'show'])
+
+router.get('/summoners/:puuid/activity', [SummonersController, 'activity'])
+router.get('/summoners/:puuid/friends', [SummonersController, 'friends'])
+router.get('/summoners/:puuid/ranks', [SummonersController, 'ranks'])
+router.get('/summoners/:puuid/stats', [SummonersController, 'stats'])
+router.get('/summoners/:puuid/champions', [SummonersController, 'champions'])
