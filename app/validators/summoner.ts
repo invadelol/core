@@ -15,9 +15,6 @@ export const syncSummonerValidator = vine.compile(
       .string()
       .trim()
       .regex(/^[^-]+-[^-]+$/),
-    platform: vine
-      .string()
-      .trim()
-      .toUpperCase(),
+    platform: vine.string().trim().toUpperCase(),
   })
 )

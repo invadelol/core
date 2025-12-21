@@ -16,10 +16,7 @@ export default class CreateRiotTables extends BaseSchema {
       table.integer('summoner_level')
       table.timestamp('last_refresh_at', { useTz: true })
       table.bigInteger('view_count').notNullable().defaultTo(0)
-      table
-        .timestamp('created_at', { useTz: true })
-        .notNullable()
-        .defaultTo(this.now())
+      table.timestamp('created_at', { useTz: true }).notNullable().defaultTo(this.now())
     })
 
     this.schema.raw(`
@@ -50,10 +47,7 @@ export default class CreateRiotTables extends BaseSchema {
       table.integer('league_points')
       table.integer('wins')
       table.integer('losses')
-      table
-        .timestamp('fetched_at', { useTz: true })
-        .notNullable()
-        .defaultTo(this.now())
+      table.timestamp('fetched_at', { useTz: true }).notNullable().defaultTo(this.now())
 
       table.primary(['puuid', 'queue_type', 'fetched_at'])
     })

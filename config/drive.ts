@@ -8,7 +8,7 @@ const driveConfig = defineConfig({
    * The services object can be used to configure multiple file system
    * services each using the same or a different driver.
    */
-  services: { 
+  services: {
     r2: services.s3({
       credentials: {
         accessKeyId: env.get('R2_KEY'),

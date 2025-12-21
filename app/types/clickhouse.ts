@@ -31,6 +31,11 @@ export type ClickhouseParticipantRow = {
   game_start_ms: number
 
   puuid: string
+  riot_id_game_name: string
+  riot_id_tag_line: string
+  profile_icon_id: number
+  summoner_level: number
+
   team_id: number
   win: number
 
@@ -66,4 +71,3 @@ export type ClickhouseParticipantRow = {
   keystone: number
   secondary_style: number
 }
-

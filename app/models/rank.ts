@@ -2,7 +2,6 @@ import { DateTime } from 'luxon'
 import { BaseModel, column } from '@adonisjs/lucid/orm'
 
 export default class Rank extends BaseModel {
-  
   public static table = 'riot_rank'
   public static primaryKey = 'puuid'
   public static selfAssignPrimaryKey = true

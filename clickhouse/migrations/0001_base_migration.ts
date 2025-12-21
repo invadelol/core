@@ -1,10 +1,5 @@
 import { BaseSchema } from 'adonisjs-clickhouse/schema'
 
-/**
- * NOTE:
- * adonisjs-clickhouse migrator only loads script files (.ts/.js). A plain `.sql`
- * file will be ignored by the migration source loader.
- */
 export default class extends BaseSchema {
   async up() {
     await this.client.command({
@@ -101,4 +96,3 @@ export default class extends BaseSchema {
     await this.client.command({ query: 'DROP TABLE IF EXISTS matches' })
   }
 }
-

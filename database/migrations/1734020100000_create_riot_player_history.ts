@@ -18,10 +18,7 @@ export default class CreateRiotPlayerHistory extends BaseSchema {
       table.specificType('tag_line', 'citext').notNullable()
       table.integer('profile_icon_id')
 
-      table
-        .timestamp('observed_at', { useTz: true })
-        .notNullable()
-        .defaultTo(this.now())
+      table.timestamp('observed_at', { useTz: true }).notNullable().defaultTo(this.now())
 
       table.index(['puuid', 'observed_at'], 'riot_player_history_puuid_observed_at_idx')
       table.index(['puuid'], 'riot_player_history_puuid_idx')

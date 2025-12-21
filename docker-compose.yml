@@ -6,7 +6,7 @@ services:
     env_file:
       - .env.development
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -17,7 +17,7 @@ services:
     env_file:
       - .env.development
     ports:
-      - "6379:6379"
+      - '6379:6379'
     volumes:
       - redis_data:/data
 
@@ -28,8 +28,8 @@ services:
     env_file:
       - .env.development
     ports:
-      - "8123:8123"
-      - "9002:9000"
+      - '8123:8123'
+      - '9002:9000'
     volumes:
       - clickhouse_data:/var/lib/clickhouse
 
@@ -39,10 +39,10 @@ services:
     restart: unless-stopped
     env_file:
       - .env.development
-    command: ["server", "/data", "--console-address", ":9001"]
+    command: ['server', '/data', '--console-address', ':9001']
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - '9000:9000'
+      - '9001:9001'
     volumes:
       - minio_data:/data
 
@@ -51,7 +51,7 @@ services:
     container_name: invade_minio_init
     depends_on:
       - minio
-    restart: "no"
+    restart: 'no'
     env_file:
       - .env.development
     entrypoint: >

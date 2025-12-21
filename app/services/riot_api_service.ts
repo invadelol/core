@@ -10,7 +10,9 @@ class RiotApiService {
     this.client = new RiotAPI(env.get('RIOT_API_KEY'))
   }
 
-  public platformToRegion(platform: string): PlatformId.EUROPE | PlatformId.AMERICAS | PlatformId.ASIA | PlatformId.SEA {
+  public platformToRegion(
+    platform: string
+  ): PlatformId.EUROPE | PlatformId.AMERICAS | PlatformId.ASIA | PlatformId.SEA {
     const p = platform.trim().toUpperCase()
 
     // Americas

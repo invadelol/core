@@ -6,7 +6,6 @@ import Summoner from '#models/summoner'
 import SummonerHistory from '#models/summoner_history'
 
 class SummonerService {
-
   /**
    * Checks if summoner data (gameName, tagLine, profileIconId) has changed.
    * Returns true if summoner is new or if any tracked field changed.

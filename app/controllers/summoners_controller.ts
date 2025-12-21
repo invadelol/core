@@ -2,7 +2,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 
 import riotApiService from '#services/riot_api_service'
 import summonerService from '#services/summoner_service'
-import matchService from '#services/match_service'
+import matchService from '#services/matches_service'
 import { syncSummonerValidator } from '#validators/summoner'
 
 export default class SummonersController {
@@ -19,8 +19,8 @@ export default class SummonersController {
     if (!newMatches.length) {
       return response.notFound({ message: 'No new matches found' })
     }
-  
-    return response.ok({ summoner: resolvedSummoner, matches: newMatches.length })
+
+    return response.ok({ summoner: resolvedSummoner, matches: newMatches })
   }
 
   async show({ params, response }: HttpContext) {

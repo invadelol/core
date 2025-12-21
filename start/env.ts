@@ -55,5 +55,5 @@ export default await Env.create(new URL('../', import.meta.url), {
   | Variables for configuring the riot service
   |----------------------------------------------------------
   */
-  RIOT_API_KEY: Env.schema.string()
+  RIOT_API_KEY: Env.schema.string(),
 })
