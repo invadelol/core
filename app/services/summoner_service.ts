@@ -196,6 +196,16 @@ class SummonerService {
       role: filters.role,
     })
   }
+
+  async incrementViewCount(puuid: string): Promise<Summoner | null> {
+    const summoner = await Summoner.find(puuid)
+    if (!summoner) return null
+
+    summoner.viewCount = summoner.viewCount + 1n
+    await summoner.save()
+
+    return summoner
+  }
 }
 
 export default new SummonerService()

@@ -118,4 +118,21 @@ export default class SummonersController {
     const matches = await summonerService.getMatches(puuid, payload)
     return response.ok(matches)
   }
+
+  /**
+   * Increment summoner view count
+   * @paramPath puuid - Summoner PUUID
+   * @responseBody 200 - { viewCount: number }
+   * @responseBody 404 - Summoner not found
+   */
+  async incrementViews({ params, response }: HttpContext) {
+    const { puuid } = params
+    const summoner = await summonerService.incrementViewCount(puuid)
+
+    if (!summoner) {
+      return response.notFound({ message: 'Summoner not found' })
+    }
+
+    return response.ok({ viewCount: summoner.viewCount.toString() })
+  }
 }

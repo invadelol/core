@@ -41,6 +41,8 @@ router
   .get('/summoners/:puuid/matches', [SummonersController, 'matches'])
   .use(middleware.httpCache())
 
+router.put('/summoners/:puuid/increment', [SummonersController, 'incrementViews'])
+
 router.get('/swagger', async () => {
   return AutoSwagger.default.docs(router.toJSON(), swagger)
 })
