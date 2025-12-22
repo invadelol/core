@@ -206,6 +206,42 @@ class SummonerService {
 
     return summoner
   }
+
+  async updateRanks(puuid: string, region: string) {
+    const entries = await riotApiService.client.league.getEntriesByPUUID({
+      region: region as any,
+      puuid,
+    })
+
+    for (const entry of entries) {
+      const latestRank = await Rank.query()
+        .where('puuid', puuid)
+        .where('queueType', entry.queueType)
+        .orderBy('fetchedAt', 'desc')
+        .first()
+
+      const hasChanged =
+        !latestRank ||
+        latestRank.tier !== entry.tier ||
+        latestRank.division !== entry.rank ||
+        latestRank.leaguePoints !== entry.leaguePoints ||
+        latestRank.wins !== entry.wins ||
+        latestRank.losses !== entry.losses
+
+      if (hasChanged) {
+        await Rank.create({
+          puuid,
+          queueType: entry.queueType,
+          tier: entry.tier,
+          division: entry.rank,
+          leaguePoints: entry.leaguePoints,
+          wins: entry.wins,
+          losses: entry.losses,
+          fetchedAt: DateTime.now(),
+        })
+      }
+    }
+  }
 }
 
 export default new SummonerService()

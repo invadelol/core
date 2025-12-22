@@ -104,6 +104,7 @@ export class ClickhouseService {
         INNER JOIN my_matches m ON p.match_id = m.match_id AND p.team_id = m.team_id
         WHERE p.puuid != '${escapeClickhouseString(puuid)}'
         GROUP BY p.puuid
+        HAVING games > 1
         ORDER BY games DESC
         LIMIT 20
       `,

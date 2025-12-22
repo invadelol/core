@@ -1,8 +1,11 @@
 import { HttpContext } from '@adonisjs/core/http'
 import redis from '@adonisjs/redis/services/main'
 
+import env from '#start/env'
+
 export default class HttpCacheMiddleware {
   async handle({ request, response }: HttpContext, next: () => Promise<void>) {
+    if (env.get('NODE_ENV') === 'development') return next()
     if (request.method() !== 'GET') return next()
 
     const url = request.url(true)
