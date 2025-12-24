@@ -3,6 +3,7 @@ import type { RiotAPITypes } from '#services/riot_api_service'
 import SummonerUpdated from '#events/summoner_updated'
 import Summoner from '#models/summoner'
 import clickhouseService from '#services/clickhouse_service'
+import compressionService from '#services/compression_service'
 import drive from '@adonisjs/drive/services/main'
 import type { PlatformId } from '@fightmegg/riot-api'
 
@@ -47,7 +48,8 @@ class MatchesService {
       cluster,
     })
 
-    await drive.use('r2').put(`matches/${matchId}.json`, JSON.stringify(matchData))
+    const compressed = await compressionService.compress(matchData)
+    await drive.use('r2').put(`matches/${matchId}.json`, compressed)
 
     const meta = await clickhouseService.ingestMatch(matchId, matchData)
 
