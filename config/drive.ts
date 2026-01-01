@@ -18,6 +18,7 @@ const driveConfig = defineConfig({
       bucket: env.get('R2_BUCKET'),
       endpoint: env.get('R2_ENDPOINT'),
       visibility: 'public',
+      supportsACL: false,
     }),
   },
 })
