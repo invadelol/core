@@ -48,8 +48,15 @@ class MatchesService {
       cluster,
     })
 
-    const compressed = await compressionService.compress(matchData)
-    await drive.use('r2').put(`matches/${matchId}.json`, compressed)
+    const filePath = `matches/${matchId}.json`
+    const r2 = drive.use('r2')
+
+    // Check if file already exists in R2 to avoid write conflicts
+    const fileExists = await r2.exists(filePath)
+    if (!fileExists) {
+      const compressed = await compressionService.compress(matchData)
+      await r2.put(filePath, compressed)
+    }
 
     const meta = await clickhouseService.ingestMatch(matchId, matchData)
 
