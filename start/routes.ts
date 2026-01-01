@@ -44,11 +44,13 @@ router
 router.put('/summoners/:puuid/increment', [SummonersController, 'incrementViews'])
 
 router.get('/swagger', async () => {
-  return AutoSwagger.default.docs(router.toJSON(), swagger)
+  // @ts-expect-error
+  return AutoSwagger.docs(router.toJSON(), swagger)
 })
 
 router.get('/docs', async () => {
-  return AutoSwagger.default.scalar('/swagger')
+  // @ts-expect-error
+  return AutoSwagger.scalar('/swagger')
 })
 
 router.get('/health', [HealthChecksController, 'handle'])
