@@ -19,6 +19,7 @@ const driveConfig = defineConfig({
       endpoint: env.get('R2_ENDPOINT'),
       visibility: 'public',
       supportsACL: false,
+      forcePathStyle: true,
     }),
   },
 })
@@ -26,5 +27,5 @@ const driveConfig = defineConfig({
 export default driveConfig
 
 declare module '@adonisjs/drive/types' {
-  export interface DriveDisks extends InferDriveDisks<typeof driveConfig> {}
+  export interface DriveDisks extends InferDriveDisks<typeof driveConfig> { }
 }

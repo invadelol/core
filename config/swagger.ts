@@ -1,8 +1,10 @@
 import path from 'node:path'
 import url from 'node:url'
 
+const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
+
 export default {
-    path: path.dirname(url.fileURLToPath(import.meta.url)) + '/../',
+    path: __dirname + '/../',
     title: 'Invade API',
     version: '1.0.0',
     tagIndex: 2,
