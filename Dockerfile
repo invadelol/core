@@ -17,9 +17,7 @@ FROM base AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules /app/node_modules
 ADD . .
-RUN bun ace docs:generate
 RUN bun ace build
-RUN cp swagger.yml build/
 
 # Production stage
 FROM base
