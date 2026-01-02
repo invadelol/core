@@ -257,6 +257,54 @@ class SummonerService {
       }
     }
   }
+  /**
+   * Upsert summoners from match participant data (no API calls).
+   * Creates or updates riot_player entries and tracks history changes.
+   */
+  async upsertFromParticipants(
+    participants: Array<{
+      puuid: string
+      gameName: string
+      tagLine: string
+      profileIconId: number
+      summonerLevel: number
+    }>,
+    platform: string
+  ): Promise<number> {
+    let upserted = 0
+
+    for (const p of participants) {
+      // Skip participants with missing data
+      if (!p.puuid || !p.gameName || !p.tagLine) continue
+
+      const existing = await Summoner.find(p.puuid)
+
+      await Summoner.updateOrCreate(
+        { puuid: p.puuid },
+        {
+          puuid: p.puuid,
+          platform,
+          gameName: p.gameName,
+          tagLine: p.tagLine,
+          profileIconId: p.profileIconId,
+          summonerLevel: p.summonerLevel,
+        }
+      )
+
+      if (this.hasChanged(existing, p.gameName, p.tagLine, p.profileIconId)) {
+        await SummonerHistory.create({
+          puuid: p.puuid,
+          gameName: p.gameName,
+          tagLine: p.tagLine,
+          profileIconId: p.profileIconId,
+        })
+      }
+
+      upserted++
+    }
+
+    return upserted
+  }
 }
 
 export default new SummonerService()
