@@ -29,6 +29,7 @@ export type ClickhouseParticipantRow = {
   match_id: string
   platform: string
   game_start_ms: number
+  queue_id: number
 
   puuid: string
   riot_id_game_name: string
