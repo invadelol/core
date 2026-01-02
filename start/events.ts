@@ -7,4 +7,3 @@ import UpdateSummonerRank from '#listeners/update_summoner_rank'
 emitter.on(SummonerUpdated, [InvalidateSummonerCache])
 emitter.on(SummonerUpdated, [UpsertMatchParticipants])
 emitter.on(SummonerUpdated, [UpdateSummonerRank])
-

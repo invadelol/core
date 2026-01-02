@@ -35,10 +35,13 @@ export default class HttpCacheMiddleware {
       // Set cache headers
       Object.keys(cached.headers).forEach((key) => response.header(key, cached.headers[key]))
       response.header('X-Cache', stale ? 'STALE' : 'HIT')
-      response.header('Cache-Control', `public, max-age=${CDN_MAX_AGE}, s-maxage=${FRESH_TTL_SECONDS}`)
+      response.header(
+        'Cache-Control',
+        `public, max-age=${CDN_MAX_AGE}, s-maxage=${FRESH_TTL_SECONDS}`
+      )
 
       if (stale) {
-        this.refreshInBackground(request, response, next, cacheKey, url).catch(() => { })
+        this.refreshInBackground(request, response, next, cacheKey, url).catch(() => {})
       }
 
       return response.send(cached.body)
@@ -54,7 +57,10 @@ export default class HttpCacheMiddleware {
     if (!body) return
 
     // Add cache headers
-    response.header('Cache-Control', `public, max-age=${CDN_MAX_AGE}, s-maxage=${FRESH_TTL_SECONDS}`)
+    response.header(
+      'Cache-Control',
+      `public, max-age=${CDN_MAX_AGE}, s-maxage=${FRESH_TTL_SECONDS}`
+    )
 
     // Cache the response
     await this.saveToCache(cacheKey, body, response.getHeaders() as Record<string, string>)
@@ -92,8 +98,7 @@ export default class HttpCacheMiddleware {
       const json = JSON.stringify(payload)
       const compressed = await brotliCompressAsync(Buffer.from(json, 'utf8'))
       await redis.setex(key, CACHE_TTL_SECONDS, compressed)
-    } catch {
-    }
+    } catch {}
   }
 
   private async refreshInBackground(
@@ -120,7 +125,6 @@ export default class HttpCacheMiddleware {
       if (puuidMatch?.[1]) {
         await redis.sadd(`summoner:${puuidMatch[1]}:cache_keys`, cacheKey)
       }
-    } catch {
-    }
+    } catch {}
   }
 }
