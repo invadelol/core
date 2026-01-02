@@ -29,21 +29,21 @@ router.post('/summoners/sync', [SummonersController, 'sync'])
 router.get('/summoners/:platform/:summoner', [SummonersController, 'show'])
 
 router
-  .get('/summoners/:puuid/activity', [SummonersController, 'activity'])
+  .get('/summoners/puuid/:puuid/activity', [SummonersController, 'activity'])
   .use(middleware.httpCache())
 router
-  .get('/summoners/:puuid/friends', [SummonersController, 'friends'])
+  .get('/summoners/puuid/:puuid/friends', [SummonersController, 'friends'])
   .use(middleware.httpCache())
-router.get('/summoners/:puuid/ranks', [SummonersController, 'ranks']).use(middleware.httpCache())
-router.get('/summoners/:puuid/stats', [SummonersController, 'stats']).use(middleware.httpCache())
+router.get('/summoners/puuid/:puuid/ranks', [SummonersController, 'ranks']).use(middleware.httpCache())
+router.get('/summoners/puuid/:puuid/stats', [SummonersController, 'stats']).use(middleware.httpCache())
 router
-  .get('/summoners/:puuid/champions', [SummonersController, 'champions'])
+  .get('/summoners/puuid/:puuid/champions', [SummonersController, 'champions'])
   .use(middleware.httpCache())
 router
-  .get('/summoners/:puuid/matches', [SummonersController, 'matches'])
+  .get('/summoners/puuid/:puuid/matches', [SummonersController, 'matches'])
   .use(middleware.httpCache())
 
-router.put('/summoners/:puuid/increment', [SummonersController, 'incrementViews'])
+router.put('/summoners/puuid/:puuid/increment', [SummonersController, 'incrementViews'])
 
 router.get('/swagger', async () => {
   // @ts-expect-error
