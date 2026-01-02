@@ -22,9 +22,9 @@ router.get('/', async () => {
   }
 })
 
-router.post('/summoner/sync', [SummonersController, 'sync'])
+router.post('/summoners/sync', [SummonersController, 'sync'])
 
-router.get('/summoner/:platform/:summoner', [SummonersController, 'show'])
+router.get('/summoners/:platform/:summoner', [SummonersController, 'show'])
 
 router
   .get('/summoners/:puuid/activity', [SummonersController, 'activity'])

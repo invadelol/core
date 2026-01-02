@@ -110,3 +110,57 @@ curl: (7) Failed to connect to localhost port 3333 after 0 ms: Could not connect
 {"current":[],"history":[]}[lschvn@louis-arch api]$ curl http://localhost:3333/summoners/g9MMDoUbjLTYuR5xzXqBG9EycNe4S09Csomx9e_6FfFuVfUBjzEJTfIez5vD0UKEOPcPFsfrXWcg7g/stats
 {"global":{"csMin":4.281248841191704,"visionMin":0.46709864816411345,"goldPerMinute":316.23076727092166,"damagePerMinute":531.7634617090015,"kda":1.2445951107715814,"killParticipation":0.38777525900446336,"damageShare":0.20134125911612366,"goldShare":0.18669672290125688,"winrate":0.29411764705882354,"total":"17"},"champions":[{"championId":45,"games":"8","winrate":0.375,"kda":1.0453598484848485},{"championId":99,"games":"3","winrate":0.3333333333333333,"kda":2.1666666666666665},{"championId":86,"games":"2","winrate":0.5,"kda":1.8333333333333333}]}[lschvn@louis-arch api]$ curl http://localhost:3333/summoners/g9MMDoUbjLTYuR5xzXqBG9EycNe4S09Csomx9e_6FfFuVfUBjzEJTfIez5vD0UKEOPcPFsfrXWcg7g/champions
 {"message":"Aggregate function avg(kills) AS kills is found inside another aggregate function in query. ","name":"Error","status":500,"frames":[{"file":"node_modules/packages/client-common/src/error/error.ts","filePath":"/home/lschvn/Work/invade/api/node_modules/packages/client-common/src/error/error.ts","line":31,"callee":"parseError","calleeShort":"parseError","column":12,"context":{},"isModule":true,"isNative":false,"isApp":false},{"file":"node_modules/packages/client-node/src/connection/node_base_connection.ts","filePath":"/home/lschvn/Work/invade/api/node_modules/packages/client-node/src/connection/node_base_connection.ts","line":567,"callee":"ClientRequest.onResponse","calleeShort":"onResponse","column":25,"context":{},"isModule":true,"isNative":false,"isApp":false},{"file":"node:internal/process/task_queues","filePath":"node:internal/process/task_queues","line":103,"callee":"process.processTicksAndRejections","calleeShort":"processTicksAndRejections","column":5,"context":{},"isModule":false,"isNative":false,"isApp":false}]}[lschvn@louis-arch api]$
+
+
+
+TODO list : 
+
+
+- ajoute ça pour comprendre ce qui prend du temps dans les requêtse merci : https://adonisjs.com/blog/introduction-adonisjs-opentelemetry
+
+- surtout faire en sorte que les ranks ça fonctionne
+- aussi ajouter un search pour les players, en ajoutant un ts vector.
+- add a statistics global endpoint 
+- add leaderboard
+- make the docs work
+
+
+
+
+  55  curl http://localhost:3333/swagger
+   57  curl -I http://localhost:3333/swagger && curl -I http://localhost:3333/docs
+  196  curl -I http://localhost:3000
+  318  curl -X POST "http://localhost:3333/summoners/sync" -H "Content-Type: application/json" -d '{"summoner":"Louhi-727","platform":"EUW1"}'
+  324  curl -X POST "http://localhost:3333/summoners/sync" -H "Content-Type: application/json" -d '{"summoner":"Louhi-727","platform":"EUW1"}'
+  326  curl -X POST "http://localhost:3333/summoners/sync" -H "Content-Type: application/json" -d '{"summoner":"Louhi-727","platform":"EUW1"}'
+  332  curl -X POST "http://localhost:3333/summoners/sync" -H "Content-Type: application/json" -d '{"summoner":"Louhi-727","platform":"EUW1"}'
+  333  curl "http://localhost:3333/summoners/Louhi-727/matches?platform=EUW1"
+  418  curl -X POST http://localhost:3333/summoners/sync   -H "Content-Type: application/json"   -d '{"summoner": "Louhi-727", "platform": "EUW1"}'
+  419  curl http://localhost:3333/summoners/g9MMDoUbjLTYuR5xzXqBG9EycNe4S09Csomx9e_6FfFuVfUBjzEJTfIez5vD0UKEOPcPFsfrXWcg7g/activity
+  420  curl http://localhost:3333/summoners/g9MMDoUbjLTYuR5xzXqBG9EycNe4S09Csomx9e_6FfFuVfUBjzEJTfIez5vD0UKEOPcPFsfrXWcg7g/friends
+  422  curl http://localhost:3333/summoners/g9MMDoUbjLTYuR5xzXqBG9EycNe4S09Csomx9e_6FfFuVfUBjzEJTfIez5vD0UKEOPcPFsfrXWcg7g/friends
+  423  curl http://localhost:3333/summoners/g9MMDoUbjLTYuR5xzXqBG9EycNe4S09Csomx9e_6FfFuVfUBjzEJTfIez5vD0UKEOPcPFsfrXWcg7g/friends
+  424  curl http://localhost:3333/summoners/g9MMDoUbjLTYuR5xzXqBG9EycNe4S09Csomx9e_6FfFuVfUBjzEJTfIez5vD0UKEOPcPFsfrXWcg7g/friends
+  425  curl http://localhost:3333/summoners/g9MMDoUbjLTYuR5xzXqBG9EycNe4S09Csomx9e_6FfFuVfUBjzEJTfIez5vD0UKEOPcPFsfrXWcg7g/ranks
+  426  curl http://localhost:3333/summoners/g9MMDoUbjLTYuR5xzXqBG9EycNe4S09Csomx9e_6FfFuVfUBjzEJTfIez5vD0UKEOPcPFsfrXWcg7g/stats
+  427  curl http://localhost:3333/summoners/g9MMDoUbjLTYuR5xzXqBG9EycNe4S09Csomx9e_6FfFuVfUBjzEJTfIez5vD0UKEOPcPFsfrXWcg7g/champions
+  492  curl -X POST http://localhost:3333/summoners/sync   -H "Content-Type: application/json"   -d '{"summoner": "Louhi-727", "platform": "EUW1"}'
+  493  curl -X POST http://localhost:3333/summoners/sync   -H "Content-Type: application/json"   -d '{"summoner": "Louhi-727", "platform": "EUW1"}'
+  494  curl -X POST http://localhost:3333/summoners/sync   -H "Content-Type: application/json"   -d '{"summoner": "Louhi-727", "platform": "EUW1"}'
+  495  curl http://localhost:3333/summoners/g9MMDoUbjLTYuR5xzXqBG9EycNe4S09Csomx9e_6FfFuVfUBjzEJTfIez5vD0UKEOPcPFsfrXWcg7g/activity
+  496  curl http://localhost:3333/summoners/g9MMDoUbjLTYuR5xzXqBG9EycNe4S09Csomx9e_6FfFuVfUBjzEJTfIez5vD0UKEOPcPFsfrXWcg7g/friends
+  497  curl http://localhost:3333/summoners/g9MMDoUbjLTYuR5xzXqBG9EycNe4S09Csomx9e_6FfFuVfUBjzEJTfIez5vD0UKEOPcPFsfrXWcg7g/ranks
+  498  curl http://localhost:3333/summoners/g9MMDoUbjLTYuR5xzXqBG9EycNe4S09Csomx9e_6FfFuVfUBjzEJTfIez5vD0UKEOPcPFsfrXWcg7g/stats
+  512  history | grep curl
+  513  curl -X POST http://localhost:3333/summoners/sync   -H "Content-Type: application/json"   -d '{"summoner": "Beng-2121", "platform": "EUW1"}'
+  514  curl -X POST https://invade.lschvn.foo/summoners/sync   -H "Content-Type: application/json"   -d '{"summoner": "Beng-2121", "platform": "EUW1"}'
+  515  curl -X POST https://invade.lschvn.foo/summoners/sync   -H "Content-Type: application/json"   -d '{"summoner": "Beng-2121", "platform": "EUW1"}'
+  517   curl -X POST https://invade.lschvn.foo/summoner/sync   -H "Content-Type: application/json"   -d '{"summoner": "Beng-2121", "platform": "EUW1"}'
+  518   curl -X POST https://invade.lschvn.foo/summoner/sync   -H "Content-Type: application/json"   -d '{"summoner": "Beng-2121", "platform": "EUW1"}'
+  522   curl -X POST https://invade.lschvn.foo/summoner/sync   -H "Content-Type: application/json"   -d '{"summoner": "Beng-2121", "platform": "EUW1"}'
+  523   curl -X POST https://invade.lschvn.foo/summoner/sync   -H "Content-Type: application/json"   -d '{"summoner": "Beng-2121", "platform": "EUW1"}'
+  524   curl -X POST https://invade.lschvn.foo/summoner/sync   -H "Content-Type: application/json"   -d '{"summoner": "CrauZmoZ-EUW", "platform": "EUW1"}'
+  527   curl -X POST https://invade.lschvn.foo/summoner/sync   -H "Content-Type: application/json"   -d '{"summoner": "CrauZmoZ-EUW", "platform": "EUW1"}'
+  529   curl -X POST https://invade.lschvn.foo/summoner/sync   -H "Content-Type: application/json"   -d '{"summoner": "CrauZmoZ-EUW", "platform": "EUW1"}'
+  530   curl -X POST https://invade.lschvn.foo/summoner/sync   -H "Content-Type: application/json"   -d '{"summoner": "Beng-2121", "platform": "EUW1"}'
+  532   curl -X POST https://invade.lschvn.foo/summoner/sync   -H "Content-Type: application/json"   -d '{"summoner": "MRS Paulux-KCWIN", "platform": "EUW1"}'
