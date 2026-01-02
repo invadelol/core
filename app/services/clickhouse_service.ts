@@ -388,6 +388,52 @@ export class ClickhouseService {
       })),
     }))
   }
+  async getRecentMatchParticipants(
+    puuid: string,
+    limit: number = 15
+  ): Promise<
+    Array<{
+      puuid: string
+      gameName: string
+      tagLine: string
+      profileIconId: number
+      summonerLevel: number
+    }>
+  > {
+    const query = `
+      WITH my_matches AS (
+        SELECT match_id
+        FROM participants
+        WHERE puuid = '${escapeClickhouseString(puuid)}'
+        ORDER BY game_start_ms DESC
+        LIMIT ${limit}
+      )
+      SELECT
+        p.puuid as puuid,
+        argMax(p.riot_id_game_name, p.game_start_ms) as gameName,
+        argMax(p.riot_id_tag_line, p.game_start_ms) as tagLine,
+        argMax(p.profile_icon_id, p.game_start_ms) as profileIconId,
+        argMax(p.summoner_level, p.game_start_ms) as summonerLevel
+      FROM participants p
+      INNER JOIN my_matches m ON p.match_id = m.match_id
+      GROUP BY p.puuid
+    `
+
+    const result = await clickhouse.query({
+      query,
+      format: 'JSONEachRow',
+    })
+
+    return (
+      (await result.json<{
+        puuid: string
+        gameName: string
+        tagLine: string
+        profileIconId: number
+        summonerLevel: number
+      }>()) ?? []
+    )
+  }
 }
 
 export default new ClickhouseService()
