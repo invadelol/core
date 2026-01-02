@@ -1,70 +1,20 @@
 import clickhouse from 'adonisjs-clickhouse/services/main'
-import {
-  toInt,
-  asString,
-  escapeClickhouseString,
-  platformFromMatchId,
-  buildMatchRow,
-  buildParticipantRows,
-} from '#utils/clickhouse'
+import { escapeClickhouseString } from '#utils/clickhouse'
 import type {
   SummonerActivity,
   SummonerFriend,
   SummonerStats,
   SummonerChampionStats,
 } from '#types/summoner'
-import { RiotAPITypes } from '@fightmegg/riot-api'
+import { DEFAULT_STATS_COUNT, DEFAULT_FRIENDS_LIMIT, TOP_CHAMPIONS_COUNT } from '#config/constants'
 
-export class ClickhouseService {
+/**
+ * Repository for summoner statistics ClickHouse queries
+ */
+export class StatsRepository {
   /**
-   * Returns the subset of matchIds that already exist in ClickHouse.
+   * Get daily activity (games played per day)
    */
-  async getExistingMatchIds(matchIds: string[]): Promise<Set<string>> {
-    const unique = Array.from(new Set(matchIds.filter(Boolean)))
-    if (!unique.length) return new Set()
-
-    const inList = unique.map((id) => `'${escapeClickhouseString(id)}'`).join(',')
-    const result = await clickhouse.query({
-      query: `SELECT match_id FROM matches WHERE match_id IN (${inList})`,
-      format: 'JSONEachRow',
-    })
-
-    const rows = (await result.json<{ match_id: string }>()) ?? []
-    return new Set(rows.map((r) => asString(r.match_id)).filter(Boolean))
-  }
-
-  async ingestMatch(
-    matchId: string,
-    matchData: RiotAPITypes.MatchV5.MatchDTO
-  ): Promise<{
-    platform: string
-    gameStartMs: number
-  }> {
-    const info = matchData.info
-    const platform =
-      (typeof info.platformId === 'string' && info.platformId) || platformFromMatchId(matchId) || ''
-    const gameStartMs = toInt(info.gameStartTimestamp ?? info.gameCreation ?? 0, 0)
-
-    const matchRow = buildMatchRow(matchId, platform, gameStartMs, info)
-    const participantRows = buildParticipantRows(matchId, platform, gameStartMs, info)
-
-    await clickhouse.insert({
-      table: 'matches',
-      values: [matchRow],
-      format: 'JSONEachRow',
-    })
-
-    if (participantRows.length) {
-      await clickhouse.insert({
-        table: 'participants',
-        values: participantRows,
-        format: 'JSONEachRow',
-      })
-    }
-
-    return { platform, gameStartMs }
-  }
-
   async getSummonerActivity(puuid: string): Promise<SummonerActivity[]> {
     const result = await clickhouse.query({
       query: `
@@ -83,6 +33,9 @@ export class ClickhouseService {
     return (await result.json<SummonerActivity>()) ?? []
   }
 
+  /**
+   * Get frequent teammates
+   */
   async getSummonerFriends(puuid: string): Promise<SummonerFriend[]> {
     const escapedPuuid = escapeClickhouseString(puuid)
     const result = await clickhouse.query({
@@ -106,7 +59,7 @@ export class ClickhouseService {
         GROUP BY p.puuid
         HAVING games > 1
         ORDER BY games DESC
-        LIMIT 20
+        LIMIT ${DEFAULT_FRIENDS_LIMIT}
       `,
       format: 'JSONEachRow',
     })
@@ -114,6 +67,9 @@ export class ClickhouseService {
     return (await result.json<SummonerFriend>()) ?? []
   }
 
+  /**
+   * Get global stats and top champions
+   */
   async getSummonerStats(
     puuid: string,
     filters: {
@@ -125,7 +81,6 @@ export class ClickhouseService {
   ): Promise<SummonerStats> {
     const escapedPuuid = escapeClickhouseString(puuid)
 
-    // Build WHERE clauses for secondary filters (after PREWHERE)
     const whereClauses: string[] = []
     if (filters.queueIds?.length) {
       whereClauses.push(`queue_id IN (${filters.queueIds.join(',')})`)
@@ -138,7 +93,6 @@ export class ClickhouseService {
     }
     const whereSql = whereClauses.length ? `AND ${whereClauses.join(' AND ')}` : ''
 
-    // Single query using CTE for match selection with PREWHERE
     const query = `
       WITH filtered_matches AS (
         SELECT match_id
@@ -196,7 +150,7 @@ export class ClickhouseService {
         AND puuid = '${escapedPuuid}'
       GROUP BY championId
       ORDER BY games DESC, kda DESC
-      LIMIT 3
+      LIMIT ${TOP_CHAMPIONS_COUNT}
     `
 
     const [globalRes, champsRes] = await Promise.all([
@@ -243,7 +197,13 @@ export class ClickhouseService {
     }
   }
 
-  async getSummonerChampionStats(puuid: string, count: number): Promise<SummonerChampionStats[]> {
+  /**
+   * Get per-champion statistics
+   */
+  async getSummonerChampionStats(
+    puuid: string,
+    count: number = DEFAULT_STATS_COUNT
+  ): Promise<SummonerChampionStats[]> {
     const escapedPuuid = escapeClickhouseString(puuid)
     const query = `
       WITH my_matches AS (
@@ -280,161 +240,6 @@ export class ClickhouseService {
 
     return (await result.json<SummonerChampionStats>()) ?? []
   }
-
-  async getSummonerMatches(
-    puuid: string,
-    filters: {
-      queueIds?: number[] | readonly number[]
-      count?: number
-      offset?: number
-      championId?: number
-      role?: string
-    }
-  ) {
-    const count = filters.count ?? 15
-    const offset = filters.offset ?? 0
-    const escapedPuuid = escapeClickhouseString(puuid)
-
-    // Build WHERE clauses for secondary filters (queue_id now on participants directly)
-    const whereClauses: string[] = []
-    if (filters.queueIds?.length) {
-      whereClauses.push(`queue_id IN (${filters.queueIds.join(',')})`)
-    }
-    if (filters.championId) {
-      whereClauses.push(`champion_id = ${filters.championId}`)
-    }
-    if (filters.role && filters.role !== 'all') {
-      whereClauses.push(`team_position = '${escapeClickhouseString(filters.role)}'`)
-    }
-    const whereSql = whereClauses.length ? `AND ${whereClauses.join(' AND ')}` : ''
-
-    const query = `
-      WITH my_matches AS (
-        SELECT match_id
-        FROM participants
-        PREWHERE puuid = '${escapedPuuid}'
-        WHERE 1=1 ${whereSql}
-        ORDER BY game_start_ms DESC
-        LIMIT ${count} OFFSET ${offset}
-      )
-      SELECT
-        m.match_id as matchId,
-        m.game_start_ms as gameStartMs,
-        m.duration_sec as duration,
-        m.queue_id as queueId,
-        m.patch as patch,
-        groupArray(
-          (
-            p.puuid,
-            p.riot_id_game_name,
-            p.riot_id_tag_line,
-            p.champion_id,
-            p.team_id,
-            p.win,
-            p.kills,
-            p.deaths,
-            p.assists,
-            p.total_cs,
-            p.summoner_level,
-            p.item0,
-            p.item1,
-            p.item2,
-            p.item3,
-            p.item4,
-            p.item5,
-            p.item6,
-            p.primary_style,
-            p.secondary_style,
-            p.vision_score,
-            p.dmg_taken,
-            p.dmg_to_champ,
-            p.team_position
-          )
-        ) as participants
-      FROM matches m
-      JOIN participants p ON m.match_id = p.match_id
-      WHERE m.match_id IN (SELECT match_id FROM my_matches)
-      GROUP BY m.match_id, m.game_start_ms, m.duration_sec, m.queue_id, m.patch
-      ORDER BY gameStartMs DESC
-    `
-
-    const result = await clickhouse.query({
-      query,
-      format: 'JSONEachRow',
-    })
-
-    const rows = (await result.json<any>()) ?? []
-
-    return rows.map((row: any) => ({
-      ...row,
-      participants: row.participants.map((p: any) => ({
-        puuid: p[0],
-        gameName: p[1],
-        tagLine: p[2],
-        championId: p[3],
-        teamId: p[4],
-        win: p[5],
-        kills: p[6],
-        deaths: p[7],
-        assists: p[8],
-        cs: p[9],
-        level: p[10],
-        items: [p[11], p[12], p[13], p[14], p[15], p[16], p[17]],
-        perks: { primary: p[18], sub: p[19] },
-        visionScore: p[20],
-        damageTaken: p[21],
-        damageDealt: p[22],
-        position: p[23],
-      })),
-    }))
-  }
-  async getRecentMatchParticipants(
-    puuid: string,
-    limit: number = 15
-  ): Promise<
-    Array<{
-      puuid: string
-      gameName: string
-      tagLine: string
-      profileIconId: number
-      summonerLevel: number
-    }>
-  > {
-    const escapedPuuid = escapeClickhouseString(puuid)
-    const query = `
-      WITH my_matches AS (
-        SELECT match_id
-        FROM participants
-        PREWHERE puuid = '${escapedPuuid}'
-        ORDER BY game_start_ms DESC
-        LIMIT ${limit}
-      )
-      SELECT
-        p.puuid as puuid,
-        argMax(p.riot_id_game_name, p.game_start_ms) as gameName,
-        argMax(p.riot_id_tag_line, p.game_start_ms) as tagLine,
-        argMax(p.profile_icon_id, p.game_start_ms) as profileIconId,
-        argMax(p.summoner_level, p.game_start_ms) as summonerLevel
-      FROM participants p
-      INNER JOIN my_matches m ON p.match_id = m.match_id
-      GROUP BY p.puuid
-    `
-
-    const result = await clickhouse.query({
-      query,
-      format: 'JSONEachRow',
-    })
-
-    return (
-      (await result.json<{
-        puuid: string
-        gameName: string
-        tagLine: string
-        profileIconId: number
-        summonerLevel: number
-      }>()) ?? []
-    )
-  }
 }
 
-export default new ClickhouseService()
+export default new StatsRepository()

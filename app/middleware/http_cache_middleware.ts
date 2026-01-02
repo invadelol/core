@@ -4,14 +4,10 @@ import { brotliCompress, brotliDecompress } from 'node:zlib'
 import { promisify } from 'node:util'
 
 import env from '#start/env'
+import { CACHE_FRESH_TTL_SECONDS, CACHE_TTL_SECONDS, CDN_MAX_AGE_SECONDS } from '#config/constants'
 
 const brotliCompressAsync = promisify(brotliCompress)
 const brotliDecompressAsync = promisify(brotliDecompress)
-
-// Cache timing constants
-const FRESH_TTL_SECONDS = 30 * 60
-const CACHE_TTL_SECONDS = 2 * 60 * 60
-const CDN_MAX_AGE = 60 * 60
 
 type CachedPayload = {
   body: any
@@ -30,14 +26,14 @@ export default class HttpCacheMiddleware {
     const cached = await this.getFromCache(cacheKey)
     if (cached) {
       const age = Date.now() - cached.timestamp
-      const stale = age > FRESH_TTL_SECONDS * 1000
+      const stale = age > CACHE_FRESH_TTL_SECONDS * 1000
 
       // Set cache headers
       Object.keys(cached.headers).forEach((key) => response.header(key, cached.headers[key]))
       response.header('X-Cache', stale ? 'STALE' : 'HIT')
       response.header(
         'Cache-Control',
-        `public, max-age=${CDN_MAX_AGE}, s-maxage=${FRESH_TTL_SECONDS}`
+        `public, max-age=${CDN_MAX_AGE_SECONDS}, s-maxage=${CACHE_FRESH_TTL_SECONDS}`
       )
 
       if (stale) {
@@ -59,7 +55,7 @@ export default class HttpCacheMiddleware {
     // Add cache headers
     response.header(
       'Cache-Control',
-      `public, max-age=${CDN_MAX_AGE}, s-maxage=${FRESH_TTL_SECONDS}`
+      `public, max-age=${CDN_MAX_AGE_SECONDS}, s-maxage=${CACHE_FRESH_TTL_SECONDS}`
     )
 
     // Cache the response

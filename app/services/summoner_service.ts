@@ -1,12 +1,20 @@
 import { DateTime } from 'luxon'
 import { Exception } from '@adonisjs/core/exceptions'
 
-import riotApiService from '#services/riot_api_service'
-import clickhouseService from '#services/clickhouse_service'
+import riotApiService from '#services/riot/api'
+import statsRepository from '#services/analytics/stats_repository'
+import matchRepository from '#services/analytics/match_repository'
 import Summoner from '#models/summoner'
 import SummonerHistory from '#models/summoner_history'
 import Rank from '#models/rank'
-import { QUEUE_IDS, type RiotQueueType, type RiotRole } from '#utils/riot_constants'
+import { QUEUE_IDS, type RiotQueueType, type RiotRole } from '#services/riot/constants'
+import {
+  DEFAULT_STATS_COUNT,
+  DEFAULT_MATCH_COUNT,
+  DEFAULT_SEARCH_LIMIT,
+  MAX_SEARCH_LIMIT,
+  DEFAULT_OFFSET,
+} from '#config/constants'
 
 class SummonerService {
   /**
@@ -53,11 +61,6 @@ class SummonerService {
 
   /**
    * Resolve a Riot ID ("GameName-TagLine") into a persisted `Summoner` row.
-   *
-   * - Checks database first (unless `refresh`)
-   * - Uses Account-V1 to resolve `puuid` from Riot ID
-   * - Uses Summoner-V4 to get profile icon + level
-   * - Upserts `riot_player` and appends `riot_player_history` if data changed
    */
   async resolveAndUpsert(
     summoner: string,
@@ -128,11 +131,11 @@ class SummonerService {
   }
 
   async getActivity(puuid: string) {
-    return clickhouseService.getSummonerActivity(puuid)
+    return statsRepository.getSummonerActivity(puuid)
   }
 
   async getFriends(puuid: string) {
-    return clickhouseService.getSummonerFriends(puuid)
+    return statsRepository.getSummonerFriends(puuid)
   }
 
   async getRanks(puuid: string) {
@@ -160,20 +163,18 @@ class SummonerService {
       role?: RiotRole
     }
   ) {
-    const { QUEUE_IDS } = await import('#utils/riot_constants')
-
     const queueIds = filters.type && filters.type !== 'all' ? QUEUE_IDS[filters.type] || [] : []
 
-    return clickhouseService.getSummonerStats(puuid, {
+    return statsRepository.getSummonerStats(puuid, {
       queueIds,
-      count: filters.count ?? 30,
+      count: filters.count ?? DEFAULT_STATS_COUNT,
       championId: filters.champion,
       role: filters.role,
     })
   }
 
   async getChampionStats(puuid: string, count?: number) {
-    return clickhouseService.getSummonerChampionStats(puuid, count ?? 30)
+    return statsRepository.getSummonerChampionStats(puuid, count ?? DEFAULT_STATS_COUNT)
   }
 
   async getMatches(
@@ -188,10 +189,10 @@ class SummonerService {
   ) {
     const queueIds = filters.type && filters.type !== 'all' ? QUEUE_IDS[filters.type] || [] : []
 
-    return clickhouseService.getSummonerMatches(puuid, {
+    return matchRepository.getSummonerMatches(puuid, {
       queueIds,
-      count: filters.count ?? 15,
-      offset: filters.offset ?? 0,
+      count: filters.count ?? DEFAULT_MATCH_COUNT,
+      offset: filters.offset ?? DEFAULT_OFFSET,
       championId: filters.champion,
       role: filters.role,
     })
@@ -210,7 +211,7 @@ class SummonerService {
   /**
    * Search summoners by name using tsvector full-text search
    */
-  async search(query: string, limit: number = 10): Promise<Summoner[]> {
+  async search(query: string, limit: number = DEFAULT_SEARCH_LIMIT): Promise<Summoner[]> {
     if (!query || query.trim().length === 0) return []
 
     const sanitized = query.trim().replace(/[^a-zA-Z0-9\s]/g, '')
@@ -219,7 +220,7 @@ class SummonerService {
     return Summoner.query()
       .whereRaw(`search_vector @@ to_tsquery('simple', ?)`, [`${sanitized}:*`])
       .orderBy('viewCount', 'desc')
-      .limit(Math.min(limit, 50))
+      .limit(Math.min(limit, MAX_SEARCH_LIMIT))
   }
 
   async updateRanks(puuid: string, region: string) {
@@ -257,9 +258,9 @@ class SummonerService {
       }
     }
   }
+
   /**
    * Upsert summoners from match participant data (no API calls).
-   * Creates or updates riot_player entries and tracks history changes.
    */
   async upsertFromParticipants(
     participants: Array<{
@@ -274,7 +275,6 @@ class SummonerService {
     let upserted = 0
 
     for (const p of participants) {
-      // Skip participants with missing data
       if (!p.puuid || !p.gameName || !p.tagLine) continue
 
       const existing = await Summoner.find(p.puuid)

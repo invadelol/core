@@ -120,7 +120,6 @@ TODO list :
 - add a statistics global endpoint
 - faire en sorte d'ajouter tout les summoners récupéré avec les matches. c'est plus pratique pour la recherche après.
 - add leaderboard
-- make the docs work
 
   55 curl http://localhost:3333/swagger
   57 curl -I http://localhost:3333/swagger && curl -I http://localhost:3333/docs
@@ -159,3 +158,209 @@ TODO list :
   529 curl -X POST https://invade.lschvn.foo/summoner/sync -H "Content-Type: application/json" -d '{"summoner": "CrauZmoZ-EUW", "platform": "EUW1"}'
   530 curl -X POST https://invade.lschvn.foo/summoner/sync -H "Content-Type: application/json" -d '{"summoner": "Beng-2121", "platform": "EUW1"}'
   532 curl -X POST https://invade.lschvn.foo/summoner/sync -H "Content-Type: application/json" -d '{"summoner": "MRS Paulux-KCWIN", "platform": "EUW1"}'
+  I've now reviewed your codebase thoroughly. Here's my comprehensive analysis of your architecture, conventions, and areas for improvement:
+
+Architecture & Structure Overview
+Your project is a League of Legends statistics API built with AdonisJS v6, using:
+
+PostgreSQL (via Lucid ORM) for player data
+ClickHouse for match/participant analytics
+Redis for caching
+R2/S3 for raw match data storage
+Overall, the architecture is solid for a personal project, but there are several areas worth improving.
+
+🟢 What's Good
+Clear separation of concerns: Controllers → Services → Data layer
+Event-driven architecture with
+SummonerUpdated
+for cache invalidation and participant upserts
+Good use of TypeScript types for ClickHouse rows and response types
+Efficient caching middleware with stale-while-revalidate pattern
+Clean utility functions in #utils/clickhouse for data transformation
+Well-structured validators using VineJS
+🔴 Areas for Improvement
+
+1. README.md is a mess
+   Your README is being used as a scratchpad with error logs, TODO lists, and curl commands. This should be:
+
+A proper project description
+Setup instructions
+API documentation or link to Swagger
+Move your TODOs to a separate TODO.md or use GitHub Issues 2. SQL Injection Vulnerability
+In
+clickhouse_service.ts
+, you're using string interpolation for SQL queries:
+
+typescript
+query: `SELECT ... PREWHERE puuid = '${escapedPuuid}'`
+While you have
+escapeClickhouseString()
+, this is fragile. Consider:
+
+Using parameterized queries if the ClickHouse client supports them
+At minimum, create a query builder abstraction to centralize escaping 3. Singleton Services Pattern
+typescript
+export default new SummonerService()
+Every service exports a singleton instance. This makes:
+
+Testing difficult (can't easily mock)
+No dependency injection
+Recommendation: Use AdonisJS's container bindings or return the class instead:
+
+typescript
+// Better for DI/testing
+export default class SummonerService { ... }
+// Then inject or use app.container 4. Route Organization
+Your
+routes.ts
+has inconsistent patterns:
+
+typescript
+router.get('/summoners/search', ...) // uses query params
+router.get('/summoners/:platform/:summoner', ...) // uses path params
+router.get('/summoners/puuid/:puuid/activity', ...) // uses /puuid/ prefix
+Consider:
+
+Using route groups for better organization
+Consistent URL structure (e.g., all puuid routes should be grouped)
+Resource-based routing where applicable 5. Validator in Controller (Duplicated)
+In
+summoners_controller.ts
+:
+
+typescript
+async champions({ request, params, response }: HttpContext) {
+const { getChampionStatsValidator } = await import('#validators/summoner')
+// ...
+}
+You're dynamically importing validators. Import them all at the top like syncSummonerValidator.
+
+6. Error Handling
+   Your services throw generic Exception:
+
+typescript
+throw new Exception('Invalid summoner format', { status: 422 })
+Consider:
+
+Creating custom exception classes (e.g., SummonerNotFoundException, InvalidFormatException)
+Centralized error handling in
+app/exceptions/handler.ts 7. ClickhouseService is Too Large
+At 441 lines,
+clickhouse_service.ts
+does too much:
+
+Getting existing match IDs
+Ingesting matches
+6+ different query methods
+Recommendation: Split into:
+
+ClickhouseMatchRepository (queries related to matches)
+ClickhouseSummonerStatsRepository (stats queries)
+ClickhouseIngestionService (write operations) 8. Magic Numbers
+Throughout the code:
+
+typescript
+count: filters.count ?? 30 // Why 30?
+count: 15 // Why 15?
+LIMIT 20 // Why 20?
+Create a constants file with named values:
+
+typescript
+// config/constants.ts
+export const DEFAULT_MATCH_COUNT = 15
+export const DEFAULT_FRIENDS_LIMIT = 20 9. Missing Input Validation in Routes
+Some routes don't validate params:
+
+typescript
+async activity({ params, response }: HttpContext) {
+const { puuid } = params // No validation!
+// ...
+}
+PUUIDs have a specific format. Add validators for these routes too.
+
+10. No Tests
+    Your tests/ directory appears mostly empty. For an analytics API, you should have:
+
+Unit tests for utility functions
+Integration tests for ClickHouse queries
+Controller tests for API endpoints 11. matches_controller.ts is Empty
+You have an empty file
+app/controllers/matches_controller.ts
+. Either implement it or remove it.
+
+12. Hardcoded Queue IDs
+    In
+    riot_constants.ts
+    :
+
+typescript
+export const QUEUE_IDS = {
+ranked: [420],
+flex: [440],
+...
+}
+This is fine, but document what these IDs represent (maybe link to Riot's docs in a comment).
+
+13. Caching Strategy Improvements
+    Your
+    http_cache_middleware.ts
+    has a potential issue:
+
+typescript
+private async refreshInBackground(
+// ...
+next: () => Promise<void>, // This calls the handler again
+The next() function is designed to be called once. Calling it in the background while already having returned a response could cause issues.
+
+14. Environment Files
+    You have multiple env files that shouldn't be committed:
+
+.env
+.env.dev
+.env.development
+Only
+.env.example
+should be in git. Check your
+.gitignore
+.
+
+15. Missing Error Logging
+    In your middleware and listeners:
+
+typescript
+} catch {
+return null // Silent failure
+}
+And:
+
+typescript
+.catch(() => {}) // Swallowed errors
+Consider logging these errors for debugging.
+
+File Structure Recommendations
+app/
+├── controllers/
+├── models/
+├── services/
+│ ├── riot/ # Group Riot-related services
+│ │ ├── api.ts
+│ │ └── constants.ts
+│ ├── analytics/ # ClickHouse-related
+│ │ ├── queries.ts
+│ │ └── ingestion.ts
+│ └── caching/
+├── exceptions/ # Custom exception classes
+├── repositories/ # Data access layer (optional)
+└── validators/
+Quick Wins
+Clean up
+README.md
+Add PUUID validation to all routes
+Move dynamic imports to file top
+Add logging to catch blocks
+Delete empty
+matches_controller.ts
+Add comments to
+riot_constants.ts
+explaining queue IDs
+Would you like me to help implement any of these improvements?
