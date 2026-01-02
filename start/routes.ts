@@ -22,6 +22,8 @@ router.get('/', async () => {
   }
 })
 
+router.get('/summoners/search', [SummonersController, 'search'])
+
 router.post('/summoners/sync', [SummonersController, 'sync'])
 
 router.get('/summoners/:platform/:summoner', [SummonersController, 'show'])

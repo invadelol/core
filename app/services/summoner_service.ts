@@ -207,6 +207,21 @@ class SummonerService {
     return summoner
   }
 
+  /**
+   * Search summoners by name using tsvector full-text search
+   */
+  async search(query: string, limit: number = 10): Promise<Summoner[]> {
+    if (!query || query.trim().length === 0) return []
+
+    const sanitized = query.trim().replace(/[^a-zA-Z0-9\s]/g, '')
+    if (!sanitized) return []
+
+    return Summoner.query()
+      .whereRaw(`search_vector @@ to_tsquery('simple', ?)`, [`${sanitized}:*`])
+      .orderBy('viewCount', 'desc')
+      .limit(Math.min(limit, 50))
+  }
+
   async updateRanks(puuid: string, region: string) {
     const entries = await riotApiService.client.league.getEntriesByPUUID({
       region: region as any,
