@@ -4,7 +4,11 @@ import { brotliCompress, brotliDecompress } from 'node:zlib'
 import { promisify } from 'node:util'
 
 import env from '#start/env'
-import { CACHE_FRESH_TTL_SECONDS, CACHE_TTL_SECONDS, CDN_MAX_AGE_SECONDS } from '#config/constants'
+import {
+  CACHE_FRESH_TTL_SECONDS,
+  CACHE_TTL_SECONDS,
+  CDN_MAX_AGE_SECONDS,
+} from '#config/constants'
 
 const brotliCompressAsync = promisify(brotliCompress)
 const brotliDecompressAsync = promisify(brotliDecompress)
@@ -15,6 +19,15 @@ type CachedPayload = {
   timestamp: number
 }
 
+/**
+ * HTTP Cache middleware using Redis with Brotli compression.
+ *
+ * Caching strategy:
+ * - Caches GET responses for CACHE_TTL_SECONDS
+ * - Returns cached data if available (HIT)
+ * - Cache is invalidated via SummonerUpdated events when data changes
+ * - No background refresh (next() should only be called once per request)
+ */
 export default class HttpCacheMiddleware {
   async handle({ request, response }: HttpContext, next: () => Promise<void>) {
     if (env.get('NODE_ENV') === 'development') return next()
@@ -25,20 +38,13 @@ export default class HttpCacheMiddleware {
 
     const cached = await this.getFromCache(cacheKey)
     if (cached) {
-      const age = Date.now() - cached.timestamp
-      const stale = age > CACHE_FRESH_TTL_SECONDS * 1000
-
-      // Set cache headers
+      // Set cache headers from stored response
       Object.keys(cached.headers).forEach((key) => response.header(key, cached.headers[key]))
-      response.header('X-Cache', stale ? 'STALE' : 'HIT')
+      response.header('X-Cache', 'HIT')
       response.header(
         'Cache-Control',
         `public, max-age=${CDN_MAX_AGE_SECONDS}, s-maxage=${CACHE_FRESH_TTL_SECONDS}`
       )
-
-      if (stale) {
-        this.refreshInBackground(request, response, next, cacheKey, url).catch(() => {})
-      }
 
       return response.send(cached.body)
     }
@@ -61,7 +67,7 @@ export default class HttpCacheMiddleware {
     // Cache the response
     await this.saveToCache(cacheKey, body, response.getHeaders() as Record<string, string>)
 
-    // Track cache key for this puuid (for invalidation)
+    // Track cache key for this puuid (for invalidation via SummonerUpdated event)
     const puuidMatch = url.match(/\/summoners\/puuid\/([a-zA-Z0-9_-]+)/)
     if (puuidMatch?.[1]) {
       await redis.sadd(`summoner:${puuidMatch[1]}:cache_keys`, cacheKey)
@@ -94,33 +100,6 @@ export default class HttpCacheMiddleware {
       const json = JSON.stringify(payload)
       const compressed = await brotliCompressAsync(Buffer.from(json, 'utf8'))
       await redis.setex(key, CACHE_TTL_SECONDS, compressed)
-    } catch {}
-  }
-
-  private async refreshInBackground(
-    _request: HttpContext['request'],
-    _response: HttpContext['response'],
-    next: () => Promise<void>,
-    cacheKey: string,
-    url: string
-  ): Promise<void> {
-    try {
-      // Execute handler to refresh data
-      await next()
-
-      // If we got a response body, update the cache
-      const body = _response.getBody()
-      if (!body) {
-        return
-      }
-
-      await this.saveToCache(cacheKey, body, _response.getHeaders() as Record<string, string>)
-
-      // Update cache key tracking
-      const puuidMatch = url.match(/\/summoners\/puuid\/([a-zA-Z0-9_-]+)/)
-      if (puuidMatch?.[1]) {
-        await redis.sadd(`summoner:${puuidMatch[1]}:cache_keys`, cacheKey)
-      }
-    } catch {}
+    } catch { }
   }
 }
