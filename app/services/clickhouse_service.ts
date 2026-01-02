@@ -73,7 +73,7 @@ export class ClickhouseService {
           count() as games,
           sum(win) as wins
         FROM participants
-        WHERE puuid = '${escapeClickhouseString(puuid)}'
+        PREWHERE puuid = '${escapeClickhouseString(puuid)}'
         GROUP BY day
         ORDER BY day ASC
       `,
@@ -84,14 +84,14 @@ export class ClickhouseService {
   }
 
   async getSummonerFriends(puuid: string): Promise<SummonerFriend[]> {
+    const escapedPuuid = escapeClickhouseString(puuid)
     const result = await clickhouse.query({
       query: `
-        WITH
-          my_matches AS (
-            SELECT match_id, team_id
-            FROM participants
-            WHERE puuid = '${escapeClickhouseString(puuid)}'
-          )
+        WITH my_matches AS (
+          SELECT match_id, team_id
+          FROM participants
+          PREWHERE puuid = '${escapedPuuid}'
+        )
         SELECT
           p.puuid as puuid,
           argMax(p.riot_id_game_name, p.game_start_ms) as gameName,
@@ -102,7 +102,7 @@ export class ClickhouseService {
           sum(p.win) as wins
         FROM participants p
         INNER JOIN my_matches m ON p.match_id = m.match_id AND p.team_id = m.team_id
-        WHERE p.puuid != '${escapeClickhouseString(puuid)}'
+        WHERE p.puuid != '${escapedPuuid}'
         GROUP BY p.puuid
         HAVING games > 1
         ORDER BY games DESC
@@ -123,37 +123,91 @@ export class ClickhouseService {
       role?: string
     }
   ): Promise<SummonerStats> {
-    const whereClauses = [`puuid = '${escapeClickhouseString(puuid)}'`]
+    const escapedPuuid = escapeClickhouseString(puuid)
 
+    // Build WHERE clauses for secondary filters (after PREWHERE)
+    const whereClauses: string[] = []
     if (filters.queueIds?.length) {
       whereClauses.push(`queue_id IN (${filters.queueIds.join(',')})`)
     }
-
     if (filters.championId) {
       whereClauses.push(`champion_id = ${filters.championId}`)
     }
-
     if (filters.role && filters.role !== 'all') {
-      whereClauses.push(`team_position = '${filters.role}'`)
+      whereClauses.push(`team_position = '${escapeClickhouseString(filters.role)}'`)
     }
+    const whereSql = whereClauses.length ? `AND ${whereClauses.join(' AND ')}` : ''
 
-    const whereSql = whereClauses.join(' AND ')
-
-    const matchesSql = `
-      SELECT match_id
-      FROM participants
-      WHERE ${whereSql}
-      ORDER BY game_start_ms DESC
-      LIMIT ${filters.count}
+    // Single query using CTE for match selection with PREWHERE
+    const query = `
+      WITH filtered_matches AS (
+        SELECT match_id
+        FROM participants
+        PREWHERE puuid = '${escapedPuuid}'
+        WHERE 1=1 ${whereSql}
+        ORDER BY game_start_ms DESC
+        LIMIT ${filters.count}
+      ),
+      team_totals AS (
+        SELECT 
+          match_id, 
+          team_id, 
+          sum(dmg_to_champ) as total_dmg, 
+          sum(gold_earned) as total_gold, 
+          sum(kills) as total_kills
+        FROM participants
+        WHERE match_id IN (SELECT match_id FROM filtered_matches)
+        GROUP BY match_id, team_id
+      )
+      SELECT
+        avg(p.total_cs / (m.duration_sec / 60.0)) as csMin,
+        avg(p.vision_score / (m.duration_sec / 60.0)) as visionMin,
+        avg(p.gold_earned / (m.duration_sec / 60.0)) as goldPerMinute,
+        avg(p.dmg_to_champ / (m.duration_sec / 60.0)) as damagePerMinute,
+        avg((p.kills + p.assists) / if(p.deaths = 0, 1, p.deaths)) as kda,
+        avg(p.win) as winrate,
+        count() as total,
+        avg(p.dmg_to_champ / if(t.total_dmg = 0, 1, t.total_dmg)) as damageShare,
+        avg(p.gold_earned / if(t.total_gold = 0, 1, t.total_gold)) as goldShare,
+        avg((p.kills + p.assists) / if(t.total_kills = 0, 1, t.total_kills)) as killParticipation
+      FROM participants p
+      JOIN matches m ON p.match_id = m.match_id
+      JOIN team_totals t ON p.match_id = t.match_id AND p.team_id = t.team_id
+      WHERE p.match_id IN (SELECT match_id FROM filtered_matches)
+        AND p.puuid = '${escapedPuuid}'
     `
 
-    const matchesResult = await clickhouse.query({
-      query: matchesSql,
-      format: 'JSONEachRow',
-    })
-    const matchIds = (await matchesResult.json<{ match_id: string }>()).map((m) => m.match_id)
+    const champsQuery = `
+      WITH filtered_matches AS (
+        SELECT match_id
+        FROM participants
+        PREWHERE puuid = '${escapedPuuid}'
+        WHERE 1=1 ${whereSql}
+        ORDER BY game_start_ms DESC
+        LIMIT ${filters.count}
+      )
+      SELECT
+        champion_id as championId,
+        count() as games,
+        avg(win) as winrate,
+        avg((kills + assists) / if(deaths = 0, 1, deaths)) as kda
+      FROM participants
+      WHERE match_id IN (SELECT match_id FROM filtered_matches)
+        AND puuid = '${escapedPuuid}'
+      GROUP BY championId
+      ORDER BY games DESC, kda DESC
+      LIMIT 3
+    `
 
-    if (!matchIds.length) {
+    const [globalRes, champsRes] = await Promise.all([
+      clickhouse.query({ query, format: 'JSONEachRow' }),
+      clickhouse.query({ query: champsQuery, format: 'JSONEachRow' }),
+    ])
+
+    const globalRows = await globalRes.json<any>()
+    const champions = await champsRes.json<any>()
+
+    if (!globalRows.length || globalRows[0].total === 0) {
       return {
         global: {
           csMin: 0,
@@ -171,55 +225,7 @@ export class ClickhouseService {
       }
     }
 
-    const matchIdsStr = matchIds.map((id) => `'${id}'`).join(',')
-
-    const globalQuery = `
-      SELECT
-        avg(p.total_cs / (m.duration_sec / 60)) as csMin,
-        avg(p.vision_score / (m.duration_sec / 60)) as visionMin,
-        avg(p.gold_earned / (m.duration_sec / 60)) as goldPerMinute,
-        avg(p.dmg_to_champ / (m.duration_sec / 60)) as damagePerMinute,
-        avg((p.kills + p.assists) / if(p.deaths = 0, 1, p.deaths)) as kda,
-        avg(p.win) as winrate,
-        count() as total,
-        
-        -- Approximate shares (avg of shares)
-        avg(p.dmg_to_champ / if(team.total_dmg = 0, 1, team.total_dmg)) as damageShare,
-        avg(p.gold_earned / if(team.total_gold = 0, 1, team.total_gold)) as goldShare,
-        avg((p.kills + p.assists) / if(team.total_kills = 0, 1, team.total_kills)) as killParticipation
-
-      FROM participants p
-      JOIN matches m ON p.match_id = m.match_id
-      JOIN (
-        SELECT match_id, team_id, sum(dmg_to_champ) as total_dmg, sum(gold_earned) as total_gold, sum(kills) as total_kills
-        FROM participants
-        WHERE match_id IN (${matchIdsStr})
-        GROUP BY match_id, team_id
-      ) as team ON p.match_id = team.match_id AND p.team_id = team.team_id
-      WHERE p.match_id IN (${matchIdsStr}) AND p.puuid = '${escapeClickhouseString(puuid)}'
-    `
-
-    const champsQuery = `
-      SELECT
-        champion_id as championId,
-        count() as games,
-        avg(win) as winrate,
-        avg((kills + assists) / if(deaths = 0, 1, deaths)) as kda
-      FROM participants
-      WHERE match_id IN (${matchIdsStr}) AND puuid = '${escapeClickhouseString(puuid)}'
-      GROUP BY championId
-      ORDER BY games DESC, kda DESC
-      LIMIT 3
-    `
-
-    const [globalRes, champsRes] = await Promise.all([
-      clickhouse.query({ query: globalQuery, format: 'JSONEachRow' }),
-      clickhouse.query({ query: champsQuery, format: 'JSONEachRow' }),
-    ])
-
-    const global = (await globalRes.json<any>())[0]
-    const champions = await champsRes.json<any>()
-
+    const global = globalRows[0]
     return {
       global: {
         csMin: global.csMin,
@@ -238,38 +244,32 @@ export class ClickhouseService {
   }
 
   async getSummonerChampionStats(puuid: string, count: number): Promise<SummonerChampionStats[]> {
+    const escapedPuuid = escapeClickhouseString(puuid)
     const query = `
-      WITH
-        my_matches AS (
-          SELECT
-            match_id,
-            game_start_ms,
-            duration_sec
-          FROM matches
-          WHERE match_id IN (
-            SELECT match_id
-            FROM participants
-            WHERE puuid = '${escapeClickhouseString(puuid)}'
-          )
-          ORDER BY game_start_ms DESC
-          LIMIT ${count}
-        )
+      WITH my_matches AS (
+        SELECT match_id
+        FROM participants
+        PREWHERE puuid = '${escapedPuuid}'
+        ORDER BY game_start_ms DESC
+        LIMIT ${count}
+      )
       SELECT
-        champion_id as championId,
+        p.champion_id as championId,
         count() as games,
-        sum(win) as wins,
-        avg(win) as winrate,
-        avg((kills + assists) / if(deaths = 0, 1, deaths)) as kda,
-        avg(kills) as avgKills,
-        avg(deaths) as avgDeaths,
-        avg(assists) as avgAssists,
-        avg(total_cs / (duration_sec / 60)) as csMin,
-        avg(gold_earned / (duration_sec / 60)) as goldMin,
-        avg(dmg_to_champ / (duration_sec / 60)) as damageMin
+        sum(p.win) as wins,
+        avg(p.win) as winrate,
+        avg((p.kills + p.assists) / if(p.deaths = 0, 1, p.deaths)) as kda,
+        avg(p.kills) as avgKills,
+        avg(p.deaths) as avgDeaths,
+        avg(p.assists) as avgAssists,
+        avg(p.total_cs / (m.duration_sec / 60.0)) as csMin,
+        avg(p.gold_earned / (m.duration_sec / 60.0)) as goldMin,
+        avg(p.dmg_to_champ / (m.duration_sec / 60.0)) as damageMin
       FROM participants p
-      JOIN my_matches m ON p.match_id = m.match_id
-      WHERE puuid = '${escapeClickhouseString(puuid)}'
-      GROUP BY championId
+      JOIN matches m ON p.match_id = m.match_id
+      WHERE p.match_id IN (SELECT match_id FROM my_matches)
+        AND p.puuid = '${escapedPuuid}'
+      GROUP BY p.champion_id
       ORDER BY games DESC
     `
 
@@ -293,24 +293,30 @@ export class ClickhouseService {
   ) {
     const count = filters.count ?? 15
     const offset = filters.offset ?? 0
+    const escapedPuuid = escapeClickhouseString(puuid)
 
-    const whereClauses = [`puuid = '${escapeClickhouseString(puuid)}'`]
-
+    // Build WHERE clauses for secondary filters (queue_id now on participants directly)
+    const whereClauses: string[] = []
     if (filters.queueIds?.length) {
       whereClauses.push(`queue_id IN (${filters.queueIds.join(',')})`)
     }
-
     if (filters.championId) {
       whereClauses.push(`champion_id = ${filters.championId}`)
     }
-
     if (filters.role && filters.role !== 'all') {
-      whereClauses.push(`team_position = '${filters.role}'`)
+      whereClauses.push(`team_position = '${escapeClickhouseString(filters.role)}'`)
     }
-
-    const whereSql = whereClauses.join(' AND ')
+    const whereSql = whereClauses.length ? `AND ${whereClauses.join(' AND ')}` : ''
 
     const query = `
+      WITH my_matches AS (
+        SELECT match_id
+        FROM participants
+        PREWHERE puuid = '${escapedPuuid}'
+        WHERE 1=1 ${whereSql}
+        ORDER BY game_start_ms DESC
+        LIMIT ${count} OFFSET ${offset}
+      )
       SELECT
         m.match_id as matchId,
         m.game_start_ms as gameStartMs,
@@ -347,13 +353,7 @@ export class ClickhouseService {
         ) as participants
       FROM matches m
       JOIN participants p ON m.match_id = p.match_id
-      WHERE m.match_id IN (
-        SELECT match_id
-        FROM participants
-        WHERE ${whereSql}
-        ORDER BY game_start_ms DESC
-        LIMIT ${count} OFFSET ${offset}
-      )
+      WHERE m.match_id IN (SELECT match_id FROM my_matches)
       GROUP BY m.match_id, m.game_start_ms, m.duration_sec, m.queue_id, m.patch
       ORDER BY gameStartMs DESC
     `
@@ -400,11 +400,12 @@ export class ClickhouseService {
       summonerLevel: number
     }>
   > {
+    const escapedPuuid = escapeClickhouseString(puuid)
     const query = `
       WITH my_matches AS (
         SELECT match_id
         FROM participants
-        WHERE puuid = '${escapeClickhouseString(puuid)}'
+        PREWHERE puuid = '${escapedPuuid}'
         ORDER BY game_start_ms DESC
         LIMIT ${limit}
       )

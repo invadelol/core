@@ -90,6 +90,7 @@ export function buildParticipantRows(
   info: any
 ): ClickhouseParticipantRow[] {
   const participants: any[] = Array.isArray(info.participants) ? info.participants : []
+  const queueId = toInt(info.queueId ?? 0, 0)
 
   return participants
     .map((p) => {
@@ -102,6 +103,7 @@ export function buildParticipantRows(
         match_id: matchId,
         platform,
         game_start_ms: gameStartMs,
+        queue_id: queueId,
 
         puuid: asString(p.puuid),
         riot_id_game_name: asString(p.riotIdGameName),
