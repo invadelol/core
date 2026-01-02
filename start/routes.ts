@@ -8,7 +8,10 @@
 */
 
 import router from '@adonisjs/core/services/router'
-import AutoSwagger from 'adonis-autoswagger'
+import AutoSwaggerModule from 'adonis-autoswagger'
+
+const AutoSwagger = AutoSwaggerModule.default ?? AutoSwaggerModule
+
 import swagger from '#config/swagger'
 
 import { middleware } from '#start/middleware'
@@ -50,11 +53,11 @@ router
 router.put('/summoners/puuid/:puuid/increment', [SummonersController, 'incrementViews'])
 
 router.get('/swagger', async () => {
-  return AutoSwagger.default.docs(router.toJSON(), swagger)
+  return AutoSwagger.docs(router.toJSON(), swagger)
 })
 
 router.get('/docs', async () => {
-  return AutoSwagger.default.ui('/swagger', swagger)
+  return AutoSwagger.ui('/swagger', swagger)
 })
 
 router.get('/health', [HealthChecksController, 'handle'])
