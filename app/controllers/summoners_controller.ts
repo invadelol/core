@@ -7,6 +7,20 @@ import { syncSummonerValidator, getStatsValidator } from '#validators/summoner'
 
 export default class SummonersController {
   /**
+   * Search summoners
+   * @paramQuery q - Search query
+   * @paramQuery limit - Max results (default 10, max 50)
+   * @responseBody 200 - <Summoner[]>
+   */
+  async search({ request, response }: HttpContext) {
+    const q = request.input('q', '')
+    const limit = Math.min(Number(request.input('limit', 10)) || 10, 50)
+
+    const summoners = await summonerService.search(q, limit)
+    return response.ok(summoners)
+  }
+
+  /**
    * Sync summoner data
    * @requestBody <syncSummonerValidator>
    * @responseBody 200 - { summoner: <Summoner>, matches: <Match[]> }

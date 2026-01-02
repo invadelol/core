@@ -33,5 +33,3 @@ server.use([
  * requests with a registered route.
  */
 router.use([() => import('@adonisjs/core/bodyparser_middleware')])
-
-

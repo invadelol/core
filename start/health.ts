@@ -5,8 +5,8 @@ import { DbCheck } from '@adonisjs/lucid/database'
 import { RedisCheck } from '@adonisjs/redis'
 
 export const healthChecks = new HealthChecks().register([
-    new DiskSpaceCheck(),
-    new MemoryHeapCheck(),
-    new DbCheck(db.connection()),
-    new RedisCheck(redis.connection()),
+  new DiskSpaceCheck(),
+  new MemoryHeapCheck(),
+  new DbCheck(db.connection()),
+  new RedisCheck(redis.connection()),
 ])
