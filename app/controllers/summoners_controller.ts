@@ -1,9 +1,15 @@
 import type { HttpContext } from '@adonisjs/core/http'
 
-import riotApiService from '#services/riot_api_service'
+import riotApiService from '#services/riot/api'
 import summonerService from '#services/summoner_service'
 import matchService from '#services/matches_service'
-import { syncSummonerValidator, getStatsValidator } from '#validators/summoner'
+import {
+  syncSummonerValidator,
+  getStatsValidator,
+  puuidParamsValidator,
+  getChampionStatsValidator,
+  getMatchesValidator,
+} from '#validators/summoner'
 
 export default class SummonersController {
   /**
@@ -61,7 +67,8 @@ export default class SummonersController {
    * @paramPath puuid - Summoner PUUID
    * @responseBody 200 - <Activity[]>
    */
-  async activity({ params, response }: HttpContext) {
+  async activity({ request, params, response }: HttpContext) {
+    await request.validateUsing(puuidParamsValidator, { data: params })
     const { puuid } = params
     const activity = await summonerService.getActivity(puuid)
     return response.ok(activity)
@@ -72,7 +79,8 @@ export default class SummonersController {
    * @paramPath puuid - Summoner PUUID
    * @responseBody 200 - <Friend[]>
    */
-  async friends({ params, response }: HttpContext) {
+  async friends({ request, params, response }: HttpContext) {
+    await request.validateUsing(puuidParamsValidator, { data: params })
     const { puuid } = params
     const friends = await summonerService.getFriends(puuid)
     return response.ok(friends)
@@ -83,7 +91,8 @@ export default class SummonersController {
    * @paramPath puuid - Summoner PUUID
    * @responseBody 200 - { current: <Rank[]>, history: <Rank[]> }
    */
-  async ranks({ params, response }: HttpContext) {
+  async ranks({ request, params, response }: HttpContext) {
+    await request.validateUsing(puuidParamsValidator, { data: params })
     const { puuid } = params
     const ranks = await summonerService.getRanks(puuid)
     return response.ok(ranks)
@@ -96,6 +105,7 @@ export default class SummonersController {
    * @responseBody 200 - <Stats>
    */
   async stats({ request, params, response }: HttpContext) {
+    await request.validateUsing(puuidParamsValidator, { data: params })
     const { puuid } = params
     const payload = await request.validateUsing(getStatsValidator)
 
@@ -110,8 +120,8 @@ export default class SummonersController {
    * @responseBody 200 - <ChampionStats[]>
    */
   async champions({ request, params, response }: HttpContext) {
+    await request.validateUsing(puuidParamsValidator, { data: params })
     const { puuid } = params
-    const { getChampionStatsValidator } = await import('#validators/summoner')
     const { count } = await request.validateUsing(getChampionStatsValidator)
 
     const stats = await summonerService.getChampionStats(puuid, count)
@@ -125,8 +135,8 @@ export default class SummonersController {
    * @responseBody 200 - <Match[]>
    */
   async matches({ request, params, response }: HttpContext) {
+    await request.validateUsing(puuidParamsValidator, { data: params })
     const { puuid } = params
-    const { getMatchesValidator } = await import('#validators/summoner')
     const payload = await request.validateUsing(getMatchesValidator)
 
     const matches = await summonerService.getMatches(puuid, payload)
@@ -139,7 +149,8 @@ export default class SummonersController {
    * @responseBody 200 - { viewCount: number }
    * @responseBody 404 - Summoner not found
    */
-  async incrementViews({ params, response }: HttpContext) {
+  async incrementViews({ request, params, response }: HttpContext) {
+    await request.validateUsing(puuidParamsValidator, { data: params })
     const { puuid } = params
     const summoner = await summonerService.incrementViewCount(puuid)
 

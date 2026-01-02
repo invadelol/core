@@ -13,7 +13,6 @@ import AutoSwaggerModule from 'adonis-autoswagger'
 const AutoSwagger = AutoSwaggerModule.default ?? AutoSwaggerModule
 
 import swagger from '#config/swagger'
-
 import { middleware } from '#start/middleware'
 
 const SummonersController = () => import('#controllers/summoners_controller')
@@ -31,21 +30,27 @@ router.post('/summoners/sync', [SummonersController, 'sync'])
 
 router.get('/summoners/:platform/:summoner', [SummonersController, 'show'])
 
+// PUUID-based routes (validated in controller)
 router
   .get('/summoners/puuid/:puuid/activity', [SummonersController, 'activity'])
   .use(middleware.httpCache())
+
 router
   .get('/summoners/puuid/:puuid/friends', [SummonersController, 'friends'])
   .use(middleware.httpCache())
+
 router
   .get('/summoners/puuid/:puuid/ranks', [SummonersController, 'ranks'])
   .use(middleware.httpCache())
+
 router
   .get('/summoners/puuid/:puuid/stats', [SummonersController, 'stats'])
   .use(middleware.httpCache())
+
 router
   .get('/summoners/puuid/:puuid/champions', [SummonersController, 'champions'])
   .use(middleware.httpCache())
+
 router
   .get('/summoners/puuid/:puuid/matches', [SummonersController, 'matches'])
   .use(middleware.httpCache())

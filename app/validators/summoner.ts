@@ -1,5 +1,18 @@
 import vine from '@vinejs/vine'
 
+/**
+ * Validates PUUID route parameter
+ * PUUIDs are exactly 78 characters: base64url encoded
+ */
+export const puuidParamsValidator = vine.compile(
+  vine.object({
+    puuid: vine
+      .string()
+      .trim()
+      .regex(/^[a-zA-Z0-9_-]{78}$/),
+  })
+)
+
 export const summonerParamsValidator = vine.compile(
   vine.object({
     summoner: vine

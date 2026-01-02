@@ -1,11 +1,12 @@
-import riotApiService from '#services/riot_api_service'
-import type { RiotAPITypes } from '#services/riot_api_service'
+import riotApiService, { type RiotAPITypes } from '#services/riot/api'
+import matchRepository from '#services/analytics/match_repository'
+import ingestionService from '#services/analytics/ingestion_service'
 import SummonerUpdated from '#events/summoner_updated'
 import Summoner from '#models/summoner'
-import clickhouseService from '#services/clickhouse_service'
 import compressionService from '#services/compression_service'
 import drive from '@adonisjs/drive/services/main'
 import type { PlatformId } from '@fightmegg/riot-api'
+import { DEFAULT_MATCH_COUNT } from '#config/constants'
 
 type MatchCluster = Exclude<RiotAPITypes.Cluster, PlatformId.ESPORTS>
 
@@ -15,7 +16,7 @@ class MatchesService {
       puuid,
       cluster,
       params: {
-        count: 15,
+        count: DEFAULT_MATCH_COUNT,
       },
     })
 
@@ -23,7 +24,7 @@ class MatchesService {
       return []
     }
 
-    const existingIds = await clickhouseService.getExistingMatchIds(matchIds)
+    const existingIds = await matchRepository.getExistingMatchIds(matchIds)
     const newIds = matchIds.filter((id) => !existingIds.has(id))
 
     if (!newIds.length) {
@@ -51,14 +52,13 @@ class MatchesService {
     const filePath = `matches/${matchId}.json`
     const r2 = drive.use('r2')
 
-    // Check if file already exists in R2 to avoid write conflicts
     const fileExists = await r2.exists(filePath)
     if (!fileExists) {
       const compressed = await compressionService.compress(matchData)
       await r2.put(filePath, compressed)
     }
 
-    const meta = await clickhouseService.ingestMatch(matchId, matchData)
+    const meta = await ingestionService.ingestMatch(matchId, matchData)
 
     return {
       matchId,
