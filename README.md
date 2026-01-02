@@ -118,7 +118,7 @@ TODO list :
 - surtout faire en sorte que les ranks ça fonctionne
 - aussi ajouter un search pour les players, en ajoutant un ts vector.
 - add a statistics global endpoint
-- faire en sorte d'ajouter tout les summoners récupéré avec les matches. c'est plus pratique pour la recherche après. 
+- faire en sorte d'ajouter tout les summoners récupéré avec les matches. c'est plus pratique pour la recherche après.
 - add leaderboard
 - make the docs work
 
