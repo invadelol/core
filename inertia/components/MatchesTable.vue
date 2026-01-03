@@ -52,7 +52,7 @@ const queueNames: Record<number, string> = {
 
 onMounted(async () => {
   try {
-    const res = await fetch(`/summoners/puuid/${props.puuid}/matches?count=15`)
+    const res = await fetch(`/api/summoners/puuid/${props.puuid}/matches?count=15`)
     if (res.ok) {
       matches.value = await res.json()
       // Initialize default tabs

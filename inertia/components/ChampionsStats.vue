@@ -24,7 +24,7 @@ const isLoading = ref(true)
 
 onMounted(async () => {
   try {
-    const res = await fetch(`/summoners/puuid/${props.puuid}/champions?count=100`)
+    const res = await fetch(`/api/summoners/puuid/${props.puuid}/champions?count=100`)
     if (res.ok) {
       champions.value = await res.json()
     }

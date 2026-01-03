@@ -24,7 +24,7 @@ watch(query, (val) => {
 async function search(q: string) {
   isLoading.value = true
   try {
-    const res = await fetch(`/summoners/search?q=${encodeURIComponent(q)}&limit=10`)
+    const res = await fetch(`/api/summoners/search?q=${encodeURIComponent(q)}&limit=10`)
     if (res.ok) {
       results.value = await res.json()
       showDropdown.value = results.value.length > 0

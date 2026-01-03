@@ -18,39 +18,43 @@ import { middleware } from '#start/middleware'
 const SummonersController = () => import('#controllers/summoners_controller')
 const HealthChecksController = () => import('#controllers/health_checks_controller')
 
-router.get('/summoners/search', [SummonersController, 'search'])
+// API routes group
+router.group(() => {
+  router.get('/summoners/search', [SummonersController, 'search'])
+  router.post('/summoners/sync', [SummonersController, 'sync'])
+  router.get('/summoners/:platform/:summoner', [SummonersController, 'show'])
 
-router.post('/summoners/sync', [SummonersController, 'sync'])
+  // PUUID-based routes
+  router
+    .get('/summoners/puuid/:puuid/activity', [SummonersController, 'activity'])
+    .use(middleware.httpCache())
 
-router.get('/summoners/:platform/:summoner', [SummonersController, 'show'])
+  router
+    .get('/summoners/puuid/:puuid/friends', [SummonersController, 'friends'])
+    .use(middleware.httpCache())
 
-// PUUID-based routes (validated in controller)
-router
-  .get('/summoners/puuid/:puuid/activity', [SummonersController, 'activity'])
-  .use(middleware.httpCache())
+  router
+    .get('/summoners/puuid/:puuid/ranks', [SummonersController, 'ranks'])
+    .use(middleware.httpCache())
 
-router
-  .get('/summoners/puuid/:puuid/friends', [SummonersController, 'friends'])
-  .use(middleware.httpCache())
+  router
+    .get('/summoners/puuid/:puuid/stats', [SummonersController, 'stats'])
+    .use(middleware.httpCache())
 
-router
-  .get('/summoners/puuid/:puuid/ranks', [SummonersController, 'ranks'])
-  .use(middleware.httpCache())
+  router
+    .get('/summoners/puuid/:puuid/champions', [SummonersController, 'champions'])
+    .use(middleware.httpCache())
 
-router
-  .get('/summoners/puuid/:puuid/stats', [SummonersController, 'stats'])
-  .use(middleware.httpCache())
+  router
+    .get('/summoners/puuid/:puuid/matches', [SummonersController, 'matches'])
+    .use(middleware.httpCache())
 
-router
-  .get('/summoners/puuid/:puuid/champions', [SummonersController, 'champions'])
-  .use(middleware.httpCache())
+  router.put('/summoners/puuid/:puuid/increment', [SummonersController, 'incrementViews'])
 
-router
-  .get('/summoners/puuid/:puuid/matches', [SummonersController, 'matches'])
-  .use(middleware.httpCache())
+  router.get('/health', [HealthChecksController, 'handle'])
+}).prefix('/api')
 
-router.put('/summoners/puuid/:puuid/increment', [SummonersController, 'incrementViews'])
-
+// Swagger docs (outside API group)
 router.get('/swagger', async () => {
   return AutoSwagger.docs(router.toJSON(), swagger)
 })
@@ -59,11 +63,9 @@ router.get('/docs', async () => {
   return AutoSwagger.ui('/swagger', swagger)
 })
 
-router.get('/health', [HealthChecksController, 'handle'])
+// Inertia pages
+router.on('/').renderInertia('home')
 
 router.get('/:summoner', ({ inertia, params }) => {
   return inertia.render('summoner', { summoner: params.summoner })
 })
-
-router.on('/').renderInertia('home')
-
