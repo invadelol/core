@@ -46,14 +46,14 @@ const parsedSummoner = computed(() => {
 onMounted(async () => {
   try {
     const platform = 'EUW1'
-    const res = await fetch(`/summoners/${platform}/${encodeURIComponent(props.summoner)}`)
+    const res = await fetch(`/api/summoners/${platform}/${encodeURIComponent(props.summoner)}`)
     
     if (res.ok) {
       const data = await res.json()
       summonerData.value = data.summoner
     } else if (res.status === 404) {
       // Try to sync the summoner first before giving up
-      const syncRes = await fetch('/summoners/sync', {
+      const syncRes = await fetch('/api/summoners/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -64,7 +64,7 @@ onMounted(async () => {
       
       if (syncRes.ok) {
         // Sync succeeded, retry fetching the summoner
-        const retryRes = await fetch(`/summoners/${platform}/${encodeURIComponent(props.summoner)}`)
+        const retryRes = await fetch(`/api/summoners/${platform}/${encodeURIComponent(props.summoner)}`)
         if (retryRes.ok) {
           const data = await retryRes.json()
           summonerData.value = data.summoner
@@ -88,7 +88,7 @@ onMounted(async () => {
     setTimeout(async () => {
       if (!summonerData.value) return
       try {
-        const viewRes = await fetch(`/summoners/puuid/${summonerData.value.puuid}/increment`, {
+        const viewRes = await fetch(`/api/summoners/puuid/${summonerData.value.puuid}/increment`, {
           method: 'PUT'
         })
         if (viewRes.ok) {
@@ -109,7 +109,7 @@ async function syncSummoner() {
   syncMessage.value = null
   
   try {
-    const res = await fetch('/summoners/sync', {
+    const res = await fetch('/api/summoners/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

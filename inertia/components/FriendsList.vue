@@ -22,7 +22,7 @@ const DDRAGON_BASE = 'https://ddragon.leagueoflegends.com/cdn/14.24.1/img'
 
 onMounted(async () => {
   try {
-    const res = await fetch(`/summoners/puuid/${props.puuid}/friends`)
+    const res = await fetch(`/api/summoners/puuid/${props.puuid}/friends`)
     if (res.ok) {
       friends.value = await res.json()
     }

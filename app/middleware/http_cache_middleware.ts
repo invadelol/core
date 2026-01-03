@@ -64,7 +64,7 @@ export default class HttpCacheMiddleware {
     await this.saveToCache(cacheKey, body, response.getHeaders() as Record<string, string>)
 
     // Track cache key for this puuid (for invalidation via SummonerUpdated event)
-    const puuidMatch = url.match(/\/summoners\/puuid\/([a-zA-Z0-9_-]+)/)
+    const puuidMatch = url.match(/\/api\/summoners\/puuid\/([a-zA-Z0-9_-]+)/)
     if (puuidMatch?.[1]) {
       await redis.sadd(`summoner:${puuidMatch[1]}:cache_keys`, cacheKey)
     }
@@ -96,6 +96,6 @@ export default class HttpCacheMiddleware {
       const json = JSON.stringify(payload)
       const compressed = await brotliCompressAsync(Buffer.from(json, 'utf8'))
       await redis.setex(key, CACHE_TTL_SECONDS, compressed)
-    } catch {}
+    } catch { }
   }
 }

@@ -44,7 +44,7 @@ const queueNames: Record<string, string> = {
 
 onMounted(async () => {
   try {
-    const res = await fetch(`/summoners/puuid/${props.puuid}/ranks`)
+    const res = await fetch(`/api/summoners/puuid/${props.puuid}/ranks`)
     if (res.ok) {
       ranks.value = await res.json()
     }
