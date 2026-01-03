@@ -7,7 +7,7 @@ import matchRepository from '#services/analytics/match_repository'
 import Summoner from '#models/summoner'
 import SummonerHistory from '#models/summoner_history'
 import Rank from '#models/rank'
-import { QUEUE_IDS, type RiotQueueType, type RiotRole } from '#services/riot/constants'
+import { QUEUE_IDS, type RiotQueueType, type RiotRole } from '#constants/riot'
 import {
   DEFAULT_STATS_COUNT,
   DEFAULT_MATCH_COUNT,
