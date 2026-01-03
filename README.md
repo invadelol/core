@@ -19,6 +19,13 @@ npm install
 # Copy environment file
 cp .env.example .env
 
+# Launch the compose stack
+docker compose up -d
+
+# Run migrations
+node ace migration:run
+node ace clickhouse:migration:run
+
 # Run development server
 npm run dev
 ```
