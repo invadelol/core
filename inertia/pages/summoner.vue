@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3'
 import { ref, onMounted, computed } from 'vue'
-import { Home, RefreshCw } from 'lucide-vue-next'
+import { Home, RefreshCw, Eye } from 'lucide-vue-next'
 
 import SearchBar from '../components/SearchBar.vue'
 import MatchesTable from '../components/MatchesTable.vue'
@@ -9,6 +9,7 @@ import ActivityChart from '../components/ActivityChart.vue'
 import FriendsList from '../components/FriendsList.vue'
 import ChampionsStats from '../components/ChampionsStats.vue'
 import StatisticsPanel from '../components/StatisticsPanel.vue'
+import RankDisplay from '../components/RankDisplay.vue'
 
 const props = defineProps<{
   summoner: string
@@ -28,6 +29,7 @@ const isLoading = ref(true)
 const error = ref<string | null>(null)
 const isSyncing = ref(false)
 const syncMessage = ref<string | null>(null)
+const viewCount = ref<number | null>(null)
 
 const DDRAGON_BASE = 'https://ddragon.leagueoflegends.com/cdn/14.24.1/img'
 
@@ -79,6 +81,24 @@ onMounted(async () => {
     error.value = 'Failed to load summoner'
   } finally {
     isLoading.value = false
+  }
+  
+  // Track view after 3 seconds
+  if (summonerData.value) {
+    setTimeout(async () => {
+      if (!summonerData.value) return
+      try {
+        const viewRes = await fetch(`/summoners/puuid/${summonerData.value.puuid}/increment`, {
+          method: 'PUT'
+        })
+        if (viewRes.ok) {
+          const data = await viewRes.json()
+          viewCount.value = Number(data.viewCount)
+        }
+      } catch (e) {
+        // Silent fail for view tracking
+      }
+    }, 3000)
   }
 })
 
@@ -161,6 +181,10 @@ async function syncSummoner() {
             </h1>
             <p class="text-gray-500 mt-1">
               Level {{ summonerData.summonerLevel || 'Unknown' }} • {{ summonerData.platform }}
+              <span v-if="viewCount !== null" class="ml-2 inline-flex items-center gap-1">
+                <Eye class="w-4 h-4" />
+                {{ viewCount.toLocaleString() }}
+              </span>
             </p>
             <p v-if="syncMessage" class="text-sm mt-1" :class="syncMessage.includes('new matches') ? 'text-green-600' : 'text-gray-500'">
               {{ syncMessage }}
@@ -196,6 +220,7 @@ async function syncSummoner() {
 
           <!-- Sidebar -->
           <div class="space-y-6">
+            <RankDisplay :puuid="summonerData.puuid" />
             <FriendsList :puuid="summonerData.puuid" />
             <ChampionsStats :puuid="summonerData.puuid" />
           </div>
