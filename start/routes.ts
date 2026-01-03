@@ -18,12 +18,6 @@ import { middleware } from '#start/middleware'
 const SummonersController = () => import('#controllers/summoners_controller')
 const HealthChecksController = () => import('#controllers/health_checks_controller')
 
-router.get('/', async () => {
-  return {
-    hello: 'world',
-  }
-})
-
 router.get('/summoners/search', [SummonersController, 'search'])
 
 router.post('/summoners/sync', [SummonersController, 'sync'])
@@ -66,3 +60,5 @@ router.get('/docs', async () => {
 })
 
 router.get('/health', [HealthChecksController, 'handle'])
+router.on('/').renderInertia('home')
+

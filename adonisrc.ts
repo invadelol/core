@@ -55,6 +55,9 @@ export default defineConfig({
     () => import('@adonisjs/cache/cache_provider'),
     () => import('@adonisjs/drive/drive_provider'),
     () => import('@adonisjs/redis/redis_provider'),
+    () => import('@adonisjs/inertia/inertia_provider'),
+    () => import('@adonisjs/vite/vite_provider'),
+    () => import('@adonisjs/core/providers/edge_provider')
   ],
 
   /*
@@ -95,4 +98,18 @@ export default defineConfig({
     ],
     forceExit: false,
   },
+  metaFiles: [
+    {
+      pattern: 'public/**',
+      reloadServer: false,
+    },
+    {
+      pattern: 'resources/views/**/*.edge',
+      reloadServer: false,
+    }
+  ],
+  hooks: {
+    onBuildStarting: [() => import('@adonisjs/vite/build_hook')],
+  },
+  assetsBundler: false,
 })
