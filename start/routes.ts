@@ -60,5 +60,10 @@ router.get('/docs', async () => {
 })
 
 router.get('/health', [HealthChecksController, 'handle'])
+
+router.get('/:summoner', ({ inertia, params }) => {
+  return inertia.render('summoner', { summoner: params.summoner })
+})
+
 router.on('/').renderInertia('home')
 
