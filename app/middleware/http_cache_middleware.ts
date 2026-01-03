@@ -4,11 +4,7 @@ import { brotliCompress, brotliDecompress } from 'node:zlib'
 import { promisify } from 'node:util'
 
 import env from '#start/env'
-import {
-  CACHE_FRESH_TTL_SECONDS,
-  CACHE_TTL_SECONDS,
-  CDN_MAX_AGE_SECONDS,
-} from '#config/constants'
+import { CACHE_FRESH_TTL_SECONDS, CACHE_TTL_SECONDS, CDN_MAX_AGE_SECONDS } from '#config/constants'
 
 const brotliCompressAsync = promisify(brotliCompress)
 const brotliDecompressAsync = promisify(brotliDecompress)
@@ -100,6 +96,6 @@ export default class HttpCacheMiddleware {
       const json = JSON.stringify(payload)
       const compressed = await brotliCompressAsync(Buffer.from(json, 'utf8'))
       await redis.setex(key, CACHE_TTL_SECONDS, compressed)
-    } catch { }
+    } catch {}
   }
 }

@@ -34,34 +34,34 @@ npm run dev
 
 ### Health & Docs
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/` | Hello world |
-| `GET` | `/health` | Health check |
-| `GET` | `/docs` | Swagger UI |
-| `GET` | `/swagger` | OpenAPI spec |
+| Method | Endpoint   | Description  |
+| ------ | ---------- | ------------ |
+| `GET`  | `/`        | Hello world  |
+| `GET`  | `/health`  | Health check |
+| `GET`  | `/docs`    | Swagger UI   |
+| `GET`  | `/swagger` | OpenAPI spec |
 
 ### Summoner Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/summoners/search?q=` | Search summoners by name |
-| `POST` | `/summoners/sync` | Sync summoner data from Riot API |
-| `GET` | `/summoners/:platform/:summoner` | Get summoner by GameName-TagLine |
+| Method | Endpoint                         | Description                      |
+| ------ | -------------------------------- | -------------------------------- |
+| `GET`  | `/summoners/search?q=`           | Search summoners by name         |
+| `POST` | `/summoners/sync`                | Sync summoner data from Riot API |
+| `GET`  | `/summoners/:platform/:summoner` | Get summoner by GameName-TagLine |
 
 ### PUUID-based Analytics
 
 All routes below require a valid PUUID and are cached:
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/summoners/puuid/:puuid/activity` | Get summoner match activity |
-| `GET` | `/summoners/puuid/:puuid/friends` | Get frequently played with players |
-| `GET` | `/summoners/puuid/:puuid/ranks` | Get current and historical ranks |
-| `GET` | `/summoners/puuid/:puuid/stats` | Get overall summoner stats |
-| `GET` | `/summoners/puuid/:puuid/champions` | Get champion-specific stats |
-| `GET` | `/summoners/puuid/:puuid/matches` | Get recent matches |
-| `PUT` | `/summoners/puuid/:puuid/increment` | Increment profile view count |
+| Method | Endpoint                            | Description                        |
+| ------ | ----------------------------------- | ---------------------------------- |
+| `GET`  | `/summoners/puuid/:puuid/activity`  | Get summoner match activity        |
+| `GET`  | `/summoners/puuid/:puuid/friends`   | Get frequently played with players |
+| `GET`  | `/summoners/puuid/:puuid/ranks`     | Get current and historical ranks   |
+| `GET`  | `/summoners/puuid/:puuid/stats`     | Get overall summoner stats         |
+| `GET`  | `/summoners/puuid/:puuid/champions` | Get champion-specific stats        |
+| `GET`  | `/summoners/puuid/:puuid/matches`   | Get recent matches                 |
+| `PUT`  | `/summoners/puuid/:puuid/increment` | Increment profile view count       |
 
 ## Scripts
 
