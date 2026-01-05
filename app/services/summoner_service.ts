@@ -45,18 +45,22 @@ class SummonerService {
   normalize(summoner: string): { gameName: string; tagLine: string } | null {
     if (!summoner) return null
 
-    const [gameName, tagLine] = summoner.split('-', 2)
-    if (!gameName || !tagLine) return null
-
-    const decode = (s: string) => {
-      try {
-        return decodeURIComponent(s)
-      } catch {
-        return s
-      }
+    let decoded = summoner
+    try {
+      decoded = decodeURIComponent(summoner)
+    } catch {
+      // Keep original if decoding fails
     }
 
-    return { gameName: decode(gameName), tagLine: decode(tagLine) }
+    const lastHyphenIndex = decoded.lastIndexOf('-')
+    if (lastHyphenIndex === -1) return null
+
+    const gameName = decoded.substring(0, lastHyphenIndex)
+    const tagLine = decoded.substring(lastHyphenIndex + 1)
+
+    if (!gameName || !tagLine) return null
+
+    return { gameName, tagLine }
   }
 
   /**
