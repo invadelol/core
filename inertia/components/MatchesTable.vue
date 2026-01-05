@@ -56,7 +56,7 @@ onMounted(async () => {
     if (res.ok) {
       matches.value = await res.json()
       // Initialize default tabs
-      matches.value.forEach(m => {
+      matches.value.forEach((m) => {
         activeTab.value[m.matchId] = 'overview'
       })
     } else {
@@ -74,11 +74,11 @@ function toggleExpand(matchId: string) {
 }
 
 function getPlayerData(match: Match) {
-  return match.participants.find(p => p.puuid === props.puuid)
+  return match.participants.find((p) => p.puuid === props.puuid)
 }
 
 function getTeam(match: Match, teamId: number) {
-  return match.participants.filter(p => p.teamId === teamId)
+  return match.participants.filter((p) => p.teamId === teamId)
 }
 
 function formatDuration(seconds: number) {
@@ -114,30 +114,26 @@ function getKDA(kills: number, deaths: number, assists: number) {
 <template>
   <div class="bg-white rounded-lg shadow p-4">
     <h2 class="text-lg font-semibold mb-4">Match History</h2>
-    
-    <div v-if="isLoading" class="text-center py-8 text-gray-500">
-      Loading matches...
-    </div>
-    
+
+    <div v-if="isLoading" class="text-center py-8 text-gray-500">Loading matches...</div>
+
     <div v-else-if="error" class="text-center py-8 text-red-500">
       {{ error }}
     </div>
-    
+
     <div v-else-if="matches.length === 0" class="text-center py-8 text-gray-500">
       No matches found
     </div>
-    
+
     <div v-else class="space-y-2">
-      <div
-        v-for="match in matches"
-        :key="match.matchId"
-        class="border rounded-lg overflow-hidden"
-      >
+      <div v-for="match in matches" :key="match.matchId" class="border rounded-lg overflow-hidden">
         <!-- Match Row (Clickable) -->
         <div
           :class="[
             'flex items-center gap-4 p-3 cursor-pointer transition-colors',
-            getPlayerData(match)?.win ? 'bg-blue-50 hover:bg-blue-100' : 'bg-red-50 hover:bg-red-100'
+            getPlayerData(match)?.win
+              ? 'bg-blue-50 hover:bg-blue-100'
+              : 'bg-red-50 hover:bg-red-100',
           ]"
           @click="toggleExpand(match.matchId)"
         >
@@ -150,27 +146,34 @@ function getKDA(kills: number, deaths: number, assists: number) {
               {{ getPlayerData(match)?.win ? 'WIN' : 'LOSS' }}
             </span>
           </div>
-          
+
           <!-- Champion -->
           <img
             :src="`https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/${getPlayerData(match)?.championId}.png`"
             class="w-12 h-12 rounded"
             :alt="`Champion ${getPlayerData(match)?.championId}`"
           />
-          
+
           <!-- KDA -->
           <div class="flex-1">
             <div class="font-semibold">
-              {{ getPlayerData(match)?.kills }}/{{ getPlayerData(match)?.deaths }}/{{ getPlayerData(match)?.assists }}
+              {{ getPlayerData(match)?.kills }}/{{ getPlayerData(match)?.deaths }}/{{
+                getPlayerData(match)?.assists
+              }}
               <span class="text-gray-500 text-sm ml-1">
-                ({{ getKDA(getPlayerData(match)?.kills || 0, getPlayerData(match)?.deaths || 0, getPlayerData(match)?.assists || 0) }} KDA)
+                ({{
+                  getKDA(
+                    getPlayerData(match)?.kills || 0,
+                    getPlayerData(match)?.deaths || 0,
+                    getPlayerData(match)?.assists || 0
+                  )
+                }}
+                KDA)
               </span>
             </div>
-            <div class="text-sm text-gray-500">
-              {{ getPlayerData(match)?.cs }} CS
-            </div>
+            <div class="text-sm text-gray-500">{{ getPlayerData(match)?.cs }} CS</div>
           </div>
-          
+
           <!-- Items -->
           <div class="hidden md:flex gap-0.5">
             <template v-for="(itemId, idx) in getPlayerData(match)?.items || []" :key="idx">
@@ -182,21 +185,34 @@ function getKDA(kills: number, deaths: number, assists: number) {
               <div v-else class="w-6 h-6 bg-gray-300 rounded"></div>
             </template>
           </div>
-          
+
           <!-- Meta -->
           <div class="text-right text-sm text-gray-500 w-24">
             <div>{{ queueNames[match.queueId] || 'Custom' }}</div>
             <div>{{ formatDuration(match.duration) }} • {{ timeAgo(match.gameStartMs) }}</div>
           </div>
-          
+
           <!-- Expand indicator -->
           <div class="text-gray-400">
-            <svg :class="['w-5 h-5 transition-transform', expandedMatch === match.matchId && 'rotate-180']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            <svg
+              :class="[
+                'w-5 h-5 transition-transform',
+                expandedMatch === match.matchId && 'rotate-180',
+              ]"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 9l-7 7-7-7"
+              />
             </svg>
           </div>
         </div>
-        
+
         <!-- Expanded Details -->
         <div v-if="expandedMatch === match.matchId" class="border-t bg-gray-50 p-4">
           <!-- Tabs -->
@@ -208,16 +224,19 @@ function getKDA(kills: number, deaths: number, assists: number) {
                 'px-4 py-2 text-sm font-medium transition-colors -mb-px',
                 activeTab[match.matchId] === tab
                   ? 'border-b-2 border-blue-500 text-blue-600'
-                  : 'text-gray-500 hover:text-gray-700'
+                  : 'text-gray-500 hover:text-gray-700',
               ]"
               @click="activeTab[match.matchId] = tab"
             >
               {{ tab === 'overview' ? 'Overview' : tab === 'team1' ? 'Blue Team' : 'Red Team' }}
             </button>
           </div>
-          
+
           <!-- Overview Tab -->
-          <div v-if="activeTab[match.matchId] === 'overview'" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div
+            v-if="activeTab[match.matchId] === 'overview'"
+            class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm"
+          >
             <div class="bg-white p-3 rounded shadow-sm">
               <div class="text-gray-500">Duration</div>
               <div class="font-semibold">{{ formatDuration(match.duration) }}</div>
@@ -228,14 +247,18 @@ function getKDA(kills: number, deaths: number, assists: number) {
             </div>
             <div class="bg-white p-3 rounded shadow-sm">
               <div class="text-gray-500">Damage Dealt</div>
-              <div class="font-semibold">{{ (getPlayerData(match)?.damageDealt || 0).toLocaleString() }}</div>
+              <div class="font-semibold">
+                {{ (getPlayerData(match)?.damageDealt || 0).toLocaleString() }}
+              </div>
             </div>
             <div class="bg-white p-3 rounded shadow-sm">
               <div class="text-gray-500">Damage Taken</div>
-              <div class="font-semibold">{{ (getPlayerData(match)?.damageTaken || 0).toLocaleString() }}</div>
+              <div class="font-semibold">
+                {{ (getPlayerData(match)?.damageTaken || 0).toLocaleString() }}
+              </div>
             </div>
           </div>
-          
+
           <!-- Team Tabs -->
           <div v-else class="overflow-x-auto">
             <table class="w-full text-sm">

@@ -57,7 +57,11 @@ const statItems = [
   { key: 'visionMin', label: 'Vision/min', format: (v: number) => formatNumber(v, 2) },
   { key: 'goldPerMinute', label: 'Gold/min', format: (v: number) => formatNumber(v, 0) },
   { key: 'damagePerMinute', label: 'Damage/min', format: (v: number) => formatNumber(v, 0) },
-  { key: 'killParticipation', label: 'Kill Participation', format: (v: number) => formatPercent(v) },
+  {
+    key: 'killParticipation',
+    label: 'Kill Participation',
+    format: (v: number) => formatPercent(v),
+  },
   { key: 'damageShare', label: 'Damage Share', format: (v: number) => formatPercent(v) },
   { key: 'goldShare', label: 'Gold Share', format: (v: number) => formatPercent(v) },
 ]
@@ -66,20 +70,16 @@ const statItems = [
 <template>
   <div class="bg-white rounded-lg shadow p-4">
     <h2 class="text-lg font-semibold mb-4">Statistics</h2>
-    
-    <div v-if="isLoading" class="text-center py-8 text-gray-500">
-      Loading statistics...
-    </div>
-    
+
+    <div v-if="isLoading" class="text-center py-8 text-gray-500">Loading statistics...</div>
+
     <div v-else-if="!stats || stats.global.total === 0" class="text-center py-8 text-gray-500">
       No statistics available
     </div>
-    
+
     <div v-else class="space-y-4">
-      <div class="text-sm text-gray-500">
-        Based on {{ stats.global.total }} games
-      </div>
-      
+      <div class="text-sm text-gray-500">Based on {{ stats.global.total }} games</div>
+
       <div class="grid grid-cols-3 gap-4">
         <div
           v-for="item in statItems"
@@ -92,7 +92,7 @@ const statItems = [
           <div class="text-sm text-gray-500">{{ item.label }}</div>
         </div>
       </div>
-      
+
       <!-- Top Champions -->
       <div v-if="stats.champions.length > 0" class="mt-6">
         <h3 class="text-sm font-semibold text-gray-600 mb-2">Top Champions</h3>

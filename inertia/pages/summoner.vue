@@ -39,7 +39,7 @@ const parsedSummoner = computed(() => {
   if (lastDash === -1) return { gameName: decoded, tagLine: 'EUW' }
   return {
     gameName: decoded.substring(0, lastDash),
-    tagLine: decoded.substring(lastDash + 1)
+    tagLine: decoded.substring(lastDash + 1),
   }
 })
 
@@ -47,7 +47,7 @@ onMounted(async () => {
   try {
     const platform = 'EUW1'
     const res = await fetch(`/api/summoners/${platform}/${encodeURIComponent(props.summoner)}`)
-    
+
     if (res.ok) {
       const data = await res.json()
       summonerData.value = data.summoner
@@ -58,13 +58,15 @@ onMounted(async () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           summoner: props.summoner,
-          platform: platform
-        })
+          platform: platform,
+        }),
       })
-      
+
       if (syncRes.ok) {
         // Sync succeeded, retry fetching the summoner
-        const retryRes = await fetch(`/api/summoners/${platform}/${encodeURIComponent(props.summoner)}`)
+        const retryRes = await fetch(
+          `/api/summoners/${platform}/${encodeURIComponent(props.summoner)}`
+        )
         if (retryRes.ok) {
           const data = await retryRes.json()
           summonerData.value = data.summoner
@@ -82,14 +84,14 @@ onMounted(async () => {
   } finally {
     isLoading.value = false
   }
-  
+
   // Track view after 3 seconds
   if (summonerData.value) {
     setTimeout(async () => {
       if (!summonerData.value) return
       try {
         const viewRes = await fetch(`/api/summoners/puuid/${summonerData.value.puuid}/increment`, {
-          method: 'PUT'
+          method: 'PUT',
         })
         if (viewRes.ok) {
           const data = await viewRes.json()
@@ -104,20 +106,20 @@ onMounted(async () => {
 
 async function syncSummoner() {
   if (!summonerData.value || isSyncing.value) return
-  
+
   isSyncing.value = true
   syncMessage.value = null
-  
+
   try {
     const res = await fetch('/api/summoners/sync', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         summoner: `${summonerData.value.gameName}-${summonerData.value.tagLine}`,
-        platform: summonerData.value.platform
-      })
+        platform: summonerData.value.platform,
+      }),
     })
-    
+
     if (res.ok) {
       const data = await res.json()
       syncMessage.value = `Found ${data.matches?.length || 0} new matches!`
@@ -155,7 +157,9 @@ async function syncSummoner() {
     <main class="max-w-7xl mx-auto px-4 py-8">
       <!-- Loading state -->
       <div v-if="isLoading" class="text-center py-16">
-        <div class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <div
+          class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"
+        ></div>
         <p class="text-gray-500">Loading summoner...</p>
       </div>
 
@@ -186,11 +190,15 @@ async function syncSummoner() {
                 {{ viewCount.toLocaleString() }}
               </span>
             </p>
-            <p v-if="syncMessage" class="text-sm mt-1" :class="syncMessage.includes('new matches') ? 'text-green-600' : 'text-gray-500'">
+            <p
+              v-if="syncMessage"
+              class="text-sm mt-1"
+              :class="syncMessage.includes('new matches') ? 'text-green-600' : 'text-gray-500'"
+            >
               {{ syncMessage }}
             </p>
           </div>
-          
+
           <button
             @click="syncSummoner"
             :disabled="isSyncing"

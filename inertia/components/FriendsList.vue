@@ -42,15 +42,13 @@ function getWinrate(friend: Friend) {
 <template>
   <div class="bg-white rounded-lg shadow p-4">
     <h2 class="text-lg font-semibold mb-4">Frequent Teammates</h2>
-    
-    <div v-if="isLoading" class="text-center py-8 text-gray-500">
-      Loading teammates...
-    </div>
-    
+
+    <div v-if="isLoading" class="text-center py-8 text-gray-500">Loading teammates...</div>
+
     <div v-else-if="friends.length === 0" class="text-center py-8 text-gray-500">
       No frequent teammates found
     </div>
-    
+
     <ul v-else class="space-y-3">
       <li
         v-for="friend in friends"
@@ -67,9 +65,7 @@ function getWinrate(friend: Friend) {
             {{ friend.gameName }}
             <span class="text-gray-500">#{{ friend.tagLine }}</span>
           </div>
-          <div class="text-sm text-gray-500">
-            Level {{ friend.level }}
-          </div>
+          <div class="text-sm text-gray-500">Level {{ friend.level }}</div>
         </div>
         <div class="text-right text-sm">
           <div class="font-medium">{{ friend.games }} games</div>
