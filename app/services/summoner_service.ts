@@ -272,27 +272,29 @@ class SummonerService {
     }>,
     platform: string
   ): Promise<number> {
-    let upserted = 0
+    const validParticipants = participants.filter((p) => p.puuid && p.gameName && p.tagLine)
+    if (!validParticipants.length) return 0
 
-    for (const p of participants) {
-      if (!p.puuid || !p.gameName || !p.tagLine) continue
+    const puuids = validParticipants.map((p) => p.puuid)
+    const existingSummoners = await Summoner.query().whereIn('puuid', puuids)
+    const existingMap = new Map<string, Summoner>()
 
-      const existing = await Summoner.find(p.puuid)
+    for (const summoner of existingSummoners) {
+      existingMap.set(summoner.puuid, summoner)
+    }
 
-      await Summoner.updateOrCreate(
-        { puuid: p.puuid },
-        {
-          puuid: p.puuid,
-          platform,
-          gameName: p.gameName,
-          tagLine: p.tagLine,
-          profileIconId: p.profileIconId,
-          summonerLevel: p.summonerLevel,
-        }
-      )
+    const historyToCreate: Array<{
+      puuid: string
+      gameName: string
+      tagLine: string
+      profileIconId: number
+    }> = []
+
+    const summonersToUpsert = validParticipants.map((p) => {
+      const existing = existingMap.get(p.puuid) || null
 
       if (this.hasChanged(existing, p.gameName, p.tagLine, p.profileIconId)) {
-        await SummonerHistory.create({
+        historyToCreate.push({
           puuid: p.puuid,
           gameName: p.gameName,
           tagLine: p.tagLine,
@@ -300,10 +302,23 @@ class SummonerService {
         })
       }
 
-      upserted++
+      return {
+        puuid: p.puuid,
+        platform,
+        gameName: p.gameName,
+        tagLine: p.tagLine,
+        profileIconId: p.profileIconId,
+        summonerLevel: p.summonerLevel,
+      }
+    })
+
+    await Summoner.updateOrCreateMany('puuid', summonersToUpsert)
+
+    if (historyToCreate.length > 0) {
+      await SummonerHistory.createMany(historyToCreate)
     }
 
-    return upserted
+    return summonersToUpsert.length
   }
 }
 

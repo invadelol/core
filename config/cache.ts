@@ -1,7 +1,8 @@
+import env from '#start/env'
 import { defineConfig, store, drivers } from '@adonisjs/cache'
 
 const cacheConfig = defineConfig({
-  default: 'default',
+  default: env.get('NODE_ENV') === 'test' ? 'memoryOnly' : 'default',
 
   stores: {
     memoryOnly: store().useL1Layer(drivers.memory()),
