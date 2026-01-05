@@ -69,6 +69,7 @@
     "@adonisjs/inertia": "^3.1.1",
     "@adonisjs/lucid": "^21.6.1",
     "@adonisjs/redis": "^9.2.0",
+    "@adonisjs/static": "^1.1.1",
     "@adonisjs/view": "^6.2.0",
     "@adonisjs/vite": "^4.0.0",
     "@aws-sdk/client-s3": "^3.948.0",
