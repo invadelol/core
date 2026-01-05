@@ -20,7 +20,7 @@ ADD . .
 RUN bun ace build
 
 # Production stage
-FROM node:22-bookworm-slim
+FROM node:22.16.0-alpine3.22
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=production-deps /app/node_modules /app/node_modules
