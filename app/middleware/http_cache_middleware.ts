@@ -96,6 +96,6 @@ export default class HttpCacheMiddleware {
       const json = JSON.stringify(payload)
       const compressed = await brotliCompressAsync(Buffer.from(json, 'utf8'))
       await redis.setex(key, CACHE_TTL_SECONDS, compressed)
-    } catch { }
+    } catch {}
   }
 }

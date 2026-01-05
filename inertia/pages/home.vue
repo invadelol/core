@@ -11,7 +11,7 @@ import SearchBar from '../components/SearchBar.vue'
       <h1 class="text-4xl font-bold text-gray-800 mb-2">Find a Summoner</h1>
       <p class="text-gray-500">Search for a player to view their stats</p>
     </div>
-    
+
     <SearchBar />
   </div>
 </template>

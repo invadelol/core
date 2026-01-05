@@ -43,15 +43,11 @@ function formatPercent(n: number) {
 <template>
   <div class="bg-white rounded-lg shadow p-4">
     <h2 class="text-lg font-semibold mb-4">Champions</h2>
-    
-    <div v-if="isLoading" class="text-center py-8 text-gray-500">
-      Loading...
-    </div>
-    
-    <div v-else-if="champions.length === 0" class="text-center py-8 text-gray-500">
-      No data
-    </div>
-    
+
+    <div v-if="isLoading" class="text-center py-8 text-gray-500">Loading...</div>
+
+    <div v-else-if="champions.length === 0" class="text-center py-8 text-gray-500">No data</div>
+
     <div v-else class="space-y-2">
       <div
         v-for="champ in champions.slice(0, 8)"
@@ -63,30 +59,40 @@ function formatPercent(n: number) {
           class="w-10 h-10 rounded"
           :alt="`Champion ${champ.championId}`"
         />
-        
+
         <div class="flex-1 min-w-0">
           <div class="text-sm text-gray-500">{{ champ.games }} games</div>
         </div>
-        
+
         <!-- Winrate -->
         <div class="text-center w-16">
           <div
             :class="[
               'font-bold text-sm',
-              champ.winrate >= 0.6 ? 'text-green-600' : champ.winrate >= 0.5 ? 'text-blue-600' : 'text-red-500'
+              champ.winrate >= 0.6
+                ? 'text-green-600'
+                : champ.winrate >= 0.5
+                  ? 'text-blue-600'
+                  : 'text-red-500',
             ]"
           >
             {{ formatPercent(champ.winrate) }}
           </div>
           <div class="text-xs text-gray-400">WR</div>
         </div>
-        
+
         <!-- KDA -->
         <div class="text-center w-16">
           <div
             :class="[
               'font-bold text-sm',
-              champ.kda >= 4 ? 'text-green-600' : champ.kda >= 3 ? 'text-blue-600' : champ.kda >= 2 ? 'text-gray-700' : 'text-red-500'
+              champ.kda >= 4
+                ? 'text-green-600'
+                : champ.kda >= 3
+                  ? 'text-blue-600'
+                  : champ.kda >= 2
+                    ? 'text-gray-700'
+                    : 'text-red-500',
             ]"
           >
             {{ champ.kda.toFixed(2) }}

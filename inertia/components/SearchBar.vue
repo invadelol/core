@@ -3,7 +3,9 @@ import { ref, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
 
 const query = ref('')
-const results = ref<Array<{ puuid: string; gameName: string; tagLine: string; profileIconId: number | null }>>([])
+const results = ref<
+  Array<{ puuid: string; gameName: string; tagLine: string; profileIconId: number | null }>
+>([])
 const isLoading = ref(false)
 const showDropdown = ref(false)
 
@@ -60,9 +62,11 @@ function handleBlur() {
       @focus="showDropdown = results.length > 0"
       @blur="handleBlur"
     />
-    
+
     <div v-if="isLoading" class="absolute right-3 top-1/2 -translate-y-1/2">
-      <div class="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      <div
+        class="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"
+      ></div>
     </div>
 
     <ul
