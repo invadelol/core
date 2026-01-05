@@ -217,8 +217,13 @@ class SummonerService {
     const sanitized = query.trim().replace(/[^a-zA-Z0-9\s]/g, '')
     if (!sanitized) return []
 
+    const terms = sanitized.split(/\s+/).filter(Boolean)
+    if (terms.length === 0) return []
+
+    const tsQuery = terms.join(' & ') + ':*'
+
     return Summoner.query()
-      .whereRaw(`search_vector @@ to_tsquery('simple', ?)`, [`${sanitized}:*`])
+      .whereRaw(`search_vector @@ to_tsquery('simple', ?)`, [tsQuery])
       .orderBy('viewCount', 'desc')
       .limit(Math.min(limit, MAX_SEARCH_LIMIT))
   }
