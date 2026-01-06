@@ -46,7 +46,7 @@ const parsedSummoner = computed(() => {
 onMounted(async () => {
   try {
     const platform = 'EUW1'
-    const res = await fetch(`/api/summoners/${platform}/${encodeURIComponent(props.summoner)}`)
+    const res = await fetch(`/api/summoners/${platform}/${props.summoner}`)
 
     if (res.ok) {
       const data = await res.json()
