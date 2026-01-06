@@ -57,7 +57,7 @@ onMounted(async () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          summoner: props.summoner,
+          summoner: decodeURIComponent(props.summoner),
           platform: platform,
         }),
       })
