@@ -68,6 +68,11 @@ router.get('/docs', async () => {
 // Inertia pages
 router.on('/').renderInertia('home')
 
+router.get('/match/:matchId', ({ inertia, params, request }) => {
+  const puuid = request.qs().puuid
+  return inertia.render('match_details', { matchId: params.matchId, puuid })
+})
+
 router.get('/:summoner', ({ inertia, params }) => {
   return inertia.render('summoner', { summoner: params.summoner })
 })
