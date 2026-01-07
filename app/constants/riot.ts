@@ -3,10 +3,10 @@
  * @see https://static.developer.riotgames.com/docs/lol/queues.json
  */
 export const QUEUE_IDS = {
-  ranked: [420], // 5v5 Ranked Solo/Duo
-  flex: [440], // 5v5 Ranked Flex
-  aram: [450], // ARAM
-  normal: [400, 430], // 5v5 Draft Pick, 5v5 Blind Pick
+  ranked: [420],
+  flex: [440],
+  aram: [450],
+  normal: [400, 430],
 } as const
 
 export type RiotQueueType = keyof typeof QUEUE_IDS | 'all'
