@@ -56,7 +56,6 @@ router
   })
   .prefix('/api')
 
-// Swagger docs (outside API group)
 router.get('/swagger', async () => {
   return AutoSwagger.docs(router.toJSON(), swagger)
 })
@@ -65,7 +64,6 @@ router.get('/docs', async () => {
   return AutoSwagger.ui('/swagger', swagger)
 })
 
-// Inertia pages
 router.on('/').renderInertia('home')
 
 router.get('/:summoner', ({ inertia, params }) => {

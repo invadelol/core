@@ -9,12 +9,6 @@ import { CACHE_FRESH_TTL_SECONDS, CACHE_TTL_SECONDS, CDN_MAX_AGE_SECONDS } from 
 const brotliCompressAsync = promisify(brotliCompress)
 const brotliDecompressAsync = promisify(brotliDecompress)
 
-type CachedPayload = {
-  body: any
-  headers: Record<string, string>
-  timestamp: number
-}
-
 /**
  * HTTP Cache middleware using Redis with Brotli compression.
  *
@@ -26,13 +20,17 @@ type CachedPayload = {
  */
 export default class HttpCacheMiddleware {
   async handle({ request, response }: HttpContext, next: () => Promise<void>) {
+    // Bypass cache in development
     if (env.get('NODE_ENV') === 'development') return next()
     if (request.method() !== 'GET') return next()
 
-    const url = request.url(true)
-    const cacheKey = `http_cache:${url}`
+    // No cache for front (inertia)
+    if (!request.url().includes('/api/')) return next()
 
-    const cached = await this.getFromCache(cacheKey)
+    const url = request.url(true)
+    const key = `http_cache:${url}`
+
+    const cached = await this.getFromCache(key)
     if (cached) {
       // Set cache headers from stored response
       Object.keys(cached.headers).forEach((key) => response.header(key, cached.headers[key]))
@@ -61,16 +59,16 @@ export default class HttpCacheMiddleware {
     )
 
     // Cache the response
-    await this.saveToCache(cacheKey, body, response.getHeaders() as Record<string, string>)
+    await this.saveToCache(key, body, response.getHeaders() as Record<string, string>)
 
     // Track cache key for this puuid (for invalidation via SummonerUpdated event)
     const puuidMatch = url.match(/\/api\/summoners\/puuid\/([a-zA-Z0-9_-]+)/)
     if (puuidMatch?.[1]) {
-      await redis.sadd(`summoner:${puuidMatch[1]}:cache_keys`, cacheKey)
+      await redis.sadd(`summoner:${puuidMatch[1]}:cache_keys`, key)
     }
   }
 
-  private async getFromCache(key: string): Promise<CachedPayload | null> {
+  private async getFromCache(key: string) {
     try {
       const compressed = await redis.getBuffer(key)
       if (!compressed) return null
@@ -88,7 +86,7 @@ export default class HttpCacheMiddleware {
     headers: Record<string, string>
   ): Promise<void> {
     try {
-      const payload: CachedPayload = {
+      const payload = {
         body,
         headers,
         timestamp: Date.now(),
