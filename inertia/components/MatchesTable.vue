@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { ExternalLink } from 'lucide-vue-next'
 
 const props = defineProps<{
   puuid: string
@@ -192,16 +191,6 @@ function getKDA(kills: number, deaths: number, assists: number) {
             <div>{{ queueNames[match.queueId] || 'Custom' }}</div>
             <div>{{ formatDuration(match.duration) }} • {{ timeAgo(match.gameStartMs) }}</div>
           </div>
-
-          <!-- View Details Link -->
-          <a
-            :href="`/match/${match.matchId}?puuid=${props.puuid}`"
-            class="p-2 rounded-lg hover:bg-gray-200 transition-colors text-gray-500 hover:text-blue-600"
-            title="View Match Details"
-            @click.stop
-          >
-            <ExternalLink class="w-4 h-4" />
-          </a>
 
           <!-- Expand indicator -->
           <div class="text-gray-400">
