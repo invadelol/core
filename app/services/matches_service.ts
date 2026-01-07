@@ -60,6 +60,12 @@ class MatchesService {
 
     const meta = await ingestionService.ingestMatch(matchId, matchData)
 
+    const timelineData = await riotApiService.client.matchV5.getMatchTimelineById({
+      matchId,
+      cluster,
+    })
+    await ingestionService.ingestTimeline(matchId, matchData, timelineData, meta)
+    
     return {
       matchId,
       ...meta,

@@ -1,5 +1,11 @@
 import clickhouse from 'adonisjs-clickhouse/services/main'
-import { toInt, platformFromMatchId, buildMatchRow, buildParticipantRows } from '#utils/clickhouse'
+import {
+  toInt,
+  platformFromMatchId,
+  buildMatchRow,
+  buildParticipantRows,
+  buildTimelineRows,
+} from '#utils/clickhouse'
 import { RiotAPITypes } from '@fightmegg/riot-api'
 
 /**
@@ -39,6 +45,32 @@ export class IngestionService {
     }
 
     return { platform, gameStartMs }
+  }
+
+  async ingestTimeline(
+    matchId: string,
+    matchData: RiotAPITypes.MatchV5.MatchDTO,
+    timelineData: RiotAPITypes.MatchV5.MatchTimelineDTO,
+    meta?: { platform?: string; gameStartMs?: number }
+  ) {
+    const info = matchData.info
+    const platform =
+      meta?.platform ||
+      (typeof info.platformId === 'string' && info.platformId) ||
+      platformFromMatchId(matchId) ||
+      ''
+    const gameStartMs =
+      meta?.gameStartMs ?? toInt(info.gameStartTimestamp ?? info.gameCreation ?? 0, 0)
+
+    const timelineRows = buildTimelineRows(matchId, platform, gameStartMs, info, timelineData)
+
+    if (timelineRows.length) {
+      await clickhouse.insert({
+        table: 'match_timeline',
+        values: timelineRows,
+        format: 'JSONEachRow',
+      })
+    }
   }
 }
 
