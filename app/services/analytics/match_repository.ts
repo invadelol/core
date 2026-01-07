@@ -67,6 +67,18 @@ export class MatchRepository {
         m.duration_sec as duration,
         m.queue_id as queueId,
         m.patch as patch,
+        m.t1_win as t1Win,
+        m.t2_win as t2Win,
+        m.t1_towers as t1Towers,
+        m.t2_towers as t2Towers,
+        m.t1_inhibs as t1Inhibs,
+        m.t2_inhibs as t2Inhibs,
+        m.t1_dragons as t1Dragons,
+        m.t2_dragons as t2Dragons,
+        m.t1_barons as t1Barons,
+        m.t2_barons as t2Barons,
+        m.t1_heralds as t1Heralds,
+        m.t2_heralds as t2Heralds,
         groupArray(
           (
             p.puuid,
@@ -80,6 +92,7 @@ export class MatchRepository {
             p.assists,
             p.total_cs,
             p.summoner_level,
+            p.champ_level,
             p.item0,
             p.item1,
             p.item2,
@@ -87,18 +100,63 @@ export class MatchRepository {
             p.item4,
             p.item5,
             p.item6,
+            p.spell1,
+            p.spell2,
             p.primary_style,
             p.secondary_style,
             p.vision_score,
             p.dmg_taken,
             p.dmg_to_champ,
-            p.team_position
+            p.team_position,
+            p.gold_earned,
+            p.wards_placed,
+            p.wards_killed,
+            p.dmg_to_turrets,
+            p.dmg_to_objectives,
+            p.physical_dmg_dealt,
+            p.magic_dmg_dealt,
+            p.true_dmg_dealt,
+            p.physical_dmg_to_champ,
+            p.magic_dmg_to_champ,
+            p.true_dmg_to_champ,
+            p.neutral_minions_killed,
+            p.vision_wards_bought,
+            p.all_in_pings,
+            p.assist_pings,
+            p.command_pings,
+            p.danger_pings,
+            p.enemy_missing_pings,
+            p.enemy_vision_pings,
+            p.get_back_pings,
+            p.need_vision_pings,
+            p.on_my_way_pings,
+            p.push_pings,
+            p.vision_cleared_pings,
+            p.bait_pings,
+            p.hold_pings
           )
         ) as participants
       FROM matches m
       JOIN participants p ON m.match_id = p.match_id
       WHERE m.match_id IN (SELECT match_id FROM my_matches)
-      GROUP BY m.match_id, m.game_start_ms, m.duration_sec, m.queue_id, m.patch
+      GROUP BY
+        m.match_id,
+        m.game_start_ms,
+        m.duration_sec,
+        m.queue_id,
+        m.patch,
+        m.t1_win,
+        m.t2_win,
+        m.t1_towers,
+        m.t2_towers,
+        m.t1_inhibs,
+        m.t2_inhibs,
+        m.t1_dragons,
+        m.t2_dragons,
+        m.t1_barons,
+        m.t2_barons,
+        m.t1_heralds,
+        m.t2_heralds
       ORDER BY gameStartMs DESC
     `
 
@@ -108,6 +166,99 @@ export class MatchRepository {
     })
 
     const rows = (await result.json<any>()) ?? []
+    const matchIds = rows.map((row: any) => row.matchId).filter(Boolean)
+    const timelineByMatch = new Map<string, any[]>()
+
+    if (matchIds.length) {
+      const inList = matchIds.map((id: string) => `'${escapeClickhouseString(id)}'`).join(',')
+      const timelineQuery = `
+        SELECT
+          match_id as matchId,
+          groupArray(
+            (
+              participant_id,
+              puuid,
+              team_id,
+              frame_ms,
+              level,
+              xp,
+              gold_current,
+              gold_total,
+              gold_per_sec,
+              cs,
+              jungle_cs,
+              kills,
+              deaths,
+              assists,
+              pos_x,
+              pos_y,
+              time_cc,
+              spell1,
+              spell2,
+              primary_style,
+              secondary_style,
+              keystone,
+              rune1,
+              rune2,
+              rune3,
+              rune4,
+              rune5,
+              rune6,
+              stat_offense,
+              stat_flex,
+              stat_defense,
+              skill_order
+            )
+          ) as timeline
+        FROM match_timeline
+        WHERE match_id IN (${inList})
+        GROUP BY match_id
+      `
+
+      const timelineResult = await clickhouse.query({
+        query: timelineQuery,
+        format: 'JSONEachRow',
+      })
+
+      const timelineRows = (await timelineResult.json<any>()) ?? []
+      for (const row of timelineRows) {
+        timelineByMatch.set(
+          row.matchId,
+          row.timeline.map((t: any) => ({
+            participantId: t[0],
+            puuid: t[1],
+            teamId: t[2],
+            frameMs: t[3],
+            level: t[4],
+            xp: t[5],
+            goldCurrent: t[6],
+            goldTotal: t[7],
+            goldPerSec: t[8],
+            cs: t[9],
+            jungleCs: t[10],
+            kills: t[11],
+            deaths: t[12],
+            assists: t[13],
+            posX: t[14],
+            posY: t[15],
+            timeCc: t[16],
+            spells: [t[17], t[18]],
+            perks: {
+              primaryStyle: t[19],
+              secondaryStyle: t[20],
+              keystone: t[21],
+              runes: [t[22], t[23], t[24], t[25], t[26], t[27]],
+              statPerks: {
+                offense: t[28],
+                flex: t[29],
+                defense: t[30],
+              },
+            },
+            skillOrder: t[31] ?? [],
+          }))
+        )
+      }
+    }
 
     return rows.map((row: any) => ({
       ...row,
@@ -123,13 +274,42 @@ export class MatchRepository {
         assists: p[8],
         cs: p[9],
         level: p[10],
-        items: [p[11], p[12], p[13], p[14], p[15], p[16], p[17]],
-        perks: { primary: p[18], sub: p[19] },
-        visionScore: p[20],
-        damageTaken: p[21],
-        damageDealt: p[22],
-        position: p[23],
+        champLevel: p[11],
+        items: [p[12], p[13], p[14], p[15], p[16], p[17], p[18]],
+        spells: [p[19], p[20]],
+        perks: { primary: p[21], sub: p[22] },
+        visionScore: p[23],
+        damageTaken: p[24],
+        damageDealt: p[25],
+        position: p[26],
+        goldEarned: p[27],
+        wardsPlaced: p[28],
+        wardsKilled: p[29],
+        damageDealtToTurrets: p[30],
+        damageDealtToObjectives: p[31],
+        physicalDamageDealt: p[32],
+        magicDamageDealt: p[33],
+        trueDamageDealt: p[34],
+        physicalDamageDealtToChampions: p[35],
+        magicDamageDealtToChampions: p[36],
+        trueDamageDealtToChampions: p[37],
+        neutralMinionsKilled: p[38],
+        visionWardsBoughtInGame: p[39],
+        allInPings: p[40],
+        assistPings: p[41],
+        commandPings: p[42],
+        dangerPings: p[43],
+        enemyMissingPings: p[44],
+        enemyVisionPings: p[45],
+        getBackPings: p[46],
+        needVisionPings: p[47],
+        onMyWayPings: p[48],
+        pushPings: p[49],
+        visionClearedPings: p[50],
+        baitPings: p[51],
+        holdPings: p[52],
       })),
+      timeline: timelineByMatch.get(row.matchId) ?? [],
     }))
   }
 

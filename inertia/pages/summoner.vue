@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3'
+import { Head } from '@inertiajs/vue3'
 import { ref, onMounted, computed } from 'vue'
 import { Home, RefreshCw, Eye } from 'lucide-vue-next'
 
