@@ -9,7 +9,7 @@ export class MatchRepository {
   /**
    * Returns the subset of matchIds that already exist in ClickHouse.
    */
-  async getExistingMatchIds(matchIds: string[]): Promise<Set<string>> {
+  async getExistingIds(matchIds: string[]): Promise<Set<string>> {
     const unique = Array.from(new Set(matchIds.filter(Boolean)))
     if (!unique.length) return new Set()
 
@@ -26,7 +26,7 @@ export class MatchRepository {
   /**
    * Get matches for a summoner with participant details
    */
-  async getSummonerMatches(
+  async getByPuuid(
     puuid: string,
     filters: {
       queueIds?: number[] | readonly number[]
@@ -136,7 +136,7 @@ export class MatchRepository {
   /**
    * Get recent match participants for upsert operations
    */
-  async getRecentMatchParticipants(
+  async getRecentParticipants(
     puuid: string,
     limit: number = DEFAULT_MATCH_COUNT
   ): Promise<

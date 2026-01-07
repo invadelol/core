@@ -4,7 +4,7 @@ import matchRepository from '#services/analytics/match_repository'
 
 export default class UpsertMatchParticipants {
   async handle(event: SummonerUpdated) {
-    const participants = await matchRepository.getRecentMatchParticipants(event.puuid)
+    const participants = await matchRepository.getRecentParticipants(event.puuid)
 
     if (participants.length) {
       await summonerService.upsertFromParticipants(participants, event.region)
