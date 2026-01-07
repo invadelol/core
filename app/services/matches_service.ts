@@ -24,7 +24,7 @@ class MatchesService {
       return []
     }
 
-    const existingIds = await matchRepository.getExistingMatchIds(matchIds)
+    const existingIds = await matchRepository.getExistingIds(matchIds)
     const newIds = matchIds.filter((id) => !existingIds.has(id))
 
     if (!newIds.length) {

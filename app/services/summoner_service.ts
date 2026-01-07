@@ -193,7 +193,7 @@ class SummonerService {
   ) {
     const queueIds = filters.type && filters.type !== 'all' ? QUEUE_IDS[filters.type] || [] : []
 
-    return matchRepository.getSummonerMatches(puuid, {
+    return matchRepository.getByPuuid(puuid, {
       queueIds,
       count: filters.count ?? DEFAULT_MATCH_COUNT,
       offset: filters.offset ?? DEFAULT_OFFSET,
