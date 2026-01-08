@@ -29,6 +29,7 @@ server.use([
   () => import('@adonisjs/inertia/inertia_middleware'),
   () => import('@adonisjs/vite/vite_middleware'),
   () => import('@adonisjs/static/static_middleware'),
+  () => import('#middleware/no_cache_inertia_middleware'),
 ])
 
 /**
