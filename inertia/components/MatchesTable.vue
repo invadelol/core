@@ -120,6 +120,7 @@ interface MatchStats {
 
 const matches = ref<Match[]>([])
 const isLoading = ref(true)
+const loadingMatchDetails = ref<Record<string, boolean>>({})
 const error = ref<string | null>(null)
 const expandedMatch = ref<string | null>(null)
 const activeTab = ref<Record<string, TabKey>>({})
@@ -261,8 +262,29 @@ const matchStats = computed<Record<string, MatchStats>>(() => {
   return out
 })
 
-function toggleExpand(matchId: string) {
-  expandedMatch.value = expandedMatch.value === matchId ? null : matchId
+async function toggleExpand(matchId: string) {
+  if (expandedMatch.value === matchId) {
+    expandedMatch.value = null
+    return
+  }
+
+  const match = matches.value.find((m) => m.matchId === matchId)
+  if (match && match.participants.length <= 1) {
+    loadingMatchDetails.value[matchId] = true
+    try {
+      const res = await fetch(`/api/matches/${matchId}`)
+      if (res.ok) {
+        const details = await res.json()
+        Object.assign(match, details)
+      }
+    } catch (e) {
+      console.error('Failed to load match details', e)
+    } finally {
+      loadingMatchDetails.value[matchId] = false
+    }
+  }
+
+  expandedMatch.value = matchId
 }
 
 function setTab(matchId: string, tab: TabKey) {
@@ -662,6 +684,7 @@ function getHoverValue(series: SeriesData, index: number | null) {
             <!-- Expand Icon -->
             <div class="w-8 flex items-center justify-center text-gray-400">
               <svg
+                v-if="!loadingMatchDetails[match.matchId]"
                 class="w-5 h-5 transform transition-transform duration-200"
                 :class="{ 'rotate-180': expandedMatch === match.matchId }"
                 fill="none"
@@ -675,13 +698,17 @@ function getHoverValue(series: SeriesData, index: number | null) {
                   d="M19 9l-7 7-7-7"
                 />
               </svg>
+              <div
+                v-else
+                class="w-5 h-5 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"
+              ></div>
             </div>
           </div>
         </button>
 
         <!-- Expanded Details -->
         <div
-          v-if="expandedMatch === match.matchId"
+          v-if="expandedMatch === match.matchId && !loadingMatchDetails[match.matchId]"
           class="bg-gray-50 border-t border-gray-100 p-4"
         >
           <!-- Tabs -->

@@ -144,6 +144,22 @@ export default class SummonersController {
   }
 
   /**
+   * Get specific match details
+   * @paramPath matchId - Match ID
+   * @responseBody 200 - <Match>
+   */
+  async match({ params, response }: HttpContext) {
+    const { matchId } = params
+    const match = await matchService.getMatch(matchId)
+
+    if (!match) {
+      return response.notFound({ message: 'Match not found' })
+    }
+
+    return response.ok(match)
+  }
+
+  /**
    * Increment summoner view count
    * @paramPath puuid - Summoner PUUID
    * @responseBody 200 - { viewCount: number }

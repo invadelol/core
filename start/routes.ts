@@ -50,6 +50,8 @@ router
       .get('/summoners/puuid/:puuid/matches', [SummonersController, 'matches'])
       .use(middleware.httpCache())
 
+    router.get('/matches/:matchId', [SummonersController, 'match']).use(middleware.httpCache())
+
     router.put('/summoners/puuid/:puuid/increment', [SummonersController, 'incrementViews'])
 
     router.get('/health', [HealthChecksController, 'handle'])

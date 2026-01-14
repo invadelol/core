@@ -71,6 +71,10 @@ class MatchesService {
       ...meta,
     }
   }
+
+  async getMatch(matchId: string) {
+    return matchRepository.getByMatchId(matchId)
+  }
 }
 
 export default new MatchesService()
