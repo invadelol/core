@@ -17,6 +17,7 @@ import { middleware } from '#start/middleware'
 
 const SummonersController = () => import('#controllers/summoners_controller')
 const HealthChecksController = () => import('#controllers/health_checks_controller')
+const MatchesController = () => import('#controllers/matches_controller')
 
 // API routes group
 router
@@ -48,6 +49,10 @@ router
 
     router
       .get('/summoners/puuid/:puuid/matches', [SummonersController, 'matches'])
+      .use(middleware.httpCache())
+
+    router
+      .get('/matches/:id', [MatchesController, 'show'])
       .use(middleware.httpCache())
 
     router.put('/summoners/puuid/:puuid/increment', [SummonersController, 'incrementViews'])
