@@ -105,7 +105,11 @@ interface Match {
   t1Heralds: number
   t2Heralds: number
   participants: Participant[]
-  timeline: TimelineEntry[]
+  /**
+   * Timeline is large and is loaded on-demand when the match is expanded.
+   * When not loaded yet, it will be `undefined`.
+   */
+  timeline?: TimelineEntry[]
 }
 
 interface MatchStats {
@@ -125,6 +129,8 @@ const expandedMatch = ref<string | null>(null)
 const activeTab = ref<Record<string, TabKey>>({})
 const selectedPlayer = ref<Record<string, string>>({})
 const runeMap = ref<Record<number, string>>({})
+const detailsLoading = ref<Record<string, boolean>>({})
+const detailsError = ref<Record<string, string | null>>({})
 
 const DDRAGON_BASE = 'https://ddragon.leagueoflegends.com/cdn/14.24.1/img'
 const CDRAGON_BASE =
@@ -176,7 +182,7 @@ const timelineIndex = computed<Record<string, Record<string, TimelineEntry[]>>>(
   const byMatch: Record<string, Record<string, TimelineEntry[]>> = {}
   matches.value.forEach((match) => {
     const byPuuid: Record<string, TimelineEntry[]> = {}
-    match.timeline.forEach((entry) => {
+    ;(match.timeline ?? []).forEach((entry) => {
       const key = entry.puuid || String(entry.participantId)
       if (!byPuuid[key]) byPuuid[key] = []
       byPuuid[key].push(entry)
@@ -203,6 +209,8 @@ interface SeriesBundle {
 const seriesIndex = computed<Record<string, SeriesBundle>>(() => {
   const map: Record<string, SeriesBundle> = {}
   matches.value.forEach((match) => {
+    // Timeline-based series is only available once details are loaded for the match.
+    if (!match.timeline?.length) return
     match.participants.forEach((p) => {
       const frames = getTimelineFrames(match, p)
       const times = frames.map((f) => f.frameMs || 0)
@@ -261,8 +269,44 @@ const matchStats = computed<Record<string, MatchStats>>(() => {
   return out
 })
 
+async function ensureMatchDetails(matchId: string) {
+  const index = matches.value.findIndex((m) => m.matchId === matchId)
+  if (index === -1) return
+
+  // Already hydrated (timeline loaded).
+  if (Array.isArray(matches.value[index].timeline)) return
+
+  if (detailsLoading.value[matchId]) return
+  detailsLoading.value[matchId] = true
+  detailsError.value[matchId] = null
+
+  try {
+    const res = await fetch(`/api/matches/${encodeURIComponent(matchId)}`)
+    if (!res.ok) {
+      detailsError.value[matchId] = 'Failed to load match details'
+      return
+    }
+
+    const details = (await res.json()) as Match
+    matches.value[index] = {
+      ...matches.value[index],
+      ...details,
+    }
+  } catch {
+    detailsError.value[matchId] = 'Failed to load match details'
+  } finally {
+    detailsLoading.value[matchId] = false
+  }
+}
+
 function toggleExpand(matchId: string) {
-  expandedMatch.value = expandedMatch.value === matchId ? null : matchId
+  const willExpand = expandedMatch.value !== matchId
+  expandedMatch.value = willExpand ? matchId : null
+
+  if (willExpand) {
+    // Load heavy timeline/details only when the user actually opens the match.
+    void ensureMatchDetails(matchId)
+  }
 }
 
 function setTab(matchId: string, tab: TabKey) {
@@ -684,6 +728,20 @@ function getHoverValue(series: SeriesData, index: number | null) {
           v-if="expandedMatch === match.matchId"
           class="bg-gray-50 border-t border-gray-100 p-4"
         >
+          <!-- Lazy-loaded details status -->
+          <div v-if="detailsLoading[match.matchId]" class="mb-4 text-sm text-gray-500">
+            Loading match details...
+          </div>
+          <div v-else-if="detailsError[match.matchId]" class="mb-4 text-sm text-red-600 flex items-center gap-3">
+            <span>{{ detailsError[match.matchId] }}</span>
+            <button
+              class="text-xs font-medium px-3 py-1 rounded-full bg-white border border-gray-200 hover:bg-gray-50"
+              @click.stop="ensureMatchDetails(match.matchId)"
+            >
+              Retry
+            </button>
+          </div>
+
           <!-- Tabs -->
           <div class="flex gap-2 mb-4 overflow-x-auto pb-2">
             <button
