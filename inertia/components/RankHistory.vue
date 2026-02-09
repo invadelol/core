@@ -23,7 +23,7 @@ const props = defineProps<{
 interface RankEntry {
   queueType: string
   tier: string
-  rank: string
+  division: string
   leaguePoints: number
   wins: number
   losses: number
@@ -192,8 +192,8 @@ const lpChange = computed(() => {
   if (filteredHistory.value.length < 2) return null
   const first = filteredHistory.value[0]
   const last = filteredHistory.value[filteredHistory.value.length - 1]
-  const firstTotal = calculateTotalLP(first.tier, first.rank, first.leaguePoints)
-  const lastTotal = calculateTotalLP(last.tier, last.rank, last.leaguePoints)
+  const firstTotal = calculateTotalLP(first.tier, first.division, first.leaguePoints)
+  const lastTotal = calculateTotalLP(last.tier, last.division, last.leaguePoints)
   return lastTotal - firstTotal
 })
 
@@ -214,7 +214,7 @@ const chartData = computed(() => {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   })
 
-  const data = history.map((entry) => calculateTotalLP(entry.tier, entry.rank, entry.leaguePoints))
+  const data = history.map((entry) => calculateTotalLP(entry.tier, entry.division, entry.leaguePoints))
 
   // Determine the gradient color based on the latest tier
   const latestTier = history[history.length - 1]?.tier || 'GOLD'
@@ -267,7 +267,7 @@ const chartOptions = computed(() => {
             const idx = items[0]?.dataIndex
             if (idx == null || !history[idx]) return ''
             const entry = history[idx]
-            return `${tierNames[entry.tier] || entry.tier} ${entry.rank}`
+            return `${tierNames[entry.tier] || entry.tier} ${entry.division}`
           },
           label: (ctx: any) => {
             const idx = ctx.dataIndex
@@ -355,11 +355,11 @@ function getRankIcon(tier: string) {
 
     <!-- Empty state -->
     <div
-      v-else-if="!ranks || filteredHistory.length === 0"
+      v-else-if="!ranks || filteredHistory.length <= 2"
       class="text-center py-8 text-gray-400"
     >
       <Trophy class="w-8 h-8 mx-auto mb-2 opacity-40" />
-      <p class="text-sm">No rank history available</p>
+      <p class="text-sm">Not enough rank data yet</p>
     </div>
 
     <!-- Chart + Current Rank -->
@@ -373,7 +373,7 @@ function getRankIcon(tier: string) {
         />
         <div class="flex-1 min-w-0">
           <div class="font-semibold text-gray-800 text-sm">
-            {{ tierNames[currentRank.tier] || currentRank.tier }} {{ currentRank.rank }}
+            {{ tierNames[currentRank.tier] || currentRank.tier }} {{ currentRank.division }}
             <span class="font-normal text-gray-500">· {{ currentRank.leaguePoints }} LP</span>
           </div>
           <div class="text-xs text-gray-500">
