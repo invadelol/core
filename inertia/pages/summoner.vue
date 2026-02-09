@@ -10,6 +10,7 @@ import FriendsList from '../components/FriendsList.vue'
 import ChampionsStats from '../components/ChampionsStats.vue'
 import StatisticsPanel from '../components/StatisticsPanel.vue'
 import RankDisplay from '../components/RankDisplay.vue'
+import RankHistory from '../components/RankHistory.vue'
 
 const props = defineProps<{
   summoner: string
@@ -221,6 +222,11 @@ async function syncSummoner() {
           <div>
             <ActivityChart :key="`activity-${refreshKey}`" :puuid="summonerData.puuid" />
           </div>
+        </div>
+
+        <!-- Rank History -->
+        <div class="mb-6">
+          <RankHistory :key="`rank-history-${refreshKey}`" :puuid="summonerData.puuid" />
         </div>
 
         <!-- Main content grid -->
