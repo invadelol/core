@@ -8,7 +8,7 @@ const props = defineProps<{
 interface Rank {
   queueType: string
   tier: string
-  rank: string
+  division: string
   leaguePoints: number
   wins: number
   losses: number
@@ -87,7 +87,7 @@ function getWinrate(wins: number, losses: number) {
         <img :src="getRankIcon(rank.tier)" :alt="rank.tier" class="w-12 h-12" />
         <div class="flex-1 min-w-0">
           <div class="font-semibold text-gray-800">
-            {{ tierNames[rank.tier] || rank.tier }} {{ rank.rank }}
+            {{ tierNames[rank.tier] || rank.tier }} {{ rank.division }}
           </div>
           <div class="text-sm text-gray-500">
             {{ queueNames[rank.queueType] || rank.queueType }}
