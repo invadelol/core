@@ -30,6 +30,7 @@ const error = ref<string | null>(null)
 const isSyncing = ref(false)
 const syncMessage = ref<string | null>(null)
 const viewCount = ref<number | null>(null)
+const refreshKey = ref(0)
 
 const DDRAGON_BASE = 'https://ddragon.leagueoflegends.com/cdn/14.24.1/img'
 
@@ -123,8 +124,11 @@ async function syncSummoner() {
     if (res.ok) {
       const data = await res.json()
       syncMessage.value = `Found ${data.matches?.length || 0} new matches!`
-      // Reload page to refresh all components
-      setTimeout(() => window.location.reload(), 1500)
+      // Increment refreshKey to force all child components to re-mount with fresh data
+      setTimeout(() => {
+        refreshKey.value++
+        syncMessage.value = null
+      }, 1000)
     } else if (res.status === 404) {
       syncMessage.value = 'No new matches found'
     } else {
@@ -212,10 +216,10 @@ async function syncSummoner() {
         <!-- Stats grid -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <div class="lg:col-span-2">
-            <StatisticsPanel :puuid="summonerData.puuid" />
+            <StatisticsPanel :key="`stats-${refreshKey}`" :puuid="summonerData.puuid" />
           </div>
           <div>
-            <ActivityChart :puuid="summonerData.puuid" />
+            <ActivityChart :key="`activity-${refreshKey}`" :puuid="summonerData.puuid" />
           </div>
         </div>
 
@@ -223,14 +227,14 @@ async function syncSummoner() {
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <!-- Match history (2 cols) -->
           <div class="lg:col-span-2">
-            <MatchesTable :puuid="summonerData.puuid" />
+            <MatchesTable :key="`matches-${refreshKey}`" :puuid="summonerData.puuid" :summoner-slug="props.summoner" />
           </div>
 
           <!-- Sidebar -->
           <div class="space-y-6">
-            <RankDisplay :puuid="summonerData.puuid" />
-            <FriendsList :puuid="summonerData.puuid" />
-            <ChampionsStats :puuid="summonerData.puuid" />
+            <RankDisplay :key="`rank-${refreshKey}`" :puuid="summonerData.puuid" />
+            <FriendsList :key="`friends-${refreshKey}`" :puuid="summonerData.puuid" />
+            <ChampionsStats :key="`champs-${refreshKey}`" :puuid="summonerData.puuid" />
           </div>
         </div>
       </div>

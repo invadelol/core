@@ -135,6 +135,11 @@ export class MatchRepository {
    *
    * Important: this intentionally does NOT load match timeline data.
    * Timeline is large and should be loaded on-demand via `getById()`.
+   *
+   * Performance approach:
+   * 1. CTE finds the small set of match_ids (fast PREWHERE on puuid index).
+   * 2. Parallel queries: one for match metadata, one for participants.
+   * 3. JS-side merge avoids a heavy GROUP BY + groupArray on the DB.
    */
   async getByPuuid(
     puuid: string,
@@ -162,318 +167,396 @@ export class MatchRepository {
     }
     const whereSql = whereClauses.length ? `AND ${whereClauses.join(' AND ')}` : ''
 
-    /**
-     * Query optimization notes:
-     * - Use a small CTE (`my_matches`) to pre-filter match ids for the summoner.
-     * - Join using `INNER JOIN` instead of `WHERE IN (subquery)` for better planning.
-     * - Group only by `match_id` and use `any()` for match-level columns. This is safe
-     *   because the `matches` table has 1 row per match_id.
-     * - Do NOT fetch timeline here; it's large and should be loaded on-demand.
-     */
-    const query = `
-      WITH my_matches AS (
-        SELECT match_id
-        FROM participants
-        PREWHERE puuid = '${escapedPuuid}'
-        WHERE 1=1 ${whereSql}
-        ORDER BY game_start_ms DESC
-        LIMIT ${count} OFFSET ${offset}
-      )
-      SELECT
-        m.match_id as matchId,
-        any(m.game_start_ms) as gameStartMs,
-        any(m.duration_sec) as duration,
-        any(m.queue_id) as queueId,
-        any(m.patch) as patch,
-        any(m.t1_win) as t1Win,
-        any(m.t2_win) as t2Win,
-        any(m.t1_towers) as t1Towers,
-        any(m.t2_towers) as t2Towers,
-        any(m.t1_inhibs) as t1Inhibs,
-        any(m.t2_inhibs) as t2Inhibs,
-        any(m.t1_dragons) as t1Dragons,
-        any(m.t2_dragons) as t2Dragons,
-        any(m.t1_barons) as t1Barons,
-        any(m.t2_barons) as t2Barons,
-        any(m.t1_heralds) as t1Heralds,
-        any(m.t2_heralds) as t2Heralds,
-        groupArray(
-          (
-            p.puuid,
-            p.riot_id_game_name,
-            p.riot_id_tag_line,
-            p.champion_id,
-            p.team_id,
-            p.win,
-            p.kills,
-            p.deaths,
-            p.assists,
-            p.total_cs,
-            p.summoner_level,
-            p.champ_level,
-            p.item0,
-            p.item1,
-            p.item2,
-            p.item3,
-            p.item4,
-            p.item5,
-            p.item6,
-            p.spell1,
-            p.spell2,
-            p.primary_style,
-            p.secondary_style,
-            p.vision_score,
-            p.dmg_taken,
-            p.dmg_to_champ,
-            p.team_position,
-            p.gold_earned,
-            p.wards_placed,
-            p.wards_killed,
-            p.dmg_to_turrets,
-            p.dmg_to_objectives,
-            p.physical_dmg_dealt,
-            p.magic_dmg_dealt,
-            p.true_dmg_dealt,
-            p.physical_dmg_to_champ,
-            p.magic_dmg_to_champ,
-            p.true_dmg_to_champ,
-            p.neutral_minions_killed,
-            p.vision_wards_bought,
-            p.all_in_pings,
-            p.assist_pings,
-            p.command_pings,
-            p.danger_pings,
-            p.enemy_missing_pings,
-            p.enemy_vision_pings,
-            p.get_back_pings,
-            p.need_vision_pings,
-            p.on_my_way_pings,
-            p.push_pings,
-            p.vision_cleared_pings,
-            p.bait_pings,
-            p.hold_pings
-          )
-        ) as participants
-      FROM my_matches mm
-      INNER JOIN matches m ON m.match_id = mm.match_id
-      INNER JOIN participants p ON p.match_id = mm.match_id
-      GROUP BY m.match_id
-      ORDER BY gameStartMs DESC
+    // Step 1: Get matching match_ids (very fast – uses PREWHERE on puuid)
+    const idsQuery = `
+      SELECT match_id, game_start_ms
+      FROM participants
+      PREWHERE puuid = '${escapedPuuid}'
+      WHERE 1=1 ${whereSql}
+      ORDER BY game_start_ms DESC
+      LIMIT ${count} OFFSET ${offset}
     `
 
-    const result = await clickhouse.query({
-      query,
-      format: 'JSONEachRow',
-    })
+    const idsResult = await clickhouse.query({ query: idsQuery, format: 'JSONEachRow' })
+    const idsRows = (await idsResult.json<{ match_id: string; game_start_ms: number }>()) ?? []
 
-    const rows = (await result.json<any>()) ?? []
-    return rows.map((row: any) => ({
-      ...row,
-      participants: row.participants.map((p: any) => this.mapParticipantTuple(p)),
-    }))
+    if (!idsRows.length) return []
+
+    const matchIds = idsRows.map((r) => asString(r.match_id))
+    const inList = matchIds.map((id) => `'${escapeClickhouseString(id)}'`).join(',')
+
+    // Step 2: Parallel fetch match metadata + participants
+    const matchQuery = `
+      SELECT
+        match_id as matchId,
+        game_start_ms as gameStartMs,
+        duration_sec as duration,
+        queue_id as queueId,
+        patch,
+        t1_win as t1Win,
+        t2_win as t2Win,
+        t1_towers as t1Towers,
+        t2_towers as t2Towers,
+        t1_inhibs as t1Inhibs,
+        t2_inhibs as t2Inhibs,
+        t1_dragons as t1Dragons,
+        t2_dragons as t2Dragons,
+        t1_barons as t1Barons,
+        t2_barons as t2Barons,
+        t1_heralds as t1Heralds,
+        t2_heralds as t2Heralds
+      FROM matches
+      PREWHERE match_id IN (${inList})
+    `
+
+    const participantsQuery = `
+      SELECT
+        match_id,
+        puuid,
+        riot_id_game_name,
+        riot_id_tag_line,
+        champion_id,
+        team_id,
+        win,
+        kills,
+        deaths,
+        assists,
+        total_cs,
+        summoner_level,
+        champ_level,
+        item0, item1, item2, item3, item4, item5, item6,
+        spell1, spell2,
+        primary_style, secondary_style,
+        vision_score,
+        dmg_taken,
+        dmg_to_champ,
+        team_position,
+        gold_earned,
+        wards_placed,
+        wards_killed,
+        dmg_to_turrets,
+        dmg_to_objectives,
+        physical_dmg_dealt,
+        magic_dmg_dealt,
+        true_dmg_dealt,
+        physical_dmg_to_champ,
+        magic_dmg_to_champ,
+        true_dmg_to_champ,
+        neutral_minions_killed,
+        vision_wards_bought,
+        all_in_pings,
+        assist_pings,
+        command_pings,
+        danger_pings,
+        enemy_missing_pings,
+        enemy_vision_pings,
+        get_back_pings,
+        need_vision_pings,
+        on_my_way_pings,
+        push_pings,
+        vision_cleared_pings,
+        bait_pings,
+        hold_pings
+      FROM participants
+      PREWHERE match_id IN (${inList})
+    `
+
+    const [matchResult, partResult] = await Promise.all([
+      clickhouse.query({ query: matchQuery, format: 'JSONEachRow' }),
+      clickhouse.query({ query: participantsQuery, format: 'JSONEachRow' }),
+    ])
+
+    const matchRows = (await matchResult.json<any>()) ?? []
+    const partRows = (await partResult.json<any>()) ?? []
+
+    // Step 3: JS-side merge (much faster than DB GROUP BY for small result sets)
+    const matchMap = new Map<string, any>()
+    for (const m of matchRows) {
+      matchMap.set(m.matchId, { ...m, participants: [] })
+    }
+
+    for (const p of partRows) {
+      const match = matchMap.get(p.match_id)
+      if (!match) continue
+      const totalDmgToChamp = (p.physical_dmg_to_champ || 0) + (p.magic_dmg_to_champ || 0) + (p.true_dmg_to_champ || 0)
+      match.participants.push({
+        puuid: p.puuid,
+        gameName: p.riot_id_game_name,
+        tagLine: p.riot_id_tag_line,
+        championId: p.champion_id,
+        teamId: p.team_id,
+        win: p.win,
+        kills: p.kills,
+        deaths: p.deaths,
+        assists: p.assists,
+        cs: p.total_cs,
+        totalMinionsKilled: p.total_cs,
+        level: p.summoner_level,
+        champLevel: p.champ_level,
+        items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5, p.item6],
+        spells: [p.spell1, p.spell2],
+        perks: { primary: p.primary_style, sub: p.secondary_style },
+        visionScore: p.vision_score,
+        damageTaken: p.dmg_taken,
+        damageDealt: p.dmg_to_champ,
+        totalDamageDealtToChampions: totalDmgToChamp,
+        position: p.team_position,
+        goldEarned: p.gold_earned,
+        wardsPlaced: p.wards_placed,
+        wardsKilled: p.wards_killed,
+        damageDealtToTurrets: p.dmg_to_turrets,
+        damageDealtToObjectives: p.dmg_to_objectives,
+        physicalDamageDealt: p.physical_dmg_dealt,
+        magicDamageDealt: p.magic_dmg_dealt,
+        trueDamageDealt: p.true_dmg_dealt,
+        physicalDamageDealtToChampions: p.physical_dmg_to_champ,
+        magicDamageDealtToChampions: p.magic_dmg_to_champ,
+        trueDamageDealtToChampions: p.true_dmg_to_champ,
+        neutralMinionsKilled: p.neutral_minions_killed,
+        visionWardsBoughtInGame: p.vision_wards_bought,
+        allInPings: p.all_in_pings,
+        assistPings: p.assist_pings,
+        commandPings: p.command_pings,
+        dangerPings: p.danger_pings,
+        enemyMissingPings: p.enemy_missing_pings,
+        enemyVisionPings: p.enemy_vision_pings,
+        getBackPings: p.get_back_pings,
+        needVisionPings: p.need_vision_pings,
+        onMyWayPings: p.on_my_way_pings,
+        pushPings: p.push_pings,
+        visionClearedPings: p.vision_cleared_pings,
+        baitPings: p.bait_pings,
+        holdPings: p.hold_pings,
+      })
+    }
+
+    // Return in descending game start order
+    return matchIds.map((id) => matchMap.get(id)).filter(Boolean)
   }
 
   /**
    * Load full match details (including timeline) by match id.
    *
-   * This endpoint is designed for on-demand UI expansion: it is intentionally
-   * heavier than the match list query, but only runs for a single match.
+   * Performance approach:
+   * - Three parallel flat queries (match, participants, timeline) — no JOINs or GROUP BY.
+   * - JS-side merge is trivial for a single match.
+   * - Timeline rows returned flat and sorted by frame_ms (ClickHouse ORDER BY).
    */
   async getById(matchId: string) {
     const escapedMatchId = escapeClickhouseString(matchId)
 
-    // 1) Match + participants (fast enough for one match, no timeline join explosion).
+    // Three parallel queries – no joins, no groupArray overhead
     const matchQuery = `
       SELECT
-        m.match_id as matchId,
-        any(m.game_start_ms) as gameStartMs,
-        any(m.duration_sec) as duration,
-        any(m.queue_id) as queueId,
-        any(m.patch) as patch,
-        any(m.t1_win) as t1Win,
-        any(m.t2_win) as t2Win,
-        any(m.t1_towers) as t1Towers,
-        any(m.t2_towers) as t2Towers,
-        any(m.t1_inhibs) as t1Inhibs,
-        any(m.t2_inhibs) as t2Inhibs,
-        any(m.t1_dragons) as t1Dragons,
-        any(m.t2_dragons) as t2Dragons,
-        any(m.t1_barons) as t1Barons,
-        any(m.t2_barons) as t2Barons,
-        any(m.t1_heralds) as t1Heralds,
-        any(m.t2_heralds) as t2Heralds,
-        groupArray(
-          (
-            p.puuid,
-            p.riot_id_game_name,
-            p.riot_id_tag_line,
-            p.champion_id,
-            p.team_id,
-            p.win,
-            p.kills,
-            p.deaths,
-            p.assists,
-            p.total_cs,
-            p.summoner_level,
-            p.champ_level,
-            p.item0,
-            p.item1,
-            p.item2,
-            p.item3,
-            p.item4,
-            p.item5,
-            p.item6,
-            p.spell1,
-            p.spell2,
-            p.primary_style,
-            p.secondary_style,
-            p.vision_score,
-            p.dmg_taken,
-            p.dmg_to_champ,
-            p.team_position,
-            p.gold_earned,
-            p.wards_placed,
-            p.wards_killed,
-            p.dmg_to_turrets,
-            p.dmg_to_objectives,
-            p.physical_dmg_dealt,
-            p.magic_dmg_dealt,
-            p.true_dmg_dealt,
-            p.physical_dmg_to_champ,
-            p.magic_dmg_to_champ,
-            p.true_dmg_to_champ,
-            p.neutral_minions_killed,
-            p.vision_wards_bought,
-            p.all_in_pings,
-            p.assist_pings,
-            p.command_pings,
-            p.danger_pings,
-            p.enemy_missing_pings,
-            p.enemy_vision_pings,
-            p.get_back_pings,
-            p.need_vision_pings,
-            p.on_my_way_pings,
-            p.push_pings,
-            p.vision_cleared_pings,
-            p.bait_pings,
-            p.hold_pings
-          )
-        ) as participants
-      FROM matches m
-      INNER JOIN participants p ON m.match_id = p.match_id
-      PREWHERE m.match_id = '${escapedMatchId}'
-      GROUP BY m.match_id
+        match_id as matchId,
+        game_start_ms as gameStartMs,
+        duration_sec as duration,
+        queue_id as queueId,
+        patch,
+        t1_win as t1Win,
+        t2_win as t2Win,
+        t1_towers as t1Towers,
+        t2_towers as t2Towers,
+        t1_inhibs as t1Inhibs,
+        t2_inhibs as t2Inhibs,
+        t1_dragons as t1Dragons,
+        t2_dragons as t2Dragons,
+        t1_barons as t1Barons,
+        t2_barons as t2Barons,
+        t1_heralds as t1Heralds,
+        t2_heralds as t2Heralds
+      FROM matches
+      PREWHERE match_id = '${escapedMatchId}'
       LIMIT 1
     `
 
-    const matchResult = await clickhouse.query({
-      query: matchQuery,
-      format: 'JSONEachRow',
-    })
+    const participantsQuery = `
+      SELECT
+        puuid,
+        riot_id_game_name,
+        riot_id_tag_line,
+        champion_id,
+        team_id,
+        win,
+        kills,
+        deaths,
+        assists,
+        total_cs,
+        summoner_level,
+        champ_level,
+        item0, item1, item2, item3, item4, item5, item6,
+        spell1, spell2,
+        primary_style, secondary_style,
+        vision_score,
+        dmg_taken,
+        dmg_to_champ,
+        team_position,
+        gold_earned,
+        wards_placed,
+        wards_killed,
+        dmg_to_turrets,
+        dmg_to_objectives,
+        physical_dmg_dealt,
+        magic_dmg_dealt,
+        true_dmg_dealt,
+        physical_dmg_to_champ,
+        magic_dmg_to_champ,
+        true_dmg_to_champ,
+        neutral_minions_killed,
+        vision_wards_bought,
+        all_in_pings,
+        assist_pings,
+        command_pings,
+        danger_pings,
+        enemy_missing_pings,
+        enemy_vision_pings,
+        get_back_pings,
+        need_vision_pings,
+        on_my_way_pings,
+        push_pings,
+        vision_cleared_pings,
+        bait_pings,
+        hold_pings
+      FROM participants
+      PREWHERE match_id = '${escapedMatchId}'
+    `
 
-    const matchRows = (await matchResult.json<any>()) ?? []
-    const base = matchRows[0]
-    if (!base?.matchId) {
-      return null
-    }
-
-    // 2) Timeline (sorted by frame_ms to avoid per-request sorting work in JS).
     const timelineQuery = `
       SELECT
-        match_id as matchId,
-        arraySort(x -> x.1,
-          groupArray(
-            (
-              frame_ms,
-              participant_id,
-              puuid,
-              team_id,
-              level,
-              xp,
-              gold_current,
-              gold_total,
-              gold_per_sec,
-              cs,
-              jungle_cs,
-              kills,
-              deaths,
-              assists,
-              pos_x,
-              pos_y,
-              time_cc,
-              spell1,
-              spell2,
-              primary_style,
-              secondary_style,
-              keystone,
-              rune1,
-              rune2,
-              rune3,
-              rune4,
-              rune5,
-              rune6,
-              stat_offense,
-              stat_flex,
-              stat_defense,
-              skill_order
-            )
-          )
-        ) as timeline
+        participant_id,
+        puuid,
+        team_id,
+        frame_ms,
+        level,
+        xp,
+        gold_current,
+        gold_total,
+        gold_per_sec,
+        cs,
+        jungle_cs,
+        kills,
+        deaths,
+        assists,
+        pos_x,
+        pos_y,
+        time_cc,
+        spell1,
+        spell2,
+        primary_style,
+        secondary_style,
+        keystone,
+        rune1, rune2, rune3, rune4, rune5, rune6,
+        stat_offense, stat_flex, stat_defense,
+        skill_order
       FROM match_timeline
       PREWHERE match_id = '${escapedMatchId}'
-      GROUP BY match_id
-      LIMIT 1
+      ORDER BY frame_ms ASC
     `
 
-    const timelineResult = await clickhouse.query({
-      query: timelineQuery,
-      format: 'JSONEachRow',
+    const [matchRes, partRes, timelineRes] = await Promise.all([
+      clickhouse.query({ query: matchQuery, format: 'JSONEachRow' }),
+      clickhouse.query({ query: participantsQuery, format: 'JSONEachRow' }),
+      clickhouse.query({ query: timelineQuery, format: 'JSONEachRow' }),
+    ])
+
+    const matchRows = (await matchRes.json<any>()) ?? []
+    const base = matchRows[0]
+    if (!base?.matchId) return null
+
+    const partRows = (await partRes.json<any>()) ?? []
+    const timelineRows = (await timelineRes.json<any>()) ?? []
+
+    // Map participants from flat rows
+    const participants = partRows.map((p: any) => {
+      const totalDmgToChamp = (p.physical_dmg_to_champ || 0) + (p.magic_dmg_to_champ || 0) + (p.true_dmg_to_champ || 0)
+      return {
+        puuid: p.puuid,
+        gameName: p.riot_id_game_name,
+        tagLine: p.riot_id_tag_line,
+        championId: p.champion_id,
+        teamId: p.team_id,
+        win: p.win,
+        kills: p.kills,
+        deaths: p.deaths,
+        assists: p.assists,
+        cs: p.total_cs,
+        totalMinionsKilled: p.total_cs,
+        level: p.summoner_level,
+        champLevel: p.champ_level,
+        items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5, p.item6],
+        spells: [p.spell1, p.spell2],
+        perks: { primary: p.primary_style, sub: p.secondary_style },
+        visionScore: p.vision_score,
+        damageTaken: p.dmg_taken,
+        damageDealt: p.dmg_to_champ,
+        totalDamageDealtToChampions: totalDmgToChamp,
+        position: p.team_position,
+        goldEarned: p.gold_earned,
+        wardsPlaced: p.wards_placed,
+        wardsKilled: p.wards_killed,
+        damageDealtToTurrets: p.dmg_to_turrets,
+        damageDealtToObjectives: p.dmg_to_objectives,
+        physicalDamageDealt: p.physical_dmg_dealt,
+        magicDamageDealt: p.magic_dmg_dealt,
+        trueDamageDealt: p.true_dmg_dealt,
+        physicalDamageDealtToChampions: p.physical_dmg_to_champ,
+        magicDamageDealtToChampions: p.magic_dmg_to_champ,
+        trueDamageDealtToChampions: p.true_dmg_to_champ,
+        neutralMinionsKilled: p.neutral_minions_killed,
+        visionWardsBoughtInGame: p.vision_wards_bought,
+        allInPings: p.all_in_pings,
+        assistPings: p.assist_pings,
+        commandPings: p.command_pings,
+        dangerPings: p.danger_pings,
+        enemyMissingPings: p.enemy_missing_pings,
+        enemyVisionPings: p.enemy_vision_pings,
+        getBackPings: p.get_back_pings,
+        needVisionPings: p.need_vision_pings,
+        onMyWayPings: p.on_my_way_pings,
+        pushPings: p.push_pings,
+        visionClearedPings: p.vision_cleared_pings,
+        baitPings: p.bait_pings,
+        holdPings: p.hold_pings,
+      }
     })
 
-    const timelineRows = (await timelineResult.json<any>()) ?? []
-    const timelineTuples = timelineRows[0]?.timeline ?? []
-
-    // tuple is (frame_ms, ...rest) -> we map to the UI shape and drop the sort key
-    const timeline = timelineTuples.map((t: any) =>
-      this.mapTimelineTuple([
-        t[1], // participant_id
-        t[2], // puuid
-        t[3], // team_id
-        t[0], // frame_ms
-        t[4],
-        t[5],
-        t[6],
-        t[7],
-        t[8],
-        t[9],
-        t[10],
-        t[11],
-        t[12],
-        t[13],
-        t[14],
-        t[15],
-        t[16],
-        t[17],
-        t[18],
-        t[19],
-        t[20],
-        t[21],
-        t[22],
-        t[23],
-        t[24],
-        t[25],
-        t[26],
-        t[27],
-        t[28],
-        t[29],
-        t[30],
-        t[31],
-      ])
-    )
+    // Map timeline from flat rows (already sorted by frame_ms)
+    const timeline = timelineRows.map((t: any) => ({
+      participantId: t.participant_id,
+      puuid: t.puuid,
+      teamId: t.team_id,
+      frameMs: t.frame_ms,
+      level: t.level,
+      xp: t.xp,
+      goldCurrent: t.gold_current,
+      goldTotal: t.gold_total,
+      goldPerSec: t.gold_per_sec,
+      cs: t.cs,
+      jungleCs: t.jungle_cs,
+      kills: t.kills,
+      deaths: t.deaths,
+      assists: t.assists,
+      posX: t.pos_x,
+      posY: t.pos_y,
+      timeCc: t.time_cc,
+      spells: [t.spell1, t.spell2],
+      perks: {
+        primaryStyle: t.primary_style,
+        secondaryStyle: t.secondary_style,
+        keystone: t.keystone,
+        runes: [t.rune1, t.rune2, t.rune3, t.rune4, t.rune5, t.rune6],
+        statPerks: {
+          offense: t.stat_offense,
+          flex: t.stat_flex,
+          defense: t.stat_defense,
+        },
+      },
+      skillOrder: t.skill_order ?? [],
+    }))
 
     return {
       ...base,
-      participants: base.participants.map((p: any) => this.mapParticipantTuple(p)),
+      participants,
       timeline,
     }
   }
