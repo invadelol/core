@@ -51,9 +51,7 @@ router
       .get('/summoners/puuid/:puuid/matches', [SummonersController, 'matches'])
       .use(middleware.httpCache())
 
-    router
-      .get('/matches/:id', [MatchesController, 'show'])
-      .use(middleware.httpCache())
+    router.get('/matches/:id', [MatchesController, 'show']).use(middleware.httpCache())
 
     router.put('/summoners/puuid/:puuid/increment', [SummonersController, 'incrementViews'])
 
@@ -70,6 +68,13 @@ router.get('/docs', async () => {
 })
 
 router.on('/').renderInertia('home')
+
+router.get('/:summoner/match/:matchId', ({ inertia, params }) => {
+  return inertia.render('match', {
+    summoner: params.summoner,
+    matchId: params.matchId,
+  })
+})
 
 router.get('/:summoner', ({ inertia, params }) => {
   return inertia.render('summoner', { summoner: params.summoner })

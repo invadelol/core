@@ -1,8 +1,23 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { Line as LineChart } from 'vue-chartjs'
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+} from 'chart.js'
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
 
 const props = defineProps<{
   puuid: string
+  summonerSlug?: string
 }>()
 
 type TabKey = 'general' | 'details' | 'runes' | 'insight'
@@ -598,6 +613,90 @@ function getHoverValue(series: SeriesData, index: number | null) {
     time: series.times[index] ?? 0,
   }
 }
+
+function buildChartData(
+  match: Match,
+  seriesKey: 'gold' | 'cs' | 'xp',
+  playerColor: string,
+  oppColor: string
+) {
+  const player = getSelectedPlayer(match)
+  const opp = getOpponent(match, player)
+  const playerSeries = getSeries(match, player)[seriesKey]
+  const oppSeries = getSeries(match, opp)[seriesKey]
+
+  const labels = playerSeries.times.map((t) => formatMs(t))
+
+  return {
+    labels,
+    datasets: [
+      {
+        label: 'You',
+        data: playerSeries.values,
+        borderColor: playerColor,
+        backgroundColor: playerColor + '20',
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        tension: 0.3,
+        fill: true,
+      },
+      {
+        label: 'Opponent',
+        data: oppSeries.values,
+        borderColor: oppColor,
+        backgroundColor: oppColor + '10',
+        borderWidth: 2,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        tension: 0.3,
+        fill: true,
+      },
+    ],
+  }
+}
+
+const chartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  interaction: {
+    mode: 'index' as const,
+    intersect: false,
+  },
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: '#fff',
+      titleColor: '#111',
+      bodyColor: '#555',
+      borderColor: '#e5e7eb',
+      borderWidth: 1,
+      padding: 8,
+      titleFont: { weight: 'bold' as const, size: 11 },
+      bodyFont: { size: 11 },
+      callbacks: {
+        label: (ctx: any) => `${ctx.dataset.label}: ${formatNumber(ctx.parsed.y)}`,
+      },
+    },
+  },
+  scales: {
+    x: {
+      display: true,
+      ticks: { maxTicksLimit: 6, font: { size: 10 }, color: '#9ca3af' },
+      grid: { display: false },
+    },
+    y: {
+      display: true,
+      ticks: {
+        maxTicksLimit: 4,
+        font: { size: 10 },
+        color: '#9ca3af',
+        callback: (v: any) => formatNumber(v),
+      },
+      grid: { color: '#f3f4f6' },
+    },
+  },
+}
 </script>
 
 <template>
@@ -743,7 +842,7 @@ function getHoverValue(series: SeriesData, index: number | null) {
           </div>
 
           <!-- Tabs -->
-          <div class="flex gap-2 mb-4 overflow-x-auto pb-2">
+          <div class="flex gap-2 mb-4 overflow-x-auto pb-2 items-center">
             <button
               v-for="tab in ['general', 'details', 'runes', 'insight']"
               :key="tab"
@@ -757,6 +856,13 @@ function getHoverValue(series: SeriesData, index: number | null) {
             >
               {{ tab.charAt(0).toUpperCase() + tab.slice(1) }}
             </button>
+            <a
+              v-if="props.summonerSlug"
+              :href="`/${encodeURIComponent(props.summonerSlug)}/match/${encodeURIComponent(match.matchId)}`"
+              class="ml-auto px-4 py-2 rounded-full text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors whitespace-nowrap"
+            >
+              Full Analysis →
+            </a>
           </div>
 
           <!-- General Tab -->
@@ -1002,65 +1108,21 @@ function getHoverValue(series: SeriesData, index: number | null) {
 
           <!-- Insight Tab -->
           <div v-else-if="activeTab[match.matchId] === 'insight'" class="tab-panel">
-            <div class="grid gap-4 md:grid-cols-2">
-              <!-- Gold Advantage Chart -->
+            <div v-if="!match.timeline?.length" class="text-center py-8 text-gray-500 text-sm">
+              Loading timeline data for charts...
+            </div>
+            <div v-else class="grid gap-4 md:grid-cols-2">
+              <!-- Gold Chart (chart.js) -->
               <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                <div class="mb-4">
-                  <h4 class="font-bold text-sm">Gold Advantage</h4>
-                  <p class="text-xs text-gray-500">Team gold difference over time</p>
+                <div class="mb-2">
+                  <h4 class="font-bold text-sm">Gold Over Time</h4>
+                  <p class="text-xs text-gray-500">You vs lane opponent</p>
                 </div>
-                <div
-                  class="relative h-32 w-full"
-                  @mousemove="(e) => setHover(e, hoverKey(match.matchId, 'gold', 'gold'), getSeries(match, getSelectedPlayer(match)).gold.values.length)"
-                  @mouseleave="clearHover(hoverKey(match.matchId, 'gold', 'gold'))"
-                >
-                  <svg class="w-full h-full" viewBox="0 0 140 46" preserveAspectRatio="none">
-                    <path
-                      :d="toLinePath(getSeries(match, getSelectedPlayer(match)).gold.values)"
-                      class="stroke-blue-500 fill-none stroke-2"
-                    />
-                    <path
-                      :d="toLinePath(getSeries(match, getOpponent(match, getSelectedPlayer(match))).gold.values)"
-                      class="stroke-red-500 fill-none stroke-2 opacity-50"
-                    />
-                  </svg>
-                  <div
-                    v-if="chartHover[hoverKey(match.matchId, 'gold', 'gold')] !== null"
-                    class="absolute top-2 right-2 bg-white border border-gray-200 rounded-lg p-2 shadow-lg text-xs z-10"
-                  >
-                    <div class="font-bold mb-1">
-                      {{
-                        formatMs(
-                          getHoverValue(
-                            getSeries(match, getSelectedPlayer(match)).gold,
-                            chartHover[hoverKey(match.matchId, 'gold', 'gold')]
-                          )?.time || 0
-                        )
-                      }}
-                    </div>
-                    <div class="flex justify-between gap-4 text-gray-500">
-                      <span>You</span>
-                      <strong class="text-gray-900">{{
-                        formatNumber(
-                          getHoverValue(
-                            getSeries(match, getSelectedPlayer(match)).gold,
-                            chartHover[hoverKey(match.matchId, 'gold', 'gold')]
-                          )?.value || 0
-                        )
-                      }}</strong>
-                    </div>
-                    <div class="flex justify-between gap-4 text-gray-500">
-                      <span>Opp</span>
-                      <strong class="text-gray-900">{{
-                        formatNumber(
-                          getHoverValue(
-                            getSeries(match, getOpponent(match, getSelectedPlayer(match))).gold,
-                            chartHover[hoverKey(match.matchId, 'gold', 'gold')]
-                          )?.value || 0
-                        )
-                      }}</strong>
-                    </div>
-                  </div>
+                <div class="h-40">
+                  <LineChart
+                    :data="buildChartData(match, 'gold', '#3b82f6', '#ef4444')"
+                    :options="chartOptions"
+                  />
                 </div>
                 <div class="flex justify-between text-xs mt-2">
                   <span class="text-blue-500 font-bold">You</span>
@@ -1068,64 +1130,17 @@ function getHoverValue(series: SeriesData, index: number | null) {
                 </div>
               </div>
 
-              <!-- XP Advantage Chart -->
+              <!-- XP Chart (chart.js) -->
               <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                <div class="mb-4">
-                  <h4 class="font-bold text-sm">XP Advantage</h4>
-                  <p class="text-xs text-gray-500">Experience difference over time</p>
+                <div class="mb-2">
+                  <h4 class="font-bold text-sm">XP Over Time</h4>
+                  <p class="text-xs text-gray-500">Experience comparison</p>
                 </div>
-                <div
-                  class="relative h-32 w-full"
-                  @mousemove="(e) => setHover(e, hoverKey(match.matchId, 'xp', 'xp'), getSeries(match, getSelectedPlayer(match)).xp.values.length)"
-                  @mouseleave="clearHover(hoverKey(match.matchId, 'xp', 'xp'))"
-                >
-                  <svg class="w-full h-full" viewBox="0 0 140 46" preserveAspectRatio="none">
-                    <path
-                      :d="toLinePath(getSeries(match, getSelectedPlayer(match)).xp.values)"
-                      class="stroke-purple-500 fill-none stroke-2"
-                    />
-                    <path
-                      :d="toLinePath(getSeries(match, getOpponent(match, getSelectedPlayer(match))).xp.values)"
-                      class="stroke-gray-400 fill-none stroke-2 opacity-50"
-                    />
-                  </svg>
-                  <div
-                    v-if="chartHover[hoverKey(match.matchId, 'xp', 'xp')] !== null"
-                    class="absolute top-2 right-2 bg-white border border-gray-200 rounded-lg p-2 shadow-lg text-xs z-10"
-                  >
-                    <div class="font-bold mb-1">
-                      {{
-                        formatMs(
-                          getHoverValue(
-                            getSeries(match, getSelectedPlayer(match)).xp,
-                            chartHover[hoverKey(match.matchId, 'xp', 'xp')]
-                          )?.time || 0
-                        )
-                      }}
-                    </div>
-                    <div class="flex justify-between gap-4 text-gray-500">
-                      <span>You</span>
-                      <strong class="text-gray-900">{{
-                        formatNumber(
-                          getHoverValue(
-                            getSeries(match, getSelectedPlayer(match)).xp,
-                            chartHover[hoverKey(match.matchId, 'xp', 'xp')]
-                          )?.value || 0
-                        )
-                      }}</strong>
-                    </div>
-                    <div class="flex justify-between gap-4 text-gray-500">
-                      <span>Opp</span>
-                      <strong class="text-gray-900">{{
-                        formatNumber(
-                          getHoverValue(
-                            getSeries(match, getOpponent(match, getSelectedPlayer(match))).xp,
-                            chartHover[hoverKey(match.matchId, 'xp', 'xp')]
-                          )?.value || 0
-                        )
-                      }}</strong>
-                    </div>
-                  </div>
+                <div class="h-40">
+                  <LineChart
+                    :data="buildChartData(match, 'xp', '#8b5cf6', '#9ca3af')"
+                    :options="chartOptions"
+                  />
                 </div>
                 <div class="flex justify-between text-xs mt-2">
                   <span class="text-purple-500 font-bold">You</span>
@@ -1140,28 +1155,26 @@ function getHoverValue(series: SeriesData, index: number | null) {
                   <p class="text-xs text-gray-500">Physical vs Magic vs True</p>
                 </div>
                 <div class="space-y-3">
-                   <!-- You -->
                    <div>
                       <div class="flex justify-between text-xs mb-1">
                         <span class="font-bold text-gray-900">You</span>
                         <span class="text-gray-500">{{ formatNumber(getSelectedPlayer(match).totalDamageDealtToChampions) }}</span>
                       </div>
                       <div class="h-2.5 flex rounded-full overflow-hidden w-full bg-gray-100">
-                        <div class="bg-orange-500 h-full" :style="{ width: (getSelectedPlayer(match).physicalDamageDealtToChampions / getSelectedPlayer(match).totalDamageDealtToChampions * 100) + '%' }"></div>
-                        <div class="bg-blue-500 h-full" :style="{ width: (getSelectedPlayer(match).magicDamageDealtToChampions / getSelectedPlayer(match).totalDamageDealtToChampions * 100) + '%' }"></div>
-                        <div class="bg-white border border-gray-200 h-full" :style="{ width: (getSelectedPlayer(match).trueDamageDealtToChampions / getSelectedPlayer(match).totalDamageDealtToChampions * 100) + '%' }"></div>
+                        <div class="bg-orange-500 h-full" :style="{ width: (getSelectedPlayer(match).physicalDamageDealtToChampions / Math.max(getSelectedPlayer(match).totalDamageDealtToChampions, 1) * 100) + '%' }"></div>
+                        <div class="bg-blue-500 h-full" :style="{ width: (getSelectedPlayer(match).magicDamageDealtToChampions / Math.max(getSelectedPlayer(match).totalDamageDealtToChampions, 1) * 100) + '%' }"></div>
+                        <div class="bg-white border border-gray-200 h-full" :style="{ width: (getSelectedPlayer(match).trueDamageDealtToChampions / Math.max(getSelectedPlayer(match).totalDamageDealtToChampions, 1) * 100) + '%' }"></div>
                       </div>
                    </div>
-                   <!-- Opponent -->
                    <div v-if="getOpponent(match, getSelectedPlayer(match))">
                       <div class="flex justify-between text-xs mb-1">
                         <span class="font-bold text-gray-900">Opponent</span>
                         <span class="text-gray-500">{{ formatNumber(getOpponent(match, getSelectedPlayer(match))!.totalDamageDealtToChampions) }}</span>
                       </div>
                       <div class="h-2.5 flex rounded-full overflow-hidden w-full bg-gray-100">
-                        <div class="bg-orange-500 h-full" :style="{ width: (getOpponent(match, getSelectedPlayer(match))!.physicalDamageDealtToChampions / getOpponent(match, getSelectedPlayer(match))!.totalDamageDealtToChampions * 100) + '%' }"></div>
-                        <div class="bg-blue-500 h-full" :style="{ width: (getOpponent(match, getSelectedPlayer(match))!.magicDamageDealtToChampions / getOpponent(match, getSelectedPlayer(match))!.totalDamageDealtToChampions * 100) + '%' }"></div>
-                        <div class="bg-white border border-gray-200 h-full" :style="{ width: (getOpponent(match, getSelectedPlayer(match))!.trueDamageDealtToChampions / getOpponent(match, getSelectedPlayer(match))!.totalDamageDealtToChampions * 100) + '%' }"></div>
+                        <div class="bg-orange-500 h-full" :style="{ width: (getOpponent(match, getSelectedPlayer(match))!.physicalDamageDealtToChampions / Math.max(getOpponent(match, getSelectedPlayer(match))!.totalDamageDealtToChampions, 1) * 100) + '%' }"></div>
+                        <div class="bg-blue-500 h-full" :style="{ width: (getOpponent(match, getSelectedPlayer(match))!.magicDamageDealtToChampions / Math.max(getOpponent(match, getSelectedPlayer(match))!.totalDamageDealtToChampions, 1) * 100) + '%' }"></div>
+                        <div class="bg-white border border-gray-200 h-full" :style="{ width: (getOpponent(match, getSelectedPlayer(match))!.trueDamageDealtToChampions / Math.max(getOpponent(match, getSelectedPlayer(match))!.totalDamageDealtToChampions, 1) * 100) + '%' }"></div>
                       </div>
                    </div>
                 </div>
@@ -1172,64 +1185,21 @@ function getHoverValue(series: SeriesData, index: number | null) {
                 </div>
               </div>
 
-              <!-- CS / Min (Existing) -->
+              <!-- CS Chart (chart.js) -->
               <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
-                <div class="mb-4">
-                  <h4 class="font-bold text-sm">CS / Min</h4>
-                  <p class="text-xs text-gray-500">Farming performance vs opponent</p>
+                <div class="mb-2">
+                  <h4 class="font-bold text-sm">CS Over Time</h4>
+                  <p class="text-xs text-gray-500">Farming comparison</p>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <div class="text-xs text-gray-500 mb-1">You</div>
-                    <div class="space-y-1">
-                      <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                          class="h-full bg-blue-500"
-                          :style="{
-                            width:
-                              Math.min(
-                                (getSeriesStats(getSeries(match, getSelectedPlayer(match)).cs.values).avg / 12) *
-                                  100,
-                                100
-                              ) + '%',
-                          }"
-                        ></div>
-                      </div>
-                      <div class="text-right text-xs font-bold text-gray-900">
-                        {{
-                          getSeriesStats(getSeries(match, getSelectedPlayer(match)).cs.values).avg.toFixed(1)
-                        }}
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <div class="text-xs text-gray-500 mb-1">Opponent</div>
-                    <div class="space-y-1">
-                      <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                          class="h-full bg-red-500"
-                          :style="{
-                            width:
-                              Math.min(
-                                (getSeriesStats(
-                                  getSeries(match, getOpponent(match, getSelectedPlayer(match))).cs.values
-                                ).avg /
-                                  12) *
-                                  100,
-                                100
-                              ) + '%',
-                          }"
-                        ></div>
-                      </div>
-                      <div class="text-right text-xs font-bold text-gray-900">
-                        {{
-                          getSeriesStats(
-                            getSeries(match, getOpponent(match, getSelectedPlayer(match))).cs.values
-                          ).avg.toFixed(1)
-                        }}
-                      </div>
-                    </div>
-                  </div>
+                <div class="h-40">
+                  <LineChart
+                    :data="buildChartData(match, 'cs', '#10b981', '#f59e0b')"
+                    :options="chartOptions"
+                  />
+                </div>
+                <div class="flex justify-between text-xs mt-2">
+                  <span class="text-emerald-500 font-bold">You</span>
+                  <span class="text-amber-500 font-bold">Opponent</span>
                 </div>
               </div>
             </div>

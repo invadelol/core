@@ -4,7 +4,7 @@ import { brotliCompress, brotliDecompress } from 'node:zlib'
 import { promisify } from 'node:util'
 
 import env from '#start/env'
-import { CACHE_FRESH_TTL_SECONDS, CACHE_TTL_SECONDS, CDN_MAX_AGE_SECONDS } from '#config/constants'
+import { CACHE_TTL_SECONDS } from '#config/constants'
 
 const brotliCompressAsync = promisify(brotliCompress)
 const brotliDecompressAsync = promisify(brotliDecompress)
@@ -13,10 +13,11 @@ const brotliDecompressAsync = promisify(brotliDecompress)
  * HTTP Cache middleware using Redis with Brotli compression.
  *
  * Caching strategy:
- * - Caches GET responses for CACHE_TTL_SECONDS
+ * - Caches GET responses in Redis for CACHE_TTL_SECONDS
  * - Returns cached data if available (HIT)
  * - Cache is invalidated via SummonerUpdated events when data changes
- * - No background refresh (next() should only be called once per request)
+ * - Browser is told NOT to cache (no-store) so stale data is never served
+ *   after invalidation. Redis is the single source of truth for caching.
  */
 export default class HttpCacheMiddleware {
   async handle({ request, response }: HttpContext, next: () => Promise<void>) {
@@ -33,12 +34,13 @@ export default class HttpCacheMiddleware {
     const cached = await this.getFromCache(key)
     if (cached) {
       // Set cache headers from stored response
-      Object.keys(cached.headers).forEach((key) => response.header(key, cached.headers[key]))
-      response.header('X-Cache', 'HIT')
-      response.header(
-        'Cache-Control',
-        `public, max-age=${CDN_MAX_AGE_SECONDS}, s-maxage=${CACHE_FRESH_TTL_SECONDS}`
+      Object.keys(cached.headers).forEach((headerName) =>
+        response.header(headerName, cached.headers[headerName])
       )
+      response.header('X-Cache', 'HIT')
+      // Tell browser not to cache – Redis handles caching, browser always re-validates
+      response.header('Cache-Control', 'no-store, no-cache, must-revalidate')
+      response.header('Pragma', 'no-cache')
 
       return response.send(cached.body)
     }
@@ -52,19 +54,23 @@ export default class HttpCacheMiddleware {
     const body = response.getBody()
     if (!body) return
 
-    // Add cache headers
-    response.header(
-      'Cache-Control',
-      `public, max-age=${CDN_MAX_AGE_SECONDS}, s-maxage=${CACHE_FRESH_TTL_SECONDS}`
-    )
+    // Tell browser not to cache – Redis handles caching
+    response.header('Cache-Control', 'no-store, no-cache, must-revalidate')
+    response.header('Pragma', 'no-cache')
 
-    // Cache the response
+    // Cache the response in Redis
     await this.saveToCache(key, body, response.getHeaders() as Record<string, string>)
 
     // Track cache key for this puuid (for invalidation via SummonerUpdated event)
     const puuidMatch = url.match(/\/api\/summoners\/puuid\/([a-zA-Z0-9_-]+)/)
     if (puuidMatch?.[1]) {
       await redis.sadd(`summoner:${puuidMatch[1]}:cache_keys`, key)
+    }
+
+    // Track cache key for match endpoints (for invalidation when match data refreshes)
+    const matchIdMatch = url.match(/\/api\/matches\/([A-Z0-9]+_[0-9]+)/)
+    if (matchIdMatch?.[1]) {
+      await redis.sadd(`match:${matchIdMatch[1]}:cache_keys`, key)
     }
   }
 
