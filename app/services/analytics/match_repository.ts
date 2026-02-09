@@ -3,116 +3,14 @@ import { asString, escapeClickhouseString } from '#utils/clickhouse'
 import { DEFAULT_MATCH_COUNT, DEFAULT_OFFSET } from '#config/constants'
 
 /**
- * Repository for match-related ClickHouse queries
+ * Repository for match-related ClickHouse queries.
+ *
+ * Performance strategy:
+ * - All queries use flat SELECT + PREWHERE (no GROUP BY / groupArray).
+ * - Parallel queries for independent data (match metadata vs participants vs timeline).
+ * - JS-side merge for small result sets (10-15 matches, 10 participants).
  */
 export class MatchRepository {
-  /**
-   * We store most ClickHouse `groupArray` values as tuples for speed.
-   * This helper converts a participant tuple (ordered SELECT list) into a JS object
-   * with stable field names used by the frontend.
-   */
-  private mapParticipantTuple(p: any) {
-    const totalDamageDealtToChampions = (p[35] || 0) + (p[36] || 0) + (p[37] || 0)
-
-    return {
-      puuid: p[0],
-      gameName: p[1],
-      tagLine: p[2],
-      championId: p[3],
-      teamId: p[4],
-      win: p[5],
-      kills: p[6],
-      deaths: p[7],
-      assists: p[8],
-
-      /**
-       * Kept for backward compatibility with existing UI usage.
-       * This is the aggregated lane + jungle CS value stored in ClickHouse.
-       */
-      cs: p[9],
-      totalMinionsKilled: p[9],
-      level: p[10],
-      champLevel: p[11],
-      items: [p[12], p[13], p[14], p[15], p[16], p[17], p[18]],
-      spells: [p[19], p[20]],
-      perks: { primary: p[21], sub: p[22] },
-
-      visionScore: p[23],
-      damageTaken: p[24],
-
-      // "damageDealt" is used throughout the UI as damage to champions.
-      damageDealt: p[25],
-      totalDamageDealtToChampions,
-      position: p[26],
-      goldEarned: p[27],
-      wardsPlaced: p[28],
-      wardsKilled: p[29],
-      damageDealtToTurrets: p[30],
-      damageDealtToObjectives: p[31],
-      physicalDamageDealt: p[32],
-      magicDamageDealt: p[33],
-      trueDamageDealt: p[34],
-      physicalDamageDealtToChampions: p[35],
-      magicDamageDealtToChampions: p[36],
-      trueDamageDealtToChampions: p[37],
-      neutralMinionsKilled: p[38],
-      visionWardsBoughtInGame: p[39],
-
-      allInPings: p[40],
-      assistPings: p[41],
-      commandPings: p[42],
-      dangerPings: p[43],
-      enemyMissingPings: p[44],
-      enemyVisionPings: p[45],
-      getBackPings: p[46],
-      needVisionPings: p[47],
-      onMyWayPings: p[48],
-      pushPings: p[49],
-      visionClearedPings: p[50],
-      baitPings: p[51],
-      holdPings: p[52],
-    }
-  }
-
-  /**
-   * Converts a timeline tuple (ordered SELECT list) into the object shape used by the UI.
-   * Note: we sort frames in ClickHouse, so we can keep this mapping lightweight here.
-   */
-  private mapTimelineTuple(t: any) {
-    return {
-      participantId: t[0],
-      puuid: t[1],
-      teamId: t[2],
-      frameMs: t[3],
-      level: t[4],
-      xp: t[5],
-      goldCurrent: t[6],
-      goldTotal: t[7],
-      goldPerSec: t[8],
-      cs: t[9],
-      jungleCs: t[10],
-      kills: t[11],
-      deaths: t[12],
-      assists: t[13],
-      posX: t[14],
-      posY: t[15],
-      timeCc: t[16],
-      spells: [t[17], t[18]],
-      perks: {
-        primaryStyle: t[19],
-        secondaryStyle: t[20],
-        keystone: t[21],
-        runes: [t[22], t[23], t[24], t[25], t[26], t[27]],
-        statPerks: {
-          offense: t[28],
-          flex: t[29],
-          defense: t[30],
-        },
-      },
-      skillOrder: t[31] ?? [],
-    }
-  }
-
   /**
    * Returns the subset of matchIds that already exist in ClickHouse.
    */

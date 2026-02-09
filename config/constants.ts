@@ -23,9 +23,9 @@ export const MAX_CHAMPION_STATS_COUNT = 100
 export const DEFAULT_OFFSET = 0
 
 // Cache timing (seconds)
-export const CACHE_FRESH_TTL_SECONDS = 30 * 60 // 30 minutes
+// Redis TTL for server-side HTTP cache. Browser caching is disabled (no-store)
+// so Redis invalidation takes effect immediately on next request.
 export const CACHE_TTL_SECONDS = 2 * 60 * 60 // 2 hours
-export const CDN_MAX_AGE_SECONDS = 60 * 60 // 1 hour
 
 // Top champions to show in stats
 export const TOP_CHAMPIONS_COUNT = 10
