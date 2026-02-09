@@ -278,7 +278,8 @@ export class MatchRepository {
     for (const p of partRows) {
       const match = matchMap.get(p.match_id)
       if (!match) continue
-      const totalDmgToChamp = (p.physical_dmg_to_champ || 0) + (p.magic_dmg_to_champ || 0) + (p.true_dmg_to_champ || 0)
+      const totalDmgToChamp =
+        (p.physical_dmg_to_champ || 0) + (p.magic_dmg_to_champ || 0) + (p.true_dmg_to_champ || 0)
       match.participants.push({
         puuid: p.puuid,
         gameName: p.riot_id_game_name,
@@ -468,7 +469,8 @@ export class MatchRepository {
 
     // Map participants from flat rows
     const participants = partRows.map((p: any) => {
-      const totalDmgToChamp = (p.physical_dmg_to_champ || 0) + (p.magic_dmg_to_champ || 0) + (p.true_dmg_to_champ || 0)
+      const totalDmgToChamp =
+        (p.physical_dmg_to_champ || 0) + (p.magic_dmg_to_champ || 0) + (p.true_dmg_to_champ || 0)
       return {
         puuid: p.puuid,
         gameName: p.riot_id_game_name,

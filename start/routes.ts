@@ -51,9 +51,7 @@ router
       .get('/summoners/puuid/:puuid/matches', [SummonersController, 'matches'])
       .use(middleware.httpCache())
 
-    router
-      .get('/matches/:id', [MatchesController, 'show'])
-      .use(middleware.httpCache())
+    router.get('/matches/:id', [MatchesController, 'show']).use(middleware.httpCache())
 
     router.put('/summoners/puuid/:puuid/increment', [SummonersController, 'incrementViews'])
 
