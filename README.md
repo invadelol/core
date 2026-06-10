@@ -24,7 +24,7 @@ A League of Legends statistics API built with AdonisJS v6.
 **1. Clone and install**
 
 ```bash
-git clone https://github.com/lschvn/api.invade.lol.git
+git clone https://github.com/invadelol/core.git
 cd api.invade.lol
 npm install
 ```
