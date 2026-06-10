@@ -1,4 +1,4 @@
-# api.invade.lol
+# Invade API
 
 A League of Legends statistics API built with AdonisJS v6.
 
