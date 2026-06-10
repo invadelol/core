@@ -2,6 +2,10 @@
 
 A League of Legends statistics API built with AdonisJS v6.
 
+Personal project. I wanted a fast, no-fluff League of Legends stats app, so I
+built one. The live version runs at [invade.lol](https://invade.lol) - feel
+free to try it out before setting up locally.
+
 > Not affiliated with or endorsed by Riot Games. League of Legends is a
 > trademark of Riot Games, Inc.
 
