@@ -221,8 +221,16 @@ class SummonerService {
     const sanitized = query.trim().replace(/[^a-zA-Z0-9\s]/g, '')
     if (!sanitized) return []
 
+    // to_tsquery requires terms to be joined with operators, so a multi-word
+    // search like "MRS Paulux" must become "MRS:* & Paulux:*"
+    const tsquery = sanitized
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((term) => `${term}:*`)
+      .join(' & ')
+
     return Summoner.query()
-      .whereRaw(`search_vector @@ to_tsquery('simple', ?)`, [`${sanitized}:*`])
+      .whereRaw(`search_vector @@ to_tsquery('simple', ?)`, [tsquery])
       .orderBy('viewCount', 'desc')
       .limit(Math.min(limit, MAX_SEARCH_LIMIT))
   }
