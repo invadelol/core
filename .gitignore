@@ -5,6 +5,8 @@ tmp
 
 # Secrets
 .env
+.env.dev
+.env.development
 .env.production.local
 .env.development.local
 
