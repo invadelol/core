@@ -21,53 +21,38 @@ A League of Legends statistics API built with AdonisJS v6.
 
 ## Getting started
 
-**1. Clone and install**
+**1. Clone**
 
 ```bash
 git clone https://github.com/invadelol/core.git
-cd api.invade.lol
-npm install
+cd core
 ```
 
-**2. Configure environment**
+**2. Fill in secrets**
 
 ```bash
-cp .env.example .env
+make dev
 ```
 
-Open `.env` and fill in:
+On first run, `make dev` creates `.env` from `.env.example` and stops.
+Open `.env` and fill in two values:
 
 - `APP_KEY` - run `node ace generate:key` to get one
-- `RIOT_API_KEY` - your Riot developer key
+- `RIOT_API_KEY` - get a key at https://developer.riotgames.com
 
-Everything else in `.env` is pre-filled with local defaults that work with
-the Docker Compose stack out of the box.
+Everything else is pre-filled with local defaults.
 
-**3. Start services**
-
-```bash
-docker compose up -d
-# or: make up
-```
-
-This starts PostgreSQL, ClickHouse, Redis, and MinIO.
-
-**4. Run migrations**
+**3. Start**
 
 ```bash
-node ace migration:run
-node ace clickhouse:migration:run
-# or: make migrate
+make dev
 ```
 
-**5. Start the dev server**
+That's it. `make dev` installs dependencies, starts Docker services (PostgreSQL,
+ClickHouse, Redis, MinIO), waits for them to be ready, runs migrations, and
+launches the dev server.
 
-```bash
-npm run dev
-# or: make dev
-```
-
-The API is now available at http://localhost:3333.
+The API is available at http://localhost:3333.
 
 ---
 
@@ -75,12 +60,12 @@ The API is now available at http://localhost:3333.
 
 | Command | Description |
 | --- | --- |
-| `make up` | Start Docker services |
+| `make dev` | Full onboarding + dev server (use this) |
+| `make up` | Start Docker services only |
 | `make down` | Stop Docker services |
-| `make dev` | Start dev server with HMR |
+| `make migrate` | Run all migrations |
 | `make build` | Build for production |
 | `make start` | Start production server |
-| `make migrate` | Run all migrations |
 | `make test` | Run test suite |
 | `make lint` | Run ESLint |
 | `make typecheck` | TypeScript check |
