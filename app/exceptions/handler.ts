@@ -23,6 +23,30 @@ export default class HttpExceptionHandler extends ExceptionHandler {
    * @note You should not attempt to send a response from this method.
    */
   async report(error: unknown, ctx: HttpContext) {
+    // The default report writes only the message, which in production reads
+    // as a bare "Internal server error" with nothing to act on. Anything that
+    // reached here uncaught is worth a full line: where it happened, what the
+    // upstream said, and the stack.
+    const err = error as any
+    const status = Number(err?.status ?? err?.statusCode ?? 500)
+
+    if (status >= 500) {
+      ctx.logger.error(
+        {
+          err,
+          status,
+          code: err?.code,
+          method: ctx.request.method(),
+          url: ctx.request.url(true),
+          // Riot's client attaches the upstream response; it explains most
+          // 500s here (429 rate limit, 403 expired key).
+          upstreamStatus: err?.response?.status ?? err?.status,
+          upstreamBody: err?.response?.data ?? err?.body,
+        },
+        `Unhandled ${status} on ${ctx.request.method()} ${ctx.request.url()}`
+      )
+    }
+
     return super.report(error, ctx)
   }
 }

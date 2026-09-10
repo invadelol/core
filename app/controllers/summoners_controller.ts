@@ -1,5 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 
+import logger from '@adonisjs/core/services/logger'
+
 import riotApiService from '#services/riot/api'
 import summonerService from '#services/summoner_service'
 import matchService from '#services/matches_service'
@@ -10,6 +12,7 @@ import {
   getChampionStatsValidator,
   getMatchesValidator,
 } from '#validators/summoner'
+import { translateRiotError } from '#utils/riot_errors'
 
 export default class SummonersController {
   /**
@@ -35,12 +38,17 @@ export default class SummonersController {
   async sync({ request, response }: HttpContext) {
     const { summoner, platform } = await request.validateUsing(syncSummonerValidator)
 
-    const resolvedSummoner = await summonerService.resolveAndUpsert(summoner, platform)
-
-    const newMatches = await matchService.update(
-      resolvedSummoner.puuid,
-      riotApiService.platformToRegion(platform)
-    )
+    let resolvedSummoner
+    let newMatches
+    try {
+      resolvedSummoner = await summonerService.resolveAndUpsert(summoner, platform)
+      newMatches = await matchService.update(
+        resolvedSummoner.puuid,
+        riotApiService.platformToRegion(platform)
+      )
+    } catch (error) {
+      throw translateRiotError(error)
+    }
 
     if (!newMatches.length) {
       return response.notFound({ message: 'No new matches found' })
@@ -58,8 +66,20 @@ export default class SummonersController {
   async show({ params, response }: HttpContext) {
     const { summoner, platform } = params
 
-    const resolvedSummoner = await summonerService.resolveAndUpsert(summoner, platform)
-    return response.ok({ summoner: resolvedSummoner })
+    try {
+      const resolvedSummoner = await summonerService.resolveAndUpsert(summoner, platform)
+      return response.ok({ summoner: resolvedSummoner })
+    } catch (error) {
+      // A profile we already hold is worth serving even when Riot is down;
+      // stale beats an error page.
+      const stored = await summonerService.findStored(summoner, platform).catch(() => null)
+      if (stored) {
+        logger.warn({ err: error, summoner, platform }, 'Riot lookup failed, serving stored row')
+        return response.ok({ summoner: stored, stale: true })
+      }
+
+      throw translateRiotError(error)
+    }
   }
 
   /**
