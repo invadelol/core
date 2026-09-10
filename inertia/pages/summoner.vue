@@ -9,7 +9,7 @@ import MatchList from '../components/MatchList.vue'
 import RankPanel from '../components/RankPanel.vue'
 import ActivityHeatmap from '../components/ActivityHeatmap.vue'
 import TeammatesPanel from '../components/TeammatesPanel.vue'
-import { parseSlug } from '../lib/format.js'
+import { decodeSlug, parseSlug } from '../lib/format.js'
 import type {
   ActivityDay,
   ChampionStats,
@@ -24,6 +24,8 @@ const props = defineProps<{ summoner: string }>()
 
 const PLATFORM = 'EUW1'
 
+/** The route param, decoded exactly once. Encode from this, never from the prop. */
+const slug = computed(() => decodeSlug(props.summoner))
 const parsed = computed(() => parseSlug(props.summoner))
 
 const profile = ref<Summoner | null>(null)
@@ -53,7 +55,7 @@ async function json<T>(url: string, fallback: T): Promise<T> {
 
 /** Resolves the summoner, syncing from Riot once if we've never seen them. */
 async function loadProfile(): Promise<Summoner | null> {
-  const url = `/api/summoners/${PLATFORM}/${encodeURIComponent(props.summoner)}`
+  const url = `/api/summoners/${PLATFORM}/${encodeURIComponent(slug.value)}`
   const res = await fetch(url)
   if (res.ok) return (await res.json()).summoner
 
@@ -62,7 +64,7 @@ async function loadProfile(): Promise<Summoner | null> {
   const synced = await fetch('/api/summoners/sync', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ summoner: decodeURIComponent(props.summoner), platform: PLATFORM }),
+    body: JSON.stringify({ summoner: slug.value, platform: PLATFORM }),
   })
   if (!synced.ok) return null
 
@@ -207,7 +209,7 @@ async function sync() {
             :puuid="profile.puuid"
           />
           <ChampionsPanel :champions="champions" />
-          <MatchList :matches="matches" :puuid="profile.puuid" :summoner-slug="props.summoner" />
+          <MatchList :matches="matches" :puuid="profile.puuid" :summoner-slug="slug" />
         </div>
 
         <aside class="space-y-5">
