@@ -67,9 +67,22 @@ export function ordinal(value: number) {
   return `${value}th`
 }
 
+/**
+ * Route params reach the page still percent-encoded, so a name with a space
+ * arrives as "MRS%20PauluX-KCWIN". Decode once here and keep the plain value
+ * in the page; encode again only when building a URL from it.
+ */
+export function decodeSlug(slug: string) {
+  try {
+    return decodeURIComponent(slug)
+  } catch {
+    return slug
+  }
+}
+
 /** Splits a "GameName-TagLine" slug back into its two halves. */
 export function parseSlug(slug: string) {
-  const decoded = decodeURIComponent(slug)
+  const decoded = decodeSlug(slug)
   const lastDash = decoded.lastIndexOf('-')
   if (lastDash === -1) return { gameName: decoded, tagLine: 'EUW' }
   return {

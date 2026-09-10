@@ -25,6 +25,7 @@ import {
 import {
   clock,
   compact,
+  decodeSlug,
   duration,
   kda,
   ordinal,
@@ -58,6 +59,8 @@ useChartJs()
 
 const props = defineProps<{ summoner: string; matchId: string }>()
 
+/** The route param, decoded exactly once. Encode from this, never from the prop. */
+const slug = computed(() => decodeSlug(props.summoner))
 const parsed = computed(() => parseSlug(props.summoner))
 
 const match = ref<Match | null>(null)
@@ -85,8 +88,7 @@ onMounted(async () => {
     }
     match.value = await res.json()
 
-    const slug = decodeURIComponent(props.summoner)
-    const owner = match.value?.participants.find((p) => `${p.gameName}-${p.tagLine}` === slug)
+    const owner = match.value?.participants.find((p) => `${p.gameName}-${p.tagLine}` === slug.value)
     selectedPuuid.value = owner?.puuid ?? match.value?.participants[0]?.puuid ?? ''
   } catch {
     error.value = 'Failed to load this match'
@@ -409,7 +411,7 @@ const duelRows = computed(() => {
 
   <AppHeader
     :crumbs="[
-      { label: `${parsed.gameName}#${parsed.tagLine}`, href: `/${encodeURIComponent(summoner)}` },
+      { label: `${parsed.gameName}#${parsed.tagLine}`, href: `/${encodeURIComponent(slug)}` },
       { label: 'Match' },
     ]"
   />
@@ -426,7 +428,7 @@ const duelRows = computed(() => {
 
     <div v-else-if="error" class="card px-6 py-16 text-center">
       <p class="text-[0.9375rem] font-medium text-ink">{{ error }}</p>
-      <a :href="`/${encodeURIComponent(summoner)}`" class="btn mt-5">Back to profile</a>
+      <a :href="`/${encodeURIComponent(slug)}`" class="btn mt-5">Back to profile</a>
     </div>
 
     <div v-else-if="match" class="space-y-5">
