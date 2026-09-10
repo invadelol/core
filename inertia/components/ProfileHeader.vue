@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Eye, RefreshCw } from 'lucide-vue-next'
-import { profileIcon, rankCrest, TIER_NAMES, QUEUE_LABELS } from '../lib/ddragon.js'
+import { profileIcon, rankCrest, TIER_NAMES, QUEUE_LABELS } from '../lib/assets.js'
 import { timeAgo } from '../lib/format.js'
 import type { Rank, Summoner } from '../lib/types.js'
 

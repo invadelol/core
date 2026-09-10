@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import ItemRow from './ItemRow.vue'
 import Meter from './ui/Meter.vue'
-import { champIcon, championName, POSITION_NAMES } from '../lib/ddragon.js'
+import { champIcon, championName, POSITION_NAMES } from '../lib/assets.js'
 import { compact, kda } from '../lib/format.js'
 import {
   killParticipation,

@@ -14,11 +14,10 @@ import {
   championName,
   loadChampions,
   loadItems,
-  loadRunes,
   queueName,
   spellIcon,
   POSITION_NAMES,
-} from '../lib/ddragon.js'
+} from '../lib/assets.js'
 import { clock, compact, duration, kda, ordinal, timeAgo } from '../lib/format.js'
 import {
   frameValue,
@@ -64,7 +63,6 @@ const failed = ref<Record<string, boolean>>({})
 onMounted(() => {
   loadChampions()
   loadItems()
-  loadRunes()
 })
 
 /* ── Row-level derived data ─────────────────────────────────── */

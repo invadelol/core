@@ -7,6 +7,9 @@ import { createSSRApp, h } from 'vue'
 import type { DefineComponent } from 'vue'
 import { createInertiaApp } from '@inertiajs/vue3'
 import { resolvePageComponent } from '@adonisjs/inertia/helpers'
+import { installIconFallback } from '../lib/icon-fallback.js'
+
+installIconFallback()
 
 const appName = import.meta.env.VITE_APP_NAME || 'invade.lol'
 

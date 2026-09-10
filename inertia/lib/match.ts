@@ -1,5 +1,5 @@
 import type { Match, Participant, RuneSet, TimelineEntry } from './types.js'
-import { POSITION_ORDER } from './ddragon.js'
+import { POSITION_ORDER } from './assets.js'
 
 export function matchMinutes(match: Pick<Match, 'duration'>) {
   return Math.max((match.duration || 0) / 60, 1)

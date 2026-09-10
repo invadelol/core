@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { Search } from 'lucide-vue-next'
-import { profileIcon } from '../lib/ddragon.js'
+import { profileIcon } from '../lib/assets.js'
 
 const props = withDefaults(
   defineProps<{

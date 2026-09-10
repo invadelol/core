@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { runeIcon, runeStyleIcon } from '../lib/ddragon.js'
+import { runeIcon, runeStyleIcon } from '../lib/assets.js'
 import type { RuneSet } from '../lib/types.js'
 
 withDefaults(
