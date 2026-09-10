@@ -1,114 +1,124 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3'
-import { ref, onMounted, computed } from 'vue'
-import { Home, RefreshCw, Eye } from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
+import AppHeader from '../components/AppHeader.vue'
+import ProfileHeader from '../components/ProfileHeader.vue'
+import PerformanceBand from '../components/PerformanceBand.vue'
+import ChampionsPanel from '../components/ChampionsPanel.vue'
+import MatchList from '../components/MatchList.vue'
+import RankPanel from '../components/RankPanel.vue'
+import ActivityHeatmap from '../components/ActivityHeatmap.vue'
+import TeammatesPanel from '../components/TeammatesPanel.vue'
+import { parseSlug } from '../lib/format.js'
+import type {
+  ActivityDay,
+  ChampionStats,
+  Match,
+  RanksPayload,
+  StatsPayload,
+  Summoner,
+  Teammate,
+} from '../lib/types.js'
 
-import SearchBar from '../components/SearchBar.vue'
-import MatchesTable from '../components/MatchesTable.vue'
-import ActivityChart from '../components/ActivityChart.vue'
-import FriendsList from '../components/FriendsList.vue'
-import ChampionsStats from '../components/ChampionsStats.vue'
-import StatisticsPanel from '../components/StatisticsPanel.vue'
-import RankDisplay from '../components/RankDisplay.vue'
-import RankHistory from '../components/RankHistory.vue'
+const props = defineProps<{ summoner: string }>()
 
-const props = defineProps<{
-  summoner: string
-}>()
+const PLATFORM = 'EUW1'
 
-interface SummonerData {
-  puuid: string
-  gameName: string
-  tagLine: string
-  profileIconId: number | null
-  summonerLevel: number | null
-  platform: string
-}
+const parsed = computed(() => parseSlug(props.summoner))
 
-const summonerData = ref<SummonerData | null>(null)
+const profile = ref<Summoner | null>(null)
+const stats = ref<StatsPayload | null>(null)
+const ranks = ref<RanksPayload | null>(null)
+const matches = ref<Match[]>([])
+const champions = ref<ChampionStats[]>([])
+const activity = ref<ActivityDay[]>([])
+const teammates = ref<Teammate[]>([])
+
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const isSyncing = ref(false)
 const syncMessage = ref<string | null>(null)
 const viewCount = ref<number | null>(null)
-const refreshKey = ref(0)
 
-const DDRAGON_BASE = 'https://ddragon.leagueoflegends.com/cdn/14.24.1/img'
+const lastGameMs = computed(() => matches.value[0]?.gameStartMs ?? null)
 
-const parsedSummoner = computed(() => {
-  const decoded = decodeURIComponent(props.summoner)
-  const lastDash = decoded.lastIndexOf('-')
-  if (lastDash === -1) return { gameName: decoded, tagLine: 'EUW' }
-  return {
-    gameName: decoded.substring(0, lastDash),
-    tagLine: decoded.substring(lastDash + 1),
+async function json<T>(url: string, fallback: T): Promise<T> {
+  try {
+    const res = await fetch(url)
+    return res.ok ? await res.json() : fallback
+  } catch {
+    return fallback
   }
-})
+}
+
+/** Resolves the summoner, syncing from Riot once if we've never seen them. */
+async function loadProfile(): Promise<Summoner | null> {
+  const url = `/api/summoners/${PLATFORM}/${encodeURIComponent(props.summoner)}`
+  const res = await fetch(url)
+  if (res.ok) return (await res.json()).summoner
+
+  if (res.status !== 404) return null
+
+  const synced = await fetch('/api/summoners/sync', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ summoner: decodeURIComponent(props.summoner), platform: PLATFORM }),
+  })
+  if (!synced.ok) return null
+
+  const retry = await fetch(url)
+  return retry.ok ? (await retry.json()).summoner : null
+}
+
+/** All analytics for a known puuid, in one round of parallel requests. */
+async function loadAnalytics(puuid: string) {
+  const base = `/api/summoners/puuid/${puuid}`
+  const [s, r, m, c, a, t] = await Promise.all([
+    json<StatsPayload | null>(`${base}/stats?count=100`, null),
+    json<RanksPayload | null>(`${base}/ranks`, null),
+    json<Match[]>(`${base}/matches?count=15`, []),
+    json<ChampionStats[]>(`${base}/champions?count=100`, []),
+    json<ActivityDay[]>(`${base}/activity`, []),
+    json<Teammate[]>(`${base}/friends`, []),
+  ])
+  stats.value = s
+  ranks.value = r
+  matches.value = m
+  champions.value = c
+  activity.value = a
+  teammates.value = t
+}
 
 onMounted(async () => {
   try {
-    const platform = 'EUW1'
-    const res = await fetch(`/api/summoners/${platform}/${props.summoner}`)
-
-    if (res.ok) {
-      const data = await res.json()
-      summonerData.value = data.summoner
-    } else if (res.status === 404) {
-      // Try to sync the summoner first before giving up
-      const syncRes = await fetch('/api/summoners/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          summoner: decodeURIComponent(props.summoner),
-          platform: platform,
-        }),
-      })
-
-      if (syncRes.ok) {
-        // Sync succeeded, retry fetching the summoner
-        const retryRes = await fetch(
-          `/api/summoners/${platform}/${encodeURIComponent(props.summoner)}`
-        )
-        if (retryRes.ok) {
-          const data = await retryRes.json()
-          summonerData.value = data.summoner
-        } else {
-          error.value = 'Summoner not found'
-        }
-      } else {
-        error.value = 'Summoner not found'
-      }
-    } else {
-      error.value = 'Failed to load summoner'
+    profile.value = await loadProfile()
+    if (!profile.value) {
+      error.value = 'Summoner not found'
+      return
     }
-  } catch (e) {
-    error.value = 'Failed to load summoner'
+    await loadAnalytics(profile.value.puuid)
+  } catch {
+    error.value = 'Failed to load this profile'
   } finally {
     isLoading.value = false
   }
 
-  // Track view after 3 seconds
-  if (summonerData.value) {
-    setTimeout(async () => {
-      if (!summonerData.value) return
-      try {
-        const viewRes = await fetch(`/api/summoners/puuid/${summonerData.value.puuid}/increment`, {
-          method: 'PUT',
-        })
-        if (viewRes.ok) {
-          const data = await viewRes.json()
-          viewCount.value = Number(data.viewCount)
-        }
-      } catch (e) {
-        // Silent fail for view tracking
-      }
-    }, 3000)
-  }
+  // Count the visit once the page has clearly been read, not on every bounce.
+  if (!profile.value) return
+  setTimeout(async () => {
+    const puuid = profile.value?.puuid
+    if (!puuid) return
+    try {
+      const res = await fetch(`/api/summoners/puuid/${puuid}/increment`, { method: 'PUT' })
+      if (res.ok) viewCount.value = Number((await res.json()).viewCount)
+    } catch {
+      /* view tracking is best-effort */
+    }
+  }, 3000)
 })
 
-async function syncSummoner() {
-  if (!summonerData.value || isSyncing.value) return
-
+async function sync() {
+  if (!profile.value || isSyncing.value) return
   isSyncing.value = true
   syncMessage.value = null
 
@@ -117,133 +127,95 @@ async function syncSummoner() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        summoner: `${summonerData.value.gameName}-${summonerData.value.tagLine}`,
-        platform: summonerData.value.platform,
+        summoner: `${profile.value.gameName}-${profile.value.tagLine}`,
+        platform: profile.value.platform,
       }),
     })
 
     if (res.ok) {
-      const data = await res.json()
-      syncMessage.value = `Found ${data.matches?.length || 0} new matches!`
-      // Increment refreshKey to force all child components to re-mount with fresh data
-      setTimeout(() => {
-        refreshKey.value++
-        syncMessage.value = null
-      }, 1000)
-    } else if (res.status === 404) {
-      syncMessage.value = 'No new matches found'
+      const found = (await res.json()).matches?.length ?? 0
+      syncMessage.value = found
+        ? `${found} new match${found > 1 ? 'es' : ''}`
+        : 'Already up to date'
+      await loadAnalytics(profile.value.puuid)
     } else {
-      syncMessage.value = 'Sync failed'
+      syncMessage.value = res.status === 404 ? 'No new matches' : 'Update failed'
     }
-  } catch (e) {
-    syncMessage.value = 'Sync failed'
+  } catch {
+    syncMessage.value = 'Update failed'
   } finally {
     isSyncing.value = false
+    setTimeout(() => (syncMessage.value = null), 4000)
   }
 }
 </script>
 
 <template>
-  <Head :title="parsedSummoner.gameName" />
+  <Head :title="`${parsed.gameName}#${parsed.tagLine}`" />
 
-  <div class="min-h-screen bg-gray-100">
-    <!-- Header with search -->
-    <header class="bg-white shadow-sm">
-      <div class="max-w-7xl mx-auto px-4 py-4 flex items-center gap-6">
-        <a href="/" class="p-2 rounded-lg hover:bg-gray-100 transition-colors" title="Home">
-          <Home class="w-6 h-6 text-gray-700" />
-        </a>
-        <div class="flex-1 max-w-md">
-          <SearchBar />
+  <AppHeader :crumbs="[{ label: `${parsed.gameName}#${parsed.tagLine}` }]" />
+
+  <main class="mx-auto max-w-[1180px] px-4 py-6">
+    <!-- Loading -->
+    <div v-if="isLoading" class="space-y-5">
+      <div class="card p-5">
+        <div class="flex items-center gap-5">
+          <div class="skel h-16 w-16 rounded-xl" />
+          <div class="flex-1 space-y-2">
+            <div class="skel h-6 w-56" />
+            <div class="skel h-3 w-40" />
+          </div>
         </div>
       </div>
-    </header>
+      <div class="skel h-32 rounded-[10px]" />
+      <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div class="skel h-[480px] rounded-[10px]" />
+        <div class="skel h-[480px] rounded-[10px]" />
+      </div>
+    </div>
 
-    <main class="max-w-7xl mx-auto px-4 py-8">
-      <!-- Loading state -->
-      <div v-if="isLoading" class="text-center py-16">
-        <div
-          class="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"
-        ></div>
-        <p class="text-gray-500">Loading summoner...</p>
+    <!-- Error -->
+    <div v-else-if="error" class="card px-6 py-16 text-center">
+      <p class="text-[0.9375rem] font-medium text-ink">{{ error }}</p>
+      <p class="mx-auto mt-2 max-w-sm text-[0.8125rem] text-ink-2">
+        Check the spelling of
+        <span class="font-medium text-ink">{{ parsed.gameName }}#{{ parsed.tagLine }}</span
+        >, or search for someone else.
+      </p>
+      <a href="/" class="btn mt-5">Back to search</a>
+    </div>
+
+    <!-- Profile -->
+    <div v-else-if="profile" class="space-y-5">
+      <div class="card p-5">
+        <ProfileHeader
+          :summoner="profile"
+          :ranks="ranks?.current ?? []"
+          :view-count="viewCount"
+          :is-syncing="isSyncing"
+          :sync-message="syncMessage"
+          :last-game-ms="lastGameMs"
+          @sync="sync"
+        />
       </div>
 
-      <!-- Error state -->
-      <div v-else-if="error" class="text-center py-16">
-        <p class="text-red-500 text-lg mb-4">{{ error }}</p>
-        <a href="/" class="text-blue-600 hover:underline">← Back to search</a>
-      </div>
-
-      <!-- Summoner data -->
-      <div v-else-if="summonerData">
-        <!-- Summoner header -->
-        <div class="bg-white rounded-lg shadow p-6 mb-6 flex items-center gap-6">
-          <img
-            :src="`${DDRAGON_BASE}/profileicon/${summonerData.profileIconId || 1}.png`"
-            :alt="summonerData.gameName"
-            class="w-24 h-24 rounded-full border-4 border-blue-500"
+      <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
+        <div class="space-y-5">
+          <PerformanceBand
+            :stats="stats?.global ?? null"
+            :matches="matches"
+            :puuid="profile.puuid"
           />
-          <div class="flex-1">
-            <h1 class="text-3xl font-bold text-gray-800">
-              {{ summonerData.gameName }}
-              <span class="text-gray-500 text-xl">#{{ summonerData.tagLine }}</span>
-            </h1>
-            <p class="text-gray-500 mt-1">
-              Level {{ summonerData.summonerLevel || 'Unknown' }} • {{ summonerData.platform }}
-              <span v-if="viewCount !== null" class="ml-2 inline-flex items-center gap-1">
-                <Eye class="w-4 h-4" />
-                {{ viewCount.toLocaleString() }}
-              </span>
-            </p>
-            <p
-              v-if="syncMessage"
-              class="text-sm mt-1"
-              :class="syncMessage.includes('new matches') ? 'text-green-600' : 'text-gray-500'"
-            >
-              {{ syncMessage }}
-            </p>
-          </div>
-
-          <button
-            @click="syncSummoner"
-            :disabled="isSyncing"
-            class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <RefreshCw :class="['w-4 h-4', isSyncing && 'animate-spin']" />
-            <span>{{ isSyncing ? 'Syncing...' : 'Update' }}</span>
-          </button>
+          <ChampionsPanel :champions="champions" />
+          <MatchList :matches="matches" :puuid="profile.puuid" :summoner-slug="props.summoner" />
         </div>
 
-        <!-- Stats grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <div class="lg:col-span-2">
-            <StatisticsPanel :key="`stats-${refreshKey}`" :puuid="summonerData.puuid" />
-          </div>
-          <div>
-            <ActivityChart :key="`activity-${refreshKey}`" :puuid="summonerData.puuid" />
-          </div>
-        </div>
-
-        <!-- Rank History -->
-        <div class="mb-6">
-          <RankHistory :key="`rank-history-${refreshKey}`" :puuid="summonerData.puuid" />
-        </div>
-
-        <!-- Main content grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <!-- Match history (2 cols) -->
-          <div class="lg:col-span-2">
-            <MatchesTable :key="`matches-${refreshKey}`" :puuid="summonerData.puuid" :summoner-slug="props.summoner" />
-          </div>
-
-          <!-- Sidebar -->
-          <div class="space-y-6">
-            <RankDisplay :key="`rank-${refreshKey}`" :puuid="summonerData.puuid" />
-            <FriendsList :key="`friends-${refreshKey}`" :puuid="summonerData.puuid" />
-            <ChampionsStats :key="`champs-${refreshKey}`" :puuid="summonerData.puuid" />
-          </div>
-        </div>
+        <aside class="space-y-5">
+          <RankPanel :ranks="ranks" />
+          <ActivityHeatmap :activity="activity" />
+          <TeammatesPanel :teammates="teammates" />
+        </aside>
       </div>
-    </main>
-  </div>
+    </div>
+  </main>
 </template>
