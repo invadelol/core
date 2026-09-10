@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
+import { Github } from 'lucide-vue-next'
 import SearchBar from './SearchBar.vue'
+import { REPO_URL } from '../lib/links.js'
 
 defineProps<{
   /** Breadcrumb shown after the wordmark, e.g. the summoner being viewed. */
@@ -32,6 +34,17 @@ defineProps<{
       <div class="ml-auto w-full max-w-[280px]">
         <SearchBar />
       </div>
+
+      <a
+        :href="REPO_URL"
+        target="_blank"
+        rel="noreferrer"
+        title="Free and open source on GitHub"
+        class="shrink-0 rounded-md p-1.5 text-ink-3 transition-colors hover:bg-[#f4f4f6] hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+      >
+        <Github class="h-[18px] w-[18px]" />
+        <span class="sr-only">Source code on GitHub</span>
+      </a>
     </div>
   </header>
 </template>
