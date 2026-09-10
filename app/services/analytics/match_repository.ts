@@ -237,7 +237,7 @@ export class MatchRepository {
    * Load full match details (including timeline) by match id.
    *
    * Performance approach:
-   * - Three parallel flat queries (match, participants, timeline) — no JOINs or GROUP BY.
+   * - Three parallel flat queries (match, participants, timeline), with no JOINs or GROUP BY.
    * - JS-side merge is trivial for a single match.
    * - Timeline rows returned flat and sorted by frame_ms (ClickHouse ORDER BY).
    */

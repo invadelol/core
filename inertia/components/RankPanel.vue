@@ -206,7 +206,7 @@ const options = computed(() =>
         </p>
       </template>
       <p v-else class="text-[0.6875rem] text-ink-3">
-        Not enough snapshots yet to draw a climb — check back after a few more days of games.
+        Not enough snapshots yet to draw a climb. Check back after a few more days of games.
       </p>
     </div>
   </Card>

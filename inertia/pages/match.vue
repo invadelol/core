@@ -105,7 +105,7 @@ const lobby = computed(() =>
 const timeline = computed(() => indexTimeline(match.value))
 const minutes = computed(() => (match.value ? matchMinutes(match.value) : 1))
 
-/** Lobby-wide maxima — every meter on the page reads against these. */
+/** Lobby-wide maxima. Every meter on the page reads against these. */
 const maxima = computed(() => {
   const players = match.value?.participants ?? []
   const max = (pick: (p: Participant) => number) => Math.max(...players.map(pick), 1)
@@ -800,7 +800,7 @@ const duelRows = computed(() => {
               {{
                 playerRunes.keystone
                   ? `Keystone and ${playerRunes.runes.length} further picks, read from the match timeline.`
-                  : 'Only the rune trees are stored for this match — no timeline to read the individual picks from.'
+                  : 'Only the rune trees are stored for this match, with no timeline to read the picks from.'
               }}
             </p>
           </Card>
@@ -812,7 +812,7 @@ const duelRows = computed(() => {
         <div v-if="!match.timeline?.length" class="card px-6 py-16 text-center">
           <p class="text-[0.9375rem] font-medium text-ink">No timeline for this match</p>
           <p class="mt-1.5 text-[0.8125rem] text-ink-2">
-            Per-minute data isn’t stored for every game — the scoreboard is still complete.
+            Per-minute data isn’t stored for every game. The scoreboard is still complete.
           </p>
         </div>
 

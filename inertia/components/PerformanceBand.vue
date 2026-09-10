@@ -8,7 +8,7 @@ import type { GlobalStats, Match } from '../lib/types.js'
 
 const props = defineProps<{
   stats: GlobalStats | null
-  /** Recent matches, newest first — used for the form strip. */
+  /** Recent matches, newest first. Used for the form strip. */
   matches: Match[]
   puuid: string
 }>()

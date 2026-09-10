@@ -105,7 +105,7 @@ export interface Match {
   t1Heralds: number
   t2Heralds: number
   participants: Participant[]
-  /** Loaded on demand — large, and only needed once a match is opened. */
+  /** Loaded on demand: large, and only needed once a match is opened. */
   timeline?: TimelineEntry[]
 }
 
