@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { champIcon, championName, POSITION_NAMES } from '../lib/ddragon.js'
+import { champIcon, championName, POSITION_NAMES } from '../lib/assets.js'
 import { teamMembers } from '../lib/match.js'
 import type { Match } from '../lib/types.js'
 

@@ -18,6 +18,7 @@ import { middleware } from '#start/middleware'
 const SummonersController = () => import('#controllers/summoners_controller')
 const HealthChecksController = () => import('#controllers/health_checks_controller')
 const MatchesController = () => import('#controllers/matches_controller')
+const AssetsController = () => import('#controllers/assets_controller')
 
 // API routes group
 router
@@ -58,6 +59,17 @@ router
     router.get('/health', [HealthChecksController, 'handle'])
   })
   .prefix('/api')
+
+/**
+ * Riot game art, proxied and mirrored so the client never talks to Riot's
+ * CDNs directly. Registered before the summoner catch-all below.
+ */
+router
+  .group(() => {
+    router.get('/names/:kind', [AssetsController, 'names'])
+    router.get('/:kind/:id', [AssetsController, 'show'])
+  })
+  .prefix('/cdn')
 
 router.get('/swagger', async () => {
   return AutoSwagger.docs(router.toJSON(), swagger)

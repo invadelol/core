@@ -17,11 +17,10 @@ import {
   championName,
   loadChampions,
   loadItems,
-  loadRunes,
   queueName,
   spellIcon,
   POSITION_NAMES,
-} from '../lib/ddragon.js'
+} from '../lib/assets.js'
 import {
   clock,
   compact,
@@ -78,7 +77,6 @@ const SECTIONS = [
 onMounted(async () => {
   loadChampions()
   loadItems()
-  loadRunes()
 
   try {
     const res = await fetch(`/api/matches/${encodeURIComponent(props.matchId)}`)

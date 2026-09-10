@@ -4,7 +4,7 @@ import { Link } from '@inertiajs/vue3'
 import Card from './ui/Card.vue'
 import EmptyState from './ui/EmptyState.vue'
 import Meter from './ui/Meter.vue'
-import { profileIcon } from '../lib/ddragon.js'
+import { profileIcon } from '../lib/assets.js'
 import type { Teammate } from '../lib/types.js'
 
 const props = defineProps<{ teammates: Teammate[] }>()

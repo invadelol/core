@@ -4,7 +4,7 @@ import Card from './ui/Card.vue'
 import EmptyState from './ui/EmptyState.vue'
 import Segmented from './ui/Segmented.vue'
 import Meter from './ui/Meter.vue'
-import { champIcon, championName, loadChampions } from '../lib/ddragon.js'
+import { champIcon, championName, loadChampions } from '../lib/assets.js'
 import { compact } from '../lib/format.js'
 import type { ChampionStats } from '../lib/types.js'
 

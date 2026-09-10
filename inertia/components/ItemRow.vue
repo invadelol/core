@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { itemIcon, itemName } from '../lib/ddragon.js'
+import { itemIcon, itemName } from '../lib/assets.js'
 
 const props = withDefaults(
   defineProps<{
