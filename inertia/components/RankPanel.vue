@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Line as LineChart } from 'vue-chartjs'
+import { LineChart } from '../lib/lazy_charts.js'
 import Card from './ui/Card.vue'
 import EmptyState from './ui/EmptyState.vue'
 import Segmented from './ui/Segmented.vue'
 import { QUEUE_LABELS, TIER_NAMES, rankCrest } from '../lib/assets.js'
 import { longDate, shortDate } from '../lib/format.js'
-import { CHART_COLORS, lineOptions, useChartJs } from '../lib/chart.js'
+import { CHART_COLORS, lineOptions } from '../lib/chart.js'
 import type { RanksPayload } from '../lib/types.js'
-
-useChartJs()
 
 const props = defineProps<{ ranks: RanksPayload | null }>()
 

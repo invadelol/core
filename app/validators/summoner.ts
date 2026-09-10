@@ -49,6 +49,7 @@ export const getChampionStatsValidator = vine.compile(
 
 export const getMatchesValidator = vine.compile(
   vine.object({
+    view: vine.enum(['summary', 'full']).optional(),
     type: vine.enum(['normal', 'ranked', 'aram', 'flex', 'all']).optional(),
     count: vine.number().min(1).max(100).optional(),
     offset: vine.number().min(0).optional(),

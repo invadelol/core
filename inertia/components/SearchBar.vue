@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { Search } from 'lucide-vue-next'
 import { profileIcon } from '../lib/assets.js'
@@ -24,9 +24,9 @@ const results = ref<Result[]>([])
 const isLoading = ref(false)
 const isOpen = ref(false)
 const activeIndex = ref(0)
-const input = ref<HTMLInputElement | null>(null)
 
 let debounce: ReturnType<typeof setTimeout>
+let searchController: AbortController | undefined
 
 /** "Faker#EUW" typed in full is a destination on its own, listed first. */
 const typedTarget = computed(() => {
@@ -54,6 +54,8 @@ const showDropdown = computed(() => isOpen.value && entries.value.length > 0)
 
 watch(query, (value) => {
   clearTimeout(debounce)
+  searchController?.abort()
+  isLoading.value = false
   activeIndex.value = 0
   if (value.trim().length < 2) {
     results.value = []
@@ -65,16 +67,26 @@ watch(query, (value) => {
 })
 
 async function search(q: string) {
+  searchController = new AbortController()
+  const { signal } = searchController
   isLoading.value = true
   try {
-    const res = await fetch(`/api/summoners/search?q=${encodeURIComponent(q)}&limit=8`)
-    if (res.ok) results.value = await res.json()
+    const res = await fetch(`/api/summoners/search?q=${encodeURIComponent(q)}&limit=8`, { signal })
+    if (res.ok) {
+      const data = await res.json()
+      if (!signal.aborted) results.value = data
+    }
   } catch {
-    results.value = []
+    if (!signal.aborted) results.value = []
   } finally {
-    isLoading.value = false
+    if (!signal.aborted) isLoading.value = false
   }
 }
+
+onBeforeUnmount(() => {
+  clearTimeout(debounce)
+  searchController?.abort()
+})
 
 function go(entry: { gameName: string; tagLine: string }) {
   isOpen.value = false
@@ -108,7 +120,6 @@ function submit() {
         :class="props.size === 'lg' ? 'w-[18px] h-[18px]' : 'w-4 h-4'"
       />
       <input
-        ref="input"
         v-model="query"
         type="text"
         spellcheck="false"

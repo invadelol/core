@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, shallowReactive, watch } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { ChevronDown } from 'lucide-vue-next'
-import { Line as LineChart } from 'vue-chartjs'
+import { LineChart } from '../lib/lazy_charts.js'
 import Card from './ui/Card.vue'
 import EmptyState from './ui/EmptyState.vue'
 import Meter from './ui/Meter.vue'
@@ -33,10 +33,8 @@ import {
   teamTotals,
   teamWon,
 } from '../lib/match.js'
-import { CHART_COLORS, areaFill, lineOptions, useChartJs } from '../lib/chart.js'
+import { CHART_COLORS, areaFill, lineOptions } from '../lib/chart.js'
 import type { Match, Participant } from '../lib/types.js'
-
-useChartJs()
 
 const props = defineProps<{
   matches: Match[]
@@ -55,8 +53,8 @@ const TABS = [
 const expanded = ref<string | null>(null)
 const tab = ref<Record<string, TabKey>>({})
 const focus = ref<Record<string, string>>({})
-/** Full match payloads (with timeline), fetched the first time a row opens. */
-const details = ref<Record<string, Match>>({})
+/** Full match payloads, fetched when a graph or rune view first needs the timeline. */
+const details = shallowReactive<Record<string, Match>>({})
 const loading = ref<Record<string, boolean>>({})
 const failed = ref<Record<string, boolean>>({})
 
@@ -67,7 +65,7 @@ onMounted(() => {
 
 /* ── Row-level derived data ─────────────────────────────────── */
 function resolve(match: Match) {
-  return details.value[match.matchId] ?? match
+  return details[match.matchId] ?? match
 }
 
 function me(match: Match) {
@@ -106,7 +104,7 @@ const context = computed(() => {
   return out
 })
 
-async function toggle(matchId: string) {
+function toggle(matchId: string) {
   if (expanded.value === matchId) {
     expanded.value = null
     return
@@ -114,17 +112,26 @@ async function toggle(matchId: string) {
   expanded.value = matchId
   tab.value[matchId] ??= 'scoreboard'
   focus.value[matchId] ??= props.puuid
-  await fetchDetails(matchId)
 }
 
+// The list already contains the scoreboard. Only graphs and runes need timeline data.
+watch(
+  () => [expanded.value, expanded.value ? tab.value[expanded.value] : null] as const,
+  ([matchId, selectedTab]) => {
+    if (matchId && selectedTab !== 'scoreboard') void fetchDetails(matchId)
+  }
+)
+
+const timeline = computed(() => indexTimeline(expanded.value ? details[expanded.value] : null))
+
 async function fetchDetails(matchId: string) {
-  if (details.value[matchId] || loading.value[matchId]) return
+  if (details[matchId] || loading.value[matchId]) return
   loading.value[matchId] = true
   failed.value[matchId] = false
   try {
     const res = await fetch(`/api/matches/${encodeURIComponent(matchId)}`)
     if (!res.ok) throw new Error('request failed')
-    details.value[matchId] = await res.json()
+    details[matchId] = await res.json()
   } catch {
     failed.value[matchId] = true
   } finally {
@@ -133,9 +140,9 @@ async function fetchDetails(matchId: string) {
 }
 
 /* ── Charts ─────────────────────────────────────────────────── */
-function series(match: Match, p: Participant | undefined, key: 'gold' | 'cs' | 'xp') {
+function series(p: Participant | undefined, key: 'gold' | 'cs' | 'xp') {
   if (!p) return { labels: [] as string[], values: [] as number[] }
-  const frames = indexTimeline(match)[p.puuid] ?? []
+  const frames = timeline.value[p.puuid] ?? []
   return {
     labels: frames.map((f) => clock(f.frameMs)),
     values: frames.map((f) => frameValue(f, key)),
@@ -145,8 +152,8 @@ function series(match: Match, p: Participant | undefined, key: 'gold' | 'cs' | '
 function chart(match: Match, key: 'gold' | 'cs' | 'xp') {
   const player = focused(match)
   const enemy = laneOpponent(match, player)
-  const mine = series(match, player, key)
-  const theirs = series(match, enemy, key)
+  const mine = series(player, key)
+  const theirs = series(enemy, key)
   return {
     labels: mine.labels.length ? mine.labels : theirs.labels,
     datasets: [
@@ -195,7 +202,15 @@ const GRAPHS = [
     />
 
     <ul v-else class="divide-y divide-line">
-      <li v-for="match in matches" :key="match.matchId">
+      <li
+        v-for="match in matches"
+        :key="match.matchId"
+        :style="
+          expanded !== match.matchId
+            ? { contentVisibility: 'auto', containIntrinsicSize: 'auto 90px' }
+            : undefined
+        "
+      >
         <!-- ── Summary row ───────────────────────────────── -->
         <button
           type="button"
@@ -330,11 +345,14 @@ const GRAPHS = [
             </Link>
           </div>
 
-          <p v-if="loading[match.matchId]" class="py-6 text-center text-[0.8125rem] text-ink-3">
+          <p
+            v-if="tab[match.matchId] !== 'scoreboard' && loading[match.matchId]"
+            class="py-6 text-center text-[0.8125rem] text-ink-3"
+          >
             Loading match details…
           </p>
           <p
-            v-else-if="failed[match.matchId]"
+            v-else-if="tab[match.matchId] !== 'scoreboard' && failed[match.matchId]"
             class="flex items-center justify-center gap-3 py-6 text-[0.8125rem] text-neg"
           >
             Couldn’t load this match.
@@ -474,7 +492,7 @@ const GRAPHS = [
                     <span class="min-w-0 flex-1 truncate text-[0.75rem] text-ink">
                       {{ championName(p.championId) }}
                     </span>
-                    <RuneGlyphs :runes="runeSet(indexTimeline(resolve(match))[p.puuid] ?? [], p)" />
+                    <RuneGlyphs :runes="runeSet(timeline[p.puuid] ?? [], p)" />
                   </li>
                 </ul>
               </div>

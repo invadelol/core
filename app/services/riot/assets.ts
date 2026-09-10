@@ -1,6 +1,7 @@
 import cache from '@adonisjs/cache/services/main'
 import drive from '@adonisjs/drive/services/main'
 import logger from '@adonisjs/core/services/logger'
+import { ByteCache } from '#utils/byte_cache'
 
 import { ASSET_PREFIX, FETCH_TIMEOUT_MS, MANIFESTS, MANIFEST_TTL } from '#constants/assets'
 import type { AssetKind } from '#constants/assets'
@@ -31,6 +32,9 @@ export interface AssetPayload {
  * labelled tile instead of letting the page render a broken-image glyph.
  */
 class RiotAssetsService {
+  /** Bound hot image bytes per process; browser/R2 remain the longer-lived caches. */
+  private memory = new ByteCache<AssetPayload>(32 * 1024 * 1024, 512)
+
   /** Dedupes concurrent misses for the same asset within one process. */
   private inFlight = new Map<string, Promise<AssetPayload>>()
 
@@ -38,6 +42,8 @@ class RiotAssetsService {
 
   async get(kind: AssetKind, id: string): Promise<AssetPayload> {
     const key = `${kind}/${id}`
+    const cached = this.memory.get(key)
+    if (cached) return cached
 
     const existing = this.inFlight.get(key)
     if (existing) return existing
@@ -47,6 +53,10 @@ class RiotAssetsService {
       .catch((error) => {
         logger.error({ err: error, kind, id }, 'asset resolution failed')
         return this.placeholder(kind, id)
+      })
+      .then((asset) => {
+        this.memory.set(key, asset, asset.body.byteLength, asset.placeholder ? 30_000 : 3_600_000)
+        return asset
       })
       .finally(() => this.inFlight.delete(key))
 
@@ -135,12 +145,13 @@ class RiotAssetsService {
   private async readMirror(path: string): Promise<AssetPayload | null> {
     try {
       const disk = drive.use()
-      if (!(await disk.exists(path))) return null
-
-      const body = await disk.getBytes(path)
+      // GET tells us whether the object exists. Read metadata concurrently to
+      // preserve SVG/JPEG/WebP types even though mirror keys have no extension.
+      const [body, meta] = await Promise.all([
+        disk.getBytes(path),
+        disk.getMetaData(path).catch(() => null),
+      ])
       if (!body?.length) return null
-
-      const meta = await disk.getMetaData(path).catch(() => null)
       return {
         body,
         contentType: meta?.contentType || guessContentType(path),
@@ -148,7 +159,12 @@ class RiotAssetsService {
       }
     } catch (error) {
       // A mirror outage must never take the icons down with it.
-      logger.warn({ err: error, path }, 'asset mirror read failed')
+      const cause = (
+        error as { cause?: { name?: string; $metadata?: { httpStatusCode?: number } } }
+      )?.cause
+      if (cause?.name !== 'NoSuchKey' && cause?.$metadata?.httpStatusCode !== 404) {
+        logger.warn({ err: error, path }, 'asset mirror read failed')
+      }
       return null
     }
   }

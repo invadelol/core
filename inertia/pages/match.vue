@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3'
-import { computed, onMounted, ref } from 'vue'
-import { Bar as BarChart, Line as LineChart } from 'vue-chartjs'
+import { computed, onMounted, ref, shallowRef } from 'vue'
+import { BarChart, LineChart } from '../lib/lazy_charts.js'
 import AppHeader from '../components/AppHeader.vue'
 import MatchScoreboard from '../components/MatchScoreboard.vue'
 import PlayerPicker from '../components/PlayerPicker.vue'
@@ -51,10 +51,8 @@ import {
   teamTotals,
   totalPings,
 } from '../lib/match.js'
-import { CHART_COLORS, areaFill, barOptions, lineOptions, useChartJs } from '../lib/chart.js'
+import { CHART_COLORS, areaFill, barOptions, lineOptions } from '../lib/chart.js'
 import type { Match, Participant } from '../lib/types.js'
-
-useChartJs()
 
 const props = defineProps<{ summoner: string; matchId: string }>()
 
@@ -62,7 +60,7 @@ const props = defineProps<{ summoner: string; matchId: string }>()
 const slug = computed(() => decodeSlug(props.summoner))
 const parsed = computed(() => parseSlug(props.summoner))
 
-const match = ref<Match | null>(null)
+const match = shallowRef<Match | null>(null)
 const isLoading = ref(true)
 const error = ref<string | null>(null)
 const selectedPuuid = ref('')

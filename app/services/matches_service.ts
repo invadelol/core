@@ -5,6 +5,8 @@ import SummonerUpdated from '#events/summoner_updated'
 import Summoner from '#models/summoner'
 import compressionService from '#services/compression_service'
 import drive from '@adonisjs/drive/services/main'
+import logger from '@adonisjs/core/services/logger'
+import { invalidateResponseCache } from '#services/http_response_cache'
 import type { PlatformId } from '@fightmegg/riot-api'
 import { DEFAULT_MATCH_COUNT } from '#config/constants'
 
@@ -65,7 +67,13 @@ class MatchesService {
       cluster,
     })
     await ingestionService.ingestTimeline(matchId, matchData, timelineData, meta)
-    
+    // All participants' cached analytics changed, including players whose own
+    // profile wasn't the one that triggered this sync. Invalidate before replying.
+    await invalidateResponseCache([
+      `match:${matchId}`,
+      ...matchData.info.participants.filter((p) => p.puuid).map((p) => `summoner:${p.puuid}`),
+    ]).catch((error) => logger.warn({ err: error, matchId }, 'match cache invalidation failed'))
+
     return {
       matchId,
       ...meta,
