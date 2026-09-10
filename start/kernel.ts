@@ -26,6 +26,17 @@ server.use([
   () => import('#middleware/container_bindings_middleware'),
   () => import('#middleware/force_json_response_middleware'),
   () => import('@adonisjs/cors/cors_middleware'),
+  /**
+   * The built front-end short-circuits here, served from memory and already
+   * compressed, before any of the heavier machinery below gets involved.
+   */
+  () => import('#middleware/static_assets_middleware'),
+  /**
+   * Wraps everything that generates a body per request, so it can encode the
+   * result on the way out. Responses that already carry a Content-Encoding —
+   * cached analytics, static assets — pass straight through.
+   */
+  () => import('#middleware/compression_middleware'),
   () => import('@adonisjs/inertia/inertia_middleware'),
   () => import('@adonisjs/vite/vite_middleware'),
   () => import('@adonisjs/static/static_middleware'),

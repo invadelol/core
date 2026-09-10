@@ -28,6 +28,23 @@ const activeIndex = ref(0)
 let debounce: ReturnType<typeof setTimeout>
 let searchController: AbortController | undefined
 
+/**
+ * Answers already fetched in this session.
+ *
+ * Typing forwards and then backspacing is the single most common thing anyone
+ * does in a search box, and every one of those keystrokes used to be a fresh
+ * request. Replaying from here makes going back through a query instant, and
+ * it also lets a pending request paint its previous answer rather than
+ * clearing the list to nothing.
+ */
+const answered = new Map<string, Result[]>()
+
+/** Kept small: a session's worth of prefixes, not an unbounded log. */
+const MAX_REMEMBERED = 50
+
+/** Short enough to feel like it is keeping up, long enough not to spam. */
+const DEBOUNCE_MS = 120
+
 /** "Faker#EUW" typed in full is a destination on its own, listed first. */
 const typedTarget = computed(() => {
   const trimmed = query.value.trim()
@@ -57,13 +74,23 @@ watch(query, (value) => {
   searchController?.abort()
   isLoading.value = false
   activeIndex.value = 0
-  if (value.trim().length < 2) {
+
+  const trimmed = value.trim()
+  if (trimmed.length < 2) {
     results.value = []
     isOpen.value = Boolean(typedTarget.value)
     return
   }
   isOpen.value = true
-  debounce = setTimeout(() => search(value), 250)
+
+  // A query we have already answered needs no request and no debounce.
+  const remembered = answered.get(trimmed.toLowerCase())
+  if (remembered) {
+    results.value = remembered
+    return
+  }
+
+  debounce = setTimeout(() => search(trimmed), DEBOUNCE_MS)
 })
 
 async function search(q: string) {
@@ -73,14 +100,42 @@ async function search(q: string) {
   try {
     const res = await fetch(`/api/summoners/search?q=${encodeURIComponent(q)}&limit=8`, { signal })
     if (res.ok) {
-      const data = await res.json()
-      if (!signal.aborted) results.value = data
+      const data: Result[] = await res.json()
+      if (signal.aborted) return
+      remember(q, data)
+      results.value = data
     }
   } catch {
-    if (!signal.aborted) results.value = []
+    // Leave the previous answer on screen: an empty list reads as "no such
+    // player", which is not what a failed request means.
   } finally {
     if (!signal.aborted) isLoading.value = false
   }
+}
+
+function remember(q: string, data: Result[]) {
+  answered.set(q.toLowerCase(), data)
+  if (answered.size > MAX_REMEMBERED) {
+    answered.delete(answered.keys().next().value!)
+  }
+}
+
+/**
+ * Warms the page behind a highlighted result.
+ *
+ * By the time the click lands, the server render and its analytics preloads
+ * have usually already happened, so the profile appears immediately.
+ */
+function warm(entry: { gameName: string; tagLine: string }) {
+  try {
+    router.prefetch(href(entry), { method: 'get' }, { cacheFor: '30s' })
+  } catch {
+    // Prefetching is an optimisation; never let it break navigation.
+  }
+}
+
+function href(entry: { gameName: string; tagLine: string }) {
+  return `/${encodeURIComponent(`${entry.gameName}-${entry.tagLine}`)}`
 }
 
 onBeforeUnmount(() => {
@@ -92,13 +147,20 @@ function go(entry: { gameName: string; tagLine: string }) {
   isOpen.value = false
   query.value = ''
   results.value = []
-  router.visit(`/${encodeURIComponent(`${entry.gameName}-${entry.tagLine}`)}`)
+  router.visit(href(entry))
+}
+
+function highlight(index: number, entry: { gameName: string; tagLine: string }) {
+  activeIndex.value = index
+  warm(entry)
 }
 
 function move(delta: number) {
   if (!entries.value.length) return
   const next = activeIndex.value + delta
   activeIndex.value = (next + entries.value.length) % entries.value.length
+  const entry = entries.value[activeIndex.value]
+  if (entry) warm(entry)
 }
 
 function handleBlur() {
@@ -154,13 +216,17 @@ function submit() {
         :key="`${entry.gameName}-${entry.tagLine}-${index}`"
         class="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors"
         :class="index === activeIndex ? 'bg-[#f6f6f8]' : ''"
-        @mouseenter="activeIndex = index"
+        @mouseenter="highlight(index, entry)"
         @mousedown.prevent="go(entry)"
       >
         <img
           v-if="!entry.direct"
           :src="profileIcon(entry.icon)"
           alt=""
+          width="28"
+          height="28"
+          loading="lazy"
+          decoding="async"
           class="thumb h-7 w-7 rounded-full"
         />
         <span

@@ -20,7 +20,18 @@ import type {
   Teammate,
 } from '../lib/types.js'
 
-const props = defineProps<{ summoner: string; initialProfile?: Summoner | null }>()
+type PanelKey = 'stats' | 'ranks' | 'matches' | 'champions' | 'activity' | 'teammates'
+
+const props = defineProps<{
+  summoner: string
+  initialProfile?: Summoner | null
+  /**
+   * The requests to make, as the server defined them. The same list produced
+   * the preload hints in the document head, so what this page asks for is
+   * exactly what the browser already started fetching.
+   */
+  panels?: ReadonlyArray<{ key: PanelKey; path: string }>
+}>()
 
 const PLATFORM = 'EUW1'
 
@@ -44,7 +55,7 @@ const viewCount = ref<number | null>(null)
 
 const lastGameMs = computed(() => matches.value[0]?.gameStartMs ?? null)
 
-const pending = reactive({
+const pending = reactive<Record<PanelKey, boolean>>({
   stats: true,
   ranks: true,
   matches: true,
@@ -52,6 +63,16 @@ const pending = reactive({
   activity: true,
   teammates: true,
 })
+
+/** Used only if the page was served without a panel list. */
+const FALLBACK_PANELS: ReadonlyArray<{ key: PanelKey; path: string }> = [
+  { key: 'matches', path: 'matches?count=15&view=summary' },
+  { key: 'stats', path: 'stats?count=100' },
+  { key: 'ranks', path: 'ranks' },
+  { key: 'champions', path: 'champions?count=100' },
+  { key: 'activity', path: 'activity' },
+  { key: 'teammates', path: 'friends' },
+]
 let analyticsVersion = 0
 let controller: AbortController | undefined
 let viewTimer: ReturnType<typeof setTimeout> | undefined
@@ -89,11 +110,23 @@ async function loadProfile(signal: AbortSignal): Promise<Summoner | LoadFailure>
   return failureFor(retry)
 }
 
+/** Where each panel's response lands. */
+const targets: Record<PanelKey, { value: any }> = {
+  matches,
+  stats,
+  ranks,
+  champions,
+  activity,
+  teammates,
+}
+
 /** Paint each independent panel as soon as its request finishes. */
 async function loadAnalytics(puuid: string, signal: AbortSignal) {
   const version = ++analyticsVersion
   const base = `/api/summoners/puuid/${puuid}`
-  async function panel<T>(key: keyof typeof pending, path: string, target: { value: T }) {
+
+  async function panel(key: PanelKey, path: string) {
+    const target = targets[key]
     try {
       const response = await fetch(`${base}/${path}`, { signal })
       if (response.ok) {
@@ -106,14 +139,8 @@ async function loadAnalytics(puuid: string, signal: AbortSignal) {
       if (!signal.aborted && version === analyticsVersion) pending[key] = false
     }
   }
-  await Promise.all([
-    panel('matches', 'matches?count=15&view=summary', matches),
-    panel('stats', 'stats?count=100', stats),
-    panel('ranks', 'ranks', ranks),
-    panel('champions', 'champions?count=100', champions),
-    panel('activity', 'activity', activity),
-    panel('teammates', 'friends', teammates),
-  ])
+
+  await Promise.all((props.panels ?? FALLBACK_PANELS).map(({ key, path }) => panel(key, path)))
 }
 
 async function load() {
@@ -134,7 +161,7 @@ async function load() {
   champions.value = []
   activity.value = []
   teammates.value = []
-  for (const key of Object.keys(pending) as (keyof typeof pending)[]) pending[key] = true
+  for (const key of Object.keys(pending) as PanelKey[]) pending[key] = true
 
   try {
     const result = profile.value ?? (await loadProfile(signal))

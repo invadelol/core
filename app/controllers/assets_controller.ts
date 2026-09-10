@@ -1,12 +1,22 @@
 import type { HttpContext } from '@adonisjs/core/http'
 
 import riotAssetsService from '#services/riot/assets'
+import { EncodedPayloadCache, negotiatePayload } from '#services/encoded_payload'
 import {
   ASSET_KINDS,
   BROWSER_CACHE_SECONDS,
+  NAMES_CACHE_SECONDS,
   PLACEHOLDER_CACHE_SECONDS,
   type AssetKind,
 } from '#constants/assets'
+
+/**
+ * Every profile page asks for the champion and item name maps, and the item
+ * map alone is tens of kilobytes of JSON built from a manifest that changes
+ * once a patch. Serialising and compressing it per request was repeating the
+ * same work for the same answer, so it is done once per hour instead.
+ */
+const namePayloads = new EncodedPayloadCache(NAMES_CACHE_SECONDS * 1000)
 
 /**
  * Proxies Riot's game art through our own origin.
@@ -36,12 +46,24 @@ export default class AssetsController {
   }
 
   /** Numeric id to display name, so the client stops fetching Riot's JSON. */
-  async names({ params, response }: HttpContext) {
+  async names({ params, request, response }: HttpContext) {
     const kind = this.kind(params.kind)
-    const names = await riotAssetsService.names(kind)
+    const payload = await namePayloads.get(kind, () => riotAssetsService.names(kind))
 
-    response.header('Cache-Control', `public, max-age=${60 * 60}`)
-    return response.ok(names)
+    response.header('Content-Type', 'application/json; charset=utf-8')
+    response.header('Cache-Control', `public, max-age=${NAMES_CACHE_SECONDS}`)
+    response.header('ETag', payload.etag)
+    response.header('Vary', 'Accept-Encoding')
+
+    if (request.header('if-none-match') === payload.etag) {
+      response.removeHeader('Content-Type')
+      return response.status(304).send(null)
+    }
+
+    const encoding = negotiatePayload(payload, request.header('accept-encoding'))
+    if (encoding) response.header('Content-Encoding', encoding)
+
+    return response.send(encoding ? payload.encoded[encoding]! : payload.identity, false)
   }
 
   /**
