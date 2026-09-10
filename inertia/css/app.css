@@ -1,12 +1,244 @@
 @import 'tailwindcss';
 
-* {
-  margin: 0;
-  padding: 0;
+/* Every class used by the app lives under inertia/. */
+@source '../';
+
+/* ──────────────────────────────────────────────────────────────
+   Design tokens
+   A white, quiet surface. Structure comes from hairlines and
+   spacing rather than shadows or colour. Colour is reserved for
+   meaning: win / loss / above / below.
+   ────────────────────────────────────────────────────────────── */
+@theme {
+  --color-canvas: #fbfbfc;
+  --color-surface: #ffffff;
+  --color-line: #ededf0;
+  --color-line-strong: #dedee3;
+
+  --color-ink: #16181d;
+  --color-ink-2: #5f636c;
+  --color-ink-3: #9aa0aa;
+  --color-ink-4: #c3c7ce;
+
+  --color-win: #2f66cc;
+  --color-win-soft: #eef3fd;
+  --color-loss: #cf5050;
+  --color-loss-soft: #fdefef;
+
+  --color-pos: #1d7d5c;
+  --color-neg: #b9503a;
+  --color-gold: #9c7420;
+
+  --font-sans:
+    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
+    sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
 }
 
-html,
-body {
-  height: 100%;
-  width: 100%;
+@layer base {
+  html,
+  body {
+    height: 100%;
+    width: 100%;
+  }
+
+  body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Every number in the app lines up in a column. */
+  .num,
+  table,
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+}
+
+@layer components {
+  /* ── Surfaces ───────────────────────────────────────────────── */
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: 10px;
+  }
+
+  .card-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .card-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-ink-2);
+  }
+
+  .card-note {
+    font-size: 0.6875rem;
+    color: var(--color-ink-3);
+  }
+
+  .card-body {
+    padding: 1rem;
+  }
+
+  /* ── Labels ─────────────────────────────────────────────────── */
+  .label {
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--color-ink-3);
+  }
+
+  /* ── Meters: a value read against the field it belongs to ───── */
+  .meter {
+    position: relative;
+    height: 3px;
+    border-radius: 999px;
+    background: #f0f0f3;
+    overflow: hidden;
+  }
+
+  .meter > span {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: 999px;
+    background: var(--color-ink);
+    transition: width 0.35s ease;
+  }
+
+  /* ── Segmented control ──────────────────────────────────────── */
+  .seg {
+    display: inline-flex;
+    padding: 2px;
+    gap: 2px;
+    background: #f4f4f6;
+    border-radius: 8px;
+  }
+
+  .seg button {
+    padding: 0.3125rem 0.6875rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--color-ink-2);
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+      background 0.15s ease,
+      color 0.15s ease;
+  }
+
+  .seg button:hover {
+    color: var(--color-ink);
+  }
+
+  .seg button[data-active='true'] {
+    background: var(--color-surface);
+    color: var(--color-ink);
+    box-shadow: 0 1px 2px rgb(16 18 29 / 0.06);
+  }
+
+  /* ── Buttons ────────────────────────────────────────────────── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4375rem;
+    padding: 0.4375rem 0.8125rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    border-radius: 8px;
+    border: 1px solid var(--color-line-strong);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    cursor: pointer;
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .btn:hover:not(:disabled) {
+    background: #f7f7f9;
+  }
+
+  .btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background: var(--color-ink);
+    border-color: var(--color-ink);
+    color: #fff;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: #2a2d35;
+  }
+
+  /* ── Skeletons ──────────────────────────────────────────────── */
+  .skel {
+    background: linear-gradient(90deg, #f2f2f5 25%, #eaeaee 37%, #f2f2f5 63%);
+    background-size: 400% 100%;
+    border-radius: 6px;
+    animation: skel 1.3s ease-in-out infinite;
+  }
+
+  @keyframes skel {
+    0% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0 50%;
+    }
+  }
+
+  /* ── Game asset thumbnails ──────────────────────────────────── */
+  .thumb {
+    background: #f1f1f4;
+    object-fit: cover;
+  }
+
+  /* Quiet scrollbars for horizontal strips */
+  .scroll-x {
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-strong) transparent;
+  }
+
+  .scroll-x::-webkit-scrollbar {
+    height: 5px;
+  }
+
+  .scroll-x::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scroll-x::-webkit-scrollbar-thumb {
+    background: var(--color-line-strong);
+    border-radius: 999px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
