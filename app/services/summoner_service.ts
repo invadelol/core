@@ -64,6 +64,20 @@ class SummonerService {
   }
 
   /**
+   * The stored row for a Riot ID, without ever calling Riot.
+   *
+   * Used as a fallback when the upstream lookup fails: a profile we already
+   * hold is better than an error page, even if it is a little stale.
+   */
+  async findStored(summoner: string, platform: string): Promise<Summoner | null> {
+    const normalized = this.normalize(summoner)
+    if (!normalized) return null
+
+    const { gameName, tagLine } = normalized
+    return Summoner.query().where({ platform, gameName, tagLine }).first()
+  }
+
+  /**
    * Resolve a Riot ID ("GameName-TagLine") into a persisted `Summoner` row.
    */
   async resolveAndUpsert(

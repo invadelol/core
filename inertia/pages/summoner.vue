@@ -37,7 +37,7 @@ const activity = ref<ActivityDay[]>([])
 const teammates = ref<Teammate[]>([])
 
 const isLoading = ref(true)
-const error = ref<string | null>(null)
+const error = ref<LoadFailure | null>(null)
 const isSyncing = ref(false)
 const syncMessage = ref<string | null>(null)
 const viewCount = ref<number | null>(null)
@@ -53,23 +53,35 @@ async function json<T>(url: string, fallback: T): Promise<T> {
   }
 }
 
+/** What went wrong, so the page can say something true about it. */
+type LoadFailure = 'not-found' | 'riot-unavailable' | 'error'
+
+async function failureFor(res: Response): Promise<LoadFailure> {
+  if (res.status === 404) return 'not-found'
+  // 503 is the API telling us Riot rate limited us or rejected our key.
+  if (res.status === 503) return 'riot-unavailable'
+  return 'error'
+}
+
 /** Resolves the summoner, syncing from Riot once if we've never seen them. */
-async function loadProfile(): Promise<Summoner | null> {
+async function loadProfile(): Promise<Summoner | LoadFailure> {
   const url = `/api/summoners/${PLATFORM}/${encodeURIComponent(slug.value)}`
   const res = await fetch(url)
   if (res.ok) return (await res.json()).summoner
 
-  if (res.status !== 404) return null
+  if (res.status !== 404) return failureFor(res)
 
   const synced = await fetch('/api/summoners/sync', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ summoner: slug.value, platform: PLATFORM }),
   })
-  if (!synced.ok) return null
+  // A 404 from sync means Riot has no such account, which is a real miss.
+  if (!synced.ok && synced.status !== 404) return failureFor(synced)
 
   const retry = await fetch(url)
-  return retry.ok ? (await retry.json()).summoner : null
+  if (retry.ok) return (await retry.json()).summoner
+  return failureFor(retry)
 }
 
 /** All analytics for a known puuid, in one round of parallel requests. */
@@ -91,19 +103,32 @@ async function loadAnalytics(puuid: string) {
   teammates.value = t
 }
 
-onMounted(async () => {
+async function load() {
+  isLoading.value = true
+  error.value = null
+
   try {
-    profile.value = await loadProfile()
-    if (!profile.value) {
-      error.value = 'Summoner not found'
+    const result = await loadProfile()
+    if (typeof result === 'string') {
+      error.value = result
       return
     }
-    await loadAnalytics(profile.value.puuid)
+    profile.value = result
+    await loadAnalytics(result.puuid)
   } catch {
-    error.value = 'Failed to load this profile'
+    error.value = 'error'
   } finally {
     isLoading.value = false
   }
+}
+
+/** Most failures here are transient, so offer the obvious way out. */
+function retry() {
+  void load()
+}
+
+onMounted(async () => {
+  await load()
 
   // Count the visit once the page has clearly been read, not on every bounce.
   if (!profile.value) return
@@ -178,13 +203,36 @@ async function sync() {
 
     <!-- Error -->
     <div v-else-if="error" class="card px-6 py-16 text-center">
-      <p class="text-[0.9375rem] font-medium text-ink">{{ error }}</p>
-      <p class="mx-auto mt-2 max-w-sm text-[0.8125rem] text-ink-2">
-        Check the spelling of
-        <span class="font-medium text-ink">{{ parsed.gameName }}#{{ parsed.tagLine }}</span
-        >, or search for someone else.
-      </p>
-      <a href="/" class="btn mt-5">Back to search</a>
+      <template v-if="error === 'not-found'">
+        <p class="text-[0.9375rem] font-medium text-ink">Summoner not found</p>
+        <p class="mx-auto mt-2 max-w-sm text-[0.8125rem] text-ink-2">
+          Riot has no account called
+          <span class="font-medium text-ink">{{ parsed.gameName }}#{{ parsed.tagLine }}</span> on
+          {{ PLATFORM }}. Check the spelling, or search for someone else.
+        </p>
+      </template>
+
+      <template v-else-if="error === 'riot-unavailable'">
+        <p class="text-[0.9375rem] font-medium text-ink">Riot's API isn't answering</p>
+        <p class="mx-auto mt-2 max-w-sm text-[0.8125rem] text-ink-2">
+          This profile isn't stored yet and Riot is rate limiting us or refusing the key, so there's
+          nothing to show. It usually clears in a minute.
+        </p>
+      </template>
+
+      <template v-else>
+        <p class="text-[0.9375rem] font-medium text-ink">Couldn't load this profile</p>
+        <p class="mx-auto mt-2 max-w-sm text-[0.8125rem] text-ink-2">
+          Something broke on our side while looking up
+          <span class="font-medium text-ink">{{ parsed.gameName }}#{{ parsed.tagLine }}</span
+          >.
+        </p>
+      </template>
+
+      <div class="mt-5 flex justify-center gap-2">
+        <button class="btn" @click="retry">Try again</button>
+        <a href="/" class="btn">Back to search</a>
+      </div>
     </div>
 
     <!-- Profile -->
