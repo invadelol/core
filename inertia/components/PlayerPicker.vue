@@ -26,7 +26,7 @@ const model = defineModel<string>({ required: true })
                 ? 'border-ink bg-[#f4f5f8]'
                 : 'border-transparent hover:border-line-strong'
             "
-            :title="`${p.gameName}#${p.tagLine} — ${championName(p.championId)}${p.position ? ` (${POSITION_NAMES[p.position] || p.position})` : ''}`"
+            :title="`${p.gameName}#${p.tagLine} · ${championName(p.championId)}${p.position ? ` (${POSITION_NAMES[p.position] || p.position})` : ''}`"
             @click="model = p.puuid"
           >
             <img

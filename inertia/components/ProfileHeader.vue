@@ -43,7 +43,7 @@ function winrate(rank: Rank) {
       </h1>
 
       <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.75rem] text-ink-3">
-        <span class="num">Level {{ summoner.summonerLevel ?? '—' }}</span>
+        <span class="num">Level {{ summoner.summonerLevel ?? '-' }}</span>
         <span class="text-ink-4">·</span>
         <span>{{ summoner.platform }}</span>
         <template v-if="lastGameMs">

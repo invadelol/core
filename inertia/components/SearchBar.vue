@@ -114,7 +114,9 @@ function submit() {
         spellcheck="false"
         autocomplete="off"
         :autofocus="props.autofocus"
-        :placeholder="props.size === 'lg' ? 'Search a summoner — Faker#KR1' : 'Search a summoner'"
+        :placeholder="
+          props.size === 'lg' ? 'Search a summoner, e.g. Faker#KR1' : 'Search a summoner'
+        "
         class="w-full rounded-lg border border-line-strong bg-surface text-ink placeholder:text-ink-3 focus:outline-none focus:border-ink transition-colors"
         :class="
           props.size === 'lg' ? 'pl-11 pr-11 py-3.5 text-[0.9375rem]' : 'pl-9 pr-9 py-2 text-sm'

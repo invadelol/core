@@ -9,7 +9,7 @@ export function teamWon(match: Match, teamId: number) {
   return teamId === 100 ? Boolean(match.t1Win) : Boolean(match.t2Win)
 }
 
-/** Winning side first — the scoreboard always reads top-down. */
+/** Winning side first, so the scoreboard always reads top-down. */
 export function teamOrder(match: Match) {
   return teamWon(match, 100) ? [100, 200] : [200, 100]
 }

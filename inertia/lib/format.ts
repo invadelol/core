@@ -58,7 +58,7 @@ export function longDate(value: string | number | Date) {
 }
 
 export function ordinal(value: number) {
-  if (!value) return '—'
+  if (!value) return '-'
   const mod10 = value % 10
   const mod100 = value % 100
   if (mod10 === 1 && mod100 !== 11) return `${value}st`

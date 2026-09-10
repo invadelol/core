@@ -97,9 +97,9 @@ function tooltip(cell: Cell) {
     month: 'short',
     day: 'numeric',
   })
-  if (!cell.games) return `${date} — no games`
+  if (!cell.games) return `${date}: no games`
   const wr = Math.round((cell.wins / cell.games) * 100)
-  return `${date} — ${cell.games} game${cell.games > 1 ? 's' : ''}, ${cell.wins}W (${wr}%)`
+  return `${date}: ${cell.games} game${cell.games > 1 ? 's' : ''}, ${cell.wins}W (${wr}%)`
 }
 </script>
 
