@@ -198,6 +198,7 @@ class SummonerService {
   async getMatches(
     puuid: string,
     filters: {
+      view?: 'summary' | 'full'
       type?: RiotQueueType
       count?: number
       offset?: number
@@ -209,6 +210,7 @@ class SummonerService {
 
     return matchRepository.getByPuuid(puuid, {
       queueIds,
+      view: filters.view,
       count: filters.count ?? DEFAULT_MATCH_COUNT,
       offset: filters.offset ?? DEFAULT_OFFSET,
       championId: filters.champion,

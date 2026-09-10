@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onBeforeUnmount, reactive, ref, shallowRef, watch } from 'vue'
 import AppHeader from '../components/AppHeader.vue'
 import ProfileHeader from '../components/ProfileHeader.vue'
 import PerformanceBand from '../components/PerformanceBand.vue'
@@ -20,7 +20,7 @@ import type {
   Teammate,
 } from '../lib/types.js'
 
-const props = defineProps<{ summoner: string }>()
+const props = defineProps<{ summoner: string; initialProfile?: Summoner | null }>()
 
 const PLATFORM = 'EUW1'
 
@@ -28,15 +28,15 @@ const PLATFORM = 'EUW1'
 const slug = computed(() => decodeSlug(props.summoner))
 const parsed = computed(() => parseSlug(props.summoner))
 
-const profile = ref<Summoner | null>(null)
-const stats = ref<StatsPayload | null>(null)
-const ranks = ref<RanksPayload | null>(null)
-const matches = ref<Match[]>([])
-const champions = ref<ChampionStats[]>([])
-const activity = ref<ActivityDay[]>([])
-const teammates = ref<Teammate[]>([])
+const profile = shallowRef<Summoner | null>(props.initialProfile ?? null)
+const stats = shallowRef<StatsPayload | null>(null)
+const ranks = shallowRef<RanksPayload | null>(null)
+const matches = shallowRef<Match[]>([])
+const champions = shallowRef<ChampionStats[]>([])
+const activity = shallowRef<ActivityDay[]>([])
+const teammates = shallowRef<Teammate[]>([])
 
-const isLoading = ref(true)
+const isLoading = ref(!profile.value)
 const error = ref<LoadFailure | null>(null)
 const isSyncing = ref(false)
 const syncMessage = ref<string | null>(null)
@@ -44,14 +44,18 @@ const viewCount = ref<number | null>(null)
 
 const lastGameMs = computed(() => matches.value[0]?.gameStartMs ?? null)
 
-async function json<T>(url: string, fallback: T): Promise<T> {
-  try {
-    const res = await fetch(url)
-    return res.ok ? await res.json() : fallback
-  } catch {
-    return fallback
-  }
-}
+const pending = reactive({
+  stats: true,
+  ranks: true,
+  matches: true,
+  champions: true,
+  activity: true,
+  teammates: true,
+})
+let analyticsVersion = 0
+let controller: AbortController | undefined
+let viewTimer: ReturnType<typeof setTimeout> | undefined
+let messageTimer: ReturnType<typeof setTimeout> | undefined
 
 /** What went wrong, so the page can say something true about it. */
 type LoadFailure = 'not-found' | 'riot-unavailable' | 'error'
@@ -64,94 +68,133 @@ async function failureFor(res: Response): Promise<LoadFailure> {
 }
 
 /** Resolves the summoner, syncing from Riot once if we've never seen them. */
-async function loadProfile(): Promise<Summoner | LoadFailure> {
+async function loadProfile(signal: AbortSignal): Promise<Summoner | LoadFailure> {
   const url = `/api/summoners/${PLATFORM}/${encodeURIComponent(slug.value)}`
-  const res = await fetch(url)
+  const res = await fetch(url, { signal })
   if (res.ok) return (await res.json()).summoner
 
   if (res.status !== 404) return failureFor(res)
 
   const synced = await fetch('/api/summoners/sync', {
     method: 'POST',
+    signal,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ summoner: slug.value, platform: PLATFORM }),
   })
   // A 404 from sync means Riot has no such account, which is a real miss.
   if (!synced.ok && synced.status !== 404) return failureFor(synced)
 
-  const retry = await fetch(url)
+  const retry = await fetch(url, { signal })
   if (retry.ok) return (await retry.json()).summoner
   return failureFor(retry)
 }
 
-/** All analytics for a known puuid, in one round of parallel requests. */
-async function loadAnalytics(puuid: string) {
+/** Paint each independent panel as soon as its request finishes. */
+async function loadAnalytics(puuid: string, signal: AbortSignal) {
+  const version = ++analyticsVersion
   const base = `/api/summoners/puuid/${puuid}`
-  const [s, r, m, c, a, t] = await Promise.all([
-    json<StatsPayload | null>(`${base}/stats?count=100`, null),
-    json<RanksPayload | null>(`${base}/ranks`, null),
-    json<Match[]>(`${base}/matches?count=15`, []),
-    json<ChampionStats[]>(`${base}/champions?count=100`, []),
-    json<ActivityDay[]>(`${base}/activity`, []),
-    json<Teammate[]>(`${base}/friends`, []),
+  async function panel<T>(key: keyof typeof pending, path: string, target: { value: T }) {
+    try {
+      const response = await fetch(`${base}/${path}`, { signal })
+      if (response.ok) {
+        const data = await response.json()
+        if (!signal.aborted && version === analyticsVersion) target.value = data
+      }
+    } catch {
+      // Preserve existing data if a refresh fails.
+    } finally {
+      if (!signal.aborted && version === analyticsVersion) pending[key] = false
+    }
+  }
+  await Promise.all([
+    panel('matches', 'matches?count=15&view=summary', matches),
+    panel('stats', 'stats?count=100', stats),
+    panel('ranks', 'ranks', ranks),
+    panel('champions', 'champions?count=100', champions),
+    panel('activity', 'activity', activity),
+    panel('teammates', 'friends', teammates),
   ])
-  stats.value = s
-  ranks.value = r
-  matches.value = m
-  champions.value = c
-  activity.value = a
-  teammates.value = t
 }
 
 async function load() {
-  isLoading.value = true
+  controller?.abort()
+  clearTimeout(viewTimer)
+  clearTimeout(messageTimer)
+  controller = new AbortController()
+  const { signal } = controller
+  profile.value = props.initialProfile ?? null
+  isLoading.value = !profile.value
   error.value = null
+  isSyncing.value = false
+  syncMessage.value = null
+  viewCount.value = null
+  stats.value = null
+  ranks.value = null
+  matches.value = []
+  champions.value = []
+  activity.value = []
+  teammates.value = []
+  for (const key of Object.keys(pending) as (keyof typeof pending)[]) pending[key] = true
 
   try {
-    const result = await loadProfile()
+    const result = profile.value ?? (await loadProfile(signal))
+    if (signal.aborted) return
     if (typeof result === 'string') {
       error.value = result
       return
     }
     profile.value = result
-    await loadAnalytics(result.puuid)
-  } catch {
-    error.value = 'error'
-  } finally {
     isLoading.value = false
+    // Start the visit timer independently of slow analytics.
+    viewTimer = setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/summoners/puuid/${result.puuid}/increment`, {
+          method: 'PUT',
+          signal,
+        })
+        if (response.ok) {
+          const data = await response.json()
+          if (!signal.aborted) viewCount.value = Number(data.viewCount)
+        }
+      } catch {
+        /* view tracking is best-effort */
+      }
+    }, 3000)
+    await loadAnalytics(result.puuid, signal)
+  } catch {
+    if (!signal.aborted) error.value = 'error'
+  } finally {
+    if (!signal.aborted) isLoading.value = false
   }
 }
 
-/** Most failures here are transient, so offer the obvious way out. */
 function retry() {
   void load()
 }
 
-onMounted(async () => {
-  await load()
-
-  // Count the visit once the page has clearly been read, not on every bounce.
-  if (!profile.value) return
-  setTimeout(async () => {
-    const puuid = profile.value?.puuid
-    if (!puuid) return
-    try {
-      const res = await fetch(`/api/summoners/puuid/${puuid}/increment`, { method: 'PUT' })
-      if (res.ok) viewCount.value = Number((await res.json()).viewCount)
-    } catch {
-      /* view tracking is best-effort */
-    }
-  }, 3000)
+onMounted(() => {
+  watch(
+    () => props.summoner,
+    () => void load(),
+    { immediate: true }
+  )
+})
+onBeforeUnmount(() => {
+  controller?.abort()
+  clearTimeout(viewTimer)
+  clearTimeout(messageTimer)
 })
 
 async function sync() {
   if (!profile.value || isSyncing.value) return
+  const signal = controller!.signal
   isSyncing.value = true
   syncMessage.value = null
 
   try {
     const res = await fetch('/api/summoners/sync', {
       method: 'POST',
+      signal,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         summoner: `${profile.value.gameName}-${profile.value.tagLine}`,
@@ -159,20 +202,24 @@ async function sync() {
       }),
     })
 
+    if (signal.aborted) return
     if (res.ok) {
       const found = (await res.json()).matches?.length ?? 0
+      if (signal.aborted) return
       syncMessage.value = found
         ? `${found} new match${found > 1 ? 'es' : ''}`
         : 'Already up to date'
-      await loadAnalytics(profile.value.puuid)
+      await loadAnalytics(profile.value.puuid, signal)
     } else {
       syncMessage.value = res.status === 404 ? 'No new matches' : 'Update failed'
     }
   } catch {
-    syncMessage.value = 'Update failed'
+    if (!signal.aborted) syncMessage.value = 'Update failed'
   } finally {
-    isSyncing.value = false
-    setTimeout(() => (syncMessage.value = null), 4000)
+    if (!signal.aborted) {
+      isSyncing.value = false
+      messageTimer = setTimeout(() => (syncMessage.value = null), 4000)
+    }
   }
 }
 </script>
@@ -251,19 +298,56 @@ async function sync() {
 
       <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
         <div class="space-y-5">
+          <div
+            v-if="pending.stats"
+            class="skel h-48 rounded-[10px]"
+            role="status"
+            aria-label="Loading performance"
+          />
           <PerformanceBand
+            v-else
             :stats="stats?.global ?? null"
             :matches="matches"
             :puuid="profile.puuid"
           />
-          <ChampionsPanel :champions="champions" />
-          <MatchList :matches="matches" :puuid="profile.puuid" :summoner-slug="slug" />
+          <div
+            v-if="pending.champions"
+            class="skel h-48 rounded-[10px]"
+            role="status"
+            aria-label="Loading champions"
+          />
+          <ChampionsPanel v-else :champions="champions" />
+          <div
+            v-if="pending.matches"
+            class="skel h-96 rounded-[10px]"
+            role="status"
+            aria-label="Loading matches"
+          />
+          <MatchList v-else :matches="matches" :puuid="profile.puuid" :summoner-slug="slug" />
         </div>
 
         <aside class="space-y-5">
-          <RankPanel :ranks="ranks" />
-          <ActivityHeatmap :activity="activity" />
-          <TeammatesPanel :teammates="teammates" />
+          <div
+            v-if="pending.ranks"
+            class="skel h-48 rounded-[10px]"
+            role="status"
+            aria-label="Loading ranks"
+          />
+          <RankPanel v-else :ranks="ranks" />
+          <div
+            v-if="pending.activity"
+            class="skel h-48 rounded-[10px]"
+            role="status"
+            aria-label="Loading activity"
+          />
+          <ActivityHeatmap v-else :activity="activity" />
+          <div
+            v-if="pending.teammates"
+            class="skel h-48 rounded-[10px]"
+            role="status"
+            aria-label="Loading teammates"
+          />
+          <TeammatesPanel v-else :teammates="teammates" />
         </aside>
       </div>
     </div>

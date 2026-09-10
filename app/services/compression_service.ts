@@ -1,6 +1,6 @@
 import { RiotAPITypes } from '@fightmegg/riot-api'
 import { compress as compressJson, Compressed, decompress as decompressJson } from 'compress-json'
-import { brotliCompress, brotliDecompress } from 'node:zlib'
+import { brotliCompress, brotliDecompress, constants } from 'node:zlib'
 import { promisify } from 'node:util'
 import { MAP, CH_MAP } from '#constants/compression.constants'
 import { CompressedMatch } from '#types/compression.types'
@@ -40,7 +40,9 @@ class CompressionService {
 
     const compact = compressJson(this.toShort(match) as RiotAPITypes.MatchV5.MatchDTO)
     const json = JSON.stringify(compact)
-    const brotli = await brotliCompressAsync(Buffer.from(json, 'utf8'))
+    const brotli = await brotliCompressAsync(Buffer.from(json, 'utf8'), {
+      params: { [constants.BROTLI_PARAM_QUALITY]: 4 },
+    })
 
     return brotli.toString('base64')
   }

@@ -125,7 +125,8 @@ export class StatsRepository {
         avg(p.gold_earned / if(t.total_gold = 0, 1, t.total_gold)) as goldShare,
         avg((p.kills + p.assists) / if(t.total_kills = 0, 1, t.total_kills)) as killParticipation
       FROM participants p
-      JOIN matches m ON p.match_id = m.match_id
+      JOIN (SELECT match_id, duration_sec FROM matches
+        WHERE match_id IN (SELECT match_id FROM filtered_matches)) m ON p.match_id = m.match_id
       JOIN team_totals t ON p.match_id = t.match_id AND p.team_id = t.team_id
       WHERE p.match_id IN (SELECT match_id FROM filtered_matches)
         AND p.puuid = '${escapedPuuid}'
@@ -158,8 +159,10 @@ export class StatsRepository {
       clickhouse.query({ query: champsQuery, format: 'JSONEachRow' }),
     ])
 
-    const globalRows = await globalRes.json<any>()
-    const champions = await champsRes.json<any>()
+    const [globalRows, champions] = await Promise.all([
+      globalRes.json<any>(),
+      champsRes.json<any>(),
+    ])
 
     if (!globalRows.length || globalRows[0].total === 0) {
       return {
@@ -226,7 +229,8 @@ export class StatsRepository {
         avg(p.gold_earned / (m.duration_sec / 60.0)) as goldMin,
         avg(p.dmg_to_champ / (m.duration_sec / 60.0)) as damageMin
       FROM participants p
-      JOIN matches m ON p.match_id = m.match_id
+      JOIN (SELECT match_id, duration_sec FROM matches
+        WHERE match_id IN (SELECT match_id FROM my_matches)) m ON p.match_id = m.match_id
       WHERE p.match_id IN (SELECT match_id FROM my_matches)
         AND p.puuid = '${escapedPuuid}'
       GROUP BY p.champion_id

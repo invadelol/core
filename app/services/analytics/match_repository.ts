@@ -42,6 +42,7 @@ export class MatchRepository {
   async getByPuuid(
     puuid: string,
     filters: {
+      view?: 'summary' | 'full'
       queueIds?: number[] | readonly number[]
       count?: number
       offset?: number
@@ -130,6 +131,13 @@ export class MatchRepository {
         dmg_to_champ,
         team_position,
         gold_earned,
+        physical_dmg_to_champ,
+        magic_dmg_to_champ,
+        true_dmg_to_champ
+        ${
+          filters.view === 'summary'
+            ? ''
+            : `,
         wards_placed,
         wards_killed,
         dmg_to_turrets,
@@ -137,9 +145,6 @@ export class MatchRepository {
         physical_dmg_dealt,
         magic_dmg_dealt,
         true_dmg_dealt,
-        physical_dmg_to_champ,
-        magic_dmg_to_champ,
-        true_dmg_to_champ,
         neutral_minions_killed,
         vision_wards_bought,
         all_in_pings,
@@ -154,7 +159,9 @@ export class MatchRepository {
         push_pings,
         vision_cleared_pings,
         bait_pings,
-        hold_pings
+        hold_pings`
+        }
+
       FROM participants
       PREWHERE match_id IN (${inList})
     `
@@ -164,8 +171,10 @@ export class MatchRepository {
       clickhouse.query({ query: participantsQuery, format: 'JSONEachRow' }),
     ])
 
-    const matchRows = (await matchResult.json<any>()) ?? []
-    const partRows = (await partResult.json<any>()) ?? []
+    const [matchRows, partRows] = await Promise.all([
+      matchResult.json<any>(),
+      partResult.json<any>(),
+    ])
 
     // Step 3: JS-side merge (much faster than DB GROUP BY for small result sets)
     const matchMap = new Map<string, any>()
@@ -358,12 +367,13 @@ export class MatchRepository {
       clickhouse.query({ query: timelineQuery, format: 'JSONEachRow' }),
     ])
 
-    const matchRows = (await matchRes.json<any>()) ?? []
+    const [matchRows, partRows, timelineRows] = await Promise.all([
+      matchRes.json<any>(),
+      partRes.json<any>(),
+      timelineRes.json<any>(),
+    ])
     const base = matchRows[0]
     if (!base?.matchId) return null
-
-    const partRows = (await partRes.json<any>()) ?? []
-    const timelineRows = (await timelineRes.json<any>()) ?? []
 
     // Map participants from flat rows
     const participants = partRows.map((p: any) => {

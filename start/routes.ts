@@ -10,7 +10,11 @@
 import router from '@adonisjs/core/services/router'
 import AutoSwaggerModule from 'adonis-autoswagger'
 
-const AutoSwagger = AutoSwaggerModule.default ?? AutoSwaggerModule
+type SwaggerInstance = typeof AutoSwaggerModule extends { default: infer T }
+  ? T
+  : typeof AutoSwaggerModule
+const AutoSwagger = ((AutoSwaggerModule as unknown as { default?: unknown }).default ??
+  AutoSwaggerModule) as SwaggerInstance
 
 import swagger from '#config/swagger'
 import { middleware } from '#start/middleware'
@@ -88,6 +92,20 @@ router.get('/:summoner/match/:matchId', ({ inertia, params }) => {
   })
 })
 
-router.get('/:summoner', ({ inertia, params }) => {
-  return inertia.render('summoner', { summoner: params.summoner })
+router.get('/:summoner', async ({ inertia, params }) => {
+  const { default: summonerService } = await import('#services/summoner_service')
+  // A stored profile can render in the HTML and removes the client lookup waterfall.
+  // Unknown profiles still resolve through the API, where Riot errors are translated.
+  const stored = await summonerService.findStored(params.summoner, 'EUW1').catch(() => null)
+  const initialProfile = stored
+    ? {
+        puuid: stored.puuid,
+        gameName: stored.gameName,
+        tagLine: stored.tagLine,
+        platform: stored.platform,
+        profileIconId: stored.profileIconId,
+        summonerLevel: stored.summonerLevel,
+      }
+    : null
+  return inertia.render('summoner', { summoner: params.summoner, initialProfile })
 })
