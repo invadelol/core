@@ -63,46 +63,80 @@ onMounted(() => {
   loadItems()
 })
 
-/* ── Row-level derived data ─────────────────────────────────── */
-function resolve(match: Match) {
-  return details[match.matchId] ?? match
-}
+/* ── Rows ───────────────────────────────────────────────────────
+   Every value the list renders is derived once, here, rather than by
+   calling helpers from the template. A template expression re-runs on
+   each render, and the summary row alone referenced `me(match)` — a
+   linear search through ten participants — fifteen times per row. This
+   also deliberately reads only from `props.matches`: the scoreboard
+   fields are all present in the summary payload, so opening one match
+   and loading its timeline no longer invalidates the derived data for
+   every other row in the list.
+   ────────────────────────────────────────────────────────────── */
 
-function me(match: Match) {
-  return match.participants.find((p) => p.puuid === props.puuid)
-}
-
-function focused(match: Match) {
-  const chosen = focus.value[match.matchId] ?? props.puuid
-  return match.participants.find((p) => p.puuid === chosen) ?? match.participants[0]
-}
-
-/** Precomputed per match: lobby ranking, team totals, lobby-wide maxima. */
-const context = computed(() => {
-  const out: Record<
-    string,
-    {
-      lobby: ReturnType<typeof rankLobby>
-      totals: ReturnType<typeof teamTotals>
-      maxDamage: number
-      maxGold: number
-      maxCs: number
-      maxVision: number
-    }
-  > = {}
-  for (const match of props.matches) {
-    const full = resolve(match)
-    out[match.matchId] = {
-      lobby: rankLobby(full),
-      totals: teamTotals(full),
-      maxDamage: Math.max(...full.participants.map((p) => p.totalDamageDealtToChampions || 0), 1),
-      maxGold: Math.max(...full.participants.map((p) => p.goldEarned || 0), 1),
-      maxCs: Math.max(...full.participants.map((p) => p.cs || 0), 1),
-      maxVision: Math.max(...full.participants.map((p) => p.visionScore || 0), 1),
-    }
+function maxOf(participants: Participant[], read: (p: Participant) => number) {
+  let max = 1
+  for (const p of participants) {
+    const value = read(p) || 0
+    if (value > max) max = value
   }
-  return out
-})
+  return max
+}
+
+const rows = computed(() =>
+  props.matches.map((match) => {
+    const participants = match.participants
+    const me = participants.find((p) => p.puuid === props.puuid)
+    const totals = teamTotals(match)
+    const lobby = rankLobby(match)
+    const minutes = matchMinutes(match)
+
+    const maxDamage = maxOf(participants, (p) => p.totalDamageDealtToChampions)
+
+    return {
+      match,
+      matchId: match.matchId,
+      me,
+      win: Boolean(me?.win),
+      totals,
+      lobby,
+      maxDamage,
+      queue: queueName(match.queueId),
+      duration: duration(match.duration),
+      ago: timeAgo(match.gameStartMs),
+      championId: me?.championId ?? 0,
+      championLabel: championName(me?.championId ?? 0),
+      spells: (me?.spells ?? []).slice(0, 2),
+      items: me?.items ?? [],
+      kdaRatio: kda(me?.kills ?? 0, me?.deaths ?? 0, me?.assists ?? 0).toFixed(2),
+      // A match can be listed without this player's row if ingestion was
+      // partial; the previous code assumed it was always there and threw.
+      killParticipation: me ? Math.round(killParticipation(me, totals)) : 0,
+      csPerMinute: ((me?.cs ?? 0) / minutes).toFixed(1),
+      gold: compact(me?.goldEarned ?? 0),
+      damage: compact(me?.totalDamageDealtToChampions ?? 0),
+      standing: ordinal(lobby.rank[props.puuid]),
+      /** Winning side first, each side's members already lane-ordered. */
+      teams: teamOrder(match).map((teamId) => ({
+        teamId,
+        won: teamWon(match, teamId),
+        totals: totals[teamId],
+        objectives: objectives(match, teamId),
+        members: teamMembers(match, teamId).map((p) => ({
+          participant: p,
+          isMe: p.puuid === props.puuid,
+          championLabel: championName(p.championId),
+          roleLabel: POSITION_NAMES[p.position] || championName(p.championId),
+          killParticipation: Math.round(killParticipation(p, totals)),
+          damage: compact(p.totalDamageDealtToChampions),
+          damageShare: (p.totalDamageDealtToChampions / maxDamage) * 100,
+        })),
+      })),
+    }
+  })
+)
+
+type Row = (typeof rows.value)[number]
 
 function toggle(matchId: string) {
   if (expanded.value === matchId) {
@@ -122,6 +156,7 @@ watch(
   }
 )
 
+/** Frames per player for the open match, indexed once. */
 const timeline = computed(() => indexTimeline(expanded.value ? details[expanded.value] : null))
 
 async function fetchDetails(matchId: string) {
@@ -140,6 +175,11 @@ async function fetchDetails(matchId: string) {
 }
 
 /* ── Charts ─────────────────────────────────────────────────── */
+function focused(match: Match) {
+  const chosen = focus.value[match.matchId] ?? props.puuid
+  return match.participants.find((p) => p.puuid === chosen) ?? match.participants[0]
+}
+
 function series(p: Participant | undefined, key: 'gold' | 'cs' | 'xp') {
   if (!p) return { labels: [] as string[], values: [] as number[] }
   const frames = timeline.value[p.puuid] ?? []
@@ -191,6 +231,11 @@ const GRAPHS = [
   { key: 'xp' as const, title: 'Experience' },
   { key: 'cs' as const, title: 'Creep score' },
 ]
+
+/** The match a graph or rune view reads, which is the one with a timeline. */
+function detailed(row: Row) {
+  return details[row.matchId] ?? row.match
+}
 </script>
 
 <template>
@@ -203,10 +248,10 @@ const GRAPHS = [
 
     <ul v-else class="divide-y divide-line">
       <li
-        v-for="match in matches"
-        :key="match.matchId"
+        v-for="row in rows"
+        :key="row.matchId"
         :style="
-          expanded !== match.matchId
+          expanded !== row.matchId
             ? { contentVisibility: 'auto', containIntrinsicSize: 'auto 90px' }
             : undefined
         "
@@ -215,12 +260,12 @@ const GRAPHS = [
         <button
           type="button"
           class="flex w-full items-stretch text-left transition-colors hover:bg-[#fafafb]"
-          :aria-expanded="expanded === match.matchId"
-          @click="toggle(match.matchId)"
+          :aria-expanded="expanded === row.matchId"
+          @click="toggle(row.matchId)"
         >
           <span
             class="w-[3px] shrink-0"
-            :class="me(match)?.win ? 'bg-win' : 'bg-loss'"
+            :class="row.win ? 'bg-win' : 'bg-loss'"
             aria-hidden="true"
           />
 
@@ -229,23 +274,31 @@ const GRAPHS = [
             <span class="flex shrink-0 items-center gap-1.5">
               <span class="relative">
                 <img
-                  :src="champIcon(me(match)?.championId ?? 0)"
-                  :alt="championName(me(match)?.championId ?? 0)"
+                  :src="champIcon(row.championId)"
+                  :alt="row.championLabel"
+                  width="40"
+                  height="40"
+                  loading="lazy"
+                  decoding="async"
                   class="thumb h-10 w-10 rounded-lg"
                 />
                 <span
                   class="num absolute -bottom-1 -right-1 flex h-[17px] min-w-[17px] items-center justify-center rounded-full border-2 border-surface px-[3px] text-[9px] font-semibold text-white"
-                  :class="me(match)?.win ? 'bg-win' : 'bg-loss'"
+                  :class="row.win ? 'bg-win' : 'bg-loss'"
                 >
-                  {{ me(match)?.champLevel }}
+                  {{ row.me?.champLevel }}
                 </span>
               </span>
               <span class="flex flex-col gap-[2px]">
                 <img
-                  v-for="spell in (me(match)?.spells ?? []).slice(0, 2)"
+                  v-for="spell in row.spells"
                   :key="spell"
                   :src="spellIcon(spell)"
                   alt=""
+                  width="19"
+                  height="19"
+                  loading="lazy"
+                  decoding="async"
                   class="thumb h-[19px] w-[19px] rounded"
                 />
               </span>
@@ -255,90 +308,78 @@ const GRAPHS = [
             <span class="min-w-0 flex-1 sm:w-[7rem] sm:flex-none">
               <span
                 class="block text-[0.8125rem] font-semibold"
-                :class="me(match)?.win ? 'text-win' : 'text-loss'"
+                :class="row.win ? 'text-win' : 'text-loss'"
               >
-                {{ me(match)?.win ? 'Victory' : 'Defeat' }}
+                {{ row.win ? 'Victory' : 'Defeat' }}
               </span>
               <span class="block truncate text-[0.6875rem] text-ink-2">
-                {{ queueName(match.queueId) }}
+                {{ row.queue }}
               </span>
               <span class="num block whitespace-nowrap text-[0.6875rem] text-ink-3">
-                {{ duration(match.duration) }} · {{ timeAgo(match.gameStartMs) }}
+                {{ row.duration }} · {{ row.ago }}
               </span>
             </span>
 
             <!-- KDA -->
             <span class="w-[6.25rem] shrink-0 sm:w-[7.5rem]">
               <span class="num block text-[0.875rem] font-semibold text-ink">
-                {{ me(match)?.kills }}
+                {{ row.me?.kills }}
                 <span class="text-ink-4">/</span>
-                <span class="text-loss">{{ me(match)?.deaths }}</span>
+                <span class="text-loss">{{ row.me?.deaths }}</span>
                 <span class="text-ink-4">/</span>
-                {{ me(match)?.assists }}
+                {{ row.me?.assists }}
               </span>
               <span class="num block text-[0.6875rem] text-ink-3">
-                {{
-                  kda(
-                    me(match)?.kills ?? 0,
-                    me(match)?.deaths ?? 0,
-                    me(match)?.assists ?? 0
-                  ).toFixed(2)
-                }}
-                KDA ·
-                {{ Math.round(killParticipation(me(match)!, context[match.matchId].totals)) }}% KP
+                {{ row.kdaRatio }} KDA · {{ row.killParticipation }}% KP
               </span>
             </span>
 
             <!-- Economy -->
             <span class="hidden w-[9rem] shrink-0 grid-cols-2 gap-x-2 gap-y-0.5 sm:grid">
               <span class="num text-[0.6875rem] text-ink-2">
-                <span class="font-medium text-ink">{{ me(match)?.cs }}</span> cs
-                <span class="text-ink-3">
-                  ({{ ((me(match)?.cs ?? 0) / matchMinutes(match)).toFixed(1) }})
-                </span>
+                <span class="font-medium text-ink">{{ row.me?.cs }}</span> cs
+                <span class="text-ink-3">({{ row.csPerMinute }})</span>
               </span>
               <span class="num text-[0.6875rem] text-ink-2">
-                <span class="font-medium text-ink">{{ compact(me(match)?.goldEarned ?? 0) }}</span>
+                <span class="font-medium text-ink">{{ row.gold }}</span>
                 gold
               </span>
               <span class="num text-[0.6875rem] text-ink-2">
-                <span class="font-medium text-ink">
-                  {{ compact(me(match)?.totalDamageDealtToChampions ?? 0) }}
-                </span>
+                <span class="font-medium text-ink">{{ row.damage }}</span>
                 dmg
               </span>
               <span class="num text-[0.6875rem] text-ink-2">
-                <span class="font-medium text-ink">{{ me(match)?.visionScore }}</span> vis
+                <span class="font-medium text-ink">{{ row.me?.visionScore }}</span> vis
               </span>
             </span>
 
             <!-- Items -->
             <span class="hidden shrink-0 lg:flex">
-              <ItemRow :items="me(match)?.items ?? []" size="xs" />
+              <ItemRow :items="row.items" size="xs" />
             </span>
 
             <!-- Standing in the lobby -->
             <span class="ml-auto flex shrink-0 items-center gap-3 pl-1">
               <span class="hidden text-right sm:block">
                 <span class="num block text-[0.8125rem] font-semibold text-ink">
-                  {{ ordinal(context[match.matchId].lobby.rank[props.puuid]) }}
+                  {{ row.standing }}
                 </span>
                 <span class="label">of 10</span>
               </span>
               <ChevronDown
                 class="h-4 w-4 text-ink-3 transition-transform"
-                :class="expanded === match.matchId && 'rotate-180'"
+                :class="expanded === row.matchId && 'rotate-180'"
               />
             </span>
           </span>
         </button>
 
         <!-- ── Expanded detail ───────────────────────────── -->
-        <div v-if="expanded === match.matchId" class="border-t border-line bg-[#fcfcfd] px-4 py-4">
+        <div v-if="expanded === row.matchId" class="border-t border-line bg-[#fcfcfd] px-4 py-4">
           <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <Segmented v-model="tab[match.matchId]" :options="TABS" />
+            <Segmented v-model="tab[row.matchId]" :options="TABS" />
             <Link
-              :href="`/${encodeURIComponent(summonerSlug)}/match/${encodeURIComponent(match.matchId)}`"
+              :href="`/${encodeURIComponent(summonerSlug)}/match/${encodeURIComponent(row.matchId)}`"
               class="text-[0.75rem] font-medium text-ink-2 underline-offset-2 hover:text-ink hover:underline"
             >
               Full analysis →
@@ -346,87 +387,88 @@ const GRAPHS = [
           </div>
 
           <p
-            v-if="tab[match.matchId] !== 'scoreboard' && loading[match.matchId]"
+            v-if="tab[row.matchId] !== 'scoreboard' && loading[row.matchId]"
             class="py-6 text-center text-[0.8125rem] text-ink-3"
           >
             Loading match details…
           </p>
           <p
-            v-else-if="tab[match.matchId] !== 'scoreboard' && failed[match.matchId]"
+            v-else-if="tab[row.matchId] !== 'scoreboard' && failed[row.matchId]"
             class="flex items-center justify-center gap-3 py-6 text-[0.8125rem] text-neg"
           >
             Couldn’t load this match.
-            <button class="btn" @click="fetchDetails(match.matchId)">Retry</button>
+            <button class="btn" @click="fetchDetails(row.matchId)">Retry</button>
           </p>
 
           <template v-else>
             <!-- Scoreboard -->
-            <div v-if="tab[match.matchId] === 'scoreboard'" class="grid gap-4 lg:grid-cols-2">
-              <div v-for="teamId in teamOrder(resolve(match))" :key="teamId" class="card">
+            <div v-if="tab[row.matchId] === 'scoreboard'" class="grid gap-4 lg:grid-cols-2">
+              <div v-for="team in row.teams" :key="team.teamId" class="card">
                 <div class="flex items-baseline justify-between border-b border-line px-3 py-2">
                   <span
                     class="text-[0.75rem] font-semibold"
-                    :class="teamWon(resolve(match), teamId) ? 'text-win' : 'text-loss'"
+                    :class="team.won ? 'text-win' : 'text-loss'"
                   >
-                    {{ teamWon(resolve(match), teamId) ? 'Victory' : 'Defeat' }}
+                    {{ team.won ? 'Victory' : 'Defeat' }}
                     <span class="font-normal text-ink-3">
-                      · {{ teamId === 100 ? 'Blue' : 'Red' }}
+                      · {{ team.teamId === 100 ? 'Blue' : 'Red' }}
                     </span>
                   </span>
                   <span class="num flex gap-2.5 text-[0.6875rem] text-ink-3">
-                    <span>{{ context[match.matchId].totals[teamId].kills }} kills</span>
-                    <span>{{ compact(context[match.matchId].totals[teamId].gold) }} gold</span>
+                    <span>{{ team.totals.kills }} kills</span>
+                    <span>{{ compact(team.totals.gold) }} gold</span>
                     <span title="Towers · Dragons · Barons">
-                      {{ objectives(resolve(match), teamId).towers }}/{{
-                        objectives(resolve(match), teamId).dragons
-                      }}/{{ objectives(resolve(match), teamId).barons }}
+                      {{ team.objectives.towers }}/{{ team.objectives.dragons }}/{{
+                        team.objectives.barons
+                      }}
                     </span>
                   </span>
                 </div>
 
                 <ul class="divide-y divide-line">
                   <li
-                    v-for="p in teamMembers(resolve(match), teamId)"
-                    :key="p.puuid"
+                    v-for="member in team.members"
+                    :key="member.participant.puuid"
                     class="px-3 py-2"
-                    :class="p.puuid === props.puuid ? 'bg-[#f6f7f9]' : ''"
+                    :class="member.isMe ? 'bg-[#f6f7f9]' : ''"
                   >
                     <div class="flex items-center gap-2.5">
                       <img
-                        :src="champIcon(p.championId)"
-                        :alt="championName(p.championId)"
+                        :src="champIcon(member.participant.championId)"
+                        :alt="member.championLabel"
+                        width="28"
+                        height="28"
+                        loading="lazy"
+                        decoding="async"
                         class="thumb h-7 w-7 shrink-0 rounded-md"
                       />
                       <span class="min-w-0 flex-1">
                         <span class="block truncate text-[0.75rem] font-medium text-ink">
-                          {{ p.gameName }}
+                          {{ member.participant.gameName }}
                         </span>
                         <span class="num block truncate text-[0.625rem] text-ink-3">
-                          {{ POSITION_NAMES[p.position] || championName(p.championId) }} ·
-                          {{ p.cs }} cs
+                          {{ member.roleLabel }} · {{ member.participant.cs }} cs
                         </span>
                       </span>
                       <span class="num w-[4.25rem] shrink-0 text-right">
                         <span class="block text-[0.75rem] font-medium text-ink">
-                          {{ p.kills }}/{{ p.deaths }}/{{ p.assists }}
+                          {{ member.participant.kills }}/{{ member.participant.deaths }}/{{
+                            member.participant.assists
+                          }}
                         </span>
                         <span class="block text-[0.625rem] text-ink-3">
-                          {{ Math.round(killParticipation(p, context[match.matchId].totals)) }}% kp
+                          {{ member.killParticipation }}% kp
                         </span>
                       </span>
                       <span class="num w-[3rem] shrink-0 text-right">
-                        <span class="block text-[0.75rem] text-ink-2">
-                          {{ compact(p.totalDamageDealtToChampions) }}
-                        </span>
+                        <span class="block text-[0.75rem] text-ink-2">{{ member.damage }}</span>
                         <span class="block text-[0.625rem] text-ink-3">dmg</span>
                       </span>
                     </div>
                     <Meter
                       class="mt-1.5"
-                      :value="
-                        (p.totalDamageDealtToChampions / context[match.matchId].maxDamage) * 100
-                      "
-                      :tone="p.puuid === props.puuid ? 'ink' : 'muted'"
+                      :value="member.damageShare"
+                      :tone="member.isMe ? 'ink' : 'muted'"
                     />
                   </li>
                 </ul>
@@ -434,9 +476,9 @@ const GRAPHS = [
             </div>
 
             <!-- Graphs -->
-            <div v-else-if="tab[match.matchId] === 'graphs'">
+            <div v-else-if="tab[row.matchId] === 'graphs'">
               <p
-                v-if="!resolve(match).timeline?.length"
+                v-if="!detailed(row).timeline?.length"
                 class="py-6 text-center text-[0.8125rem] text-ink-3"
               >
                 No timeline recorded for this match.
@@ -448,12 +490,12 @@ const GRAPHS = [
                     <span class="text-[0.625rem] text-ink-3">over time</span>
                   </div>
                   <div class="h-36">
-                    <LineChart :data="chart(resolve(match), graph.key)" :options="chartOptions" />
+                    <LineChart :data="chart(detailed(row), graph.key)" :options="chartOptions" />
                   </div>
                   <div class="mt-2 flex items-center justify-between text-[0.625rem]">
                     <span class="flex items-center gap-1.5 text-ink">
                       <span class="h-[2px] w-3 bg-ink" />
-                      {{ focused(resolve(match))?.gameName }}
+                      {{ focused(detailed(row))?.gameName }}
                     </span>
                     <span class="flex items-center gap-1.5 text-ink-3">
                       <span
@@ -466,7 +508,7 @@ const GRAPHS = [
                           );
                         "
                       />
-                      {{ laneOpponent(resolve(match), focused(resolve(match)))?.gameName }}
+                      {{ laneOpponent(detailed(row), focused(detailed(row)))?.gameName }}
                     </span>
                   </div>
                 </div>
@@ -475,24 +517,30 @@ const GRAPHS = [
 
             <!-- Runes -->
             <div v-else class="grid gap-4 lg:grid-cols-2">
-              <div v-for="teamId in teamOrder(resolve(match))" :key="teamId">
-                <h4 class="card-title mb-2">{{ teamId === 100 ? 'Blue' : 'Red' }} team</h4>
+              <div v-for="team in row.teams" :key="team.teamId">
+                <h4 class="card-title mb-2">{{ team.teamId === 100 ? 'Blue' : 'Red' }} team</h4>
                 <ul class="card divide-y divide-line">
                   <li
-                    v-for="p in teamMembers(resolve(match), teamId)"
-                    :key="p.puuid"
+                    v-for="member in team.members"
+                    :key="member.participant.puuid"
                     class="flex items-center gap-3 px-3 py-2"
-                    :class="p.puuid === props.puuid ? 'bg-[#f6f7f9]' : ''"
+                    :class="member.isMe ? 'bg-[#f6f7f9]' : ''"
                   >
                     <img
-                      :src="champIcon(p.championId)"
-                      :alt="championName(p.championId)"
+                      :src="champIcon(member.participant.championId)"
+                      :alt="member.championLabel"
+                      width="28"
+                      height="28"
+                      loading="lazy"
+                      decoding="async"
                       class="thumb h-7 w-7 rounded-md"
                     />
                     <span class="min-w-0 flex-1 truncate text-[0.75rem] text-ink">
-                      {{ championName(p.championId) }}
+                      {{ member.championLabel }}
                     </span>
-                    <RuneGlyphs :runes="runeSet(timeline[p.puuid] ?? [], p)" />
+                    <RuneGlyphs
+                      :runes="runeSet(timeline[member.participant.puuid] ?? [], member.participant)"
+                    />
                   </li>
                 </ul>
               </div>

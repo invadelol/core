@@ -18,6 +18,7 @@ const AutoSwagger = ((AutoSwaggerModule as unknown as { default?: unknown }).def
 
 import swagger from '#config/swagger'
 import { middleware } from '#start/middleware'
+import { ANALYTICS_PANELS, analyticsUrls } from '#constants/analytics'
 
 const SummonersController = () => import('#controllers/summoners_controller')
 const HealthChecksController = () => import('#controllers/health_checks_controller')
@@ -96,16 +97,23 @@ router.get('/:summoner', async ({ inertia, params }) => {
   const { default: summonerService } = await import('#services/summoner_service')
   // A stored profile can render in the HTML and removes the client lookup waterfall.
   // Unknown profiles still resolve through the API, where Riot errors are translated.
-  const stored = await summonerService.findStored(params.summoner, 'EUW1').catch(() => null)
-  const initialProfile = stored
-    ? {
-        puuid: stored.puuid,
-        gameName: stored.gameName,
-        tagLine: stored.tagLine,
-        platform: stored.platform,
-        profileIconId: stored.profileIconId,
-        summonerLevel: stored.summonerLevel,
-      }
-    : null
-  return inertia.render('summoner', { summoner: params.summoner, initialProfile })
+  const initialProfile = await summonerService
+    .findStoredProfile(params.summoner, 'EUW1')
+    .catch(() => null)
+
+  /**
+   * Knowing the puuid server-side means the browser can be told which
+   * analytics requests are coming while it is still parsing the HTML, rather
+   * than discovering them only after the bundle has downloaded, parsed and
+   * hydrated. The panels' own `fetch` calls then land on connections that are
+   * already open and, more often than not, on responses already in flight.
+   */
+  const preload = initialProfile ? analyticsUrls(initialProfile.puuid) : []
+
+  return inertia.render('summoner', {
+    summoner: params.summoner,
+    initialProfile,
+    panels: ANALYTICS_PANELS,
+    preload,
+  })
 })

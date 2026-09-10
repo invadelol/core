@@ -29,3 +29,17 @@ export const CACHE_TTL_SECONDS = 2 * 60 * 60 // 2 hours
 
 // Top champions to show in stats
 export const TOP_CHAMPIONS_COUNT = 10
+
+/**
+ * Typeahead fires a request per pause in typing and popular prefixes repeat
+ * across visitors, so a short cache removes almost all of the full-text scans
+ * without a visible delay before a newly indexed player becomes findable.
+ */
+export const SEARCH_CACHE_TTL = '60s'
+
+/**
+ * Identity fields rendered into the profile HTML. They change only when a
+ * player renames or changes icon, and this lookup sits in front of first
+ * paint, so it is worth keeping out of Postgres.
+ */
+export const STORED_PROFILE_CACHE_TTL = '60s'

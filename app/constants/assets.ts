@@ -56,6 +56,13 @@ export const BROWSER_CACHE_SECONDS = 60 * 60 * 24 * 7
  */
 export const PLACEHOLDER_CACHE_SECONDS = 60 * 5
 
+/**
+ * Id-to-name maps are derived from a manifest that changes once a patch, and
+ * every profile page asks for two of them. An hour of browser caching, and of
+ * holding the encoded bytes in the process, costs nothing in freshness.
+ */
+export const NAMES_CACHE_SECONDS = 60 * 60
+
 /** Upstream is given this long before we fall through to the next source. */
 export const FETCH_TIMEOUT_MS = 6000
 
@@ -71,3 +78,17 @@ export const PLACEHOLDER_COLORS = [
   ['#e8e1e1', '#bda9a9'],
   ['#e1e5dd', '#adb5a4'],
 ] as const
+
+/**
+ * Vite writes content-hashed filenames, so a URL under `/assets` never
+ * describes different bytes. `immutable` tells the browser exactly that, and
+ * saves it a revalidation round trip per asset per page view.
+ */
+export const ASSET_IMMUTABLE_SECONDS = 60 * 60 * 24 * 365
+
+/**
+ * Files we serve under a stable name — the self-hosted fonts — are cached for
+ * a month rather than declared immutable, so replacing one still reaches
+ * everybody within a month instead of never.
+ */
+export const ASSET_REVALIDATE_SECONDS = 60 * 60 * 24 * 30

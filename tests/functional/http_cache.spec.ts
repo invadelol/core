@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto'
 import testUtils from '@adonisjs/core/services/test_utils'
 import redis from '@adonisjs/redis/services/main'
 import HttpCacheMiddleware from '#middleware/http_cache_middleware'
+import memoryCache from '#services/response_memory_cache'
 import {
   compressResponse,
   decompressResponse,
@@ -13,11 +14,12 @@ import {
   saveResponseCache,
 } from '#services/http_response_cache'
 
-async function context(url: string, encoding = 'br') {
+async function context(url: string, encoding = 'br', ifNoneMatch?: string) {
   const req = new IncomingMessage(new Socket())
   req.url = url
   req.method = 'GET'
   req.headers['accept-encoding'] = encoding
+  if (ifNoneMatch) req.headers['if-none-match'] = ifNoneMatch
   return testUtils.createHttpContext({ req })
 }
 
@@ -41,6 +43,10 @@ test.group('HTTP response cache', (group) => {
   }
   const urlFor = (id: string) => `/api/summoners/puuid/${id.slice(9)}/stats?count=100`
 
+  // Each test decides which tier it is exercising, so the in-process layer
+  // never leaks a hit into the next one.
+  group.each.setup(() => memoryCache.clear())
+
   group.teardown(async () => {
     await invalidateResponseCache(resources)
     for (const id of resources) await redis.del(`${id}:cache_generation`)
@@ -62,9 +68,64 @@ test.group('HTTP response cache', (group) => {
     await middleware.handle(hit, async () => {
       assert.fail('cache hit executed controller')
     })
-    assert.equal(hit.response.getHeader('X-Cache'), 'HIT')
+    assert.equal(hit.response.getHeader('X-Cache'), 'MEMORY')
     assert.deepEqual(hit.response.getBody(), first.response.getBody())
-    assert.equal(hit.response.getHeader('Cache-Control'), 'no-store')
+    assert.equal(hit.response.getHeader('Cache-Control'), 'private, no-cache')
+
+    // Dropping the in-process layer falls through to Redis, same bytes.
+    memoryCache.clear()
+    const redisHit = await context(url)
+    await middleware.handle(redisHit, async () => assert.fail('cache hit executed controller'))
+    assert.equal(redisHit.response.getHeader('X-Cache'), 'HIT')
+    assert.deepEqual(redisHit.response.getBody(), first.response.getBody())
+  })
+
+  test('answers a matching If-None-Match with a bodyless 304', async ({ assert }) => {
+    const url = urlFor(resource())
+    const middleware = new HttpCacheMiddleware()
+    const first = await context(url)
+    await middleware.handle(first, async () => first.response.ok({ total: 7 }))
+
+    const etag = String(first.response.getHeader('ETag'))
+    assert.match(etag, /^"[\w-]+"$/)
+
+    const revalidated = await context(url, 'br', etag)
+    await middleware.handle(revalidated, async () =>
+      assert.fail('revalidation executed controller')
+    )
+    assert.equal(revalidated.response.getStatus(), 304)
+    assert.isNull(revalidated.response.getBody())
+
+    // A client on a different encoding holds a different representation, so
+    // its validator must not match the Brotli one.
+    const identity = await context(url, 'identity', etag)
+    await middleware.handle(identity, async () => assert.fail('revalidation executed controller'))
+    assert.equal(identity.response.getStatus(), 200)
+    assert.deepEqual(JSON.parse(identity.response.getBody().toString()), { total: 7 })
+  })
+
+  test('an invalidation drops the in-process copy as well as the Redis one', async ({ assert }) => {
+    const id = resource()
+    const url = urlFor(id)
+    const middleware = new HttpCacheMiddleware()
+    const first = await context(url)
+    await middleware.handle(first, async () => first.response.ok({ total: 1 }))
+
+    // Proves the copy is genuinely in memory before the invalidation lands.
+    const warm = await context(url)
+    await middleware.handle(warm, async () => assert.fail('memory did not hold the response'))
+    assert.equal(warm.response.getHeader('X-Cache'), 'MEMORY')
+
+    await invalidateResponseCache([id])
+
+    let recomputed = 0
+    const after = await context(url)
+    await middleware.handle(after, async () => {
+      recomputed++
+      after.response.ok({ total: 2 })
+    })
+    assert.equal(recomputed, 1, 'memory served a copy that had been invalidated')
+    assert.deepEqual(await decoded(after.response.getBody()), { total: 2 })
   })
 
   test('honors br;q=0 and returns JSON bytes for clients without Brotli', async ({ assert }) => {

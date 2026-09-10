@@ -1,14 +1,307 @@
 import clickhouse from 'adonisjs-clickhouse/services/main'
 import { asString, escapeClickhouseString } from '#utils/clickhouse'
+import { plan, type ColumnPlan } from '#services/analytics/columns'
 import { DEFAULT_MATCH_COUNT, DEFAULT_OFFSET } from '#config/constants'
+
+/* ── Column plans ───────────────────────────────────────────────
+   The SELECT clause and the row reader come from one list, so a column can
+   never be added to a query without the reader learning where it sits.
+   See `columns.ts` for why rows come back positionally.
+   ────────────────────────────────────────────────────────────── */
+
+const MATCH_COLUMNS = [
+  'match_id',
+  'game_start_ms',
+  'duration_sec',
+  'queue_id',
+  'patch',
+  't1_win',
+  't2_win',
+  't1_towers',
+  't2_towers',
+  't1_inhibs',
+  't2_inhibs',
+  't1_dragons',
+  't2_dragons',
+  't1_barons',
+  't2_barons',
+  't1_heralds',
+  't2_heralds',
+] as const
+
+const matchPlan = plan<any>(MATCH_COLUMNS, {
+  matchId: 'match_id',
+  gameStartMs: 'game_start_ms',
+  duration: 'duration_sec',
+  queueId: 'queue_id',
+  patch: 'patch',
+  t1Win: 't1_win',
+  t2Win: 't2_win',
+  t1Towers: 't1_towers',
+  t2Towers: 't2_towers',
+  t1Inhibs: 't1_inhibs',
+  t2Inhibs: 't2_inhibs',
+  t1Dragons: 't1_dragons',
+  t2Dragons: 't2_dragons',
+  t1Barons: 't1_barons',
+  t2Barons: 't2_barons',
+  t1Heralds: 't1_heralds',
+  t2Heralds: 't2_heralds',
+})
+
+/**
+ * Everything a scoreboard needs, and nothing else. The match list stops here;
+ * the analysis-only columns below are read only for a single expanded match.
+ */
+const SUMMARY_PARTICIPANT_COLUMNS = [
+  'match_id',
+  'puuid',
+  'riot_id_game_name',
+  'riot_id_tag_line',
+  'champion_id',
+  'team_id',
+  'win',
+  'kills',
+  'deaths',
+  'assists',
+  'total_cs',
+  'summoner_level',
+  'champ_level',
+  'item0',
+  'item1',
+  'item2',
+  'item3',
+  'item4',
+  'item5',
+  'item6',
+  'spell1',
+  'spell2',
+  'primary_style',
+  'secondary_style',
+  'vision_score',
+  'dmg_taken',
+  'dmg_to_champ',
+  'team_position',
+  'gold_earned',
+  'physical_dmg_to_champ',
+  'magic_dmg_to_champ',
+  'true_dmg_to_champ',
+] as const
+
+const DETAIL_PARTICIPANT_COLUMNS = [
+  'wards_placed',
+  'wards_killed',
+  'dmg_to_turrets',
+  'dmg_to_objectives',
+  'physical_dmg_dealt',
+  'magic_dmg_dealt',
+  'true_dmg_dealt',
+  'neutral_minions_killed',
+  'vision_wards_bought',
+  'all_in_pings',
+  'assist_pings',
+  'command_pings',
+  'danger_pings',
+  'enemy_missing_pings',
+  'enemy_vision_pings',
+  'get_back_pings',
+  'need_vision_pings',
+  'on_my_way_pings',
+  'push_pings',
+  'vision_cleared_pings',
+  'bait_pings',
+  'hold_pings',
+] as const
+
+const SUMMARY_PARTICIPANT_FIELDS = {
+  puuid: 'puuid',
+  gameName: 'riot_id_game_name',
+  tagLine: 'riot_id_tag_line',
+  championId: 'champion_id',
+  teamId: 'team_id',
+  win: 'win',
+  kills: 'kills',
+  deaths: 'deaths',
+  assists: 'assists',
+  cs: 'total_cs',
+  totalMinionsKilled: 'total_cs',
+  level: 'summoner_level',
+  champLevel: 'champ_level',
+  visionScore: 'vision_score',
+  damageTaken: 'dmg_taken',
+  damageDealt: 'dmg_to_champ',
+  position: 'team_position',
+  goldEarned: 'gold_earned',
+  physicalDamageDealtToChampions: 'physical_dmg_to_champ',
+  magicDamageDealtToChampions: 'magic_dmg_to_champ',
+  trueDamageDealtToChampions: 'true_dmg_to_champ',
+}
+
+const DETAIL_PARTICIPANT_FIELDS = {
+  wardsPlaced: 'wards_placed',
+  wardsKilled: 'wards_killed',
+  damageDealtToTurrets: 'dmg_to_turrets',
+  damageDealtToObjectives: 'dmg_to_objectives',
+  physicalDamageDealt: 'physical_dmg_dealt',
+  magicDamageDealt: 'magic_dmg_dealt',
+  trueDamageDealt: 'true_dmg_dealt',
+  neutralMinionsKilled: 'neutral_minions_killed',
+  visionWardsBoughtInGame: 'vision_wards_bought',
+  allInPings: 'all_in_pings',
+  assistPings: 'assist_pings',
+  commandPings: 'command_pings',
+  dangerPings: 'danger_pings',
+  enemyMissingPings: 'enemy_missing_pings',
+  enemyVisionPings: 'enemy_vision_pings',
+  getBackPings: 'get_back_pings',
+  needVisionPings: 'need_vision_pings',
+  onMyWayPings: 'on_my_way_pings',
+  pushPings: 'push_pings',
+  visionClearedPings: 'vision_cleared_pings',
+  baitPings: 'bait_pings',
+  holdPings: 'hold_pings',
+}
+
+/** Items, spells, runes and the damage total are assembled, not selected. */
+function participantExtras(row: readonly unknown[], at: (column: string) => number) {
+  const number = (column: string) => (row[at(column)] as number) || 0
+  return {
+    items: [
+      row[at('item0')],
+      row[at('item1')],
+      row[at('item2')],
+      row[at('item3')],
+      row[at('item4')],
+      row[at('item5')],
+      row[at('item6')],
+    ],
+    spells: [row[at('spell1')], row[at('spell2')]],
+    perks: { primary: row[at('primary_style')], sub: row[at('secondary_style')] },
+    totalDamageDealtToChampions:
+      number('physical_dmg_to_champ') + number('magic_dmg_to_champ') + number('true_dmg_to_champ'),
+  }
+}
+
+const summaryParticipantPlan = plan<any>(
+  SUMMARY_PARTICIPANT_COLUMNS,
+  SUMMARY_PARTICIPANT_FIELDS,
+  participantExtras
+)
+
+const fullParticipantPlan = plan<any>(
+  [...SUMMARY_PARTICIPANT_COLUMNS, ...DETAIL_PARTICIPANT_COLUMNS],
+  { ...SUMMARY_PARTICIPANT_FIELDS, ...DETAIL_PARTICIPANT_FIELDS },
+  participantExtras
+)
+
+const TIMELINE_COLUMNS = [
+  'participant_id',
+  'puuid',
+  'team_id',
+  'frame_ms',
+  'level',
+  'xp',
+  'gold_current',
+  'gold_total',
+  'gold_per_sec',
+  'cs',
+  'jungle_cs',
+  'kills',
+  'deaths',
+  'assists',
+  'pos_x',
+  'pos_y',
+  'time_cc',
+  'spell1',
+  'spell2',
+  'primary_style',
+  'secondary_style',
+  'keystone',
+  'rune1',
+  'rune2',
+  'rune3',
+  'rune4',
+  'rune5',
+  'rune6',
+  'stat_offense',
+  'stat_flex',
+  'stat_defense',
+  'skill_order',
+] as const
+
+const timelinePlan = plan<any>(
+  TIMELINE_COLUMNS,
+  {
+    participantId: 'participant_id',
+    puuid: 'puuid',
+    teamId: 'team_id',
+    frameMs: 'frame_ms',
+    level: 'level',
+    xp: 'xp',
+    goldCurrent: 'gold_current',
+    goldTotal: 'gold_total',
+    goldPerSec: 'gold_per_sec',
+    cs: 'cs',
+    jungleCs: 'jungle_cs',
+    kills: 'kills',
+    deaths: 'deaths',
+    assists: 'assists',
+    posX: 'pos_x',
+    posY: 'pos_y',
+    timeCc: 'time_cc',
+  },
+  (row, at) => ({
+    spells: [row[at('spell1')], row[at('spell2')]],
+    perks: {
+      primaryStyle: row[at('primary_style')],
+      secondaryStyle: row[at('secondary_style')],
+      keystone: row[at('keystone')],
+      runes: [
+        row[at('rune1')],
+        row[at('rune2')],
+        row[at('rune3')],
+        row[at('rune4')],
+        row[at('rune5')],
+        row[at('rune6')],
+      ],
+      statPerks: {
+        offense: row[at('stat_offense')],
+        flex: row[at('stat_flex')],
+        defense: row[at('stat_defense')],
+      },
+    },
+    skillOrder: row[at('skill_order')] ?? [],
+  })
+)
+
+/** One positional result set: a single `JSON.parse`, no per-row key strings. */
+async function rawRows(query: string): Promise<unknown[][]> {
+  const result = await clickhouse.query({ query, format: 'JSONCompactEachRow' })
+  return (await result.json<unknown[]>()) ?? []
+}
+
+async function readRows<T>(query: string, columns: ColumnPlan<T>): Promise<T[]> {
+  const raw = await rawRows(query)
+  const out: T[] = new Array(raw.length)
+  for (let i = 0; i < raw.length; i++) out[i] = columns.read(raw[i])
+  return out
+}
+
+/** Only integers ever reach a query string; caller input never does. */
+function integer(value: number | undefined, fallback: number) {
+  const n = Math.trunc(Number(value))
+  return Number.isFinite(n) && n >= 0 ? n : fallback
+}
 
 /**
  * Repository for match-related ClickHouse queries.
  *
  * Performance strategy:
- * - All queries use flat SELECT + PREWHERE (no GROUP BY / groupArray).
- * - Parallel queries for independent data (match metadata vs participants vs timeline).
- * - JS-side merge for small result sets (10-15 matches, 10 participants).
+ * - Flat SELECT + PREWHERE, no JOIN and no GROUP BY / groupArray.
+ * - Every independent read is issued concurrently, and no read has to wait on
+ *   another read's *result* before it can start.
+ * - Rows arrive positionally and are assembled in JS, which is far cheaper
+ *   than a DB-side GROUP BY for these small result sets.
  */
 export class MatchRepository {
   /**
@@ -19,25 +312,27 @@ export class MatchRepository {
     if (!unique.length) return new Set()
 
     const inList = unique.map((id) => `'${escapeClickhouseString(id)}'`).join(',')
-    const result = await clickhouse.query({
-      query: `SELECT match_id FROM matches WHERE match_id IN (${inList})`,
-      format: 'JSONEachRow',
-    })
+    const rows = await rawRows(`SELECT match_id FROM matches WHERE match_id IN (${inList})`)
 
-    const rows = (await result.json<{ match_id: string }>()) ?? []
-    return new Set(rows.map((r) => asString(r.match_id)).filter(Boolean))
+    const found = new Set<string>()
+    for (const row of rows) {
+      const id = asString(row[0])
+      if (id) found.add(id)
+    }
+    return found
   }
 
   /**
    * Get matches for a summoner (fast list).
    *
    * Important: this intentionally does NOT load match timeline data.
-   * Timeline is large and should be loaded on-demand via `getById()`.
+   * Timeline is large and is loaded on demand via `getById()`.
    *
-   * Performance approach:
-   * 1. CTE finds the small set of match_ids (fast PREWHERE on puuid index).
-   * 2. Parallel queries: one for match metadata, one for participants.
-   * 3. JS-side merge avoids a heavy GROUP BY + groupArray on the DB.
+   * The window of match ids is defined once and inlined into both reads, so
+   * the metadata and the participants are fetched in a single concurrent
+   * step. Resolving the ids in their own round trip first would put an extra
+   * network latency in front of every match list, and the id scan itself is a
+   * cheap ordered read over one player's slice of the primary index.
    */
   async getByPuuid(
     puuid: string,
@@ -50,429 +345,121 @@ export class MatchRepository {
       role?: string
     }
   ) {
-    const count = filters.count ?? DEFAULT_MATCH_COUNT
-    const offset = filters.offset ?? DEFAULT_OFFSET
+    const count = integer(filters.count, DEFAULT_MATCH_COUNT)
+    const offset = integer(filters.offset, DEFAULT_OFFSET)
     const escapedPuuid = escapeClickhouseString(puuid)
 
     const whereClauses: string[] = []
     if (filters.queueIds?.length) {
-      whereClauses.push(`queue_id IN (${filters.queueIds.join(',')})`)
+      whereClauses.push(`queue_id IN (${filters.queueIds.map(Number).join(',')})`)
     }
     if (filters.championId) {
-      whereClauses.push(`champion_id = ${filters.championId}`)
+      whereClauses.push(`champion_id = ${Math.trunc(filters.championId)}`)
     }
     if (filters.role && filters.role !== 'all') {
       whereClauses.push(`team_position = '${escapeClickhouseString(filters.role)}'`)
     }
     const whereSql = whereClauses.length ? `AND ${whereClauses.join(' AND ')}` : ''
 
-    // Step 1: Get matching match_ids (very fast – uses PREWHERE on puuid)
-    const idsQuery = `
-      SELECT match_id, game_start_ms
+    // `match_id` breaks ties, so both readers see the same window even when
+    // two games share a start timestamp on the offset boundary.
+    const matchWindow = `
+      SELECT match_id
       FROM participants
       PREWHERE puuid = '${escapedPuuid}'
       WHERE 1=1 ${whereSql}
-      ORDER BY game_start_ms DESC
+      ORDER BY game_start_ms DESC, match_id DESC
       LIMIT ${count} OFFSET ${offset}
     `
 
-    const idsResult = await clickhouse.query({ query: idsQuery, format: 'JSONEachRow' })
-    const idsRows = (await idsResult.json<{ match_id: string; game_start_ms: number }>()) ?? []
+    // An `IN` set, never a join: ClickHouse builds the set first and then
+    // prunes granules with the primary key and the match_id bloom filter.
+    // Joining `participants` against the window instead streams the entire
+    // table through the join.
+    const participantPlan =
+      filters.view === 'summary' ? summaryParticipantPlan : fullParticipantPlan
+    const matchIdAt = participantPlan.at('match_id')
 
-    if (!idsRows.length) return []
-
-    const matchIds = idsRows.map((r) => asString(r.match_id))
-    const inList = matchIds.map((id) => `'${escapeClickhouseString(id)}'`).join(',')
-
-    // Step 2: Parallel fetch match metadata + participants
-    const matchQuery = `
-      SELECT
-        match_id as matchId,
-        game_start_ms as gameStartMs,
-        duration_sec as duration,
-        queue_id as queueId,
-        patch,
-        t1_win as t1Win,
-        t2_win as t2Win,
-        t1_towers as t1Towers,
-        t2_towers as t2Towers,
-        t1_inhibs as t1Inhibs,
-        t2_inhibs as t2Inhibs,
-        t1_dragons as t1Dragons,
-        t2_dragons as t2Dragons,
-        t1_barons as t1Barons,
-        t2_barons as t2Barons,
-        t1_heralds as t1Heralds,
-        t2_heralds as t2Heralds
-      FROM matches
-      PREWHERE match_id IN (${inList})
-    `
-
-    const participantsQuery = `
-      SELECT
-        match_id,
-        puuid,
-        riot_id_game_name,
-        riot_id_tag_line,
-        champion_id,
-        team_id,
-        win,
-        kills,
-        deaths,
-        assists,
-        total_cs,
-        summoner_level,
-        champ_level,
-        item0, item1, item2, item3, item4, item5, item6,
-        spell1, spell2,
-        primary_style, secondary_style,
-        vision_score,
-        dmg_taken,
-        dmg_to_champ,
-        team_position,
-        gold_earned,
-        physical_dmg_to_champ,
-        magic_dmg_to_champ,
-        true_dmg_to_champ
-        ${
-          filters.view === 'summary'
-            ? ''
-            : `,
-        wards_placed,
-        wards_killed,
-        dmg_to_turrets,
-        dmg_to_objectives,
-        physical_dmg_dealt,
-        magic_dmg_dealt,
-        true_dmg_dealt,
-        neutral_minions_killed,
-        vision_wards_bought,
-        all_in_pings,
-        assist_pings,
-        command_pings,
-        danger_pings,
-        enemy_missing_pings,
-        enemy_vision_pings,
-        get_back_pings,
-        need_vision_pings,
-        on_my_way_pings,
-        push_pings,
-        vision_cleared_pings,
-        bait_pings,
-        hold_pings`
-        }
-
-      FROM participants
-      PREWHERE match_id IN (${inList})
-    `
-
-    const [matchResult, partResult] = await Promise.all([
-      clickhouse.query({ query: matchQuery, format: 'JSONEachRow' }),
-      clickhouse.query({ query: participantsQuery, format: 'JSONEachRow' }),
+    const [matches, participantRows] = await Promise.all([
+      readRows<any>(
+        `WITH match_window AS (${matchWindow})
+         SELECT ${matchPlan.select}
+         FROM matches
+         WHERE match_id IN (SELECT match_id FROM match_window)`,
+        matchPlan
+      ),
+      rawRows(
+        `WITH match_window AS (${matchWindow})
+         SELECT ${participantPlan.select}
+         FROM participants
+         WHERE match_id IN (SELECT match_id FROM match_window)`
+      ),
     ])
 
-    const [matchRows, partRows] = await Promise.all([
-      matchResult.json<any>(),
-      partResult.json<any>(),
-    ])
+    if (!matches.length) return []
 
-    // Step 3: JS-side merge (much faster than DB GROUP BY for small result sets)
-    const matchMap = new Map<string, any>()
-    for (const m of matchRows) {
-      matchMap.set(m.matchId, { ...m, participants: [] })
+    const byMatchId = new Map<string, any>()
+    for (const match of matches) {
+      match.participants = []
+      byMatchId.set(asString(match.matchId), match)
     }
 
-    for (const p of partRows) {
-      const match = matchMap.get(p.match_id)
-      if (!match) continue
-      const totalDmgToChamp =
-        (p.physical_dmg_to_champ || 0) + (p.magic_dmg_to_champ || 0) + (p.true_dmg_to_champ || 0)
-      match.participants.push({
-        puuid: p.puuid,
-        gameName: p.riot_id_game_name,
-        tagLine: p.riot_id_tag_line,
-        championId: p.champion_id,
-        teamId: p.team_id,
-        win: p.win,
-        kills: p.kills,
-        deaths: p.deaths,
-        assists: p.assists,
-        cs: p.total_cs,
-        totalMinionsKilled: p.total_cs,
-        level: p.summoner_level,
-        champLevel: p.champ_level,
-        items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5, p.item6],
-        spells: [p.spell1, p.spell2],
-        perks: { primary: p.primary_style, sub: p.secondary_style },
-        visionScore: p.vision_score,
-        damageTaken: p.dmg_taken,
-        damageDealt: p.dmg_to_champ,
-        totalDamageDealtToChampions: totalDmgToChamp,
-        position: p.team_position,
-        goldEarned: p.gold_earned,
-        wardsPlaced: p.wards_placed,
-        wardsKilled: p.wards_killed,
-        damageDealtToTurrets: p.dmg_to_turrets,
-        damageDealtToObjectives: p.dmg_to_objectives,
-        physicalDamageDealt: p.physical_dmg_dealt,
-        magicDamageDealt: p.magic_dmg_dealt,
-        trueDamageDealt: p.true_dmg_dealt,
-        physicalDamageDealtToChampions: p.physical_dmg_to_champ,
-        magicDamageDealtToChampions: p.magic_dmg_to_champ,
-        trueDamageDealtToChampions: p.true_dmg_to_champ,
-        neutralMinionsKilled: p.neutral_minions_killed,
-        visionWardsBoughtInGame: p.vision_wards_bought,
-        allInPings: p.all_in_pings,
-        assistPings: p.assist_pings,
-        commandPings: p.command_pings,
-        dangerPings: p.danger_pings,
-        enemyMissingPings: p.enemy_missing_pings,
-        enemyVisionPings: p.enemy_vision_pings,
-        getBackPings: p.get_back_pings,
-        needVisionPings: p.need_vision_pings,
-        onMyWayPings: p.on_my_way_pings,
-        pushPings: p.push_pings,
-        visionClearedPings: p.vision_cleared_pings,
-        baitPings: p.bait_pings,
-        holdPings: p.hold_pings,
-      })
+    for (const row of participantRows) {
+      const match = byMatchId.get(asString(row[matchIdAt]))
+      if (match) match.participants.push(participantPlan.read(row))
     }
 
-    // Return in descending game start order
-    return matchIds.map((id) => matchMap.get(id)).filter(Boolean)
+    // The reads come back unordered, so newest-first is imposed here.
+    return matches.sort(
+      (a, b) =>
+        Number(b.gameStartMs) - Number(a.gameStartMs) ||
+        (a.matchId < b.matchId ? 1 : a.matchId > b.matchId ? -1 : 0)
+    )
   }
 
   /**
    * Load full match details (including timeline) by match id.
    *
-   * Performance approach:
-   * - Three parallel flat queries (match, participants, timeline), with no JOINs or GROUP BY.
-   * - JS-side merge is trivial for a single match.
-   * - Timeline rows returned flat and sorted by frame_ms (ClickHouse ORDER BY).
+   * Three parallel flat reads, no joins and no GROUP BY. The timeline arrives
+   * ordered by frame, so nothing downstream has to sort it.
    */
   async getById(matchId: string) {
     const escapedMatchId = escapeClickhouseString(matchId)
 
-    // Three parallel queries – no joins, no groupArray overhead
-    const matchQuery = `
-      SELECT
-        match_id as matchId,
-        game_start_ms as gameStartMs,
-        duration_sec as duration,
-        queue_id as queueId,
-        patch,
-        t1_win as t1Win,
-        t2_win as t2Win,
-        t1_towers as t1Towers,
-        t2_towers as t2Towers,
-        t1_inhibs as t1Inhibs,
-        t2_inhibs as t2Inhibs,
-        t1_dragons as t1Dragons,
-        t2_dragons as t2Dragons,
-        t1_barons as t1Barons,
-        t2_barons as t2Barons,
-        t1_heralds as t1Heralds,
-        t2_heralds as t2Heralds
-      FROM matches
-      PREWHERE match_id = '${escapedMatchId}'
-      LIMIT 1
-    `
-
-    const participantsQuery = `
-      SELECT
-        puuid,
-        riot_id_game_name,
-        riot_id_tag_line,
-        champion_id,
-        team_id,
-        win,
-        kills,
-        deaths,
-        assists,
-        total_cs,
-        summoner_level,
-        champ_level,
-        item0, item1, item2, item3, item4, item5, item6,
-        spell1, spell2,
-        primary_style, secondary_style,
-        vision_score,
-        dmg_taken,
-        dmg_to_champ,
-        team_position,
-        gold_earned,
-        wards_placed,
-        wards_killed,
-        dmg_to_turrets,
-        dmg_to_objectives,
-        physical_dmg_dealt,
-        magic_dmg_dealt,
-        true_dmg_dealt,
-        physical_dmg_to_champ,
-        magic_dmg_to_champ,
-        true_dmg_to_champ,
-        neutral_minions_killed,
-        vision_wards_bought,
-        all_in_pings,
-        assist_pings,
-        command_pings,
-        danger_pings,
-        enemy_missing_pings,
-        enemy_vision_pings,
-        get_back_pings,
-        need_vision_pings,
-        on_my_way_pings,
-        push_pings,
-        vision_cleared_pings,
-        bait_pings,
-        hold_pings
-      FROM participants
-      PREWHERE match_id = '${escapedMatchId}'
-    `
-
-    const timelineQuery = `
-      SELECT
-        participant_id,
-        puuid,
-        team_id,
-        frame_ms,
-        level,
-        xp,
-        gold_current,
-        gold_total,
-        gold_per_sec,
-        cs,
-        jungle_cs,
-        kills,
-        deaths,
-        assists,
-        pos_x,
-        pos_y,
-        time_cc,
-        spell1,
-        spell2,
-        primary_style,
-        secondary_style,
-        keystone,
-        rune1, rune2, rune3, rune4, rune5, rune6,
-        stat_offense, stat_flex, stat_defense,
-        skill_order
-      FROM match_timeline
-      PREWHERE match_id = '${escapedMatchId}'
-      ORDER BY frame_ms ASC
-    `
-
-    const [matchRes, partRes, timelineRes] = await Promise.all([
-      clickhouse.query({ query: matchQuery, format: 'JSONEachRow' }),
-      clickhouse.query({ query: participantsQuery, format: 'JSONEachRow' }),
-      clickhouse.query({ query: timelineQuery, format: 'JSONEachRow' }),
+    const [matches, participants, timeline] = await Promise.all([
+      readRows<any>(
+        `SELECT ${matchPlan.select}
+         FROM matches
+         PREWHERE match_id = '${escapedMatchId}'
+         LIMIT 1`,
+        matchPlan
+      ),
+      readRows<any>(
+        `SELECT ${fullParticipantPlan.select}
+         FROM participants
+         PREWHERE match_id = '${escapedMatchId}'`,
+        fullParticipantPlan
+      ),
+      readRows<any>(
+        `SELECT ${timelinePlan.select}
+         FROM match_timeline
+         PREWHERE match_id = '${escapedMatchId}'
+         ORDER BY frame_ms ASC`,
+        timelinePlan
+      ),
     ])
 
-    const [matchRows, partRows, timelineRows] = await Promise.all([
-      matchRes.json<any>(),
-      partRes.json<any>(),
-      timelineRes.json<any>(),
-    ])
-    const base = matchRows[0]
+    const base = matches[0]
     if (!base?.matchId) return null
 
-    // Map participants from flat rows
-    const participants = partRows.map((p: any) => {
-      const totalDmgToChamp =
-        (p.physical_dmg_to_champ || 0) + (p.magic_dmg_to_champ || 0) + (p.true_dmg_to_champ || 0)
-      return {
-        puuid: p.puuid,
-        gameName: p.riot_id_game_name,
-        tagLine: p.riot_id_tag_line,
-        championId: p.champion_id,
-        teamId: p.team_id,
-        win: p.win,
-        kills: p.kills,
-        deaths: p.deaths,
-        assists: p.assists,
-        cs: p.total_cs,
-        totalMinionsKilled: p.total_cs,
-        level: p.summoner_level,
-        champLevel: p.champ_level,
-        items: [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5, p.item6],
-        spells: [p.spell1, p.spell2],
-        perks: { primary: p.primary_style, sub: p.secondary_style },
-        visionScore: p.vision_score,
-        damageTaken: p.dmg_taken,
-        damageDealt: p.dmg_to_champ,
-        totalDamageDealtToChampions: totalDmgToChamp,
-        position: p.team_position,
-        goldEarned: p.gold_earned,
-        wardsPlaced: p.wards_placed,
-        wardsKilled: p.wards_killed,
-        damageDealtToTurrets: p.dmg_to_turrets,
-        damageDealtToObjectives: p.dmg_to_objectives,
-        physicalDamageDealt: p.physical_dmg_dealt,
-        magicDamageDealt: p.magic_dmg_dealt,
-        trueDamageDealt: p.true_dmg_dealt,
-        physicalDamageDealtToChampions: p.physical_dmg_to_champ,
-        magicDamageDealtToChampions: p.magic_dmg_to_champ,
-        trueDamageDealtToChampions: p.true_dmg_to_champ,
-        neutralMinionsKilled: p.neutral_minions_killed,
-        visionWardsBoughtInGame: p.vision_wards_bought,
-        allInPings: p.all_in_pings,
-        assistPings: p.assist_pings,
-        commandPings: p.command_pings,
-        dangerPings: p.danger_pings,
-        enemyMissingPings: p.enemy_missing_pings,
-        enemyVisionPings: p.enemy_vision_pings,
-        getBackPings: p.get_back_pings,
-        needVisionPings: p.need_vision_pings,
-        onMyWayPings: p.on_my_way_pings,
-        pushPings: p.push_pings,
-        visionClearedPings: p.vision_cleared_pings,
-        baitPings: p.bait_pings,
-        holdPings: p.hold_pings,
-      }
-    })
-
-    // Map timeline from flat rows (already sorted by frame_ms)
-    const timeline = timelineRows.map((t: any) => ({
-      participantId: t.participant_id,
-      puuid: t.puuid,
-      teamId: t.team_id,
-      frameMs: t.frame_ms,
-      level: t.level,
-      xp: t.xp,
-      goldCurrent: t.gold_current,
-      goldTotal: t.gold_total,
-      goldPerSec: t.gold_per_sec,
-      cs: t.cs,
-      jungleCs: t.jungle_cs,
-      kills: t.kills,
-      deaths: t.deaths,
-      assists: t.assists,
-      posX: t.pos_x,
-      posY: t.pos_y,
-      timeCc: t.time_cc,
-      spells: [t.spell1, t.spell2],
-      perks: {
-        primaryStyle: t.primary_style,
-        secondaryStyle: t.secondary_style,
-        keystone: t.keystone,
-        runes: [t.rune1, t.rune2, t.rune3, t.rune4, t.rune5, t.rune6],
-        statPerks: {
-          offense: t.stat_offense,
-          flex: t.stat_flex,
-          defense: t.stat_defense,
-        },
-      },
-      skillOrder: t.skill_order ?? [],
-    }))
-
-    return {
-      ...base,
-      participants,
-      timeline,
-    }
+    return { ...base, participants, timeline }
   }
 
   /**
-   * Get recent match participants for upsert operations
+   * Get recent match participants for upsert operations.
+   *
+   * Same reason as the match list for using an `IN` set rather than a join:
+   * a join here streams every participant row we have ever ingested.
    */
   async getRecentParticipants(
     puuid: string,
@@ -487,39 +474,32 @@ export class MatchRepository {
     }>
   > {
     const escapedPuuid = escapeClickhouseString(puuid)
-    const query = `
+    const rows = await rawRows(`
       WITH my_matches AS (
         SELECT match_id
         FROM participants
         PREWHERE puuid = '${escapedPuuid}'
-        ORDER BY game_start_ms DESC
-        LIMIT ${limit}
+        ORDER BY game_start_ms DESC, match_id DESC
+        LIMIT ${integer(limit, DEFAULT_MATCH_COUNT)}
       )
       SELECT
-        p.puuid as puuid,
-        argMax(p.riot_id_game_name, p.game_start_ms) as gameName,
-        argMax(p.riot_id_tag_line, p.game_start_ms) as tagLine,
-        argMax(p.profile_icon_id, p.game_start_ms) as profileIconId,
-        argMax(p.summoner_level, p.game_start_ms) as summonerLevel
-      FROM participants p
-      INNER JOIN my_matches m ON p.match_id = m.match_id
-      GROUP BY p.puuid
-    `
+        puuid,
+        argMax(riot_id_game_name, game_start_ms),
+        argMax(riot_id_tag_line, game_start_ms),
+        argMax(profile_icon_id, game_start_ms),
+        argMax(summoner_level, game_start_ms)
+      FROM participants
+      WHERE match_id IN (SELECT match_id FROM my_matches)
+      GROUP BY puuid
+    `)
 
-    const result = await clickhouse.query({
-      query,
-      format: 'JSONEachRow',
-    })
-
-    return (
-      (await result.json<{
-        puuid: string
-        gameName: string
-        tagLine: string
-        profileIconId: number
-        summonerLevel: number
-      }>()) ?? []
-    )
+    return rows.map((row) => ({
+      puuid: asString(row[0]),
+      gameName: asString(row[1]),
+      tagLine: asString(row[2]),
+      profileIconId: Number(row[3]) || 0,
+      summonerLevel: Number(row[4]) || 0,
+    }))
   }
 }
 

@@ -172,12 +172,12 @@ export default class SummonersController {
   async incrementViews({ request, params, response }: HttpContext) {
     await request.validateUsing(puuidParamsValidator, { data: params })
     const { puuid } = params
-    const summoner = await summonerService.incrementViewCount(puuid)
+    const viewCount = await summonerService.incrementViewCount(puuid)
 
-    if (!summoner) {
+    if (viewCount === null) {
       return response.notFound({ message: 'Summoner not found' })
     }
 
-    return response.ok({ viewCount: summoner.viewCount.toString() })
+    return response.ok({ viewCount: viewCount.toString() })
   }
 }

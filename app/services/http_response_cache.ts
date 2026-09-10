@@ -2,6 +2,7 @@ import redis from '@adonisjs/redis/services/main'
 import { brotliCompress, brotliDecompress, constants } from 'node:zlib'
 import { promisify } from 'node:util'
 import { CACHE_TTL_SECONDS } from '#config/constants'
+import memoryCache, { RESPONSE_CACHE_CHANNEL } from '#services/response_memory_cache'
 
 const compress = promisify(brotliCompress)
 export const decompressResponse = promisify(brotliDecompress)
@@ -47,8 +48,14 @@ export const INVALIDATE_RESPONSE_SCRIPT = `
 
 export async function invalidateResponseCache(resources: string[]) {
   if (!resources.length) return
+  const unique = new Set(resources)
+
+  // Drop this process's copies first. Waiting for our own broadcast to come
+  // back would leave a window where we serve what we just invalidated.
+  for (const resource of unique) memoryCache.dropResource(resource)
+
   const pipeline = redis.pipeline()
-  for (const resource of new Set(resources)) {
+  for (const resource of unique) {
     pipeline.eval(
       INVALIDATE_RESPONSE_SCRIPT,
       2,
@@ -56,6 +63,8 @@ export async function invalidateResponseCache(resources: string[]) {
       `${resource}:cache_keys`,
       CACHE_TTL_SECONDS * 2
     )
+    // Tells every other process to do the same.
+    pipeline.publish(RESPONSE_CACHE_CHANNEL, resource)
   }
   const results = await pipeline.exec()
   const error = results?.find(([err]) => err)?.[0]

@@ -14,8 +14,27 @@
       invade.lol
     </title>
 
-    <link rel="preconnect" href="https://fonts.bunny.net" crossorigin />
-    <link href="https://fonts.bunny.net/css?family=inter:400,500,600&display=swap" rel="stylesheet" />
+    {{--
+      Inter is served from our own origin. Pulling it from a font CDN cost a
+      DNS lookup, a TLS handshake and a render-blocking stylesheet before the
+      first character could be painted; the @font-face rules now ride along in
+      the app stylesheet we were already fetching. These two weights carry
+      almost all of the page, so they start downloading immediately instead of
+      waiting for the stylesheet to be parsed.
+    --}}
+    <link rel="preload" href="/fonts/inter-latin-400.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/inter-latin-600.woff2" as="font" type="font/woff2" crossorigin />
+
+    {{--
+      For a profile we already hold, the analytics requests are known before
+      the browser has even seen the bundle. Announcing them here lets it open
+      the connections and start fetching during HTML parse, rather than after
+      the JavaScript has downloaded, parsed and hydrated. The page then issues
+      these exact URLs and finds the work already underway.
+    --}}
+    @each(url in (page.props.preload || []))
+      <link rel="preload" href="{{ url }}" as="fetch" crossorigin />
+    @endeach
 
     @vite(['inertia/app/app.ts', `inertia/pages/${page.component}.vue`])
     @inertiaHead()
