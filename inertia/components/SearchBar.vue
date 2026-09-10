@@ -1,147 +1,168 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
+import { Search } from 'lucide-vue-next'
+import { profileIcon } from '../lib/ddragon.js'
+
+const props = withDefaults(
+  defineProps<{
+    size?: 'sm' | 'lg'
+    autofocus?: boolean
+  }>(),
+  { size: 'sm', autofocus: false }
+)
+
+interface Result {
+  puuid: string
+  gameName: string
+  tagLine: string
+  profileIconId: number | null
+}
 
 const query = ref('')
-const results = ref<
-  Array<{ puuid: string; gameName: string; tagLine: string; profileIconId: number | null }>
->([])
+const results = ref<Result[]>([])
 const isLoading = ref(false)
-const showDropdown = ref(false)
+const isOpen = ref(false)
+const activeIndex = ref(0)
+const input = ref<HTMLInputElement | null>(null)
 
-let debounceTimer: ReturnType<typeof setTimeout>
+let debounce: ReturnType<typeof setTimeout>
 
-const DDRAGON_BASE = 'https://ddragon.leagueoflegends.com/cdn/14.24.1/img'
-
-// Parse user input to detect name#tag format
-const parsedUserInput = computed(() => {
+/** "Faker#EUW" typed in full is a destination on its own, listed first. */
+const typedTarget = computed(() => {
   const trimmed = query.value.trim()
-  if (!trimmed) return null
+  const hash = trimmed.indexOf('#')
+  if (hash <= 0 || hash >= trimmed.length - 1) return null
+  const gameName = trimmed.slice(0, hash).trim()
+  const tagLine = trimmed.slice(hash + 1).trim()
+  return gameName && tagLine ? { gameName, tagLine } : null
+})
 
-  // Check if input contains # separator
-  const hashIndex = trimmed.indexOf('#')
-  if (hashIndex > 0 && hashIndex < trimmed.length - 1) {
-    const gameName = trimmed.substring(0, hashIndex).trim()
-    const tagLine = trimmed.substring(hashIndex + 1).trim()
-    if (gameName && tagLine) {
-      return { gameName, tagLine }
-    }
+/** Flat list of everything selectable, so arrow keys have one index space. */
+const entries = computed(() => {
+  const list: Array<{ gameName: string; tagLine: string; direct: boolean; icon?: number | null }> =
+    []
+  if (typedTarget.value) list.push({ ...typedTarget.value, direct: true })
+  for (const r of results.value) {
+    if (typedTarget.value && r.gameName === typedTarget.value.gameName) continue
+    list.push({ gameName: r.gameName, tagLine: r.tagLine, direct: false, icon: r.profileIconId })
   }
-
-  return null
+  return list
 })
 
-// Show dropdown if there are results OR if user has typed a valid name#tag
-const shouldShowDropdown = computed(() => {
-  return showDropdown.value && (results.value.length > 0 || parsedUserInput.value !== null)
-})
+const showDropdown = computed(() => isOpen.value && entries.value.length > 0)
 
-watch(query, (val) => {
-  clearTimeout(debounceTimer)
-  if (val.length < 2) {
+watch(query, (value) => {
+  clearTimeout(debounce)
+  activeIndex.value = 0
+  if (value.trim().length < 2) {
     results.value = []
-    showDropdown.value = false
+    isOpen.value = Boolean(typedTarget.value)
     return
   }
-  showDropdown.value = true
-  debounceTimer = setTimeout(() => search(val), 300)
+  isOpen.value = true
+  debounce = setTimeout(() => search(value), 250)
 })
 
 async function search(q: string) {
   isLoading.value = true
   try {
-    const res = await fetch(`/api/summoners/search?q=${encodeURIComponent(q)}&limit=10`)
-    if (res.ok) {
-      results.value = await res.json()
-    }
-  } catch (e) {
-    console.error('Search failed:', e)
+    const res = await fetch(`/api/summoners/search?q=${encodeURIComponent(q)}&limit=8`)
+    if (res.ok) results.value = await res.json()
+  } catch {
+    results.value = []
   } finally {
     isLoading.value = false
   }
 }
 
-function navigateToSummoner(summoner: { gameName: string; tagLine: string }) {
-  const slug = `${summoner.gameName}-${summoner.tagLine}`
-  showDropdown.value = false
+function go(entry: { gameName: string; tagLine: string }) {
+  isOpen.value = false
   query.value = ''
-  router.visit(`/${encodeURIComponent(slug)}`)
+  results.value = []
+  router.visit(`/${encodeURIComponent(`${entry.gameName}-${entry.tagLine}`)}`)
 }
 
-function handleEnter() {
-  // If user has typed a valid name#tag, navigate directly
-  if (parsedUserInput.value) {
-    navigateToSummoner(parsedUserInput.value)
-  } else if (results.value.length > 0) {
-    // Otherwise, navigate to the first result if available
-    navigateToSummoner(results.value[0])
-  }
+function move(delta: number) {
+  if (!entries.value.length) return
+  const next = activeIndex.value + delta
+  activeIndex.value = (next + entries.value.length) % entries.value.length
 }
 
 function handleBlur() {
-  setTimeout(() => {
-    showDropdown.value = false
-  }, 200)
+  // Let a click on a result land before the list unmounts.
+  setTimeout(() => (isOpen.value = false), 150)
+}
+
+function submit() {
+  const entry = entries.value[activeIndex.value]
+  if (entry) go(entry)
 }
 </script>
 
 <template>
-  <div class="relative w-full max-w-md">
-    <input
-      v-model="query"
-      type="text"
-      placeholder="Search summoner (e.g., Faker or Faker#EUW)"
-      class="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-      @focus="showDropdown = results.length > 0 || parsedUserInput !== null"
-      @blur="handleBlur"
-      @keydown.enter.prevent="handleEnter"
-    />
-
-    <div v-if="isLoading" class="absolute right-3 top-1/2 -translate-y-1/2">
-      <div
-        class="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"
-      ></div>
+  <div class="relative w-full">
+    <div class="relative">
+      <Search
+        class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-3"
+        :class="props.size === 'lg' ? 'w-[18px] h-[18px]' : 'w-4 h-4'"
+      />
+      <input
+        ref="input"
+        v-model="query"
+        type="text"
+        spellcheck="false"
+        autocomplete="off"
+        :autofocus="props.autofocus"
+        :placeholder="props.size === 'lg' ? 'Search a summoner — Faker#KR1' : 'Search a summoner'"
+        class="w-full rounded-lg border border-line-strong bg-surface text-ink placeholder:text-ink-3 focus:outline-none focus:border-ink transition-colors"
+        :class="
+          props.size === 'lg' ? 'pl-11 pr-11 py-3.5 text-[0.9375rem]' : 'pl-9 pr-9 py-2 text-sm'
+        "
+        @focus="isOpen = entries.length > 0"
+        @blur="handleBlur"
+        @keydown.down.prevent="move(1)"
+        @keydown.up.prevent="move(-1)"
+        @keydown.enter.prevent="submit"
+        @keydown.esc="isOpen = false"
+      />
+      <span
+        v-if="isLoading"
+        class="absolute right-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-[1.5px] border-line-strong border-t-ink animate-spin"
+      />
     </div>
 
     <ul
-      v-if="shouldShowDropdown"
-      class="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-80 overflow-y-auto"
+      v-if="showDropdown"
+      class="absolute z-30 mt-1.5 w-full overflow-hidden rounded-lg border border-line bg-surface shadow-[0_8px_24px_rgb(16_18_29_/_0.08)]"
     >
-      <!-- User input option (name#tag format) -->
       <li
-        v-if="parsedUserInput"
-        class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-blue-50 bg-blue-50/50 transition-colors border-b border-gray-100"
-        @mousedown.prevent="navigateToSummoner(parsedUserInput)"
-      >
-        <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </div>
-        <div class="flex-1">
-          <span class="font-medium">{{ parsedUserInput.gameName }}</span>
-          <span class="text-gray-500">#{{ parsedUserInput.tagLine }}</span>
-          <span class="ml-2 text-xs text-blue-600 font-medium">Search directly</span>
-        </div>
-        <kbd class="hidden sm:inline-block px-2 py-1 text-xs font-semibold text-gray-500 bg-gray-100 border border-gray-200 rounded">Enter</kbd>
-      </li>
-
-      <!-- Search results -->
-      <li
-        v-for="summoner in results"
-        :key="summoner.puuid"
-        class="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors"
-        @mousedown.prevent="navigateToSummoner(summoner)"
+        v-for="(entry, index) in entries"
+        :key="`${entry.gameName}-${entry.tagLine}-${index}`"
+        class="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors"
+        :class="index === activeIndex ? 'bg-[#f6f6f8]' : ''"
+        @mouseenter="activeIndex = index"
+        @mousedown.prevent="go(entry)"
       >
         <img
-          :src="`${DDRAGON_BASE}/profileicon/${summoner.profileIconId || 1}.png`"
-          :alt="summoner.gameName"
-          class="w-10 h-10 rounded-full"
+          v-if="!entry.direct"
+          :src="profileIcon(entry.icon)"
+          alt=""
+          class="thumb h-7 w-7 rounded-full"
         />
-        <div>
-          <span class="font-medium">{{ summoner.gameName }}</span>
-          <span class="text-gray-500">#{{ summoner.tagLine }}</span>
-        </div>
+        <span
+          v-else
+          class="flex h-7 w-7 items-center justify-center rounded-full border border-line text-ink-3"
+        >
+          <Search class="h-3.5 w-3.5" />
+        </span>
+
+        <span class="min-w-0 flex-1 truncate text-[0.8125rem]">
+          <span class="font-medium text-ink">{{ entry.gameName }}</span>
+          <span class="text-ink-3">#{{ entry.tagLine }}</span>
+        </span>
+
+        <span v-if="entry.direct" class="label">Go</span>
       </li>
     </ul>
   </div>
