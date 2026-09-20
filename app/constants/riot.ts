@@ -23,7 +23,7 @@ export type RiotRole = (typeof ROLES)[number] | 'all'
  */
 export const PLATFORMS = {
   americas: ['NA1', 'BR1', 'LA1', 'LA2'],
-  europe: ['EUW1', 'EUN1', 'EUNE1', 'TR1', 'RU', 'ME1'],
+  europe: ['EUW1', 'EUN1', 'TR1', 'RU', 'ME1'],
   asia: ['KR', 'JP1'],
-  sea: ['OC1', 'PH2', 'SG2', 'TH2', 'TW2', 'VN2'],
+  sea: ['OC1', 'SG2', 'TW2', 'VN2'],
 } as const

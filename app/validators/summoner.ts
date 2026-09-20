@@ -18,7 +18,7 @@ export const summonerParamsValidator = vine.compile(
     summoner: vine
       .string()
       .trim()
-      .regex(/^[^-]+-[^-]+$/),
+      .regex(/^.+-[^-]+$/),
   })
 )
 
@@ -27,8 +27,8 @@ export const syncSummonerValidator = vine.compile(
     summoner: vine
       .string()
       .trim()
-      .regex(/^[^-]+-[^-]+$/),
-    platform: vine.string().trim().toUpperCase(),
+      .regex(/^.+-[^-]+$/),
+    platform: vine.string().trim().toUpperCase().optional(),
   })
 )
 
