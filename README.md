@@ -17,6 +17,33 @@ free to try it out before setting up locally.
 - **Storage** - S3-compatible (MinIO locally, Cloudflare R2 in production)
 - **Data source** - Riot Games API
 
+## Multi-region player lookup
+
+Search still accepts `Name#Tag`, and profiles keep the `/:player` URL
+(`/<GameName>-<TagLine>`). No region selector is needed. Typeahead searches
+stored players across regions, including non-Latin names; entering a full Riot ID
+also resolves players who are not stored yet.
+
+The backend resolves the Riot ID to a PUUID, then checks supported League
+platforms until it finds the profile. A saved platform or a recognizable tag is
+only a priority hint, not an authoritative region. Custom tags work too. Only
+404 responses advance to another platform; key, rate-limit, and service errors
+are preserved. Concurrent lookups for the same ID are coalesced, and successful
+results are persisted so subsequent visits avoid discovery calls.
+
+Account routing is separate from match routing (Oceania and Southeast Asia
+use SEA for matches). PH2 and TH2 are normalized to SG2. Refresh detects server
+transfers and routes match requests using the newly resolved platform.
+See [Riot's routing documentation](https://support-developer.riotgames.com/hc/en-us/articles/22698698001939-League-of-Legends).
+
+`GET /api/summoners/:summoner` detects the platform automatically. The existing
+`GET /api/summoners/:platform/:summoner` API remains available. For
+`POST /api/summoners/sync`, omit `platform` to detect it automatically; a valid
+profile with no new matches returns 200 with an empty `matches` array.
+
+Run `node ace migration:run` when upgrading to add the index used by regionless
+profile lookups. Keep `RIOT_API_KEY` in the server environment or ignored `.env`.
+
 ## Prerequisites
 
 - Node.js >= 22

@@ -34,7 +34,7 @@ export default class SummonersController {
    * Sync summoner data
    * @requestBody <syncSummonerValidator>
    * @responseBody 200 - { summoner: <Summoner>, matches: <Match[]> }
-   * @responseBody 404 - No new matches found
+   * @responseBody 404 - Summoner not found
    */
   async sync({ request, response }: HttpContext) {
     const { summoner, platform } = await request.validateUsing(syncSummonerValidator)
@@ -47,7 +47,7 @@ export default class SummonersController {
       })
       newMatches = await matchService.update(
         resolvedSummoner.puuid,
-        riotApiService.platformToRegion(platform)
+        riotApiService.platformToRegion(resolvedSummoner.platform)
       )
     } catch (error) {
       throw translateRiotError(error)

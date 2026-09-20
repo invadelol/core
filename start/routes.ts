@@ -31,6 +31,7 @@ router
   .group(() => {
     router.get('/summoners/search', [SummonersController, 'search'])
     router.post('/summoners/sync', [SummonersController, 'sync'])
+    router.get('/summoners/:summoner', [SummonersController, 'show'])
     router.get('/summoners/:platform/:summoner', [SummonersController, 'show'])
 
     router.get('/summoners/puuid/:puuid/mastery', [PlayerInsightsController, 'mastery'])
@@ -106,9 +107,7 @@ router.get('/:summoner/:section?', async ({ inertia, params, response }) => {
   const { default: summonerService } = await import('#services/summoner_service')
   // A stored profile can render in the HTML and removes the client lookup waterfall.
   // Unknown profiles still resolve through the API, where Riot errors are translated.
-  const initialProfile = await summonerService
-    .findStoredProfile(params.summoner, 'EUW1')
-    .catch(() => null)
+  const initialProfile = await summonerService.findStoredProfile(params.summoner).catch(() => null)
 
   /**
    * Knowing the puuid server-side means the browser can be told which
