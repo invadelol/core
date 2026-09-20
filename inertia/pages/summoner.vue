@@ -33,8 +33,6 @@ const props = defineProps<{
   panels?: ReadonlyArray<{ key: PanelKey; path: string }>
 }>()
 
-const PLATFORM = 'EUW1'
-
 /** The route param, decoded exactly once. Encode from this, never from the prop. */
 const slug = computed(() => decodeSlug(props.summoner))
 const parsed = computed(() => parseSlug(props.summoner))
@@ -88,26 +86,11 @@ async function failureFor(res: Response): Promise<LoadFailure> {
   return 'error'
 }
 
-/** Resolves the summoner, syncing from Riot once if we've never seen them. */
+/** Resolves the Riot ID and detects its platform on the server. */
 async function loadProfile(signal: AbortSignal): Promise<Summoner | LoadFailure> {
-  const url = `/api/summoners/${PLATFORM}/${encodeURIComponent(slug.value)}`
-  const res = await fetch(url, { signal })
+  const res = await fetch(`/api/summoners/${encodeURIComponent(slug.value)}`, { signal })
   if (res.ok) return (await res.json()).summoner
-
-  if (res.status !== 404) return failureFor(res)
-
-  const synced = await fetch('/api/summoners/sync', {
-    method: 'POST',
-    signal,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ summoner: slug.value, platform: PLATFORM }),
-  })
-  // A 404 from sync means Riot has no such account, which is a real miss.
-  if (!synced.ok && synced.status !== 404) return failureFor(synced)
-
-  const retry = await fetch(url, { signal })
-  if (retry.ok) return (await retry.json()).summoner
-  return failureFor(retry)
+  return failureFor(res)
 }
 
 /** Where each panel's response lands. */
@@ -225,13 +208,14 @@ async function sync() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         summoner: `${profile.value.gameName}-${profile.value.tagLine}`,
-        platform: profile.value.platform,
       }),
     })
 
     if (signal.aborted) return
     if (res.ok) {
-      const found = (await res.json()).matches?.length ?? 0
+      const payload = await res.json()
+      const found = payload.matches?.length ?? 0
+      if (payload.summoner && !signal.aborted) profile.value = payload.summoner
       if (signal.aborted) return
       syncMessage.value = found
         ? `${found} new match${found > 1 ? 'es' : ''}`
@@ -280,9 +264,9 @@ async function sync() {
       <template v-if="error === 'not-found'">
         <p class="text-[0.9375rem] font-medium text-ink">Summoner not found</p>
         <p class="mx-auto mt-2 max-w-sm text-[0.8125rem] text-ink-2">
-          Riot has no account called
-          <span class="font-medium text-ink">{{ parsed.gameName }}#{{ parsed.tagLine }}</span> on
-          {{ PLATFORM }}. Check the spelling, or search for someone else.
+          No League profile was found for
+          <span class="font-medium text-ink">{{ parsed.gameName }}#{{ parsed.tagLine }}</span>
+          across the supported regions. Check the spelling, or search for someone else.
         </p>
       </template>
 
