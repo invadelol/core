@@ -44,6 +44,8 @@ export const getStatsValidator = vine.compile(
 export const getChampionStatsValidator = vine.compile(
   vine.object({
     count: vine.number().min(1).max(100).optional(),
+    type: vine.enum(['normal', 'ranked', 'aram', 'flex', 'all']).optional(),
+    role: vine.enum(['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'SUPPORT', 'all']).optional(),
   })
 )
 

@@ -12,6 +12,7 @@ import {
   getChampionStatsValidator,
   getMatchesValidator,
 } from '#validators/summoner'
+import { invalidateResponseCache } from '#services/http_response_cache'
 import { translateRiotError } from '#utils/riot_errors'
 
 export default class SummonersController {
@@ -52,7 +53,16 @@ export default class SummonersController {
       throw translateRiotError(error)
     }
 
-    return response.ok({ summoner: resolvedSummoner, matches: newMatches })
+    // Ranks change even when all recent matches were ingested by another player's update.
+    let rankRefreshFailed = false
+    try {
+      await summonerService.updateRanks(resolvedSummoner.puuid, resolvedSummoner.platform)
+      await invalidateResponseCache([`summoner:${resolvedSummoner.puuid}`])
+    } catch (error) {
+      rankRefreshFailed = true
+      logger.warn({ err: error }, 'Match update succeeded but rank refresh failed')
+    }
+    return response.ok({ summoner: resolvedSummoner, matches: newMatches, rankRefreshFailed })
   }
 
   /**
@@ -140,9 +150,9 @@ export default class SummonersController {
   async champions({ request, params, response }: HttpContext) {
     await request.validateUsing(puuidParamsValidator, { data: params })
     const { puuid } = params
-    const { count } = await request.validateUsing(getChampionStatsValidator)
+    const filters = await request.validateUsing(getChampionStatsValidator)
 
-    const stats = await summonerService.getChampionStats(puuid, count)
+    const stats = await summonerService.getChampionStats(puuid, filters.count, filters)
     return response.ok(stats)
   }
 

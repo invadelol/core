@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Eye, RefreshCw } from 'lucide-vue-next'
-import { profileIcon, rankCrest, TIER_NAMES, QUEUE_LABELS } from '../lib/assets.js'
+import { Link } from '@inertiajs/vue3'
+import { Eye, RefreshCw, Share2, ArrowLeftRight, Clock3, Sparkles } from 'lucide-vue-next'
+import { profileIcon, championSplash, championName } from '../lib/assets.js'
 import { timeAgo } from '../lib/format.js'
 import type { Rank, Summoner } from '../lib/types.js'
-
 const props = defineProps<{
   summoner: Summoner
   ranks: Rank[]
@@ -12,77 +12,61 @@ const props = defineProps<{
   isSyncing: boolean
   syncMessage: string | null
   lastGameMs: number | null
+  mainChampion?: number
 }>()
-
-defineEmits<{ sync: [] }>()
-
-const soloRank = computed(
-  () => props.ranks.find((r) => r.queueType === 'RANKED_SOLO_5x5') ?? props.ranks[0] ?? null
+defineEmits<{ sync: []; share: [] }>()
+const path = computed(
+  () => `/${encodeURIComponent(`${props.summoner.gameName}-${props.summoner.tagLine}`)}`
 )
-
-function winrate(rank: Rank) {
-  const total = rank.wins + rank.losses
-  return total ? Math.round((rank.wins / total) * 100) : 0
-}
 </script>
-
 <template>
-  <div class="flex flex-wrap items-center gap-x-5 gap-y-4">
+  <section class="profile-hero">
     <img
-      :src="profileIcon(summoner.profileIconId)"
-      :alt="summoner.gameName"
-      class="thumb h-16 w-16 rounded-xl border border-line"
+      v-if="mainChampion"
+      class="hero-art"
+      :src="championSplash(mainChampion)"
+      :alt="`${championName(mainChampion)} splash art`"
+      fetchpriority="high"
     />
-
-    <div class="min-w-0 flex-1">
-      <h1
-        class="flex flex-wrap items-baseline gap-x-2 text-[1.5rem] font-semibold tracking-[-0.02em]"
+    <div class="hero-shade" />
+    <div class="hero-topline">
+      <span class="hero-eyebrow">THE PLAYER BEHIND THE PLAYS</span
+      ><span v-if="mainChampion" class="hero-main"
+        ><Sparkles :size="12" /> {{ championName(mainChampion) }} main</span
       >
-        <span class="text-ink">{{ summoner.gameName }}</span>
-        <span class="text-ink-3 text-[1.125rem] font-normal">#{{ summoner.tagLine }}</span>
-      </h1>
-
-      <div class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.75rem] text-ink-3">
-        <span class="num">Level {{ summoner.summonerLevel ?? '-' }}</span>
-        <span class="text-ink-4">·</span>
-        <span>{{ summoner.platform }}</span>
-        <template v-if="lastGameMs">
-          <span class="text-ink-4">·</span>
-          <span>last game {{ timeAgo(lastGameMs) }}</span>
-        </template>
-        <template v-if="viewCount !== null">
-          <span class="text-ink-4">·</span>
-          <span class="inline-flex items-center gap-1 num">
-            <Eye class="h-3 w-3" />{{ viewCount.toLocaleString() }}
-          </span>
-        </template>
+    </div>
+    <div class="hero-profile">
+      <div class="hero-avatar">
+        <img :src="profileIcon(summoner.profileIconId)" :alt="summoner.gameName" /><span>{{
+          summoner.summonerLevel ?? '—'
+        }}</span>
+      </div>
+      <div class="hero-identity">
+        <div class="hero-region">{{ summoner.platform }} <span>•</span> SUMMONER PROFILE</div>
+        <h1>
+          {{ summoner.gameName }}<span>#{{ summoner.tagLine }}</span>
+        </h1>
+        <p>Your game. A clearer picture.</p>
       </div>
     </div>
-
-    <!-- Current rank, read at a glance next to the name -->
-    <div v-if="soloRank?.tier" class="flex items-center gap-2.5 border-l border-line pl-5">
-      <img :src="rankCrest(soloRank.tier)" :alt="soloRank.tier" class="h-9 w-9" />
-      <div>
-        <div class="text-[0.8125rem] font-semibold text-ink">
-          {{ TIER_NAMES[soloRank.tier] || soloRank.tier }} {{ soloRank.division }}
-          <span class="num font-normal text-ink-2">· {{ soloRank.leaguePoints }} LP</span>
-        </div>
-        <div class="num text-[0.6875rem] text-ink-3">
-          {{ QUEUE_LABELS[soloRank.queueType] || soloRank.queueType }} · {{ soloRank.wins }}W
-          {{ soloRank.losses }}L ·
-          <span :class="winrate(soloRank) >= 50 ? 'text-pos' : 'text-neg'">
-            {{ winrate(soloRank) }}%
-          </span>
-        </div>
+    <div class="hero-footer">
+      <div class="hero-meta">
+        <span v-if="lastGameMs"><Clock3 :size="13" /> Last game {{ timeAgo(lastGameMs) }}</span
+        ><span v-if="viewCount !== null"
+          ><Eye :size="14" /> {{ viewCount.toLocaleString() }} views</span
+        >
+      </div>
+      <div class="hero-actions">
+        <span v-if="syncMessage" class="sync-message" role="status">{{ syncMessage }}</span
+        ><Link :href="`${path}/compare`" class="hero-button"
+          ><ArrowLeftRight :size="14" /> Compare</Link
+        ><button class="hero-button" @click="$emit('share')"><Share2 :size="14" /> Share</button
+        ><button class="hero-button hero-update" :disabled="isSyncing" @click="$emit('sync')">
+          <RefreshCw :size="14" :class="{ 'animate-spin': isSyncing }" />{{
+            isSyncing ? 'Updating…' : 'Update'
+          }}
+        </button>
       </div>
     </div>
-
-    <div class="flex flex-col items-end gap-1">
-      <button class="btn" :disabled="isSyncing" @click="$emit('sync')">
-        <RefreshCw class="h-3.5 w-3.5" :class="isSyncing && 'animate-spin'" />
-        {{ isSyncing ? 'Updating' : 'Update' }}
-      </button>
-      <span v-if="syncMessage" class="text-[0.6875rem] text-ink-3">{{ syncMessage }}</span>
-    </div>
-  </div>
+  </section>
 </template>

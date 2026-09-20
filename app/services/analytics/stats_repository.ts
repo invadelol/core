@@ -244,14 +244,23 @@ export class StatsRepository {
    */
   async getSummonerChampionStats(
     puuid: string,
-    count: number = DEFAULT_STATS_COUNT
+    count: number = DEFAULT_STATS_COUNT,
+    filters: { queueIds?: readonly number[]; role?: string } = {}
   ): Promise<SummonerChampionStats[]> {
     const escapedPuuid = escapeClickhouseString(puuid)
+    const conditions = []
+    if (filters.queueIds?.length)
+      conditions.push(`queue_id IN (${filters.queueIds.map(Number).join(',')})`)
+    if (filters.role && filters.role !== 'all')
+      conditions.push(
+        `team_position = '${escapeClickhouseString(filters.role === 'SUPPORT' ? 'UTILITY' : filters.role)}'`
+      )
     const result = await rows(`
       WITH my_matches AS (
         SELECT match_id
         FROM participants
         PREWHERE puuid = '${escapedPuuid}'
+        ${conditions.length ? 'WHERE ' + conditions.join(' AND ') : ''}
         ORDER BY game_start_ms DESC, match_id DESC
         LIMIT ${integer(count, DEFAULT_STATS_COUNT)}
       ),
@@ -278,7 +287,9 @@ export class StatsRepository {
         avg(p.assists) as avgAssists,
         avg(p.total_cs / (m.duration_sec / 60.0)) as csMin,
         avg(p.gold_earned / (m.duration_sec / 60.0)) as goldMin,
-        avg(p.dmg_to_champ / (m.duration_sec / 60.0)) as damageMin
+        avg(p.dmg_to_champ / (m.duration_sec / 60.0)) as damageMin,
+        max(p.kills) as maxKills,
+        sum(m.duration_sec) as duration
       FROM mine p
       JOIN durations m ON p.match_id = m.match_id
       GROUP BY p.champion_id
@@ -297,6 +308,8 @@ export class StatsRepository {
       csMin: number(row[8]),
       goldMin: number(row[9]),
       damageMin: number(row[10]),
+      maxKills: number(row[11]),
+      duration: number(row[12]),
     }))
   }
 }

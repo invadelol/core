@@ -13,6 +13,10 @@ export function profileIcon(id: number | null | undefined) {
   return `${CDN}/profile-icon/${id || 29}.png`
 }
 
+export function championSplash(id: number) {
+  return `${CDN}/splash/${id}.jpg`
+}
+
 export function champIcon(id: number) {
   return `${CDN}/champion/${id}.png`
 }
@@ -40,6 +44,15 @@ export function rankCrest(tier: string) {
 /* ── Display names ──────────────────────────────────────────── */
 const champions = reactive<Record<number, string>>({})
 const items = reactive<Record<number, string>>({})
+const runes = reactive<Record<number, string>>({})
+const styles = reactive<Record<number, string>>({})
+let runePromise: Promise<unknown> | null = null
+export function loadRunes() {
+  return (runePromise ||= Promise.all([loadNames('perk', runes), loadNames('perkstyle', styles)]))
+}
+export function runeName(id: number) {
+  return runes[id] || styles[id] || `Rune ${id}`
+}
 
 let championsPromise: Promise<void> | null = null
 let itemsPromise: Promise<void> | null = null
