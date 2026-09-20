@@ -6,6 +6,7 @@ import { ByteCache } from '#utils/byte_cache'
 import { ASSET_PREFIX, FETCH_TIMEOUT_MS, MANIFESTS, MANIFEST_TTL } from '#constants/assets'
 import type { AssetKind } from '#constants/assets'
 import {
+  gameDataUrl,
   fallbackSources,
   guessContentType,
   parseManifest,
@@ -109,6 +110,18 @@ class RiotAssetsService {
    */
   private async sources(kind: AssetKind, id: string): Promise<string[]> {
     if (kind === 'rank') return rankSources(id)
+    if (kind === 'splash') {
+      if (!/^\d+$/.test(id)) return []
+      const champion = await this.downloadJson(
+        `${MANIFESTS.champion!.replace('champion-summary.json', `champions/${id}.json`)}`
+      )
+      const skin =
+        champion?.skins?.find((entry: { isBase?: boolean }) => entry.isBase) ?? champion?.skins?.[0]
+      return [
+        ...(skin?.splashPath ? [gameDataUrl(skin.splashPath)] : []),
+        ...fallbackSources(kind, id),
+      ]
+    }
 
     const manifest = await this.manifest(kind)
     return manifest[id]?.sources ?? fallbackSources(kind, id)

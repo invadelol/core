@@ -268,12 +268,19 @@ class SummonerService {
       queueIds,
       count: filters.count ?? DEFAULT_STATS_COUNT,
       championId: filters.champion,
-      role: filters.role,
+      role: filters.role === 'SUPPORT' ? 'UTILITY' : filters.role,
     })
   }
 
-  async getChampionStats(puuid: string, count?: number) {
-    return statsRepository.getSummonerChampionStats(puuid, count ?? DEFAULT_STATS_COUNT)
+  async getChampionStats(
+    puuid: string,
+    count?: number,
+    filters: { type?: RiotQueueType; role?: RiotRole } = {}
+  ) {
+    return statsRepository.getSummonerChampionStats(puuid, count ?? DEFAULT_STATS_COUNT, {
+      queueIds: filters.type && filters.type !== 'all' ? QUEUE_IDS[filters.type] : undefined,
+      role: filters.role,
+    })
   }
 
   async getMatches(
@@ -295,7 +302,7 @@ class SummonerService {
       count: filters.count ?? DEFAULT_MATCH_COUNT,
       offset: filters.offset ?? DEFAULT_OFFSET,
       championId: filters.champion,
-      role: filters.role,
+      role: filters.role === 'SUPPORT' ? 'UTILITY' : filters.role,
     })
   }
 

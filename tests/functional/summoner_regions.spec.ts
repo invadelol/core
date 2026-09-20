@@ -12,10 +12,12 @@ const player = {
 
 test.group('Regionless summoner API', (group) => {
   const resolve = summonerService.resolveAndUpsert
+  const updateRanks = summonerService.updateRanks
   const update = matchService.update
   const stored = summonerService.findStored
   group.each.teardown(() => {
     summonerService.resolveAndUpsert = resolve
+    summonerService.updateRanks = updateRanks
     matchService.update = update
     summonerService.findStored = stored
   })
@@ -55,9 +57,17 @@ test.group('Regionless summoner API', (group) => {
       assert.equal(cluster, 'sea')
       return []
     }
+    summonerService.updateRanks = async (puuid, platform) => {
+      assert.equal(puuid, player.puuid)
+      assert.equal(platform, 'OC1')
+    }
     const response = await client.post('/api/summoners/sync').json({ summoner: 'My-Player-custom' })
     response.assertStatus(200)
-    response.assertBodyContains({ summoner: { platform: 'OC1' }, matches: [] })
+    response.assertBodyContains({
+      summoner: { platform: 'OC1' },
+      matches: [],
+      rankRefreshFailed: false,
+    })
   })
 
   test('upstream failures retain their meaning on regionless lookups', async ({ client }) => {

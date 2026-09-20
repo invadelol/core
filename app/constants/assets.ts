@@ -13,6 +13,7 @@ export const DDRAGON = 'https://ddragon.leagueoflegends.com'
 /** The asset families the proxy knows how to resolve. */
 export const ASSET_KINDS = [
   'champion',
+  'splash',
   'item',
   'spell',
   'perk',

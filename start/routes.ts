@@ -23,6 +23,7 @@ import { ANALYTICS_PANELS, analyticsUrls } from '#constants/analytics'
 const SummonersController = () => import('#controllers/summoners_controller')
 const HealthChecksController = () => import('#controllers/health_checks_controller')
 const MatchesController = () => import('#controllers/matches_controller')
+const PlayerInsightsController = () => import('#controllers/player_insights_controller')
 const AssetsController = () => import('#controllers/assets_controller')
 
 // API routes group
@@ -32,6 +33,9 @@ router
     router.post('/summoners/sync', [SummonersController, 'sync'])
     router.get('/summoners/:summoner', [SummonersController, 'show'])
     router.get('/summoners/:platform/:summoner', [SummonersController, 'show'])
+
+    router.get('/summoners/puuid/:puuid/mastery', [PlayerInsightsController, 'mastery'])
+    router.get('/summoners/puuid/:puuid/live', [PlayerInsightsController, 'live'])
 
     // PUUID-based routes
     router
@@ -94,7 +98,12 @@ router.get('/:summoner/match/:matchId', ({ inertia, params }) => {
   })
 })
 
-router.get('/:summoner', async ({ inertia, params }) => {
+router.get('/:summoner/:section?', async ({ inertia, params, response }) => {
+  const section = params.section ?? 'overview'
+  if (section === 'history')
+    return response.redirect(`/${encodeURIComponent(params.summoner)}#matches`)
+  if (!['overview', 'lens', 'champions', 'live', 'compare'].includes(section))
+    return response.notFound()
   const { default: summonerService } = await import('#services/summoner_service')
   // A stored profile can render in the HTML and removes the client lookup waterfall.
   // Unknown profiles still resolve through the API, where Riot errors are translated.
@@ -111,6 +120,7 @@ router.get('/:summoner', async ({ inertia, params }) => {
 
   return inertia.render('summoner', {
     summoner: params.summoner,
+    section,
     initialProfile,
     panels: ANALYTICS_PANELS,
     preload,
