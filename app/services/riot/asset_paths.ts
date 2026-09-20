@@ -39,6 +39,8 @@ export function gameDataUrl(iconPath: string) {
  */
 export function fallbackSources(kind: AssetKind, id: string): string[] {
   switch (kind) {
+    case 'splash':
+      return [`https://cdn.communitydragon.org/latest/champion/${id}/splash-art`]
     case 'champion':
       return [`${CDRAGON_GAME_DATA}/v1/champion-icons/${id}.png`]
     case 'item':

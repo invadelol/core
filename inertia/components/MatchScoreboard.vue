@@ -14,7 +14,7 @@ import {
 } from '../lib/match.js'
 import type { Match } from '../lib/types.js'
 
-const props = defineProps<{
+defineProps<{
   match: Match
   teamId: number
   lobby: LobbyRanking
