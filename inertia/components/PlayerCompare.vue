@@ -39,14 +39,11 @@ async function compare() {
   error.value = ''
   try {
     const slug = `${target.value.slice(0, hash).trim()}-${target.value.slice(hash + 1).trim()}`
-    const res = await fetch(
-      `/api/summoners/${props.profile.platform}/${encodeURIComponent(slug)}`,
-      { signal }
-    )
+    const res = await fetch(`/api/summoners/${encodeURIComponent(slug)}`, { signal })
     if (!res.ok)
       throw new Error(
         res.status === 404
-          ? 'Player not found on this server. Check their Riot ID.'
+          ? 'Player not found. Check their Riot ID.'
           : 'Riot could not load this player. Please try again.'
       )
     const data = await res.json()
@@ -152,7 +149,7 @@ function values(index: number, key: string) {
         v-model="target"
         placeholder="Who’s your match? Enter Name#Tag"
         required
-      /><span class="subtle">{{ profile.platform }}</span
+      /><span class="subtle">All regions</span
       ><button class="btn btn-primary" :disabled="busy">
         {{ busy ? 'Finding player…' : 'Compare player' }}
       </button>

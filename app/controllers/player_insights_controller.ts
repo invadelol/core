@@ -1,3 +1,4 @@
+import { normalizePlatform } from '#services/riot/routing'
 import type { HttpContext } from '@adonisjs/core/http'
 import { Exception } from '@adonisjs/core/exceptions'
 import cache from '@adonisjs/cache/services/main'
@@ -13,10 +14,7 @@ export default class PlayerInsightsController {
   private async get(puuid: string, kind: 'mastery' | 'live') {
     const player = await Summoner.findBy('puuid', puuid)
     if (!player) throw new Exception('Player not found', { status: 404 })
-    const platform = player.platform.toLowerCase()
-    if (!/^(euw1|eun1|na1|br1|la1|la2|kr|jp1|oc1|tr1|ru|me1|sg2|tw2|vn2)$/.test(platform)) {
-      throw new Exception('Unsupported platform', { status: 422 })
-    }
+    const platform = normalizePlatform(player.platform).toLowerCase()
     return cache.getOrSet({
       key: `player-insights:${platform}:${puuid}:${kind}`,
       ttl: kind === 'live' ? '30s' : '1h',

@@ -10,7 +10,7 @@ Player profiles retain the application's light surfaces, Inter typography, and s
 | `/:summoner/lens` | Lifetime champion mastery and detailed recent performance |
 | `/:summoner/champions` | Champion highlights, queue/role filters, searchable and sortable statistics |
 | `/:summoner/live` | Current lineup, spells, runes, and available tracked champion/rank information |
-| `/:summoner/compare?with=Name%23Tag` | Comparison with another player on the same platform |
+| `/:summoner/compare?with=Name%23Tag` | Comparison with another player across supported regions |
 | `/:summoner/history` | Compatibility redirect to Overview's match feed; no separate History page |
 
 Overview loads 15 matches at a time as the end of the feed approaches the viewport. Queue, champion, and role changes restart pagination. Appending preserves open match details and deduplicates match IDs. Failed requests require an explicit retry; reaching the end stops further requests.
@@ -27,14 +27,14 @@ Share opens a keyboard-accessible native dialog with a selectable profile link, 
 - Live champion win rates and ranks are labelled as tracked data. Missing history and hidden player identities are not fabricated. Observer credentials are excluded.
 - Champion splash art uses the existing same-origin asset mirror and fallback system.
 - Update refreshes identity and rank even when there are no newly discovered matches. Rank refresh failures are reported separately.
-- No new database migration is required. The local Compose PostgreSQL 18 volume mount was corrected to `/var/lib/postgresql`.
+- Automatic region detection is shared by profile lookup, updates, comparison, mastery, and live data. Apply the global Riot ID index migration when deploying the combined changes. The local Compose PostgreSQL 18 volume mount was corrected to `/var/lib/postgresql`.
 
 Riot endpoints: [official API reference](https://developer.riotgames.com/apis/).
 
 ## Verification
 
 - Production build and server/client TypeScript checks.
-- 41 passing unit tests, including champion query boundaries, role normalization, PUUID mastery, live 404/error distinction, and removal of observer credentials.
+- 71 passing unit tests and four regionless API tests, including champion query boundaries, role normalization, PUUID mastery, live 404/error distinction, and removal of observer credentials.
 - Real Riot data: `Louhi#727`; comparison with `MRS PauluX#KCWIN`.
 - Browser checks: filters and sorting, champion-to-overview navigation, timeline scrubber, rune selections, share copy/download/Escape, and responsive layouts.
 - Deterministic browser checks: 45-match infinite feed, pagination failure/retry, offset reset, no duplicate requests, populated ten-player live lobby, and upstream error recovery.
