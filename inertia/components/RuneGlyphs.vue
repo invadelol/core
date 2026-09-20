@@ -1,6 +1,9 @@
 <script setup lang="ts">
-import { runeIcon, runeStyleIcon } from '../lib/assets.js'
+import { onMounted } from 'vue'
+import { runeIcon, runeStyleIcon, runeName, loadRunes } from '../lib/assets.js'
 import type { RuneSet } from '../lib/types.js'
+
+onMounted(loadRunes)
 
 withDefaults(
   defineProps<{
@@ -17,11 +20,12 @@ withDefaults(
     <img
       v-if="runes.keystone"
       :src="runeIcon(runes.keystone)"
-      alt="Keystone"
+      :alt="runeName(runes.keystone)"
+      :title="runeName(runes.keystone)"
       class="h-7 w-7 shrink-0"
     />
     <span
-      v-else
+      v-else-if="!runes.primaryStyle"
       class="h-7 w-7 shrink-0 rounded-full border border-dashed border-line-strong"
       title="Rune data unavailable"
     />
@@ -30,13 +34,15 @@ withDefaults(
       <img
         v-if="runes.primaryStyle"
         :src="runeStyleIcon(runes.primaryStyle)"
-        alt="Primary tree"
+        :alt="runeName(runes.primaryStyle)"
+        :title="runeName(runes.primaryStyle)"
         class="h-3.5 w-3.5"
       />
       <img
         v-if="runes.secondaryStyle"
         :src="runeStyleIcon(runes.secondaryStyle)"
-        alt="Secondary tree"
+        :alt="runeName(runes.secondaryStyle)"
+        :title="runeName(runes.secondaryStyle)"
         class="h-3.5 w-3.5"
       />
     </span>

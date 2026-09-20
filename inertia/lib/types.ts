@@ -154,6 +154,8 @@ export interface ChampionStats {
   csMin: number
   goldMin: number
   damageMin: number
+  maxKills: number
+  duration: number
 }
 
 export interface ActivityDay {
@@ -179,4 +181,31 @@ export interface RuneSet {
   secondaryStyle: number
   runes: number[]
   statPerks: { offense: number; flex: number; defense: number }
+}
+
+export interface ChampionMastery {
+  championId: number
+  championLevel: number
+  championPoints: number
+  lastPlayTime: number
+  championPointsUntilNextLevel: number
+  tokensEarned: number
+}
+export interface LiveGame {
+  gameId: number
+  gameStartTime: number
+  gameLength: number
+  gameQueueConfigId: number
+  bannedChampions: Array<{ championId: number; teamId: number }>
+  participants: Array<{
+    puuid?: string
+    riotId?: string
+    championId: number
+    teamId: number
+    championStats?: { games: number; winrate: number } | null
+    rank?: { tier: string; division: string; leaguePoints: number } | null
+    spell1Id: number
+    spell2Id: number
+    perks?: { perkIds: number[]; perkStyle: number; perkSubStyle: number }
+  }>
 }

@@ -131,7 +131,7 @@ function tooltip(cell: Cell) {
       </div>
 
       <div class="scroll-x pb-1">
-        <div class="flex min-w-max gap-[3px] pr-5">
+        <div class="activity-calendar">
           <div class="mr-1 flex flex-col gap-[3px] pt-[14px]">
             <span
               v-for="(label, index) in DAY_LABELS"
@@ -143,15 +143,15 @@ function tooltip(cell: Cell) {
           </div>
 
           <div v-for="(column, index) in weeks" :key="index" class="flex flex-col gap-[3px]">
-            <span class="h-[11px] text-[9px] leading-[11px] text-ink-3">{{ column.month }}</span>
+            <span class="h-[11px] text-[8px] leading-[11px] text-ink-3">{{ column.month }}</span>
             <template v-for="(cell, dayIndex) in column.days" :key="dayIndex">
               <span
                 v-if="cell"
-                class="h-[11px] w-[11px] rounded-[2px]"
+                class="activity-cell rounded-[2px]"
                 :style="{ background: SHADES[cell.level] }"
                 :title="tooltip(cell)"
               />
-              <span v-else class="h-[11px] w-[11px]" />
+              <span v-else class="activity-cell" />
             </template>
           </div>
         </div>

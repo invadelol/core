@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, shallowReactive, watch } from 'vue'
 import { Link } from '@inertiajs/vue3'
-import { ChevronDown } from 'lucide-vue-next'
+import { ChevronDown, Share2, Check } from 'lucide-vue-next'
 import { LineChart } from '../lib/lazy_charts.js'
-import Card from './ui/Card.vue'
+import MatchScoreboard from './MatchScoreboard.vue'
+import RuneBuild from './RuneBuild.vue'
+import PlayerPicker from './PlayerPicker.vue'
 import EmptyState from './ui/EmptyState.vue'
 import Meter from './ui/Meter.vue'
 import Segmented from './ui/Segmented.vue'
@@ -42,15 +44,47 @@ const props = defineProps<{
   summonerSlug: string
 }>()
 
-type TabKey = 'scoreboard' | 'graphs' | 'runes'
+type TabKey = 'scoreboard' | 'details' | 'graphs' | 'runes'
 
 const TABS = [
-  { value: 'scoreboard' as const, label: 'Scoreboard' },
-  { value: 'graphs' as const, label: 'Graphs' },
+  { value: 'scoreboard' as const, label: 'Overview' },
+  { value: 'details' as const, label: 'Details' },
+  { value: 'graphs' as const, label: 'Timeline' },
   { value: 'runes' as const, label: 'Runes' },
 ]
 
 const expanded = ref<string | null>(null)
+const copied = ref('')
+const copyError = ref('')
+const minute = ref(0)
+async function shareMatch(id: string) {
+  copyError.value = ''
+  try {
+    await navigator.clipboard.writeText(
+      `${location.origin}/${encodeURIComponent(props.summonerSlug)}/match/${encodeURIComponent(id)}`
+    )
+    copied.value = id
+  } catch {
+    copyError.value = 'Could not copy the link. Open Full analysis and copy its address.'
+  }
+}
+function day(ms: number) {
+  return new Date(Number(ms)).toLocaleDateString(undefined, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  })
+}
+const days = computed(() => {
+  const result: Record<string, { wins: number; losses: number }> = {}
+  for (const m of props.matches) {
+    const d = day(m.gameStartMs)
+    result[d] ??= { wins: 0, losses: 0 }
+    const p = m.participants.find((p) => p.puuid === props.puuid)
+    if (p) result[d][p.win ? 'wins' : 'losses']++
+  }
+  return result
+})
 const tab = ref<Record<string, TabKey>>({})
 const focus = ref<Record<string, string>>({})
 /** Full match payloads, fetched when a graph or rune view first needs the timeline. */
@@ -144,6 +178,7 @@ function toggle(matchId: string) {
     return
   }
   expanded.value = matchId
+  minute.value = 0
   tab.value[matchId] ??= 'scoreboard'
   focus.value[matchId] ??= props.puuid
 }
@@ -152,7 +187,7 @@ function toggle(matchId: string) {
 watch(
   () => [expanded.value, expanded.value ? tab.value[expanded.value] : null] as const,
   ([matchId, selectedTab]) => {
-    if (matchId && selectedTab !== 'scoreboard') void fetchDetails(matchId)
+    if (matchId && (selectedTab === 'graphs' || selectedTab === 'runes')) void fetchDetails(matchId)
   }
 )
 
@@ -239,315 +274,320 @@ function detailed(row: Row) {
 </script>
 
 <template>
-  <Card title="Matches" :note="`${matches.length} most recent`" flush>
+  <section class="match-feed">
+    <p v-if="copyError" role="alert" class="notice-error">{{ copyError }}</p>
     <EmptyState
       v-if="!matches.length"
       message="No matches recorded"
       hint="Hit Update to pull this player’s history from Riot."
     />
 
-    <ul v-else class="divide-y divide-line">
-      <li
-        v-for="row in rows"
-        :key="row.matchId"
-        :style="
-          expanded !== row.matchId
-            ? { contentVisibility: 'auto', containIntrinsicSize: 'auto 90px' }
-            : undefined
-        "
-      >
-        <!-- ── Summary row ───────────────────────────────── -->
-        <button
-          type="button"
-          class="flex w-full items-stretch text-left transition-colors hover:bg-[#fafafb]"
-          :aria-expanded="expanded === row.matchId"
-          @click="toggle(row.matchId)"
+    <ul v-else class="match-feed-list">
+      <li v-for="(row, rowIndex) in rows" :key="row.matchId">
+        <div
+          v-if="
+            rowIndex === 0 ||
+            day(row.match.gameStartMs) !== day(rows[rowIndex - 1].match.gameStartMs)
+          "
+          class="match-day"
         >
-          <span
-            class="w-[3px] shrink-0"
-            :class="row.win ? 'bg-win' : 'bg-loss'"
-            aria-hidden="true"
-          />
-
-          <span class="flex min-w-0 flex-1 items-center gap-2 px-3 py-3 sm:gap-3 sm:px-4">
-            <!-- Champion + summoner spells -->
-            <span class="flex shrink-0 items-center gap-1.5">
-              <span class="relative">
-                <img
+          <span>{{ day(row.match.gameStartMs) }}</span
+          ><span
+            ><b class="text-win">{{ days[day(row.match.gameStartMs)].wins }}W</b>
+            <b class="text-loss">{{ days[day(row.match.gameStartMs)].losses }}L</b
+            ><span>
+              ·
+              {{ days[day(row.match.gameStartMs)].wins + days[day(row.match.gameStartMs)].losses }}
+              games</span
+            ></span
+          >
+        </div>
+        <div
+          class="match-card"
+          :class="[
+            row.win ? 'match-win' : 'match-loss',
+            { 'match-open': expanded === row.matchId },
+          ]"
+        >
+          <button
+            type="button"
+            class="match-summary"
+            :aria-expanded="expanded === row.matchId"
+            @click="toggle(row.matchId)"
+          >
+            <span class="match-outcome"
+              ><strong>{{ row.win ? 'Victory' : 'Defeat' }}</strong
+              ><span>{{ row.queue }}</span
+              ><small>{{ row.duration }} · {{ row.ago }}</small></span
+            >
+            <span class="match-champion"
+              ><span class="match-portrait"
+                ><img
                   :src="champIcon(row.championId)"
                   :alt="row.championLabel"
-                  width="40"
-                  height="40"
                   loading="lazy"
-                  decoding="async"
-                  class="thumb h-10 w-10 rounded-lg"
-                />
-                <span
-                  class="num absolute -bottom-1 -right-1 flex h-[17px] min-w-[17px] items-center justify-center rounded-full border-2 border-surface px-[3px] text-[9px] font-semibold text-white"
-                  :class="row.win ? 'bg-win' : 'bg-loss'"
-                >
-                  {{ row.me?.champLevel }}
-                </span>
-              </span>
-              <span class="flex flex-col gap-[2px]">
-                <img
+                /><small>{{ row.me?.champLevel }}</small></span
+              ><span class="match-spells"
+                ><img
                   v-for="spell in row.spells"
                   :key="spell"
                   :src="spellIcon(spell)"
-                  alt=""
-                  width="19"
-                  height="19"
-                  loading="lazy"
-                  decoding="async"
-                  class="thumb h-[19px] w-[19px] rounded"
-                />
-              </span>
-            </span>
-
-            <!-- Outcome -->
-            <span class="min-w-0 flex-1 sm:w-[7rem] sm:flex-none">
-              <span
-                class="block text-[0.8125rem] font-semibold"
-                :class="row.win ? 'text-win' : 'text-loss'"
-              >
-                {{ row.win ? 'Victory' : 'Defeat' }}
-              </span>
-              <span class="block truncate text-[0.6875rem] text-ink-2">
-                {{ row.queue }}
-              </span>
-              <span class="num block whitespace-nowrap text-[0.6875rem] text-ink-3">
-                {{ row.duration }} · {{ row.ago }}
-              </span>
-            </span>
-
-            <!-- KDA -->
-            <span class="w-[6.25rem] shrink-0 sm:w-[7.5rem]">
-              <span class="num block text-[0.875rem] font-semibold text-ink">
-                {{ row.me?.kills }}
-                <span class="text-ink-4">/</span>
-                <span class="text-loss">{{ row.me?.deaths }}</span>
-                <span class="text-ink-4">/</span>
-                {{ row.me?.assists }}
-              </span>
-              <span class="num block text-[0.6875rem] text-ink-3">
-                {{ row.kdaRatio }} KDA · {{ row.killParticipation }}% KP
-              </span>
-            </span>
-
-            <!-- Economy -->
-            <span class="hidden w-[9rem] shrink-0 grid-cols-2 gap-x-2 gap-y-0.5 sm:grid">
-              <span class="num text-[0.6875rem] text-ink-2">
-                <span class="font-medium text-ink">{{ row.me?.cs }}</span> cs
-                <span class="text-ink-3">({{ row.csPerMinute }})</span>
-              </span>
-              <span class="num text-[0.6875rem] text-ink-2">
-                <span class="font-medium text-ink">{{ row.gold }}</span>
-                gold
-              </span>
-              <span class="num text-[0.6875rem] text-ink-2">
-                <span class="font-medium text-ink">{{ row.damage }}</span>
-                dmg
-              </span>
-              <span class="num text-[0.6875rem] text-ink-2">
-                <span class="font-medium text-ink">{{ row.me?.visionScore }}</span> vis
-              </span>
-            </span>
-
-            <!-- Items -->
-            <span class="hidden shrink-0 lg:flex">
-              <ItemRow :items="row.items" size="xs" />
-            </span>
-
-            <!-- Standing in the lobby -->
-            <span class="ml-auto flex shrink-0 items-center gap-3 pl-1">
-              <span class="hidden text-right sm:block">
-                <span class="num block text-[0.8125rem] font-semibold text-ink">
-                  {{ row.standing }}
-                </span>
-                <span class="label">of 10</span>
-              </span>
-              <ChevronDown
-                class="h-4 w-4 text-ink-3 transition-transform"
-                :class="expanded === row.matchId && 'rotate-180'"
-              />
-            </span>
-          </span>
-        </button>
-
-        <!-- ── Expanded detail ───────────────────────────── -->
-        <div v-if="expanded === row.matchId" class="border-t border-line bg-[#fcfcfd] px-4 py-4">
-          <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <Segmented v-model="tab[row.matchId]" :options="TABS" />
-            <Link
-              :href="`/${encodeURIComponent(summonerSlug)}/match/${encodeURIComponent(row.matchId)}`"
-              class="text-[0.75rem] font-medium text-ink-2 underline-offset-2 hover:text-ink hover:underline"
+                  alt="Summoner spell"
+                  loading="lazy" /></span
+              ><span class="match-champ-label"
+                >{{ row.championLabel
+                }}<small>{{ POSITION_NAMES[row.me?.position ?? ''] || '—' }}</small></span
+              ></span
             >
-              Full analysis →
-            </Link>
+            <span class="match-kda"
+              ><strong
+                >{{ row.me?.kills }} <i>/</i> <em>{{ row.me?.deaths }}</em> <i>/</i>
+                {{ row.me?.assists }}</strong
+              ><span
+                >{{ row.kdaRatio }} KDA <small>· {{ row.killParticipation }}% KP</small></span
+              ></span
+            >
+            <span class="match-economy"
+              ><strong
+                >{{ row.me?.cs }} <small>CS</small> <span>({{ row.csPerMinute }}/min)</span></strong
+              ><span>{{ row.damage }} damage · {{ row.me?.visionScore }} vision</span></span
+            >
+            <span
+              class="match-standing"
+              title="Performance rank in this lobby, based on damage, gold, and KDA"
+              ><strong>{{ row.standing }}</strong
+              ><small>in lobby</small></span
+            >
+            <ChevronDown
+              :size="16"
+              class="match-chevron"
+              :class="{ 'rotate-180': expanded === row.matchId }"
+            />
+          </button>
+          <div class="match-loadout">
+            <div class="match-build">
+              <ItemRow :items="row.items" size="sm" /><span class="loadout-separator" /><RuneGlyphs
+                :runes="runeSet([], row.me)"
+              />
+            </div>
+            <div class="match-teams">
+              <div
+                v-for="team in row.teams"
+                :key="team.teamId"
+                :class="team.teamId === 100 ? 'team-blue' : 'team-red'"
+              >
+                <img
+                  v-for="member in team.members"
+                  :key="member.participant.puuid"
+                  :src="champIcon(member.participant.championId)"
+                  :alt="member.championLabel"
+                  :title="`${member.participant.gameName} · ${member.championLabel}`"
+                  :class="{ 'team-me': member.isMe }"
+                  loading="lazy"
+                />
+              </div>
+            </div>
+            <button
+              class="icon-button match-share"
+              :aria-label="`Share match ${row.matchId}`"
+              @click="shareMatch(row.matchId)"
+            >
+              <Check v-if="copied === row.matchId" :size="14" /><Share2 v-else :size="14" />
+            </button>
           </div>
 
-          <p
-            v-if="tab[row.matchId] !== 'scoreboard' && loading[row.matchId]"
-            class="py-6 text-center text-[0.8125rem] text-ink-3"
-          >
-            Loading match details…
-          </p>
-          <p
-            v-else-if="tab[row.matchId] !== 'scoreboard' && failed[row.matchId]"
-            class="flex items-center justify-center gap-3 py-6 text-[0.8125rem] text-neg"
-          >
-            Couldn’t load this match.
-            <button class="btn" @click="fetchDetails(row.matchId)">Retry</button>
-          </p>
-
-          <template v-else>
-            <!-- Scoreboard -->
-            <div v-if="tab[row.matchId] === 'scoreboard'" class="grid gap-4 lg:grid-cols-2">
-              <div v-for="team in row.teams" :key="team.teamId" class="card">
-                <div class="flex items-baseline justify-between border-b border-line px-3 py-2">
-                  <span
-                    class="text-[0.75rem] font-semibold"
-                    :class="team.won ? 'text-win' : 'text-loss'"
-                  >
-                    {{ team.won ? 'Victory' : 'Defeat' }}
-                    <span class="font-normal text-ink-3">
-                      · {{ team.teamId === 100 ? 'Blue' : 'Red' }}
-                    </span>
-                  </span>
-                  <span class="num flex gap-2.5 text-[0.6875rem] text-ink-3">
-                    <span>{{ team.totals.kills }} kills</span>
-                    <span>{{ compact(team.totals.gold) }} gold</span>
-                    <span title="Towers · Dragons · Barons">
-                      {{ team.objectives.towers }}/{{ team.objectives.dragons }}/{{
-                        team.objectives.barons
-                      }}
-                    </span>
-                  </span>
-                </div>
-
-                <ul class="divide-y divide-line">
-                  <li
-                    v-for="member in team.members"
-                    :key="member.participant.puuid"
-                    class="px-3 py-2"
-                    :class="member.isMe ? 'bg-[#f6f7f9]' : ''"
-                  >
-                    <div class="flex items-center gap-2.5">
-                      <img
-                        :src="champIcon(member.participant.championId)"
-                        :alt="member.championLabel"
-                        width="28"
-                        height="28"
-                        loading="lazy"
-                        decoding="async"
-                        class="thumb h-7 w-7 shrink-0 rounded-md"
-                      />
-                      <span class="min-w-0 flex-1">
-                        <span class="block truncate text-[0.75rem] font-medium text-ink">
-                          {{ member.participant.gameName }}
-                        </span>
-                        <span class="num block truncate text-[0.625rem] text-ink-3">
-                          {{ member.roleLabel }} · {{ member.participant.cs }} cs
-                        </span>
-                      </span>
-                      <span class="num w-[4.25rem] shrink-0 text-right">
-                        <span class="block text-[0.75rem] font-medium text-ink">
-                          {{ member.participant.kills }}/{{ member.participant.deaths }}/{{
-                            member.participant.assists
-                          }}
-                        </span>
-                        <span class="block text-[0.625rem] text-ink-3">
-                          {{ member.killParticipation }}% kp
-                        </span>
-                      </span>
-                      <span class="num w-[3rem] shrink-0 text-right">
-                        <span class="block text-[0.75rem] text-ink-2">{{ member.damage }}</span>
-                        <span class="block text-[0.625rem] text-ink-3">dmg</span>
-                      </span>
-                    </div>
-                    <Meter
-                      class="mt-1.5"
-                      :value="member.damageShare"
-                      :tone="member.isMe ? 'ink' : 'muted'"
-                    />
-                  </li>
-                </ul>
-              </div>
-            </div>
-
-            <!-- Graphs -->
-            <div v-else-if="tab[row.matchId] === 'graphs'">
-              <p
-                v-if="!detailed(row).timeline?.length"
-                class="py-6 text-center text-[0.8125rem] text-ink-3"
+          <!-- ── Expanded detail ───────────────────────────── -->
+          <div v-if="expanded === row.matchId" class="match-detail">
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <Segmented v-model="tab[row.matchId]" :options="TABS" />
+              <Link
+                :href="`/${encodeURIComponent(summonerSlug)}/match/${encodeURIComponent(row.matchId)}`"
+                class="text-[0.75rem] font-medium text-ink-2 underline-offset-2 hover:text-ink hover:underline"
               >
-                No timeline recorded for this match.
-              </p>
-              <div v-else class="grid gap-4 md:grid-cols-3">
-                <div v-for="graph in GRAPHS" :key="graph.key" class="card p-3">
-                  <div class="mb-2 flex items-baseline justify-between">
-                    <h4 class="card-title">{{ graph.title }}</h4>
-                    <span class="text-[0.625rem] text-ink-3">over time</span>
-                  </div>
-                  <div class="h-36">
-                    <LineChart :data="chart(detailed(row), graph.key)" :options="chartOptions" />
-                  </div>
-                  <div class="mt-2 flex items-center justify-between text-[0.625rem]">
-                    <span class="flex items-center gap-1.5 text-ink">
-                      <span class="h-[2px] w-3 bg-ink" />
-                      {{ focused(detailed(row))?.gameName }}
+                Full analysis →
+              </Link>
+            </div>
+
+            <p
+              v-if="
+                (tab[row.matchId] === 'graphs' || tab[row.matchId] === 'runes') &&
+                loading[row.matchId]
+              "
+              class="py-6 text-center text-[0.8125rem] text-ink-3"
+            >
+              Loading match details…
+            </p>
+            <p
+              v-else-if="
+                (tab[row.matchId] === 'graphs' || tab[row.matchId] === 'runes') &&
+                failed[row.matchId]
+              "
+              class="flex items-center justify-center gap-3 py-6 text-[0.8125rem] text-neg"
+            >
+              Couldn’t load this match.
+              <button class="btn" @click="fetchDetails(row.matchId)">Retry</button>
+            </p>
+
+            <template v-else>
+              <!-- Scoreboard -->
+              <div v-if="tab[row.matchId] === 'scoreboard'" class="grid gap-4 lg:grid-cols-2">
+                <div v-for="team in row.teams" :key="team.teamId" class="card">
+                  <div class="flex items-baseline justify-between border-b border-line px-3 py-2">
+                    <span
+                      class="text-[0.75rem] font-semibold"
+                      :class="team.won ? 'text-win' : 'text-loss'"
+                    >
+                      {{ team.won ? 'Victory' : 'Defeat' }}
+                      <span class="font-normal text-ink-3">
+                        · {{ team.teamId === 100 ? 'Blue' : 'Red' }}
+                      </span>
                     </span>
-                    <span class="flex items-center gap-1.5 text-ink-3">
-                      <span
-                        class="h-[2px] w-3"
-                        style="
-                          background: repeating-linear-gradient(
-                            90deg,
-                            #9aa0aa 0 4px,
-                            transparent 4px 7px
-                          );
-                        "
+                    <span class="num flex gap-2.5 text-[0.6875rem] text-ink-3">
+                      <span>{{ team.totals.kills }} kills</span>
+                      <span>{{ compact(team.totals.gold) }} gold</span>
+                      <span title="Towers · Dragons · Barons">
+                        {{ team.objectives.towers }}/{{ team.objectives.dragons }}/{{
+                          team.objectives.barons
+                        }}
+                      </span>
+                    </span>
+                  </div>
+
+                  <ul class="divide-y divide-line">
+                    <li
+                      v-for="member in team.members"
+                      :key="member.participant.puuid"
+                      class="px-3 py-2"
+                      :class="member.isMe ? 'bg-[#f6f7f9]' : ''"
+                    >
+                      <div class="flex items-center gap-2.5">
+                        <img
+                          :src="champIcon(member.participant.championId)"
+                          :alt="member.championLabel"
+                          width="28"
+                          height="28"
+                          loading="lazy"
+                          decoding="async"
+                          class="thumb h-7 w-7 shrink-0 rounded-md"
+                        />
+                        <span class="min-w-0 flex-1">
+                          <span class="block truncate text-[0.75rem] font-medium text-ink">
+                            {{ member.participant.gameName }}
+                          </span>
+                          <span class="num block truncate text-[0.625rem] text-ink-3">
+                            {{ member.roleLabel }} · {{ member.participant.cs }} cs
+                          </span>
+                        </span>
+                        <span class="num w-[4.25rem] shrink-0 text-right">
+                          <span class="block text-[0.75rem] font-medium text-ink">
+                            {{ member.participant.kills }}/{{ member.participant.deaths }}/{{
+                              member.participant.assists
+                            }}
+                          </span>
+                          <span class="block text-[0.625rem] text-ink-3">
+                            {{ member.killParticipation }}% kp
+                          </span>
+                        </span>
+                        <span class="num w-[3rem] shrink-0 text-right">
+                          <span class="block text-[0.75rem] text-ink-2">{{ member.damage }}</span>
+                          <span class="block text-[0.625rem] text-ink-3">dmg</span>
+                        </span>
+                      </div>
+                      <Meter
+                        class="mt-1.5"
+                        :value="member.damageShare"
+                        :tone="member.isMe ? 'ink' : 'muted'"
                       />
-                      {{ laneOpponent(detailed(row), focused(detailed(row)))?.gameName }}
-                    </span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div v-else-if="tab[row.matchId] === 'details'" class="space-y-4">
+                <MatchScoreboard
+                  v-for="team in row.teams"
+                  :key="team.teamId"
+                  :match="row.match"
+                  :team-id="team.teamId"
+                  :lobby="row.lobby"
+                  :totals="row.totals"
+                  :max-damage="row.maxDamage"
+                  :selected-puuid="focus[row.matchId] ?? puuid"
+                  @select="focus[row.matchId] = $event"
+                />
+              </div>
+              <!-- Graphs -->
+              <div v-else-if="tab[row.matchId] === 'graphs'">
+                <p
+                  v-if="!detailed(row).timeline?.length"
+                  class="py-6 text-center text-[0.8125rem] text-ink-3"
+                >
+                  No timeline recorded for this match.
+                </p>
+                <div v-else class="space-y-4">
+                  <PlayerPicker v-model="focus[row.matchId]" :match="detailed(row)" />
+                  <div class="timeline-snapshot">
+                    <label
+                      >Timeline
+                      <input
+                        v-model.number="minute"
+                        type="range"
+                        min="0"
+                        :max="
+                          Math.max(0, (timeline[focus[row.matchId] ?? puuid]?.length ?? 1) - 1)
+                        " /></label
+                    ><span v-if="timeline[focus[row.matchId] ?? puuid]?.[minute]"
+                      >{{ clock(timeline[focus[row.matchId] ?? puuid][minute].frameMs) }} ·
+                      {{ compact(timeline[focus[row.matchId] ?? puuid][minute].goldTotal) }} gold ·
+                      {{ timeline[focus[row.matchId] ?? puuid][minute].cs }} CS · Level
+                      {{ timeline[focus[row.matchId] ?? puuid][minute].level }}</span
+                    >
+                  </div>
+                  <div class="grid gap-4 md:grid-cols-3">
+                    <div v-for="graph in GRAPHS" :key="graph.key" class="card p-3">
+                      <div class="mb-2 flex items-baseline justify-between">
+                        <h4 class="card-title">{{ graph.title }}</h4>
+                        <span class="text-[0.625rem] text-ink-3">over time</span>
+                      </div>
+                      <div class="h-36">
+                        <LineChart
+                          :data="chart(detailed(row), graph.key)"
+                          :options="chartOptions"
+                        />
+                      </div>
+                      <div class="mt-2 flex items-center justify-between text-[0.625rem]">
+                        <span class="flex items-center gap-1.5 text-ink">
+                          <span class="h-[2px] w-3 bg-ink" />
+                          {{ focused(detailed(row))?.gameName }}
+                        </span>
+                        <span class="flex items-center gap-1.5 text-ink-3">
+                          <span
+                            class="h-[2px] w-3"
+                            style="
+                              background: repeating-linear-gradient(
+                                90deg,
+                                #9aa0aa 0 4px,
+                                transparent 4px 7px
+                              );
+                            "
+                          />
+                          {{ laneOpponent(detailed(row), focused(detailed(row)))?.gameName }}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Runes -->
-            <div v-else class="grid gap-4 lg:grid-cols-2">
-              <div v-for="team in row.teams" :key="team.teamId">
-                <h4 class="card-title mb-2">{{ team.teamId === 100 ? 'Blue' : 'Red' }} team</h4>
-                <ul class="card divide-y divide-line">
-                  <li
-                    v-for="member in team.members"
-                    :key="member.participant.puuid"
-                    class="flex items-center gap-3 px-3 py-2"
-                    :class="member.isMe ? 'bg-[#f6f7f9]' : ''"
-                  >
-                    <img
-                      :src="champIcon(member.participant.championId)"
-                      :alt="member.championLabel"
-                      width="28"
-                      height="28"
-                      loading="lazy"
-                      decoding="async"
-                      class="thumb h-7 w-7 rounded-md"
-                    />
-                    <span class="min-w-0 flex-1 truncate text-[0.75rem] text-ink">
-                      {{ member.championLabel }}
-                    </span>
-                    <RuneGlyphs
-                      :runes="runeSet(timeline[member.participant.puuid] ?? [], member.participant)"
-                    />
-                  </li>
-                </ul>
+              <div v-else class="space-y-4">
+                <PlayerPicker v-model="focus[row.matchId]" :match="detailed(row)" /><RuneBuild
+                  :runes="runeSet(timeline[focus[row.matchId] ?? puuid] ?? [], focused(row.match))"
+                />
               </div>
-            </div>
-          </template>
+            </template>
+          </div>
         </div>
       </li>
     </ul>
-  </Card>
+  </section>
 </template>
