@@ -4,6 +4,9 @@ import cache from '@adonisjs/cache/services/main'
 import db from '@adonisjs/lucid/services/db'
 import type { ModelObject } from '@adonisjs/lucid/types/model'
 
+import { resolvePlayer } from '#services/riot/player_resolver'
+import { normalizePlatform } from '#services/riot/routing'
+import type { RiotAPITypes } from '#services/riot/api'
 import riotApiService from '#services/riot/api'
 import statsRepository from '#services/analytics/stats_repository'
 import matchRepository from '#services/analytics/match_repository'
@@ -93,12 +96,14 @@ class SummonerService {
    * Used as a fallback when the upstream lookup fails: a profile we already
    * hold is better than an error page, even if it is a little stale.
    */
-  async findStored(summoner: string, platform: string): Promise<Summoner | null> {
+  async findStored(summoner: string, platform?: string): Promise<Summoner | null> {
     const normalized = this.normalize(summoner)
     if (!normalized) return null
 
     const { gameName, tagLine } = normalized
-    return Summoner.query().select(SUMMONER_COLUMNS).where({ platform, gameName, tagLine }).first()
+    const query = Summoner.query().select(SUMMONER_COLUMNS).where({ gameName, tagLine })
+    if (platform) query.where('platform', normalizePlatform(platform))
+    return query.orderBy('lastRefreshAt', 'desc').first()
   }
 
   /**
@@ -110,26 +115,16 @@ class SummonerService {
    * essentially free and takes Postgres off the render path for anyone
    * popular enough to be viewed more than once a minute.
    */
-  async findStoredProfile(summoner: string, platform: string) {
+  async findStoredProfile(summoner: string, platform?: string) {
     const normalized = this.normalize(summoner)
     if (!normalized) return null
 
     const { gameName, tagLine } = normalized
     return cache.getOrSet({
-      key: `summoner:profile:${platform}:${gameName.toLowerCase()}:${tagLine.toLowerCase()}`,
+      key: `summoner:profile:${platform ?? 'auto'}:${gameName.toLowerCase()}:${tagLine.toLowerCase()}`,
       ttl: STORED_PROFILE_CACHE_TTL,
       factory: async () => {
-        const stored = await Summoner.query()
-          .select([
-            'puuid',
-            'platform',
-            'game_name',
-            'tag_line',
-            'profile_icon_id',
-            'summoner_level',
-          ])
-          .where({ platform, gameName, tagLine })
-          .first()
+        const stored = await this.findStored(summoner, platform)
 
         if (!stored) return null
         return {
@@ -147,9 +142,32 @@ class SummonerService {
   /**
    * Resolve a Riot ID ("GameName-TagLine") into a persisted `Summoner` row.
    */
+  private resolving = new Map<string, Promise<Summoner>>()
+
   async resolveAndUpsert(
     summoner: string,
-    platform: string,
+    platform?: string,
+    options: { refresh: boolean } = { refresh: false }
+  ): Promise<Summoner> {
+    const normalized = this.normalize(summoner)
+    const key = JSON.stringify([
+      normalized?.gameName.toLowerCase(),
+      normalized?.tagLine.toLowerCase(),
+      platform ? normalizePlatform(platform) : 'auto',
+      options.refresh,
+    ])
+    const pending = this.resolving.get(key)
+    if (pending) return pending
+    const lookup = this.resolveAndPersist(summoner, platform, options).finally(() =>
+      this.resolving.delete(key)
+    )
+    this.resolving.set(key, lookup)
+    return lookup
+  }
+
+  private async resolveAndPersist(
+    summoner: string,
+    platform?: string,
     options: { refresh: boolean } = { refresh: false }
   ): Promise<Summoner> {
     const normalized = this.normalize(summoner)
@@ -157,40 +175,33 @@ class SummonerService {
       throw new Exception('Invalid summoner format. Expected "GameName-TagLine".', { status: 422 })
     }
 
-    const { gameName, tagLine } = normalized
+    const stored = await this.findStored(summoner, platform)
+    if (!options.refresh && stored) return stored
 
-    if (!options.refresh) {
-      const existing = await Summoner.query()
-        .select(SUMMONER_COLUMNS)
-        .where({ platform, gameName, tagLine })
-        .first()
-      if (existing) return existing
-    }
-
-    const region = riotApiService.platformToRegion(platform)
-
-    const account = await riotApiService.client.account.getByRiotId({
-      region: region as any,
-      gameName,
-      tagLine,
-    })
-
-    const puuid = account.puuid
-    if (!puuid) {
-      throw new Exception('Summoner not found', { status: 404 })
-    }
-
-    const summonerDto = await riotApiService.client.summoner.getByPUUID({
-      region: platform as any,
-      puuid,
-    })
-
-    if (!summonerDto) {
-      throw new Exception('Summoner details not found', { status: 404 })
-    }
-
-    const profileIconId = summonerDto.profileIconId
-    const summonerLevel = summonerDto.summonerLevel
+    const resolved = await resolvePlayer(
+      {
+        account: (region, gameName, tagLine) =>
+          riotApiService.client.account.getByRiotId({
+            region: region as RiotAPITypes.Cluster & ('europe' | 'americas' | 'asia'),
+            gameName,
+            tagLine,
+          }),
+        summoner: (region, puuid) =>
+          riotApiService.client.summoner.getByPUUID({
+            region: region.toLowerCase() as RiotAPITypes.LoLRegion,
+            puuid,
+          }),
+      },
+      normalized.gameName,
+      normalized.tagLine,
+      platform,
+      stored?.platform
+    )
+    const { puuid } = resolved.account
+    const gameName = resolved.account.gameName ?? normalized.gameName
+    const tagLine = resolved.account.tagLine ?? normalized.tagLine
+    const { profileIconId, summonerLevel } = resolved.details
+    platform = resolved.platform
 
     const existing = await Summoner.find(puuid)
     const player = await Summoner.updateOrCreate(
@@ -313,7 +324,10 @@ class SummonerService {
   async search(query: string, limit: number = DEFAULT_SEARCH_LIMIT): Promise<ModelObject[]> {
     if (!query || query.trim().length === 0) return []
 
-    const sanitized = query.trim().replace(/[^a-zA-Z0-9\s]/g, '')
+    const sanitized = query
+      .trim()
+      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+      .trim()
     if (!sanitized) return []
 
     // to_tsquery requires terms to be joined with operators, so a multi-word
