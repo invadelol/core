@@ -108,12 +108,16 @@ export class StatsRepository {
     filters: {
       queueIds?: number[] | readonly number[]
       count: number
+      /** Skips this many of the most recent games, so a period can be
+       *  compared against the one before it. */
+      offset?: number
       championId?: number
       role?: string
     }
   ): Promise<SummonerStats> {
     const escapedPuuid = escapeClickhouseString(puuid)
     const count = integer(filters.count, DEFAULT_STATS_COUNT)
+    const offset = Math.max(0, Math.trunc(Number(filters.offset)) || 0)
 
     const whereClauses: string[] = []
     if (filters.queueIds?.length) {
@@ -133,7 +137,7 @@ export class StatsRepository {
       PREWHERE puuid = '${escapedPuuid}'
       WHERE 1=1 ${whereSql}
       ORDER BY game_start_ms DESC, match_id DESC
-      LIMIT ${count}
+      LIMIT ${count} OFFSET ${offset}
     `
 
     // The player's own rows are selected in their own subquery rather than

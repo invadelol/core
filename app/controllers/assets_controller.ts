@@ -48,14 +48,22 @@ export default class AssetsController {
   /** Numeric id to display name, so the client stops fetching Riot's JSON. */
   async names({ params, request, response }: HttpContext) {
     const kind = this.kind(params.kind)
-    const payload = await namePayloads.get(kind, () => riotAssetsService.names(kind))
+    const payload = await namePayloads.get(
+      kind,
+      () => riotAssetsService.names(kind),
+      (value) => Object.keys(value as Record<string, string>).length > 0
+    )
+
+    // An empty map means upstream did not answer. Telling the browser to hold
+    // it for an hour turns a blip into an hour of unnamed champions.
+    const empty = payload.identity.length <= 2
 
     response.header('Content-Type', 'application/json; charset=utf-8')
-    response.header('Cache-Control', `public, max-age=${NAMES_CACHE_SECONDS}`)
+    response.header('Cache-Control', empty ? 'no-store' : `public, max-age=${NAMES_CACHE_SECONDS}`)
     response.header('ETag', payload.etag)
     response.header('Vary', 'Accept-Encoding')
 
-    if (request.header('if-none-match') === payload.etag) {
+    if (!empty && request.header('if-none-match') === payload.etag) {
       response.removeHeader('Content-Type')
       return response.status(304).send(null)
     }

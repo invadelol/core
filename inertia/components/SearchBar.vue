@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
-import { Search } from 'lucide-vue-next'
+import { CornerDownLeft, Search } from 'lucide-vue-next'
 import { profileIcon } from '../lib/assets.js'
 
 const props = withDefaults(
@@ -24,6 +24,7 @@ const results = ref<Result[]>([])
 const isLoading = ref(false)
 const isOpen = ref(false)
 const activeIndex = ref(0)
+const input = ref<HTMLInputElement>()
 
 let debounce: ReturnType<typeof setTimeout>
 let searchController: AbortController | undefined
@@ -138,7 +139,18 @@ function href(entry: { gameName: string; tagLine: string }) {
   return `/${encodeURIComponent(`${entry.gameName}-${entry.tagLine}`)}`
 }
 
+/** ⌘K / Ctrl-K puts the caret here from anywhere on the page. */
+function onHotkey(event: KeyboardEvent) {
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+    event.preventDefault()
+    input.value?.focus()
+    input.value?.select()
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', onHotkey))
 onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onHotkey)
   clearTimeout(debounce)
   searchController?.abort()
 })
@@ -147,6 +159,7 @@ function go(entry: { gameName: string; tagLine: string }) {
   isOpen.value = false
   query.value = ''
   results.value = []
+  input.value?.blur()
   router.visit(href(entry))
 }
 
@@ -179,20 +192,23 @@ function submit() {
     <div class="relative">
       <Search
         class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-3"
-        :class="props.size === 'lg' ? 'w-[18px] h-[18px]' : 'w-4 h-4'"
+        :class="props.size === 'lg' ? 'h-[18px] w-[18px]' : 'h-4 w-4'"
       />
       <input
+        ref="input"
         v-model="query"
         type="text"
         spellcheck="false"
         autocomplete="off"
         :autofocus="props.autofocus"
         :placeholder="
-          props.size === 'lg' ? 'Search a summoner, e.g. Faker#KR1' : 'Search a summoner'
+          props.size === 'lg' ? 'Search any Riot ID, e.g. Faker#KR1' : 'Search a player'
         "
-        class="w-full rounded-lg border border-line-strong bg-surface text-ink placeholder:text-ink-3 focus:outline-none focus:border-ink transition-colors"
+        class="field"
         :class="
-          props.size === 'lg' ? 'pl-11 pr-11 py-3.5 text-[0.9375rem]' : 'pl-9 pr-9 py-2 text-sm'
+          props.size === 'lg'
+            ? '!rounded-[12px] !py-3.5 !pl-11 !pr-14 !text-[15px]'
+            : '!py-[7px] !pl-9 !pr-12 !text-[12.5px]'
         "
         @focus="isOpen = entries.length > 0"
         @blur="handleBlur"
@@ -201,21 +217,29 @@ function submit() {
         @keydown.enter.prevent="submit"
         @keydown.esc="isOpen = false"
       />
+
       <span
         v-if="isLoading"
-        class="absolute right-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-[1.5px] border-line-strong border-t-ink animate-spin"
+        class="absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin rounded-full border-[1.5px] border-line-2 border-t-accent"
       />
+      <kbd
+        v-else-if="!query"
+        class="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded border border-line bg-raised px-1.5 py-0.5 font-sans text-[10px] font-medium text-ink-3 sm:block"
+      >
+        ⌘K
+      </kbd>
     </div>
 
     <ul
       v-if="showDropdown"
-      class="absolute z-30 mt-1.5 w-full overflow-hidden rounded-lg border border-line bg-surface shadow-[0_8px_24px_rgb(16_18_29_/_0.08)]"
+      class="menu absolute z-50 mt-2 w-full py-1"
+      :class="props.size === 'lg' ? 'text-[13.5px]' : 'text-[12.5px]'"
     >
       <li
         v-for="(entry, index) in entries"
         :key="`${entry.gameName}-${entry.tagLine}-${index}`"
-        class="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors"
-        :class="index === activeIndex ? 'bg-[#f6f6f8]' : ''"
+        class="menu-item cursor-pointer"
+        :data-active="index === activeIndex"
         @mouseenter="highlight(index, entry)"
         @mousedown.prevent="go(entry)"
       >
@@ -223,25 +247,25 @@ function submit() {
           v-if="!entry.direct"
           :src="profileIcon(entry.icon)"
           alt=""
-          width="28"
-          height="28"
+          width="26"
+          height="26"
           loading="lazy"
           decoding="async"
-          class="thumb h-7 w-7 rounded-full"
+          class="thumb h-[26px] w-[26px] rounded-full"
         />
         <span
           v-else
-          class="flex h-7 w-7 items-center justify-center rounded-full border border-line text-ink-3"
+          class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-raised text-ink"
         >
           <Search class="h-3.5 w-3.5" />
         </span>
 
-        <span class="min-w-0 flex-1 truncate text-[0.8125rem]">
+        <span class="min-w-0 flex-1 truncate">
           <span class="font-medium text-ink">{{ entry.gameName }}</span>
           <span class="text-ink-3">#{{ entry.tagLine }}</span>
         </span>
 
-        <span v-if="entry.direct" class="label">Go</span>
+        <CornerDownLeft v-if="index === activeIndex" :size="13" class="shrink-0 text-ink-4" />
       </li>
     </ul>
   </div>

@@ -1,58 +1,69 @@
 <script setup lang="ts">
-import { computed, ref, watch, onBeforeUnmount } from 'vue'
-import { ArrowLeftRight, Search } from 'lucide-vue-next'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { ArrowLeftRight, X } from 'lucide-vue-next'
 import MatchFilters, { type Filters } from './MatchFilters.vue'
-import StatSparkline from './StatSparkline.vue'
-import { championSplash, profileIcon } from '../lib/assets.js'
-import type { Summoner, ChampionStats, GlobalStats, Match } from '../lib/types.js'
+import PlayerLink from './PlayerLink.vue'
+import PlayerSearchField from './PlayerSearchField.vue'
+import RoleIcon from './RoleIcon.vue'
+import Sparkline from './ui/Sparkline.vue'
+import { champIcon, championName, profileIcon, queueName } from '../lib/assets.js'
+import { compact, duration, timeAgo } from '../lib/format.js'
+import { killParticipation, matchMinutes, teamTotals } from '../lib/match.js'
+import {
+  championSplit,
+  lineOf,
+  roleRows,
+  sharedGames,
+  type Line,
+  type Side,
+} from '../lib/compare.js'
+import { teammatesFrom } from '../lib/synergy.js'
+import type { ChampionStats, GlobalStats, Match, Summoner } from '../lib/types.js'
+
 const props = defineProps<{
   profile: Summoner
   champions: ChampionStats[]
-  mainChampion?: number
 }>()
-const target = ref(''),
-  other = ref<Summoner | null>(null),
-  busy = ref(false),
-  error = ref('')
+
+const other = ref<Summoner | null>(null)
+const busy = ref(false)
+const error = ref('')
 const filters = ref<Filters>({ type: 'all', champion: 0, role: 'all' })
-const datasets = ref<Array<{ stats: GlobalStats; matches: Match[]; champion?: number }>>([])
-let lookup: AbortController | undefined, analytics: AbortController | undefined
+
+interface Dataset {
+  stats: GlobalStats
+  matches: Match[]
+  champions: ChampionStats[]
+}
+const datasets = ref<Dataset[]>([])
+
+let lookup: AbortController | undefined
+let analytics: AbortController | undefined
+
 const players = computed(() => (other.value ? [props.profile, other.value] : [props.profile]))
-const metrics = [
-  { key: 'winrate', name: 'Win rate', unit: '%', factor: 100 },
-  { key: 'kda', name: 'KDA ratio', unit: '', factor: 1 },
-  { key: 'csMin', name: 'CS per minute', unit: '', factor: 1 },
-  { key: 'damagePerMinute', name: 'Damage per minute', unit: '', factor: 1 },
-  { key: 'goldPerMinute', name: 'Gold per minute', unit: '', factor: 1 },
-  { key: 'visionMin', name: 'Vision per minute', unit: '', factor: 1 },
-] as const
-async function compare() {
-  const hash = target.value.lastIndexOf('#')
-  if (hash < 1 || !target.value.slice(hash + 1).trim()) {
-    error.value = 'Enter a Riot ID, for example CrauZmoZ#EUW.'
-    return
-  }
+const ready = computed(() => Boolean(other.value) && datasets.value.length === 2)
+
+async function pick(entry: { gameName: string; tagLine: string }) {
   lookup?.abort()
   lookup = new AbortController()
   const signal = lookup.signal
   busy.value = true
   error.value = ''
   try {
-    const slug = `${target.value.slice(0, hash).trim()}-${target.value.slice(hash + 1).trim()}`
+    const slug = `${entry.gameName}-${entry.tagLine}`
     const res = await fetch(`/api/summoners/${encodeURIComponent(slug)}`, { signal })
     if (!res.ok)
       throw new Error(
         res.status === 404
           ? 'Player not found. Check their Riot ID.'
-          : 'Riot could not load this player. Please try again.'
+          : 'Riot could not load this player.'
       )
     const data = await res.json()
     if (signal.aborted) return
-    if (data.summoner.puuid === props.profile.puuid)
-      throw new Error('Choose a different player to compare.')
+    if (data.summoner.puuid === props.profile.puuid) throw new Error('Choose a different player.')
     other.value = data.summoner
     const url = new URL(location.href)
-    url.searchParams.set('with', target.value.trim())
+    url.searchParams.set('with', `${entry.gameName}#${entry.tagLine}`)
     history.replaceState(history.state, '', url)
   } catch (e) {
     if (!signal.aborted) error.value = (e as Error).message
@@ -60,11 +71,19 @@ async function compare() {
     if (!signal.aborted) busy.value = false
   }
 }
+
+function clear() {
+  other.value = null
+  datasets.value = []
+  const url = new URL(location.href)
+  url.searchParams.delete('with')
+  history.replaceState(history.state, '', url)
+}
+
 async function load() {
   analytics?.abort()
   analytics = new AbortController()
   const signal = analytics.signal
-  error.value = ''
   datasets.value = []
   const query = new URLSearchParams({
     type: filters.value.type,
@@ -76,14 +95,17 @@ async function load() {
     const data = await Promise.all(
       players.value.map(async (p) => {
         const base = `/api/summoners/puuid/${p.puuid}`
-        const [s, m] = await Promise.all([
+        const [s, m, c] = await Promise.all([
           fetch(`${base}/stats?${query}`, { signal }),
           fetch(`${base}/matches?${query}&view=summary`, { signal }),
+          fetch(`${base}/champions?${query}`, { signal }),
         ])
-        if (!s.ok || !m.ok) throw new Error('Comparison statistics could not be loaded. Try again.')
-        const stats = await s.json()
-        const matches = await m.json()
-        return { stats: stats.global, matches, champion: stats.champions?.[0]?.championId }
+        if (!s.ok || !m.ok || !c.ok) throw new Error('Comparison data could not be loaded.')
+        return {
+          stats: (await s.json()).global as GlobalStats,
+          matches: (await m.json()) as Match[],
+          champions: (await c.json()) as ChampionStats[],
+        }
       })
     )
     if (!signal.aborted) datasets.value = data
@@ -91,114 +113,738 @@ async function load() {
     if (!signal.aborted) error.value = (e as Error).message
   }
 }
+
 watch([players, filters], () => void load(), { immediate: true, deep: true })
-if (typeof window !== 'undefined') {
+
+/* Restoring `?with=` flips the field into its loading state, so it has to wait
+   until after hydration or the first client render no longer matches the HTML
+   the server sent. */
+onMounted(() => {
   const initial = new URLSearchParams(location.search).get('with')
-  if (initial) {
-    target.value = initial
-    void compare()
+  const hash = initial?.lastIndexOf('#') ?? -1
+  if (initial && hash > 0) {
+    void pick({ gameName: initial.slice(0, hash), tagLine: initial.slice(hash + 1) })
   }
-}
+})
+
 onBeforeUnmount(() => {
   lookup?.abort()
   analytics?.abort()
 })
-function value(index: number, key: (typeof metrics)[number]['key'], factor: number) {
+
+/** The two match samples, the shape every derivation in lib/compare works on. */
+const sides = computed<Side[]>(() =>
+  players.value.map((p, index) => ({
+    puuid: p.puuid,
+    matches: datasets.value[index]?.matches ?? [],
+  }))
+)
+
+/* ── Metrics ───────────────────────────────────────────────────── */
+const METRICS = [
+  { key: 'winrate', name: 'Win rate', unit: '%', factor: 100, decimals: 0 },
+  { key: 'kda', name: 'KDA', unit: '', factor: 1, decimals: 2 },
+  { key: 'killParticipation', name: 'Kill participation', unit: '%', factor: 100, decimals: 0 },
+  { key: 'damageShare', name: 'Damage share', unit: '%', factor: 100, decimals: 0 },
+  { key: 'goldShare', name: 'Gold share', unit: '%', factor: 100, decimals: 0 },
+  { key: 'csMin', name: 'CS per minute', unit: '', factor: 1, decimals: 1 },
+  { key: 'goldPerMinute', name: 'Gold per minute', unit: '', factor: 1, decimals: 0 },
+  { key: 'damagePerMinute', name: 'Damage per minute', unit: '', factor: 1, decimals: 0 },
+  { key: 'visionMin', name: 'Vision per minute', unit: '', factor: 1, decimals: 2 },
+] as const
+
+type MetricKey = (typeof METRICS)[number]['key']
+
+function value(index: number, key: MetricKey, factor: number, decimals: number) {
   const g = datasets.value[index]?.stats
-  if (!g?.total) return '—'
-  return (g[key] * factor).toFixed(key === 'kda' || key === 'csMin' || key === 'visionMin' ? 1 : 0)
+  if (!g?.total) return null
+  return (g[key] * factor).toFixed(decimals)
 }
-function values(index: number, key: string) {
+
+function leader(key: MetricKey) {
+  const a = datasets.value[0]?.stats
+  const b = datasets.value[1]?.stats
+  if (!a?.total || !b?.total || a[key] === b[key]) return -1
+  return a[key] > b[key] ? 0 : 1
+}
+
+/**
+ * Each bar as a share of the larger of the two, so the player ahead always
+ * fills their half and the other one is visibly short of it. A bar split by
+ * the sum instead reads as 52/48 on a metric one of them clearly wins.
+ */
+function weights(key: MetricKey) {
+  const a = datasets.value[0]?.stats
+  const b = datasets.value[1]?.stats
+  if (!a?.total || !b?.total) return [0, 0]
+  const top = Math.max(Math.max(0, a[key]), Math.max(0, b[key]))
+  if (!top) return [0, 0]
+  return [(Math.max(0, a[key]) / top) * 100, (Math.max(0, b[key]) / top) * 100]
+}
+
+/** The margin, printed beside whoever holds it. */
+function gap(key: MetricKey, factor: number, decimals: number) {
+  const a = datasets.value[0]?.stats
+  const b = datasets.value[1]?.stats
+  if (!a?.total || !b?.total) return null
+  const diff = Math.abs(a[key] - b[key]) * factor
+  if (diff < Number(`1e-${decimals}`)) return null
+  return `+${diff.toFixed(decimals)}`
+}
+
+/* ── Per-game series, for the trend beside each metric ─────────── */
+function series(index: number, key: MetricKey) {
   return (datasets.value[index]?.matches ?? [])
     .slice(0, 20)
     .reverse()
     .flatMap((m) => {
-      const p = m.participants.find((p) => p.puuid === players.value[index]?.puuid)
+      const p = m.participants.find((x) => x.puuid === players.value[index]?.puuid)
       if (!p) return []
-      const minutes = Math.max(1, m.duration / 60)
-      return [
-        key === 'winrate'
-          ? Number(p.win) * 100
-          : key === 'kda'
-            ? (p.kills + p.assists) / Math.max(1, p.deaths)
-            : key === 'csMin'
-              ? p.cs / minutes
-              : key === 'damagePerMinute'
-                ? p.totalDamageDealtToChampions / minutes
-                : key === 'goldPerMinute'
-                  ? p.goldEarned / minutes
-                  : p.visionScore / minutes,
-      ]
+      const minutes = matchMinutes(m)
+      const totals = teamTotals(m)
+      const teamDamage = totals[p.teamId]?.damage || 1
+      const teamGold = totals[p.teamId]?.gold || 1
+      if (key === 'winrate') return [Number(p.win) * 100]
+      if (key === 'kda') return [(p.kills + p.assists) / Math.max(1, p.deaths)]
+      if (key === 'killParticipation') return [killParticipation(p, totals)]
+      if (key === 'damageShare') return [(p.totalDamageDealtToChampions / teamDamage) * 100]
+      if (key === 'goldShare') return [(p.goldEarned / teamGold) * 100]
+      if (key === 'csMin') return [p.cs / minutes]
+      if (key === 'goldPerMinute') return [p.goldEarned / minutes]
+      if (key === 'damagePerMinute') return [p.totalDamageDealtToChampions / minutes]
+      return [p.visionScore / minutes]
     })
 }
+
+/** Last 20 results per player, oldest first. */
+const form = computed(() =>
+  players.value.map((p, index) =>
+    (datasets.value[index]?.matches ?? [])
+      .slice(0, 20)
+      .map((m) => m.participants.find((x) => x.puuid === p.puuid)?.win)
+      .filter((w): w is boolean => w !== undefined)
+      .reverse()
+  )
+)
+
+const wins = computed(() => {
+  let a = 0
+  let b = 0
+  for (const metric of METRICS) {
+    const side = leader(metric.key)
+    if (side === 0) a++
+    else if (side === 1) b++
+  }
+  return [a, b]
+})
+
+/* ── The games they actually shared ────────────────────────────── */
+const shared = computed(() => (ready.value ? sharedGames(sides.value) : []))
+const sameTeam = computed(() => shared.value.filter((g) => g.together))
+const versus = computed(() => shared.value.filter((g) => !g.together))
+
+const record = computed(() => {
+  const played = sameTeam.value.length
+  const won = sameTeam.value.filter((g) => Boolean(g.players[0]?.win)).length
+  return { played, won, lost: played - won }
+})
+
+/** Each side's numbers narrowed to the games they queued together. */
+const togetherLines = computed(() =>
+  sides.value.map((side) =>
+    lineOf(
+      sameTeam.value.map((g) => g.match),
+      side.puuid
+    )
+  )
+)
+
+/**
+ * The same player without the other one, which is the number that turns a
+ * duo record into a verdict. `teammatesFrom` already derives it, so both
+ * sides here are read off it rather than counted a second time.
+ */
+const apart = computed(() =>
+  sides.value.map((side, index) => {
+    const opponent = sides.value[1 - index]
+    if (!opponent || !side.matches.length) return null
+    const mate = teammatesFrom(side.matches, side.puuid, 1).find((m) => m.puuid === opponent.puuid)
+    if (!mate || mate.lift === null) return null
+    const games = side.matches.length - mate.games
+    if (games < 1) return null
+    return { games, winrate: Math.round(mate.soloWinrate), lift: Math.round(mate.lift) }
+  })
+)
+
+/** The lane partnership those games settled into, when they have one. */
+const pairing = computed(() => {
+  const side = sides.value[0]
+  const opponent = sides.value[1]
+  if (!side || !opponent || !sameTeam.value.length) return null
+  const mate = teammatesFrom(side.matches, side.puuid, 1).find((m) => m.puuid === opponent.puuid)
+  return mate?.pairing?.label ?? null
+})
+
+/* ── Role by role ──────────────────────────────────────────────── */
+const ROLE_COLUMNS = [
+  { key: 'winrate', head: 'Win rate', unit: '%', factor: 100, decimals: 0, dense: false, at: '' },
+  { key: 'kda', head: 'KDA', unit: '', factor: 1, decimals: 2, dense: false, at: '' },
+  {
+    key: 'killParticipation',
+    head: 'KP',
+    unit: '%',
+    factor: 100,
+    decimals: 0,
+    dense: false,
+    at: 'hidden xs:table-cell',
+  },
+  {
+    key: 'csMin',
+    head: 'CS/min',
+    unit: '',
+    factor: 1,
+    decimals: 1,
+    dense: false,
+    at: 'hidden sm:table-cell',
+  },
+  {
+    key: 'damagePerMinute',
+    head: 'DPM',
+    unit: '',
+    factor: 1,
+    decimals: 0,
+    dense: true,
+    at: 'hidden md:table-cell',
+  },
+  {
+    key: 'goldPerMinute',
+    head: 'GPM',
+    unit: '',
+    factor: 1,
+    decimals: 0,
+    dense: true,
+    at: 'hidden lg:table-cell',
+  },
+] as const
+
+const roles = computed(() => (ready.value ? roleRows(sides.value) : []))
+
+function cell(line: Line | null, column: (typeof ROLE_COLUMNS)[number]) {
+  if (!line?.games) return '—'
+  const raw = line[column.key] * column.factor
+  return `${column.dense ? compact(raw) : raw.toFixed(column.decimals)}${column.unit}`
+}
+
+/**
+ * Full ink for whoever holds a column inside one role, faded for the other.
+ * A role only one of them queues has nothing to win, so it stays legible
+ * rather than being greyed out as though it had lost.
+ */
+function roleInk(lines: Array<Line | null>, key: MetricKey, index: number) {
+  const [a, b] = lines
+  if (!a?.games || !b?.games || a[key] === b[key]) return 'text-ink-2'
+  return (a[key] > b[key] ? 0 : 1) === index ? 'font-semibold text-ink' : 'text-ink-4'
+}
+
+/* ── Champion pools ────────────────────────────────────────────── */
+const pools = computed(() =>
+  ready.value
+    ? championSplit([datasets.value[0]?.champions ?? [], datasets.value[1]?.champions ?? []])
+    : { both: [], only: [[], []] }
+)
+
+const overlap = computed(() => pools.value.both.slice(0, 8))
+
+/** Same emphasis rule as the role table, on the pick they share. */
+function poolInk(stats: Array<ChampionStats | null>, index: number) {
+  const [a, b] = stats
+  if (!a || !b || a.winrate === b.winrate) return 'font-medium text-ink-2'
+  return (a.winrate > b.winrate ? 0 : 1) === index
+    ? 'font-semibold text-ink'
+    : 'font-medium text-ink-4'
+}
 </script>
+
 <template>
-  <section class="space-y-5">
-    <div class="section-intro">
-      <div>
-        <span class="eyebrow">SIDE BY SIDE</span>
-        <h2>Better together. Better informed.</h2>
-        <p>Compare recent performance across the same queues, champions, and roles.</p>
-      </div>
-      <ArrowLeftRight :size="25" class="text-ink-3" />
+  <section>
+    <div class="section">
+      <h2>Compare</h2>
+      <span class="meta">up to 100 games each, on the same filters</span>
     </div>
-    <form class="compare-search card" @submit.prevent="compare">
-      <Search :size="18" /><label class="sr-only" for="compare-player">Player Riot ID</label
-      ><input
-        id="compare-player"
-        v-model="target"
-        placeholder="Who’s your match? Enter Name#Tag"
-        required
-      /><span class="subtle">All regions</span
-      ><button class="btn btn-primary" :disabled="busy">
-        {{ busy ? 'Finding player…' : 'Compare player' }}
+
+    <div class="mb-6 flex flex-wrap items-center gap-2">
+      <PlayerSearchField
+        :busy="busy"
+        placeholder="Search a Riot ID to compare against"
+        @select="pick"
+      />
+      <button v-if="other" class="btn btn-sm" @click="clear">
+        <X :size="12" />
+        Clear
       </button>
-    </form>
-    <p v-if="error" class="notice-error" role="alert">{{ error }}</p>
-    <MatchFilters v-model="filters" :champions="champions" />
-    <div class="compare-grid">
-      <article v-for="(p, i) in players" :key="p.puuid" class="card compare-player">
-        <div
-          class="compare-player-hero"
-          :style="
-            datasets[i]?.champion || (i === 0 && mainChampion)
-              ? {
-                  backgroundImage: `linear-gradient(0deg,rgba(12,18,30,.93),rgba(12,18,30,.25)),url(${championSplash(datasets[i]?.champion || mainChampion!)})`,
-                }
-              : {}
-          "
-        >
-          <img :src="profileIcon(p.profileIconId)" alt="" />
-          <h3>
-            {{ p.gameName }}<span>#{{ p.tagLine }}</span>
-          </h3>
-          <p>
-            {{ p.platform }} · Level {{ p.summonerLevel }} ·
-            {{ datasets[i]?.stats.total ?? 0 }} games analysed
-          </p>
-        </div>
-        <div v-for="metric in metrics" :key="metric.key" class="compare-stat">
-          <div>
-            <span>{{ metric.name }}</span
-            ><strong
-              >{{ value(i, metric.key, metric.factor)
-              }}{{ datasets[i]?.stats.total ? metric.unit : '' }}</strong
-            >
-          </div>
-          <StatSparkline
-            :values="values(i, metric.key)"
-            :label="`${metric.name}, last 20 games, oldest first`"
-          />
-        </div>
-        <p class="compare-note">
-          Trend shows up to 20 recent games · No games? Open this player’s profile and Update.
-        </p>
-      </article>
-      <div v-if="!other" class="card compare-placeholder">
-        <ArrowLeftRight :size="32" />
-        <h3>A little friendly competition?</h3>
-        <p>Search for a teammate or rival above to see how your games compare.</p>
-      </div>
     </div>
+
+    <p v-if="error" class="notice mb-5" role="alert">{{ error }}</p>
+
+    <MatchFilters v-model="filters" :champions="champions" class="mb-7" />
+
+    <div v-if="!other" class="py-20 text-center">
+      <ArrowLeftRight :size="22" class="mx-auto mb-3 text-ink-4" />
+      <p class="text-[13px] font-medium text-ink">Pick someone to compare against</p>
+    </div>
+
+    <template v-else-if="ready">
+      <!-- Who is being compared, and who is ahead overall -->
+      <div
+        class="mb-7 grid grid-cols-2 items-center gap-x-4 gap-y-5 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"
+      >
+        <div
+          v-for="(p, i) in players"
+          :key="p.puuid"
+          :class="i === 1 ? 'order-2 text-right sm:order-3' : 'order-1'"
+        >
+          <div class="flex items-center gap-2.5" :class="i === 1 ? 'flex-row-reverse' : ''">
+            <img
+              :src="profileIcon(p.profileIconId)"
+              alt=""
+              width="40"
+              height="40"
+              class="thumb h-10 w-10 rounded-[9px]"
+            />
+            <div class="min-w-0" :class="i === 1 ? 'text-right' : ''">
+              <PlayerLink
+                :game-name="p.gameName"
+                :tag-line="p.tagLine"
+                show-tag
+                bold
+                class="max-w-full text-[15px] tracking-[-0.015em]"
+              />
+              <div class="num text-[11px] text-ink-3">
+                {{ p.platform }} · level {{ p.summonerLevel }} ·
+                {{ datasets[i]?.stats.total ?? 0 }} games
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-2.5 flex gap-[2px]" :class="i === 1 ? 'justify-end' : ''">
+            <span
+              v-for="(win, index) in form[i]"
+              :key="index"
+              class="h-[12px] w-[4px] rounded-[1px]"
+              :style="{ background: win ? 'var(--color-win)' : 'var(--color-loss)' }"
+            />
+          </div>
+        </div>
+
+        <div class="order-3 col-span-2 text-center sm:order-2 sm:col-span-1">
+          <div class="num display text-[22px] text-ink">{{ wins[0] }}–{{ wins[1] }}</div>
+          <div class="label mt-1 !text-[9px]">metrics won</div>
+        </div>
+      </div>
+
+      <!-- Every metric on one axis -->
+      <div class="frame mb-9">
+        <table class="dt num w-full">
+          <tbody>
+            <tr v-for="metric in METRICS" :key="metric.key">
+              <td class="w-[22%] !py-3 !pl-3 text-right">
+                <div class="flex items-baseline justify-end gap-1.5">
+                  <span v-if="leader(metric.key) === 0" class="text-[10.5px] text-ink-3">
+                    {{ gap(metric.key, metric.factor, metric.decimals) }}
+                  </span>
+                  <span
+                    class="text-[14.5px]"
+                    :class="
+                      leader(metric.key) === 0 ? 'font-semibold text-ink' : 'font-medium text-ink-4'
+                    "
+                  >
+                    {{ value(0, metric.key, metric.factor, metric.decimals) ?? '—'
+                    }}{{ metric.unit }}
+                  </span>
+                </div>
+                <Sparkline
+                  :values="series(0, metric.key)"
+                  :label="`${metric.name}, last 20 games`"
+                  :width="72"
+                  :height="18"
+                  class="ml-auto mt-1 hidden text-ink-4 lg:block"
+                />
+              </td>
+
+              <td class="!py-3">
+                <div class="mb-1.5 text-center text-[11px] uppercase tracking-[0.06em] text-ink-3">
+                  {{ metric.name }}
+                </div>
+                <div class="flex h-[7px] items-stretch gap-[3px]">
+                  <span class="flex flex-1 justify-end overflow-hidden rounded-l-[2px] bg-sunken">
+                    <span
+                      class="block h-full rounded-l-[2px]"
+                      :style="{
+                        width: `${weights(metric.key)[0]}%`,
+                        background:
+                          leader(metric.key) === 0 ? 'var(--color-ink)' : 'var(--color-ink-4)',
+                      }"
+                    />
+                  </span>
+                  <span class="flex-1 overflow-hidden rounded-r-[2px] bg-sunken">
+                    <span
+                      class="block h-full rounded-r-[2px]"
+                      :style="{
+                        width: `${weights(metric.key)[1]}%`,
+                        background:
+                          leader(metric.key) === 1 ? 'var(--color-ink)' : 'var(--color-ink-4)',
+                      }"
+                    />
+                  </span>
+                </div>
+              </td>
+
+              <td class="w-[22%] !py-3 !pr-3">
+                <div class="flex items-baseline gap-1.5">
+                  <span
+                    class="text-[14.5px]"
+                    :class="
+                      leader(metric.key) === 1 ? 'font-semibold text-ink' : 'font-medium text-ink-4'
+                    "
+                  >
+                    {{ value(1, metric.key, metric.factor, metric.decimals) ?? '—'
+                    }}{{ metric.unit }}
+                  </span>
+                  <span v-if="leader(metric.key) === 1" class="text-[10.5px] text-ink-3">
+                    {{ gap(metric.key, metric.factor, metric.decimals) }}
+                  </span>
+                </div>
+                <Sparkline
+                  :values="series(1, metric.key)"
+                  :label="`${metric.name}, last 20 games`"
+                  :width="72"
+                  :height="18"
+                  class="mt-1 hidden text-ink-4 lg:block"
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- The games they shared -->
+      <template v-if="shared.length">
+        <div class="section">
+          <h3>Together</h3>
+          <span v-if="pairing" class="meta">{{ pairing }}</span>
+        </div>
+
+        <div class="mb-4 flex flex-wrap items-start gap-x-9 gap-y-4">
+          <div v-if="record.played">
+            <div class="label">Record</div>
+            <div class="num display mt-1 text-[19px]">
+              <span class="text-win">{{ record.won }}</span>
+              <span class="text-ink-4">–</span>
+              <span class="text-loss">{{ record.lost }}</span>
+              <span class="ml-1.5 text-[11px] font-medium text-ink-3">
+                {{ Math.round((record.won / record.played) * 100) }}%
+              </span>
+            </div>
+          </div>
+          <div v-if="versus.length">
+            <div class="label">Against</div>
+            <div class="num display mt-1 text-[19px] text-ink">{{ versus.length }}</div>
+          </div>
+          <div v-for="(row, i) in apart" :key="i">
+            <template v-if="row">
+              <div class="label">{{ players[i].gameName }} apart</div>
+              <div class="num display mt-1 text-[19px] text-ink">
+                {{ row.winrate }}%
+                <span class="ml-1.5 text-[11px] font-medium text-ink-3">{{ row.games }} games</span>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <div class="frame mb-9">
+          <div class="scroll-x">
+            <table class="dt dt-hover num min-w-[330px]">
+              <thead>
+                <tr>
+                  <th class="!pl-3">Game</th>
+                  <th v-for="p in players" :key="p.puuid" class="text-right">
+                    <PlayerLink
+                      :game-name="p.gameName"
+                      :tag-line="p.tagLine"
+                      class="!font-semibold"
+                    />
+                  </th>
+                  <th class="hidden !pr-3 text-right sm:table-cell">Length</th>
+                </tr>
+              </thead>
+
+              <tbody v-if="record.played">
+                <tr class="band">
+                  <td class="!pl-3 text-[11px] text-ink-2">{{ record.played }} games together</td>
+                  <td v-for="(line, i) in togetherLines" :key="i" class="text-right">
+                    <span class="text-[12.5px]" :class="roleInk(togetherLines, 'kda', i)">
+                      {{ line.kda.toFixed(2) }}
+                    </span>
+                    <span
+                      class="ml-1.5 text-[10.5px]"
+                      :class="roleInk(togetherLines, 'killParticipation', i)"
+                    >
+                      {{ Math.round(line.killParticipation * 100) }}% KP
+                    </span>
+                  </td>
+                  <td class="hidden !pr-3 sm:table-cell" />
+                </tr>
+
+                <tr v-for="game in sameTeam" :key="game.match.matchId">
+                  <td class="!pl-3">
+                    <span class="flex items-baseline gap-2">
+                      <span
+                        class="text-[12px] font-semibold"
+                        :class="game.players[0].win ? 'text-win' : 'text-loss'"
+                      >
+                        {{ game.players[0].win ? 'W' : 'L' }}
+                      </span>
+                      <span class="min-w-0 truncate text-[11px] text-ink-3">
+                        {{ queueName(game.match.queueId) }}
+                        <span class="hidden text-ink-4 sm:inline">
+                          {{ timeAgo(game.match.gameStartMs) }}
+                        </span>
+                      </span>
+                    </span>
+                  </td>
+                  <td v-for="(p, i) in game.players" :key="i" class="text-right">
+                    <span class="flex items-center justify-end gap-2">
+                      <span class="text-[12px] text-ink-2">
+                        {{ p.kills }}/{{ p.deaths }}/{{ p.assists }}
+                      </span>
+                      <RoleIcon
+                        v-if="p.position"
+                        :role="p.position"
+                        :size="13"
+                        class="text-ink-4"
+                      />
+                      <img
+                        :src="champIcon(p.championId)"
+                        :alt="championName(p.championId)"
+                        :title="championName(p.championId)"
+                        width="22"
+                        height="22"
+                        loading="lazy"
+                        class="thumb h-[22px] w-[22px] rounded-[5px]"
+                      />
+                    </span>
+                  </td>
+                  <td class="hidden !pr-3 text-right text-[11px] text-ink-3 sm:table-cell">
+                    {{ duration(game.match.duration) }}
+                  </td>
+                </tr>
+              </tbody>
+
+              <tbody v-if="versus.length">
+                <tr class="band">
+                  <td class="!pl-3 text-[11px] text-ink-2">
+                    {{ versus.length }} against each other
+                  </td>
+                  <td :colspan="players.length" />
+                  <td class="hidden !pr-3 sm:table-cell" />
+                </tr>
+
+                <tr v-for="game in versus" :key="game.match.matchId">
+                  <td class="!pl-3">
+                    <span class="min-w-0 truncate text-[11px] text-ink-3">
+                      {{ queueName(game.match.queueId) }}
+                      <span class="hidden text-ink-4 sm:inline">
+                        {{ timeAgo(game.match.gameStartMs) }}
+                      </span>
+                    </span>
+                  </td>
+                  <td v-for="(p, i) in game.players" :key="i" class="text-right">
+                    <span class="flex items-center justify-end gap-2">
+                      <span
+                        class="text-[11px] font-semibold"
+                        :class="p.win ? 'text-win' : 'text-loss'"
+                      >
+                        {{ p.win ? 'W' : 'L' }}
+                      </span>
+                      <span class="text-[12px] text-ink-2">
+                        {{ p.kills }}/{{ p.deaths }}/{{ p.assists }}
+                      </span>
+                      <img
+                        :src="champIcon(p.championId)"
+                        :alt="championName(p.championId)"
+                        :title="championName(p.championId)"
+                        width="22"
+                        height="22"
+                        loading="lazy"
+                        class="thumb h-[22px] w-[22px] rounded-[5px]"
+                      />
+                    </span>
+                  </td>
+                  <td class="hidden !pr-3 text-right text-[11px] text-ink-3 sm:table-cell">
+                    {{ duration(game.match.duration) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </template>
+
+      <!-- The same metrics, one position at a time -->
+      <template v-if="roles.length">
+        <div class="section">
+          <h3>By role</h3>
+        </div>
+        <div class="frame mb-9">
+          <table class="dt num w-full">
+            <thead>
+              <tr>
+                <th class="!pl-3">Player</th>
+                <th class="text-right">Games</th>
+                <th
+                  v-for="column in ROLE_COLUMNS"
+                  :key="column.key"
+                  class="text-right"
+                  :class="column.at"
+                >
+                  {{ column.head }}
+                </th>
+              </tr>
+            </thead>
+
+            <tbody v-for="row in roles" :key="row.role">
+              <tr class="band">
+                <td class="!pl-3" :colspan="2 + ROLE_COLUMNS.length">
+                  <span class="flex items-center gap-2">
+                    <RoleIcon :role="row.role" :size="14" class="text-ink-3" />
+                    <span class="label !text-ink-2">{{ row.label }}</span>
+                  </span>
+                </td>
+              </tr>
+
+              <template v-for="(line, i) in row.lines" :key="i">
+                <tr v-if="line">
+                  <td class="!pl-3">
+                    <PlayerLink
+                      :game-name="players[i].gameName"
+                      :tag-line="players[i].tagLine"
+                      class="max-w-[140px] text-[12px]"
+                    />
+                  </td>
+                  <td class="text-right text-ink-3">{{ line.games }}</td>
+                  <td
+                    v-for="column in ROLE_COLUMNS"
+                    :key="column.key"
+                    class="text-right"
+                    :class="[column.at, roleInk(row.lines, column.key, i)]"
+                  >
+                    {{ cell(line, column) }}
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </template>
+
+      <!-- Champion pools, overlapping and not -->
+      <template v-if="overlap.length || pools.only[0].length || pools.only[1].length">
+        <div class="section">
+          <h3>Champions</h3>
+        </div>
+        <div class="frame">
+          <table class="dt num w-full">
+            <thead>
+              <tr>
+                <th class="!pl-3">Champion</th>
+                <th v-for="p in players" :key="p.puuid" class="!pr-3 text-right">
+                  <PlayerLink
+                    :game-name="p.gameName"
+                    :tag-line="p.tagLine"
+                    class="!font-semibold"
+                  />
+                </th>
+              </tr>
+            </thead>
+
+            <tbody v-if="overlap.length">
+              <tr class="band">
+                <td class="!pl-3" colspan="3">
+                  <span class="label !text-ink-2">Both play</span>
+                </td>
+              </tr>
+              <tr v-for="row in overlap" :key="row.championId">
+                <td class="!pl-3">
+                  <span class="flex items-center gap-2.5">
+                    <img
+                      :src="champIcon(row.championId)"
+                      :alt="championName(row.championId)"
+                      width="26"
+                      height="26"
+                      loading="lazy"
+                      class="thumb h-[26px] w-[26px] rounded-[6px]"
+                    />
+                    <span class="truncate font-medium text-ink">
+                      {{ championName(row.championId) }}
+                    </span>
+                  </span>
+                </td>
+                <td v-for="(stat, i) in row.stats" :key="i" class="!pr-3 text-right align-middle">
+                  <template v-if="stat">
+                    <div class="text-[13px]" :class="poolInk(row.stats, i)">
+                      {{ Math.round(stat.winrate * 100) }}%
+                    </div>
+                    <div class="text-[10.5px] text-ink-3">
+                      {{ stat.games }}g · {{ stat.kda.toFixed(2) }}
+                    </div>
+                  </template>
+                  <span v-else class="text-ink-4">—</span>
+                </td>
+              </tr>
+            </tbody>
+
+            <tbody v-for="(list, side) in pools.only" :key="side">
+              <template v-if="list.length">
+                <tr class="band">
+                  <td class="!pl-3" colspan="3">
+                    <span class="label !text-ink-2">Only {{ players[side].gameName }}</span>
+                  </td>
+                </tr>
+                <tr v-for="row in list" :key="row.championId">
+                  <td class="!pl-3">
+                    <span class="flex items-center gap-2.5">
+                      <img
+                        :src="champIcon(row.championId)"
+                        :alt="championName(row.championId)"
+                        width="26"
+                        height="26"
+                        loading="lazy"
+                        class="thumb h-[26px] w-[26px] rounded-[6px]"
+                      />
+                      <span class="truncate font-medium text-ink">
+                        {{ championName(row.championId) }}
+                      </span>
+                    </span>
+                  </td>
+                  <td v-for="(stat, i) in row.stats" :key="i" class="!pr-3 text-right align-middle">
+                    <template v-if="stat">
+                      <div class="text-[13px] font-semibold text-ink">
+                        {{ Math.round(stat.winrate * 100) }}%
+                      </div>
+                      <div class="text-[10.5px] text-ink-3">
+                        {{ stat.games }}g · {{ stat.kda.toFixed(2) }}
+                      </div>
+                    </template>
+                    <span v-else class="text-ink-4">—</span>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </template>
+    </template>
+
+    <div v-else class="skel h-[420px]" />
   </section>
 </template>

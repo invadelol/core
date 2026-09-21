@@ -3,13 +3,14 @@ import drive from '@adonisjs/drive/services/main'
 import logger from '@adonisjs/core/services/logger'
 import { ByteCache } from '#utils/byte_cache'
 
-import { ASSET_PREFIX, FETCH_TIMEOUT_MS, MANIFESTS, MANIFEST_TTL } from '#constants/assets'
+import { ASSET_PREFIX, DDRAGON, FETCH_TIMEOUT_MS, MANIFESTS, MANIFEST_TTL } from '#constants/assets'
 import type { AssetKind } from '#constants/assets'
 import {
   gameDataUrl,
   fallbackSources,
   guessContentType,
   parseManifest,
+  mapSources,
   placeholderSvg,
   rankSources,
   type Manifest,
@@ -110,6 +111,13 @@ class RiotAssetsService {
    */
   private async sources(kind: AssetKind, id: string): Promise<string[]> {
     if (kind === 'rank') return rankSources(id)
+    if (kind === 'map') {
+      const version = await this.ddragonVersion()
+      return [
+        ...(version ? [`${DDRAGON}/cdn/${version}/img/map/map${id}.png`] : []),
+        ...mapSources(id),
+      ]
+    }
     if (kind === 'splash') {
       if (!/^\d+$/.test(id)) return []
       const champion = await this.downloadJson(
@@ -127,25 +135,53 @@ class RiotAssetsService {
     return manifest[id]?.sources ?? fallbackSources(kind, id)
   }
 
+  /**
+   * The current Data Dragon patch.
+   *
+   * Map art is the one asset family Community Dragon does not expose under a
+   * stable path, and Data Dragon requires a version in the URL. The list is
+   * read once a patch cycle; a failed read is never cached, so a blip does not
+   * cost half a day of missing maps.
+   */
+  private async ddragonVersion(): Promise<string | null> {
+    const key = 'riot:ddragon:version'
+    try {
+      const cached = await cache.get<string>({ key })
+      if (cached) return cached
+
+      const versions = await this.downloadJson(`${DDRAGON}/api/versions.json`)
+      const latest = Array.isArray(versions) && typeof versions[0] === 'string' ? versions[0] : null
+      if (latest) await cache.set({ key, value: latest, ttl: MANIFEST_TTL })
+      return latest
+    } catch (error) {
+      logger.warn({ err: error }, 'ddragon version lookup failed')
+      return null
+    }
+  }
+
   /* ── Manifests ──────────────────────────────────────────────── */
 
   private async manifest(kind: AssetKind): Promise<Manifest> {
     const url = MANIFESTS[kind]
     if (!url) return {}
 
+    const key = `riot:manifest:${kind}`
+
     try {
-      return await cache.getOrSet<Manifest>({
-        key: `riot:manifest:${kind}`,
-        ttl: MANIFEST_TTL,
-        factory: async () => {
-          const raw = await this.downloadJson(url)
-          if (!raw) {
-            logger.warn({ kind, url }, 'riot manifest unavailable')
-            return {}
-          }
-          return parseManifest(kind, raw)
-        },
-      })
+      const cached = await cache.get<Manifest>({ key })
+      if (cached && Object.keys(cached).length) return cached
+
+      const raw = await this.downloadJson(url)
+      if (!raw) {
+        // Storing this would serve empty names for the whole TTL over one
+        // blip upstream, so it is never written and the next request retries.
+        logger.warn({ kind, url }, 'riot manifest unavailable')
+        return cached ?? {}
+      }
+
+      const manifest = parseManifest(kind, raw)
+      if (Object.keys(manifest).length) await cache.set({ key, value: manifest, ttl: MANIFEST_TTL })
+      return manifest
     } catch (error) {
       // A cache outage falls through to the conventional paths.
       logger.warn({ err: error, kind }, 'manifest cache read failed')

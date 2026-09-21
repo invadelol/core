@@ -1,4 +1,4 @@
-import { DEFAULT_MATCH_COUNT } from '#config/constants'
+import { DEFAULT_MATCH_COUNT, STATS_WINDOW } from '#config/constants'
 
 /**
  * The six independent requests a profile page makes, defined once.
@@ -15,7 +15,7 @@ import { DEFAULT_MATCH_COUNT } from '#config/constants'
  */
 export const ANALYTICS_PANELS = [
   { key: 'matches', path: `matches?count=${DEFAULT_MATCH_COUNT}&view=summary` },
-  { key: 'stats', path: 'stats?count=100' },
+  { key: 'stats', path: `stats?count=${STATS_WINDOW}` },
   { key: 'ranks', path: 'ranks' },
   { key: 'champions', path: 'champions?count=100' },
   { key: 'activity', path: 'activity' },

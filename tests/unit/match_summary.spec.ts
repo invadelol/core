@@ -44,10 +44,14 @@ function fakeClickhouse(source: Record<string, unknown>) {
       if (table === 'matches') {
         const matches: Record<string, unknown> = {
           match_id: 'EUW1_1',
+          platform: 'EUW1',
           game_start_ms: 1000,
           duration_sec: 1800,
           queue_id: 420,
+          map_id: 11,
           t1_win: 1,
+          t1_bans: [1, 2, 3, 4, 5],
+          t2_bans: [6, 7, 8, 9, 10],
         }
         return matches[column] ?? 0
       }
@@ -86,6 +90,8 @@ const participant = {
   spell2: 14,
   primary_style: 8000,
   secondary_style: 8100,
+  keystone: 8010,
+  lane: 'TOP',
   vision_score: 40,
   dmg_taken: 12000,
   dmg_to_champ: 20000,

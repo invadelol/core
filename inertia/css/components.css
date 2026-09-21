@@ -1,0 +1,527 @@
+/* ──────────────────────────────────────────────────────────────
+   Primitives
+
+   Only the shapes that repeat. A "section" is a rule and a label,
+   not a box, which is what stops the layout turning into panels
+   inside panels.
+   ────────────────────────────────────────────────────────────── */
+@layer components {
+  /* ── Section headings ───────────────────────────────────────── */
+  .section {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--color-line);
+    margin-bottom: 14px;
+  }
+
+  .section > h2,
+  .section > h3 {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--color-ink);
+    white-space: nowrap;
+  }
+
+  .section > .meta {
+    font-size: 11.5px;
+    color: var(--color-ink-3);
+  }
+
+  /* The only box in the system. Outlined, never filled, never nested. */
+  .frame {
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-lg);
+    background: var(--color-panel);
+    overflow: hidden;
+  }
+
+  .label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-ink-3);
+    white-space: nowrap;
+  }
+
+  .display {
+    font-weight: 600;
+    letter-spacing: -0.035em;
+    line-height: 1.05;
+  }
+
+  /* ── Meters ─────────────────────────────────────────────────── */
+  .meter {
+    position: relative;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--color-sunken);
+    overflow: hidden;
+  }
+
+  .meter > span {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: 999px;
+    background: var(--color-ink);
+    transition: width 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  /* ── Segmented control ──────────────────────────────────────── */
+  .seg {
+    display: inline-flex;
+    align-items: stretch;
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--color-panel);
+  }
+
+  .seg > button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-ink-3);
+    white-space: nowrap;
+    border-right: 1px solid var(--color-line);
+    transition:
+      color 0.12s ease,
+      background 0.12s ease;
+  }
+
+  .seg > button:last-child {
+    border-right: 0;
+  }
+
+  .seg > button:hover {
+    color: var(--color-ink);
+    background: var(--color-raised);
+  }
+
+  .seg > button[data-active='true'] {
+    background: var(--color-ink);
+    color: var(--color-bg);
+  }
+
+  .seg > button[data-active='true']:hover {
+    background: var(--color-ink);
+  }
+
+  /* ── Underline tabs ─────────────────────────────────────────── */
+  .tabs {
+    display: flex;
+    align-items: stretch;
+    gap: 20px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tabs > a,
+  .tabs > button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 0 11px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    color: var(--color-ink-3);
+    transition: color 0.12s ease;
+  }
+
+  .tabs > :is(a, button):hover {
+    color: var(--color-ink);
+  }
+
+  .tabs > :is(a, button)[data-active='true'] {
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+
+  .tabs > :is(a, button)[data-active='true']::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 -1px;
+    height: 2px;
+    background: var(--color-ink);
+  }
+
+  /* An in-page anchor styled like a tab, for long analysis pages. */
+  .tabs-link {
+    position: relative;
+    padding: 0 0 10px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--color-ink-3);
+    white-space: nowrap;
+    transition: color 0.12s ease;
+  }
+
+  .tabs-link:hover {
+    color: var(--color-ink);
+  }
+
+  /* ── Buttons ────────────────────────────────────────────────── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px 11px;
+    font-size: 12.5px;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-line-2);
+    background: var(--color-panel);
+    color: var(--color-ink);
+    white-space: nowrap;
+    transition:
+      background 0.12s ease,
+      border-color 0.12s ease;
+  }
+
+  .btn:hover:not(:disabled) {
+    background: var(--color-raised);
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+  }
+
+  .btn-primary {
+    background: var(--color-ink);
+    border-color: var(--color-ink);
+    color: var(--color-bg);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--color-ink-2);
+    border-color: var(--color-ink-2);
+  }
+
+  .btn-ghost {
+    border-color: transparent;
+    background: transparent;
+    color: var(--color-ink-2);
+  }
+
+  .btn-ghost:hover:not(:disabled) {
+    background: var(--color-raised);
+    color: var(--color-ink);
+  }
+
+  .btn-sm {
+    padding: 4px 8px;
+    font-size: 11.5px;
+    gap: 4px;
+  }
+
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    color: var(--color-ink-3);
+    transition:
+      background 0.12s ease,
+      color 0.12s ease;
+  }
+
+  .icon-btn:hover {
+    background: var(--color-raised);
+    color: var(--color-ink);
+  }
+
+  /* ── Inputs ─────────────────────────────────────────────────── */
+  .field {
+    width: 100%;
+    padding: 6px 10px;
+    font-size: 12.5px;
+    color: var(--color-ink);
+    background: var(--color-panel);
+    border: 1px solid var(--color-line-2);
+    border-radius: var(--radius-sm);
+    transition: border-color 0.12s ease;
+  }
+
+  .field::placeholder {
+    color: var(--color-ink-4);
+  }
+
+  .field:focus {
+    outline: none;
+    border-color: var(--color-ink);
+  }
+
+  /* ── Popovers ───────────────────────────────────────────────── */
+  .menu {
+    background: var(--color-panel);
+    border: 1px solid var(--color-line-2);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-e2);
+    overflow: hidden;
+  }
+
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 10px;
+    font-size: 12.5px;
+    color: var(--color-ink-2);
+    text-align: left;
+    transition:
+      background 0.1s ease,
+      color 0.1s ease;
+  }
+
+  .menu-item:hover,
+  .menu-item[data-active='true'] {
+    background: var(--color-raised);
+    color: var(--color-ink);
+  }
+
+  /* ── Game art ───────────────────────────────────────────────── */
+  .thumb {
+    background: var(--color-sunken);
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  /* Rune glyphs are drawn as light artwork on transparency. */
+  .glyph {
+    border-radius: 50%;
+    background: var(--color-raised);
+    flex-shrink: 0;
+  }
+
+  /* ── Data tables ────────────────────────────────────────────── */
+  .dt {
+    width: 100%;
+    font-size: 12.5px;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .dt thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 7px 10px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-ink-3);
+    text-align: left;
+    white-space: nowrap;
+    background: var(--color-bg);
+    border-bottom: 1px solid var(--color-line-2);
+  }
+
+  .dt td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--color-line);
+    vertical-align: middle;
+  }
+
+  .dt tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .dt-hover tbody tr:hover td {
+    background: var(--color-raised);
+  }
+
+  /* A full-width heading row inside a table, used to band two teams
+     together in one table instead of splitting them into two. */
+  .dt .band td {
+    padding: 8px 10px;
+    background: var(--color-raised);
+    border-bottom: 1px solid var(--color-line);
+    border-top: 1px solid var(--color-line);
+  }
+
+  .dt tbody:first-of-type .band td {
+    border-top: 0;
+  }
+
+  /* ── Performance grade ──────────────────────────────────────── */
+  /* How the game went, in one glyph. The colour carries it; the hairline
+     under the letter is the margin behind the grade. */
+  .grade {
+    position: relative;
+    display: grid;
+    place-items: center;
+    flex: none;
+    border-radius: 7px;
+    padding-bottom: 3px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    color: var(--grade);
+    background: color-mix(in srgb, var(--grade) 10%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--grade) 26%, transparent);
+  }
+
+  .grade-bar {
+    position: absolute;
+    inset: auto 5px 4px 5px;
+    height: 2px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--grade) 18%, transparent);
+    overflow: hidden;
+  }
+
+  .grade-bar > span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--grade);
+  }
+
+  /* ── Skeletons ──────────────────────────────────────────────── */
+  .skel {
+    background: linear-gradient(
+      90deg,
+      var(--color-raised) 25%,
+      var(--color-sunken) 37%,
+      var(--color-raised) 63%
+    );
+    background-size: 400% 100%;
+    border-radius: var(--radius-md);
+    animation: skel 1.4s ease-in-out infinite;
+  }
+
+  @keyframes skel {
+    0% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0 50%;
+    }
+  }
+
+  /* ── Scroll strips ──────────────────────────────────────────── */
+  .scroll-x {
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-2) transparent;
+  }
+
+  .scroll-x::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .scroll-x::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scroll-x::-webkit-scrollbar-thumb {
+    background: var(--color-line-2);
+    border-radius: 999px;
+  }
+
+  /* ── Notices ────────────────────────────────────────────────── */
+  .notice {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    font-size: 12.5px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-loss);
+    color: var(--color-ink);
+  }
+
+  /* ── Live pulse ─────────────────────────────────────────────── */
+  .pulse {
+    position: relative;
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--color-win);
+    flex-shrink: 0;
+  }
+
+  .pulse::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    border: 1px solid var(--color-win);
+    opacity: 0;
+    animation: pulse 2s ease-out infinite;
+  }
+
+  @keyframes pulse {
+    0% {
+      opacity: 0.7;
+      transform: scale(0.6);
+    }
+    70%,
+    100% {
+      opacity: 0;
+      transform: scale(1.4);
+    }
+  }
+
+  /* ── Scrubber ───────────────────────────────────────────────── */
+  .scrub {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 16px;
+    background: transparent;
+  }
+
+  .scrub::-webkit-slider-runnable-track {
+    height: 3px;
+    border-radius: 999px;
+    background: var(--color-sunken);
+  }
+
+  .scrub::-moz-range-track {
+    height: 3px;
+    border-radius: 999px;
+    background: var(--color-sunken);
+  }
+
+  .scrub::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 13px;
+    height: 13px;
+    margin-top: -5px;
+    border-radius: 50%;
+    background: var(--color-ink);
+    border: 2px solid var(--color-bg);
+    cursor: grab;
+  }
+
+  .scrub::-moz-range-thumb {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: var(--color-ink);
+    border: 2px solid var(--color-bg);
+    cursor: grab;
+  }
+}

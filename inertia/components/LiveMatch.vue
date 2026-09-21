@@ -1,24 +1,29 @@
 <script setup lang="ts">
-import { ref, watch, onBeforeUnmount, computed } from 'vue'
-import { Radio, RefreshCw, Clock3 } from 'lucide-vue-next'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { RefreshCw } from 'lucide-vue-next'
+import PlayerLink from './PlayerLink.vue'
 import {
+  champIcon,
   championName,
-  championSplash,
-  spellIcon,
+  queueName,
   runeIcon,
   runeStyleIcon,
-  queueName,
-  champIcon,
+  spellIcon,
   TIER_NAMES,
 } from '../lib/assets.js'
+import { duration } from '../lib/format.js'
 import type { LiveGame } from '../lib/types.js'
+
 const props = defineProps<{ puuid: string; name: string }>()
+
 const game = ref<LiveGame | null>(null)
 const loading = ref(true)
 const error = ref('')
-const checked = ref('')
+const checkedAt = ref('')
+
 let controller: AbortController | undefined
-let timer: ReturnType<typeof setInterval> | undefined
+let clock: ReturnType<typeof setInterval> | undefined
+
 async function refresh() {
   controller?.abort()
   controller = new AbortController()
@@ -30,19 +35,20 @@ async function refresh() {
     if (!response.ok)
       throw new Error(
         response.status === 503
-          ? 'Riot is temporarily unavailable. Please try again shortly.'
-          : 'Could not check this player’s live game.'
+          ? 'Riot is temporarily unavailable. Try again shortly.'
+          : "Could not check this player's live game."
       )
     const data = await response.json()
     if (signal.aborted) return
     game.value = data.game
-    checked.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    checkedAt.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   } catch (e) {
     if (!signal.aborted) error.value = (e as Error).message
   } finally {
     if (!signal.aborted) loading.value = false
   }
 }
+
 watch(
   () => props.puuid,
   () => {
@@ -51,122 +57,165 @@ watch(
   },
   { immediate: true }
 )
+
 const now = ref(Date.now())
-timer = setInterval(() => {
-  now.value = Date.now()
-}, 1000)
+clock = setInterval(() => (now.value = Date.now()), 1000)
+
 onBeforeUnmount(() => {
   controller?.abort()
-  clearInterval(timer)
+  clearInterval(clock)
 })
+
 const elapsed = computed(() =>
   game.value?.gameStartTime
     ? Math.max(0, Math.floor((now.value - game.value.gameStartTime) / 1000))
     : (game.value?.gameLength ?? 0)
 )
+
+/** "Name#Tag" as Riot sends it for a live lobby, split for linking. */
+function split(riotId?: string) {
+  const hash = riotId?.indexOf('#') ?? -1
+  if (!riotId || hash < 1) return { gameName: riotId ?? '', tagLine: '' }
+  return { gameName: riotId.slice(0, hash), tagLine: riotId.slice(hash + 1) }
+}
+
+const sides = computed(() =>
+  [100, 200].map((teamId) => ({
+    teamId,
+    label: teamId === 100 ? 'Blue side' : 'Red side',
+    color: teamId === 100 ? 'var(--color-blue)' : 'var(--color-red)',
+    bans: (game.value?.bannedChampions ?? []).filter(
+      (b) => b.teamId === teamId && b.championId > 0
+    ),
+    players: (game.value?.participants ?? []).filter((p) => p.teamId === teamId),
+  }))
+)
 </script>
+
 <template>
-  <section class="space-y-5">
-    <div class="section-intro">
-      <div>
-        <span class="eyebrow">ON THE RIFT, RIGHT NOW</span>
-        <h2>Live game <Radio :size="22" /></h2>
-        <p>See the lineup, summoner spells, and rune choices before the next play.</p>
-      </div>
-      <button class="btn" :disabled="loading" @click="refresh">
-        <RefreshCw :size="14" :class="{ 'animate-spin': loading }" />{{
-          loading ? 'Checking…' : 'Refresh live game'
-        }}
+  <section>
+    <div v-if="error" class="py-20 text-center" role="alert">
+      <p class="text-[13px] font-medium text-ink">Unable to check live status</p>
+      <p class="mx-auto mt-1.5 max-w-[44ch] text-[12px] text-ink-3">{{ error }}</p>
+      <button class="btn btn-sm mt-4" @click="refresh">Try again</button>
+    </div>
+
+    <div v-else-if="loading && !game" class="skel h-[420px]" />
+
+    <div v-else-if="!game" class="py-24 text-center">
+      <span class="pulse mx-auto mb-4 block !h-2 !w-2" />
+      <p class="text-[14px] font-medium text-ink">{{ name }} is not in a game right now</p>
+      <p class="mx-auto mt-2 max-w-[48ch] text-[12.5px] leading-relaxed text-ink-3">
+        Both line-ups appear here once they load into a supported match.
+      </p>
+      <button class="btn btn-sm mt-5" :disabled="loading" @click="refresh">
+        <RefreshCw :size="12" :class="{ 'animate-spin': loading }" />
+        Check again
+        <span v-if="checkedAt" class="text-ink-3">· {{ checkedAt }}</span>
       </button>
     </div>
-    <div v-if="error" class="card live-empty" role="alert">
-      <Radio :size="35" />
-      <h3>Unable to check live status</h3>
-      <p>{{ error }}</p>
-      <button class="btn" @click="refresh">Try again</button>
-    </div>
-    <div
-      v-else-if="loading && !game"
-      class="skel h-96"
-      role="status"
-      aria-label="Checking live game"
-    />
-    <div v-else-if="!game" class="card live-empty">
-      <div class="live-empty-icon"><Radio :size="32" /></div>
-      <span class="eyebrow">BETWEEN GAMES</span>
-      <h3>{{ name }} isn’t in a live game</h3>
-      <p>
-        When they enter a supported match, their team and opponents will appear here. Refresh after
-        the game begins.
-      </p>
-      <span class="subtle"><Clock3 :size="13" /> Checked at {{ checked }}</span>
-    </div>
-    <template v-else
-      ><div class="live-game-heading">
-        <span><i class="live-dot" /> IN PROGRESS · {{ queueName(game.gameQueueConfigId) }}</span
-        ><strong class="num"
-          >{{ Math.floor(elapsed / 60) }}:{{ String(elapsed % 60).padStart(2, '0') }}</strong
-        >
+
+    <template v-else>
+      <div class="section">
+        <h2>Live</h2>
+        <span class="meta flex items-center gap-1.5">
+          <span class="pulse" />
+          {{ queueName(game.gameQueueConfigId) }}
+        </span>
+        <span class="num display ml-auto text-[18px] text-ink">{{ duration(elapsed) }}</span>
+        <button class="btn btn-sm" :disabled="loading" @click="refresh">
+          <RefreshCw :size="12" :class="{ 'animate-spin': loading }" />
+          Refresh
+        </button>
       </div>
-      <div v-for="teamId in [100, 200]" :key="teamId" class="space-y-3">
-        <div class="live-team-title">
-          <h3 :class="teamId === 100 ? 'text-win' : 'text-loss'">
-            {{ teamId === 100 ? 'Blue side' : 'Red side' }}
-          </h3>
-          <div>
-            <span class="subtle">Bans</span
-            ><img
-              v-for="(ban, i) in game.bannedChampions.filter(
-                (b) => b.teamId === teamId && b.championId > 0
-              )"
-              :key="i"
-              :src="champIcon(ban.championId)"
-              :alt="championName(ban.championId)"
-              :title="championName(ban.championId)"
-            />
+
+      <div class="grid gap-x-10 gap-y-8 lg:grid-cols-2">
+        <div v-for="side in sides" :key="side.teamId">
+          <div class="mb-3 flex items-center gap-2">
+            <span class="h-3 w-[3px] rounded-full" :style="{ background: side.color }" />
+            <span class="label !text-[9.5px]">{{ side.label }}</span>
+            <span v-if="side.bans.length" class="ml-auto flex items-center gap-1.5">
+              <span class="label !text-[9.5px]">Bans</span>
+              <img
+                v-for="(ban, i) in side.bans"
+                :key="i"
+                :src="champIcon(ban.championId)"
+                :alt="championName(ban.championId)"
+                :title="championName(ban.championId)"
+                class="thumb h-[18px] w-[18px] rounded-[3px] opacity-45 grayscale"
+              />
+            </span>
           </div>
-        </div>
-        <div class="live-lineup">
-          <article
-            v-for="(p, i) in game.participants.filter((p) => p.teamId === teamId)"
-            :key="p.puuid ?? i"
-            class="live-player"
-            :class="{ 'live-player-me': p.puuid === puuid }"
-          >
-            <img
-              class="live-player-art"
-              :src="championSplash(p.championId)"
-              :alt="championName(p.championId)"
-            />
-            <div class="live-player-info">
-              <span class="eyebrow">{{ championName(p.championId) }}</span>
-              <h4>{{ p.riotId || 'Hidden player' }}</h4>
-              <span class="live-history" v-if="p.championStats"
-                >{{ p.championStats.games }} tracked games ·
-                {{ Math.round(p.championStats.winrate * 100) }}% WR</span
-              ><span v-else class="live-history">No tracked games on this champion</span>
-              <span v-if="p.rank" class="live-rank" title="Latest tracked Solo/Duo rank"
-                >{{ TIER_NAMES[p.rank.tier] || p.rank.tier }} {{ p.rank.division }} ·
-                {{ p.rank.leaguePoints }} LP</span
-              >
-              <span v-if="p.puuid === puuid" class="live-you">THIS PLAYER</span>
-              <div class="live-loadout">
-                <img :src="spellIcon(p.spell1Id)" alt="Summoner spell 1" /><img
+
+          <ul class="divide-y divide-line">
+            <li
+              v-for="(p, i) in side.players"
+              :key="p.puuid ?? i"
+              class="flex items-center gap-3 py-2.5"
+              :class="p.puuid === puuid ? 'bg-raised' : ''"
+            >
+              <img
+                :src="champIcon(p.championId)"
+                :alt="championName(p.championId)"
+                loading="lazy"
+                class="thumb h-9 w-9 rounded-[7px]"
+              />
+
+              <span class="flex shrink-0 flex-col gap-[2px]">
+                <img
+                  :src="spellIcon(p.spell1Id)"
+                  alt=""
+                  class="thumb h-[16px] w-[16px] rounded-[3px]"
+                />
+                <img
                   :src="spellIcon(p.spell2Id)"
-                  alt="Summoner spell 2"
-                /><img
-                  v-if="p.perks?.perkIds[0]"
+                  alt=""
+                  class="thumb h-[16px] w-[16px] rounded-[3px]"
+                />
+              </span>
+
+              <span class="flex shrink-0 items-center gap-1">
+                <img
+                  v-if="p.perks?.perkIds?.[0]"
                   :src="runeIcon(p.perks.perkIds[0])"
                   alt="Keystone"
-                /><img
+                  class="glyph h-[20px] w-[20px]"
+                />
+                <img
                   v-if="p.perks?.perkSubStyle"
                   :src="runeStyleIcon(p.perks.perkSubStyle)"
-                  alt="Secondary rune tree"
+                  alt="Secondary tree"
+                  class="h-[14px] w-[14px]"
                 />
-              </div>
-            </div>
-          </article>
-        </div></div
-    ></template>
+              </span>
+
+              <span class="min-w-0 flex-1">
+                <PlayerLink
+                  v-bind="split(p.riotId)"
+                  class="text-[12.5px]"
+                  :is-self="p.puuid === puuid"
+                />
+                <span class="num block truncate text-[10.5px] text-ink-3">
+                  {{ championName(p.championId) }}
+                  <template v-if="p.championStats">
+                    <span class="text-ink-4">·</span>
+                    {{ p.championStats.games }} tracked ·
+                    {{ Math.round(p.championStats.winrate * 100) }}% WR
+                  </template>
+                </span>
+              </span>
+
+              <span v-if="p.rank" class="num shrink-0 text-right text-[11px]">
+                <span class="block text-ink-2">
+                  {{ TIER_NAMES[p.rank.tier] || p.rank.tier }} {{ p.rank.division }}
+                </span>
+                <span class="block text-ink-4">{{ p.rank.leaguePoints }} LP</span>
+              </span>
+              <span v-else class="shrink-0 text-[11px] text-ink-4">Unranked</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </template>
   </section>
 </template>

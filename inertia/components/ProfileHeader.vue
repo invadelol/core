@@ -1,72 +1,80 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { ArrowLeftRight, Eye, RefreshCw, Share2 } from 'lucide-vue-next'
 import { Link } from '@inertiajs/vue3'
-import { Eye, RefreshCw, Share2, ArrowLeftRight, Clock3, Sparkles } from 'lucide-vue-next'
-import { profileIcon, championSplash, championName } from '../lib/assets.js'
-import { timeAgo } from '../lib/format.js'
-import type { Rank, Summoner } from '../lib/types.js'
+import { champIcon, championName, profileIcon } from '../lib/assets.js'
+import { profilePath, timeAgo } from '../lib/format.js'
+import type { Summoner } from '../lib/types.js'
+
 const props = defineProps<{
   summoner: Summoner
-  ranks: Rank[]
   viewCount: number | null
   isSyncing: boolean
   syncMessage: string | null
   lastGameMs: number | null
   mainChampion?: number
 }>()
+
 defineEmits<{ sync: []; share: [] }>()
-const path = computed(
-  () => `/${encodeURIComponent(`${props.summoner.gameName}-${props.summoner.tagLine}`)}`
-)
+
+const path = computed(() => profilePath(props.summoner.gameName, props.summoner.tagLine))
 </script>
+
 <template>
-  <section class="profile-hero">
-    <img
-      v-if="mainChampion"
-      class="hero-art"
-      :src="championSplash(mainChampion)"
-      :alt="`${championName(mainChampion)} splash art`"
-      fetchpriority="high"
-    />
-    <div class="hero-shade" />
-    <div class="hero-topline">
-      <span class="hero-eyebrow">THE PLAYER BEHIND THE PLAYS</span
-      ><span v-if="mainChampion" class="hero-main"
-        ><Sparkles :size="12" /> {{ championName(mainChampion) }} main</span
+  <header class="flex flex-wrap items-center gap-x-5 gap-y-3 pb-5">
+    <div class="relative shrink-0">
+      <img
+        :src="profileIcon(summoner.profileIconId)"
+        :alt="summoner.gameName"
+        width="60"
+        height="60"
+        class="thumb h-[60px] w-[60px] rounded-[12px]"
+      />
+      <span
+        class="num absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-[4px] border border-line bg-panel px-1.5 py-px text-[10px] font-semibold text-ink"
       >
+        {{ summoner.summonerLevel ?? '—' }}
+      </span>
     </div>
-    <div class="hero-profile">
-      <div class="hero-avatar">
-        <img :src="profileIcon(summoner.profileIconId)" :alt="summoner.gameName" /><span>{{
-          summoner.summonerLevel ?? '—'
-        }}</span>
-      </div>
-      <div class="hero-identity">
-        <div class="hero-region">{{ summoner.platform }} <span>•</span> SUMMONER PROFILE</div>
-        <h1>
-          {{ summoner.gameName }}<span>#{{ summoner.tagLine }}</span>
-        </h1>
-        <p>Your game. A clearer picture.</p>
-      </div>
-    </div>
-    <div class="hero-footer">
-      <div class="hero-meta">
-        <span v-if="lastGameMs"><Clock3 :size="13" /> Last game {{ timeAgo(lastGameMs) }}</span
-        ><span v-if="viewCount !== null"
-          ><Eye :size="14" /> {{ viewCount.toLocaleString() }} views</span
-        >
-      </div>
-      <div class="hero-actions">
-        <span v-if="syncMessage" class="sync-message" role="status">{{ syncMessage }}</span
-        ><Link :href="`${path}/compare`" class="hero-button"
-          ><ArrowLeftRight :size="14" /> Compare</Link
-        ><button class="hero-button" @click="$emit('share')"><Share2 :size="14" /> Share</button
-        ><button class="hero-button hero-update" :disabled="isSyncing" @click="$emit('sync')">
-          <RefreshCw :size="14" :class="{ 'animate-spin': isSyncing }" />{{
-            isSyncing ? 'Updating…' : 'Update'
-          }}
-        </button>
+
+    <div class="min-w-0 flex-1 basis-[calc(100%-5.5rem)] sm:basis-auto">
+      <h1 class="display truncate text-[clamp(24px,3vw,30px)] text-ink">
+        {{ summoner.gameName }}<span class="font-normal text-ink-4">#{{ summoner.tagLine }}</span>
+      </h1>
+
+      <div class="num mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-ink-3">
+        <span class="font-medium text-ink-2">{{ summoner.platform }}</span>
+        <span v-if="mainChampion" class="flex items-center gap-1.5">
+          <img
+            :src="champIcon(mainChampion)"
+            :alt="championName(mainChampion)"
+            class="thumb h-4 w-4 rounded-[3px]"
+          />
+          {{ championName(mainChampion) }}
+        </span>
+        <span v-if="lastGameMs">Last game {{ timeAgo(lastGameMs) }}</span>
+        <span v-if="viewCount !== null" class="flex items-center gap-1">
+          <Eye :size="11" />{{ viewCount.toLocaleString() }}
+        </span>
       </div>
     </div>
-  </section>
+
+    <div class="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto">
+      <span v-if="syncMessage" class="text-[11.5px] text-ink-2" role="status">
+        {{ syncMessage }}
+      </span>
+      <Link :href="`${path}/compare`" class="btn btn-sm">
+        <ArrowLeftRight :size="12" />
+        Compare
+      </Link>
+      <button class="btn btn-sm" @click="$emit('share')">
+        <Share2 :size="12" />
+        Share
+      </button>
+      <button class="btn btn-sm btn-primary" :disabled="isSyncing" @click="$emit('sync')">
+        <RefreshCw :size="12" :class="{ 'animate-spin': isSyncing }" />
+        {{ isSyncing ? 'Updating' : 'Update' }}
+      </button>
+    </div>
+  </header>
 </template>

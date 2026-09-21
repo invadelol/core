@@ -146,7 +146,24 @@ All routes require a valid PUUID and are cached.
 | `GET` | `/summoners/puuid/:puuid/stats` | Overall stats |
 | `GET` | `/summoners/puuid/:puuid/champions` | Per-champion stats |
 | `GET` | `/summoners/puuid/:puuid/matches` | Recent matches |
+| `GET` | `/matches/:id` | One match in full, with its timeline |
 | `PUT` | `/summoners/puuid/:puuid/increment` | Increment profile view count |
+
+---
+
+## Interface
+
+The app ships a light and a dark theme, both designed rather than derived. The
+theme follows the operating system by default and can be set explicitly from
+the header; the choice is stored in `localStorage` and replayed before first
+paint, so there is no flash.
+
+Structure comes from rules and spacing rather than nested cards, five hues
+carry all the meaning, and Riot's own role glyphs are used wherever a lane is
+named.
+
+See [docs/design.md](docs/design.md) for the palette and primitives, and
+[docs/player-profile.md](docs/player-profile.md) for what each page shows.
 
 ---
 
