@@ -8,7 +8,7 @@ const puuid = 'P'.repeat(78)
 const context = {
   params: { puuid },
   request: { validateUsing: async () => ({ puuid }) },
-  response: { ok: (value: unknown) => value },
+  response: { ok: (value: unknown) => value, header: () => {} },
 } as unknown as HttpContext
 
 async function withResponse(
