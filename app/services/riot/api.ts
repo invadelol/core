@@ -1,6 +1,7 @@
 import { platformRegion } from './routing.js'
 import env from '#start/env'
 import { RiotAPI, RiotAPITypes, PlatformId } from '@fightmegg/riot-api'
+import { CoalescingRiotAPI } from './client.js'
 
 export type { RiotAPITypes }
 
@@ -11,7 +12,7 @@ export class RiotApiService {
   public client: RiotAPI
 
   constructor() {
-    this.client = new RiotAPI(env.get('RIOT_API_KEY'))
+    this.client = new CoalescingRiotAPI(env.get('RIOT_API_KEY'))
   }
 
   /**

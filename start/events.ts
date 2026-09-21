@@ -1,9 +1,9 @@
 import emitter from '@adonisjs/core/services/emitter'
 import SummonerUpdated from '#events/summoner_updated'
-import InvalidateSummonerCache from '#listeners/invalidate_summoner_cache'
-import UpsertMatchParticipants from '#listeners/upsert_match_participants'
-import UpdateSummonerRank from '#listeners/update_summoner_rank'
+const InvalidateSummonerCache = () => import('#listeners/invalidate_summoner_cache')
+const UpsertMatchParticipants = () => import('#listeners/upsert_match_participants')
 
 emitter.on(SummonerUpdated, [InvalidateSummonerCache])
 emitter.on(SummonerUpdated, [UpsertMatchParticipants])
-emitter.on(SummonerUpdated, [UpdateSummonerRank])
+// The sync controller awaits rank refresh and reports partial failure to callers.
+// Running it again as a background listener duplicates Riot requests.

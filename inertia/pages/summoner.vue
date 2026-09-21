@@ -512,7 +512,17 @@ async function sync() {
       await applyFilters()
       void loadMastery()
     } else {
-      syncMessage.value = res.status === 404 ? 'No new matches' : 'Update failed'
+      const failure = await res.json().catch(() => null)
+      if (signal.aborted) return
+      const code = failure?.errors?.[0]?.code
+      syncMessage.value =
+        code === 'E_RIOT_RATE_LIMITED'
+          ? `Riot rate limit reached. Try again in ${failure.retryAfter ?? 60}s`
+          : res.status === 404
+            ? 'Player not found'
+            : res.status === 503
+              ? 'Riot is temporarily unavailable. Try again shortly'
+              : 'Update failed'
     }
   } catch {
     if (!signal.aborted) syncMessage.value = 'Update failed'

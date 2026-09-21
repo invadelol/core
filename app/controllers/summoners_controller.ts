@@ -13,7 +13,10 @@ import {
   getMatchesValidator,
 } from '#validators/summoner'
 import { invalidateResponseCache } from '#services/http_response_cache'
+import { SyncGuard } from '#utils/sync_guard'
 import { translateRiotError } from '#utils/riot_errors'
+
+const syncGuard = new SyncGuard()
 
 export default class SummonersController {
   /**
@@ -39,30 +42,39 @@ export default class SummonersController {
   async sync({ request, response }: HttpContext) {
     const { summoner, platform } = await request.validateUsing(syncSummonerValidator)
 
-    let resolvedSummoner
-    let newMatches
-    try {
-      resolvedSummoner = await summonerService.resolveAndUpsert(summoner, platform, {
-        refresh: true,
-      })
-      newMatches = await matchService.update(
-        resolvedSummoner.puuid,
-        riotApiService.platformToRegion(resolvedSummoner.platform)
-      )
-    } catch (error) {
-      throw translateRiotError(error)
-    }
+    const identity = summonerService.normalize(summoner)
+    const key = JSON.stringify([
+      identity?.gameName.toLowerCase(),
+      identity?.tagLine.toLowerCase(),
+      platform?.toUpperCase(),
+    ])
+    const result = await syncGuard.run(key, async () => {
+      let resolvedSummoner
+      let newMatches
+      try {
+        resolvedSummoner = await summonerService.resolveAndUpsert(summoner, platform, {
+          refresh: true,
+        })
+        newMatches = await matchService.update(
+          resolvedSummoner.puuid,
+          riotApiService.platformToRegion(resolvedSummoner.platform)
+        )
+      } catch (error) {
+        throw translateRiotError(error)
+      }
 
-    // Ranks change even when all recent matches were ingested by another player's update.
-    let rankRefreshFailed = false
-    try {
-      await summonerService.updateRanks(resolvedSummoner.puuid, resolvedSummoner.platform)
-      await invalidateResponseCache([`summoner:${resolvedSummoner.puuid}`])
-    } catch (error) {
-      rankRefreshFailed = true
-      logger.warn({ err: error }, 'Match update succeeded but rank refresh failed')
-    }
-    return response.ok({ summoner: resolvedSummoner, matches: newMatches, rankRefreshFailed })
+      // Ranks change even when all recent matches were ingested by another player's update.
+      let rankRefreshFailed = false
+      try {
+        await summonerService.updateRanks(resolvedSummoner.puuid, resolvedSummoner.platform)
+        await invalidateResponseCache([`summoner:${resolvedSummoner.puuid}`])
+      } catch (error) {
+        rankRefreshFailed = true
+        logger.warn({ err: error }, 'Match update succeeded but rank refresh failed')
+      }
+      return { summoner: resolvedSummoner, matches: newMatches, rankRefreshFailed }
+    })
+    return response.ok(result)
   }
 
   /**

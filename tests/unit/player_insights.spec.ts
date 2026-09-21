@@ -4,9 +4,12 @@ import cache from '@adonisjs/cache/services/main'
 import Summoner from '#models/summoner'
 import PlayerInsightsController from '#controllers/player_insights_controller'
 
-const puuid = 'P'.repeat(78)
+let puuid = 'P'.repeat(78)
+let responseId = 0
 const context = {
-  params: { puuid },
+  get params() {
+    return { puuid }
+  },
   request: { validateUsing: async () => ({ puuid }) },
   response: { ok: (value: unknown) => value, header: () => {} },
 } as unknown as HttpContext
@@ -16,6 +19,7 @@ async function withResponse(
   body: unknown,
   run: (controller: PlayerInsightsController, urls: string[]) => Promise<void>
 ) {
+  puuid = String(++responseId).padStart(78, 'P')
   const fetch = globalThis.fetch
   const find = Summoner.findBy
   const getOrSet = cache.getOrSet
@@ -27,7 +31,7 @@ async function withResponse(
     urls.push(url)
     return new Response(JSON.stringify(body), {
       status,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Retry-After': '19' },
     })
   }) as typeof globalThis.fetch
   try {
@@ -40,6 +44,20 @@ async function withResponse(
 }
 
 test.group('Player insights', () => {
+  test('backs off repeated mastery reads using Riot Retry-After', async ({ assert }) => {
+    await withResponse(429, {}, async (controller, urls) => {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const [result] = await Promise.allSettled([controller.mastery(context)])
+        assert.equal(result.status, 'rejected')
+        if (result.status === 'rejected') {
+          assert.equal(result.reason.code, 'E_RIOT_RATE_LIMITED')
+          assert.equal(result.reason.retryAfter, 19)
+        }
+      }
+      assert.equal(urls.length, 1)
+    })
+  })
+
   test('only a spectator 404 means the player is between games', async ({ assert }) => {
     await withResponse(404, {}, async (controller, urls) => {
       assert.deepEqual(await controller.live(context), { game: null })
