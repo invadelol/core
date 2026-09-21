@@ -9,8 +9,6 @@ import RoleIcon from './RoleIcon.vue'
 import GradeBadge from './GradeBadge.vue'
 import Scoreboard from './Scoreboard.vue'
 import MatchTimeline from './MatchTimeline.vue'
-import MatchTags from './MatchTags.vue'
-import { matchTags } from '../lib/match_tags.js'
 import { champIcon, championName, queueName, spellIcon, POSITION_NAMES } from '../lib/assets.js'
 import { compact, duration, kda, ordinal, timeAgo } from '../lib/format.js'
 import {
@@ -127,7 +125,6 @@ const row = computed(() => {
       100,
     standing: lobby.rank[props.puuid] ?? 0,
     grade: gradeFor(lobby, props.puuid),
-    tags: matchTags(match, props.puuid, lobby),
     teams: teamOrder(match).map((teamId) => ({ teamId, members: teamMembers(match, teamId) })),
   }
 })
@@ -310,8 +307,6 @@ async function copyLink() {
         </button>
       </div>
     </div>
-
-    <MatchTags :tags="row.tags" />
 
     <!-- Expanded: the same depth the match page has, in place -->
     <div v-if="expanded" class="border-t border-line bg-raised">
