@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RefreshCw } from 'lucide-vue-next'
 import PlayerLink from './PlayerLink.vue'
 import {
@@ -23,15 +23,22 @@ const checkedAt = ref('')
 
 let controller: AbortController | undefined
 let clock: ReturnType<typeof setInterval> | undefined
+let poll: ReturnType<typeof setTimeout> | undefined
 
-async function refresh() {
+async function refresh(background = false) {
+  clearTimeout(poll)
   controller?.abort()
   controller = new AbortController()
   const signal = controller.signal
-  loading.value = true
-  error.value = ''
+  if (!background) {
+    loading.value = true
+    error.value = ''
+  }
   try {
-    const response = await fetch(`/api/summoners/puuid/${props.puuid}/live`, { signal })
+    const response = await fetch(`/api/summoners/puuid/${props.puuid}/live`, {
+      signal,
+      cache: 'no-store',
+    })
     if (!response.ok)
       throw new Error(
         response.status === 503
@@ -40,12 +47,18 @@ async function refresh() {
       )
     const data = await response.json()
     if (signal.aborted) return
+    error.value = ''
     game.value = data.game
     checkedAt.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   } catch (e) {
     if (!signal.aborted) error.value = (e as Error).message
   } finally {
-    if (!signal.aborted) loading.value = false
+    if (!signal.aborted) {
+      loading.value = false
+      poll = setTimeout(() => {
+        if (document.visibilityState === 'visible') void refresh(true)
+      }, 30_000)
+    }
   }
 }
 
@@ -61,9 +74,17 @@ watch(
 const now = ref(Date.now())
 clock = setInterval(() => (now.value = Date.now()), 1000)
 
+function onVisibilityChange() {
+  if (document.visibilityState === 'visible') void refresh(true)
+}
+
+onMounted(() => document.addEventListener('visibilitychange', onVisibilityChange))
+
 onBeforeUnmount(() => {
   controller?.abort()
   clearInterval(clock)
+  clearTimeout(poll)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
 })
 
 const elapsed = computed(() =>
@@ -97,18 +118,18 @@ const sides = computed(() =>
     <div v-if="error" class="py-20 text-center" role="alert">
       <p class="text-[13px] font-medium text-ink">Unable to check live status</p>
       <p class="mx-auto mt-1.5 max-w-[44ch] text-[12px] text-ink-3">{{ error }}</p>
-      <button class="btn btn-sm mt-4" @click="refresh">Try again</button>
+      <button class="btn btn-sm mt-4" @click="refresh()">Try again</button>
     </div>
 
     <div v-else-if="loading && !game" class="skel h-[420px]" />
 
     <div v-else-if="!game" class="py-24 text-center">
       <span class="pulse mx-auto mb-4 block !h-2 !w-2" />
-      <p class="text-[14px] font-medium text-ink">{{ name }} is not in a game right now</p>
+      <p class="text-[14px] font-medium text-ink">No live match found for {{ name }}</p>
       <p class="mx-auto mt-2 max-w-[48ch] text-[12.5px] leading-relaxed text-ink-3">
-        Both line-ups appear here once they load into a supported match.
+        Riot hasn't returned an active match. We'll check again automatically every 30 seconds.
       </p>
-      <button class="btn btn-sm mt-5" :disabled="loading" @click="refresh">
+      <button class="btn btn-sm mt-5" :disabled="loading" @click="refresh()">
         <RefreshCw :size="12" :class="{ 'animate-spin': loading }" />
         Check again
         <span v-if="checkedAt" class="text-ink-3">· {{ checkedAt }}</span>
@@ -123,7 +144,7 @@ const sides = computed(() =>
           {{ queueName(game.gameQueueConfigId) }}
         </span>
         <span class="num display ml-auto text-[18px] text-ink">{{ duration(elapsed) }}</span>
-        <button class="btn btn-sm" :disabled="loading" @click="refresh">
+        <button class="btn btn-sm" :disabled="loading" @click="refresh()">
           <RefreshCw :size="12" :class="{ 'animate-spin': loading }" />
           Refresh
         </button>
