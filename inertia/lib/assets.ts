@@ -76,8 +76,10 @@ function loadNames(kind: string, into: Record<number, string>) {
   return fetch(`${CDN}/names/${kind}`)
     .then((r) => (r.ok ? r.json() : null))
     .then((json) => {
-      if (!json) return
-      for (const [id, name] of Object.entries<string>(json)) into[Number(id)] = name
+      if (!json || typeof json !== 'object') return
+      for (const [id, name] of Object.entries(json)) {
+        if (typeof name === 'string') into[Number(id)] = name
+      }
     })
     .catch(() => {})
 }

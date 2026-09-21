@@ -77,6 +77,15 @@ KDA, kill participation, CS and CS/min, gold, vision, a damage bar, items, both
 line-ups and the player's rank in that lobby, plus a link to the match page and
 a copy-link action.
 
+Compact highlights below each preview describe the player's performance, team,
+role matchup, economy, vision and game pace. Four tags are visible initially;
+"more" reveals the rest, and selecting a tag explains its supporting numbers.
+These are heuristics derived from the existing summary payload, not Riot awards.
+Role diffs compare final gold and KDA with the recorded opponent on Summoner's
+Rift; they do not claim who won lane. Games under five minutes only receive
+"Short game", and other maps skip Rift-specific tags. Per-match LP changes are
+not shown because the stored rank snapshots do not establish an exact match delta.
+
 Expanding a row opens three views in place: the full scoreboard, the timeline,
 and build and runes. Opening a player inside that scoreboard fetches the full
 match, because the list payload carries only the summary columns.
