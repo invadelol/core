@@ -595,7 +595,7 @@ async function sync() {
 
       <!-- ── Overview ─────────────────────────────────────────── -->
       <template v-if="section === 'overview'">
-        <div class="pt-7">
+        <div v-if="pending.ranks || ranks?.current?.some((rank) => rank.tier)" class="pt-7">
           <div v-if="pending.ranks" class="skel h-[120px]" />
           <RankStrip v-else :ranks="ranks" />
         </div>
