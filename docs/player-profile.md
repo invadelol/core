@@ -123,3 +123,15 @@ Every player name in the product links to that player's profile.
 - Mastery uses Riot's PUUID endpoint with a one-hour cache; live state uses
   spectator v5 with a 30-second cache. Only a spectator 404 means "not in a
   game". Observer credentials are never sent to the browser.
+
+## Link previews
+
+Stored profiles include Open Graph and Twitter large-image metadata in the
+initial HTML. `/og/:summoner` renders a public 1200×630 PNG with the main
+champion's artwork and the latest 30-game win rate, KDA and CS/min. Rendering
+uses Sharp on the server; crawlers do not need JavaScript or authentication.
+Images are cached for five minutes with a bounded memory cache and concurrent
+request coalescing. Missing analytics or artwork produces an uncached fallback
+so an upstream outage does not persist in the application cache. Unknown
+profiles return 404 from the image endpoint until the profile has been tracked.
+Social platforms may retain their own cached previews longer.

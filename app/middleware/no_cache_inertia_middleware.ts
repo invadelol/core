@@ -21,7 +21,7 @@ export default class NoCacheInertiaMiddleware {
     await next()
 
     const url = request.url()
-    if (!url.startsWith('/api/') && !url.startsWith('/cdn/')) {
+    if (!url.startsWith('/api/') && !url.startsWith('/cdn/') && !url.startsWith('/og/')) {
       response.header('Cache-Control', 'private, no-cache, must-revalidate')
     }
   }

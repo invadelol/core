@@ -89,6 +89,8 @@ router.get('/docs', async () => {
   return AutoSwagger.ui('/swagger', swagger)
 })
 
+router.get('/og/:summoner', [() => import('#controllers/social_cards_controller'), 'show'])
+
 router.on('/').renderInertia('home')
 
 router.get('/:summoner/match/:matchId', ({ inertia, params }) => {
@@ -126,6 +128,14 @@ router.get('/:summoner/:section?', async ({ inertia, params, response }) => {
     summoner: params.summoner,
     section,
     initialProfile,
+    social: initialProfile
+      ? {
+          title: `${initialProfile.gameName}#${initialProfile.tagLine} · invade.lol`,
+          description: `${initialProfile.gameName}'s League of Legends profile, recent performance and champion pool.`,
+          url: `https://invade.lol/${encodeURIComponent(`${initialProfile.gameName}-${initialProfile.tagLine}`)}`,
+          image: `https://invade.lol/og/${encodeURIComponent(`${initialProfile.gameName}-${initialProfile.tagLine}`)}`,
+        }
+      : null,
     panels: ANALYTICS_PANELS,
     preload,
   })

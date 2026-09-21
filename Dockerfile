@@ -20,7 +20,9 @@ ADD . .
 RUN bun ace build
 
 # Production stage
-FROM node:22.16.0-alpine3.22
+# Match the glibc native image dependency installed in the Bun stages.
+FROM node:22.16.0-bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends fontconfig fonts-dejavu-core && rm -rf /var/lib/apt/lists/*
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=production-deps /app/node_modules /app/node_modules

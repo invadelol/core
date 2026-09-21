@@ -52,6 +52,24 @@
       <link rel="preload" href="{{ url }}" as="fetch" crossorigin />
     @endeach
 
+    @if(page.props.social)
+      <meta property="og:type" content="profile" />
+      <meta property="og:site_name" content="invade.lol" />
+      <meta property="og:title" content="{{ page.props.social.title }}" />
+      <meta property="og:description" content="{{ page.props.social.description }}" />
+      <meta property="og:url" content="{{ page.props.social.url }}" />
+      <meta property="og:image" content="{{ page.props.social.image }}" />
+      <meta property="og:image:type" content="image/png" />
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
+      <meta property="og:image:alt" content="{{ page.props.social.title }} champion artwork and recent stats" />
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content="{{ page.props.social.title }}" />
+      <meta name="twitter:description" content="{{ page.props.social.description }}" />
+      <meta name="twitter:image" content="{{ page.props.social.image }}" />
+      <meta name="twitter:image:alt" content="{{ page.props.social.title }} champion artwork and recent stats" />
+    @endif
+
     @vite(['inertia/app/app.ts', `inertia/pages/${page.component}.vue`])
     @inertiaHead()
     @stack('dumper')
