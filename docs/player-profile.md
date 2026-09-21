@@ -18,8 +18,8 @@ See [design.md](design.md) for the palette, themes and primitives.
 
 ## Overview
 
-An art-only banner of the player's main champion appears above the identity
-block on every profile tab. Four stacked sections follow on Overview:
+The player's avatar, name and region sit over their main champion's artwork
+in one profile banner on every tab. Activity and actions sit directly below. Four stacked sections follow on Overview:
 
 - **Ranked**: every ranked queue with its crest, LP and record, plus the LP
   climb for whichever queue has the most snapshots. Collapses to one line when
