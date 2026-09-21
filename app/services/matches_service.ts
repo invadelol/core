@@ -9,11 +9,19 @@ import logger from '@adonisjs/core/services/logger'
 import { invalidateResponseCache } from '#services/http_response_cache'
 import type { PlatformId } from '@fightmegg/riot-api'
 import { DEFAULT_MATCH_COUNT } from '#config/constants'
+import { SyncGuard } from '#utils/sync_guard'
 
 type MatchCluster = Exclude<RiotAPITypes.Cluster, PlatformId.ESPORTS>
 
 class MatchesService {
+  private updates = new SyncGuard()
+  private matches = new SyncGuard()
+
   async update(puuid: string, cluster: MatchCluster) {
+    return this.updates.run(`${cluster}:${puuid}`, () => this.updatePlayer(puuid, cluster))
+  }
+
+  private async updatePlayer(puuid: string, cluster: MatchCluster) {
     const matchIds = await riotApiService.client.matchV5.getIdsByPuuid({
       puuid,
       cluster,
@@ -39,13 +47,19 @@ class MatchesService {
 
     const summoner = await Summoner.find(puuid)
     if (summoner) {
-      SummonerUpdated.dispatch(puuid, summoner.platform)
+      void SummonerUpdated.dispatch(puuid, summoner.platform).catch((error) =>
+        logger.warn({ err: error, puuid }, 'Post-sync summoner listener failed')
+      )
     }
 
     return results
   }
 
   async fetchAndStoreMatch(matchId: string, cluster: MatchCluster) {
+    return this.matches.run(`${cluster}:${matchId}`, () => this.storeMatch(matchId, cluster))
+  }
+
+  private async storeMatch(matchId: string, cluster: MatchCluster) {
     const matchData = await riotApiService.client.matchV5.getMatchById({
       matchId,
       cluster,
