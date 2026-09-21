@@ -134,20 +134,16 @@ function record(rank: Rank) {
 </script>
 
 <template>
-  <section>
-    <div class="section" :class="queues.length ? '' : '!mb-0'">
+  <section v-if="queues.length">
+    <div class="section">
       <h2>Ranked</h2>
-      <span v-if="!queues.length" class="meta"> no ranked games recorded for this player </span>
-      <span v-else-if="peak" class="meta ml-auto">
+      <span v-if="peak" class="meta ml-auto">
         Peak {{ TIER_NAMES[peak.tier] || peak.tier }} {{ peak.division }} ·
         {{ peak.leaguePoints }} LP
       </span>
     </div>
 
-    <div
-      v-if="queues.length"
-      class="grid items-center gap-x-10 gap-y-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]"
-    >
+    <div class="grid items-center gap-x-10 gap-y-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
       <div class="grid gap-x-8 gap-y-5 sm:grid-cols-2">
         <div v-for="rank in queues" :key="rank.queueType" class="flex items-center gap-3">
           <img
@@ -184,7 +180,7 @@ function record(rank: Rank) {
           <LineChart :data="chartData" :options="options" />
         </div>
       </div>
-      <p v-else-if="queues.length" class="text-[11.5px] leading-relaxed text-ink-3">
+      <p v-else class="text-[11.5px] leading-relaxed text-ink-3">
         Not enough snapshots yet to draw a climb. Check back after a few more days of games.
       </p>
     </div>
