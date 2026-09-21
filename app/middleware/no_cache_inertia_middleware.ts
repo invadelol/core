@@ -21,7 +21,13 @@ export default class NoCacheInertiaMiddleware {
     await next()
 
     const url = request.url()
-    if (!url.startsWith('/api/') && !url.startsWith('/cdn/') && !url.startsWith('/og/')) {
+    if (
+      !url.startsWith('/api/') &&
+      !url.startsWith('/cdn/') &&
+      !url.startsWith('/og/') &&
+      url !== '/sitemap.xml' &&
+      url !== '/robots.txt'
+    ) {
       response.header('Cache-Control', 'private, no-cache, must-revalidate')
     }
   }
