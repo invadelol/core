@@ -135,3 +135,12 @@ request coalescing. Missing analytics or artwork produces an uncached fallback
 so an upstream outage does not persist in the application cache. Unknown
 profiles return 404 from the image endpoint until the profile has been tracked.
 Social platforms may retain their own cached previews longer.
+
+## Sitemap
+
+`/sitemap.xml` lists the homepage and every distinct named player stored in
+`riot_player`, using canonical `https://invade.lol/GameName-TagLine` URLs.
+Names are URL-encoded and XML-escaped. The list is read from the database,
+with a five-minute HTTP cache, so newly stored players appear automatically.
+Above 10,000 players it becomes an index of paginated sitemaps, keeping each
+response bounded. `/robots.txt` advertises the sitemap to crawlers.

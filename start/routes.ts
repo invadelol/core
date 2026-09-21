@@ -91,6 +91,8 @@ router.get('/docs', async () => {
 
 router.get('/og/:summoner', [() => import('#controllers/social_cards_controller'), 'show'])
 
+router.get('/sitemap.xml', [() => import('#controllers/sitemaps_controller'), 'index'])
+
 router.on('/').renderInertia('home')
 
 router.get('/:summoner/match/:matchId', ({ inertia, params }) => {
