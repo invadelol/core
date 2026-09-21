@@ -102,7 +102,11 @@ router.get('/:summoner/:section?', async ({ inertia, params, response }) => {
   const section = params.section ?? 'overview'
   if (section === 'history')
     return response.redirect(`/${encodeURIComponent(params.summoner)}#matches`)
-  if (!['overview', 'lens', 'champions', 'live', 'compare'].includes(section))
+  // "Lens" showed champion mastery next to a second copy of the performance
+  // panel. Mastery now lives inside Champions, where a champion pool belongs.
+  if (section === 'lens')
+    return response.redirect(`/${encodeURIComponent(params.summoner)}/champions`)
+  if (!['overview', 'champions', 'friends', 'compare', 'live'].includes(section))
     return response.notFound()
   const { default: summonerService } = await import('#services/summoner_service')
   // A stored profile can render in the HTML and removes the client lookup waterfall.

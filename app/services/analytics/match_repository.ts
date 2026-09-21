@@ -11,9 +11,11 @@ import { DEFAULT_MATCH_COUNT, DEFAULT_OFFSET } from '#config/constants'
 
 const MATCH_COLUMNS = [
   'match_id',
+  'platform',
   'game_start_ms',
   'duration_sec',
   'queue_id',
+  'map_id',
   'patch',
   't1_win',
   't2_win',
@@ -27,13 +29,17 @@ const MATCH_COLUMNS = [
   't2_barons',
   't1_heralds',
   't2_heralds',
+  't1_bans',
+  't2_bans',
 ] as const
 
 const matchPlan = plan<any>(MATCH_COLUMNS, {
   matchId: 'match_id',
+  platform: 'platform',
   gameStartMs: 'game_start_ms',
   duration: 'duration_sec',
   queueId: 'queue_id',
+  mapId: 'map_id',
   patch: 'patch',
   t1Win: 't1_win',
   t2Win: 't2_win',
@@ -47,6 +53,10 @@ const matchPlan = plan<any>(MATCH_COLUMNS, {
   t2Barons: 't2_barons',
   t1Heralds: 't1_heralds',
   t2Heralds: 't2_heralds',
+  // Drafted away and never shown until now, although every ingested match
+  // has carried them since the first migration.
+  t1Bans: 't1_bans',
+  t2Bans: 't2_bans',
 })
 
 /**
@@ -78,6 +88,10 @@ const SUMMARY_PARTICIPANT_COLUMNS = [
   'spell2',
   'primary_style',
   'secondary_style',
+  // The keystone is the single most recognisable thing about a build, and it
+  // was ingested from the first patch but never selected, so every rune glyph
+  // in a match list rendered as an empty placeholder.
+  'keystone',
   'vision_score',
   'dmg_taken',
   'dmg_to_champ',
@@ -89,6 +103,7 @@ const SUMMARY_PARTICIPANT_COLUMNS = [
 ] as const
 
 const DETAIL_PARTICIPANT_COLUMNS = [
+  'lane',
   'wards_placed',
   'wards_killed',
   'dmg_to_turrets',
@@ -138,6 +153,7 @@ const SUMMARY_PARTICIPANT_FIELDS = {
 }
 
 const DETAIL_PARTICIPANT_FIELDS = {
+  lane: 'lane',
   wardsPlaced: 'wards_placed',
   wardsKilled: 'wards_killed',
   damageDealtToTurrets: 'dmg_to_turrets',
@@ -176,7 +192,11 @@ function participantExtras(row: readonly unknown[], at: (column: string) => numb
       row[at('item6')],
     ],
     spells: [row[at('spell1')], row[at('spell2')]],
-    perks: { primary: row[at('primary_style')], sub: row[at('secondary_style')] },
+    perks: {
+      primary: row[at('primary_style')],
+      sub: row[at('secondary_style')],
+      keystone: row[at('keystone')],
+    },
     totalDamageDealtToChampions:
       number('physical_dmg_to_champ') + number('magic_dmg_to_champ') + number('true_dmg_to_champ'),
   }

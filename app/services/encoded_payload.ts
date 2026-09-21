@@ -31,20 +31,34 @@ export class EncodedPayloadCache {
     private now = Date.now
   ) {}
 
-  async get(key: string, build: () => Promise<unknown>): Promise<EncodedPayload> {
+  /**
+   * `cacheable` decides whether the built value is worth keeping. Without it a
+   * single upstream failure gets encoded, stored, and served for the whole TTL
+   * as though it were the answer.
+   */
+  async get(
+    key: string,
+    build: () => Promise<unknown>,
+    cacheable?: (value: unknown) => boolean
+  ): Promise<EncodedPayload> {
     const cached = this.#entries.get(key)
     if (cached && cached.expires > this.now()) return cached.payload
 
     const pending = this.#inFlight.get(key)
     if (pending) return pending
 
-    const load = this.#build(key, build).finally(() => this.#inFlight.delete(key))
+    const load = this.#build(key, build, cacheable).finally(() => this.#inFlight.delete(key))
     this.#inFlight.set(key, load)
     return load
   }
 
-  async #build(key: string, build: () => Promise<unknown>): Promise<EncodedPayload> {
-    const identity = Buffer.from(JSON.stringify(await build()), 'utf8')
+  async #build(
+    key: string,
+    build: () => Promise<unknown>,
+    cacheable?: (value: unknown) => boolean
+  ): Promise<EncodedPayload> {
+    const value = await build()
+    const identity = Buffer.from(JSON.stringify(value), 'utf8')
     const [br, gz] = await Promise.all([
       brotli(identity, {
         params: {
@@ -64,7 +78,9 @@ export class EncodedPayloadCache {
       etag: `"${createHash('sha1').update(identity).digest('base64url')}"`,
     }
 
-    this.#entries.set(key, { payload, expires: this.now() + this.ttlMs })
+    if (!cacheable || cacheable(value)) {
+      this.#entries.set(key, { payload, expires: this.now() + this.ttlMs })
+    }
     return payload
   }
 

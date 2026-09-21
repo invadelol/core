@@ -11,7 +11,8 @@ const props = withDefaults(
   { size: 'sm' }
 )
 
-const dimension = computed(() => ({ xs: 18, sm: 22, md: 28 })[props.size])
+const dimension = computed(() => ({ xs: 19, sm: 23, md: 28 })[props.size])
+const radius = computed(() => (props.size === 'md' ? 6 : 5))
 
 /** Always seven cells, so empty slots keep the row aligned. */
 const slots = computed(() => Array.from({ length: 7 }, (_, i) => props.items?.[i] ?? 0))
@@ -20,19 +21,29 @@ const slots = computed(() => Array.from({ length: 7 }, (_, i) => props.items?.[i
 <template>
   <div class="flex shrink-0 items-center gap-[2px]">
     <template v-for="(id, index) in slots" :key="index">
-      <span v-if="index === 6" class="mx-[3px] h-3 w-px bg-line" />
+      <span v-if="index === 6" class="mx-[3px] h-3.5 w-px bg-line-strong" />
       <img
         v-if="id > 0"
         :src="itemIcon(id)"
         :alt="itemName(id)"
         :title="itemName(id)"
-        class="thumb rounded"
-        :style="{ width: `${dimension}px`, height: `${dimension}px` }"
+        loading="lazy"
+        decoding="async"
+        class="thumb"
+        :style="{
+          width: `${dimension}px`,
+          height: `${dimension}px`,
+          borderRadius: `${radius}px`,
+        }"
       />
       <span
         v-else
-        class="rounded bg-[#f2f2f5]"
-        :style="{ width: `${dimension}px`, height: `${dimension}px` }"
+        class="bg-sunken"
+        :style="{
+          width: `${dimension}px`,
+          height: `${dimension}px`,
+          borderRadius: `${radius}px`,
+        }"
       />
     </template>
   </div>

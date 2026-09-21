@@ -31,6 +31,12 @@ export const CACHE_TTL_SECONDS = 2 * 60 * 60 // 2 hours
 export const TOP_CHAMPIONS_COUNT = 10
 
 /**
+ * The profile's headline window. Small enough that it describes current form
+ * rather than a season, and the same size as the window it is compared with.
+ */
+export const STATS_WINDOW = 30
+
+/**
  * Typeahead fires a request per pause in typing and popular prefixes repeat
  * across visitors, so a short cache removes almost all of the full-text scans
  * without a visible delay before a newly indexed player becomes findable.

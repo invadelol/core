@@ -258,6 +258,7 @@ class SummonerService {
     filters: {
       type?: RiotQueueType
       count?: number
+      offset?: number
       champion?: number
       role?: RiotRole
     }
@@ -267,6 +268,7 @@ class SummonerService {
     return statsRepository.getSummonerStats(puuid, {
       queueIds,
       count: filters.count ?? DEFAULT_STATS_COUNT,
+      offset: filters.offset ?? DEFAULT_OFFSET,
       championId: filters.champion,
       role: filters.role === 'SUPPORT' ? 'UTILITY' : filters.role,
     })

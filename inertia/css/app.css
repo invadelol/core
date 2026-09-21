@@ -1,132 +1,75 @@
 @import 'tailwindcss';
-@import './profile.css';
-
-/* ──────────────────────────────────────────────────────────────
-   Inter, self-hosted.
-   Loading it from a font CDN put a DNS lookup, a TLS handshake and
-   a render-blocking stylesheet in front of the first painted
-   character. These rules ride along in the stylesheet the page was
-   already fetching, and the files are served from our own origin
-   with immutable caching. Each unicode-range is downloaded only if
-   the page contains a character from it, so a typical visitor
-   fetches the latin files and nothing else.
-   ────────────────────────────────────────────────────────────── */
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/inter-latin-400.woff2') format('woff2');
-  unicode-range:
-    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
-    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/fonts/inter-latin-500.woff2') format('woff2');
-  unicode-range:
-    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
-    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('/fonts/inter-latin-600.woff2') format('woff2');
-  unicode-range:
-    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
-    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/inter-latin-ext-400.woff2') format('woff2');
-  unicode-range:
-    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
-    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
-    U+A720-A7FF;
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/fonts/inter-latin-ext-500.woff2') format('woff2');
-  unicode-range:
-    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
-    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
-    U+A720-A7FF;
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('/fonts/inter-latin-ext-600.woff2') format('woff2');
-  unicode-range:
-    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
-    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
-    U+A720-A7FF;
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/inter-cyrillic-400.woff2') format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/fonts/inter-cyrillic-500.woff2') format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
-}
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('/fonts/inter-cyrillic-600.woff2') format('woff2');
-  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
-}
+@import './fonts.css';
+@import './components.css';
 
 /* Every class used by the app lives under inertia/. */
 @source '../';
 
 /* ──────────────────────────────────────────────────────────────
-   Design tokens
-   A white, quiet surface. Structure comes from hairlines and
-   spacing rather than shadows or colour. Colour is reserved for
-   meaning: win / loss / above / below.
+   Tokens
+
+   The page is one surface. Structure comes from rules and spacing
+   rather than from stacking filled rectangles, which is what keeps
+   panels from nesting inside panels.
+
+   Five hues carry meaning and nothing else carries any:
+     win / loss    an outcome
+     blue / red    a side of the map
+     gold          the economy, and Riot's own accent
+
+   Interaction is ink: buttons, active tabs, focus rings. There is
+   no sixth brand colour competing with the data for attention.
    ────────────────────────────────────────────────────────────── */
 @theme {
-  --color-canvas: #fbfbfc;
-  --color-surface: #ffffff;
-  --color-line: #ededf0;
-  --color-line-strong: #dedee3;
+  /* Surfaces */
+  --color-bg: #fcfcfd;
+  --color-panel: #ffffff;
+  --color-raised: #eef2f7;
+  --color-sunken: #e9eaee;
+  --color-line: #e5e6ea;
+  --color-line-2: #d1d3da;
 
-  --color-ink: #16181d;
-  --color-ink-2: #5f636c;
-  --color-ink-3: #9aa0aa;
-  --color-ink-4: #c3c7ce;
+  /* Text */
+  --color-ink: #0b0c0f;
+  --color-ink-2: #494d57;
+  --color-ink-3: #7b7f8a;
+  --color-ink-4: #adb0b9;
 
-  --color-win: #2f66cc;
-  --color-win-soft: #eef3fd;
-  --color-loss: #cf5050;
-  --color-loss-soft: #fdefef;
+  /* Outcome */
+  --color-win: #12794a;
+  --color-win-soft: #e5f2eb;
+  --color-loss: #c22f42;
+  --color-loss-soft: #fae9ec;
 
-  --color-pos: #1d7d5c;
-  --color-neg: #b9503a;
-  --color-gold: #9c7420;
+  /* Sides */
+  --color-blue: #2560c4;
+  --color-blue-soft: #e8eefa;
+  --color-red: #c4472f;
+  --color-red-soft: #faeae6;
+
+  /* Economy, and the one decorative accent the game itself uses */
+  --color-gold: #8d6a16;
+  --color-gold-bright: #c8aa6e;
+
+  /* Categorical series, only where a chart needs three of them */
+  --color-s1: #2b2e36;
+  --color-s2: #2560c4;
+  --color-s3: #a97b16;
+
+  /* Riot's minimap is painted for the client, not for a page of numbers.
+     This pulls it back so the player markers on top of it stay the subject. */
+  --map-tone: saturate(0.5) brightness(1.06) contrast(0.9);
+
+  /* Elevation. Two steps, both restrained. */
+  --shadow-e1: 0 1px 2px rgb(11 12 15 / 0.05);
+  --shadow-e2: 0 10px 30px -10px rgb(11 12 15 / 0.18);
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 9px;
+  --radius-lg: 12px;
+
+  --breakpoint-xs: 26rem;
 
   --font-sans:
     'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
@@ -134,200 +77,181 @@
   --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
 }
 
+/* Dark is designed, not inverted: the ground is near-black so champion art
+   sits in it without needing a scrim, the rules stay cool, and every hue is
+   lifted to hold its weight against the dark. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-bg: #0f151d;
+    --color-panel: #141c26;
+    --color-raised: #1a232f;
+    --color-sunken: #232e3d;
+    --color-line: #1f2a37;
+    --color-line-2: #31404f;
+
+    --color-ink: #eef2f7;
+    --color-ink-2: #9aa8ba;
+    --color-ink-3: #6c7c8f;
+    --color-ink-4: #4a5a6d;
+
+    --color-win: #3ecf8e;
+    --color-win-soft: #10291f;
+    --color-loss: #fb6179;
+    --color-loss-soft: #2b1522;
+
+    --color-blue: #5f9bff;
+    --color-blue-soft: #14213a;
+    --color-red: #f4735a;
+    --color-red-soft: #2c1712;
+
+    --color-gold: #d7ab58;
+    --color-gold-bright: #e4c58c;
+
+    --color-s1: #cfd8e4;
+    --color-s2: #5f9bff;
+    --color-s3: #d7ab58;
+
+    --map-tone: saturate(0.34) brightness(0.46) contrast(1.16);
+
+    --shadow-e1: 0 1px 2px rgb(0 0 0 / 0.5);
+    --shadow-e2: 0 12px 34px -12px rgb(0 0 0 / 0.75);
+
+    color-scheme: dark;
+  }
+}
+
+/* An explicit choice wins over the system preference, so this sits after. */
+:root[data-theme='dark'] {
+  --color-bg: #0f151d;
+  --color-panel: #141c26;
+  --color-raised: #1a232f;
+  --color-sunken: #232e3d;
+  --color-line: #1f2a37;
+  --color-line-2: #31404f;
+
+  --color-ink: #eef2f7;
+  --color-ink-2: #9aa8ba;
+  --color-ink-3: #6c7c8f;
+  --color-ink-4: #4a5a6d;
+
+  --color-win: #3ecf8e;
+  --color-win-soft: #10291f;
+  --color-loss: #fb6179;
+  --color-loss-soft: #2b1522;
+
+  --color-blue: #5f9bff;
+  --color-blue-soft: #14213a;
+  --color-red: #f4735a;
+  --color-red-soft: #2c1712;
+
+  --color-gold: #d7ab58;
+  --color-gold-bright: #e4c58c;
+
+  --color-s1: #cfd8e4;
+  --color-s2: #5f9bff;
+  --color-s3: #d7ab58;
+
+  --map-tone: saturate(0.34) brightness(0.46) contrast(1.16);
+
+  --shadow-e1: 0 1px 2px rgb(0 0 0 / 0.5);
+  --shadow-e2: 0 12px 34px -12px rgb(0 0 0 / 0.75);
+
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+/* Rarely needed: almost everything reads a token instead. */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme='light']), :root:not([data-theme='light']) *) {
+      @slot;
+    }
+  }
+  &:where(:root[data-theme='dark'], :root[data-theme='dark'] *) {
+    @slot;
+  }
+}
+
 @layer base {
-  html,
-  body {
+  * {
+    border-color: var(--color-line);
+  }
+
+  html {
     height: 100%;
-    width: 100%;
+    background: var(--color-bg);
+  }
+
+  /* The dark ground gets one soft lift towards the top of the page, so it
+     reads as a lit room rather than a black rectangle. Nothing else in the
+     product uses a gradient for atmosphere. */
+  :root[data-theme='dark'] body {
+    background:
+      linear-gradient(180deg, #17222f 0%, var(--color-bg) 620px) no-repeat,
+      var(--color-bg);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) body {
+      background:
+        linear-gradient(180deg, #17222f 0%, var(--color-bg) 620px) no-repeat,
+        var(--color-bg);
+    }
   }
 
   body {
-    background: var(--color-canvas);
+    min-height: 100%;
+    background: var(--color-bg);
     color: var(--color-ink);
     font-family: var(--font-sans);
+    font-size: 13px;
+    line-height: 1.45;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* Every number in the app lines up in a column. */
   .num,
   table,
+  input,
   .tabular {
     font-variant-numeric: tabular-nums;
     font-feature-settings: 'tnum' 1;
   }
-}
 
-@layer components {
-  /* ── Surfaces ───────────────────────────────────────────────── */
-  .card {
-    background: var(--color-surface);
-    border: 1px solid var(--color-line);
-    border-radius: 10px;
+  button,
+  a,
+  select,
+  input,
+  summary {
+    -webkit-tap-highlight-color: transparent;
   }
 
-  .card-head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.75rem;
-    padding: 0.875rem 1rem;
-    border-bottom: 1px solid var(--color-line);
-  }
-
-  .card-title {
-    font-size: 0.75rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--color-ink-2);
-  }
-
-  .card-note {
-    font-size: 0.6875rem;
-    color: var(--color-ink-3);
-  }
-
-  .card-body {
-    padding: 1rem;
-  }
-
-  /* ── Labels ─────────────────────────────────────────────────── */
-  .label {
-    font-size: 0.625rem;
-    font-weight: 600;
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
-    color: var(--color-ink-3);
-  }
-
-  /* ── Meters: a value read against the field it belongs to ───── */
-  .meter {
-    position: relative;
-    height: 3px;
-    border-radius: 999px;
-    background: #f0f0f3;
-    overflow: hidden;
-  }
-
-  .meter > span {
-    position: absolute;
-    inset: 0 auto 0 0;
-    border-radius: 999px;
-    background: var(--color-ink);
-    transition: width 0.35s ease;
-  }
-
-  /* ── Segmented control ──────────────────────────────────────── */
-  .seg {
-    display: inline-flex;
-    padding: 2px;
-    gap: 2px;
-    background: #f4f4f6;
-    border-radius: 8px;
-  }
-
-  .seg button {
-    padding: 0.3125rem 0.6875rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--color-ink-2);
-    border-radius: 6px;
+  button {
     cursor: pointer;
-    white-space: nowrap;
-    transition:
-      background 0.15s ease,
-      color 0.15s ease;
+    color: inherit;
   }
 
-  .seg button:hover {
-    color: var(--color-ink);
-  }
-
-  .seg button[data-active='true'] {
-    background: var(--color-surface);
-    color: var(--color-ink);
-    box-shadow: 0 1px 2px rgb(16 18 29 / 0.06);
-  }
-
-  /* ── Buttons ────────────────────────────────────────────────── */
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4375rem;
-    padding: 0.4375rem 0.8125rem;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    border-radius: 8px;
-    border: 1px solid var(--color-line-strong);
-    background: var(--color-surface);
-    color: var(--color-ink);
-    cursor: pointer;
-    transition:
-      background 0.15s ease,
-      border-color 0.15s ease;
-  }
-
-  .btn:hover:not(:disabled) {
-    background: #f7f7f9;
-  }
-
-  .btn:disabled {
-    opacity: 0.55;
+  button:disabled {
     cursor: not-allowed;
   }
 
-  .btn-primary {
-    background: var(--color-ink);
-    border-color: var(--color-ink);
-    color: #fff;
+  :is(button, a, input, select, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+    border-radius: 3px;
   }
 
-  .btn-primary:hover:not(:disabled) {
-    background: #2a2d35;
+  ::selection {
+    background: var(--color-sunken);
+    color: var(--color-ink);
   }
 
-  /* ── Skeletons ──────────────────────────────────────────────── */
-  .skel {
-    background: linear-gradient(90deg, #f2f2f5 25%, #eaeaee 37%, #f2f2f5 63%);
-    background-size: 400% 100%;
-    border-radius: 6px;
-    animation: skel 1.3s ease-in-out infinite;
-  }
-
-  @keyframes skel {
-    0% {
-      background-position: 100% 50%;
-    }
-    100% {
-      background-position: 0 50%;
-    }
-  }
-
-  /* ── Game asset thumbnails ──────────────────────────────────── */
-  .thumb {
-    background: #f1f1f4;
-    object-fit: cover;
-  }
-
-  /* Quiet scrollbars for horizontal strips */
-  .scroll-x {
-    overflow-x: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-line-strong) transparent;
-  }
-
-  .scroll-x::-webkit-scrollbar {
-    height: 5px;
-  }
-
-  .scroll-x::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .scroll-x::-webkit-scrollbar-thumb {
-    background: var(--color-line-strong);
-    border-radius: 999px;
+  img {
+    max-width: 100%;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -337,6 +261,7 @@
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
     }
   }
 }

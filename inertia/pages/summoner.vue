@@ -3,8 +3,8 @@ import { Head, router } from '@inertiajs/vue3'
 import {
   computed,
   nextTick,
-  onMounted,
   onBeforeUnmount,
+  onMounted,
   reactive,
   ref,
   shallowRef,
@@ -12,25 +12,29 @@ import {
 } from 'vue'
 import AppHeader from '../components/AppHeader.vue'
 import ProfileHeader from '../components/ProfileHeader.vue'
-import ProfileStats from '../components/ProfileStats.vue'
-import PlayerNavigation from '../components/PlayerNavigation.vue'
+import ProfileNav from '../components/ProfileNav.vue'
+import StatBoard from '../components/StatBoard.vue'
+import RankStrip from '../components/RankStrip.vue'
+import ChampionPool from '../components/ChampionPool.vue'
+import RoleSplit from '../components/RoleSplit.vue'
+import TeammatesPanel from '../components/TeammatesPanel.vue'
+import ActivityHeatmap from '../components/ActivityHeatmap.vue'
 import MatchFilters, { type Filters } from '../components/MatchFilters.vue'
+import MatchList from '../components/MatchList.vue'
+import InfiniteScroll from '../components/InfiniteScroll.vue'
 import ChampionExplorer from '../components/ChampionExplorer.vue'
-import PlayerLens from '../components/PlayerLens.vue'
+import MasteryPanel from '../components/MasteryPanel.vue'
+import FriendsPanel from '../components/FriendsPanel.vue'
 import LiveMatch from '../components/LiveMatch.vue'
 import PlayerCompare from '../components/PlayerCompare.vue'
 import ShareProfile from '../components/ShareProfile.vue'
-import { championName, champIcon, loadChampions } from '../lib/assets.js'
-import { ArrowUpRight } from 'lucide-vue-next'
-import MatchList from '../components/MatchList.vue'
-import InfiniteScroll from '../components/InfiniteScroll.vue'
-import RankPanel from '../components/RankPanel.vue'
-import ActivityHeatmap from '../components/ActivityHeatmap.vue'
-import TeammatesPanel from '../components/TeammatesPanel.vue'
+import { loadChampions } from '../lib/assets.js'
 import { decodeSlug, parseSlug } from '../lib/format.js'
+import { rememberPlayer } from '../lib/recent.js'
 import type {
-  ChampionMastery,
   ActivityDay,
+  GlobalStats,
+  ChampionMastery,
   ChampionStats,
   Match,
   RanksPayload,
@@ -54,6 +58,9 @@ const props = defineProps<{
 }>()
 
 const section = computed(() => props.section ?? 'overview')
+
+/** The profile's headline window, and the one it is compared with. */
+const STATS_WINDOW = 30
 const shareOpen = ref(false)
 const filters = ref<Filters>({ type: 'all', champion: 0, role: 'all' })
 const filteredMatches = shallowRef<Match[] | null>(null)
@@ -67,10 +74,107 @@ const failedPanels = ref<string[]>([])
 const mastery = shallowRef<ChampionMastery[]>([])
 const masteryLoading = ref(false)
 const masteryError = ref(false)
+
+/** Champions has two readings of the same pool: recent form, and lifetime. */
+const championsView = ref<'stats' | 'mastery'>('stats')
+const CHAMPION_VIEWS = [
+  { value: 'stats' as const, label: 'Recent form' },
+  { value: 'mastery' as const, label: 'Mastery' },
+]
+
 let filterController: AbortController | undefined
 let masteryController: AbortController | undefined
+
 const mainChampion = computed(() => champions.value[0]?.championId ?? mastery.value[0]?.championId)
 const displayedMatches = computed(() => filteredMatches.value ?? matches.value)
+
+/** What the current filters actually returned, printed next to them. */
+const filterSummary = computed(() => {
+  const list = displayedMatches.value
+  if (!list.length) return ''
+  let wins = 0
+  for (const match of list) {
+    if (match.participants.find((p) => p.puuid === profile.value?.puuid)?.win) wins++
+  }
+  return `${list.length} games · ${wins}W ${list.length - wins}L · ${Math.round((wins / list.length) * 100)}%`
+})
+
+const performanceMatches = shallowRef<Match[]>([])
+let statsController: AbortController | undefined
+
+/**
+ * Stats follow the match filters: changing the queue or the role has to change
+ * the numbers above the feed, or the two disagree. Both windows are fetched
+ * together so the trend is always against a like-for-like sample.
+ */
+async function loadStats() {
+  if (!profile.value) return
+  statsController?.abort()
+  statsController = new AbortController()
+  const signal = statsController.signal
+  pending.stats = true
+  stats.value = null
+  previousStats.value = null
+  performanceMatches.value = []
+
+  const query = (offset: number) => {
+    const params = new URLSearchParams({ count: String(STATS_WINDOW) })
+    if (offset) params.set('offset', String(offset))
+    if (filters.value.type !== 'all') params.set('type', filters.value.type)
+    if (filters.value.role !== 'all') params.set('role', filters.value.role)
+    if (filters.value.champion) params.set('champion', String(filters.value.champion))
+    return params
+  }
+
+  try {
+    const base = `/api/summoners/puuid/${profile.value.puuid}/stats`
+    const [current, before, recent] = await Promise.all([
+      fetch(`${base}?${query(0)}`, { signal }).then((r) => (r.ok ? r.json() : null)),
+      fetch(`${base}?${query(STATS_WINDOW)}`, { signal }).then((r) => (r.ok ? r.json() : null)),
+      fetch(`/api/summoners/puuid/${profile.value.puuid}/matches?${query(0)}&view=summary`, {
+        signal,
+      }).then((r) => (r.ok ? r.json() : null)),
+    ])
+    if (signal.aborted) return
+    failedPanels.value = failedPanels.value.filter((key) => key !== 'stats')
+    if (!current || !before || !recent) failedPanels.value.push('stats')
+    stats.value = current
+    performanceMatches.value = recent ?? []
+    previousStats.value = before?.global?.total ? before.global : null
+  } catch {
+    if (!signal.aborted && !failedPanels.value.includes('stats')) failedPanels.value.push('stats')
+  } finally {
+    if (!signal.aborted) pending.stats = false
+  }
+}
+
+const friendMatches = shallowRef<Match[]>([])
+const friendsLoading = ref(false)
+let friendsController: AbortController | undefined
+
+/** Synergy needs roles, which only the match rows carry, so it reads a
+ *  wider sample of the player's own games rather than the friends endpoint. */
+async function loadFriendMatches() {
+  if (!profile.value || friendMatches.value.length) return
+  friendsController?.abort()
+  friendsController = new AbortController()
+  const signal = friendsController.signal
+  friendsLoading.value = true
+  try {
+    const res = await fetch(
+      `/api/summoners/puuid/${profile.value.puuid}/matches?count=100&view=summary`,
+      { signal }
+    )
+    if (!res.ok) throw new Error()
+    const data = await res.json()
+    if (!signal.aborted) friendMatches.value = data
+  } catch {
+    if (!signal.aborted) friendMatches.value = []
+  } finally {
+    if (!signal.aborted) friendsLoading.value = false
+  }
+}
+
 async function loadMastery() {
   if (!profile.value) return
   masteryController?.abort()
@@ -92,6 +196,7 @@ async function loadMastery() {
     if (!signal.aborted) masteryLoading.value = false
   }
 }
+
 async function applyFilters(append = false) {
   if (!profile.value) return
   if (
@@ -105,6 +210,7 @@ async function applyFilters(append = false) {
   filterBusy.value = true
   appendError.value = false
   filterError.value = ''
+  if (!append) void loadStats()
   const isChampions = section.value === 'champions'
   const query = new URLSearchParams({
     type: filters.value.type,
@@ -137,12 +243,13 @@ async function applyFilters(append = false) {
   } catch {
     if (!signal.aborted) {
       appendError.value = append
-      if (!append) filterError.value = 'These results could not be loaded. Please try again.'
+      if (!append) filterError.value = 'These results could not be loaded.'
     }
   } finally {
     if (!signal.aborted) filterBusy.value = false
   }
 }
+
 watch(
   filters,
   () => {
@@ -150,12 +257,20 @@ watch(
   },
   { deep: true }
 )
+
 watch(section, () => {
-  if (section.value === 'lens' && !mastery.value.length) void loadMastery()
+  if (section.value === 'champions' && !mastery.value.length) void loadMastery()
+  if (section.value === 'friends') void loadFriendMatches()
   if (['overview', 'champions'].includes(section.value)) void applyFilters()
 })
+
+/** Picking a champion anywhere sends you to that champion's games. */
 function championMatches(id: number) {
   filters.value.champion = id
+  if (section.value === 'overview') {
+    void nextTick(() => document.getElementById('matches')?.scrollIntoView({ block: 'start' }))
+    return
+  }
   router.visit(`/${encodeURIComponent(slug.value)}#matches`, {
     preserveState: true,
     preserveScroll: true,
@@ -171,6 +286,7 @@ const parsed = computed(() => parseSlug(props.summoner))
 
 const profile = shallowRef<Summoner | null>(props.initialProfile ?? null)
 const stats = shallowRef<StatsPayload | null>(null)
+const previousStats = shallowRef<GlobalStats | null>(null)
 const ranks = shallowRef<RanksPayload | null>(null)
 const matches = shallowRef<Match[]>([])
 const champions = shallowRef<ChampionStats[]>([])
@@ -197,12 +313,13 @@ const pending = reactive<Record<PanelKey, boolean>>({
 /** Used only if the page was served without a panel list. */
 const FALLBACK_PANELS: ReadonlyArray<{ key: PanelKey; path: string }> = [
   { key: 'matches', path: 'matches?count=15&view=summary' },
-  { key: 'stats', path: 'stats?count=100' },
+  { key: 'stats', path: `stats?count=${STATS_WINDOW}` },
   { key: 'ranks', path: 'ranks' },
   { key: 'champions', path: 'champions?count=100' },
   { key: 'activity', path: 'activity' },
   { key: 'teammates', path: 'friends' },
 ]
+
 let analyticsVersion = 0
 let controller: AbortController | undefined
 let viewTimer: ReturnType<typeof setTimeout> | undefined
@@ -241,14 +358,13 @@ async function loadAnalytics(puuid: string, signal: AbortSignal) {
   const base = `/api/summoners/puuid/${puuid}`
 
   async function panel(key: PanelKey, path: string) {
+    if (key === 'stats') return
     const target = targets[key]
     try {
       const response = await fetch(`${base}/${path}`, { signal })
       if (!response.ok) throw new Error()
-      if (response.ok) {
-        const data = await response.json()
-        if (!signal.aborted && version === analyticsVersion) target.value = data
-      }
+      const data = await response.json()
+      if (!signal.aborted && version === analyticsVersion) target.value = data
     } catch {
       if (!signal.aborted && version === analyticsVersion) failedPanels.value.push(key)
     } finally {
@@ -261,6 +377,8 @@ async function loadAnalytics(puuid: string, signal: AbortSignal) {
 
 async function load() {
   controller?.abort()
+  statsController?.abort()
+  friendsController?.abort()
   filterController?.abort()
   masteryController?.abort()
   clearTimeout(viewTimer)
@@ -277,6 +395,7 @@ async function load() {
   filteredMatches.value = null
   filteredChampions.value = null
   mastery.value = []
+  friendMatches.value = []
   profile.value = props.initialProfile ?? null
   isLoading.value = !profile.value
   error.value = null
@@ -284,6 +403,7 @@ async function load() {
   syncMessage.value = null
   viewCount.value = null
   stats.value = null
+  previousStats.value = null
   ranks.value = null
   matches.value = []
   champions.value = []
@@ -300,6 +420,11 @@ async function load() {
     }
     profile.value = result
     isLoading.value = false
+    rememberPlayer({
+      gameName: result.gameName,
+      tagLine: result.tagLine,
+      profileIconId: result.profileIconId,
+    })
     // Start the visit timer independently of slow analytics.
     viewTimer = setTimeout(async () => {
       try {
@@ -316,6 +441,8 @@ async function load() {
       }
     }, 3000)
     void loadMastery()
+    void loadStats()
+    if (section.value === 'friends') void loadFriendMatches()
     await loadAnalytics(result.puuid, signal)
     if (
       !signal.aborted &&
@@ -345,9 +472,12 @@ onMounted(() => {
     { immediate: true }
   )
 })
+
 onBeforeUnmount(() => {
   filterController?.abort()
   masteryController?.abort()
+  statsController?.abort()
+  friendsController?.abort()
   controller?.abort()
   clearTimeout(viewTimer)
   clearTimeout(messageTimer)
@@ -364,9 +494,7 @@ async function sync() {
       method: 'POST',
       signal,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        summoner: `${profile.value.gameName}-${profile.value.tagLine}`,
-      }),
+      body: JSON.stringify({ summoner: `${profile.value.gameName}-${profile.value.tagLine}` }),
     })
 
     if (signal.aborted) return
@@ -402,63 +530,53 @@ async function sync() {
 
   <AppHeader :crumbs="[{ label: `${parsed.gameName}#${parsed.tagLine}` }]" />
 
-  <main class="mx-auto max-w-[1320px] px-4 py-6">
+  <main class="mx-auto max-w-[1320px] px-5 pb-12 pt-6 2xl:max-w-[1480px]">
     <!-- Loading -->
-    <div v-if="isLoading" class="space-y-5">
-      <div class="card p-5">
-        <div class="flex items-center gap-5">
-          <div class="skel h-16 w-16 rounded-xl" />
-          <div class="flex-1 space-y-2">
-            <div class="skel h-6 w-56" />
-            <div class="skel h-3 w-40" />
-          </div>
+    <div v-if="isLoading" class="space-y-6">
+      <div class="flex items-center gap-5">
+        <div class="skel h-[60px] w-[60px] rounded-[12px]" />
+        <div class="flex-1 space-y-2.5">
+          <div class="skel h-7 w-64" />
+          <div class="skel h-3.5 w-48" />
         </div>
       </div>
-      <div class="skel h-32 rounded-[10px]" />
-      <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <div class="skel h-[480px] rounded-[10px]" />
-        <div class="skel h-[480px] rounded-[10px]" />
+      <div class="skel h-9" />
+      <div class="skel h-[120px]" />
+      <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div class="skel h-[560px]" />
+        <div class="skel h-[420px]" />
       </div>
     </div>
 
     <!-- Error -->
-    <div v-else-if="error" class="card px-6 py-16 text-center">
-      <template v-if="error === 'not-found'">
-        <p class="text-[0.9375rem] font-medium text-ink">Summoner not found</p>
-        <p class="mx-auto mt-2 max-w-sm text-[0.8125rem] text-ink-2">
-          No League profile was found for
-          <span class="font-medium text-ink">{{ parsed.gameName }}#{{ parsed.tagLine }}</span>
-          across the supported regions. Check the spelling, or search for someone else.
-        </p>
-      </template>
-
-      <template v-else-if="error === 'riot-unavailable'">
-        <p class="text-[0.9375rem] font-medium text-ink">Riot's API isn't answering</p>
-        <p class="mx-auto mt-2 max-w-sm text-[0.8125rem] text-ink-2">
-          This profile isn't stored yet and Riot is rate limiting us or refusing the key, so there's
-          nothing to show. It usually clears in a minute.
-        </p>
-      </template>
-
-      <template v-else>
-        <p class="text-[0.9375rem] font-medium text-ink">Couldn't load this profile</p>
-        <p class="mx-auto mt-2 max-w-sm text-[0.8125rem] text-ink-2">
-          Something broke on our side while looking up
-          <span class="font-medium text-ink">{{ parsed.gameName }}#{{ parsed.tagLine }}</span
-          >.
-        </p>
-      </template>
-
+    <div v-else-if="error" class="py-24 text-center">
+      <p class="text-[15px] font-medium text-ink">
+        {{
+          error === 'not-found'
+            ? 'Summoner not found'
+            : error === 'riot-unavailable'
+              ? "Riot's API isn't answering"
+              : "Couldn't load this profile"
+        }}
+      </p>
+      <p class="mx-auto mt-2 max-w-[48ch] text-[12.5px] leading-relaxed text-ink-3">
+        {{
+          error === 'not-found'
+            ? `No League profile was found for ${parsed.gameName}#${parsed.tagLine} across the supported regions.`
+            : error === 'riot-unavailable'
+              ? 'This profile is not stored yet and Riot is rate limiting us. It usually clears in a minute.'
+              : 'Something broke on our side while looking this player up.'
+        }}
+      </p>
       <div class="mt-5 flex justify-center gap-2">
-        <button class="btn" @click="retry">Try again</button>
-        <a href="/" class="btn">Back to search</a>
+        <button class="btn btn-sm btn-primary" @click="retry">Try again</button>
+        <a href="/" class="btn btn-sm">Back to search</a>
       </div>
     </div>
 
-    <div v-else-if="profile" class="profile-shell">
+    <div v-else-if="profile">
       <ProfileHeader
         :summoner="profile"
-        :ranks="ranks?.current ?? []"
         :view-count="viewCount"
         :is-syncing="isSyncing"
         :sync-message="syncMessage"
@@ -467,134 +585,142 @@ async function sync() {
         @sync="sync"
         @share="shareOpen = true"
       />
-      <PlayerNavigation :slug="slug" :section="section" />
-      <div v-if="failedPanels.length" class="notice-error" role="alert">
-        Some data could not be loaded ({{ failedPanels.join(', ') }}).
-        <button class="underline" @click="retry">Retry</button>
-      </div>
-      <div v-if="section === 'overview'" class="overview-grid">
-        <aside class="profile-sidebar">
-          <div v-if="pending.ranks" class="skel h-48" role="status" aria-label="Loading ranks" />
-          <RankPanel v-else :ranks="ranks" />
-          <section class="card compact-champions">
-            <div class="card-head">
-              <h2 class="card-title">Comfort picks</h2>
-              <a
-                :href="`/${encodeURIComponent(slug)}/champions`"
-                aria-label="All champion statistics"
-                ><ArrowUpRight :size="16"
-              /></a>
-            </div>
-            <div v-if="pending.champions" class="skel h-40" />
-            <template v-else
-              ><button
-                v-for="c in champions.slice(0, 4)"
-                :key="c.championId"
-                @click="championMatches(c.championId)"
-              >
-                <img :src="champIcon(c.championId)" :alt="championName(c.championId)" /><span
-                  ><strong>{{ championName(c.championId) }}</strong
-                  ><small>{{ c.games }} games · {{ c.csMin.toFixed(1) }} CS/min</small></span
-                ><span class="text-right"
-                  ><strong :class="c.winrate >= 0.5 ? 'text-pos' : 'text-neg'"
-                    >{{ Math.round(c.winrate * 100) }}%</strong
-                  ><small>{{ c.kda.toFixed(2) }} KDA</small></span
-                >
-              </button>
-              <p v-if="!champions.length" class="empty-panel">
-                Play a few games to find your comfort picks.
-              </p></template
-            >
-          </section>
-          <div
-            v-if="pending.teammates"
-            class="skel h-40"
-            role="status"
-            aria-label="Loading teammates"
-          />
-          <TeammatesPanel v-else :teammates="teammates" />
-          <div
-            v-if="pending.activity"
-            class="skel h-40"
-            role="status"
-            aria-label="Loading activity"
-          />
-          <ActivityHeatmap v-else :activity="activity" />
-        </aside>
-        <div class="profile-feed">
-          <div
-            v-if="pending.stats"
-            class="skel h-48"
-            role="status"
-            aria-label="Loading performance"
-          />
-          <ProfileStats
+
+      <ProfileNav :slug="slug" :section="section" />
+
+      <p v-if="failedPanels.length" class="notice mt-5" role="alert">
+        <span>Some data could not be loaded ({{ failedPanels.join(', ') }}).</span>
+        <button class="btn btn-sm ml-auto" @click="retry">Retry</button>
+      </p>
+
+      <!-- ── Overview ─────────────────────────────────────────── -->
+      <template v-if="section === 'overview'">
+        <div class="pt-7">
+          <div v-if="pending.ranks" class="skel h-[120px]" />
+          <RankStrip v-else :ranks="ranks" />
+        </div>
+
+        <div class="pt-9">
+          <div v-if="pending.stats" class="skel h-[140px]" />
+          <StatBoard
             v-else
             :stats="stats?.global ?? null"
-            :matches="matches"
+            :previous="previousStats"
+            :matches="performanceMatches"
             :puuid="profile.puuid"
-          />
-          <div id="matches" class="section-intro feed-heading">
-            <div>
-              <h2>Match history</h2>
-              <p>Every game, all in one place.</p>
-            </div>
-            <span class="subtle">{{ displayedMatches.length }} matches</span>
-          </div>
-          <MatchFilters v-model="filters" :champions="champions" :busy="filterBusy" />
-          <p v-if="filterError" class="notice-error" role="alert">
-            {{ filterError }} <button @click="applyFilters()">Retry</button>
-          </p>
-          <div
-            v-if="pending.matches"
-            class="skel h-96"
-            role="status"
-            aria-label="Loading matches"
-          />
-          <MatchList
-            v-else
-            :matches="displayedMatches"
-            :puuid="profile.puuid"
-            :summoner-slug="slug"
-          />
-          <InfiniteScroll
-            v-if="!filterError"
-            :has-more="hasMore"
-            :loading="pending.matches || filterBusy"
-            :error="appendError"
-            :empty="!displayedMatches.length"
-            @load="applyFilters(true)"
+            :window="STATS_WINDOW"
           />
         </div>
-      </div>
-      <div v-else-if="section === 'champions'" class="space-y-5">
-        <MatchFilters v-model="filters" :hide-champion="true" :busy="filterBusy" />
-        <p v-if="filterError" class="notice-error" role="alert">
-          {{ filterError }} <button @click="applyFilters()">Retry</button>
+
+        <div class="grid items-start gap-x-10 gap-y-9 pt-9 lg:grid-cols-[minmax(0,1fr)_296px]">
+          <section id="matches" class="min-w-0 scroll-mt-20">
+            <div class="section">
+              <h2>Match history</h2>
+              <span class="meta num">{{ filterSummary }}</span>
+            </div>
+
+            <MatchFilters v-model="filters" :champions="champions" :busy="filterBusy" />
+
+            <p v-if="filterError" class="notice mt-4" role="alert">
+              <span>{{ filterError }}</span>
+              <button class="btn btn-sm ml-auto" @click="applyFilters()">Retry</button>
+            </p>
+
+            <div v-if="pending.matches" class="skel mt-4 h-[520px]" />
+            <div v-else class="frame mt-4">
+              <MatchList :matches="displayedMatches" :puuid="profile.puuid" :summoner-slug="slug" />
+            </div>
+
+            <InfiniteScroll
+              v-if="!filterError"
+              :has-more="hasMore"
+              :loading="pending.matches || filterBusy"
+              :error="appendError"
+              :empty="!displayedMatches.length"
+              @load="applyFilters(true)"
+            />
+          </section>
+
+          <aside class="grid min-w-0 gap-9 sm:grid-cols-2 lg:grid-cols-1">
+            <div v-if="pending.champions" class="skel h-[200px]" />
+            <ChampionPool
+              v-else
+              :champions="champions"
+              :slug="slug"
+              :active="filters.champion"
+              :limit="5"
+              @pick="championMatches"
+            />
+
+            <div v-if="pending.matches" class="skel h-[160px]" />
+            <RoleSplit v-else :matches="matches" :puuid="profile.puuid" />
+
+            <div v-if="pending.teammates" class="skel h-[180px]" />
+            <TeammatesPanel v-else :teammates="teammates" />
+
+            <div v-if="pending.activity" class="skel h-[160px]" />
+            <ActivityHeatmap v-else :activity="activity" />
+          </aside>
+        </div>
+      </template>
+
+      <!-- ── Champions ────────────────────────────────────────── -->
+      <div v-else-if="section === 'champions'" class="pt-7">
+        <div class="mb-5 flex flex-wrap items-center gap-3">
+          <div class="seg">
+            <button
+              v-for="option in CHAMPION_VIEWS"
+              :key="option.value"
+              type="button"
+              :data-active="championsView === option.value"
+              @click="championsView = option.value"
+            >
+              {{ option.label }}
+            </button>
+          </div>
+          <MatchFilters
+            v-if="championsView === 'stats'"
+            v-model="filters"
+            hide-champion
+            :busy="filterBusy"
+          />
+        </div>
+
+        <p v-if="filterError" class="notice mb-4" role="alert">
+          <span>{{ filterError }}</span>
+          <button class="btn btn-sm ml-auto" @click="applyFilters()">Retry</button>
         </p>
+
         <ChampionExplorer
+          v-if="championsView === 'stats'"
           :champions="filteredChampions ?? champions"
           :busy="filterBusy || pending.champions"
           @matches="championMatches"
         />
+        <MasteryPanel
+          v-else
+          :mastery="mastery"
+          :loading="masteryLoading"
+          :error="masteryError"
+          @retry="loadMastery"
+        />
       </div>
-      <PlayerLens
-        v-else-if="section === 'lens'"
-        :mastery="mastery"
-        :loading="masteryLoading"
-        :error="masteryError"
-        :stats="stats?.global ?? null"
-        :matches="matches"
-        :puuid="profile.puuid"
-        @retry="loadMastery"
-      />
-      <LiveMatch v-else-if="section === 'live'" :puuid="profile.puuid" :name="profile.gameName" />
-      <PlayerCompare
-        v-else-if="section === 'compare'"
-        :profile="profile"
-        :champions="champions"
-        :main-champion="mainChampion"
-      />
+
+      <!-- ── Friends ──────────────────────────────────────────── -->
+      <div v-else-if="section === 'friends'" class="pt-7">
+        <FriendsPanel :matches="friendMatches" :puuid="profile.puuid" :loading="friendsLoading" />
+      </div>
+
+      <!-- ── Live ─────────────────────────────────────────────── -->
+      <div v-else-if="section === 'live'" class="pt-7">
+        <LiveMatch :puuid="profile.puuid" :name="profile.gameName" />
+      </div>
+
+      <!-- ── Compare ──────────────────────────────────────────── -->
+      <div v-else-if="section === 'compare'" class="pt-7">
+        <PlayerCompare :profile="profile" :champions="champions" />
+      </div>
+
       <ShareProfile
         v-if="shareOpen"
         :profile="profile"
@@ -602,9 +728,12 @@ async function sync() {
         :champion="mainChampion"
         @close="shareOpen = false"
       />
-      <footer class="profile-footer">
-        <span>invade.lol <span>— Your game, understood.</span></span
-        ><span>Not endorsed by Riot Games. League of Legends is a trademark of Riot Games.</span>
+
+      <footer
+        class="mt-12 flex flex-wrap justify-between gap-3 border-t border-line pt-5 text-[10.5px] text-ink-4"
+      >
+        <span>invade.lol</span>
+        <span>Not endorsed by Riot Games. League of Legends is a trademark of Riot Games.</span>
       </footer>
     </div>
   </main>

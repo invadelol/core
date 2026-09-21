@@ -22,7 +22,8 @@ export interface Participant {
   champLevel: number
   items: number[]
   spells: number[]
-  perks: { primary: number; sub: number }
+  /** `keystone` comes from the match row; the timeline carries the full page. */
+  perks: { primary: number; sub: number; keystone: number }
   visionScore: number
   damageTaken: number
   damageDealt: number
@@ -39,6 +40,8 @@ export interface Participant {
   neutralMinionsKilled: number
   visionWardsBoughtInGame: number
   position: string
+  /** Riot's raw lane, kept for modes where `position` is empty. */
+  lane?: string
   goldEarned: number
   wardsPlaced: number
   wardsKilled: number
@@ -88,9 +91,11 @@ export interface TimelineEntry {
 
 export interface Match {
   matchId: string
+  platform: string
   gameStartMs: number
   duration: number
   queueId: number
+  mapId: number
   patch: string
   t1Win: number
   t2Win: number
@@ -104,6 +109,9 @@ export interface Match {
   t2Barons: number
   t1Heralds: number
   t2Heralds: number
+  /** Champion ids banned by each side, in pick order. */
+  t1Bans: number[]
+  t2Bans: number[]
   participants: Participant[]
   /** Loaded on demand: large, and only needed once a match is opened. */
   timeline?: TimelineEntry[]
@@ -191,6 +199,7 @@ export interface ChampionMastery {
   championPointsUntilNextLevel: number
   tokensEarned: number
 }
+
 export interface LiveGame {
   gameId: number
   gameStartTime: number

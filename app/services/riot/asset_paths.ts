@@ -64,9 +64,25 @@ export function fallbackSources(kind: AssetKind, id: string): string[] {
       ]
     case 'rank':
       return rankSources(id)
+    case 'map':
+      return mapSources(id)
     default:
       return []
   }
+}
+
+/**
+ * The 2D minimap for a map id, e.g. 11 for Summoner's Rift and 12 for the
+ * Howling Abyss. Mirrored on first use like every other asset, so the drawing
+ * of it only ever has to be fetched once.
+ */
+export function mapSources(id: string): string[] {
+  const numeric = id.replace(/[^0-9]/g, '')
+  if (!numeric) return []
+  return [
+    `${CDRAGON_GAME_DATA}/v1/map-assets/map${numeric}/2dlevelminimap.png`,
+    `${CDRAGON_GAME_DATA}/v1/map-assets/map${numeric}/2dlevelminimap.jpg`,
+  ]
 }
 
 /** Ranked crests live outside the game-data plugin, so they resolve by tier. */

@@ -20,6 +20,7 @@ export const ASSET_KINDS = [
   'perkstyle',
   'profile-icon',
   'rank',
+  'map',
 ] as const
 
 export type AssetKind = (typeof ASSET_KINDS)[number]

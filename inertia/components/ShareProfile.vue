@@ -1,33 +1,43 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
-import { X, Copy, Download, Check } from 'lucide-vue-next'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { Check, Copy, Download, X } from 'lucide-vue-next'
 import { championSplash, profileIcon } from '../lib/assets.js'
-import type { Summoner, GlobalStats } from '../lib/types.js'
+import type { GlobalStats, Summoner } from '../lib/types.js'
+
 const props = defineProps<{ profile: Summoner; stats: GlobalStats | null; champion?: number }>()
 const emit = defineEmits<{ close: [] }>()
+
 const dialog = ref<HTMLDialogElement>()
 const includeStats = ref(true)
 const message = ref('')
+const copied = ref(false)
 const busy = ref(false)
 const url = ref('')
+
 const cells = computed(() => [
   { name: 'WIN RATE', value: `${Math.round((props.stats?.winrate ?? 0) * 100)}%` },
   { name: 'KDA', value: props.stats?.kda.toFixed(2) ?? '—' },
   { name: 'CS / MIN', value: props.stats?.csMin.toFixed(1) ?? '—' },
 ])
+
 onMounted(() => {
   url.value = `${location.origin}/${encodeURIComponent(`${props.profile.gameName}-${props.profile.tagLine}`)}`
   dialog.value?.showModal()
 })
+
 onBeforeUnmount(() => dialog.value?.close())
+
 async function copy() {
   try {
     await navigator.clipboard.writeText(url.value)
+    copied.value = true
     message.value = 'Link copied'
+    setTimeout(() => (copied.value = false), 2000)
   } catch {
     message.value = 'Select and copy the link below.'
   }
 }
+
 async function download() {
   busy.value = true
   message.value = ''
@@ -36,7 +46,7 @@ async function download() {
     canvas.width = 1200
     canvas.height = 630
     const ctx = canvas.getContext('2d')!
-    ctx.fillStyle = '#161c27'
+    ctx.fillStyle = '#0b0c10'
     ctx.fillRect(0, 0, 1200, 630)
     if (props.champion) {
       const img = new Image()
@@ -52,30 +62,27 @@ async function download() {
       )
     }
     const shade = ctx.createLinearGradient(0, 0, 1200, 630)
-    shade.addColorStop(0, 'rgba(12,18,30,.68)')
-    shade.addColorStop(1, 'rgba(12,18,30,.95)')
+    shade.addColorStop(0, 'rgba(8,9,14,.82)')
+    shade.addColorStop(1, 'rgba(8,9,14,.96)')
     ctx.fillStyle = shade
     ctx.fillRect(0, 0, 1200, 630)
     ctx.fillStyle = '#ffffff'
     ctx.font = '600 24px Inter, sans-serif'
-    ctx.fillText('invade.lol', 64, 74)
-    ctx.font = '600 64px Inter, sans-serif'
-    ctx.fillText(props.profile.gameName, 64, 270)
+    ctx.fillText('invade.lol', 64, 78)
+    ctx.font = '600 66px Inter, sans-serif'
+    ctx.fillText(props.profile.gameName, 64, 280)
     ctx.font = '28px Inter, sans-serif'
-    ctx.fillStyle = '#c5cbd5'
-    ctx.fillText(`#${props.profile.tagLine}  ·  ${props.profile.platform}`, 64, 320)
+    ctx.fillStyle = '#9aa1b2'
+    ctx.fillText(`#${props.profile.tagLine}  ·  ${props.profile.platform}`, 64, 328)
     if (includeStats.value && props.stats)
       cells.value.forEach((cell, i) => {
         ctx.fillStyle = '#ffffff'
-        ctx.font = '600 48px Inter, sans-serif'
-        ctx.fillText(cell.value, 64 + i * 300, 460)
-        ctx.fillStyle = '#c5cbd5'
-        ctx.font = '18px Inter, sans-serif'
-        ctx.fillText(cell.name, 64 + i * 300, 497)
+        ctx.font = '600 50px Inter, sans-serif'
+        ctx.fillText(cell.value, 64 + i * 300, 470)
+        ctx.fillStyle = '#8e7bff'
+        ctx.font = '600 17px Inter, sans-serif'
+        ctx.fillText(cell.name, 64 + i * 300, 505)
       })
-    ctx.font = '18px Inter, sans-serif'
-    ctx.fillStyle = '#c5cbd5'
-    ctx.fillText('YOUR GAME. A CLEARER PICTURE.', 64, 578)
     const blob = await new Promise<Blob>((resolve, reject) =>
       canvas.toBlob((b) => (b ? resolve(b) : reject(new Error())), 'image/png')
     )
@@ -87,16 +94,17 @@ async function download() {
     setTimeout(() => URL.revokeObjectURL(href), 1000)
     message.value = 'Card downloaded'
   } catch {
-    message.value = 'Could not create the image. You can still copy your profile link.'
+    message.value = 'Could not create the image. You can still copy the link.'
   } finally {
     busy.value = false
   }
 }
 </script>
+
 <template>
   <dialog
     ref="dialog"
-    class="share-dialog"
+    class="m-auto w-[min(560px,calc(100%-24px))] rounded-[18px] border border-line bg-panel p-5 text-ink shadow-e2 backdrop:bg-black/50 backdrop:backdrop-blur-sm"
     aria-labelledby="share-title"
     @cancel.prevent="emit('close')"
     @click="
@@ -105,55 +113,74 @@ async function download() {
       }
     "
   >
-    <div class="share-dialog-head">
-      <div>
-        <span class="eyebrow">MADE TO BE SHARED</span>
-        <h2 id="share-title">Your game, on a card.</h2>
-      </div>
-      <button class="icon-button" aria-label="Close share dialog" @click="emit('close')">
-        <X :size="20" />
-      </button>
+    <div class="mb-4 flex items-start justify-between gap-4">
+      <h2 id="share-title" class="display text-[18px]">Share this profile</h2>
+      <button class="icon-btn" aria-label="Close" @click="emit('close')"><X :size="18" /></button>
     </div>
-    <div
-      class="share-preview"
-      :style="
-        champion
-          ? {
-              backgroundImage: `linear-gradient(90deg,rgba(12,18,30,.86),rgba(12,18,30,.5)),url(${championSplash(champion)})`,
-            }
-          : {}
-      "
-    >
-      <strong class="share-brand">invade<span>.lol</span></strong>
-      <div class="share-player">
-        <img :src="profileIcon(profile.profileIconId)" alt="" />
-        <div>
-          <h3>{{ profile.gameName }}</h3>
-          <p>#{{ profile.tagLine }} · {{ profile.platform }}</p>
+
+    <div class="relative isolate overflow-hidden rounded-[12px] p-5 text-white">
+      <img
+        v-if="champion"
+        :src="championSplash(champion)"
+        alt=""
+        class="absolute inset-0 -z-10 h-full w-full object-cover object-[50%_22%]"
+      />
+      <div
+        class="absolute inset-0 -z-10"
+        style="background: linear-gradient(100deg, rgb(8 9 14 / 0.9), rgb(8 9 14 / 0.6))"
+      />
+
+      <strong class="text-[14px] font-semibold"
+        >invade<span class="text-white/55">.lol</span></strong
+      >
+
+      <div class="mt-6 flex items-center gap-4">
+        <img
+          :src="profileIcon(profile.profileIconId)"
+          alt=""
+          class="h-14 w-14 rounded-[12px] ring-2 ring-white/40"
+        />
+        <div class="min-w-0">
+          <h3 class="display truncate text-[24px]">{{ profile.gameName }}</h3>
+          <p class="num text-[11px] text-white/65">
+            #{{ profile.tagLine }} · {{ profile.platform }}
+          </p>
         </div>
       </div>
-      <div v-if="includeStats && stats" class="share-stats">
+
+      <div v-if="includeStats && stats" class="mt-5 flex gap-10">
         <div v-for="cell in cells" :key="cell.name">
-          <strong>{{ cell.value }}</strong
-          ><span>{{ cell.name }}</span>
+          <div class="num display text-[22px]">{{ cell.value }}</div>
+          <div class="mt-1 text-[9px] tracking-[0.1em] text-white/55">{{ cell.name }}</div>
         </div>
       </div>
-      <span class="share-tagline">YOUR GAME. A CLEARER PICTURE.</span>
     </div>
-    <label class="share-option"
-      ><input v-model="includeStats" type="checkbox" /> Include performance statistics</label
-    ><label class="share-link"
-      >Profile link<input
+
+    <label class="mt-4 flex items-center gap-2 text-[12.5px] text-ink-2">
+      <input v-model="includeStats" type="checkbox" class="accent-ink" />
+      Include performance statistics
+    </label>
+
+    <label class="mt-3 block">
+      <span class="label">Profile link</span>
+      <input
         :value="url"
         readonly
-        @focus="($event.target as HTMLInputElement).select()"
-    /></label>
-    <div class="share-dialog-actions">
-      <span role="status">{{ message }}</span
-      ><button class="btn" @click="copy">
-        <Check v-if="message === 'Link copied'" :size="14" /><Copy v-else :size="14" /> Copy link</button
-      ><button class="btn btn-primary" :disabled="busy" @click="download">
-        <Download :size="14" />{{ busy ? 'Creating…' : 'Download card' }}
+        class="field mt-1.5 !text-[12px]"
+        @focus="(e) => (e.target as HTMLInputElement).select()"
+      />
+    </label>
+
+    <div class="mt-4 flex flex-wrap items-center justify-end gap-2">
+      <span v-if="message" class="mr-auto text-[11.5px] text-win">{{ message }}</span>
+      <button class="btn btn-sm" @click="copy">
+        <Check v-if="copied" :size="13" />
+        <Copy v-else :size="13" />
+        Copy link
+      </button>
+      <button class="btn btn-sm btn-primary" :disabled="busy" @click="download">
+        <Download :size="13" />
+        {{ busy ? 'Rendering…' : 'Download card' }}
       </button>
     </div>
   </dialog>

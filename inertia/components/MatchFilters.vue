@@ -1,77 +1,135 @@
 <script setup lang="ts">
-import { SlidersHorizontal, RotateCcw } from 'lucide-vue-next'
-import { championName } from '../lib/assets.js'
+import { computed } from 'vue'
+import { X } from 'lucide-vue-next'
+import Select from './ui/Select.vue'
+import RoleIcon from './RoleIcon.vue'
+import { champIcon, championName } from '../lib/assets.js'
 import type { ChampionStats } from '../lib/types.js'
+
 export interface Filters {
   type: string
   champion: number
   role: string
 }
+
 const props = defineProps<{
   modelValue: Filters
   champions?: ChampionStats[]
   hideChampion?: boolean
   busy?: boolean
+  /** What the current filters actually returned, printed on the right. */
+  summary?: string
 }>()
+
 const emit = defineEmits<{ 'update:modelValue': [value: Filters] }>()
+
 function set(key: keyof Filters, value: string | number) {
   emit('update:modelValue', { ...props.modelValue, [key]: value })
 }
-const roles = [
-  ['all', 'All roles'],
+
+const QUEUES = [
+  ['all', 'All'],
+  ['ranked', 'Solo/Duo'],
+  ['flex', 'Flex'],
+  ['normal', 'Normals'],
+  ['aram', 'ARAM'],
+] as const
+
+/* Riot's own position glyphs, which players read faster than the words. */
+const ROLES = [
   ['TOP', 'Top'],
   ['JUNGLE', 'Jungle'],
   ['MIDDLE', 'Mid'],
   ['BOTTOM', 'Bot'],
   ['SUPPORT', 'Support'],
-]
+] as const
+
+const championOptions = computed(() => [
+  { value: 0, label: 'All champions' },
+  ...[...(props.champions ?? [])]
+    .sort((a, b) => b.games - a.games)
+    .map((c) => ({
+      value: c.championId,
+      label: championName(c.championId),
+      icon: champIcon(c.championId),
+      meta: `${c.games}`,
+    })),
+])
+
+const dirty = computed(
+  () =>
+    props.modelValue.type !== 'all' ||
+    props.modelValue.role !== 'all' ||
+    Boolean(props.modelValue.champion)
+)
+
+const championModel = computed({
+  get: () => props.modelValue.champion,
+  set: (value: number) => set('champion', value),
+})
 </script>
+
 <template>
-  <div class="match-filters" :aria-busy="busy">
-    <SlidersHorizontal :size="15" class="text-ink-3" /><label
-      ><span class="sr-only">Queue</span
-      ><select
-        aria-label="Queue"
-        :value="modelValue.type"
-        @change="set('type', ($event.target as HTMLSelectElement).value)"
-      >
-        <option value="all">All queues</option>
-        <option value="ranked">Ranked Solo/Duo</option>
-        <option value="flex">Ranked Flex</option>
-        <option value="normal">Normal</option>
-        <option value="aram">ARAM</option>
-      </select></label
-    ><label v-if="!hideChampion"
-      ><span class="sr-only">Champion</span
-      ><select
-        aria-label="Champion"
-        :value="modelValue.champion"
-        @change="set('champion', Number(($event.target as HTMLSelectElement).value))"
-      >
-        <option :value="0">All champions</option>
-        <option v-for="c in champions" :key="c.championId" :value="c.championId">
-          {{ championName(c.championId) }}
-        </option>
-      </select></label
-    >
-    <div class="role-filter" aria-label="Role">
+  <div
+    class="flex flex-wrap items-center gap-x-4 gap-y-2.5 transition-opacity"
+    :class="busy ? 'opacity-55' : ''"
+    :aria-busy="busy"
+  >
+    <div class="seg" role="group" aria-label="Queue">
       <button
-        v-for="[value, label] in roles"
+        v-for="[value, label] in QUEUES"
         :key="value"
-        :class="{ selected: modelValue.role === value }"
-        :aria-pressed="modelValue.role === value"
-        @click="set('role', value)"
+        type="button"
+        :data-active="modelValue.type === value"
+        @click="set('type', value)"
       >
         {{ label }}
       </button>
     </div>
+
+    <div class="seg" role="group" aria-label="Role">
+      <button
+        type="button"
+        class="!px-2.5"
+        :data-active="modelValue.role === 'all'"
+        @click="set('role', 'all')"
+      >
+        All
+      </button>
+      <button
+        v-for="[value, label] in ROLES"
+        :key="value"
+        type="button"
+        class="!px-2.5"
+        :title="label"
+        :aria-label="label"
+        :data-active="modelValue.role === value"
+        @click="set('role', value)"
+      >
+        <RoleIcon :role="value === 'SUPPORT' ? 'UTILITY' : value" :size="15" />
+      </button>
+    </div>
+
+    <Select
+      v-if="!hideChampion"
+      v-model="championModel"
+      :options="championOptions"
+      searchable
+      search-placeholder="Find a champion"
+      placeholder="All champions"
+      width="16rem"
+      class="w-[160px]"
+    />
+
     <button
-      v-if="modelValue.type !== 'all' || modelValue.champion || modelValue.role !== 'all'"
-      class="filter-reset"
-      aria-label="Reset filters"
+      v-if="dirty"
+      class="btn btn-ghost btn-sm"
       @click="emit('update:modelValue', { type: 'all', champion: 0, role: 'all' })"
     >
-      <RotateCcw :size="14" />
+      <X :size="12" />
+      Clear
     </button>
+
+    <span v-if="summary" class="num ml-auto shrink-0 text-[11.5px] text-ink-3">{{ summary }}</span>
   </div>
 </template>

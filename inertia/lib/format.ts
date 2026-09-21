@@ -1,11 +1,20 @@
-/** 12 345 → "12.3k". Keeps dense tables readable. */
+/** 1 234 → "1.2k", 12 345 → "12k". Keeps dense tables readable. */
 export function compact(value: number) {
   if (!Number.isFinite(value)) return '0'
   const abs = Math.abs(value)
-  if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}m`
-  if (abs >= 10_000) return `${Math.round(value / 1000)}k`
+  // Each threshold sits where the finer format would round up into the next
+  // band, so 9,970 prints as "10k" rather than a four-character "10.0k".
+  if (abs >= 999_950) return `${(value / 1_000_000).toFixed(1)}m`
+  if (abs >= 9_950) return `${Math.round(value / 1000)}k`
   if (abs >= 1000) return `${(value / 1000).toFixed(1)}k`
   return `${Math.round(value)}`
+}
+
+/** Same scale, but always carrying its sign: "+1.2k", "−340", "even". */
+export function signed(value: number, zero = '0') {
+  const rounded = Math.round(value)
+  if (rounded === 0) return zero
+  return `${rounded > 0 ? '+' : '−'}${compact(Math.abs(value))}`
 }
 
 export function percent(ratio: number, decimals = 0) {
@@ -29,6 +38,15 @@ export function clock(ms: number) {
   return duration(Math.floor(ms / 1000))
 }
 
+/** Seconds → "1h 24m", for totals rather than a game clock. */
+export function hours(seconds: number) {
+  const total = Math.max(Math.floor(seconds), 0)
+  const h = Math.floor(total / 3600)
+  const m = Math.floor((total % 3600) / 60)
+  if (!h) return `${m}m`
+  return `${h}h ${m}m`
+}
+
 export function timeAgo(ms: number) {
   const value = Number(ms)
   if (!value || Number.isNaN(value)) return 'unknown'
@@ -36,9 +54,9 @@ export function timeAgo(ms: number) {
   const minutes = Math.floor(diff / 60_000)
   if (minutes < 1) return 'just now'
   if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
+  const hoursAgo = Math.floor(minutes / 60)
+  if (hoursAgo < 24) return `${hoursAgo}h ago`
+  const days = Math.floor(hoursAgo / 24)
   if (days < 30) return `${days}d ago`
   const months = Math.floor(days / 30)
   if (months < 12) return `${months}mo ago`
@@ -54,6 +72,15 @@ export function longDate(value: string | number | Date) {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+  })
+}
+
+/** "Sat 20 Sep", the heading a day of matches sits under. */
+export function dayLabel(ms: number) {
+  return new Date(Number(ms)).toLocaleDateString(undefined, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
   })
 }
 
@@ -89,4 +116,9 @@ export function parseSlug(slug: string) {
     gameName: decoded.slice(0, lastDash),
     tagLine: decoded.slice(lastDash + 1),
   }
+}
+
+/** The profile URL for a Riot ID, encoded exactly once. */
+export function profilePath(gameName: string, tagLine: string) {
+  return `/${encodeURIComponent(`${gameName}-${tagLine}`)}`
 }

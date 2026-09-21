@@ -1,61 +1,69 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
-import Card from './ui/Card.vue'
-import EmptyState from './ui/EmptyState.vue'
-import Meter from './ui/Meter.vue'
 import { profileIcon } from '../lib/assets.js'
+import { profilePath } from '../lib/format.js'
 import type { Teammate } from '../lib/types.js'
 
 const props = defineProps<{ teammates: Teammate[] }>()
 
-const maxGames = computed(() => Math.max(...props.teammates.map((t) => t.games), 1))
-
-function winrate(mate: Teammate) {
-  return mate.games ? Math.round((mate.wins / mate.games) * 100) : 0
-}
+const rows = computed(() => {
+  const list = props.teammates.slice(0, 5)
+  const most = Math.max(...list.map((t) => t.games), 1)
+  return list.map((mate) => ({
+    ...mate,
+    share: (mate.games / most) * 100,
+    winrate: mate.games ? Math.round((mate.wins / mate.games) * 100) : 0,
+  }))
+})
 </script>
 
 <template>
-  <Card title="Duo partners" note="games played together" flush>
-    <EmptyState
-      v-if="!teammates.length"
-      message="No recurring teammates"
-      hint="Players seen in more than one recent game show up here."
-    />
+  <section v-if="rows.length">
+    <div class="section">
+      <h3>Played with</h3>
+      <span class="meta">recurring teammates</span>
+    </div>
 
-    <ul v-else class="divide-y divide-line">
-      <li v-for="mate in teammates" :key="mate.puuid">
+    <ul class="space-y-1">
+      <li v-for="mate in rows" :key="mate.puuid">
         <Link
-          :href="`/${encodeURIComponent(`${mate.gameName}-${mate.tagLine}`)}`"
-          class="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-[#fafafb]"
+          :href="profilePath(mate.gameName, mate.tagLine)"
+          class="flex items-center gap-2.5 rounded-[6px] px-1.5 py-1.5 transition-colors hover:bg-raised"
         >
-          <img :src="profileIcon(mate.profileIconId)" alt="" class="thumb h-8 w-8 rounded-full" />
-
-          <div class="min-w-0 flex-1">
-            <div class="truncate text-[0.8125rem]">
-              <span class="font-medium text-ink">{{ mate.gameName }}</span>
-              <span class="text-ink-3">#{{ mate.tagLine }}</span>
-            </div>
-            <div class="mt-1 flex items-center gap-2">
-              <Meter class="w-14" :value="(mate.games / maxGames) * 100" tone="muted" />
-              <span class="num text-[0.6875rem] text-ink-3">{{ mate.games }} together</span>
-            </div>
-          </div>
-
-          <div class="text-right">
-            <div
-              class="num text-[0.8125rem] font-semibold"
-              :class="winrate(mate) >= 50 ? 'text-pos' : 'text-neg'"
-            >
-              {{ winrate(mate) }}%
-            </div>
-            <div class="num text-[0.625rem] text-ink-3">
-              {{ mate.wins }}W {{ mate.games - mate.wins }}L
-            </div>
-          </div>
+          <img
+            :src="profileIcon(mate.profileIconId)"
+            alt=""
+            width="26"
+            height="26"
+            loading="lazy"
+            class="thumb h-[26px] w-[26px] rounded-full"
+          />
+          <span class="min-w-0 flex-1">
+            <span class="flex items-baseline justify-between gap-2">
+              <span class="truncate text-[12px]">
+                <span class="font-medium text-ink">{{ mate.gameName }}</span>
+                <span class="text-ink-4">#{{ mate.tagLine }}</span>
+              </span>
+              <span
+                class="num shrink-0 text-[11.5px] font-medium"
+                :class="mate.winrate >= 50 ? 'text-win' : 'text-loss'"
+              >
+                {{ mate.winrate }}%
+              </span>
+            </span>
+            <span class="mt-1 flex items-center gap-2">
+              <span class="h-[4px] min-w-0 flex-1 rounded-[2px] bg-sunken">
+                <span
+                  class="block h-full rounded-[2px] bg-ink-3"
+                  :style="{ width: `${mate.share}%` }"
+                />
+              </span>
+              <span class="num shrink-0 text-[10.5px] text-ink-3"> {{ mate.games }} together </span>
+            </span>
+          </span>
         </Link>
       </li>
     </ul>
-  </Card>
+  </section>
 </template>
