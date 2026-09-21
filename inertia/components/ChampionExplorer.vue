@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { ArrowDown, ArrowUp, ArrowRight, Search } from 'lucide-vue-next'
-import ChampionBanner from './ChampionBanner.vue'
 import { champIcon, championName } from '../lib/assets.js'
 import { compact, hours } from '../lib/format.js'
 import type { ChampionStats } from '../lib/types.js'
@@ -80,8 +79,6 @@ function order(key: keyof ChampionStats) {
 
 <template>
   <div>
-    <ChampionBanner :champions="champions" class="mb-9" @pick="emit('matches', $event)" />
-
     <template v-if="heat.length">
       <div class="section">
         <h2>Win rate</h2>

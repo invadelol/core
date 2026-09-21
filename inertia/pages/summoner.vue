@@ -12,6 +12,7 @@ import {
 } from 'vue'
 import AppHeader from '../components/AppHeader.vue'
 import ProfileHeader from '../components/ProfileHeader.vue'
+import ChampionBanner from '../components/ChampionBanner.vue'
 import ProfileNav from '../components/ProfileNav.vue'
 import StatBoard from '../components/StatBoard.vue'
 import RankStrip from '../components/RankStrip.vue'
@@ -575,6 +576,7 @@ async function sync() {
     </div>
 
     <div v-else-if="profile">
+      <ChampionBanner v-if="mainChampion" :champion-id="mainChampion" class="mb-6" />
       <ProfileHeader
         :summoner="profile"
         :view-count="viewCount"

@@ -18,7 +18,8 @@ See [design.md](design.md) for the palette, themes and primitives.
 
 ## Overview
 
-A flat identity block, then four stacked sections with no boxes between them:
+An art-only banner of the player's main champion appears above the identity
+block on every profile tab. Four stacked sections follow on Overview:
 
 - **Ranked**: every ranked queue with its crest, LP and record, plus the LP
   climb for whichever queue has the most snapshots. Collapses to one line when
@@ -44,7 +45,7 @@ record prints in the section rule.
 
 ## Champions
 
-One art-only splash banner for the most-played champion, a win-rate heatmap (one tile per
+A win-rate heatmap (one tile per
 champion, the rate pulled towards even by two phantom games so one win is not a
 100% champion), then the sortable pool. A second tab carries lifetime mastery:
 points, level and progress to the next, for every champion Riot returns.
