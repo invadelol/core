@@ -20,6 +20,7 @@ const game = ref<LiveGame | null>(null)
 const loading = ref(true)
 const error = ref('')
 const checkedAt = ref('')
+const now = ref(Date.now())
 
 let controller: AbortController | undefined
 let clock: ReturnType<typeof setInterval> | undefined
@@ -62,23 +63,29 @@ async function refresh(background = false) {
   }
 }
 
-watch(
-  () => props.puuid,
-  () => {
-    game.value = null
-    void refresh()
-  },
-  { immediate: true }
-)
-
-const now = ref(Date.now())
-clock = setInterval(() => (now.value = Date.now()), 1000)
-
 function onVisibilityChange() {
   if (document.visibilityState === 'visible') void refresh(true)
 }
 
-onMounted(() => document.addEventListener('visibilitychange', onVisibilityChange))
+/**
+ * The poll, the clock and the listener are browser-only, so none of them may
+ * start during SSR: a timer scheduled while rendering outlives the response
+ * and fires inside the Node process, where `document` does not exist. That
+ * throws outside any request, which takes the server down with it. The server
+ * renders the loading state; the browser starts the polling.
+ */
+onMounted(() => {
+  document.addEventListener('visibilitychange', onVisibilityChange)
+  clock = setInterval(() => (now.value = Date.now()), 1000)
+  watch(
+    () => props.puuid,
+    () => {
+      game.value = null
+      void refresh()
+    },
+    { immediate: true }
+  )
+})
 
 onBeforeUnmount(() => {
   controller?.abort()
