@@ -88,7 +88,7 @@ const path = computed(() => profilePath(props.summoner.gameName, props.summoner.
             Share
           </button>
           <button
-            class="btn btn-primary !px-3.5 !py-[6px]"
+            class="btn btn-sm btn-primary"
             :class="{ 'banner-primary': mainChampion }"
             :disabled="isSyncing"
             @click="$emit('sync')"
