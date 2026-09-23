@@ -28,6 +28,7 @@ import FriendsPanel from '../components/FriendsPanel.vue'
 import LiveMatch from '../components/LiveMatch.vue'
 import PlayerCompare from '../components/PlayerCompare.vue'
 import ShareProfile from '../components/ShareProfile.vue'
+import Wordmark from '../components/ui/Wordmark.vue'
 import { loadChampions } from '../lib/assets.js'
 import { decodeSlug, parseSlug } from '../lib/format.js'
 import { rememberPlayer } from '../lib/recent.js'
@@ -560,7 +561,7 @@ async function sync() {
 
     <!-- Error -->
     <div v-else-if="error" class="py-24 text-center">
-      <p class="text-[15px] font-medium text-ink">
+      <p class="display text-[26px] text-ink">
         {{
           error === 'not-found'
             ? 'Summoner not found'
@@ -605,13 +606,13 @@ async function sync() {
 
       <!-- ── Overview ─────────────────────────────────────────── -->
       <template v-if="section === 'overview'">
-        <div v-if="pending.ranks || ranks?.current?.some((rank) => rank.tier)" class="pt-7">
+        <div v-if="pending.ranks || ranks?.current?.some((rank) => rank.tier)" class="pt-6">
           <div v-if="pending.ranks" class="skel h-[120px]" />
           <RankStrip v-else :ranks="ranks" />
         </div>
 
-        <div class="pt-9">
-          <div v-if="pending.stats" class="skel h-[140px]" />
+        <div class="pt-8">
+          <div v-if="pending.stats" class="skel h-[230px]" />
           <StatBoard
             v-else
             :stats="stats?.global ?? null"
@@ -622,7 +623,7 @@ async function sync() {
           />
         </div>
 
-        <div class="grid items-start gap-x-10 gap-y-9 pt-9 lg:grid-cols-[minmax(0,1fr)_296px]">
+        <div class="grid items-start gap-x-8 gap-y-9 pt-9 lg:grid-cols-[minmax(0,1fr)_304px]">
           <section id="matches" class="min-w-0 scroll-mt-20">
             <div class="section">
               <h2>Match history</h2>
@@ -637,7 +638,7 @@ async function sync() {
             </p>
 
             <div v-if="pending.matches" class="skel mt-4 h-[520px]" />
-            <div v-else class="frame mt-4">
+            <div v-else class="mt-5">
               <MatchList :matches="displayedMatches" :puuid="profile.puuid" :summoner-slug="slug" />
             </div>
 
@@ -651,7 +652,7 @@ async function sync() {
             />
           </section>
 
-          <aside class="grid min-w-0 gap-9 sm:grid-cols-2 lg:grid-cols-1">
+          <aside class="grid min-w-0 items-start gap-3 sm:grid-cols-2 lg:grid-cols-1">
             <div v-if="pending.champions" class="skel h-[200px]" />
             <ChampionPool
               v-else
@@ -740,9 +741,9 @@ async function sync() {
       />
 
       <footer
-        class="mt-12 flex flex-wrap justify-between gap-3 border-t border-line pt-5 text-[10.5px] text-ink-4"
+        class="mt-14 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5 text-[10.5px] text-ink-4"
       >
-        <span>invade.lol</span>
+        <Wordmark :size="13" />
         <span>Not endorsed by Riot Games. League of Legends is a trademark of Riot Games.</span>
       </footer>
     </div>

@@ -25,16 +25,22 @@ const rows = computed(() => {
 </script>
 
 <template>
-  <div class="flex items-center gap-2.5">
+  <div class="flex items-center" :class="size === 'md' ? 'gap-3.5' : 'gap-3'">
     <span
       v-for="row in rows"
       :key="row.key"
-      class="num flex items-center gap-1 text-[11.5px]"
-      :class="row.value ? 'text-ink-2' : 'text-ink-4'"
+      class="flex items-center gap-1"
+      :class="row.value ? 'text-ink' : 'text-ink-4'"
       :title="`${row.value} ${row.label}`"
     >
-      <component :is="row.icon" :size="size === 'md' ? 14 : 12.5" />
-      {{ row.value }}
+      <component
+        :is="row.icon"
+        :size="size === 'md' ? 14 : 12.5"
+        :class="row.value ? 'text-ink-3' : ''"
+      />
+      <span class="stat" :class="size === 'md' ? 'text-[15px]' : 'text-[13px]'">
+        {{ row.value }}
+      </span>
     </span>
   </div>
 </template>

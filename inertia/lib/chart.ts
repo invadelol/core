@@ -14,7 +14,7 @@ export const palette = reactive({
   ink3: '#868c9c',
   line: '#e7e7ed',
   surface: '#ffffff',
-  accent: '#5b47e0',
+  accent: '#8a6c00',
   win: '#0d8a63',
   loss: '#d0384f',
   blue: '#2f6fe0',
@@ -29,7 +29,7 @@ export function refreshPalette() {
   palette.ink3 = token('--color-ink-3', palette.ink3)
   palette.line = token('--color-line', palette.line)
   palette.surface = token('--color-panel', palette.surface)
-  palette.accent = token('--color-ink', palette.accent)
+  palette.accent = token('--color-signal', palette.accent)
   palette.win = token('--color-win', palette.win)
   palette.loss = token('--color-loss', palette.loss)
   palette.blue = token('--color-blue', palette.blue)

@@ -109,7 +109,7 @@ function tooltip(cell: Cell) {
 </script>
 
 <template>
-  <section>
+  <section class="card">
     <div class="section">
       <h3>Activity</h3>
       <span class="meta">last {{ WEEKS }} weeks</span>

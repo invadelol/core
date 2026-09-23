@@ -145,7 +145,7 @@ function submit() {
         spellcheck="false"
         autocomplete="off"
         :placeholder="placeholder"
-        class="field !py-2 !pl-9 !pr-9"
+        class="field !h-9 !py-0 !pl-9 !pr-9 !text-[13px]"
         @focus="open = entries.length > 0"
         @blur="closeSoon"
         @keydown.down.prevent="move(1)"
@@ -175,17 +175,17 @@ function submit() {
           width="24"
           height="24"
           loading="lazy"
-          class="thumb h-6 w-6 rounded-full"
+          class="thumb h-6 w-6 rounded-[6px]"
         />
         <span
           v-else
-          class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-sunken text-ink-3"
+          class="grid h-6 w-6 shrink-0 place-items-center rounded-[6px] bg-sunken text-ink-3"
         >
           <Search :size="12" />
         </span>
         <span class="min-w-0 flex-1 truncate">
-          <span class="font-medium text-ink">{{ entry.gameName }}</span>
-          <span class="text-ink-4">#{{ entry.tagLine }}</span>
+          <span class="font-semibold text-ink">{{ entry.gameName }}</span>
+          <span class="text-ink-3">#{{ entry.tagLine }}</span>
         </span>
         <CornerDownLeft v-if="index === active" :size="12" class="shrink-0 text-ink-4" />
       </li>

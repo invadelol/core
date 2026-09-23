@@ -21,72 +21,93 @@ const path = computed(() => profilePath(props.summoner.gameName, props.summoner.
 </script>
 
 <template>
-  <header class="pb-4">
+  <header class="pb-5">
     <div
-      class="relative isolate flex min-h-[210px] items-end overflow-hidden rounded-xl bg-sunken px-5 pb-6 pt-20 sm:min-h-[250px] sm:px-7 sm:pb-7"
+      class="relative isolate flex min-h-[220px] items-end overflow-hidden rounded-[12px] border border-line bg-panel px-5 pb-6 pt-20 sm:min-h-[260px] sm:px-8 sm:pb-8"
       :class="mainChampion ? 'text-white' : 'text-ink'"
     >
       <template v-if="mainChampion">
         <img
           :src="championSplash(mainChampion)"
           :alt="`${championName(mainChampion)} champion artwork`"
-          class="absolute inset-0 -z-20 h-full w-full object-cover object-[60%_30%]"
+          class="absolute inset-0 -z-20 h-full w-full object-cover object-[60%_28%]"
         />
         <div class="profile-banner-shade absolute inset-0 -z-10" />
       </template>
-      <div class="flex w-full items-end gap-4 sm:gap-5">
-        <div class="relative shrink-0">
-          <img
-            :src="profileIcon(summoner.profileIconId)"
-            :alt="summoner.gameName"
-            width="76"
-            height="76"
-            class="h-16 w-16 rounded-xl border-2 border-white/70 shadow-lg sm:h-[76px] sm:w-[76px]"
-          />
-          <span
-            class="num absolute -bottom-2 left-1/2 -translate-x-1/2 rounded border border-line bg-panel px-2 py-px text-[10px] font-semibold text-ink"
-          >
-            {{ summoner.summonerLevel ?? '—' }}
-          </span>
-        </div>
-        <div class="min-w-0 flex-1 pb-0.5">
-          <h1 class="display truncate text-[clamp(25px,3vw,36px)] leading-tight">
-            {{ summoner.gameName
-            }}<span class="font-normal opacity-65">#{{ summoner.tagLine }}</span>
-          </h1>
-          <div
-            class="num mt-2 flex items-center gap-2 text-[11px] font-medium tracking-wide opacity-85"
-          >
-            {{ summoner.platform }}
+
+      <div class="flex w-full flex-wrap items-end gap-x-6 gap-y-5">
+        <div class="flex min-w-0 flex-1 items-end gap-4 sm:gap-5">
+          <div class="relative shrink-0">
+            <img
+              :src="profileIcon(summoner.profileIconId)"
+              :alt="summoner.gameName"
+              width="84"
+              height="84"
+              class="h-[68px] w-[68px] rounded-[10px] shadow-lg ring-2 ring-white/15 sm:h-[84px] sm:w-[84px]"
+            />
+            <span
+              class="num absolute -bottom-2 left-1/2 -translate-x-1/2 rounded-[4px] border border-white/15 bg-[#0a0b0e] px-1.5 py-px text-[10.5px] font-semibold text-white"
+            >
+              {{ summoner.summonerLevel ?? '—' }}
+            </span>
           </div>
+
+          <div class="min-w-0 flex-1">
+            <div class="mb-2 flex flex-wrap items-center gap-1.5">
+              <span class="tag" :class="{ 'banner-tag': mainChampion }">
+                {{ summoner.platform }}
+              </span>
+              <span v-if="mainChampion" class="tag banner-tag">
+                {{ championName(mainChampion) }} main
+              </span>
+            </div>
+            <h1 class="display truncate text-[clamp(32px,4.4vw,56px)] leading-[0.9]">
+              {{ summoner.gameName
+              }}<span class="font-semibold opacity-50 [font-stretch:85%]"
+                >#{{ summoner.tagLine }}</span
+              >
+            </h1>
+          </div>
+        </div>
+
+        <div class="flex w-full shrink-0 flex-wrap items-center gap-2 lg:w-auto">
+          <Link
+            :href="`${path}/compare`"
+            class="btn btn-sm"
+            :class="{ 'banner-btn': mainChampion }"
+          >
+            <ArrowLeftRight :size="13" />
+            Compare
+          </Link>
+          <button
+            class="btn btn-sm"
+            :class="{ 'banner-btn': mainChampion }"
+            @click="$emit('share')"
+          >
+            <Share2 :size="13" />
+            Share
+          </button>
+          <button
+            class="btn btn-primary !px-3.5 !py-[6px]"
+            :class="{ 'banner-primary': mainChampion }"
+            :disabled="isSyncing"
+            @click="$emit('sync')"
+          >
+            <RefreshCw :size="13" :class="{ 'animate-spin': isSyncing }" />
+            {{ isSyncing ? 'Updating' : 'Update' }}
+          </button>
         </div>
       </div>
     </div>
 
-    <div class="flex flex-wrap items-center justify-between gap-x-5 gap-y-3 pt-4">
-      <div class="num flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] text-ink-3">
-        <span v-if="lastGameMs">Last game {{ timeAgo(lastGameMs) }}</span>
-        <span v-if="viewCount !== null" class="flex items-center gap-1.5">
-          <Eye :size="12" />{{ viewCount.toLocaleString() }} views
-        </span>
-      </div>
-      <div class="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto">
-        <span v-if="syncMessage" class="text-[11.5px] text-ink-2" role="status">
-          {{ syncMessage }}
-        </span>
-        <Link :href="`${path}/compare`" class="btn btn-sm">
-          <ArrowLeftRight :size="12" />
-          Compare
-        </Link>
-        <button class="btn btn-sm" @click="$emit('share')">
-          <Share2 :size="12" />
-          Share
-        </button>
-        <button class="btn btn-sm btn-primary" :disabled="isSyncing" @click="$emit('sync')">
-          <RefreshCw :size="12" :class="{ 'animate-spin': isSyncing }" />
-          {{ isSyncing ? 'Updating' : 'Update' }}
-        </button>
-      </div>
+    <div class="num flex flex-wrap items-center gap-x-5 gap-y-1 px-1 pt-3 text-[11.5px] text-ink-3">
+      <span v-if="lastGameMs">Last game {{ timeAgo(lastGameMs) }}</span>
+      <span v-if="viewCount !== null" class="flex items-center gap-1.5">
+        <Eye :size="12" />{{ viewCount.toLocaleString() }} views
+      </span>
+      <span v-if="syncMessage" class="ml-auto font-medium text-ink" role="status">
+        {{ syncMessage }}
+      </span>
     </div>
   </header>
 </template>
@@ -94,7 +115,32 @@ const path = computed(() => profilePath(props.summoner.gameName, props.summoner.
 <style scoped>
 .profile-banner-shade {
   background:
-    linear-gradient(90deg, rgb(5 10 18 / 0.78), rgb(5 10 18 / 0.12) 75%),
-    linear-gradient(0deg, rgb(5 10 18 / 0.72), transparent 85%);
+    linear-gradient(90deg, rgb(6 7 10 / 0.86), rgb(6 7 10 / 0.2) 70%, rgb(6 7 10 / 0.35)),
+    linear-gradient(0deg, rgb(6 7 10 / 0.85), transparent 80%);
+}
+
+/* Secondary actions sit on the artwork, so they borrow its darkness. */
+.banner-btn {
+  background: rgb(10 11 14 / 0.45);
+  border-color: rgb(255 255 255 / 0.14);
+  color: #fff;
+  backdrop-filter: blur(8px);
+}
+
+.banner-tag {
+  background: rgb(255 255 255 / 0.12);
+  color: #fff;
+  backdrop-filter: blur(6px);
+}
+
+/* On artwork the primary action is always the light one, whatever the theme. */
+.banner-primary {
+  background: #f3f4f6;
+  border-color: #f3f4f6;
+  color: #0a0b0e;
+}
+
+.banner-btn:hover:not(:disabled) {
+  background: rgb(10 11 14 / 0.7);
 }
 </style>

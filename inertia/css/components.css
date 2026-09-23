@@ -1,29 +1,61 @@
 /* ──────────────────────────────────────────────────────────────
    Primitives
 
-   Only the shapes that repeat. A "section" is a rule and a label,
-   not a box, which is what stops the layout turning into panels
-   inside panels.
+   Only the shapes that repeat. Anything used once lives in the
+   component that uses it.
    ────────────────────────────────────────────────────────────── */
 @layer components {
+  /* ── Type ───────────────────────────────────────────────────── */
+
+  /* Headings and hero figures: the same family, pulled a little narrow. */
+  .display {
+    font-stretch: 82%;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    line-height: 1;
+  }
+
+  /* A figure that is meant to be read first. */
+  .stat {
+    font-stretch: 84%;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .label {
+    font-size: 10.5px;
+    font-stretch: 85%;
+    font-weight: 650;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-ink-3);
+    white-space: nowrap;
+  }
+
   /* ── Section headings ───────────────────────────────────────── */
   .section {
     display: flex;
     align-items: baseline;
-    gap: 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--color-line);
-    margin-bottom: 14px;
+    gap: 10px;
+    margin-bottom: 12px;
   }
 
   .section > h2,
   .section > h3 {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.09em;
+    font-size: 13px;
+    font-stretch: 88%;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    line-height: 1;
     text-transform: uppercase;
     color: var(--color-ink);
     white-space: nowrap;
+  }
+
+  .section > h3 {
+    font-size: 12px;
   }
 
   .section > .meta {
@@ -31,7 +63,11 @@
     color: var(--color-ink-3);
   }
 
-  /* The only box in the system. Outlined, never filled, never nested. */
+  /* ── Cards ──────────────────────────────────────────────────── */
+
+  /* A panel sitting on the stage. Cards do not nest: inside one,
+     structure comes from rules and spacing. */
+  .card,
   .frame {
     border: 1px solid var(--color-line);
     border-radius: var(--radius-lg);
@@ -39,26 +75,26 @@
     overflow: hidden;
   }
 
-  .label {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--color-ink-3);
-    white-space: nowrap;
+  .card-pad {
+    padding: 14px 16px 16px;
   }
 
-  .display {
-    font-weight: 600;
-    letter-spacing: -0.035em;
-    line-height: 1.05;
+  /* A card's own heading row, used when the card is the section. */
+  .card > .section {
+    margin: 0;
+    padding: 13px 16px 11px;
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .card > .section + * {
+    padding: 12px 16px 16px;
   }
 
   /* ── Meters ─────────────────────────────────────────────────── */
   .meter {
     position: relative;
-    height: 3px;
-    border-radius: 999px;
+    height: 4px;
+    border-radius: 1px;
     background: var(--color-sunken);
     overflow: hidden;
   }
@@ -66,8 +102,8 @@
   .meter > span {
     position: absolute;
     inset: 0 auto 0 0;
-    border-radius: 999px;
-    background: var(--color-ink);
+    border-radius: 1px;
+    background: var(--color-ink-2);
     transition: width 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
@@ -75,29 +111,26 @@
   .seg {
     display: inline-flex;
     align-items: stretch;
-    border: 1px solid var(--color-line);
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-    background: var(--color-panel);
+    gap: 2px;
+    padding: 2px;
+    border-radius: var(--radius-md);
+    background: var(--color-sunken);
   }
 
   .seg > button {
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    padding: 5px 10px;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
     font-size: 12px;
-    font-weight: 500;
+    font-stretch: 88%;
+    font-weight: 650;
     color: var(--color-ink-3);
     white-space: nowrap;
-    border-right: 1px solid var(--color-line);
     transition:
       color 0.12s ease,
       background 0.12s ease;
-  }
-
-  .seg > button:last-child {
-    border-right: 0;
   }
 
   .seg > button:hover {
@@ -106,19 +139,19 @@
   }
 
   .seg > button[data-active='true'] {
-    background: var(--color-ink);
-    color: var(--color-bg);
+    background: var(--color-accent);
+    color: var(--color-accent-fg);
   }
 
   .seg > button[data-active='true']:hover {
-    background: var(--color-ink);
+    background: var(--color-accent);
   }
 
-  /* ── Underline tabs ─────────────────────────────────────────── */
+  /* ── Tabs ───────────────────────────────────────────────────── */
   .tabs {
     display: flex;
     align-items: stretch;
-    gap: 20px;
+    gap: 26px;
     overflow-x: auto;
     scrollbar-width: none;
   }
@@ -133,9 +166,9 @@
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    padding: 0 0 11px;
-    font-size: 13px;
-    font-weight: 500;
+    padding: 0 0 12px;
+    font-size: 13.5px;
+    font-weight: 550;
     white-space: nowrap;
     color: var(--color-ink-3);
     transition: color 0.12s ease;
@@ -147,7 +180,7 @@
 
   .tabs > :is(a, button)[data-active='true'] {
     color: var(--color-ink);
-    font-weight: 600;
+    font-weight: 650;
   }
 
   .tabs > :is(a, button)[data-active='true']::after {
@@ -155,15 +188,16 @@
     position: absolute;
     inset: auto 0 -1px;
     height: 2px;
+    border-radius: 2px 2px 0 0;
     background: var(--color-ink);
   }
 
   /* An in-page anchor styled like a tab, for long analysis pages. */
   .tabs-link {
     position: relative;
-    padding: 0 0 10px;
-    font-size: 12.5px;
-    font-weight: 500;
+    padding: 0 0 11px;
+    font-size: 13px;
+    font-weight: 550;
     color: var(--color-ink-3);
     white-space: nowrap;
     transition: color 0.12s ease;
@@ -179,21 +213,23 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    padding: 6px 11px;
+    padding: 6px 12px;
     font-size: 12.5px;
-    font-weight: 500;
+    font-stretch: 88%;
+    font-weight: 650;
     border-radius: var(--radius-sm);
     border: 1px solid var(--color-line-2);
-    background: var(--color-panel);
+    background: var(--color-raised);
     color: var(--color-ink);
     white-space: nowrap;
     transition:
       background 0.12s ease,
-      border-color 0.12s ease;
+      border-color 0.12s ease,
+      filter 0.12s ease;
   }
 
   .btn:hover:not(:disabled) {
-    background: var(--color-raised);
+    background: var(--color-sunken);
   }
 
   .btn:disabled {
@@ -201,14 +237,14 @@
   }
 
   .btn-primary {
-    background: var(--color-ink);
-    border-color: var(--color-ink);
-    color: var(--color-bg);
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: var(--color-accent-fg);
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: var(--color-ink-2);
-    border-color: var(--color-ink-2);
+    background: var(--color-accent);
+    filter: brightness(0.92);
   }
 
   .btn-ghost {
@@ -223,17 +259,17 @@
   }
 
   .btn-sm {
-    padding: 4px 8px;
-    font-size: 11.5px;
-    gap: 4px;
+    padding: 5px 9px;
+    font-size: 12px;
+    gap: 5px;
   }
 
   .icon-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
     border-radius: var(--radius-sm);
     color: var(--color-ink-3);
     transition:
@@ -252,26 +288,33 @@
     padding: 6px 10px;
     font-size: 12.5px;
     color: var(--color-ink);
-    background: var(--color-panel);
-    border: 1px solid var(--color-line-2);
-    border-radius: var(--radius-sm);
-    transition: border-color 0.12s ease;
+    background: var(--color-sunken);
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    transition:
+      border-color 0.12s ease,
+      background 0.12s ease;
   }
 
   .field::placeholder {
-    color: var(--color-ink-4);
+    color: var(--color-ink-3);
+  }
+
+  .field:hover {
+    border-color: var(--color-line-2);
   }
 
   .field:focus {
     outline: none;
-    border-color: var(--color-ink);
+    border-color: var(--color-line-2);
+    background: var(--color-panel);
   }
 
   /* ── Popovers ───────────────────────────────────────────────── */
   .menu {
     background: var(--color-panel);
     border: 1px solid var(--color-line-2);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     box-shadow: var(--shadow-e2);
     overflow: hidden;
   }
@@ -279,9 +322,9 @@
   .menu-item {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 9px;
     width: 100%;
-    padding: 6px 10px;
+    padding: 7px 11px;
     font-size: 12.5px;
     color: var(--color-ink-2);
     text-align: left;
@@ -306,8 +349,49 @@
   /* Rune glyphs are drawn as light artwork on transparency. */
   .glyph {
     border-radius: 50%;
-    background: var(--color-raised);
+    background: var(--color-sunken);
     flex-shrink: 0;
+  }
+
+  /* Champion level, pinned to the corner of a portrait. */
+  .lvl {
+    display: grid;
+    place-items: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 3px;
+    border-radius: 3px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-line-2);
+    color: var(--color-ink);
+    font-size: 9.5px;
+    font-stretch: 80%;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Tags ───────────────────────────────────────────────────── */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 9.5px;
+    font-stretch: 80%;
+    font-weight: 750;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1.2;
+    background: var(--color-sunken);
+    color: var(--color-ink-2);
+    white-space: nowrap;
+  }
+
+  .tag-signal {
+    background: color-mix(in srgb, var(--color-signal) 16%, transparent);
+    color: var(--color-signal);
   }
 
   /* ── Data tables ────────────────────────────────────────────── */
@@ -322,15 +406,16 @@
     position: sticky;
     top: 0;
     z-index: 2;
-    padding: 7px 10px;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
+    padding: 8px 10px;
+    font-size: 10.5px;
+    font-stretch: 82%;
+    font-weight: 700;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: var(--color-ink-3);
     text-align: left;
     white-space: nowrap;
-    background: var(--color-bg);
+    background: var(--color-panel);
     border-bottom: 1px solid var(--color-line-2);
   }
 
@@ -351,7 +436,7 @@
   /* A full-width heading row inside a table, used to band two teams
      together in one table instead of splitting them into two. */
   .dt .band td {
-    padding: 8px 10px;
+    padding: 9px 10px;
     background: var(--color-raised);
     border-bottom: 1px solid var(--color-line);
     border-top: 1px solid var(--color-line);
@@ -361,51 +446,17 @@
     border-top: 0;
   }
 
-  /* ── Performance grade ──────────────────────────────────────── */
-  /* How the game went, in one glyph. The colour carries it; the hairline
-     under the letter is the margin behind the grade. */
-  .grade {
-    position: relative;
-    display: grid;
-    place-items: center;
-    flex: none;
-    border-radius: 7px;
-    padding-bottom: 3px;
-    font-variant-numeric: tabular-nums;
-    font-weight: 600;
-    line-height: 1;
-    letter-spacing: -0.01em;
-    color: var(--grade);
-    background: color-mix(in srgb, var(--grade) 10%, transparent);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--grade) 26%, transparent);
-  }
-
-  .grade-bar {
-    position: absolute;
-    inset: auto 5px 4px 5px;
-    height: 2px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--grade) 18%, transparent);
-    overflow: hidden;
-  }
-
-  .grade-bar > span {
-    display: block;
-    height: 100%;
-    border-radius: 999px;
-    background: var(--grade);
-  }
-
   /* ── Skeletons ──────────────────────────────────────────────── */
   .skel {
     background: linear-gradient(
       90deg,
-      var(--color-raised) 25%,
-      var(--color-sunken) 37%,
-      var(--color-raised) 63%
+      var(--color-panel) 25%,
+      var(--color-raised) 37%,
+      var(--color-panel) 63%
     );
     background-size: 400% 100%;
-    border-radius: var(--radius-md);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-lg);
     animation: skel 1.4s ease-in-out infinite;
   }
 
@@ -443,10 +494,11 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 9px 12px;
+    padding: 10px 14px;
     font-size: 12.5px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--color-loss);
+    border-radius: var(--radius-md);
+    border: 1px solid color-mix(in srgb, var(--color-loss) 45%, transparent);
+    background: var(--color-loss-soft);
     color: var(--color-ink);
   }
 
@@ -454,10 +506,10 @@
   .pulse {
     position: relative;
     display: inline-block;
-    width: 5px;
-    height: 5px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
-    background: var(--color-win);
+    background: var(--color-loss);
     flex-shrink: 0;
   }
 
@@ -466,7 +518,7 @@
     position: absolute;
     inset: -3px;
     border-radius: 50%;
-    border: 1px solid var(--color-win);
+    border: 1px solid var(--color-loss);
     opacity: 0;
     animation: pulse 2s ease-out infinite;
   }
@@ -493,22 +545,22 @@
   }
 
   .scrub::-webkit-slider-runnable-track {
-    height: 3px;
-    border-radius: 999px;
+    height: 4px;
+    border-radius: 1px;
     background: var(--color-sunken);
   }
 
   .scrub::-moz-range-track {
-    height: 3px;
-    border-radius: 999px;
+    height: 4px;
+    border-radius: 1px;
     background: var(--color-sunken);
   }
 
   .scrub::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 13px;
-    height: 13px;
+    width: 14px;
+    height: 14px;
     margin-top: -5px;
     border-radius: 50%;
     background: var(--color-ink);
@@ -517,8 +569,8 @@
   }
 
   .scrub::-moz-range-thumb {
-    width: 13px;
-    height: 13px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     background: var(--color-ink);
     border: 2px solid var(--color-bg);

@@ -256,16 +256,16 @@ const diffOptions = computed(() =>
 </script>
 
 <template>
-  <div v-if="!times.length" class="py-14 text-center text-[13px] text-ink-3">
+  <div v-if="!times.length" class="tl-card card py-14 text-center text-[13px] text-ink-3">
     No timeline stored for this match
   </div>
 
-  <div v-else class="space-y-8">
+  <div v-else class="space-y-4">
     <!-- One chart the whole match can be read off -->
-    <div>
-      <div class="flex flex-wrap items-center gap-3 pb-3">
+    <section class="tl-card card">
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2.5 border-b border-line px-4 py-3">
         <button
-          class="icon-btn shrink-0 border border-line"
+          class="icon-btn shrink-0 border border-line-2 bg-raised"
           :aria-label="playing ? 'Pause' : 'Play'"
           @click="toggle"
         >
@@ -273,7 +273,7 @@ const diffOptions = computed(() =>
           <Play v-else :size="14" />
         </button>
 
-        <span class="num display w-[62px] shrink-0 text-[20px] text-ink">{{ clock(now) }}</span>
+        <span class="stat w-[64px] shrink-0 text-[24px] text-ink">{{ clock(now) }}</span>
 
         <input
           v-model.number="index"
@@ -285,199 +285,206 @@ const diffOptions = computed(() =>
           @input="stop"
         />
 
-        <div class="num flex shrink-0 items-center gap-3 text-[12px]">
-          <span class="text-blue">{{ compact(teamGoldNow.blue) }}</span>
+        <div class="flex shrink-0 items-baseline gap-3">
+          <span class="stat text-[14px] text-blue">{{ compact(teamGoldNow.blue) }}</span>
           <span
-            class="text-[13px] font-semibold"
+            class="stat min-w-[52px] text-center text-[18px]"
             :class="teamGoldNow.blue >= teamGoldNow.red ? 'text-blue' : 'text-red'"
           >
             {{ signed(teamGoldNow.blue - teamGoldNow.red, 'even') }}
           </span>
-          <span class="text-red">{{ compact(teamGoldNow.red) }}</span>
+          <span class="stat text-[14px] text-red">{{ compact(teamGoldNow.red) }}</span>
         </div>
       </div>
 
-      <div v-if="chart" class="frame relative">
-        <svg
-          ref="surface"
-          :viewBox="`0 0 ${CHART.w} ${CHART.h}`"
-          preserveAspectRatio="none"
-          class="block h-[210px] w-full cursor-ew-resize touch-none select-none"
-          @pointerdown="onDown"
-          @pointermove="onMove"
-          @pointerup="onUp"
-          @pointercancel="onUp"
-        >
-          <!-- Minute grid -->
-          <g>
+      <div class="px-4 pb-4 pt-3">
+        <div v-if="chart" class="tl-plot relative overflow-hidden rounded-[8px] bg-raised">
+          <svg
+            ref="surface"
+            :viewBox="`0 0 ${CHART.w} ${CHART.h}`"
+            preserveAspectRatio="none"
+            class="block h-[210px] w-full cursor-ew-resize touch-none select-none"
+            @pointerdown="onDown"
+            @pointermove="onMove"
+            @pointerup="onUp"
+            @pointercancel="onUp"
+          >
+            <!-- Minute grid -->
+            <g>
+              <line
+                v-for="minute in chart.minutes"
+                :key="minute.label"
+                :x1="minute.x"
+                :x2="minute.x"
+                :y1="chart.top"
+                :y2="chart.top + chart.inner"
+                stroke="var(--color-line)"
+                stroke-width="1"
+                vector-effect="non-scaling-stroke"
+              />
+            </g>
+
+            <!-- The lead itself -->
+            <defs>
+              <clipPath id="tl-above">
+                <rect x="0" y="0" :width="chart.plot" :height="chart.zero" />
+              </clipPath>
+              <clipPath id="tl-below">
+                <rect x="0" :y="chart.zero" :width="chart.plot" :height="CHART.h - chart.zero" />
+              </clipPath>
+            </defs>
+            <path
+              :d="chart.area"
+              fill="var(--color-blue)"
+              fill-opacity="0.22"
+              clip-path="url(#tl-above)"
+            />
+            <path
+              :d="chart.area"
+              fill="var(--color-red)"
+              fill-opacity="0.22"
+              clip-path="url(#tl-below)"
+            />
             <line
-              v-for="minute in chart.minutes"
-              :key="minute.label"
-              :x1="minute.x"
-              :x2="minute.x"
-              :y1="chart.top"
-              :y2="chart.top + chart.inner"
-              stroke="var(--color-line)"
+              x1="0"
+              :x2="chart.plot"
+              :y1="chart.zero"
+              :y2="chart.zero"
+              stroke="var(--color-line-2)"
               stroke-width="1"
               vector-effect="non-scaling-stroke"
             />
-          </g>
+            <polyline
+              :points="chart.line"
+              fill="none"
+              stroke="var(--color-ink)"
+              stroke-width="1.75"
+              stroke-linejoin="round"
+              vector-effect="non-scaling-stroke"
+            />
 
-          <!-- The lead itself -->
-          <defs>
-            <clipPath id="tl-above">
-              <rect x="0" y="0" :width="chart.plot" :height="chart.zero" />
-            </clipPath>
-            <clipPath id="tl-below">
-              <rect x="0" :y="chart.zero" :width="chart.plot" :height="CHART.h - chart.zero" />
-            </clipPath>
-          </defs>
-          <path
-            :d="chart.area"
-            fill="var(--color-blue)"
-            fill-opacity="0.22"
-            clip-path="url(#tl-above)"
-          />
-          <path
-            :d="chart.area"
-            fill="var(--color-red)"
-            fill-opacity="0.22"
-            clip-path="url(#tl-below)"
-          />
-          <line
-            x1="0"
-            :x2="chart.plot"
-            :y1="chart.zero"
-            :y2="chart.zero"
-            stroke="var(--color-line-2)"
-            stroke-width="1"
-            vector-effect="non-scaling-stroke"
-          />
-          <polyline
-            :points="chart.line"
-            fill="none"
-            stroke="var(--color-ink)"
-            stroke-width="1.75"
-            stroke-linejoin="round"
-            vector-effect="non-scaling-stroke"
-          />
+            <!-- Kills, read off the frame-to-frame counts -->
+            <g>
+              <rect
+                v-for="(event, i) in chart.events"
+                :key="i"
+                :x="event.x - 1.5"
+                :y="event.side === 'blue' ? chart.zero - 5 - event.count * 3 : chart.zero + 5"
+                width="3"
+                :height="event.count * 3"
+                :fill="event.side === 'blue' ? 'var(--color-blue)' : 'var(--color-red)'"
+                :opacity="0.75"
+              >
+                <title>
+                  {{ event.count }} {{ event.side }} side {{ event.count === 1 ? 'kill' : 'kills' }}
+                </title>
+              </rect>
+            </g>
 
-          <!-- Kills, read off the frame-to-frame counts -->
-          <g>
-            <rect
-              v-for="(event, i) in chart.events"
-              :key="i"
-              :x="event.x - 1.5"
-              :y="event.side === 'blue' ? chart.zero - 5 - event.count * 3 : chart.zero + 5"
-              width="3"
-              :height="event.count * 3"
-              :fill="event.side === 'blue' ? 'var(--color-blue)' : 'var(--color-red)'"
-              :opacity="0.75"
-            >
-              <title>
-                {{ event.count }} {{ event.side }} side {{ event.count === 1 ? 'kill' : 'kills' }}
-              </title>
-            </rect>
-          </g>
+            <!-- Where you are -->
+            <line
+              :x1="chart.cursor"
+              :x2="chart.cursor"
+              :y1="chart.top"
+              :y2="chart.top + chart.inner"
+              stroke="var(--color-ink)"
+              stroke-width="1.5"
+              vector-effect="non-scaling-stroke"
+            />
+            <circle :cx="chart.cursor" :cy="chart.cursorY" r="3.5" fill="var(--color-ink)" />
+          </svg>
 
-          <!-- Where you are -->
-          <line
-            :x1="chart.cursor"
-            :x2="chart.cursor"
-            :y1="chart.top"
-            :y2="chart.top + chart.inner"
-            stroke="var(--color-ink)"
-            stroke-width="1.5"
-            vector-effect="non-scaling-stroke"
-          />
-          <circle :cx="chart.cursor" :cy="chart.cursorY" r="3.5" fill="var(--color-ink)" />
-        </svg>
-
-        <!-- Axes, in HTML so the type does not stretch with the chart -->
-        <span class="label pointer-events-none absolute left-3 top-2.5 !text-[9.5px]">
-          Gold advantage
-        </span>
-        <span
-          class="num pointer-events-none absolute right-3 -translate-y-1/2 text-[10px] text-blue"
-          :style="{ top: `${(chart.top / CHART.h) * 100}%` }"
-        >
-          +{{ compact(chart.up) }}
-        </span>
-        <span
-          class="num pointer-events-none absolute right-3 -translate-y-1/2 text-[10px] text-ink-4"
-          :style="{ top: `${(chart.zero / CHART.h) * 100}%` }"
-        >
-          0
-        </span>
-        <span
-          class="num pointer-events-none absolute right-3 -translate-y-1/2 text-[10px] text-red"
-          :style="{ top: `${((chart.top + chart.inner) / CHART.h) * 100}%` }"
-        >
-          −{{ compact(chart.down) }}
-        </span>
-        <div class="pointer-events-none absolute inset-x-0 bottom-1.5">
-          <div class="num relative h-3 text-[10px] text-ink-4">
-            <span
-              v-for="minute in chart.minutes"
-              :key="minute.label"
-              class="absolute -translate-x-1/2"
-              :style="{ left: `${(minute.x / CHART.w) * 100}%` }"
-            >
-              {{ minute.label }}
-            </span>
+          <!-- Axes, in HTML so the type does not stretch with the chart -->
+          <span class="label pointer-events-none absolute left-3 top-2.5 !text-[9.5px]">
+            Gold advantage
+          </span>
+          <span
+            class="num pointer-events-none absolute right-3 -translate-y-1/2 text-[10px] text-blue"
+            :style="{ top: `${(chart.top / CHART.h) * 100}%` }"
+          >
+            +{{ compact(chart.up) }}
+          </span>
+          <span
+            class="num pointer-events-none absolute right-3 -translate-y-1/2 text-[10px] text-ink-4"
+            :style="{ top: `${(chart.zero / CHART.h) * 100}%` }"
+          >
+            0
+          </span>
+          <span
+            class="num pointer-events-none absolute right-3 -translate-y-1/2 text-[10px] text-red"
+            :style="{ top: `${((chart.top + chart.inner) / CHART.h) * 100}%` }"
+          >
+            −{{ compact(chart.down) }}
+          </span>
+          <div class="pointer-events-none absolute inset-x-0 bottom-1.5">
+            <div class="num relative h-3 text-[10px] text-ink-4">
+              <span
+                v-for="minute in chart.minutes"
+                :key="minute.label"
+                class="absolute -translate-x-1/2"
+                :style="{ left: `${(minute.x / CHART.w) * 100}%` }"
+              >
+                {{ minute.label }}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <p class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-ink-3">
-        <span class="flex items-center gap-1.5">
-          <i class="h-2.5 w-[3px] rounded-[1px]" style="background: var(--color-blue)" />
-          blue kills
-        </span>
-        <span class="flex items-center gap-1.5">
-          <i class="h-2.5 w-[3px] rounded-[1px]" style="background: var(--color-red)" />
-          red kills
-        </span>
-        <span class="text-ink-4">per minute</span>
-      </p>
-    </div>
+        <p class="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-ink-3">
+          <span class="flex items-center gap-1.5">
+            <i class="h-2.5 w-[3px] rounded-[1px]" style="background: var(--color-blue)" />
+            blue kills
+          </span>
+          <span class="flex items-center gap-1.5">
+            <i class="h-2.5 w-[3px] rounded-[1px]" style="background: var(--color-red)" />
+            red kills
+          </span>
+          <span class="text-ink-4">per minute</span>
+        </p>
+      </div>
+    </section>
 
     <!-- Map and standings share one instant -->
-    <div class="grid gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
-      <div>
+    <div class="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+      <section class="tl-card card min-w-0">
         <div class="section">
           <h3>Positions</h3>
           <span class="meta num">{{ clock(now) }}</span>
         </div>
-        <Minimap :dots="dots" :trails="trails" :highlight="selectedPuuid" :map-id="match.mapId" />
-        <p v-if="!dots.length" class="mt-2 text-center text-[11px] text-ink-3">
-          No positions recorded for this frame.
-        </p>
-      </div>
+        <div>
+          <Minimap :dots="dots" :trails="trails" :highlight="selectedPuuid" :map-id="match.mapId" />
+          <p v-if="!dots.length" class="mt-2 text-center text-[11px] text-ink-3">
+            No positions recorded for this frame.
+          </p>
+        </div>
+      </section>
 
-      <div>
+      <section class="tl-card card min-w-0">
         <div class="section">
           <h3>State of the game</h3>
           <span class="meta num">{{ clock(now) }}</span>
         </div>
-        <div class="scroll-x">
+        <div class="scroll-x !p-0">
           <table class="dt dt-hover">
             <thead>
               <tr>
-                <th colspan="2">Player</th>
+                <th colspan="2" class="!pl-4">Player</th>
                 <th class="text-right">KDA</th>
                 <th>Gold</th>
-                <th class="text-right">CS</th>
+                <th class="text-right !pr-4">CS</th>
               </tr>
             </thead>
             <tbody v-for="team in standings" :key="team.teamId">
               <tr class="band">
-                <td colspan="5">
+                <td colspan="5" class="!px-4">
                   <span class="flex items-center gap-2">
                     <span class="h-3 w-[3px] rounded-full" :style="{ background: team.color }" />
-                    <span class="label !text-[9.5px]">{{ team.label }} side</span>
-                    <span class="num ml-auto text-[11px] text-ink-3">
-                      {{ compact(team.players.reduce((sum, entry) => sum + entry.gold, 0)) }} gold
+                    <span class="display text-[13px] text-ink">{{ team.label }} side</span>
+                    <span class="ml-auto text-[11px] text-ink-3">
+                      <b class="stat text-[13px] text-gold">
+                        {{ compact(team.players.reduce((sum, entry) => sum + entry.gold, 0)) }}
+                      </b>
+                      gold
                     </span>
                   </span>
                 </td>
@@ -486,19 +493,23 @@ const diffOptions = computed(() =>
                 v-for="entry in team.players"
                 :key="entry.p.puuid"
                 class="cursor-pointer"
-                :class="entry.p.puuid === selectedPuuid ? 'bg-raised' : ''"
+                :class="
+                  entry.p.puuid === selectedPuuid
+                    ? '[&>td]:!bg-raised [&>td:first-child]:shadow-[inset_2px_0_0_var(--color-ink-2)]'
+                    : ''
+                "
                 @click="emit('select', entry.p.puuid)"
               >
-                <td class="w-[34px]">
-                  <span class="relative block w-6">
+                <td class="w-[42px] !pl-4">
+                  <span class="relative block w-7">
                     <img
                       :src="champIcon(entry.p.championId)"
                       :alt="championName(entry.p.championId)"
                       loading="lazy"
-                      class="thumb h-6 w-6 rounded-[5px]"
+                      class="thumb h-7 w-7 rounded-[6px]"
                     />
                     <span
-                      class="absolute -bottom-1 -right-1 grid h-[13px] min-w-[13px] place-items-center rounded-full bg-ink px-[2px] text-[8px] font-semibold text-bg"
+                      class="lvl absolute -bottom-1 -right-1 !h-[14px] !min-w-[14px] !text-[8.5px]"
                     >
                       {{ entry.level }}
                     </span>
@@ -520,8 +531,10 @@ const diffOptions = computed(() =>
                     />
                   </span>
                 </td>
-                <td class="num text-right text-ink-2">
-                  {{ entry.kills }}/{{ entry.deaths }}/{{ entry.assists }}
+                <td class="stat text-right text-[13.5px] text-ink">
+                  {{ entry.kills }}<span class="text-ink-4">/</span
+                  ><span class="text-loss">{{ entry.deaths }}</span
+                  ><span class="text-ink-4">/</span>{{ entry.assists }}
                 </td>
                 <td class="w-[34%] min-w-[110px]">
                   <span class="flex items-center gap-2">
@@ -533,21 +546,21 @@ const diffOptions = computed(() =>
                         }"
                       />
                     </span>
-                    <span class="num w-[38px] text-right text-gold">
+                    <span class="num w-[38px] text-right font-semibold text-gold">
                       {{ compact(entry.gold) }}
                     </span>
                   </span>
                 </td>
-                <td class="num text-right text-ink-3">{{ entry.cs }}</td>
+                <td class="num !pr-4 text-right text-ink-2">{{ entry.cs }}</td>
               </tr>
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
     </div>
 
     <!-- The lane, in full: three curves plus the running lead -->
-    <div v-if="player && opponent">
+    <section v-if="player && opponent" class="tl-card card">
       <div class="section">
         <h3>Lane</h3>
         <span class="meta flex items-center gap-1.5">
@@ -558,7 +571,7 @@ const diffOptions = computed(() =>
         </span>
         <span class="meta ml-auto hidden items-center gap-4 sm:flex">
           <span class="flex items-center gap-1.5 text-ink-2">
-            <i class="h-[2px] w-4 bg-ink" />
+            <i class="h-[2px] w-4 rounded-full bg-ink" />
             {{ player.gameName }}
           </span>
           <span class="flex items-center gap-1.5">
@@ -578,19 +591,34 @@ const diffOptions = computed(() =>
       </div>
 
       <div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        <div v-for="graph in DUELS" :key="graph.key">
-          <div class="label mb-2 !text-[9.5px]">{{ graph.title }}</div>
+        <div v-for="graph in DUELS" :key="graph.key" class="min-w-0">
+          <div class="label mb-2">{{ graph.title }}</div>
           <div class="h-[150px]">
             <LineChart :data="duelChart(graph.key)" :options="duelOptions" />
           </div>
         </div>
-        <div>
-          <div class="label mb-2 !text-[9.5px]">Gold difference</div>
+        <div class="min-w-0">
+          <div class="label mb-2">Gold difference</div>
           <div class="h-[150px]">
             <LineChart :data="duelDiffChart" :options="diffOptions" />
           </div>
         </div>
       </div>
-    </div>
+    </section>
   </div>
 </template>
+
+<style scoped>
+/* Inside an expanded match row the row itself is the card, and cards do
+   not nest: there the blocks fall back to plain sections split by rules. */
+:global(.match-row .tl-card) {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+:global(.match-row .tl-card > *) {
+  padding-inline: 0;
+}
+</style>

@@ -84,7 +84,7 @@ const SECTIONS = [
     </div>
 
     <div v-else-if="error" class="py-24 text-center">
-      <p class="text-[15px] font-medium text-ink">{{ error }}</p>
+      <p class="display text-[26px] text-ink">{{ error }}</p>
       <a :href="`/${encodeURIComponent(slug)}`" class="btn mt-5">Back to profile</a>
     </div>
 
@@ -92,24 +92,30 @@ const SECTIONS = [
       <MatchHeader :match="match" />
 
       <nav
-        class="sticky top-[53px] z-20 -mx-5 mt-7 flex gap-5 border-b border-line bg-bg/95 px-5 pt-1 backdrop-blur"
+        class="sticky top-[57px] z-20 -mx-5 mt-6 flex gap-6 border-b border-line bg-bg/90 px-5 pt-3 backdrop-blur"
       >
         <a v-for="item in SECTIONS" :key="item.id" :href="`#${item.id}`" class="tabs-link">
           {{ item.label }}
         </a>
       </nav>
 
-      <section id="scoreboard" class="scroll-mt-24 pt-7">
-        <Scoreboard
-          :match="match"
-          :owner-puuid="ownerPuuid"
-          :timeline="timeline"
-          :open-puuid="openPuuid"
-          @open="toggleRow"
-        />
+      <section id="scoreboard" class="scroll-mt-28 pt-6">
+        <div class="section">
+          <h2>Scoreboard</h2>
+          <span class="meta">Click a player for the full breakdown</span>
+        </div>
+        <div class="card">
+          <Scoreboard
+            :match="match"
+            :owner-puuid="ownerPuuid"
+            :timeline="timeline"
+            :open-puuid="openPuuid"
+            @open="toggleRow"
+          />
+        </div>
       </section>
 
-      <section id="analysis" class="scroll-mt-24 pt-10">
+      <section id="analysis" class="scroll-mt-28 pt-10">
         <MatchCharts
           :match="match"
           :owner-puuid="ownerPuuid"
@@ -118,7 +124,7 @@ const SECTIONS = [
         />
       </section>
 
-      <section id="timeline" class="scroll-mt-24 pt-10">
+      <section id="timeline" class="scroll-mt-28 pt-10">
         <div class="section">
           <h2>Timeline</h2>
         </div>

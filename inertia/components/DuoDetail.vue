@@ -79,14 +79,14 @@ const splits = computed(() =>
 
         <template v-for="split in splits" :key="split.key">
           <span class="truncate text-ink-2">{{ split.label }}</span>
-          <span class="text-right font-semibold" :class="split.tone">{{ split.here }}</span>
+          <span class="stat text-right text-[14px]" :class="split.tone">{{ split.here }}</span>
           <span v-if="duo.apartGames" class="text-right text-ink-3">{{ split.there }}</span>
         </template>
       </div>
     </section>
 
     <!-- What the pairing was made of -->
-    <section class="min-w-0 border-l border-line pl-7">
+    <section class="min-w-0 border-l border-line-2 pl-7">
       <div v-if="duo.roles.length" class="label mb-3">Lanes</div>
       <ul v-if="duo.roles.length" class="space-y-2.5">
         <li v-for="row in duo.roles" :key="row.label" class="flex items-center gap-2">
@@ -135,7 +135,7 @@ const splits = computed(() =>
     </section>
 
     <!-- The games themselves -->
-    <section class="min-w-0 border-l border-line pl-7">
+    <section class="min-w-0 border-l border-line-2 pl-7">
       <div class="label mb-3 flex items-baseline gap-2">
         <span>Games together</span>
         <span class="num !tracking-normal text-ink-4">
@@ -155,7 +155,7 @@ const splits = computed(() =>
           :title="`${queueName(game.queueId)} · ${duration(game.duration)}`"
         >
           <span
-            class="num w-[9px] shrink-0 text-[11px] font-semibold"
+            class="display w-[10px] shrink-0 text-[12px]"
             :class="game.win ? 'text-win' : 'text-loss'"
           >
             {{ game.win ? 'W' : 'L' }}
@@ -181,8 +181,10 @@ const splits = computed(() =>
             <RoleIcon :role="game.theirRole" :size="11" class="text-ink-4" />
           </span>
 
-          <span class="num ml-auto shrink-0 text-ink-2">
-            {{ game.kills }}/{{ game.deaths }}/{{ game.assists }}
+          <span class="stat ml-auto shrink-0 text-[13px] text-ink">
+            {{ game.kills }}<span class="text-ink-4">/</span
+            ><span class="text-loss">{{ game.deaths }}</span
+            ><span class="text-ink-4">/</span>{{ game.assists }}
           </span>
           <span class="num w-[52px] shrink-0 whitespace-nowrap text-right text-ink-4">
             {{ shortDate(game.gameStartMs) }}

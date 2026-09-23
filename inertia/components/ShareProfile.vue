@@ -46,7 +46,7 @@ async function download() {
     canvas.width = 1200
     canvas.height = 630
     const ctx = canvas.getContext('2d')!
-    ctx.fillStyle = '#0b0c10'
+    ctx.fillStyle = '#0a0b0e'
     ctx.fillRect(0, 0, 1200, 630)
     if (props.champion) {
       const img = new Image()
@@ -67,20 +67,20 @@ async function download() {
     ctx.fillStyle = shade
     ctx.fillRect(0, 0, 1200, 630)
     ctx.fillStyle = '#ffffff'
-    ctx.font = '600 24px Inter, sans-serif'
+    ctx.font = '700 26px Archivo, Inter, sans-serif'
     ctx.fillText('invade.lol', 64, 78)
-    ctx.font = '600 66px Inter, sans-serif'
+    ctx.font = '700 72px Archivo, Inter, sans-serif'
     ctx.fillText(props.profile.gameName, 64, 280)
-    ctx.font = '28px Inter, sans-serif'
+    ctx.font = '500 28px Archivo, Inter, sans-serif'
     ctx.fillStyle = '#9aa1b2'
     ctx.fillText(`#${props.profile.tagLine}  ·  ${props.profile.platform}`, 64, 328)
     if (includeStats.value && props.stats)
       cells.value.forEach((cell, i) => {
         ctx.fillStyle = '#ffffff'
-        ctx.font = '600 50px Inter, sans-serif'
+        ctx.font = '700 56px Archivo, Inter, sans-serif'
         ctx.fillText(cell.value, 64 + i * 300, 470)
-        ctx.fillStyle = '#8e7bff'
-        ctx.font = '600 17px Inter, sans-serif'
+        ctx.fillStyle = '#a8adb9'
+        ctx.font = '700 17px Archivo, Inter, sans-serif'
         ctx.fillText(cell.name, 64 + i * 300, 505)
       })
     const blob = await new Promise<Blob>((resolve, reject) =>
@@ -104,7 +104,7 @@ async function download() {
 <template>
   <dialog
     ref="dialog"
-    class="m-auto w-[min(560px,calc(100%-24px))] rounded-[18px] border border-line bg-panel p-5 text-ink shadow-e2 backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+    class="card m-auto w-[min(560px,calc(100%-24px))] p-0 text-ink shadow-e2 backdrop:bg-black/60 backdrop:backdrop-blur-sm"
     aria-labelledby="share-title"
     @cancel.prevent="emit('close')"
     @click="
@@ -113,75 +113,79 @@ async function download() {
       }
     "
   >
-    <div class="mb-4 flex items-start justify-between gap-4">
-      <h2 id="share-title" class="display text-[18px]">Share this profile</h2>
-      <button class="icon-btn" aria-label="Close" @click="emit('close')"><X :size="18" /></button>
+    <div class="section items-center !py-2.5 !pr-2.5">
+      <h2 id="share-title">Share this profile</h2>
+      <button class="icon-btn ml-auto" aria-label="Close" @click="emit('close')">
+        <X :size="16" />
+      </button>
     </div>
 
-    <div class="relative isolate overflow-hidden rounded-[12px] p-5 text-white">
-      <img
-        v-if="champion"
-        :src="championSplash(champion)"
-        alt=""
-        class="absolute inset-0 -z-10 h-full w-full object-cover object-[50%_22%]"
-      />
-      <div
-        class="absolute inset-0 -z-10"
-        style="background: linear-gradient(100deg, rgb(8 9 14 / 0.9), rgb(8 9 14 / 0.6))"
-      />
-
-      <strong class="text-[14px] font-semibold"
-        >invade<span class="text-white/55">.lol</span></strong
-      >
-
-      <div class="mt-6 flex items-center gap-4">
+    <div>
+      <div class="relative isolate overflow-hidden rounded-[8px] border border-line p-5 text-white">
         <img
-          :src="profileIcon(profile.profileIconId)"
+          v-if="champion"
+          :src="championSplash(champion)"
           alt=""
-          class="h-14 w-14 rounded-[12px] ring-2 ring-white/40"
+          class="absolute inset-0 -z-10 h-full w-full object-cover object-[50%_22%]"
         />
-        <div class="min-w-0">
-          <h3 class="display truncate text-[24px]">{{ profile.gameName }}</h3>
-          <p class="num text-[11px] text-white/65">
-            #{{ profile.tagLine }} · {{ profile.platform }}
-          </p>
+        <div
+          class="absolute inset-0 -z-10"
+          style="background: linear-gradient(100deg, rgb(10 11 14 / 0.92), rgb(10 11 14 / 0.62))"
+        />
+
+        <span class="display text-[15px]">invade<span class="text-white/45">.lol</span></span>
+
+        <div class="mt-6 flex items-center gap-4">
+          <img
+            :src="profileIcon(profile.profileIconId)"
+            alt=""
+            class="h-14 w-14 rounded-[8px] ring-2 ring-white/15"
+          />
+          <div class="min-w-0">
+            <h3 class="display truncate text-[28px] leading-[0.95]">{{ profile.gameName }}</h3>
+            <p class="num mt-1 text-[11.5px] text-white/60">
+              #{{ profile.tagLine }} · {{ profile.platform }}
+            </p>
+          </div>
+        </div>
+
+        <div v-if="includeStats && stats" class="mt-6 flex gap-10">
+          <div v-for="cell in cells" :key="cell.name">
+            <div class="stat text-[28px]">{{ cell.value }}</div>
+            <div class="label mt-1.5 !text-white/55">{{ cell.name }}</div>
+          </div>
         </div>
       </div>
 
-      <div v-if="includeStats && stats" class="mt-5 flex gap-10">
-        <div v-for="cell in cells" :key="cell.name">
-          <div class="num display text-[22px]">{{ cell.value }}</div>
-          <div class="mt-1 text-[9px] tracking-[0.1em] text-white/55">{{ cell.name }}</div>
-        </div>
+      <label class="mt-4 flex items-center gap-2 text-[12.5px] text-ink-2">
+        <input v-model="includeStats" type="checkbox" class="accent-[var(--color-ink)]" />
+        Include performance statistics
+      </label>
+
+      <label class="mt-4 block">
+        <span class="label">Profile link</span>
+        <input
+          :value="url"
+          readonly
+          class="field mt-1.5 !text-[12px]"
+          @focus="(e) => (e.target as HTMLInputElement).select()"
+        />
+      </label>
+
+      <div class="mt-5 flex flex-wrap items-center justify-end gap-2">
+        <span v-if="message" class="mr-auto text-[11.5px] text-ink-2" role="status">{{
+          message
+        }}</span>
+        <button class="btn" @click="copy">
+          <Check v-if="copied" :size="13" />
+          <Copy v-else :size="13" />
+          Copy link
+        </button>
+        <button class="btn btn-primary" :disabled="busy" @click="download">
+          <Download :size="13" />
+          {{ busy ? 'Rendering…' : 'Download card' }}
+        </button>
       </div>
-    </div>
-
-    <label class="mt-4 flex items-center gap-2 text-[12.5px] text-ink-2">
-      <input v-model="includeStats" type="checkbox" class="accent-ink" />
-      Include performance statistics
-    </label>
-
-    <label class="mt-3 block">
-      <span class="label">Profile link</span>
-      <input
-        :value="url"
-        readonly
-        class="field mt-1.5 !text-[12px]"
-        @focus="(e) => (e.target as HTMLInputElement).select()"
-      />
-    </label>
-
-    <div class="mt-4 flex flex-wrap items-center justify-end gap-2">
-      <span v-if="message" class="mr-auto text-[11.5px] text-win">{{ message }}</span>
-      <button class="btn btn-sm" @click="copy">
-        <Check v-if="copied" :size="13" />
-        <Copy v-else :size="13" />
-        Copy link
-      </button>
-      <button class="btn btn-sm btn-primary" :disabled="busy" @click="download">
-        <Download :size="13" />
-        {{ busy ? 'Rendering…' : 'Download card' }}
-      </button>
     </div>
   </dialog>
 </template>

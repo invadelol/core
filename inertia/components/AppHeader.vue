@@ -3,6 +3,7 @@ import { Link } from '@inertiajs/vue3'
 import { Github } from 'lucide-vue-next'
 import SearchBar from './SearchBar.vue'
 import ThemeToggle from './ui/ThemeToggle.vue'
+import Wordmark from './ui/Wordmark.vue'
 import { REPO_URL } from '../lib/links.js'
 
 defineProps<{
@@ -12,33 +13,32 @@ defineProps<{
 </script>
 
 <template>
-  <header class="sticky top-0 z-30 border-b border-line bg-bg/90 backdrop-blur-md">
+  <header class="sticky top-0 z-30 border-b border-line bg-bg/85 backdrop-blur-md">
     <div
-      class="mx-auto flex h-[52px] max-w-[1320px] items-center gap-3 px-5 sm:gap-4 2xl:max-w-[1480px]"
+      class="mx-auto flex h-[56px] max-w-[1320px] items-center gap-3 px-5 sm:gap-5 2xl:max-w-[1480px]"
     >
-      <Link
-        href="/"
-        class="shrink-0 text-[14.5px] font-semibold tracking-[-0.02em] text-ink"
-        aria-label="invade.lol home"
-      >
-        invade<span class="text-ink-4">.lol</span>
+      <Link href="/" class="shrink-0" aria-label="invade.lol home">
+        <Wordmark :size="19" />
       </Link>
 
-      <nav v-if="crumbs?.length" class="hidden items-center gap-1.5 text-[12.5px] md:flex">
+      <nav
+        v-if="crumbs?.length"
+        class="hidden min-w-0 items-center gap-2 text-[12.5px] font-medium md:flex"
+      >
         <template v-for="crumb in crumbs" :key="crumb.label">
-          <span class="text-ink-4">/</span>
+          <span class="h-3.5 w-px rotate-[18deg] bg-line-2" />
           <Link
             v-if="crumb.href"
             :href="crumb.href"
-            class="max-w-[18ch] truncate text-ink-2 transition-colors hover:text-ink"
+            class="max-w-[20ch] truncate text-ink-2 transition-colors hover:text-ink"
           >
             {{ crumb.label }}
           </Link>
-          <span v-else class="max-w-[18ch] truncate text-ink-2">{{ crumb.label }}</span>
+          <span v-else class="max-w-[20ch] truncate text-ink">{{ crumb.label }}</span>
         </template>
       </nav>
 
-      <div class="ml-auto w-full max-w-[300px]">
+      <div class="ml-auto w-full max-w-[320px]">
         <SearchBar />
       </div>
 

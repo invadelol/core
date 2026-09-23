@@ -19,45 +19,42 @@ const rows = computed(() => {
 </script>
 
 <template>
-  <section v-if="rows.length">
+  <section v-if="rows.length" class="card">
     <div class="section">
       <h3>Played with</h3>
       <span class="meta">recurring teammates</span>
     </div>
 
-    <ul class="space-y-1">
+    <ul class="space-y-0.5 !px-2 !pb-2 !pt-2">
       <li v-for="mate in rows" :key="mate.puuid">
         <Link
           :href="profilePath(mate.gameName, mate.tagLine)"
-          class="flex items-center gap-2.5 rounded-[6px] px-1.5 py-1.5 transition-colors hover:bg-raised"
+          class="flex items-center gap-3 rounded-[7px] px-2 py-2 transition-colors hover:bg-raised"
         >
           <img
             :src="profileIcon(mate.profileIconId)"
             alt=""
-            width="26"
-            height="26"
+            width="30"
+            height="30"
             loading="lazy"
-            class="thumb h-[26px] w-[26px] rounded-full"
+            class="thumb h-[30px] w-[30px] rounded-[7px]"
           />
           <span class="min-w-0 flex-1">
             <span class="flex items-baseline justify-between gap-2">
               <span class="truncate text-[12px]">
-                <span class="font-medium text-ink">{{ mate.gameName }}</span>
+                <span class="font-semibold text-ink">{{ mate.gameName }}</span>
                 <span class="text-ink-4">#{{ mate.tagLine }}</span>
               </span>
               <span
-                class="num shrink-0 text-[11.5px] font-medium"
+                class="num stat shrink-0 text-[15px]"
                 :class="mate.winrate >= 50 ? 'text-win' : 'text-loss'"
               >
                 {{ mate.winrate }}%
               </span>
             </span>
             <span class="mt-1 flex items-center gap-2">
-              <span class="h-[4px] min-w-0 flex-1 rounded-[2px] bg-sunken">
-                <span
-                  class="block h-full rounded-[2px] bg-ink-3"
-                  :style="{ width: `${mate.share}%` }"
-                />
+              <span class="meter min-w-0 flex-1">
+                <span class="!bg-ink-3" :style="{ width: `${mate.share}%` }" />
               </span>
               <span class="num shrink-0 text-[10.5px] text-ink-3"> {{ mate.games }} together </span>
             </span>

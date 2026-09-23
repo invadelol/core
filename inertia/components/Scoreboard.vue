@@ -7,6 +7,7 @@ import PlayerLink from './PlayerLink.vue'
 import PlayerRowDetail from './PlayerRowDetail.vue'
 import ObjectiveTally from './ObjectiveTally.vue'
 import RoleIcon from './RoleIcon.vue'
+import ScoreRing from './ScoreRing.vue'
 import { champIcon, championName, spellIcon, POSITION_NAMES } from '../lib/assets.js'
 import { compact, kda } from '../lib/format.js'
 import {
@@ -32,7 +33,7 @@ const props = withDefaults(
     timeline?: Record<string, TimelineEntry[]>
     /** Which player's detail row is open. */
     openPuuid?: string
-    /** Drops the rating column and the per-minute second lines. */
+    /** Drops the per-minute second lines and shrinks the score. */
     dense?: boolean
   }>(),
   { dense: false }
@@ -81,7 +82,7 @@ const sides = computed(() =>
           ratio: kda(p.kills, p.deaths, p.assists),
           kp: Math.round(killParticipation(p, totals.value)),
           share: Math.round(damageShare(p, totals.value)),
-          rating: lobby.value.rating[p.puuid] ?? 0,
+          score: lobby.value.score[p.puuid] ?? null,
           rank: lobby.value.rank[p.puuid] ?? 0,
           damageBar: (p.totalDamageDealtToChampions / maxima.value.damage) * 100,
           takenBar: (p.damageTaken / maxima.value.damageTaken) * 100,
@@ -109,16 +110,16 @@ const sides = computed(() =>
   })
 )
 
-const columnCount = computed(() => (props.dense ? 9 : 10))
+const columnCount = 10
 </script>
 
 <template>
   <div class="scroll-x">
-    <table class="dt dt-hover num" :class="dense ? 'min-w-[880px]' : 'min-w-[1040px]'">
+    <table class="dt dt-hover num" :class="dense ? 'min-w-[940px]' : 'min-w-[1060px]'">
       <thead>
         <tr>
           <th class="w-[30%] !pl-3">Player</th>
-          <th v-if="!dense" class="w-[74px]">Rating</th>
+          <th class="w-[64px] text-center" title="0–100, against the other nine players">Score</th>
           <th class="text-right">KDA</th>
           <th class="text-right">KP</th>
           <th class="w-[15%]">Damage</th>
@@ -137,17 +138,14 @@ const columnCount = computed(() => (props.dense ? 9 : 10))
             <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5">
               <span class="flex items-center gap-2">
                 <span class="h-3 w-[3px] rounded-full" :style="{ background: side.color }" />
-                <span
-                  class="text-[12px] font-semibold uppercase tracking-[0.06em]"
-                  :class="side.won ? 'text-win' : 'text-loss'"
-                >
+                <span class="display text-[14px]" :class="side.won ? 'text-win' : 'text-loss'">
                   {{ side.won ? 'Victory' : 'Defeat' }}
                 </span>
                 <span class="text-[11.5px] text-ink-3">{{ side.side }} side</span>
               </span>
 
               <span class="text-[11.5px] text-ink-2">
-                <b class="font-semibold text-ink">{{ side.kills }}</b> kills
+                <b class="stat text-[14px] text-ink">{{ side.kills }}</b> kills
                 <span class="text-ink-4">·</span>
                 <span class="text-gold">{{ compact(side.gold) }}</span> gold
               </span>
@@ -188,14 +186,14 @@ const columnCount = computed(() => (props.dense ? 9 : 10))
                   <img
                     :src="champIcon(row.p.championId)"
                     :alt="row.champion"
-                    width="30"
-                    height="30"
+                    width="32"
+                    height="32"
                     loading="lazy"
                     decoding="async"
-                    class="thumb h-[30px] w-[30px] rounded-[6px]"
+                    class="thumb h-[32px] w-[32px] rounded-[6px]"
                   />
                   <span
-                    class="absolute -bottom-1 -left-1 grid h-[14px] min-w-[14px] place-items-center rounded-full bg-ink px-[3px] text-[8.5px] font-semibold text-bg"
+                    class="lvl absolute -bottom-1 -left-1 !h-[14px] !min-w-[14px] !text-[8.5px]"
                   >
                     {{ row.p.champLevel }}
                   </span>
@@ -225,8 +223,8 @@ const columnCount = computed(() => (props.dense ? 9 : 10))
                     />
                     <span
                       v-if="row.badge"
-                      class="rounded-[3px] px-1 py-px text-[9px] font-semibold tracking-[0.04em]"
-                      :class="row.badge === 'MVP' ? 'bg-ink text-bg' : 'bg-sunken text-ink-2'"
+                      class="tag !px-1 !py-px"
+                      :class="row.badge === 'MVP' ? 'tag-signal' : ''"
                     >
                       {{ row.badge }}
                     </span>
@@ -241,20 +239,18 @@ const columnCount = computed(() => (props.dense ? 9 : 10))
               </div>
             </td>
 
-            <td v-if="!dense">
-              <div class="mb-1 text-[11.5px] text-ink-2">{{ row.rating }}</div>
-              <div class="meter">
-                <span
-                  :style="{
-                    width: `${row.rating}%`,
-                    background: row.rank <= 3 ? 'var(--color-ink)' : 'var(--color-ink-4)',
-                  }"
-                />
-              </div>
+            <td class="text-center">
+              <span v-if="row.score === null" class="text-ink-4" title="Remakes are not scored">
+                —
+              </span>
+              <span v-else class="inline-flex flex-col items-center gap-0.5">
+                <ScoreRing :score="row.score" :size="dense ? 32 : 36" :stroke="3.5" />
+                <span class="num text-[9.5px] font-semibold text-ink-3">#{{ row.rank }}</span>
+              </span>
             </td>
 
             <td class="text-right">
-              <div class="text-ink">
+              <div class="stat text-[15px] text-ink">
                 {{ row.p.kills }}<span class="text-ink-4">/</span
                 ><span class="text-loss">{{ row.p.deaths }}</span
                 ><span class="text-ink-4">/</span>{{ row.p.assists }}

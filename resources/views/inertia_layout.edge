@@ -5,8 +5,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#08090c" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f2f2ef" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0a0b0e" media="(prefers-color-scheme: dark)" />
     <meta
       name="description"
       content="League of Legends statistics: match timelines, lobby-relative scoring and rank history, with nothing in the way."
@@ -31,15 +31,14 @@
     </script>
 
     {{--
-      Inter is served from our own origin. Pulling it from a font CDN cost a
+      Archivo is served from our own origin. Pulling it from a font CDN cost a
       DNS lookup, a TLS handshake and a render-blocking stylesheet before the
       first character could be painted; the @font-face rules now ride along in
-      the app stylesheet we were already fetching. These two weights carry
-      almost all of the page, so they start downloading immediately instead of
+      the app stylesheet we were already fetching. This one variable file carries
+      almost all of the page, so it starts downloading immediately instead of
       waiting for the stylesheet to be parsed.
     --}}
-    <link rel="preload" href="/fonts/inter-latin-400.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/fonts/inter-latin-600.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/archivo-latin-wdth.woff2" as="font" type="font/woff2" crossorigin />
 
     {{--
       For a profile we already hold, the analytics requests are known before

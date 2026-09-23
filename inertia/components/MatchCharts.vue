@@ -113,35 +113,36 @@ const finalLead = computed(() => {
 </script>
 
 <template>
-  <div class="grid gap-x-10 gap-y-8 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)]">
+  <div class="grid gap-4 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)]">
     <!-- Team against team -->
-    <section class="min-w-0">
+    <section class="card min-w-0">
       <div class="section">
         <h2>Team comparison</h2>
         <span class="meta">blue against red</span>
       </div>
 
-      <ul class="space-y-3">
+      <ul class="space-y-3.5">
         <li v-for="row in comparison" :key="row.label">
-          <div class="num mb-1.5 flex items-baseline justify-between gap-3 text-[12px]">
-            <span :class="row.blue >= row.red ? 'font-semibold text-blue' : 'text-ink-3'">
+          <div class="mb-1.5 flex items-baseline justify-between gap-3">
+            <span
+              class="stat text-[15px]"
+              :class="row.blue >= row.red ? 'text-blue' : 'text-ink-3'"
+            >
               {{ row.blueText }}
             </span>
-            <span class="text-[10.5px] uppercase tracking-[0.06em] text-ink-3">
-              {{ row.label }}
-            </span>
-            <span :class="row.red >= row.blue ? 'font-semibold text-red' : 'text-ink-3'">
+            <span class="label">{{ row.label }}</span>
+            <span class="stat text-[15px]" :class="row.red >= row.blue ? 'text-red' : 'text-ink-3'">
               {{ row.redText }}
             </span>
           </div>
-          <div class="flex h-[5px] gap-[2px] overflow-hidden">
-            <span class="flex flex-1 justify-end bg-sunken">
+          <div class="flex h-[5px] gap-[2px]">
+            <span class="flex flex-1 justify-end overflow-hidden rounded-l-[2px] bg-sunken">
               <span
                 class="block h-full"
                 :style="{ width: `${row.blueShare}%`, background: 'var(--color-blue)' }"
               />
             </span>
-            <span class="flex-1 bg-sunken">
+            <span class="flex-1 overflow-hidden rounded-r-[2px] bg-sunken">
               <span
                 class="block h-full"
                 :style="{ width: `${100 - row.blueShare}%`, background: 'var(--color-red)' }"
@@ -153,10 +154,10 @@ const finalLead = computed(() => {
     </section>
 
     <!-- Damage dealt and damage absorbed, on one axis -->
-    <section class="min-w-0">
+    <section class="card min-w-0">
       <div class="section">
         <h2>Damage profile</h2>
-        <span class="meta">dealt to champions against damage taken</span>
+        <span class="meta hidden sm:inline">dealt to champions against damage taken</span>
         <span class="meta ml-auto flex items-center gap-3">
           <span class="flex items-center gap-1.5">
             <i class="h-2 w-2 rounded-[2px]" style="background: var(--color-blue)" />
@@ -169,12 +170,16 @@ const finalLead = computed(() => {
         </span>
       </div>
 
-      <ul class="space-y-1">
+      <ul class="space-y-0.5 !px-2.5">
         <li
           v-for="row in damageRows"
           :key="row.p.puuid"
-          class="grid cursor-pointer grid-cols-[136px_minmax(0,1fr)_60px] items-center gap-3 rounded-[6px] px-1.5 py-1 transition-colors hover:bg-raised"
-          :class="row.p.puuid === selectedPuuid ? 'bg-raised' : ''"
+          class="grid cursor-pointer grid-cols-[140px_minmax(0,1fr)_60px] items-center gap-3 rounded-[7px] px-2 py-1 transition-colors"
+          :class="
+            row.p.puuid === selectedPuuid
+              ? 'bg-raised ring-1 ring-inset ring-line-2'
+              : 'hover:bg-raised'
+          "
           @click="emit('select', row.p.puuid)"
         >
           <span class="flex min-w-0 items-center gap-2">
@@ -182,14 +187,14 @@ const finalLead = computed(() => {
               :src="champIcon(row.p.championId)"
               :alt="championName(row.p.championId)"
               loading="lazy"
-              class="thumb h-[22px] w-[22px] rounded-[5px]"
+              class="thumb h-[26px] w-[26px] rounded-[6px]"
             />
             <RoleIcon v-if="row.p.position" :role="row.p.position" :size="11" class="text-ink-4" />
             <PlayerLink
               :game-name="row.p.gameName"
               :tag-line="row.p.tagLine"
               :is-self="row.p.puuid === ownerPuuid"
-              class="min-w-0 text-[11.5px]"
+              class="min-w-0 text-[12px]"
               @click.stop
             />
           </span>
@@ -205,7 +210,7 @@ const finalLead = computed(() => {
             />
           </span>
 
-          <span class="num text-right text-[11.5px] text-ink-2">
+          <span class="stat text-right text-[14px] text-ink">
             {{ compact(row.p.totalDamageDealtToChampions) }}
           </span>
         </li>
@@ -213,15 +218,15 @@ const finalLead = computed(() => {
     </section>
 
     <!-- The game over time -->
-    <section v-if="hasTimeline" class="min-w-0 xl:col-span-2">
-      <div class="section">
+    <section v-if="hasTimeline" class="card min-w-0 xl:col-span-2">
+      <div class="section flex-wrap !items-center gap-y-2">
         <h2>Over time</h2>
         <span class="meta">
           {{ METRICS.find((m) => m.value === metric)?.label.toLowerCase() }} by side
         </span>
         <span
-          class="num meta ml-auto"
-          :class="finalLead > 0 ? 'text-blue' : finalLead < 0 ? 'text-red' : ''"
+          class="stat ml-auto text-[16px]"
+          :class="finalLead > 0 ? 'text-blue' : finalLead < 0 ? 'text-red' : 'text-ink-3'"
         >
           {{
             finalLead === 0
@@ -242,19 +247,21 @@ const finalLead = computed(() => {
         </div>
       </div>
 
-      <div class="h-[220px]">
-        <LineChart :data="chartData" :options="chartOptions" />
-      </div>
+      <div>
+        <div class="h-[240px]">
+          <LineChart :data="chartData" :options="chartOptions" />
+        </div>
 
-      <div class="mt-3 flex justify-center gap-6 text-[11.5px] text-ink-2">
-        <span class="flex items-center gap-1.5">
-          <i class="h-[2px] w-4" style="background: var(--color-blue)" />
-          Blue side
-        </span>
-        <span class="flex items-center gap-1.5">
-          <i class="h-[2px] w-4" style="background: var(--color-red)" />
-          Red side
-        </span>
+        <div class="mt-3 flex justify-center gap-6 text-[11.5px] text-ink-2">
+          <span class="flex items-center gap-1.5">
+            <i class="h-[2px] w-4 rounded-full" style="background: var(--color-blue)" />
+            Blue side
+          </span>
+          <span class="flex items-center gap-1.5">
+            <i class="h-[2px] w-4 rounded-full" style="background: var(--color-red)" />
+            Red side
+          </span>
+        </div>
       </div>
     </section>
   </div>

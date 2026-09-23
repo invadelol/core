@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import ItemRow from './ItemRow.vue'
 import RuneTrees from './RuneTrees.vue'
 import RoleIcon from './RoleIcon.vue'
+import ScoreRing from './ScoreRing.vue'
 import { champIcon, championName, spellIcon, POSITION_NAMES } from '../lib/assets.js'
 import { compact, percent } from '../lib/format.js'
 import {
@@ -10,6 +11,12 @@ import {
   laneOpponent,
   matchMinutes,
   runeSet,
+  SCORE_CATEGORIES,
+  SCORE_CATEGORY_LABEL,
+  SCORE_LABEL,
+  SCORE_TONE,
+  scoreLobby,
+  scoreTier,
   skillMatrix,
   skillOrderOf,
   skillPriority,
@@ -35,6 +42,26 @@ const skills = computed(() => skillMatrix(skillOrderOf(props.frames)))
 const priority = computed(() => skillPriority(skillOrderOf(props.frames)))
 const hasSkills = computed(() => skills.value.Q.some(Boolean))
 const opponent = computed(() => laneOpponent(props.match, props.player))
+
+/** The score, and the five categories it is built from, weighted for the role. */
+const breakdown = computed(() => {
+  const entry = scoreLobby(props.match)[props.player.puuid]
+  if (!entry) return null
+  const tier = scoreTier(entry.score)
+  return {
+    score: entry.score,
+    rank: props.lobby.rank[props.player.puuid] ?? 0,
+    label: SCORE_LABEL[tier],
+    tone: SCORE_TONE[tier],
+    rows: SCORE_CATEGORIES.filter((key) => entry.weights[key] > 0).map((key) => ({
+      key,
+      label: SCORE_CATEGORY_LABEL[key],
+      value: entry.categories[key],
+      weight: entry.weights[key],
+      tone: SCORE_TONE[scoreTier(entry.categories[key])],
+    })),
+  }
+})
 
 /** Rows read against the best value anyone in this lobby managed. */
 const groups = computed<
@@ -179,7 +206,7 @@ const checkpoints = computed(() => {
             <template v-for="(key, index) in priority" :key="key">
               <span v-if="index" class="text-[10px] text-ink-4">›</span>
               <span
-                class="grid h-6 w-6 place-items-center rounded-[5px] bg-sunken text-[11px] font-semibold text-ink"
+                class="grid h-6 w-6 place-items-center rounded-[5px] bg-panel text-[11px] font-semibold text-ink"
               >
                 {{ key }}
               </span>
@@ -205,8 +232,8 @@ const checkpoints = computed(() => {
                 :class="
                   level
                     ? key === 'R'
-                      ? 'bg-ink text-bg'
-                      : 'bg-sunken text-ink-2'
+                      ? 'bg-accent text-accent-fg'
+                      : 'bg-line-2 text-ink'
                     : 'bg-panel text-transparent'
                 "
               >
@@ -225,6 +252,40 @@ const checkpoints = computed(() => {
 
     <!-- Numbers against the lobby -->
     <section class="min-w-0 lg:border-l lg:border-line lg:pl-8">
+      <div v-if="breakdown" class="mb-6 rounded-[8px] bg-panel p-3.5">
+        <div class="flex items-center gap-3">
+          <ScoreRing :score="breakdown.score" :size="52" :stroke="4.5" />
+          <div class="min-w-0">
+            <div class="text-[13px] font-semibold" :style="{ color: breakdown.tone }">
+              {{ breakdown.label }} game
+            </div>
+            <div class="num text-[11.5px] text-ink-3">
+              {{ breakdown.rank ? `#${breakdown.rank} of ${match.participants.length}` : '' }}
+              in this lobby
+            </div>
+          </div>
+        </div>
+        <ul class="mt-3.5 space-y-2">
+          <li
+            v-for="row in breakdown.rows"
+            :key="row.key"
+            class="grid grid-cols-[76px_minmax(0,1fr)_26px_34px] items-center gap-2 text-[11.5px]"
+          >
+            <span class="text-ink-2">{{ row.label }}</span>
+            <span class="meter">
+              <span :style="{ width: `${row.value}%`, background: row.tone }" />
+            </span>
+            <span class="num text-right font-semibold text-ink">{{ row.value }}</span>
+            <span
+              class="num text-right text-[10.5px] text-ink-4"
+              :title="`${row.weight}% of the score for this role`"
+            >
+              ×{{ row.weight }}%
+            </span>
+          </li>
+        </ul>
+      </div>
+
       <div v-for="(group, gi) in groups" :key="group.title" :class="gi ? 'mt-5' : ''">
         <div class="label mb-2.5">{{ group.title }}</div>
         <ul class="space-y-2">
@@ -257,7 +318,7 @@ const checkpoints = computed(() => {
           <img
             :src="champIcon(player.championId)"
             :alt="championName(player.championId)"
-            class="thumb h-8 w-8 rounded-[6px]"
+            class="thumb h-9 w-9 rounded-[7px]"
           />
           <span class="min-w-0">
             <span class="block truncate text-[12px] font-medium text-ink">
@@ -282,7 +343,7 @@ const checkpoints = computed(() => {
           <img
             :src="champIcon(opponent.championId)"
             :alt="championName(opponent.championId)"
-            class="thumb h-8 w-8 rounded-[6px]"
+            class="thumb h-9 w-9 rounded-[7px]"
           />
         </span>
       </div>
