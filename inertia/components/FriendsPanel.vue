@@ -77,30 +77,30 @@ function rate(wins: number, games: number) {
   <section>
     <div v-if="loading" class="skel h-[420px]" />
 
-    <p v-else-if="!mates.length" class="py-20 text-center text-[12.5px] text-ink-3">
+    <p v-else-if="!mates.length" class="card py-20 text-center text-[12.5px] text-ink-3">
       Nobody appears in more than one of the last {{ matches.length }} games.
     </p>
 
-    <template v-else>
+    <div v-else class="space-y-3">
       <!-- Which partnership, not just which person -->
-      <template v-if="pairings.length">
+      <section v-if="pairings.length" class="card">
         <div class="section">
           <h2>Lane partnerships</h2>
           <span class="meta">from the last {{ matches.length }} games</span>
         </div>
 
-        <div class="mb-9 grid gap-x-10 gap-y-7 sm:grid-cols-2 2xl:grid-cols-3">
-          <div v-for="pair in pairings" :key="pair.id">
-            <div class="flex items-baseline justify-between gap-3">
-              <span class="flex items-center gap-2">
-                <span class="flex items-center gap-0.5 text-ink-3">
+        <div class="grid gap-2 sm:grid-cols-2 2xl:grid-cols-3">
+          <div v-for="pair in pairings" :key="pair.id" class="rounded-[8px] bg-raised p-3.5">
+            <div class="flex items-center justify-between gap-3">
+              <span class="flex min-w-0 items-center gap-2">
+                <span class="flex shrink-0 items-center gap-0.5 text-ink-3">
                   <RoleIcon :role="pair.myRole" :size="13" />
                   <RoleIcon :role="pair.theirRole" :size="13" />
                 </span>
-                <span class="text-[12.5px] font-medium text-ink">{{ pair.label }}</span>
+                <span class="truncate text-[13px] font-semibold text-ink">{{ pair.label }}</span>
               </span>
               <span
-                class="num text-[13px] font-semibold"
+                class="stat shrink-0 text-[22px]"
                 :class="pair.wins / pair.games >= 0.5 ? 'text-win' : 'text-loss'"
               >
                 {{ rate(pair.wins, pair.games) }}%
@@ -108,7 +108,7 @@ function rate(wins: number, games: number) {
             </div>
 
             <div
-              class="mt-2 flex h-[5px] overflow-hidden rounded-[2px]"
+              class="mt-2.5 flex h-[4px] overflow-hidden rounded-[1px]"
               style="background: var(--color-loss)"
             >
               <span
@@ -124,7 +124,7 @@ function rate(wins: number, games: number) {
               <span>{{ pair.wins }}W {{ pair.games - pair.wins }}L</span>
             </div>
 
-            <ul class="mt-3 space-y-1.5">
+            <ul class="mt-3 space-y-1.5 border-t border-line-2 pt-3">
               <li
                 v-for="pick in pair.duos.slice(0, 3)"
                 :key="`${pick.mine}-${pick.theirs}`"
@@ -136,14 +136,14 @@ function rate(wins: number, games: number) {
                     :alt="championName(pick.mine)"
                     :title="championName(pick.mine)"
                     loading="lazy"
-                    class="thumb h-[19px] w-[19px] rounded-[5px]"
+                    class="thumb h-[22px] w-[22px] rounded-[5px]"
                   />
                   <img
                     :src="champIcon(pick.theirs)"
                     :alt="championName(pick.theirs)"
                     :title="championName(pick.theirs)"
                     loading="lazy"
-                    class="thumb h-[19px] w-[19px] rounded-[5px]"
+                    class="thumb h-[22px] w-[22px] rounded-[5px]"
                   />
                 </span>
                 <span class="min-w-0 flex-1 truncate text-[11.5px] text-ink-2">
@@ -169,32 +169,34 @@ function rate(wins: number, games: number) {
             </div>
           </div>
         </div>
-      </template>
+      </section>
 
       <!-- Who, and what the record with them is made of -->
-      <div class="section">
-        <h2>Played with</h2>
-        <span v-if="company.soloGames && company.duoGames" class="meta num">
-          duo {{ company.duoGames }} games {{ rate(company.duoWins, company.duoGames) }}%
-          <span class="ml-3">
-            solo {{ company.soloGames }} games {{ rate(company.soloWins, company.soloGames) }}%
+      <section class="card">
+        <div class="section">
+          <h2>Played with</h2>
+          <span v-if="company.soloGames && company.duoGames" class="meta num">
+            duo {{ company.duoGames }} games
+            <b class="font-semibold text-ink">{{ rate(company.duoWins, company.duoGames) }}%</b>
+            <span class="ml-3">
+              solo {{ company.soloGames }} games
+              <b class="font-semibold text-ink">{{ rate(company.soloWins, company.soloGames) }}%</b>
+            </span>
           </span>
-        </span>
-        <span v-else class="meta num">{{ matches.length }} games</span>
-      </div>
+          <span v-else class="meta num">{{ matches.length }} games</span>
+        </div>
 
-      <div class="frame">
-        <div class="scroll-x">
+        <div class="scroll-x !p-0">
           <table class="dt dt-hover num min-w-[760px]">
             <thead>
               <tr>
-                <th class="w-[24%] !pl-3">Player</th>
+                <th class="w-[24%] !pl-4">Player</th>
                 <th class="w-[15%]">Lane</th>
                 <th class="text-right">Games</th>
                 <th class="text-right">Record</th>
                 <th class="w-[14%]">Win rate</th>
                 <th class="text-right">With − without</th>
-                <th class="!pr-3">Champions</th>
+                <th class="!pr-4">Champions</th>
               </tr>
             </thead>
             <tbody>
@@ -206,7 +208,7 @@ function rate(wins: number, games: number) {
                   :aria-expanded="open === mate.puuid"
                   @click="toggle(mate.puuid)"
                 >
-                  <td class="!pl-3">
+                  <td class="!pl-4">
                     <span class="flex items-center gap-2">
                       <ChevronRight
                         :size="13"
@@ -217,7 +219,7 @@ function rate(wins: number, games: number) {
                         :game-name="mate.gameName"
                         :tag-line="mate.tagLine"
                         show-tag
-                        class="text-[12.5px]"
+                        class="text-[13px]"
                         @click.stop
                       />
                     </span>
@@ -236,10 +238,10 @@ function rate(wins: number, games: number) {
                   </td>
 
                   <td class="text-right">
-                    <div class="text-ink-2">{{ mate.games }}</div>
-                    <div class="mt-1 h-[3px] w-full rounded-full bg-sunken">
+                    <div class="stat text-[15px] text-ink">{{ mate.games }}</div>
+                    <div class="meter mt-1.5 !h-[3px]">
                       <span
-                        class="block h-full rounded-full bg-ink-3"
+                        class="!bg-ink-3"
                         :style="{ width: `${(mate.games / mostGames) * 100}%` }"
                       />
                     </div>
@@ -251,13 +253,13 @@ function rate(wins: number, games: number) {
 
                   <td>
                     <div
-                      class="mb-1 font-medium"
+                      class="stat mb-1.5 text-[15px]"
                       :class="mate.winrate >= 50 ? 'text-win' : 'text-loss'"
                     >
                       {{ Math.round(mate.winrate) }}%
                     </div>
                     <div
-                      class="flex h-[4px] overflow-hidden rounded-[2px]"
+                      class="flex h-[4px] overflow-hidden rounded-[1px]"
                       style="background: var(--color-loss)"
                     >
                       <span
@@ -269,7 +271,7 @@ function rate(wins: number, games: number) {
                   <td class="text-right">
                     <span
                       v-if="mate.lift !== null"
-                      class="text-[12.5px] font-semibold"
+                      class="stat text-[15px]"
                       :class="
                         mate.lift > 2 ? 'text-win' : mate.lift < -2 ? 'text-loss' : 'text-ink-3'
                       "
@@ -280,7 +282,7 @@ function rate(wins: number, games: number) {
                     <span v-else class="text-[12.5px] text-ink-4">—</span>
                   </td>
 
-                  <td class="!pr-3">
+                  <td class="!pr-4">
                     <span class="flex items-center gap-1">
                       <img
                         v-for="id in mate.champions"
@@ -289,7 +291,7 @@ function rate(wins: number, games: number) {
                         :alt="championName(id)"
                         :title="championName(id)"
                         loading="lazy"
-                        class="thumb h-[22px] w-[22px] rounded-[5px]"
+                        class="thumb h-[24px] w-[24px] rounded-[5px]"
                       />
                     </span>
                   </td>
@@ -297,7 +299,7 @@ function rate(wins: number, games: number) {
 
                 <!-- The duo opens in place, under the row it belongs to. -->
                 <tr v-if="open === mate.puuid">
-                  <td :colspan="7" class="!bg-raised !px-3 !py-0">
+                  <td :colspan="7" class="!bg-raised !px-4 !py-0">
                     <DuoDetail :matches="matches" :puuid="puuid" :mate-puuid="mate.puuid" />
                   </td>
                 </tr>
@@ -305,7 +307,7 @@ function rate(wins: number, games: number) {
             </tbody>
           </table>
         </div>
-      </div>
-    </template>
+      </section>
+    </div>
   </section>
 </template>

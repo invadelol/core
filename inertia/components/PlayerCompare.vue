@@ -372,44 +372,49 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
       <span class="meta">up to 100 games each, on the same filters</span>
     </div>
 
-    <div class="mb-6 flex flex-wrap items-center gap-2">
+    <div class="mb-5 flex flex-wrap items-center gap-2">
       <PlayerSearchField
         :busy="busy"
         placeholder="Search a Riot ID to compare against"
         @select="pick"
       />
-      <button v-if="other" class="btn btn-sm" @click="clear">
-        <X :size="12" />
+      <button v-if="other" class="btn" @click="clear">
+        <X :size="13" />
         Clear
       </button>
     </div>
 
     <p v-if="error" class="notice mb-5" role="alert">{{ error }}</p>
 
-    <MatchFilters v-model="filters" :champions="champions" class="mb-7" />
+    <MatchFilters v-model="filters" :champions="champions" class="mb-6" />
 
-    <div v-if="!other" class="py-20 text-center">
-      <ArrowLeftRight :size="22" class="mx-auto mb-3 text-ink-4" />
-      <p class="text-[13px] font-medium text-ink">Pick someone to compare against</p>
+    <div v-if="!other" class="card px-6 py-16 text-center">
+      <span
+        class="mx-auto mb-4 grid h-11 w-11 place-items-center rounded-[8px] bg-raised text-ink-3"
+      >
+        <ArrowLeftRight :size="20" />
+      </span>
+      <p class="display text-[20px] text-ink">Pick someone to compare against</p>
     </div>
 
     <template v-else-if="ready">
       <!-- Who is being compared, and who is ahead overall -->
       <div
-        class="mb-7 grid grid-cols-2 items-center gap-x-4 gap-y-5 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"
+        class="mb-2 grid grid-cols-2 items-stretch gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"
       >
         <div
           v-for="(p, i) in players"
           :key="p.puuid"
+          class="card min-w-0 p-3.5 sm:p-4"
           :class="i === 1 ? 'order-2 text-right sm:order-3' : 'order-1'"
         >
-          <div class="flex items-center gap-2.5" :class="i === 1 ? 'flex-row-reverse' : ''">
+          <div class="flex items-center gap-3" :class="i === 1 ? 'flex-row-reverse' : ''">
             <img
               :src="profileIcon(p.profileIconId)"
               alt=""
-              width="40"
-              height="40"
-              class="thumb h-10 w-10 rounded-[9px]"
+              width="48"
+              height="48"
+              class="thumb h-10 w-10 rounded-[8px] sm:h-12 sm:w-12"
             />
             <div class="min-w-0" :class="i === 1 ? 'text-right' : ''">
               <PlayerLink
@@ -417,46 +422,83 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
                 :tag-line="p.tagLine"
                 show-tag
                 bold
-                class="max-w-full text-[15px] tracking-[-0.015em]"
+                class="display max-w-full text-[16px] sm:text-[19px]"
               />
-              <div class="num text-[11px] text-ink-3">
-                {{ p.platform }} · level {{ p.summonerLevel }} ·
-                {{ datasets[i]?.stats.total ?? 0 }} games
+              <div class="num mt-1 truncate text-[11px] text-ink-3">
+                {{ p.platform }} · level {{ p.summonerLevel }}
               </div>
             </div>
           </div>
 
-          <div class="mt-2.5 flex gap-[2px]" :class="i === 1 ? 'justify-end' : ''">
+          <!-- The headline figures, the better of the two in full ink -->
+          <div
+            class="mt-4 flex flex-wrap items-end gap-x-5 gap-y-3"
+            :class="i === 1 ? 'justify-end' : ''"
+          >
+            <div>
+              <div class="label">Win rate</div>
+              <div
+                class="stat mt-1.5 text-[24px] sm:text-[30px]"
+                :class="leader('winrate') === 1 - i ? 'text-ink-3' : 'text-ink'"
+              >
+                {{ value(i, 'winrate', 100, 0) ?? '—' }}%
+              </div>
+            </div>
+            <div>
+              <div class="label">KDA</div>
+              <div
+                class="stat mt-1.5 text-[24px] sm:text-[30px]"
+                :class="leader('kda') === 1 - i ? 'text-ink-3' : 'text-ink'"
+              >
+                {{ value(i, 'kda', 1, 2) ?? '—' }}
+              </div>
+            </div>
+            <div>
+              <div class="label">Games</div>
+              <div class="stat mt-1.5 text-[24px] text-ink-2 sm:text-[30px]">
+                {{ datasets[i]?.stats.total ?? 0 }}
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 flex gap-[2px]" :class="i === 1 ? 'justify-end' : ''">
             <span
               v-for="(win, index) in form[i]"
               :key="index"
-              class="h-[12px] w-[4px] rounded-[1px]"
+              class="h-[14px] w-[4px] rounded-[1px]"
               :style="{ background: win ? 'var(--color-win)' : 'var(--color-loss)' }"
             />
           </div>
         </div>
 
-        <div class="order-3 col-span-2 text-center sm:order-2 sm:col-span-1">
-          <div class="num display text-[22px] text-ink">{{ wins[0] }}–{{ wins[1] }}</div>
-          <div class="label mt-1 !text-[9px]">metrics won</div>
+        <div
+          class="order-3 col-span-2 flex flex-col items-center justify-center py-2 text-center sm:order-2 sm:col-span-1 sm:px-4"
+        >
+          <div class="stat text-[34px] sm:text-[40px]">
+            <span :class="wins[0] >= wins[1] ? 'text-ink' : 'text-ink-3'">{{ wins[0] }}</span>
+            <span class="px-1 text-ink-4">–</span>
+            <span :class="wins[1] >= wins[0] ? 'text-ink' : 'text-ink-3'">{{ wins[1] }}</span>
+          </div>
+          <div class="label mt-1.5">metrics won</div>
         </div>
       </div>
 
       <!-- Every metric on one axis -->
-      <div class="frame mb-9">
+      <div class="card mb-8">
         <table class="dt num w-full">
           <tbody>
             <tr v-for="metric in METRICS" :key="metric.key">
-              <td class="w-[22%] !py-3 !pl-3 text-right">
+              <td class="w-[24%] !py-3 !pl-4 text-right">
                 <div class="flex items-baseline justify-end gap-1.5">
-                  <span v-if="leader(metric.key) === 0" class="text-[10.5px] text-ink-3">
+                  <span
+                    v-if="leader(metric.key) === 0"
+                    class="text-[10.5px] font-semibold text-win"
+                  >
                     {{ gap(metric.key, metric.factor, metric.decimals) }}
                   </span>
                   <span
-                    class="text-[14.5px]"
-                    :class="
-                      leader(metric.key) === 0 ? 'font-semibold text-ink' : 'font-medium text-ink-4'
-                    "
+                    class="stat text-[16px] sm:text-[18px]"
+                    :class="leader(metric.key) === 0 ? 'text-ink' : 'text-ink-3'"
                   >
                     {{ value(0, metric.key, metric.factor, metric.decimals) ?? '—'
                     }}{{ metric.unit }}
@@ -467,15 +509,16 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
                   :label="`${metric.name}, last 20 games`"
                   :width="72"
                   :height="18"
-                  class="ml-auto mt-1 hidden text-ink-4 lg:block"
+                  class="ml-auto mt-1.5 hidden lg:block"
+                  :class="leader(metric.key) === 0 ? 'text-ink-2' : 'text-ink-4'"
                 />
               </td>
 
               <td class="!py-3">
-                <div class="mb-1.5 text-center text-[11px] uppercase tracking-[0.06em] text-ink-3">
+                <div class="label mb-2 text-center">
                   {{ metric.name }}
                 </div>
-                <div class="flex h-[7px] items-stretch gap-[3px]">
+                <div class="flex h-[6px] items-stretch gap-[3px]">
                   <span class="flex flex-1 justify-end overflow-hidden rounded-l-[2px] bg-sunken">
                     <span
                       class="block h-full rounded-l-[2px]"
@@ -499,18 +542,19 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
                 </div>
               </td>
 
-              <td class="w-[22%] !py-3 !pr-3">
+              <td class="w-[24%] !py-3 !pr-4">
                 <div class="flex items-baseline gap-1.5">
                   <span
-                    class="text-[14.5px]"
-                    :class="
-                      leader(metric.key) === 1 ? 'font-semibold text-ink' : 'font-medium text-ink-4'
-                    "
+                    class="stat text-[16px] sm:text-[18px]"
+                    :class="leader(metric.key) === 1 ? 'text-ink' : 'text-ink-3'"
                   >
                     {{ value(1, metric.key, metric.factor, metric.decimals) ?? '—'
                     }}{{ metric.unit }}
                   </span>
-                  <span v-if="leader(metric.key) === 1" class="text-[10.5px] text-ink-3">
+                  <span
+                    v-if="leader(metric.key) === 1"
+                    class="text-[10.5px] font-semibold text-win"
+                  >
                     {{ gap(metric.key, metric.factor, metric.decimals) }}
                   </span>
                 </div>
@@ -519,7 +563,8 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
                   :label="`${metric.name}, last 20 games`"
                   :width="72"
                   :height="18"
-                  class="mt-1 hidden text-ink-4 lg:block"
+                  class="mt-1.5 hidden lg:block"
+                  :class="leader(metric.key) === 1 ? 'text-ink-2' : 'text-ink-4'"
                 />
               </td>
             </tr>
@@ -534,39 +579,41 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
           <span v-if="pairing" class="meta">{{ pairing }}</span>
         </div>
 
-        <div class="mb-4 flex flex-wrap items-start gap-x-9 gap-y-4">
+        <div class="card mb-2 flex flex-wrap items-start gap-x-10 gap-y-4 px-4 py-3.5">
           <div v-if="record.played">
             <div class="label">Record</div>
-            <div class="num display mt-1 text-[19px]">
+            <div class="stat mt-1.5 text-[26px]">
               <span class="text-win">{{ record.won }}</span>
               <span class="text-ink-4">–</span>
               <span class="text-loss">{{ record.lost }}</span>
-              <span class="ml-1.5 text-[11px] font-medium text-ink-3">
+              <span class="num ml-1.5 text-[12px] font-semibold text-ink-3">
                 {{ Math.round((record.won / record.played) * 100) }}%
               </span>
             </div>
           </div>
           <div v-if="versus.length">
             <div class="label">Against</div>
-            <div class="num display mt-1 text-[19px] text-ink">{{ versus.length }}</div>
+            <div class="stat mt-1.5 text-[26px] text-ink">{{ versus.length }}</div>
           </div>
           <div v-for="(row, i) in apart" :key="i">
             <template v-if="row">
               <div class="label">{{ players[i].gameName }} apart</div>
-              <div class="num display mt-1 text-[19px] text-ink">
+              <div class="stat mt-1.5 text-[26px] text-ink">
                 {{ row.winrate }}%
-                <span class="ml-1.5 text-[11px] font-medium text-ink-3">{{ row.games }} games</span>
+                <span class="num ml-1.5 text-[12px] font-semibold text-ink-3"
+                  >{{ row.games }} games</span
+                >
               </div>
             </template>
           </div>
         </div>
 
-        <div class="frame mb-9">
+        <div class="card mb-8">
           <div class="scroll-x">
             <table class="dt dt-hover num min-w-[330px]">
               <thead>
                 <tr>
-                  <th class="!pl-3">Game</th>
+                  <th class="!pl-4">Game</th>
                   <th v-for="p in players" :key="p.puuid" class="text-right">
                     <PlayerLink
                       :game-name="p.gameName"
@@ -574,15 +621,17 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
                       class="!font-semibold"
                     />
                   </th>
-                  <th class="hidden !pr-3 text-right sm:table-cell">Length</th>
+                  <th class="hidden !pr-4 text-right sm:table-cell">Length</th>
                 </tr>
               </thead>
 
               <tbody v-if="record.played">
                 <tr class="band">
-                  <td class="!pl-3 text-[11px] text-ink-2">{{ record.played }} games together</td>
+                  <td class="!pl-4">
+                    <span class="label !text-ink-2">{{ record.played }} games together</span>
+                  </td>
                   <td v-for="(line, i) in togetherLines" :key="i" class="text-right">
-                    <span class="text-[12.5px]" :class="roleInk(togetherLines, 'kda', i)">
+                    <span class="stat text-[14px]" :class="roleInk(togetherLines, 'kda', i)">
                       {{ line.kda.toFixed(2) }}
                     </span>
                     <span
@@ -592,21 +641,21 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
                       {{ Math.round(line.killParticipation * 100) }}% KP
                     </span>
                   </td>
-                  <td class="hidden !pr-3 sm:table-cell" />
+                  <td class="hidden !pr-4 sm:table-cell" />
                 </tr>
 
                 <tr v-for="game in sameTeam" :key="game.match.matchId">
-                  <td class="!pl-3">
-                    <span class="flex items-baseline gap-2">
+                  <td class="!pl-4">
+                    <span class="flex items-center gap-2.5">
                       <span
-                        class="text-[12px] font-semibold"
+                        class="stat text-[13px]"
                         :class="game.players[0].win ? 'text-win' : 'text-loss'"
                       >
                         {{ game.players[0].win ? 'W' : 'L' }}
                       </span>
-                      <span class="min-w-0 truncate text-[11px] text-ink-3">
+                      <span class="min-w-0 truncate text-[11.5px] text-ink-2">
                         {{ queueName(game.match.queueId) }}
-                        <span class="hidden text-ink-4 sm:inline">
+                        <span class="hidden text-ink-3 sm:inline">
                           {{ timeAgo(game.match.gameStartMs) }}
                         </span>
                       </span>
@@ -614,27 +663,27 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
                   </td>
                   <td v-for="(p, i) in game.players" :key="i" class="text-right">
                     <span class="flex items-center justify-end gap-2">
-                      <span class="text-[12px] text-ink-2">
+                      <span class="text-[12px] font-medium text-ink-2">
                         {{ p.kills }}/{{ p.deaths }}/{{ p.assists }}
                       </span>
                       <RoleIcon
                         v-if="p.position"
                         :role="p.position"
                         :size="13"
-                        class="text-ink-4"
+                        class="text-ink-3"
                       />
                       <img
                         :src="champIcon(p.championId)"
                         :alt="championName(p.championId)"
                         :title="championName(p.championId)"
-                        width="22"
-                        height="22"
+                        width="26"
+                        height="26"
                         loading="lazy"
-                        class="thumb h-[22px] w-[22px] rounded-[5px]"
+                        class="thumb h-[26px] w-[26px] rounded-[7px]"
                       />
                     </span>
                   </td>
-                  <td class="hidden !pr-3 text-right text-[11px] text-ink-3 sm:table-cell">
+                  <td class="hidden !pr-4 text-right text-[11.5px] text-ink-3 sm:table-cell">
                     {{ duration(game.match.duration) }}
                   </td>
                 </tr>
@@ -642,45 +691,42 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
 
               <tbody v-if="versus.length">
                 <tr class="band">
-                  <td class="!pl-3 text-[11px] text-ink-2">
-                    {{ versus.length }} against each other
+                  <td class="!pl-4">
+                    <span class="label !text-ink-2">{{ versus.length }} against each other</span>
                   </td>
                   <td :colspan="players.length" />
-                  <td class="hidden !pr-3 sm:table-cell" />
+                  <td class="hidden !pr-4 sm:table-cell" />
                 </tr>
 
                 <tr v-for="game in versus" :key="game.match.matchId">
-                  <td class="!pl-3">
-                    <span class="min-w-0 truncate text-[11px] text-ink-3">
+                  <td class="!pl-4">
+                    <span class="min-w-0 truncate text-[11.5px] text-ink-2">
                       {{ queueName(game.match.queueId) }}
-                      <span class="hidden text-ink-4 sm:inline">
+                      <span class="hidden text-ink-3 sm:inline">
                         {{ timeAgo(game.match.gameStartMs) }}
                       </span>
                     </span>
                   </td>
                   <td v-for="(p, i) in game.players" :key="i" class="text-right">
                     <span class="flex items-center justify-end gap-2">
-                      <span
-                        class="text-[11px] font-semibold"
-                        :class="p.win ? 'text-win' : 'text-loss'"
-                      >
+                      <span class="stat text-[13px]" :class="p.win ? 'text-win' : 'text-loss'">
                         {{ p.win ? 'W' : 'L' }}
                       </span>
-                      <span class="text-[12px] text-ink-2">
+                      <span class="text-[12px] font-medium text-ink-2">
                         {{ p.kills }}/{{ p.deaths }}/{{ p.assists }}
                       </span>
                       <img
                         :src="champIcon(p.championId)"
                         :alt="championName(p.championId)"
                         :title="championName(p.championId)"
-                        width="22"
-                        height="22"
+                        width="26"
+                        height="26"
                         loading="lazy"
-                        class="thumb h-[22px] w-[22px] rounded-[5px]"
+                        class="thumb h-[26px] w-[26px] rounded-[7px]"
                       />
                     </span>
                   </td>
-                  <td class="hidden !pr-3 text-right text-[11px] text-ink-3 sm:table-cell">
+                  <td class="hidden !pr-4 text-right text-[11.5px] text-ink-3 sm:table-cell">
                     {{ duration(game.match.duration) }}
                   </td>
                 </tr>
@@ -695,17 +741,17 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
         <div class="section">
           <h3>By role</h3>
         </div>
-        <div class="frame mb-9">
+        <div class="card mb-8">
           <table class="dt num w-full">
             <thead>
               <tr>
-                <th class="!pl-3">Player</th>
+                <th class="!pl-4">Player</th>
                 <th class="text-right">Games</th>
                 <th
-                  v-for="column in ROLE_COLUMNS"
+                  v-for="(column, c) in ROLE_COLUMNS"
                   :key="column.key"
                   class="text-right"
-                  :class="column.at"
+                  :class="[column.at, c === ROLE_COLUMNS.length - 1 ? '!pr-4' : '']"
                 >
                   {{ column.head }}
                 </th>
@@ -714,9 +760,9 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
 
             <tbody v-for="row in roles" :key="row.role">
               <tr class="band">
-                <td class="!pl-3" :colspan="2 + ROLE_COLUMNS.length">
+                <td class="!pl-4" :colspan="2 + ROLE_COLUMNS.length">
                   <span class="flex items-center gap-2">
-                    <RoleIcon :role="row.role" :size="14" class="text-ink-3" />
+                    <RoleIcon :role="row.role" :size="14" class="text-ink-2" />
                     <span class="label !text-ink-2">{{ row.label }}</span>
                   </span>
                 </td>
@@ -724,19 +770,23 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
 
               <template v-for="(line, i) in row.lines" :key="i">
                 <tr v-if="line">
-                  <td class="!pl-3">
+                  <td class="!pl-4">
                     <PlayerLink
                       :game-name="players[i].gameName"
                       :tag-line="players[i].tagLine"
-                      class="max-w-[140px] text-[12px]"
+                      class="max-w-[140px] text-[12.5px]"
                     />
                   </td>
                   <td class="text-right text-ink-3">{{ line.games }}</td>
                   <td
-                    v-for="column in ROLE_COLUMNS"
+                    v-for="(column, c) in ROLE_COLUMNS"
                     :key="column.key"
                     class="text-right"
-                    :class="[column.at, roleInk(row.lines, column.key, i)]"
+                    :class="[
+                      column.at,
+                      roleInk(row.lines, column.key, i),
+                      c === ROLE_COLUMNS.length - 1 ? '!pr-4' : '',
+                    ]"
                   >
                     {{ cell(line, column) }}
                   </td>
@@ -752,12 +802,12 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
         <div class="section">
           <h3>Champions</h3>
         </div>
-        <div class="frame">
+        <div class="card">
           <table class="dt num w-full">
             <thead>
               <tr>
-                <th class="!pl-3">Champion</th>
-                <th v-for="p in players" :key="p.puuid" class="!pr-3 text-right">
+                <th class="!pl-4">Champion</th>
+                <th v-for="p in players" :key="p.puuid" class="!pr-4 text-right">
                   <PlayerLink
                     :game-name="p.gameName"
                     :tag-line="p.tagLine"
@@ -769,32 +819,32 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
 
             <tbody v-if="overlap.length">
               <tr class="band">
-                <td class="!pl-3" colspan="3">
+                <td class="!pl-4" colspan="3">
                   <span class="label !text-ink-2">Both play</span>
                 </td>
               </tr>
               <tr v-for="row in overlap" :key="row.championId">
-                <td class="!pl-3">
+                <td class="!pl-4">
                   <span class="flex items-center gap-2.5">
                     <img
                       :src="champIcon(row.championId)"
                       :alt="championName(row.championId)"
-                      width="26"
-                      height="26"
+                      width="30"
+                      height="30"
                       loading="lazy"
-                      class="thumb h-[26px] w-[26px] rounded-[6px]"
+                      class="thumb h-[30px] w-[30px] rounded-[7px]"
                     />
-                    <span class="truncate font-medium text-ink">
+                    <span class="truncate font-semibold text-ink">
                       {{ championName(row.championId) }}
                     </span>
                   </span>
                 </td>
-                <td v-for="(stat, i) in row.stats" :key="i" class="!pr-3 text-right align-middle">
+                <td v-for="(stat, i) in row.stats" :key="i" class="!pr-4 text-right align-middle">
                   <template v-if="stat">
-                    <div class="text-[13px]" :class="poolInk(row.stats, i)">
+                    <div class="stat text-[15px]" :class="poolInk(row.stats, i)">
                       {{ Math.round(stat.winrate * 100) }}%
                     </div>
-                    <div class="text-[10.5px] text-ink-3">
+                    <div class="mt-0.5 text-[10.5px] text-ink-3">
                       {{ stat.games }}g · {{ stat.kda.toFixed(2) }}
                     </div>
                   </template>
@@ -806,32 +856,32 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
             <tbody v-for="(list, side) in pools.only" :key="side">
               <template v-if="list.length">
                 <tr class="band">
-                  <td class="!pl-3" colspan="3">
+                  <td class="!pl-4" colspan="3">
                     <span class="label !text-ink-2">Only {{ players[side].gameName }}</span>
                   </td>
                 </tr>
                 <tr v-for="row in list" :key="row.championId">
-                  <td class="!pl-3">
+                  <td class="!pl-4">
                     <span class="flex items-center gap-2.5">
                       <img
                         :src="champIcon(row.championId)"
                         :alt="championName(row.championId)"
-                        width="26"
-                        height="26"
+                        width="30"
+                        height="30"
                         loading="lazy"
-                        class="thumb h-[26px] w-[26px] rounded-[6px]"
+                        class="thumb h-[30px] w-[30px] rounded-[7px]"
                       />
-                      <span class="truncate font-medium text-ink">
+                      <span class="truncate font-semibold text-ink">
                         {{ championName(row.championId) }}
                       </span>
                     </span>
                   </td>
-                  <td v-for="(stat, i) in row.stats" :key="i" class="!pr-3 text-right align-middle">
+                  <td v-for="(stat, i) in row.stats" :key="i" class="!pr-4 text-right align-middle">
                     <template v-if="stat">
-                      <div class="text-[13px] font-semibold text-ink">
+                      <div class="stat text-[15px] text-ink">
                         {{ Math.round(stat.winrate * 100) }}%
                       </div>
-                      <div class="text-[10.5px] text-ink-3">
+                      <div class="mt-0.5 text-[10.5px] text-ink-3">
                         {{ stat.games }}g · {{ stat.kda.toFixed(2) }}
                       </div>
                     </template>
@@ -845,6 +895,12 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
       </template>
     </template>
 
-    <div v-else class="skel h-[420px]" />
+    <div v-else class="grid gap-2">
+      <div class="grid grid-cols-2 gap-2">
+        <div class="skel h-[168px]" />
+        <div class="skel h-[168px]" />
+      </div>
+      <div class="skel h-[420px]" />
+    </div>
   </section>
 </template>

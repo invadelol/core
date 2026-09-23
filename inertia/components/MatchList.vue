@@ -42,33 +42,27 @@ function toggle(matchId: string) {
 </script>
 
 <template>
-  <div v-if="!matches.length" class="py-16 text-center">
-    <p class="text-[13px] font-medium text-ink">No matches here</p>
+  <div v-if="!matches.length" class="card py-16 text-center">
+    <p class="display text-[17px] text-ink">No matches here</p>
     <p class="mx-auto mt-1.5 max-w-[46ch] text-[12px] leading-relaxed text-ink-3">
       Nothing matches these filters.
     </p>
   </div>
 
-  <div v-else>
-    <template v-for="day in days" :key="day.label">
-      <div
-        class="flex items-baseline justify-between gap-3 border-b border-line bg-raised px-4 py-2"
-      >
-        <span class="text-[11px] font-semibold uppercase tracking-[0.07em] text-ink-2">
-          {{ day.label }}
-        </span>
-        <span class="num text-[11px]">
-          <b class="font-semibold text-win">{{ day.wins }}W</b>
-          <b class="ml-1.5 font-semibold text-loss">{{ day.losses }}L</b>
+  <div v-else class="space-y-5">
+    <section v-for="day in days" :key="day.label">
+      <div class="mb-2 flex items-baseline justify-between gap-3 px-1">
+        <span class="label !text-ink-2">{{ day.label }}</span>
+        <span class="num stat text-[12.5px]">
+          <b class="text-win">{{ day.wins }}W</b>
+          <b class="ml-1.5 text-loss">{{ day.losses }}L</b>
         </span>
       </div>
 
-      <div
-        v-for="match in day.matches"
-        :key="match.matchId"
-        class="border-b border-line last:border-b-0"
-      >
+      <div class="space-y-1.5">
         <MatchRow
+          v-for="match in day.matches"
+          :key="match.matchId"
           :match="match"
           :puuid="puuid"
           :summoner-slug="summonerSlug"
@@ -76,6 +70,6 @@ function toggle(matchId: string) {
           @toggle="toggle(match.matchId)"
         />
       </div>
-    </template>
+    </section>
   </div>
 </template>

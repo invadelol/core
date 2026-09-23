@@ -33,22 +33,22 @@ const rows = computed(() => {
 </script>
 
 <template>
-  <section v-if="rows.length">
+  <section v-if="rows.length" class="card">
     <div class="section">
       <h3>Roles</h3>
       <span class="meta">{{ matches.length }} games</span>
     </div>
 
-    <ul class="space-y-2.5">
+    <ul class="space-y-3">
       <li v-for="row in rows" :key="row.position" class="flex items-center gap-2.5">
-        <RoleIcon :role="row.position" :size="15" class="text-ink-3" />
-        <span class="w-[46px] shrink-0 text-[11.5px] text-ink-2">{{ row.label }}</span>
-        <span class="h-[5px] min-w-0 flex-1 rounded-[2px] bg-sunken">
-          <span class="block h-full rounded-[2px] bg-ink" :style="{ width: `${row.share}%` }" />
+        <RoleIcon :role="row.position" :size="16" class="text-ink-2" />
+        <span class="w-[50px] shrink-0 text-[12px] font-medium text-ink">{{ row.label }}</span>
+        <span class="meter min-w-0 flex-1 !h-[6px]">
+          <span class="!bg-ink" :style="{ width: `${row.share}%` }" />
         </span>
         <span class="num w-[26px] shrink-0 text-right text-[11px] text-ink-3">{{ row.games }}</span>
         <span
-          class="num w-[32px] shrink-0 text-right text-[11px] font-medium"
+          class="num stat w-[38px] shrink-0 text-right text-[14px]"
           :class="row.winrate >= 50 ? 'text-win' : 'text-loss'"
         >
           {{ row.winrate }}%

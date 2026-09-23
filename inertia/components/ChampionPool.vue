@@ -22,7 +22,7 @@ const rows = computed(() => {
 </script>
 
 <template>
-  <section v-if="rows.length">
+  <section v-if="rows.length" class="card">
     <div class="section">
       <h3>Champions</h3>
       <Link
@@ -33,39 +33,40 @@ const rows = computed(() => {
       </Link>
     </div>
 
-    <ul class="space-y-1">
+    <ul class="space-y-0.5 !px-2 !pb-2 !pt-2">
       <li v-for="champ in rows" :key="champ.championId">
         <button
-          class="flex w-full items-center gap-2.5 rounded-[6px] px-1.5 py-1.5 text-left transition-colors hover:bg-raised"
-          :class="active === champ.championId ? 'bg-raised' : ''"
+          class="flex w-full items-center gap-3 rounded-[7px] px-2 py-2 text-left transition-colors hover:bg-raised"
+          :class="
+            active === champ.championId
+              ? 'bg-raised shadow-[inset_3px_0_0_var(--color-accent)]'
+              : ''
+          "
           @click="emit('pick', champ.championId)"
         >
           <img
             :src="champIcon(champ.championId)"
             :alt="championName(champ.championId)"
-            width="28"
-            height="28"
+            width="34"
+            height="34"
             loading="lazy"
-            class="thumb h-7 w-7 rounded-[6px]"
+            class="thumb h-[34px] w-[34px] rounded-[7px]"
           />
           <span class="min-w-0 flex-1">
             <span class="flex items-baseline justify-between gap-2">
-              <span class="truncate text-[12px] font-medium text-ink">
+              <span class="truncate text-[13px] font-semibold text-ink">
                 {{ championName(champ.championId) }}
               </span>
               <span
-                class="num shrink-0 text-[11.5px] font-medium"
+                class="num stat shrink-0 text-[15px]"
                 :class="champ.winrate >= 0.5 ? 'text-win' : 'text-loss'"
               >
                 {{ Math.round(champ.winrate * 100) }}%
               </span>
             </span>
             <span class="mt-1 flex items-center gap-2">
-              <span class="h-[4px] min-w-0 flex-1 rounded-[2px] bg-sunken">
-                <span
-                  class="block h-full rounded-[2px] bg-ink-3"
-                  :style="{ width: `${champ.share}%` }"
-                />
+              <span class="meter min-w-0 flex-1">
+                <span class="!bg-ink-3" :style="{ width: `${champ.share}%` }" />
               </span>
               <span class="num shrink-0 text-[10.5px] text-ink-3">
                 {{ champ.games }}g · {{ champ.kda.toFixed(1) }} KDA

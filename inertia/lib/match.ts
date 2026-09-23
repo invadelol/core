@@ -107,88 +107,243 @@ export function goldShare(p: Participant, totals: Record<number, TeamTotals>) {
   return ((p.goldEarned || 0) / teamGold) * 100
 }
 
-/**
- * A single number blending combat, economy and vision, used only to rank the
- * ten players of one lobby against each other.
- */
-export function performanceScore(match: Match, p: Participant) {
-  const minutes = matchMinutes(match)
-  const ratio = (p.kills + p.assists) / Math.max(1, p.deaths)
-  return (
-    ratio * 18 +
-    (p.damageDealt || 0) / minutes / 140 +
-    (p.goldEarned || 0) / minutes / 70 +
-    ((p.visionScore || 0) / minutes) * 2 +
-    ((p.cs || 0) / minutes) * 4
-  )
+/* ── Score ─────────────────────────────────────────────────────────
+
+   One 0–100 number for how a game went, built from five sub-scores so
+   the number can explain itself:
+
+     Fighting    KDA, kill participation, staying alive
+     Damage      damage to champions, and damage soaked for the team
+     Farming     gold and creep score
+     Vision      vision score
+     Objectives  damage to objectives
+
+   Every stat is rated twice. Once against the lobby, as a z-score over
+   the ten players squashed onto 0–1, so one runaway carry does not
+   flatten everybody else. And once against the lane opponent, as a
+   share of the two players' combined total, because a support's farm
+   means nothing next to a mid laner's but a lot next to the other
+   support's. Roles then weight the five categories by what the role is
+   asked to do. A win adds a fixed ten points: it is the point of the
+   game, but it does not turn a bad game into a good one.
+
+   Games under five minutes are remakes and are not scored. */
+
+export const SCORE_CATEGORIES = ['fighting', 'damage', 'farming', 'vision', 'objectives'] as const
+export type ScoreCategory = (typeof SCORE_CATEGORIES)[number]
+
+export const SCORE_CATEGORY_LABEL: Record<ScoreCategory, string> = {
+  fighting: 'Fighting',
+  damage: 'Damage',
+  farming: 'Farming',
+  vision: 'Vision',
+  objectives: 'Objectives',
+}
+
+type ScoreMetric =
+  | 'kda'
+  | 'kp'
+  | 'alive'
+  | 'dealt'
+  | 'taken'
+  | 'gold'
+  | 'cs'
+  | 'vision'
+  | 'objectives'
+
+/** How each category is assembled from raw stats. */
+const CATEGORY_METRICS: Record<ScoreCategory, Partial<Record<ScoreMetric, number>>> = {
+  fighting: { kda: 0.45, kp: 0.35, alive: 0.2 },
+  damage: { dealt: 0.75, taken: 0.25 },
+  farming: { gold: 0.5, cs: 0.5 },
+  vision: { vision: 1 },
+  objectives: { objectives: 1 },
+}
+
+const ROLE_WEIGHTS: Record<string, Record<ScoreCategory, number>> = {
+  TOP: { fighting: 25, damage: 25, farming: 25, vision: 8, objectives: 17 },
+  JUNGLE: { fighting: 30, damage: 15, farming: 15, vision: 15, objectives: 25 },
+  MIDDLE: { fighting: 28, damage: 30, farming: 25, vision: 7, objectives: 10 },
+  BOTTOM: { fighting: 27, damage: 32, farming: 28, vision: 5, objectives: 8 },
+  UTILITY: { fighting: 40, damage: 15, farming: 0, vision: 40, objectives: 5 },
+  /* ARAM and the other roleless modes: fights are the whole game. */
+  NONE: { fighting: 45, damage: 45, farming: 10, vision: 0, objectives: 0 },
+}
+
+/** Below this a game is a remake, and a score would only be noise. */
+const MIN_SCORED_SECONDS = 300
+
+export interface PlayerScore {
+  /** 0–100 overall. */
+  score: number
+  /** 0–100 per category, before role weighting. */
+  categories: Record<ScoreCategory, number>
+  /** The role weights that produced the overall, summing to 100. */
+  weights: Record<ScoreCategory, number>
+}
+
+function scoreMetrics(p: Participant, totals: Record<number, TeamTotals>) {
+  return {
+    kda: (p.kills + p.assists) / Math.max(1, p.deaths),
+    kp: killParticipation(p, totals),
+    /* Fewer deaths is better; negated so that "higher is better" holds
+       for every metric and one formula rates them all. */
+    alive: -(p.deaths || 0),
+    dealt: p.totalDamageDealtToChampions,
+    taken: p.damageTaken,
+    gold: p.goldEarned,
+    cs: p.cs,
+    vision: p.visionScore,
+    objectives: p.damageDealtToObjectives,
+  } satisfies Record<ScoreMetric, number | undefined>
+}
+
+/** A z-score over the lobby, squashed onto 0–1 (0.5 is the lobby mean). */
+function lobbyStanding(value: number, values: number[]) {
+  const mean = values.reduce((a, b) => a + b, 0) / values.length
+  const variance = values.reduce((a, b) => a + (b - mean) ** 2, 0) / values.length
+  const sd = Math.max(Math.sqrt(variance), Math.abs(mean) * 0.05, 1e-6)
+  return 1 / (1 + Math.exp(-1.7 * ((value - mean) / sd)))
+}
+
+/** Share of the two laners' combined total, 0.5 when even. */
+function laneEdge(mine: number, theirs: number, key: ScoreMetric) {
+  if (key === 'alive') return (1 - theirs) / (2 - mine - theirs)
+  const total = mine + theirs
+  return total > 0 ? mine / total : 0.5
+}
+
+const scoreCache = new WeakMap<Match, Record<string, PlayerScore>>()
+
+/** Every player's score and breakdown in one lobby. Empty for a remake. */
+export function scoreLobby(match: Match): Record<string, PlayerScore> {
+  const cached = scoreCache.get(match)
+  if (cached) return cached
+
+  const result: Record<string, PlayerScore> = {}
+  scoreCache.set(match, result)
+  if ((match.duration || 0) < MIN_SCORED_SECONDS || match.participants.length < 2) return result
+
+  const totals = teamTotals(match)
+  const laned = isLanedMode(match)
+  const rows = match.participants.map((p) => ({ p, m: scoreMetrics(p, totals) }))
+  const byPuuid = new Map(rows.map((row) => [row.p.puuid, row]))
+
+  /* A payload that does not carry a stat (an older cached list, a mode
+     without it) drops that stat for everyone rather than zeroing it, so a
+     game scores the same wherever it is read. */
+  const present = (key: ScoreMetric) =>
+    rows.some((r) => r.m[key] !== undefined && r.m[key] !== null)
+  const column = (key: ScoreMetric) => rows.map((r) => r.m[key] || 0)
+  const columns = new Map<ScoreMetric, number[]>()
+
+  for (const { p, m } of rows) {
+    const opponent = laned ? laneOpponent(match, p) : undefined
+    const theirs = opponent ? byPuuid.get(opponent.puuid)?.m : undefined
+
+    const rate = (key: ScoreMetric) => {
+      if (!columns.has(key)) columns.set(key, column(key))
+      const value = m[key] || 0
+      const lobby = lobbyStanding(value, columns.get(key)!)
+      if (!theirs) return lobby
+      return lobby * 0.5 + laneEdge(value, theirs[key] || 0, key) * 0.5
+    }
+
+    const categories = {} as Record<ScoreCategory, number>
+    const available: ScoreCategory[] = []
+    for (const category of SCORE_CATEGORIES) {
+      let sum = 0
+      let weight = 0
+      for (const [key, w] of Object.entries(CATEGORY_METRICS[category]) as [
+        ScoreMetric,
+        number,
+      ][]) {
+        if (!present(key)) continue
+        sum += rate(key) * w
+        weight += w
+      }
+      categories[category] = weight ? Math.round((sum / weight) * 100) : 0
+      if (weight) available.push(category)
+    }
+
+    const role = (laned && ROLE_WEIGHTS[p.position]) || ROLE_WEIGHTS.NONE
+    const roleTotal = available.reduce((n, c) => n + role[c], 0) || 1
+    const weights = {} as Record<ScoreCategory, number>
+    let share = 0
+    for (const category of SCORE_CATEGORIES) {
+      const w = available.includes(category) ? role[category] / roleTotal : 0
+      weights[category] = Math.round(w * 100)
+      share += (categories[category] / 100) * w
+    }
+
+    const raw = 8 + share * 82 + (p.win ? 10 : 0)
+    result[p.puuid] = {
+      score: Math.max(0, Math.min(100, Math.round(raw))),
+      categories,
+      weights,
+    }
+  }
+  return result
+}
+
+/** Every player's overall score in one lobby, 0–100. Empty for a remake. */
+export function lobbyScores(match: Match): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const [puuid, entry] of Object.entries(scoreLobby(match))) out[puuid] = entry.score
+  return out
 }
 
 export interface LobbyRanking {
+  /** 0–100, see scoreLobby. Empty for a remake. */
   score: Record<string, number>
   /** 1–10, best first. */
   rank: Record<string, number>
-  /** 0–100, relative to the best player in the lobby. */
-  rating: Record<string, number>
   mvpPuuid: string | null
   acePuuid: string | null
 }
 
 export function rankLobby(match: Match): LobbyRanking {
-  const score: Record<string, number> = {}
-  for (const p of match.participants) score[p.puuid] = performanceScore(match, p)
-
-  const sorted = [...match.participants].sort((a, b) => score[b.puuid] - score[a.puuid])
-  const best = Math.max(...Object.values(score), 1)
+  const score = lobbyScores(match)
+  const scored = match.participants.filter((p) => score[p.puuid] !== undefined)
+  const sorted = [...scored].sort((a, b) => score[b.puuid] - score[a.puuid])
 
   const rank: Record<string, number> = {}
-  const rating: Record<string, number> = {}
-  sorted.forEach((p, index) => {
-    rank[p.puuid] = index + 1
-    rating[p.puuid] = Math.round((score[p.puuid] / best) * 100)
-  })
+  sorted.forEach((p, index) => (rank[p.puuid] = index + 1))
 
   const winningTeam = teamWon(match, 100) ? 100 : 200
   return {
     score,
     rank,
-    rating,
     mvpPuuid: sorted.find((p) => p.teamId === winningTeam)?.puuid ?? null,
     acePuuid: sorted.find((p) => p.teamId !== winningTeam)?.puuid ?? null,
   }
 }
 
-export interface Grade {
-  letter: 'S' | 'A' | 'B' | 'C' | 'D'
-  /** 0-100, the player's rating against the best in that lobby. */
-  rating: number
-  rank: number
+export type ScoreTier = 'elite' | 'great' | 'good' | 'fair' | 'poor'
+
+export function scoreTier(score: number): ScoreTier {
+  if (score >= 85) return 'elite'
+  if (score >= 70) return 'great'
+  if (score >= 55) return 'good'
+  if (score >= 40) return 'fair'
+  return 'poor'
 }
 
-/**
- * One glyph that answers "was that a good game".
- *
- * Rank within the lobby is the honest version of this: it is computed from the
- * same ten players who shared the map, so it does not reward padding a stat in
- * a one-sided game. The letter is what gets read; the rating is the detail.
- */
-export function gradeFor(lobby: LobbyRanking, puuid: string): Grade | null {
-  const rank = lobby.rank[puuid]
-  if (!rank) return null
-  const rating = lobby.rating[puuid] ?? 0
-  if (rank === 1) return { letter: 'S', rating, rank }
-  if (rank <= 3) return { letter: 'A', rating, rank }
-  if (rank <= 6) return { letter: 'B', rating, rank }
-  if (rank <= 8) return { letter: 'C', rating, rank }
-  return { letter: 'D', rating, rank }
+/** Gold for the top tier, then down the outcome scale. */
+export const SCORE_TONE: Record<ScoreTier, string> = {
+  elite: 'var(--color-signal)',
+  great: 'var(--color-win)',
+  good: 'var(--color-blue)',
+  fair: 'var(--color-ink-2)',
+  poor: 'var(--color-loss)',
 }
 
-/** Gold for the best game in the lobby, then down the ranking. */
-export const GRADE_COLOR: Record<Grade['letter'], string> = {
-  S: 'var(--color-gold)',
-  A: 'var(--color-win)',
-  B: 'var(--color-blue)',
-  C: 'var(--color-red)',
-  D: 'var(--color-loss)',
+export const SCORE_LABEL: Record<ScoreTier, string> = {
+  elite: 'Elite',
+  great: 'Great',
+  good: 'Solid',
+  fair: 'Average',
+  poor: 'Rough',
 }
 
 /** The enemy in the same lane, falling back to the mirrored slot in modes

@@ -157,6 +157,7 @@ test('summary matches retain scoreboard data while omitting analysis-only column
       'totalDamageDealtToChampions',
       'position',
       'goldEarned',
+      'damageDealtToObjectives',
     ]) {
       assert.deepEqual(player[key], full.participants[0][key], key)
     }

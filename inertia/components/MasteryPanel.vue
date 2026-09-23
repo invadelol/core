@@ -52,34 +52,34 @@ const headline = computed(() => {
   <div>
     <div v-if="loading" class="skel h-[320px]" />
 
-    <p v-else-if="error" class="py-16 text-center text-[12.5px] text-ink-3">
+    <p v-else-if="error" class="card py-16 text-center text-[12.5px] text-ink-3">
       Riot did not return this player's mastery.
       <button class="btn btn-sm ml-2" @click="$emit('retry')">Try again</button>
     </p>
 
-    <p v-else-if="!mastery.length" class="py-16 text-center text-[12.5px] text-ink-3">
+    <p v-else-if="!mastery.length" class="card py-16 text-center text-[12.5px] text-ink-3">
       No champion mastery recorded.
     </p>
 
-    <template v-else>
-      <div class="section">
+    <section v-else class="card">
+      <div class="section flex-wrap !items-center">
         <h2>Mastery</h2>
         <span class="meta num">
-          {{ mastery.length }} champions
+          <b class="font-semibold text-ink">{{ mastery.length }}</b> champions
           <span class="text-ink-4">·</span>
-          {{ levels }} levels
+          <b class="font-semibold text-ink">{{ levels }}</b> levels
           <span class="text-ink-4">·</span>
-          {{ compact(points) }} points
+          <b class="font-semibold text-ink">{{ compact(points) }}</b> points
           <template v-if="headline.levelTen">
             <span class="text-ink-4">·</span>
-            {{ headline.levelTen }} at level 10+
+            <b class="font-semibold text-ink">{{ headline.levelTen }}</b> at level 10+
           </template>
           <template v-if="headline.tokens">
             <span class="text-ink-4">·</span>
-            {{ headline.tokens }} tokens
+            <b class="font-semibold text-ink">{{ headline.tokens }}</b> tokens
           </template>
         </span>
-        <label class="relative ml-auto w-[170px]">
+        <label class="relative ml-auto w-[180px]">
           <Search
             :size="12"
             class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-3"
@@ -93,60 +93,67 @@ const headline = computed(() => {
         </label>
       </div>
 
-      <ul class="grid gap-x-8 gap-y-1 sm:grid-cols-2 xl:grid-cols-3">
-        <li v-for="c in visible" :key="c.championId" class="flex items-center gap-2.5 py-1.5">
-          <img
-            :src="champIcon(c.championId)"
-            :alt="championName(c.championId)"
-            width="30"
-            height="30"
-            loading="lazy"
-            class="thumb h-[30px] w-[30px] rounded-[6px]"
-          />
-          <span class="min-w-0 flex-1">
-            <span class="flex items-baseline justify-between gap-2">
-              <span class="truncate text-[12px] font-medium text-ink">
-                {{ championName(c.championId) }}
-              </span>
-              <span class="num shrink-0 text-[11px] text-ink-3">
-                {{ compact(c.championPoints) }}
-              </span>
-            </span>
-            <span class="mt-1 flex items-center gap-2">
-              <span class="h-[4px] min-w-0 flex-1 rounded-[2px] bg-sunken">
-                <span
-                  class="block h-full rounded-[2px] bg-ink-3"
-                  :style="{ width: `${(c.championPoints / most) * 100}%` }"
-                />
-              </span>
-              <span class="num shrink-0 text-[10px] text-ink-4">
-                <template v-if="progress(c)">
-                  {{ compact(progress(c)!.remaining) }} to next
-                </template>
-                <template v-else>{{ timeAgo(c.lastPlayTime) }}</template>
-              </span>
-            </span>
-          </span>
-          <span
-            class="num w-6 shrink-0 text-right text-[12px] font-semibold text-gold"
-            title="Mastery level"
+      <div>
+        <ul class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+          <li
+            v-for="c in visible"
+            :key="c.championId"
+            class="flex items-center gap-3 rounded-[8px] bg-raised px-3 py-2.5"
           >
-            {{ c.championLevel }}
-          </span>
-        </li>
-      </ul>
+            <img
+              :src="champIcon(c.championId)"
+              :alt="championName(c.championId)"
+              width="36"
+              height="36"
+              loading="lazy"
+              class="thumb h-9 w-9 rounded-[7px]"
+            />
+            <span class="min-w-0 flex-1">
+              <span class="flex items-baseline justify-between gap-2">
+                <span class="truncate text-[13px] font-semibold text-ink">
+                  {{ championName(c.championId) }}
+                </span>
+                <span class="stat shrink-0 text-[14px] text-ink">
+                  {{ compact(c.championPoints) }}
+                </span>
+              </span>
+              <span class="mt-1.5 flex items-center gap-2">
+                <span class="meter min-w-0 flex-1">
+                  <span
+                    class="!bg-ink-3"
+                    :style="{ width: `${(c.championPoints / most) * 100}%` }"
+                  />
+                </span>
+                <span class="num shrink-0 text-[10.5px] text-ink-3">
+                  <template v-if="progress(c)">
+                    {{ compact(progress(c)!.remaining) }} to next
+                  </template>
+                  <template v-else>{{ timeAgo(c.lastPlayTime) }}</template>
+                </span>
+              </span>
+            </span>
+            <span
+              class="flex w-9 shrink-0 flex-col items-end border-l border-line-2 pl-2.5"
+              title="Mastery level"
+            >
+              <span class="label !text-[9px]">Lvl</span>
+              <span class="stat mt-0.5 text-[18px] text-ink">{{ c.championLevel }}</span>
+            </span>
+          </li>
+        </ul>
 
-      <p v-if="!visible.length" class="py-10 text-center text-[12.5px] text-ink-3">
-        No champion matches “{{ query }}”.
-      </p>
+        <p v-if="!visible.length" class="py-10 text-center text-[12.5px] text-ink-3">
+          No champion matches “{{ query }}”.
+        </p>
 
-      <button
-        v-if="!expanded && filtered.length > 24"
-        class="btn btn-sm mt-5"
-        @click="expanded = true"
-      >
-        Show all {{ filtered.length }} champions
-      </button>
-    </template>
+        <button
+          v-if="!expanded && filtered.length > 24"
+          class="btn btn-sm mt-4"
+          @click="expanded = true"
+        >
+          Show all {{ filtered.length }} champions
+        </button>
+      </div>
+    </section>
   </div>
 </template>

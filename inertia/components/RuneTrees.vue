@@ -41,14 +41,14 @@ const size = computed(() =>
 <template>
   <div class="grid gap-x-6 gap-y-4 sm:grid-cols-2">
     <div class="min-w-0">
-      <div class="mb-2 flex items-center gap-1.5">
+      <div class="mb-2.5 flex items-center gap-1.5">
         <img
           v-if="primary.style"
           :src="runeStyleIcon(primary.style)"
           :alt="runeName(primary.style)"
           :style="{ width: `${size.tree}px`, height: `${size.tree}px` }"
         />
-        <span class="truncate text-[11.5px] font-medium text-ink">
+        <span class="label truncate !text-ink-2">
           {{ runeName(primary.style) || 'Primary' }}
         </span>
       </div>
@@ -60,7 +60,10 @@ const size = computed(() =>
           class="glyph p-[2px]"
           :style="{ width: `${size.key}px`, height: `${size.key}px` }"
         />
-        <span class="min-w-0 truncate text-[12.5px] font-semibold text-ink">
+        <span
+          class="display min-w-0 truncate text-ink"
+          :class="compact ? 'text-[13px]' : 'text-[15px]'"
+        >
           {{ runeName(primary.keystone) || 'Keystone' }}
         </span>
       </div>
@@ -73,20 +76,20 @@ const size = computed(() =>
             class="glyph p-[2px]"
             :style="{ width: `${size.minor}px`, height: `${size.minor}px` }"
           />
-          <span class="min-w-0 truncate text-[11.5px] text-ink-2">{{ runeName(id) }}</span>
+          <span class="min-w-0 truncate text-[12px] text-ink-2">{{ runeName(id) }}</span>
         </li>
       </ul>
     </div>
 
-    <div class="min-w-0">
-      <div class="mb-2 flex items-center gap-1.5">
+    <div class="min-w-0 sm:border-l sm:border-line sm:pl-6">
+      <div class="mb-2.5 flex items-center gap-1.5">
         <img
           v-if="secondary.style"
           :src="runeStyleIcon(secondary.style)"
           :alt="runeName(secondary.style)"
           :style="{ width: `${size.tree}px`, height: `${size.tree}px` }"
         />
-        <span class="truncate text-[11.5px] font-medium text-ink">
+        <span class="label truncate !text-ink-2">
           {{ runeName(secondary.style) || 'Secondary' }}
         </span>
       </div>
@@ -99,11 +102,14 @@ const size = computed(() =>
             class="glyph p-[2px]"
             :style="{ width: `${size.minor}px`, height: `${size.minor}px` }"
           />
-          <span class="min-w-0 truncate text-[11.5px] text-ink-2">{{ runeName(id) }}</span>
+          <span class="min-w-0 truncate text-[12px] text-ink-2">{{ runeName(id) }}</span>
         </li>
       </ul>
 
-      <div v-if="shards.length" class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+      <div
+        v-if="shards.length"
+        class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-3"
+      >
         <span
           v-for="shard in shards"
           :key="shard.key"

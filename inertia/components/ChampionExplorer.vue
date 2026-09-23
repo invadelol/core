@@ -78,8 +78,8 @@ function order(key: keyof ChampionStats) {
 </script>
 
 <template>
-  <div>
-    <template v-if="heat.length">
+  <div class="space-y-3">
+    <section v-if="heat.length" class="card">
       <div class="section">
         <h2>Win rate</h2>
         <span class="meta">by champion</span>
@@ -92,12 +92,12 @@ function order(key: keyof ChampionStats) {
           <i class="h-2.5 w-4 rounded-[2px]" style="background: var(--color-win)" />
         </span>
       </div>
-      <div class="mb-9 flex flex-wrap gap-1.5">
+      <div class="flex flex-wrap gap-1.5">
         <button
           v-for="c in heat"
           :key="c.championId"
           type="button"
-          class="relative h-[52px] w-[52px] overflow-hidden rounded-[8px] transition-transform hover:scale-105"
+          class="relative h-[54px] w-[54px] overflow-hidden rounded-[7px] ring-ink-2 transition-shadow hover:ring-2"
           :title="`${championName(c.championId)} · ${c.games} games · ${c.wins}W ${c.games - c.wins}L · ${c.kda.toFixed(2)} KDA`"
           @click="emit('matches', c.championId)"
         >
@@ -112,171 +112,184 @@ function order(key: keyof ChampionStats) {
             :style="{ background: `color-mix(in srgb, ${c.tone} ${c.wash}%, transparent)` }"
           />
           <span
-            class="num absolute inset-x-0 bottom-0 py-[1px] text-center text-[9.5px] font-semibold text-white"
-            style="background: rgb(0 0 0 / 0.55)"
+            class="stat absolute inset-x-0 bottom-0 py-[2px] text-center text-[11px] text-white"
+            style="background: rgb(0 0 0 / 0.6)"
           >
             {{ Math.round(c.winrate * 100) }}%
           </span>
         </button>
       </div>
-    </template>
+    </section>
 
-    <div class="section">
-      <h2>Champion pool</h2>
-      <span class="meta num">
-        {{ champions.length }} champions
-        <span class="text-ink-4">·</span>
-        {{ totals.games }} games
-        <span class="text-ink-4">·</span>
-        {{ hours(totals.time) }}
-      </span>
-      <label class="relative ml-auto w-[170px]">
-        <Search
-          :size="12"
-          class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-3"
-        />
-        <input
-          v-model="query"
-          class="field !py-1 !pl-7 !text-[12px]"
-          aria-label="Search champions"
-          placeholder="Find a champion"
-        />
-      </label>
-    </div>
-
-    <!-- Volume against record, before the table gets into detail -->
-    <div v-if="chart.length" class="mb-8 grid gap-x-10 gap-y-2 md:grid-cols-2">
-      <button
-        v-for="c in chart"
-        :key="c.championId"
-        class="flex items-center gap-2.5 rounded-[6px] px-1.5 py-1 text-left transition-colors hover:bg-raised"
-        @click="emit('matches', c.championId)"
-      >
-        <img
-          :src="champIcon(c.championId)"
-          :alt="championName(c.championId)"
-          loading="lazy"
-          class="thumb h-[26px] w-[26px] rounded-[5px]"
-        />
-        <span class="w-[86px] shrink-0 truncate text-[12px] text-ink">
-          {{ championName(c.championId) }}
+    <section class="card">
+      <div class="section flex-wrap !items-center">
+        <h2>Champion pool</h2>
+        <span class="meta num">
+          {{ champions.length }} champions
+          <span class="text-ink-4">·</span>
+          {{ totals.games }} games
+          <span class="text-ink-4">·</span>
+          {{ hours(totals.time) }}
         </span>
-        <span class="min-w-0 flex-1">
-          <span
-            class="flex h-[7px] overflow-hidden rounded-[2px]"
-            :style="{ width: `${c.width}%` }"
-          >
-            <span :style="{ width: `${c.winShare}%`, background: 'var(--color-win)' }" />
-            <span class="flex-1" style="background: var(--color-loss)" />
-          </span>
-        </span>
-        <span class="num w-[74px] shrink-0 text-right text-[11px] text-ink-3">
-          {{ c.wins }}W {{ c.games - c.wins }}L
-        </span>
-      </button>
-    </div>
-
-    <div class="frame">
-      <div class="scroll-x">
-        <table class="dt dt-hover num min-w-[880px]">
-          <thead>
-            <tr>
-              <th class="w-[20%] !pl-3">Champion</th>
-              <th
-                v-for="col in COLUMNS"
-                :key="col.key"
-                :class="col.align === 'right' ? 'text-right' : ''"
-                :aria-sort="
-                  sort === col.key ? (direction === 1 ? 'ascending' : 'descending') : 'none'
-                "
-              >
-                <button
-                  class="inline-flex items-center gap-1 transition-colors hover:text-ink"
-                  :class="[
-                    sort === col.key ? 'text-ink' : '',
-                    col.align === 'right' ? 'flex-row-reverse' : '',
-                  ]"
-                  @click="order(col.key)"
-                >
-                  {{ col.label }}
-                  <component
-                    :is="direction === 1 ? ArrowUp : ArrowDown"
-                    v-if="sort === col.key"
-                    :size="10"
-                  />
-                </button>
-              </th>
-              <th class="!pr-3"><span class="sr-only">Matches</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="c in rows" :key="c.championId">
-              <td class="!pl-3">
-                <div class="flex items-center gap-2.5">
-                  <img
-                    :src="champIcon(c.championId)"
-                    :alt="championName(c.championId)"
-                    width="28"
-                    height="28"
-                    loading="lazy"
-                    class="thumb h-7 w-7 rounded-[6px]"
-                  />
-                  <span class="truncate font-medium text-ink">
-                    {{ championName(c.championId) }}
-                  </span>
-                </div>
-              </td>
-
-              <td>
-                <div class="text-ink-2">{{ c.games }}</div>
-                <div class="text-[10.5px] text-ink-3">{{ c.wins }}W {{ c.games - c.wins }}L</div>
-              </td>
-
-              <td class="w-[96px]">
-                <div class="mb-1 font-medium" :class="c.winrate >= 0.5 ? 'text-win' : 'text-loss'">
-                  {{ Math.round(c.winrate * 100) }}%
-                </div>
-                <div
-                  class="flex h-[4px] overflow-hidden rounded-[2px]"
-                  style="background: var(--color-loss)"
-                >
-                  <span :style="{ width: `${c.winrate * 100}%`, background: 'var(--color-win)' }" />
-                </div>
-              </td>
-
-              <td class="text-right">
-                <div class="font-medium text-ink">{{ c.kda.toFixed(2) }}</div>
-                <div class="text-[10.5px] text-ink-3">
-                  {{ c.avgKills.toFixed(1) }}/{{ c.avgDeaths.toFixed(1) }}/{{
-                    c.avgAssists.toFixed(1)
-                  }}
-                </div>
-              </td>
-
-              <td class="text-right text-ink-2">{{ c.csMin.toFixed(1) }}</td>
-              <td class="text-right text-gold">{{ Math.round(c.goldMin) }}</td>
-              <td class="text-right text-ink-2">{{ compact(c.damageMin) }}</td>
-              <td class="text-right text-ink-2">{{ c.maxKills || '—' }}</td>
-              <td class="text-right text-ink-3">{{ c.duration ? hours(c.duration) : '—' }}</td>
-
-              <td class="!pr-3 text-right">
-                <button
-                  class="btn btn-sm btn-ghost"
-                  :title="`Show ${championName(c.championId)} matches`"
-                  @click="emit('matches', c.championId)"
-                >
-                  Matches
-                  <ArrowRight :size="12" />
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <label class="relative ml-auto w-[180px]">
+          <Search
+            :size="12"
+            class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-3"
+          />
+          <input
+            v-model="query"
+            class="field !py-1 !pl-7 !text-[12px]"
+            aria-label="Search champions"
+            placeholder="Find a champion"
+          />
+        </label>
       </div>
 
-      <p v-if="!rows.length" class="py-12 text-center text-[12.5px] text-ink-3">
-        {{ busy ? 'Loading champion statistics' : 'No champions match these filters.' }}
-      </p>
-    </div>
+      <div class="!p-0">
+        <!-- Volume against record, before the table gets into detail -->
+        <div
+          v-if="chart.length"
+          class="grid gap-x-8 gap-y-0.5 border-b border-line px-3 py-3 md:grid-cols-2"
+        >
+          <button
+            v-for="c in chart"
+            :key="c.championId"
+            class="flex items-center gap-2.5 rounded-[7px] px-2 py-1.5 text-left transition-colors hover:bg-raised"
+            @click="emit('matches', c.championId)"
+          >
+            <img
+              :src="champIcon(c.championId)"
+              :alt="championName(c.championId)"
+              loading="lazy"
+              class="thumb h-[28px] w-[28px] rounded-[6px]"
+            />
+            <span class="w-[86px] shrink-0 truncate text-[12.5px] font-semibold text-ink">
+              {{ championName(c.championId) }}
+            </span>
+            <span class="min-w-0 flex-1">
+              <span
+                class="flex h-[6px] overflow-hidden rounded-[1px]"
+                :style="{ width: `${c.width}%` }"
+              >
+                <span :style="{ width: `${c.winShare}%`, background: 'var(--color-win)' }" />
+                <span class="flex-1" style="background: var(--color-loss)" />
+              </span>
+            </span>
+            <span class="num w-[74px] shrink-0 text-right text-[11px] text-ink-3">
+              {{ c.wins }}W {{ c.games - c.wins }}L
+            </span>
+          </button>
+        </div>
+
+        <div class="scroll-x">
+          <table class="dt dt-hover num min-w-[880px]">
+            <thead>
+              <tr>
+                <th class="w-[20%] !pl-4">Champion</th>
+                <th
+                  v-for="col in COLUMNS"
+                  :key="col.key"
+                  :class="col.align === 'right' ? 'text-right' : ''"
+                  :aria-sort="
+                    sort === col.key ? (direction === 1 ? 'ascending' : 'descending') : 'none'
+                  "
+                >
+                  <button
+                    class="inline-flex items-center gap-1 uppercase transition-colors hover:text-ink"
+                    :class="[
+                      sort === col.key ? 'text-ink' : '',
+                      col.align === 'right' ? 'flex-row-reverse' : '',
+                    ]"
+                    @click="order(col.key)"
+                  >
+                    {{ col.label }}
+                    <component
+                      :is="direction === 1 ? ArrowUp : ArrowDown"
+                      v-if="sort === col.key"
+                      :size="10"
+                      class="text-ink-2"
+                    />
+                  </button>
+                </th>
+                <th class="!pr-4"><span class="sr-only">Matches</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="c in rows" :key="c.championId">
+                <td class="!pl-4">
+                  <div class="flex items-center gap-2.5">
+                    <img
+                      :src="champIcon(c.championId)"
+                      :alt="championName(c.championId)"
+                      width="32"
+                      height="32"
+                      loading="lazy"
+                      class="thumb h-8 w-8 rounded-[7px]"
+                    />
+                    <span class="truncate text-[13px] font-semibold text-ink">
+                      {{ championName(c.championId) }}
+                    </span>
+                  </div>
+                </td>
+
+                <td>
+                  <div class="stat text-[15px] text-ink">{{ c.games }}</div>
+                  <div class="mt-0.5 text-[10.5px] text-ink-3">
+                    {{ c.wins }}W {{ c.games - c.wins }}L
+                  </div>
+                </td>
+
+                <td class="w-[100px]">
+                  <div
+                    class="stat mb-1.5 text-[15px]"
+                    :class="c.winrate >= 0.5 ? 'text-win' : 'text-loss'"
+                  >
+                    {{ Math.round(c.winrate * 100) }}%
+                  </div>
+                  <div
+                    class="flex h-[4px] overflow-hidden rounded-[1px]"
+                    style="background: var(--color-loss)"
+                  >
+                    <span
+                      :style="{ width: `${c.winrate * 100}%`, background: 'var(--color-win)' }"
+                    />
+                  </div>
+                </td>
+
+                <td class="text-right">
+                  <div class="stat text-[15px] text-ink">{{ c.kda.toFixed(2) }}</div>
+                  <div class="mt-0.5 text-[10.5px] text-ink-3">
+                    {{ c.avgKills.toFixed(1) }}/{{ c.avgDeaths.toFixed(1) }}/{{
+                      c.avgAssists.toFixed(1)
+                    }}
+                  </div>
+                </td>
+
+                <td class="text-right text-ink-2">{{ c.csMin.toFixed(1) }}</td>
+                <td class="text-right text-gold">{{ Math.round(c.goldMin) }}</td>
+                <td class="text-right text-ink-2">{{ compact(c.damageMin) }}</td>
+                <td class="text-right text-ink-2">{{ c.maxKills || '—' }}</td>
+                <td class="text-right text-ink-3">{{ c.duration ? hours(c.duration) : '—' }}</td>
+
+                <td class="!pr-4 text-right">
+                  <button
+                    class="btn btn-sm btn-ghost"
+                    :title="`Show ${championName(c.championId)} matches`"
+                    @click="emit('matches', c.championId)"
+                  >
+                    Matches
+                    <ArrowRight :size="12" />
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p v-if="!rows.length" class="py-12 text-center text-[12.5px] text-ink-3">
+          {{ busy ? 'Loading champion statistics' : 'No champions match these filters.' }}
+        </p>
+      </div>
+    </section>
   </div>
 </template>

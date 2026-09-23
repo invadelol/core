@@ -41,11 +41,11 @@ onBeforeUnmount(() => observer?.disconnect())
 <template>
   <div
     ref="sentinel"
-    class="flex min-h-[56px] items-center justify-center gap-3 py-4 text-[11.5px] text-ink-3"
+    class="flex min-h-[64px] items-center justify-center gap-3 py-4 text-[12px] text-ink-3"
     aria-live="polite"
     :aria-busy="loading"
   >
-    <span v-if="loading" class="flex items-center gap-2">
+    <span v-if="loading" class="flex items-center gap-2 font-medium text-ink-2">
       <LoaderCircle :size="14" class="animate-spin" />
       Loading more games
     </span>
@@ -53,9 +53,13 @@ onBeforeUnmount(() => observer?.disconnect())
       <span>Couldn’t load the next matches.</span>
       <button class="btn btn-sm" @click="emit('load')">Try again</button>
     </template>
-    <span v-else-if="!hasMore && !empty" class="flex items-center gap-1.5">
-      <Check :size="13" />
-      That’s every tracked game
+    <span v-else-if="!hasMore && !empty" class="flex w-full items-center gap-3">
+      <span class="h-px flex-1 bg-line" />
+      <span class="label flex items-center gap-1.5">
+        <Check :size="12" />
+        That’s every tracked game
+      </span>
+      <span class="h-px flex-1 bg-line" />
     </span>
   </div>
 </template>

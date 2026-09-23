@@ -12,7 +12,10 @@ const props = withDefaults(
 )
 
 const dimension = computed(() => ({ xs: 19, sm: 23, md: 28 })[props.size])
-const radius = computed(() => (props.size === 'md' ? 6 : 5))
+/* The same steps as every other tile: portraits, spells, runes. */
+const radius = computed(
+  () => ({ xs: 'var(--radius-xs)', sm: 'var(--radius-sm)', md: 'var(--radius-md)' })[props.size]
+)
 
 /** Always seven cells, so empty slots keep the row aligned. */
 const slots = computed(() => Array.from({ length: 7 }, (_, i) => props.items?.[i] ?? 0))
@@ -21,7 +24,7 @@ const slots = computed(() => Array.from({ length: 7 }, (_, i) => props.items?.[i
 <template>
   <div class="flex shrink-0 items-center gap-[2px]">
     <template v-for="(id, index) in slots" :key="index">
-      <span v-if="index === 6" class="mx-[3px] h-3.5 w-px bg-line-strong" />
+      <span v-if="index === 6" class="mx-[3px] h-3.5 w-px rounded-full bg-line-2" />
       <img
         v-if="id > 0"
         :src="itemIcon(id)"
@@ -33,7 +36,7 @@ const slots = computed(() => Array.from({ length: 7 }, (_, i) => props.items?.[i
         :style="{
           width: `${dimension}px`,
           height: `${dimension}px`,
-          borderRadius: `${radius}px`,
+          borderRadius: radius,
         }"
       />
       <span
@@ -42,7 +45,7 @@ const slots = computed(() => Array.from({ length: 7 }, (_, i) => props.items?.[i
         :style="{
           width: `${dimension}px`,
           height: `${dimension}px`,
-          borderRadius: `${radius}px`,
+          borderRadius: radius,
         }"
       />
     </template>

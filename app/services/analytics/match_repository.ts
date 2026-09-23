@@ -100,6 +100,8 @@ const SUMMARY_PARTICIPANT_COLUMNS = [
   'physical_dmg_to_champ',
   'magic_dmg_to_champ',
   'true_dmg_to_champ',
+  // Part of every player's score, which the match list shows on each row.
+  'dmg_to_objectives',
 ] as const
 
 const DETAIL_PARTICIPANT_COLUMNS = [
@@ -107,7 +109,6 @@ const DETAIL_PARTICIPANT_COLUMNS = [
   'wards_placed',
   'wards_killed',
   'dmg_to_turrets',
-  'dmg_to_objectives',
   'physical_dmg_dealt',
   'magic_dmg_dealt',
   'true_dmg_dealt',
@@ -150,6 +151,7 @@ const SUMMARY_PARTICIPANT_FIELDS = {
   physicalDamageDealtToChampions: 'physical_dmg_to_champ',
   magicDamageDealtToChampions: 'magic_dmg_to_champ',
   trueDamageDealtToChampions: 'true_dmg_to_champ',
+  damageDealtToObjectives: 'dmg_to_objectives',
 }
 
 const DETAIL_PARTICIPANT_FIELDS = {
@@ -157,7 +159,6 @@ const DETAIL_PARTICIPANT_FIELDS = {
   wardsPlaced: 'wards_placed',
   wardsKilled: 'wards_killed',
   damageDealtToTurrets: 'dmg_to_turrets',
-  damageDealtToObjectives: 'dmg_to_objectives',
   physicalDamageDealt: 'physical_dmg_dealt',
   magicDamageDealt: 'magic_dmg_dealt',
   trueDamageDealt: 'true_dmg_dealt',

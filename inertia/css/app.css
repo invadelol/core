@@ -8,113 +8,124 @@
 /* ──────────────────────────────────────────────────────────────
    Tokens
 
-   The page is one surface. Structure comes from rules and spacing
-   rather than from stacking filled rectangles, which is what keeps
-   panels from nesting inside panels.
+   A near-black stage, panels that sit on it as cards, semi-condensed
+   type for headings and figures. Interaction stays neutral so the
+   data keeps all the colour.
 
-   Five hues carry meaning and nothing else carries any:
+   Meaning is carried by a fixed set of hues:
      win / loss    an outcome
      blue / red    a side of the map
-     gold          the economy, and Riot's own accent
+     gold          the economy
+     signal        distinction: the top score tier, the MVP
 
-   Interaction is ink: buttons, active tabs, focus rings. There is
-   no sixth brand colour competing with the data for attention.
+   Nothing else is coloured.
    ────────────────────────────────────────────────────────────── */
 @theme {
   /* Surfaces */
-  --color-bg: #fcfcfd;
+  --color-bg: #f2f2ef;
   --color-panel: #ffffff;
-  --color-raised: #eef2f7;
-  --color-sunken: #e9eaee;
-  --color-line: #e5e6ea;
-  --color-line-2: #d1d3da;
+  --color-raised: #f3f3f0;
+  --color-sunken: #e7e7e2;
+  --color-line: #e3e3dd;
+  --color-line-2: #cdcdc6;
 
   /* Text */
-  --color-ink: #0b0c0f;
-  --color-ink-2: #494d57;
-  --color-ink-3: #7b7f8a;
-  --color-ink-4: #adb0b9;
+  --color-ink: #0a0b0e;
+  --color-ink-2: #43464f;
+  --color-ink-3: #767983;
+  --color-ink-4: #a8aab0;
+
+  /* Interaction is the inverse of the page: a solid ink chip on light,
+     a near-white chip on dark. `accent` is that fill, `accent-fg` the
+     text on it. `signal` marks distinction (the top score tier, MVP)
+     and borrows Riot's own gold for it. */
+  --color-accent: #0a0b0e;
+  --color-accent-fg: #ffffff;
+  --color-signal: #a57a12;
 
   /* Outcome */
-  --color-win: #12794a;
-  --color-win-soft: #e5f2eb;
-  --color-loss: #c22f42;
-  --color-loss-soft: #fae9ec;
+  --color-win: #0f8a5a;
+  --color-win-soft: #e2f3ea;
+  --color-loss: #d42f4b;
+  --color-loss-soft: #fbe7ea;
 
   /* Sides */
-  --color-blue: #2560c4;
-  --color-blue-soft: #e8eefa;
-  --color-red: #c4472f;
-  --color-red-soft: #faeae6;
+  --color-blue: #2462d6;
+  --color-blue-soft: #e6eefc;
+  --color-red: #d4472b;
+  --color-red-soft: #fbe9e4;
 
-  /* Economy, and the one decorative accent the game itself uses */
-  --color-gold: #8d6a16;
+  /* Economy */
+  --color-gold: #946b0c;
   --color-gold-bright: #c8aa6e;
 
   /* Categorical series, only where a chart needs three of them */
   --color-s1: #2b2e36;
-  --color-s2: #2560c4;
-  --color-s3: #a97b16;
+  --color-s2: #2462d6;
+  --color-s3: #b07d10;
 
   /* Riot's minimap is painted for the client, not for a page of numbers.
      This pulls it back so the player markers on top of it stay the subject. */
   --map-tone: saturate(0.5) brightness(1.06) contrast(0.9);
 
-  /* Elevation. Two steps, both restrained. */
-  --shadow-e1: 0 1px 2px rgb(11 12 15 / 0.05);
-  --shadow-e2: 0 10px 30px -10px rgb(11 12 15 / 0.18);
+  --shadow-e1: 0 1px 2px rgb(10 11 14 / 0.06);
+  --shadow-e2: 0 14px 34px -12px rgb(10 11 14 / 0.22);
 
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 9px;
-  --radius-lg: 12px;
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 10px;
 
   --breakpoint-xs: 26rem;
 
   --font-sans:
-    'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial,
-    sans-serif;
+    'Archivo', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica,
+    Arial, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
 }
 
-/* Dark is designed, not inverted: the ground is near-black so champion art
-   sits in it without needing a scrim, the rules stay cool, and every hue is
-   lifted to hold its weight against the dark. */
+/* Dark is the product's home. The stage is close to black and slightly
+   cool so champion art pops off it, panels step up in small increments,
+   and every hue is lifted to hold its weight. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --color-bg: #0f151d;
-    --color-panel: #141c26;
-    --color-raised: #1a232f;
-    --color-sunken: #232e3d;
-    --color-line: #1f2a37;
-    --color-line-2: #31404f;
+    --color-bg: #0a0b0e;
+    --color-panel: #111318;
+    --color-raised: #171a20;
+    --color-sunken: #1f232b;
+    --color-line: #1e2129;
+    --color-line-2: #2d313b;
 
-    --color-ink: #eef2f7;
-    --color-ink-2: #9aa8ba;
-    --color-ink-3: #6c7c8f;
-    --color-ink-4: #4a5a6d;
+    --color-ink: #f3f4f6;
+    --color-ink-2: #a8adb9;
+    --color-ink-3: #6f7583;
+    --color-ink-4: #464b57;
 
-    --color-win: #3ecf8e;
-    --color-win-soft: #10291f;
-    --color-loss: #fb6179;
-    --color-loss-soft: #2b1522;
+    --color-accent: #e8eaf0;
+    --color-accent-fg: #0a0b0e;
+    --color-signal: #e2b457;
 
-    --color-blue: #5f9bff;
-    --color-blue-soft: #14213a;
-    --color-red: #f4735a;
-    --color-red-soft: #2c1712;
+    --color-win: #36d399;
+    --color-win-soft: #0e2a20;
+    --color-loss: #ff5470;
+    --color-loss-soft: #2d121a;
 
-    --color-gold: #d7ab58;
-    --color-gold-bright: #e4c58c;
+    --color-blue: #4d8dff;
+    --color-blue-soft: #121f38;
+    --color-red: #ff6a4d;
+    --color-red-soft: #2d1510;
 
-    --color-s1: #cfd8e4;
-    --color-s2: #5f9bff;
-    --color-s3: #d7ab58;
+    --color-gold: #e2b457;
+    --color-gold-bright: #e9c98d;
+
+    --color-s1: #d4d8e0;
+    --color-s2: #4d8dff;
+    --color-s3: #e2b457;
 
     --map-tone: saturate(0.34) brightness(0.46) contrast(1.16);
 
     --shadow-e1: 0 1px 2px rgb(0 0 0 / 0.5);
-    --shadow-e2: 0 12px 34px -12px rgb(0 0 0 / 0.75);
+    --shadow-e2: 0 16px 40px -12px rgb(0 0 0 / 0.8);
 
     color-scheme: dark;
   }
@@ -122,39 +133,43 @@
 
 /* An explicit choice wins over the system preference, so this sits after. */
 :root[data-theme='dark'] {
-  --color-bg: #0f151d;
-  --color-panel: #141c26;
-  --color-raised: #1a232f;
-  --color-sunken: #232e3d;
-  --color-line: #1f2a37;
-  --color-line-2: #31404f;
+  --color-bg: #0a0b0e;
+  --color-panel: #111318;
+  --color-raised: #171a20;
+  --color-sunken: #1f232b;
+  --color-line: #1e2129;
+  --color-line-2: #2d313b;
 
-  --color-ink: #eef2f7;
-  --color-ink-2: #9aa8ba;
-  --color-ink-3: #6c7c8f;
-  --color-ink-4: #4a5a6d;
+  --color-ink: #f3f4f6;
+  --color-ink-2: #a8adb9;
+  --color-ink-3: #6f7583;
+  --color-ink-4: #464b57;
 
-  --color-win: #3ecf8e;
-  --color-win-soft: #10291f;
-  --color-loss: #fb6179;
-  --color-loss-soft: #2b1522;
+  --color-accent: #e8eaf0;
+  --color-accent-fg: #0a0b0e;
+  --color-signal: #e2b457;
 
-  --color-blue: #5f9bff;
-  --color-blue-soft: #14213a;
-  --color-red: #f4735a;
-  --color-red-soft: #2c1712;
+  --color-win: #36d399;
+  --color-win-soft: #0e2a20;
+  --color-loss: #ff5470;
+  --color-loss-soft: #2d121a;
 
-  --color-gold: #d7ab58;
-  --color-gold-bright: #e4c58c;
+  --color-blue: #4d8dff;
+  --color-blue-soft: #121f38;
+  --color-red: #ff6a4d;
+  --color-red-soft: #2d1510;
 
-  --color-s1: #cfd8e4;
-  --color-s2: #5f9bff;
-  --color-s3: #d7ab58;
+  --color-gold: #e2b457;
+  --color-gold-bright: #e9c98d;
+
+  --color-s1: #d4d8e0;
+  --color-s2: #4d8dff;
+  --color-s3: #e2b457;
 
   --map-tone: saturate(0.34) brightness(0.46) contrast(1.16);
 
   --shadow-e1: 0 1px 2px rgb(0 0 0 / 0.5);
-  --shadow-e2: 0 12px 34px -12px rgb(0 0 0 / 0.75);
+  --shadow-e2: 0 16px 40px -12px rgb(0 0 0 / 0.8);
 
   color-scheme: dark;
 }
@@ -183,23 +198,6 @@
   html {
     height: 100%;
     background: var(--color-bg);
-  }
-
-  /* The dark ground gets one soft lift towards the top of the page, so it
-     reads as a lit room rather than a black rectangle. Nothing else in the
-     product uses a gradient for atmosphere. */
-  :root[data-theme='dark'] body {
-    background:
-      linear-gradient(180deg, #17222f 0%, var(--color-bg) 620px) no-repeat,
-      var(--color-bg);
-  }
-
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme='light']) body {
-      background:
-        linear-gradient(180deg, #17222f 0%, var(--color-bg) 620px) no-repeat,
-        var(--color-bg);
-    }
   }
 
   body {
@@ -240,7 +238,7 @@
   }
 
   :is(button, a, input, select, [tabindex]):focus-visible {
-    outline: 2px solid var(--color-ink);
+    outline: 2px solid var(--color-ink-2);
     outline-offset: 2px;
     border-radius: 3px;
   }

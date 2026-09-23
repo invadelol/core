@@ -6,13 +6,12 @@ import ItemRow from './ItemRow.vue'
 import RuneGlyphs from './RuneGlyphs.vue'
 import RuneTrees from './RuneTrees.vue'
 import RoleIcon from './RoleIcon.vue'
-import GradeBadge from './GradeBadge.vue'
+import ScoreRing from './ScoreRing.vue'
 import Scoreboard from './Scoreboard.vue'
 import MatchTimeline from './MatchTimeline.vue'
 import { champIcon, championName, queueName, spellIcon, POSITION_NAMES } from '../lib/assets.js'
 import { compact, duration, kda, ordinal, timeAgo } from '../lib/format.js'
 import {
-  gradeFor,
   indexTimeline,
   killParticipation,
   matchMinutes,
@@ -124,7 +123,8 @@ const row = computed(() => {
         maxOf(match.participants, (p) => p.totalDamageDealtToChampions)) *
       100,
     standing: lobby.rank[props.puuid] ?? 0,
-    grade: gradeFor(lobby, props.puuid),
+    score: lobby.score[props.puuid] ?? null,
+    badge: props.puuid === lobby.mvpPuuid ? 'MVP' : props.puuid === lobby.acePuuid ? 'ACE' : null,
     teams: teamOrder(match).map((teamId) => ({ teamId, members: teamMembers(match, teamId) })),
   }
 })
@@ -146,27 +146,26 @@ async function copyLink() {
 </script>
 
 <template>
-  <div class="relative">
-    <!-- The outcome reads as a colour before it reads as a word. -->
-    <span
-      class="absolute inset-y-0 left-0 w-[3px]"
-      :style="{ background: row.win ? 'var(--color-win)' : 'var(--color-loss)' }"
-    />
-
+  <div
+    class="match-row relative overflow-hidden rounded-[10px] border border-line bg-panel"
+    :data-result="row.win ? 'win' : 'loss'"
+  >
     <div class="flex items-stretch">
       <button
         type="button"
-        class="flex min-w-0 flex-1 items-center gap-2 py-2.5 pl-3.5 pr-1 text-left transition-colors hover:bg-raised sm:gap-3 sm:pl-4 sm:pr-2"
+        class="flex min-w-0 flex-1 items-center gap-2.5 py-3 pl-4 pr-2 text-left transition-colors hover:bg-white/[0.025] sm:gap-4 sm:pl-5 sm:pr-4"
         :aria-expanded="expanded"
         @click="$emit('toggle')"
       >
         <!-- Result -->
-        <span class="w-[74px] shrink-0 sm:w-[88px]">
-          <span class="text-[12px] font-semibold" :class="row.win ? 'text-win' : 'text-loss'">
+        <span class="w-[64px] shrink-0 sm:w-[86px]">
+          <span class="display block text-[14px]" :class="row.win ? 'text-win' : 'text-loss'">
             {{ row.win ? 'Victory' : 'Defeat' }}
           </span>
-          <span class="mt-0.5 block truncate text-[11px] text-ink-2">{{ row.queue }}</span>
-          <span class="num mt-0.5 block text-[10.5px] text-ink-3">
+          <span class="mt-1 block truncate text-[11px] font-medium text-ink-2">{{
+            row.queue
+          }}</span>
+          <span class="num mt-px block truncate text-[10.5px] text-ink-3">
             {{ row.duration }} · {{ row.ago }}
           </span>
         </span>
@@ -177,17 +176,13 @@ async function copyLink() {
             <img
               :src="champIcon(row.me?.championId ?? 0)"
               :alt="row.champion"
-              width="42"
-              height="42"
+              width="46"
+              height="46"
               loading="lazy"
               decoding="async"
-              class="thumb h-[42px] w-[42px] rounded-[8px]"
+              class="thumb h-[40px] w-[40px] rounded-[8px] sm:h-[46px] sm:w-[46px]"
             />
-            <span
-              class="num absolute -bottom-1 -right-1 grid h-[16px] min-w-[16px] place-items-center rounded-full border-2 border-bg bg-ink px-[3px] text-[8.5px] font-semibold text-bg"
-            >
-              {{ row.me?.champLevel }}
-            </span>
+            <span class="lvl absolute -bottom-1 -right-1">{{ row.me?.champLevel }}</span>
           </span>
           <span class="flex flex-col gap-[3px]">
             <img
@@ -196,43 +191,45 @@ async function copyLink() {
               :src="spellIcon(spell)"
               alt=""
               loading="lazy"
-              class="thumb h-[18px] w-[18px] rounded-[4px]"
+              class="thumb h-[18px] w-[18px] rounded-[4px] sm:h-[20px] sm:w-[20px]"
             />
           </span>
-          <RuneGlyphs :runes="row.runes" size="xs" class="hidden xs:flex" />
+          <RuneGlyphs :runes="row.runes" size="xs" class="hidden xs:flex xs:flex-col" />
         </span>
 
         <!-- Who they played -->
         <span class="hidden w-[92px] shrink-0 lg:block">
-          <span class="block truncate text-[12px] font-medium text-ink">{{ row.champion }}</span>
-          <span class="flex items-center gap-1 text-[10.5px] text-ink-3">
+          <span class="block truncate text-[13px] font-semibold text-ink">{{ row.champion }}</span>
+          <span class="mt-0.5 flex items-center gap-1 text-[10.5px] text-ink-3">
             <RoleIcon v-if="row.me?.position" :role="row.me.position" :size="11" />
             {{ row.role || '—' }}
           </span>
         </span>
 
-        <!-- Score -->
-        <span class="w-[104px] shrink-0 whitespace-nowrap">
-          <span class="num block text-[15px] font-semibold tracking-[-0.02em] text-ink">
-            {{ row.me?.kills }}<span class="font-normal text-ink-4"> / </span
+        <!-- Score line -->
+        <span class="w-[72px] shrink-0 whitespace-nowrap sm:w-[96px]">
+          <span class="num stat block text-[18px] text-ink sm:text-[21px]">
+            {{ row.me?.kills }}<span class="text-ink-4"> / </span
             ><span class="text-loss">{{ row.me?.deaths }}</span
-            ><span class="font-normal text-ink-4"> / </span>{{ row.me?.assists }}
+            ><span class="text-ink-4"> / </span>{{ row.me?.assists }}
           </span>
-          <span class="num mt-0.5 block text-[10.5px] text-ink-2">
-            {{ row.ratio }} KDA <span class="text-ink-3">· {{ row.kp }}% KP</span>
+          <span class="num mt-1 block text-[10.5px] text-ink-2">
+            <b class="font-semibold text-ink">{{ row.ratio }}</b> KDA
+            <span class="hidden text-ink-3 sm:inline">· {{ row.kp }}% KP</span>
           </span>
         </span>
 
         <!-- Economy and contribution, all four numbers kept -->
-        <span class="num hidden w-[136px] shrink-0 whitespace-nowrap md:block">
-          <span class="block text-[11px] text-ink-2">
-            {{ row.me?.cs }} CS <span class="text-ink-3">({{ row.csMin }}/m)</span>
+        <span class="num hidden w-[128px] shrink-0 whitespace-nowrap md:block">
+          <span class="block text-[11.5px] text-ink-2">
+            <b class="font-semibold text-ink">{{ row.me?.cs }}</b> CS
+            <span class="text-ink-3">{{ row.csMin }}/m</span>
           </span>
           <span class="mt-0.5 block text-[10.5px] text-ink-3">
-            {{ row.gold }} gold · {{ row.me?.visionScore }} vis
+            <span class="text-gold">{{ row.gold }}</span> gold · {{ row.me?.visionScore }} vis
           </span>
-          <span class="mt-1 flex items-center gap-1.5">
-            <span class="meter w-[52px]"><span :style="{ width: `${row.damageBar}%` }" /></span>
+          <span class="mt-1.5 flex items-center gap-1.5">
+            <span class="meter w-[56px]"><span :style="{ width: `${row.damageBar}%` }" /></span>
             <span class="text-[10px] text-ink-3">{{ row.damage }}</span>
           </span>
         </span>
@@ -243,11 +240,11 @@ async function copyLink() {
         </span>
 
         <!-- Both line-ups, winning side first -->
-        <span class="ml-auto hidden shrink-0 gap-2 2xl:flex">
+        <span class="ml-auto hidden shrink-0 flex-col gap-[3px] 2xl:flex">
           <span
             v-for="team in row.teams"
             :key="team.teamId"
-            class="flex gap-[2px] border-l-2 pl-1"
+            class="flex gap-[2px] border-l-2 pl-1.5"
             :style="{ borderColor: team.teamId === 100 ? 'var(--color-blue)' : 'var(--color-red)' }"
           >
             <img
@@ -258,58 +255,74 @@ async function copyLink() {
               :title="`${member.gameName} · ${championName(member.championId)}`"
               loading="lazy"
               decoding="async"
-              class="thumb h-[16px] w-[16px] rounded-[3px]"
+              class="thumb h-[17px] w-[17px] rounded-[3px]"
               :class="
                 member.puuid === puuid
-                  ? 'ring-1 ring-ink ring-offset-1 ring-offset-bg'
-                  : 'opacity-80'
+                  ? 'ring-1 ring-ink-2 ring-offset-1 ring-offset-panel'
+                  : 'opacity-75'
               "
             />
           </span>
         </span>
 
-        <!-- How the game actually went, as one glyph -->
-        <GradeBadge
-          v-if="row.grade"
-          :grade="row.grade"
-          :size="32"
-          class="ml-auto hidden sm:grid 2xl:ml-0"
-          :title="`${ordinal(row.standing)} of 10 in this lobby`"
-        />
-
         <ChevronDown
           :size="15"
-          class="shrink-0 text-ink-4 transition-transform duration-200"
+          class="ml-auto hidden shrink-0 text-ink-4 transition-transform duration-200 sm:block 2xl:ml-1"
           :class="expanded ? 'rotate-180' : ''"
         />
       </button>
 
-      <div class="flex shrink-0 items-center gap-0.5 pr-2">
-        <Link :href="matchHref" class="icon-btn" title="Open full match analysis">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <path
-              d="M6 3h7v7M13 3 4 12"
-              stroke="currentColor"
-              stroke-width="1.6"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-          <span class="sr-only">Open match</span>
-        </Link>
-        <button
-          class="icon-btn hidden sm:inline-flex"
-          :title="copied ? 'Copied' : 'Copy match link'"
-          @click="copyLink"
-        >
-          <Check v-if="copied" :size="13" />
-          <Link2 v-else :size="13" />
-        </button>
-      </div>
+      <!-- The score gets its own column, so it reads as the verdict on the game -->
+      <button
+        type="button"
+        class="flex w-[54px] shrink-0 items-center justify-center gap-3 border-l border-line px-2 transition-colors hover:bg-white/[0.025] sm:w-[132px] sm:justify-start sm:px-4"
+        :title="
+          row.score !== null
+            ? `Score ${row.score} · ${ordinal(row.standing)} of 10 in this lobby`
+            : 'Games under five minutes are not scored'
+        "
+        :aria-expanded="expanded"
+        @click="$emit('toggle')"
+      >
+        <template v-if="row.score !== null">
+          <ScoreRing :score="row.score" :size="44" :stroke="4" class="max-sm:hidden" />
+          <ScoreRing :score="row.score" :size="36" :stroke="3.5" class="sm:hidden" />
+          <span class="hidden min-w-0 flex-col sm:flex">
+            <span class="label">Score</span>
+            <span
+              class="num mt-1 text-[13px] font-semibold"
+              :class="row.badge === 'MVP' ? 'text-signal' : row.badge ? 'text-ink' : 'text-ink-2'"
+            >
+              {{ row.badge ?? ordinal(row.standing) }}
+            </span>
+          </span>
+        </template>
+        <template v-else>
+          <span class="tag max-sm:!hidden">Remake</span>
+          <span class="text-ink-4 sm:hidden">—</span>
+        </template>
+      </button>
+
+      <Link
+        :href="matchHref"
+        class="flex w-[36px] shrink-0 items-center justify-center border-l sm:w-[40px] border-line text-ink-3 transition-colors hover:bg-white/[0.025] hover:text-ink"
+        title="Open full match analysis"
+      >
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path
+            d="M6 3h7v7M13 3 4 12"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        <span class="sr-only">Open match</span>
+      </Link>
     </div>
 
     <!-- Expanded: the same depth the match page has, in place -->
-    <div v-if="expanded" class="border-t border-line bg-raised">
+    <div v-if="expanded" class="relative border-t border-line bg-panel">
       <div class="flex flex-wrap items-center gap-3 px-4 py-2.5">
         <div class="seg">
           <button
@@ -322,10 +335,15 @@ async function copyLink() {
             {{ option.label }}
           </button>
         </div>
-        <Link :href="matchHref" class="btn btn-sm ml-auto">Open full analysis</Link>
+        <button class="btn btn-sm btn-ghost ml-auto" @click="copyLink">
+          <Check v-if="copied" :size="13" />
+          <Link2 v-else :size="13" />
+          {{ copied ? 'Copied' : 'Copy link' }}
+        </button>
+        <Link :href="matchHref" class="btn btn-sm">Open full analysis</Link>
       </div>
 
-      <div class="border-t border-line bg-bg">
+      <div class="border-t border-line">
         <Scoreboard
           v-if="view === 'scoreboard'"
           dense
@@ -356,7 +374,7 @@ async function copyLink() {
               type="button"
               class="rounded-[7px] border p-[3px] transition-colors"
               :class="
-                focusPuuid === p.puuid ? 'border-ink' : 'border-transparent hover:border-line-2'
+                focusPuuid === p.puuid ? 'border-ink-2' : 'border-transparent hover:border-line-2'
               "
               :title="`${p.gameName} · ${championName(p.championId)}`"
               @click="focusPuuid = p.puuid"
@@ -383,3 +401,33 @@ async function copyLink() {
     </div>
   </div>
 </template>
+
+<style scoped>
+/* The outcome reads as a colour before it reads as a word: an edge, and a
+   wash that fades out before it reaches the numbers. */
+.match-row {
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--result) 10%, transparent),
+    color-mix(in srgb, var(--result) 3%, transparent) 36%,
+    transparent 70%
+  );
+}
+
+.match-row::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--result);
+  pointer-events: none;
+}
+
+.match-row[data-result='win'] {
+  --result: var(--color-win);
+}
+
+.match-row[data-result='loss'] {
+  --result: var(--color-loss);
+}
+</style>

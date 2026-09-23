@@ -24,9 +24,11 @@ const model = defineModel<string>({ required: true })
             v-for="p in teamMembers(match, teamId)"
             :key="p.puuid"
             type="button"
-            class="relative rounded-[9px] border p-[3px] transition-colors"
+            class="relative rounded-[10px] border p-[3px] transition-colors"
             :class="
-              model === p.puuid ? 'border-ink bg-raised' : 'border-transparent hover:border-line-2'
+              model === p.puuid
+                ? 'border-ink-2 bg-raised'
+                : 'border-transparent hover:border-line-2 hover:bg-raised'
             "
             :title="`${p.gameName}#${p.tagLine} · ${championName(p.championId)}${p.position ? ` (${POSITION_NAMES[p.position] || p.position})` : ''}`"
             @click="model = p.puuid"
@@ -35,10 +37,10 @@ const model = defineModel<string>({ required: true })
               :src="champIcon(p.championId)"
               :alt="championName(p.championId)"
               loading="lazy"
-              class="thumb h-8 w-8 rounded-[6px]"
+              class="thumb h-8 w-8 rounded-[7px]"
             />
             <span
-              class="absolute -bottom-px left-1/2 h-[2px] w-4 -translate-x-1/2 rounded-full"
+              class="absolute -bottom-px left-1/2 h-[3px] w-3.5 -translate-x-1/2 rounded-full"
               :style="{ background: teamId === 100 ? 'var(--color-blue)' : 'var(--color-red)' }"
             />
           </button>
