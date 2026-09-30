@@ -50,15 +50,15 @@ function forget() {
     </header>
 
     <main class="mx-auto flex w-full max-w-[560px] flex-1 flex-col justify-center px-5 pb-28">
-      <Link href="/app" class="app-tag mx-auto mb-9">
-        <span class="app-tag-new">New</span>
-        Get the Invade app now
-        <ArrowRight :size="13" class="app-tag-arrow" />
-      </Link>
       <Glyph :size="46" class="mx-auto" />
       <h1 class="display mt-6 text-center text-[clamp(34px,5.4vw,52px)] font-extrabold text-ink">
         Find a summoner
       </h1>
+      <Link href="/app" class="app-tag mx-auto mt-5">
+        <span class="app-tag-new">New</span>
+        Get the Invade app now
+        <ArrowRight :size="13" class="app-tag-arrow" />
+      </Link>
 
       <div class="mt-7">
         <SearchBar size="lg" autofocus />
