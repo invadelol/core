@@ -132,6 +132,19 @@ export function parseManifest(kind: AssetKind, raw: any): Manifest {
     }
   }
 
+  if (kind === 'item') {
+    // Existing ClickHouse item columns are UInt16. Recover only unambiguous
+    // wrapped IDs from real manifest entries; never overwrite a real item.
+    const aliases = new Map<string, ManifestEntry | null>()
+    for (const [id, entry] of Object.entries(manifest)) {
+      const numeric = Number(id)
+      if (!Number.isInteger(numeric) || numeric <= 65535) continue
+      const wrapped = String(numeric % 65536)
+      if (wrapped === '0' || manifest[wrapped]) continue
+      aliases.set(wrapped, aliases.has(wrapped) ? null : entry)
+    }
+    for (const [id, entry] of aliases) if (entry) manifest[id] = entry
+  }
   return manifest
 }
 
