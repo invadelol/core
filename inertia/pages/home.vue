@@ -2,6 +2,7 @@
 import { Head, Link } from '@inertiajs/vue3'
 import { onMounted, ref } from 'vue'
 import { Github, X } from 'lucide-vue-next'
+import DownloadButton from '../components/DownloadButton.vue'
 import SearchBar from '../components/SearchBar.vue'
 import ThemeToggle from '../components/ui/ThemeToggle.vue'
 import Wordmark from '../components/ui/Wordmark.vue'
@@ -30,7 +31,8 @@ function forget() {
   <div class="flex min-h-screen flex-col">
     <header class="mx-auto flex w-full max-w-[1080px] items-center gap-4 px-5 py-5">
       <Wordmark :size="20" />
-      <div class="ml-auto flex items-center gap-0.5">
+      <div class="ml-auto flex items-center gap-1.5">
+        <DownloadButton />
         <ThemeToggle />
         <a
           :href="REPO_URL"
