@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
 import { Github } from 'lucide-vue-next'
+import DownloadButton from './DownloadButton.vue'
 import SearchBar from './SearchBar.vue'
 import ThemeToggle from './ui/ThemeToggle.vue'
 import Wordmark from './ui/Wordmark.vue'
@@ -42,7 +43,8 @@ defineProps<{
         <SearchBar />
       </div>
 
-      <div class="flex shrink-0 items-center gap-0.5">
+      <div class="flex shrink-0 items-center gap-1.5">
+        <DownloadButton />
         <ThemeToggle />
         <a
           :href="REPO_URL"
