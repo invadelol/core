@@ -28,7 +28,6 @@ const href = (id: DesktopPlatform) => `/download/${id}`
     <a v-else-if="checked" href="#download" class="btn btn-primary !px-5 !py-2.5 !text-[13.5px]">
       <Download :size="15" />Download
     </a>
-    <!-- Before the browser is inspected, keep the space so nothing jumps. -->
     <span v-else class="block h-[40px]" aria-hidden="true" />
     <p v-if="checked" class="text-[11.5px] text-ink-3">
       <template v-if="!target">Invade runs on Windows and macOS computers. </template>
