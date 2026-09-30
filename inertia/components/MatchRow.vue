@@ -147,19 +147,19 @@ async function copyLink() {
 
 <template>
   <div
-    class="match-row relative overflow-hidden rounded-[10px] border border-line bg-panel"
+    class="match-row slash-mark @container relative overflow-hidden rounded-lg border border-line bg-panel"
     :data-result="row.win ? 'win' : 'loss'"
   >
     <div class="flex items-stretch">
       <button
         type="button"
-        class="flex min-w-0 flex-1 items-center gap-2.5 py-3 pl-4 pr-2 text-left transition-colors hover:bg-white/[0.025] sm:gap-4 sm:pl-5 sm:pr-4"
+        class="flex min-w-0 flex-1 items-center gap-2.5 py-3 pl-6 pr-2 text-left transition-colors hover:bg-raised sm:gap-4 sm:pl-7 sm:pr-4"
         :aria-expanded="expanded"
         @click="$emit('toggle')"
       >
         <!-- Result -->
         <span class="w-[64px] shrink-0 sm:w-[86px]">
-          <span class="display block text-[14px]" :class="row.win ? 'text-win' : 'text-loss'">
+          <span class="display block text-[15px]" :class="row.win ? 'text-win' : 'text-loss'">
             {{ row.win ? 'Victory' : 'Defeat' }}
           </span>
           <span class="mt-1 block truncate text-[11px] font-medium text-ink-2">{{
@@ -180,7 +180,7 @@ async function copyLink() {
               height="46"
               loading="lazy"
               decoding="async"
-              class="thumb h-[40px] w-[40px] rounded-[8px] sm:h-[46px] sm:w-[46px]"
+              class="thumb h-[40px] w-[40px] rounded-md sm:h-[46px] sm:w-[46px]"
             />
             <span class="lvl absolute -bottom-1 -right-1">{{ row.me?.champLevel }}</span>
           </span>
@@ -198,7 +198,7 @@ async function copyLink() {
         </span>
 
         <!-- Who they played -->
-        <span class="hidden w-[92px] shrink-0 lg:block">
+        <span class="hidden w-[92px] shrink-0 @min-[58rem]:block">
           <span class="block truncate text-[13px] font-semibold text-ink">{{ row.champion }}</span>
           <span class="mt-0.5 flex items-center gap-1 text-[10.5px] text-ink-3">
             <RoleIcon v-if="row.me?.position" :role="row.me.position" :size="11" />
@@ -220,7 +220,7 @@ async function copyLink() {
         </span>
 
         <!-- Economy and contribution, all four numbers kept -->
-        <span class="num hidden w-[128px] shrink-0 whitespace-nowrap md:block">
+        <span class="num hidden w-[128px] shrink-0 whitespace-nowrap @min-[40rem]:block">
           <span class="block text-[11.5px] text-ink-2">
             <b class="font-semibold text-ink">{{ row.me?.cs }}</b> CS
             <span class="text-ink-3">{{ row.csMin }}/m</span>
@@ -235,12 +235,12 @@ async function copyLink() {
         </span>
 
         <!-- Build -->
-        <span class="hidden shrink-0 xl:block">
+        <span class="hidden shrink-0 @min-[48rem]:block">
           <ItemRow :items="row.me?.items ?? []" size="sm" />
         </span>
 
         <!-- Both line-ups, winning side first -->
-        <span class="ml-auto hidden shrink-0 flex-col gap-[3px] 2xl:flex">
+        <span class="ml-auto hidden shrink-0 flex-col gap-[3px] @min-[72rem]:flex">
           <span
             v-for="team in row.teams"
             :key="team.teamId"
@@ -267,7 +267,7 @@ async function copyLink() {
 
         <ChevronDown
           :size="15"
-          class="ml-auto hidden shrink-0 text-ink-4 transition-transform duration-200 sm:block 2xl:ml-1"
+          class="ml-auto hidden shrink-0 text-ink-4 transition-transform duration-200 sm:block @min-[72rem]:ml-1"
           :class="expanded ? 'rotate-180' : ''"
         />
       </button>
@@ -275,7 +275,7 @@ async function copyLink() {
       <!-- The score gets its own column, so it reads as the verdict on the game -->
       <button
         type="button"
-        class="flex w-[54px] shrink-0 items-center justify-center gap-3 border-l border-line px-2 transition-colors hover:bg-white/[0.025] sm:w-[132px] sm:justify-start sm:px-4"
+        class="flex w-[54px] shrink-0 items-center justify-center gap-3 border-l border-line px-2 transition-colors hover:bg-raised sm:w-[132px] sm:justify-start sm:px-4"
         :title="
           row.score !== null
             ? `Score ${row.score} · ${ordinal(row.standing)} of 10 in this lobby`
@@ -305,7 +305,7 @@ async function copyLink() {
 
       <Link
         :href="matchHref"
-        class="flex w-[36px] shrink-0 items-center justify-center border-l sm:w-[40px] border-line text-ink-3 transition-colors hover:bg-white/[0.025] hover:text-ink"
+        class="flex w-[36px] shrink-0 items-center justify-center border-l sm:w-[40px] border-line text-ink-3 transition-colors hover:bg-raised hover:text-ink"
         title="Open full match analysis"
       >
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -372,7 +372,7 @@ async function copyLink() {
               v-for="p in full.participants"
               :key="p.puuid"
               type="button"
-              class="rounded-[7px] border p-[3px] transition-colors"
+              class="rounded-sm border p-[3px] transition-colors"
               :class="
                 focusPuuid === p.puuid ? 'border-ink-2' : 'border-transparent hover:border-line-2'
               "
@@ -382,7 +382,7 @@ async function copyLink() {
               <img
                 :src="champIcon(p.championId)"
                 :alt="championName(p.championId)"
-                class="thumb h-7 w-7 rounded-[5px]"
+                class="thumb h-7 w-7 rounded-sm"
               />
             </button>
           </div>
@@ -403,31 +403,17 @@ async function copyLink() {
 </template>
 
 <style scoped>
-/* The outcome reads as a colour before it reads as a word: an edge, and a
-   wash that fades out before it reaches the numbers. */
-.match-row {
-  background-image: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--result) 10%, transparent),
-    color-mix(in srgb, var(--result) 3%, transparent) 36%,
-    transparent 70%
-  );
-}
-
-.match-row::after {
-  content: '';
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 3px;
-  background: var(--result);
-  pointer-events: none;
-}
-
+/* The outcome reads as a mark before it reads as a word: the slash on the left edge. */
 .match-row[data-result='win'] {
-  --result: var(--color-win);
+  --mark: var(--color-win);
 }
 
 .match-row[data-result='loss'] {
-  --result: var(--color-loss);
+  --mark: var(--color-loss);
+}
+
+.match-row::before {
+  z-index: 1;
+  pointer-events: none;
 }
 </style>

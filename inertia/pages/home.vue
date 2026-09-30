@@ -5,6 +5,7 @@ import { Github, X } from 'lucide-vue-next'
 import DownloadButton from '../components/DownloadButton.vue'
 import SearchBar from '../components/SearchBar.vue'
 import ThemeToggle from '../components/ui/ThemeToggle.vue'
+import Glyph from '../components/ui/Glyph.vue'
 import Wordmark from '../components/ui/Wordmark.vue'
 import { profileIcon } from '../lib/assets.js'
 import { profilePath, timeAgo } from '../lib/format.js'
@@ -48,13 +49,16 @@ function forget() {
     </header>
 
     <main class="mx-auto flex w-full max-w-[560px] flex-1 flex-col justify-center px-5 pb-28">
-      <h1 class="display text-center text-[clamp(32px,5vw,44px)] text-ink">Find a summoner</h1>
+      <Glyph :size="46" class="mx-auto" />
+      <h1 class="display mt-6 text-center text-[clamp(34px,5.4vw,52px)] font-extrabold text-ink">
+        Find a summoner
+      </h1>
 
       <div class="mt-7">
         <SearchBar size="lg" autofocus />
       </div>
 
-      <section v-if="recent.length" class="card mt-8">
+      <section v-if="recent.length" class="card mt-10">
         <div class="section">
           <h2>Recently viewed</h2>
           <button class="meta ml-auto transition-colors hover:text-ink" @click="forget">
@@ -66,7 +70,7 @@ function forget() {
           <li v-for="player in recent" :key="`${player.gameName}#${player.tagLine}`">
             <Link
               :href="profilePath(player.gameName, player.tagLine)"
-              class="flex items-center gap-3 rounded-[7px] px-2.5 py-2 transition-colors hover:bg-raised"
+              class="flex items-center gap-3 rounded-sm px-2.5 py-2 transition-colors hover:bg-raised"
             >
               <img
                 :src="profileIcon(player.profileIconId)"
@@ -74,7 +78,7 @@ function forget() {
                 width="30"
                 height="30"
                 loading="lazy"
-                class="thumb h-[30px] w-[30px] rounded-[7px]"
+                class="thumb h-[30px] w-[30px] rounded-sm"
               />
               <span class="min-w-0 flex-1 truncate text-[13px]">
                 <span class="font-semibold text-ink">{{ player.gameName }}</span>

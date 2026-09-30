@@ -134,70 +134,61 @@ function record(rank: Rank) {
 </script>
 
 <template>
+  <!-- Ranked, sized for the profile rail: one row per queue, then the climb. -->
   <section v-if="queues.length" class="card">
     <div class="section">
-      <h2>Ranked</h2>
+      <h3>Ranked</h3>
       <span v-if="peak" class="meta ml-auto">
         Peak
         <b class="font-semibold text-ink">
           {{ TIER_NAMES[peak.tier] || peak.tier }} {{ peak.division }}
         </b>
-        · {{ peak.leaguePoints }} LP
       </span>
     </div>
 
-    <div class="grid items-stretch gap-x-8 gap-y-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-      <div class="grid gap-3 sm:grid-cols-2">
-        <div
-          v-for="rank in queues"
-          :key="rank.queueType"
-          class="flex items-center gap-3.5 rounded-[8px] bg-raised px-3 py-3"
-        >
+    <div>
+      <ul class="space-y-4">
+        <li v-for="(rank, index) in queues" :key="rank.queueType" class="flex items-center gap-3.5">
           <img
             :src="rankCrest(rank.tier)"
             :alt="rank.tier"
-            class="h-[60px] w-[60px] shrink-0"
+            class="shrink-0"
+            :class="index === 0 ? 'h-[56px] w-[56px]' : 'mx-1.5 h-[44px] w-[44px]'"
             loading="lazy"
           />
           <div class="min-w-0 flex-1">
             <div class="label">
               {{ QUEUE_LABELS[rank.queueType] || rank.queueType }}
             </div>
-            <div class="display mt-1 truncate text-[20px] text-ink">
-              {{ TIER_NAMES[rank.tier] || rank.tier }} {{ rank.division }}
-            </div>
-            <div class="num mt-1 flex items-baseline gap-2 text-[11.5px] text-ink-2">
-              <b class="font-semibold text-ink">{{ rank.leaguePoints }} LP</b>
-              <span>{{ rank.wins }}W {{ rank.losses }}L</span>
+            <div class="mt-1 flex items-baseline justify-between gap-2">
+              <span class="display truncate text-ink" :class="index === 0 ? 'text-[24px]' : 'text-[18px]'">
+                {{ TIER_NAMES[rank.tier] || rank.tier }} {{ rank.division }}
+              </span>
               <span
-                class="stat ml-auto text-[14px]"
+                class="stat shrink-0 text-[15px]"
                 :class="record(rank).winrate >= 50 ? 'text-win' : 'text-loss'"
               >
                 {{ record(rank).winrate }}%
               </span>
             </div>
-            <div class="meter mt-1.5">
-              <span
-                :style="{
-                  width: `${record(rank).winrate}%`,
-                  background: record(rank).winrate >= 50 ? 'var(--color-win)' : 'var(--color-loss)',
-                }"
-              />
+            <div class="num mt-1 flex items-baseline gap-2 text-[11.5px] text-ink-3">
+              <b class="font-semibold text-ink">{{ rank.leaguePoints }} LP</b>
+              <span>{{ rank.wins }}W {{ rank.losses }}L</span>
             </div>
           </div>
-        </div>
-      </div>
+        </li>
+      </ul>
 
-      <div v-if="charted" class="min-w-0">
+      <div v-if="charted" class="mt-5 min-w-0">
         <div class="label mb-2">
           {{ QUEUE_LABELS[charted.queueType] || charted.queueType }} climb ·
           {{ charted.history.length }} snapshots
         </div>
-        <div class="h-[110px]">
+        <div class="h-[96px]">
           <LineChart :data="chartData" :options="options" />
         </div>
       </div>
-      <p v-else class="self-center text-[12px] leading-relaxed text-ink-3">
+      <p v-else class="mt-4 text-[11.5px] leading-relaxed text-ink-3">
         Not enough snapshots yet to draw a climb. Check back after a few more days of games.
       </p>
     </div>

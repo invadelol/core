@@ -196,7 +196,7 @@ const checkpoints = computed(() => {
               :key="spell"
               :src="spellIcon(spell)"
               alt=""
-              class="thumb h-6 w-6 rounded-[5px]"
+              class="thumb h-6 w-6 rounded-sm"
             />
           </div>
         </div>
@@ -206,7 +206,7 @@ const checkpoints = computed(() => {
             <template v-for="(key, index) in priority" :key="key">
               <span v-if="index" class="text-[10px] text-ink-4">›</span>
               <span
-                class="grid h-6 w-6 place-items-center rounded-[5px] bg-panel text-[11px] font-semibold text-ink"
+                class="grid h-6 w-6 place-items-center rounded-sm bg-panel text-[11px] font-semibold text-ink"
               >
                 {{ key }}
               </span>
@@ -252,7 +252,7 @@ const checkpoints = computed(() => {
 
     <!-- Numbers against the lobby -->
     <section class="min-w-0 lg:border-l lg:border-line lg:pl-8">
-      <div v-if="breakdown" class="mb-6 rounded-[8px] bg-panel p-3.5">
+      <div v-if="breakdown" class="mb-6 rounded-md bg-panel p-3.5">
         <div class="flex items-center gap-3">
           <ScoreRing :score="breakdown.score" :size="52" :stroke="4.5" />
           <div class="min-w-0">
@@ -318,7 +318,7 @@ const checkpoints = computed(() => {
           <img
             :src="champIcon(player.championId)"
             :alt="championName(player.championId)"
-            class="thumb h-9 w-9 rounded-[7px]"
+            class="thumb h-9 w-9 rounded-sm"
           />
           <span class="min-w-0">
             <span class="block truncate text-[12px] font-medium text-ink">
@@ -343,7 +343,7 @@ const checkpoints = computed(() => {
           <img
             :src="champIcon(opponent.championId)"
             :alt="championName(opponent.championId)"
-            class="thumb h-9 w-9 rounded-[7px]"
+            class="thumb h-9 w-9 rounded-sm"
           />
         </span>
       </div>

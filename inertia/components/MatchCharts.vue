@@ -174,7 +174,7 @@ const finalLead = computed(() => {
         <li
           v-for="row in damageRows"
           :key="row.p.puuid"
-          class="grid cursor-pointer grid-cols-[140px_minmax(0,1fr)_60px] items-center gap-3 rounded-[7px] px-2 py-1 transition-colors"
+          class="grid cursor-pointer grid-cols-[140px_minmax(0,1fr)_60px] items-center gap-3 rounded-sm px-2 py-1 transition-colors"
           :class="
             row.p.puuid === selectedPuuid
               ? 'bg-raised ring-1 ring-inset ring-line-2'
@@ -187,7 +187,7 @@ const finalLead = computed(() => {
               :src="champIcon(row.p.championId)"
               :alt="championName(row.p.championId)"
               loading="lazy"
-              class="thumb h-[26px] w-[26px] rounded-[6px]"
+              class="thumb h-[26px] w-[26px] rounded-sm"
             />
             <RoleIcon v-if="row.p.position" :role="row.p.position" :size="11" class="text-ink-4" />
             <PlayerLink

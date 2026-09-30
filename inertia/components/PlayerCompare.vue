@@ -390,7 +390,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
 
     <div v-if="!other" class="card px-6 py-16 text-center">
       <span
-        class="mx-auto mb-4 grid h-11 w-11 place-items-center rounded-[8px] bg-raised text-ink-3"
+        class="mx-auto mb-4 grid h-11 w-11 place-items-center rounded-md bg-raised text-ink-3"
       >
         <ArrowLeftRight :size="20" />
       </span>
@@ -414,7 +414,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
               alt=""
               width="48"
               height="48"
-              class="thumb h-10 w-10 rounded-[8px] sm:h-12 sm:w-12"
+              class="thumb h-10 w-10 rounded-md sm:h-12 sm:w-12"
             />
             <div class="min-w-0" :class="i === 1 ? 'text-right' : ''">
               <PlayerLink
@@ -679,7 +679,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
                         width="26"
                         height="26"
                         loading="lazy"
-                        class="thumb h-[26px] w-[26px] rounded-[7px]"
+                        class="thumb h-[26px] w-[26px] rounded-sm"
                       />
                     </span>
                   </td>
@@ -722,7 +722,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
                         width="26"
                         height="26"
                         loading="lazy"
-                        class="thumb h-[26px] w-[26px] rounded-[7px]"
+                        class="thumb h-[26px] w-[26px] rounded-sm"
                       />
                     </span>
                   </td>
@@ -832,7 +832,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
                       width="30"
                       height="30"
                       loading="lazy"
-                      class="thumb h-[30px] w-[30px] rounded-[7px]"
+                      class="thumb h-[30px] w-[30px] rounded-sm"
                     />
                     <span class="truncate font-semibold text-ink">
                       {{ championName(row.championId) }}
@@ -869,7 +869,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
                         width="30"
                         height="30"
                         loading="lazy"
-                        class="thumb h-[30px] w-[30px] rounded-[7px]"
+                        class="thumb h-[30px] w-[30px] rounded-sm"
                       />
                       <span class="truncate font-semibold text-ink">
                         {{ championName(row.championId) }}

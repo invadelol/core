@@ -36,7 +36,7 @@ const rows = computed(() => {
     <ul class="space-y-0.5 !px-2 !pb-2 !pt-2">
       <li v-for="champ in rows" :key="champ.championId">
         <button
-          class="flex w-full items-center gap-3 rounded-[7px] px-2 py-2 text-left transition-colors hover:bg-raised"
+          class="flex w-full items-center gap-3 rounded-sm px-2 py-2 text-left transition-colors hover:bg-raised"
           :class="
             active === champ.championId
               ? 'bg-raised shadow-[inset_3px_0_0_var(--color-accent)]'
@@ -50,7 +50,7 @@ const rows = computed(() => {
             width="34"
             height="34"
             loading="lazy"
-            class="thumb h-[34px] w-[34px] rounded-[7px]"
+            class="thumb h-[34px] w-[34px] rounded-sm"
           />
           <span class="min-w-0 flex-1">
             <span class="flex items-baseline justify-between gap-2">

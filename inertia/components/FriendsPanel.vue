@@ -90,7 +90,7 @@ function rate(wins: number, games: number) {
         </div>
 
         <div class="grid gap-2 sm:grid-cols-2 2xl:grid-cols-3">
-          <div v-for="pair in pairings" :key="pair.id" class="rounded-[8px] bg-raised p-3.5">
+          <div v-for="pair in pairings" :key="pair.id" class="rounded-md bg-raised p-3.5">
             <div class="flex items-center justify-between gap-3">
               <span class="flex min-w-0 items-center gap-2">
                 <span class="flex shrink-0 items-center gap-0.5 text-ink-3">
@@ -136,14 +136,14 @@ function rate(wins: number, games: number) {
                     :alt="championName(pick.mine)"
                     :title="championName(pick.mine)"
                     loading="lazy"
-                    class="thumb h-[22px] w-[22px] rounded-[5px]"
+                    class="thumb h-[22px] w-[22px] rounded-sm"
                   />
                   <img
                     :src="champIcon(pick.theirs)"
                     :alt="championName(pick.theirs)"
                     :title="championName(pick.theirs)"
                     loading="lazy"
-                    class="thumb h-[22px] w-[22px] rounded-[5px]"
+                    class="thumb h-[22px] w-[22px] rounded-sm"
                   />
                 </span>
                 <span class="min-w-0 flex-1 truncate text-[11.5px] text-ink-2">
@@ -291,7 +291,7 @@ function rate(wins: number, games: number) {
                         :alt="championName(id)"
                         :title="championName(id)"
                         loading="lazy"
-                        class="thumb h-[24px] w-[24px] rounded-[5px]"
+                        class="thumb h-[24px] w-[24px] rounded-sm"
                       />
                     </span>
                   </td>

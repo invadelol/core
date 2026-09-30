@@ -34,7 +34,7 @@ const href = (id: DesktopPlatform) => `/download/${id}`
     <a
       v-if="target"
       :href="href(target)"
-      class="btn btn-primary btn-sm hidden shrink-0 sm:inline-flex"
+      class="btn btn-sm hidden shrink-0 sm:inline-flex"
       :title="`Download Invade for ${targetLabel(target)}`"
     >
       <Download :size="13" />Download

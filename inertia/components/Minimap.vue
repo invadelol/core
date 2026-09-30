@@ -42,7 +42,7 @@ watch(() => props.mapId, resolveArt)
 </script>
 
 <template>
-  <div class="relative aspect-square w-full overflow-hidden rounded-[8px] bg-sunken">
+  <div class="relative aspect-square w-full overflow-hidden rounded-md bg-sunken">
     <img
       v-if="art"
       :src="art"

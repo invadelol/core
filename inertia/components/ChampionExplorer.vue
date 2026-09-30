@@ -97,7 +97,7 @@ function order(key: keyof ChampionStats) {
           v-for="c in heat"
           :key="c.championId"
           type="button"
-          class="relative h-[54px] w-[54px] overflow-hidden rounded-[7px] ring-ink-2 transition-shadow hover:ring-2"
+          class="relative h-[54px] w-[54px] overflow-hidden rounded-sm ring-ink-2 transition-shadow hover:ring-2"
           :title="`${championName(c.championId)} · ${c.games} games · ${c.wins}W ${c.games - c.wins}L · ${c.kda.toFixed(2)} KDA`"
           @click="emit('matches', c.championId)"
         >
@@ -154,14 +154,14 @@ function order(key: keyof ChampionStats) {
           <button
             v-for="c in chart"
             :key="c.championId"
-            class="flex items-center gap-2.5 rounded-[7px] px-2 py-1.5 text-left transition-colors hover:bg-raised"
+            class="flex items-center gap-2.5 rounded-sm px-2 py-1.5 text-left transition-colors hover:bg-raised"
             @click="emit('matches', c.championId)"
           >
             <img
               :src="champIcon(c.championId)"
               :alt="championName(c.championId)"
               loading="lazy"
-              class="thumb h-[28px] w-[28px] rounded-[6px]"
+              class="thumb h-[28px] w-[28px] rounded-sm"
             />
             <span class="w-[86px] shrink-0 truncate text-[12.5px] font-semibold text-ink">
               {{ championName(c.championId) }}
@@ -224,7 +224,7 @@ function order(key: keyof ChampionStats) {
                       width="32"
                       height="32"
                       loading="lazy"
-                      class="thumb h-8 w-8 rounded-[7px]"
+                      class="thumb h-8 w-8 rounded-sm"
                     />
                     <span class="truncate text-[13px] font-semibold text-ink">
                       {{ championName(c.championId) }}

@@ -298,7 +298,7 @@ const diffOptions = computed(() =>
       </div>
 
       <div class="px-4 pb-4 pt-3">
-        <div v-if="chart" class="tl-plot relative overflow-hidden rounded-[8px] bg-raised">
+        <div v-if="chart" class="tl-plot relative overflow-hidden rounded-md bg-raised">
           <svg
             ref="surface"
             :viewBox="`0 0 ${CHART.w} ${CHART.h}`"
@@ -478,7 +478,7 @@ const diffOptions = computed(() =>
               <tr class="band">
                 <td colspan="5" class="!px-4">
                   <span class="flex items-center gap-2">
-                    <span class="h-3 w-[3px] rounded-full" :style="{ background: team.color }" />
+                    <span class="h-3 w-[3px] -skew-x-[14deg]" :style="{ background: team.color }" />
                     <span class="display text-[13px] text-ink">{{ team.label }} side</span>
                     <span class="ml-auto text-[11px] text-ink-3">
                       <b class="stat text-[13px] text-gold">
@@ -506,7 +506,7 @@ const diffOptions = computed(() =>
                       :src="champIcon(entry.p.championId)"
                       :alt="championName(entry.p.championId)"
                       loading="lazy"
-                      class="thumb h-7 w-7 rounded-[6px]"
+                      class="thumb h-7 w-7 rounded-sm"
                     />
                     <span
                       class="lvl absolute -bottom-1 -right-1 !h-[14px] !min-w-[14px] !text-[8.5px]"

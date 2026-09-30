@@ -191,7 +191,7 @@ function submit() {
   <div class="relative w-full">
     <div class="relative">
       <Search
-        class="pointer-events-none absolute top-1/2 -translate-y-1/2 text-ink-3"
+        class="pointer-events-none absolute top-1/2 z-10 -translate-y-1/2 text-ink-3"
         :class="props.size === 'lg' ? 'left-4 h-[19px] w-[19px]' : 'left-3 h-4 w-4'"
       />
       <input
@@ -207,7 +207,7 @@ function submit() {
         class="field"
         :class="
           props.size === 'lg'
-            ? '!rounded-[10px] !border-line-2 !bg-panel !py-4 !pl-12 !pr-14 !text-[16px]'
+            ? 'chamfer !rounded-sm !border-line-2 !bg-panel !py-4 !pl-12 !pr-14 !text-[16px]'
             : '!py-[7px] !pl-9 !pr-12 !text-[12.5px]'
         "
         @focus="isOpen = entries.length > 0"
@@ -251,11 +251,11 @@ function submit() {
           height="26"
           loading="lazy"
           decoding="async"
-          class="thumb h-[26px] w-[26px] rounded-[6px]"
+          class="thumb h-[26px] w-[26px] rounded-sm"
         />
         <span
           v-else
-          class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-[6px] bg-sunken text-ink-2"
+          class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-sm bg-sunken text-ink-2"
         >
           <Search class="h-3.5 w-3.5" />
         </span>
