@@ -54,15 +54,14 @@ function forget() {
       <h1 class="display mt-6 text-center text-[clamp(34px,5.4vw,52px)] font-extrabold text-ink">
         Find a summoner
       </h1>
-      <Link href="/app" class="app-tag mx-auto mt-5">
+      <div class="mt-7">
+        <SearchBar size="lg" autofocus />
+      </div>
+      <Link href="/app" class="app-tag mx-auto mt-6">
         <span class="app-tag-new">New</span>
         Get the Invade app now
         <ArrowRight :size="13" class="app-tag-arrow" />
       </Link>
-
-      <div class="mt-7">
-        <SearchBar size="lg" autofocus />
-      </div>
 
       <section v-if="recent.length" class="card mt-10">
         <div class="section">
@@ -105,7 +104,7 @@ function forget() {
 </template>
 
 <style scoped>
-/* A pointer to the desktop app, above the search. */
+/* A pointer to the desktop app, below the search. */
 .app-tag {
   display: inline-flex;
   align-items: center;
