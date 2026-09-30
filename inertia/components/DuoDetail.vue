@@ -111,14 +111,14 @@ const splits = computed(() =>
                 :alt="championName(pick.mine)"
                 :title="championName(pick.mine)"
                 loading="lazy"
-                class="thumb h-[20px] w-[20px] rounded-[5px]"
+                class="thumb h-[20px] w-[20px] rounded-sm"
               />
               <img
                 :src="champIcon(pick.theirs)"
                 :alt="championName(pick.theirs)"
                 :title="championName(pick.theirs)"
                 loading="lazy"
-                class="thumb h-[20px] w-[20px] rounded-[5px]"
+                class="thumb h-[20px] w-[20px] rounded-sm"
               />
             </span>
             <span class="min-w-0 flex-1 truncate text-ink-2">
@@ -166,7 +166,7 @@ const splits = computed(() =>
               :src="champIcon(game.myChampion)"
               :alt="championName(game.myChampion)"
               loading="lazy"
-              class="thumb h-[20px] w-[20px] rounded-[5px]"
+              class="thumb h-[20px] w-[20px] rounded-sm"
             />
             <RoleIcon :role="game.myRole" :size="11" class="text-ink-4" />
           </span>
@@ -176,7 +176,7 @@ const splits = computed(() =>
               :src="champIcon(game.theirChampion)"
               :alt="championName(game.theirChampion)"
               loading="lazy"
-              class="thumb h-[20px] w-[20px] rounded-[5px]"
+              class="thumb h-[20px] w-[20px] rounded-sm"
             />
             <RoleIcon :role="game.theirRole" :size="11" class="text-ink-4" />
           </span>

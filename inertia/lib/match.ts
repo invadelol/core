@@ -333,7 +333,7 @@ export function scoreTier(score: number): ScoreTier {
 export const SCORE_TONE: Record<ScoreTier, string> = {
   elite: 'var(--color-signal)',
   great: 'var(--color-win)',
-  good: 'var(--color-blue)',
+  good: 'var(--color-brand)',
   fair: 'var(--color-ink-2)',
   poor: 'var(--color-loss)',
 }

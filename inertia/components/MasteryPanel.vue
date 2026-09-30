@@ -98,7 +98,7 @@ const headline = computed(() => {
           <li
             v-for="c in visible"
             :key="c.championId"
-            class="flex items-center gap-3 rounded-[8px] bg-raised px-3 py-2.5"
+            class="flex items-center gap-3 rounded-md bg-raised px-3 py-2.5"
           >
             <img
               :src="champIcon(c.championId)"
@@ -106,7 +106,7 @@ const headline = computed(() => {
               width="36"
               height="36"
               loading="lazy"
-              class="thumb h-9 w-9 rounded-[7px]"
+              class="thumb h-9 w-9 rounded-sm"
             />
             <span class="min-w-0 flex-1">
               <span class="flex items-baseline justify-between gap-2">

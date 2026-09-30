@@ -115,7 +115,7 @@ const columnCount = 10
 
 <template>
   <div class="scroll-x">
-    <table class="dt dt-hover num" :class="dense ? 'min-w-[940px]' : 'min-w-[1060px]'">
+    <table class="dt dt-hover num" :class="dense ? 'min-w-[880px]' : 'min-w-[1060px]'">
       <thead>
         <tr>
           <th class="w-[30%] !pl-3">Player</th>
@@ -137,7 +137,7 @@ const columnCount = 10
           <td :colspan="columnCount">
             <div class="flex flex-wrap items-center gap-x-4 gap-y-1.5">
               <span class="flex items-center gap-2">
-                <span class="h-3 w-[3px] rounded-full" :style="{ background: side.color }" />
+                <span class="h-3 w-[3px] -skew-x-[14deg]" :style="{ background: side.color }" />
                 <span class="display text-[14px]" :class="side.won ? 'text-win' : 'text-loss'">
                   {{ side.won ? 'Victory' : 'Defeat' }}
                 </span>
@@ -190,7 +190,7 @@ const columnCount = 10
                     height="32"
                     loading="lazy"
                     decoding="async"
-                    class="thumb h-[32px] w-[32px] rounded-[6px]"
+                    class="thumb h-[32px] w-[32px] rounded-sm"
                   />
                   <span
                     class="lvl absolute -bottom-1 -left-1 !h-[14px] !min-w-[14px] !text-[8.5px]"

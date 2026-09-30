@@ -88,12 +88,13 @@ const totals = computed(() => {
 
 /** Four steps of one neutral, so intensity reads as intensity. */
 
+/* The player's own activity: the brand violet, from empty to full. */
 const SHADES = [
   'var(--color-sunken)',
-  'color-mix(in srgb, var(--color-ink) 22%, var(--color-sunken))',
-  'color-mix(in srgb, var(--color-ink) 45%, var(--color-sunken))',
-  'color-mix(in srgb, var(--color-ink) 70%, var(--color-sunken))',
-  'var(--color-ink)',
+  'color-mix(in srgb, var(--color-brand) 30%, var(--color-sunken))',
+  'color-mix(in srgb, var(--color-brand) 55%, var(--color-sunken))',
+  'color-mix(in srgb, var(--color-brand) 80%, var(--color-sunken))',
+  'var(--color-brand-hi)',
 ]
 
 function tooltip(cell: Cell) {

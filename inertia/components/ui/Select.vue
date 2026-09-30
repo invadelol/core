@@ -92,7 +92,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside))
   <div ref="root" class="relative">
     <button
       type="button"
-      class="flex h-[30px] w-full items-center gap-2 rounded-[7px] border bg-sunken px-2.5 text-[12px] font-medium transition-colors"
+      class="flex h-[30px] w-full items-center gap-2 rounded-sm border bg-sunken px-2.5 text-[12px] font-medium transition-colors"
       :class="open ? 'border-line-2' : 'border-transparent hover:border-line-2'"
       :aria-expanded="open"
       aria-haspopup="listbox"
@@ -152,7 +152,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside))
           @mouseenter="active = index"
           @click="choose(option.value)"
         >
-          <img v-if="option.icon" :src="option.icon" alt="" class="thumb h-5 w-5 rounded-[5px]" />
+          <img v-if="option.icon" :src="option.icon" alt="" class="thumb h-5 w-5 rounded-sm" />
           <span class="min-w-0 flex-1 truncate">{{ option.label }}</span>
           <span v-if="option.meta" class="num shrink-0 text-[11px] text-ink-3">{{
             option.meta

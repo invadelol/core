@@ -6,53 +6,55 @@
 @source '../';
 
 /* ──────────────────────────────────────────────────────────────
-   Tokens
+   Tokens ("Shard", shared with the desktop app: src/theme.css)
 
-   A near-black stage, panels that sit on it as cards, semi-condensed
-   type for headings and figures. Interaction stays neutral so the
-   data keeps all the colour.
+   Night ink with a violet undertone, one violet taken from the
+   Invade glyph, and two marks drawn from its facets: the chamfer
+   (a cut top-right corner, on identity and primary elements) and
+   the slash (a 14deg bar: active tab, results, form strips).
 
+   Violet is Invade itself: the active place, focus, the primary
+   action, the viewed player's own series. It never encodes data.
    Meaning is carried by a fixed set of hues:
      win / loss    an outcome
      blue / red    a side of the map
      gold          the economy
      signal        distinction: the top score tier, the MVP
-
-   Nothing else is coloured.
    ────────────────────────────────────────────────────────────── */
 @theme {
   /* Surfaces */
-  --color-bg: #f2f2ef;
+  --color-bg: #f3f3f7;
   --color-panel: #ffffff;
-  --color-raised: #f3f3f0;
-  --color-sunken: #e7e7e2;
-  --color-line: #e3e3dd;
-  --color-line-2: #cdcdc6;
+  --color-raised: #f5f5f9;
+  --color-sunken: #e9e9f0;
+  --color-line: #e3e3eb;
+  --color-line-2: #cfcfdb;
 
   /* Text */
-  --color-ink: #0a0b0e;
-  --color-ink-2: #43464f;
-  --color-ink-3: #767983;
-  --color-ink-4: #a8aab0;
+  --color-ink: #0c0c14;
+  --color-ink-2: #454558;
+  --color-ink-3: #75758a;
+  --color-ink-4: #a7a7b8;
 
-  /* Interaction is the inverse of the page: a solid ink chip on light,
-     a near-white chip on dark. `accent` is that fill, `accent-fg` the
-     text on it. `signal` marks distinction (the top score tier, MVP)
-     and borrows Riot's own gold for it. */
-  --color-accent: #0a0b0e;
+  /* Brand: the glyph violet, deepened on paper to hold contrast. */
+  --color-brand: #5a4bf0;
+  --color-brand-hi: #4a3bdf;
+  --color-brand-soft: #ecebff;
+  /* Interaction fill (primary buttons) and the text on it. */
+  --color-accent: #5a4bf0;
   --color-accent-fg: #ffffff;
   --color-signal: #a57a12;
 
   /* Outcome */
-  --color-win: #0f8a5a;
-  --color-win-soft: #e2f3ea;
+  --color-win: #0e8a5f;
+  --color-win-soft: #e1f3eb;
   --color-loss: #d42f4b;
   --color-loss-soft: #fbe7ea;
 
   /* Sides */
   --color-blue: #2462d6;
   --color-blue-soft: #e6eefc;
-  --color-red: #d4472b;
+  --color-red: #cf4326;
   --color-red-soft: #fbe9e4;
 
   /* Economy */
@@ -60,7 +62,7 @@
   --color-gold-bright: #c8aa6e;
 
   /* Categorical series, only where a chart needs three of them */
-  --color-s1: #2b2e36;
+  --color-s1: #2b2b38;
   --color-s2: #2462d6;
   --color-s3: #b07d10;
 
@@ -68,13 +70,15 @@
      This pulls it back so the player markers on top of it stay the subject. */
   --map-tone: saturate(0.5) brightness(1.06) contrast(0.9);
 
-  --shadow-e1: 0 1px 2px rgb(10 11 14 / 0.06);
-  --shadow-e2: 0 14px 34px -12px rgb(10 11 14 / 0.22);
+  --shadow-e1: 0 1px 2px rgb(12 12 20 / 0.06);
+  --shadow-e2: 0 18px 44px -16px rgb(12 12 20 / 0.24);
 
-  --radius-xs: 3px;
-  --radius-sm: 5px;
-  --radius-md: 7px;
-  --radius-lg: 10px;
+  /* Facets, not bubbles. */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 5px;
+  --radius-lg: 6px;
+  --radius-xl: 10px;
 
   --breakpoint-xs: 26rem;
 
@@ -84,48 +88,58 @@
   --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
 }
 
-/* Dark is the product's home. The stage is close to black and slightly
-   cool so champion art pops off it, panels step up in small increments,
-   and every hue is lifted to hold its weight. */
+:root {
+  --cut: 8px;
+  --slash: -14deg;
+  --t-fast: 120ms;
+  --t-base: 180ms;
+  --t-slow: 260ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* Dark is the product's home, and the same ink as the desktop app. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --color-bg: #0a0b0e;
-    --color-panel: #111318;
-    --color-raised: #171a20;
-    --color-sunken: #1f232b;
-    --color-line: #1e2129;
-    --color-line-2: #2d313b;
+    --color-bg: #07070b;
+    --color-panel: #101016;
+    --color-raised: #15151d;
+    --color-sunken: #1c1c26;
+    --color-line: #1c1c25;
+    --color-line-2: #2a2a36;
 
-    --color-ink: #f3f4f6;
-    --color-ink-2: #a8adb9;
-    --color-ink-3: #6f7583;
-    --color-ink-4: #464b57;
+    --color-ink: #eeeef5;
+    --color-ink-2: #a3a3b8;
+    --color-ink-3: #6c6c82;
+    --color-ink-4: #474759;
 
-    --color-accent: #e8eaf0;
-    --color-accent-fg: #0a0b0e;
-    --color-signal: #e2b457;
+    --color-brand: #7b6dff;
+    --color-brand-hi: #a99fff;
+    --color-brand-soft: #1b1830;
+    --color-accent: #7b6dff;
+    --color-accent-fg: #ffffff;
+    --color-signal: #ffd166;
 
-    --color-win: #36d399;
-    --color-win-soft: #0e2a20;
-    --color-loss: #ff5470;
-    --color-loss-soft: #2d121a;
+    --color-win: #34d39e;
+    --color-win-soft: #0d261e;
+    --color-loss: #ff4d6a;
+    --color-loss-soft: #2b111a;
 
     --color-blue: #4d8dff;
-    --color-blue-soft: #121f38;
+    --color-blue-soft: #111c33;
     --color-red: #ff6a4d;
-    --color-red-soft: #2d1510;
+    --color-red-soft: #2b1510;
 
-    --color-gold: #e2b457;
-    --color-gold-bright: #e9c98d;
+    --color-gold: #e8b04f;
+    --color-gold-bright: #efc98a;
 
-    --color-s1: #d4d8e0;
+    --color-s1: #d4d4e0;
     --color-s2: #4d8dff;
-    --color-s3: #e2b457;
+    --color-s3: #e8b04f;
 
     --map-tone: saturate(0.34) brightness(0.46) contrast(1.16);
 
     --shadow-e1: 0 1px 2px rgb(0 0 0 / 0.5);
-    --shadow-e2: 0 16px 40px -12px rgb(0 0 0 / 0.8);
+    --shadow-e2: 0 18px 48px -16px rgb(0 0 0 / 0.75);
 
     color-scheme: dark;
   }
@@ -133,43 +147,46 @@
 
 /* An explicit choice wins over the system preference, so this sits after. */
 :root[data-theme='dark'] {
-  --color-bg: #0a0b0e;
-  --color-panel: #111318;
-  --color-raised: #171a20;
-  --color-sunken: #1f232b;
-  --color-line: #1e2129;
-  --color-line-2: #2d313b;
+  --color-bg: #07070b;
+  --color-panel: #101016;
+  --color-raised: #15151d;
+  --color-sunken: #1c1c26;
+  --color-line: #1c1c25;
+  --color-line-2: #2a2a36;
 
-  --color-ink: #f3f4f6;
-  --color-ink-2: #a8adb9;
-  --color-ink-3: #6f7583;
-  --color-ink-4: #464b57;
+  --color-ink: #eeeef5;
+  --color-ink-2: #a3a3b8;
+  --color-ink-3: #6c6c82;
+  --color-ink-4: #474759;
 
-  --color-accent: #e8eaf0;
-  --color-accent-fg: #0a0b0e;
-  --color-signal: #e2b457;
+  --color-brand: #7b6dff;
+  --color-brand-hi: #a99fff;
+  --color-brand-soft: #1b1830;
+  --color-accent: #7b6dff;
+  --color-accent-fg: #ffffff;
+  --color-signal: #ffd166;
 
-  --color-win: #36d399;
-  --color-win-soft: #0e2a20;
-  --color-loss: #ff5470;
-  --color-loss-soft: #2d121a;
+  --color-win: #34d39e;
+  --color-win-soft: #0d261e;
+  --color-loss: #ff4d6a;
+  --color-loss-soft: #2b111a;
 
   --color-blue: #4d8dff;
-  --color-blue-soft: #121f38;
+  --color-blue-soft: #111c33;
   --color-red: #ff6a4d;
-  --color-red-soft: #2d1510;
+  --color-red-soft: #2b1510;
 
-  --color-gold: #e2b457;
-  --color-gold-bright: #e9c98d;
+  --color-gold: #e8b04f;
+  --color-gold-bright: #efc98a;
 
-  --color-s1: #d4d8e0;
+  --color-s1: #d4d4e0;
   --color-s2: #4d8dff;
-  --color-s3: #e2b457;
+  --color-s3: #e8b04f;
 
   --map-tone: saturate(0.34) brightness(0.46) contrast(1.16);
 
   --shadow-e1: 0 1px 2px rgb(0 0 0 / 0.5);
-  --shadow-e2: 0 16px 40px -12px rgb(0 0 0 / 0.8);
+  --shadow-e2: 0 18px 48px -16px rgb(0 0 0 / 0.75);
 
   color-scheme: dark;
 }
@@ -238,13 +255,13 @@
   }
 
   :is(button, a, input, select, [tabindex]):focus-visible {
-    outline: 2px solid var(--color-ink-2);
+    outline: 2px solid var(--color-brand);
     outline-offset: 2px;
-    border-radius: 3px;
+    border-radius: 2px;
   }
 
   ::selection {
-    background: var(--color-sunken);
+    background: color-mix(in srgb, var(--color-brand) 30%, transparent);
     color: var(--color-ink);
   }
 

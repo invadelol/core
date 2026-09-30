@@ -161,7 +161,7 @@ const sides = computed(() =>
         <!-- One lobby card per team -->
         <section v-for="side in sides" :key="side.teamId" class="card">
           <div class="section !items-center">
-            <span class="h-3 w-[3px] shrink-0 rounded-full" :style="{ background: side.color }" />
+            <span class="h-3 w-[3px] shrink-0 -skew-x-[14deg]" :style="{ background: side.color }" />
             <h3>{{ side.label }}</h3>
             <span v-if="side.bans.length" class="ml-auto flex items-center gap-1.5">
               <span class="label !text-[9.5px]">Bans</span>
@@ -189,7 +189,7 @@ const sides = computed(() =>
                 :src="champIcon(p.championId)"
                 :alt="championName(p.championId)"
                 loading="lazy"
-                class="thumb h-10 w-10 rounded-[7px]"
+                class="thumb h-10 w-10 rounded-sm"
               />
 
               <span class="flex shrink-0 flex-col gap-[2px]">

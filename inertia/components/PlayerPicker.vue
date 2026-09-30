@@ -24,7 +24,7 @@ const model = defineModel<string>({ required: true })
             v-for="p in teamMembers(match, teamId)"
             :key="p.puuid"
             type="button"
-            class="relative rounded-[10px] border p-[3px] transition-colors"
+            class="relative rounded-lg border p-[3px] transition-colors"
             :class="
               model === p.puuid
                 ? 'border-ink-2 bg-raised'
@@ -37,7 +37,7 @@ const model = defineModel<string>({ required: true })
               :src="champIcon(p.championId)"
               :alt="championName(p.championId)"
               loading="lazy"
-              class="thumb h-8 w-8 rounded-[7px]"
+              class="thumb h-8 w-8 rounded-sm"
             />
             <span
               class="absolute -bottom-px left-1/2 h-[3px] w-3.5 -translate-x-1/2 rounded-full"

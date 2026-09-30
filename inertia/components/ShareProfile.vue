@@ -121,7 +121,7 @@ async function download() {
     </div>
 
     <div>
-      <div class="relative isolate overflow-hidden rounded-[8px] border border-line p-5 text-white">
+      <div class="relative isolate overflow-hidden rounded-md border border-line p-5 text-white">
         <img
           v-if="champion"
           :src="championSplash(champion)"
@@ -139,7 +139,7 @@ async function download() {
           <img
             :src="profileIcon(profile.profileIconId)"
             alt=""
-            class="h-14 w-14 rounded-[8px] ring-2 ring-white/15"
+            class="h-14 w-14 rounded-md ring-2 ring-white/15"
           />
           <div class="min-w-0">
             <h3 class="display truncate text-[28px] leading-[0.95]">{{ profile.gameName }}</h3>

@@ -70,7 +70,7 @@ const sides = computed(() =>
       class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 px-5 py-5 sm:gap-8 sm:px-8"
     >
       <div class="flex items-center gap-3 sm:gap-4">
-        <span class="h-11 w-[3px] rounded-full" :style="{ background: sides[0].color }" />
+        <span class="h-11 w-[4px] -skew-x-[14deg]" :style="{ background: sides[0].color }" />
         <div>
           <div class="flex items-center gap-2">
             <span class="label" :style="{ color: sides[0].color }"> Blue </span>
@@ -122,7 +122,7 @@ const sides = computed(() =>
             {{ sides[1].kills }}
           </div>
         </div>
-        <span class="h-11 w-[3px] rounded-full" :style="{ background: sides[1].color }" />
+        <span class="h-11 w-[4px] -skew-x-[14deg]" :style="{ background: sides[1].color }" />
       </div>
     </div>
   </header>

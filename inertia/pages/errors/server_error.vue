@@ -23,7 +23,7 @@ function retry() {
       </p>
       <p
         v-if="error?.message"
-        class="mx-auto mt-5 inline-block max-w-lg rounded-[7px] bg-sunken px-3 py-1.5 font-mono text-[11px] text-ink-3"
+        class="mx-auto mt-5 inline-block max-w-lg rounded-sm bg-sunken px-3 py-1.5 font-mono text-[11px] text-ink-3"
       >
         {{ error.message }}
       </p>

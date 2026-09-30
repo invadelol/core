@@ -168,6 +168,8 @@ const cells = computed(() => {
 </script>
 
 <template>
+  <!-- Performance: the headline result and score, then every metric as a row with its trend.
+       The same "form" plate as the desktop app's dashboard. -->
   <section>
     <div class="section">
       <h2>Performance</h2>
@@ -175,124 +177,133 @@ const cells = computed(() => {
       <span v-if="previous?.total" class="meta hidden text-ink-4 sm:inline">
         against the {{ previous.total }} before
       </span>
-
-      <div v-if="form.length" class="ml-auto flex items-center gap-2.5">
-        <div class="hidden gap-[2px] sm:flex" :title="`Last ${form.length} games, oldest first`">
-          <span
-            v-for="(win, index) in form"
-            :key="index"
-            class="h-[14px] w-[4px] rounded-[1px]"
-            :style="{ background: win ? 'var(--color-win)' : 'var(--color-loss)' }"
-          />
-        </div>
-        <span class="num stat text-[14px]">
-          <b class="text-win">{{ record.wins }}W</b>
-          <b class="ml-1 text-loss">{{ record.losses }}L</b>
-        </span>
-      </div>
     </div>
 
     <p v-if="!stats || !stats.total" class="card py-10 text-center text-[12.5px] text-ink-3">
       No games in this window.
     </p>
 
-    <div v-else class="space-y-2">
-      <!-- The score: the average, what it is made of, and every game behind it -->
+    <div v-else class="card">
+      <!-- Headline: record, form and the Invade score -->
       <div
-        v-if="score"
-        class="card grid items-center gap-x-8 gap-y-5 p-5 md:grid-cols-[auto_minmax(0,1fr)] xl:grid-cols-[auto_minmax(0,1fr)_minmax(0,300px)]"
+        class="grid items-center gap-x-8 gap-y-5 border-b border-line p-5 md:grid-cols-[auto_minmax(0,1fr)]"
       >
-        <div class="flex items-center gap-4">
-          <ScoreRing :score="score.average" :size="84" />
+        <div class="flex items-center gap-5">
           <div>
-            <div class="label">Avg. score</div>
-            <div class="mt-1 text-[15px] font-semibold" :style="{ color: score.tone }">
-              {{ score.label }}
+            <div class="label">Win rate</div>
+            <div class="mt-2 flex items-baseline gap-2.5">
+              <span
+                class="num display text-[46px] font-extrabold"
+                :class="(stats.winrate ?? 0) >= 0.5 ? 'text-win' : 'text-loss'"
+              >
+                {{ Math.round(stats.winrate * 100) }}%
+              </span>
+              <span class="num text-[13px] text-ink-2">{{ record.wins }}W {{ record.losses }}L</span>
             </div>
-            <div class="num mt-0.5 text-[11.5px] text-ink-3">
-              Best {{ score.best }}
-              <template v-if="score.trend !== null && score.trend !== 0">
-                ·
-                <span :class="score.trend > 0 ? 'text-win' : 'text-loss'">
-                  {{ score.trend > 0 ? '+' : '' }}{{ score.trend }}
-                </span>
-                lately
-              </template>
+            <div
+              v-if="form.length"
+              class="form-strip mt-3"
+              :title="`Last ${form.length} games, oldest first`"
+            >
+              <i v-for="(win, index) in form" :key="index" :class="{ w: win }" />
             </div>
           </div>
         </div>
 
-        <ul class="grid grid-cols-3 gap-x-5 gap-y-3 sm:grid-cols-5">
-          <li v-for="category in score.categories" :key="category.key" class="min-w-0">
-            <div class="flex items-baseline justify-between gap-2">
-              <span class="truncate text-[11.5px] text-ink-3">{{ category.label }}</span>
-              <span class="num stat text-[17px] text-ink">{{ category.value }}</span>
+        <div
+          v-if="score"
+          class="grid items-center gap-x-6 gap-y-4 md:border-l md:border-line md:pl-8 xl:grid-cols-[auto_minmax(0,1fr)]"
+        >
+          <div class="flex items-center gap-4">
+            <ScoreRing :score="score.average" :size="72" :stroke="5" />
+            <div>
+              <div class="label">Avg. score</div>
+              <div class="mt-1 text-[15px] font-semibold" :style="{ color: score.tone }">
+                {{ score.label }}
+              </div>
+              <div class="num mt-0.5 text-[11.5px] text-ink-3">
+                Best {{ score.best }}
+                <template v-if="score.trend !== null && score.trend !== 0">
+                  ·
+                  <span :class="score.trend > 0 ? 'text-win' : 'text-loss'">
+                    {{ score.trend > 0 ? '+' : '' }}{{ score.trend }}
+                  </span>
+                  lately
+                </template>
+              </div>
             </div>
-            <div class="meter mt-1.5">
-              <span
-                :style="{
-                  width: `${category.value}%`,
-                  background: SCORE_TONE[scoreTier(category.value)],
-                }"
-              />
-            </div>
-          </li>
-        </ul>
-
-        <div class="min-w-0 md:col-span-2 xl:col-span-1">
-          <div class="label mb-2">Game by game</div>
-          <div class="flex flex-wrap gap-1">
-            <span
-              v-for="game in score.games"
-              :key="game.id"
-              class="num grid h-[26px] w-[30px] place-items-center rounded-[5px] text-[12px] font-semibold [font-stretch:88%]"
-              :style="{
-                color: SCORE_TONE[scoreTier(game.score)],
-                background: `color-mix(in srgb, ${SCORE_TONE[scoreTier(game.score)]} 13%, transparent)`,
-                boxShadow: `inset 0 -2px 0 ${game.win ? 'var(--color-win)' : 'var(--color-loss)'}`,
-              }"
-              :title="`${game.score} · ${game.win ? 'Win' : 'Loss'}`"
-            >
-              {{ game.score }}
-            </span>
           </div>
+
+          <ul class="grid grid-cols-3 gap-x-4 gap-y-3 sm:grid-cols-5">
+            <li v-for="category in score.categories" :key="category.key" class="min-w-0">
+              <div class="flex items-baseline justify-between gap-2">
+                <span class="truncate text-[11px] text-ink-3">{{ category.label }}</span>
+                <span class="num stat text-[17px] text-ink">{{ category.value }}</span>
+              </div>
+              <div class="meter mt-1.5">
+                <span
+                  :style="{
+                    width: `${category.value}%`,
+                    background: SCORE_TONE[scoreTier(category.value)],
+                  }"
+                />
+              </div>
+            </li>
+          </ul>
         </div>
       </div>
 
-      <!-- Hairlines between cells are the card showing through a 1px gap. -->
-      <div class="card grid grid-cols-2 gap-px !bg-line sm:grid-cols-3 xl:grid-cols-5">
-        <div
-          v-for="cell in cells"
+      <!-- Game by game: one score per game, its result as the base edge -->
+      <div v-if="score" class="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-5 py-3.5">
+        <span class="label w-[92px] shrink-0">Game by game</span>
+        <div class="flex flex-wrap gap-1">
+          <span
+            v-for="game in score.games"
+            :key="game.id"
+            class="num grid h-[24px] w-[30px] place-items-center rounded-[2px] text-[12px] font-bold [font-stretch:80%]"
+            :style="{
+              color: SCORE_TONE[scoreTier(game.score)],
+              background: `color-mix(in srgb, ${SCORE_TONE[scoreTier(game.score)]} 12%, transparent)`,
+              boxShadow: `inset 0 -2px 0 ${game.win ? 'var(--color-win)' : 'var(--color-loss)'}`,
+            }"
+            :title="`${game.score} · ${game.win ? 'Win' : 'Loss'}`"
+          >
+            {{ game.score }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Metrics: label, trend over the window, value, change against the window before -->
+      <ul class="px-5 py-1">
+        <li
+          v-for="cell in cells.slice(1)"
           :key="cell.label"
-          class="flex min-w-0 items-end justify-between gap-3 bg-panel px-4 py-3.5 first:max-sm:col-span-2 last:sm:max-xl:col-span-2"
+          class="grid h-[46px] grid-cols-[92px_minmax(0,1fr)_72px_52px] items-center gap-4 border-b border-line last:border-b-0 sm:grid-cols-[120px_minmax(0,1fr)_84px_60px] sm:gap-6"
         >
-          <div class="min-w-0">
-            <div class="label">{{ cell.label }}</div>
-            <div class="mt-1.5 flex items-baseline gap-1.5">
-              <span class="num stat text-[26px]" :class="cell.tone ?? 'text-ink'">
-                {{ cell.value }}
-              </span>
-              <span
-                v-if="cell.delta !== null && Math.abs(cell.delta) >= 1"
-                class="num flex items-center text-[11px] font-semibold"
-                :class="cell.delta > 0 ? 'text-win' : 'text-loss'"
-                :title="`Against the previous ${previous?.total ?? 0} games`"
-              >
-                <component :is="cell.delta > 0 ? ArrowUp : ArrowDown" :size="10" />
-                {{ Math.abs(Math.round(cell.delta)) }}%
-              </span>
-            </div>
-          </div>
+          <span class="truncate text-[12.5px] font-medium text-ink-2">{{ cell.label }}</span>
           <Sparkline
-            class="mb-1 shrink-0 text-ink-3"
+            class="h-[28px] w-full text-brand"
             :values="cell.trend"
             :label="`${cell.label} over the last ${cell.trend.length} games`"
-            :width="72"
+            :width="400"
             :height="28"
             :fill="false"
           />
-        </div>
-      </div>
+          <span class="num stat text-right text-[22px]" :class="cell.tone ?? 'text-ink'">
+            {{ cell.value }}
+          </span>
+          <span
+            v-if="cell.delta !== null && Math.abs(cell.delta) >= 1"
+            class="num flex items-center justify-end text-[11.5px] font-semibold"
+            :class="cell.delta > 0 ? 'text-win' : 'text-loss'"
+            :title="`Against the previous ${previous?.total ?? 0} games`"
+          >
+            <component :is="cell.delta > 0 ? ArrowUp : ArrowDown" :size="10" />
+            {{ Math.abs(Math.round(cell.delta)) }}%
+          </span>
+          <span v-else class="text-right text-[11.5px] text-ink-4">steady</span>
+        </li>
+      </ul>
     </div>
   </section>
 </template>

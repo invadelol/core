@@ -175,11 +175,11 @@ function submit() {
           width="24"
           height="24"
           loading="lazy"
-          class="thumb h-6 w-6 rounded-[6px]"
+          class="thumb h-6 w-6 rounded-sm"
         />
         <span
           v-else
-          class="grid h-6 w-6 shrink-0 place-items-center rounded-[6px] bg-sunken text-ink-3"
+          class="grid h-6 w-6 shrink-0 place-items-center rounded-sm bg-sunken text-ink-3"
         >
           <Search :size="12" />
         </span>
