@@ -8,14 +8,6 @@ import {
   type DesktopPlatform,
 } from '../lib/platform.js'
 
-withDefaults(
-  defineProps<{
-    /** `header` is compact and hidden where the app cannot run; `hero` also lists the other builds. */
-    variant?: 'header' | 'hero'
-  }>(),
-  { variant: 'header' }
-)
-
 /** Null until the browser is inspected (and on computers the app does not run on). */
 const target = ref<DesktopPlatform | null>(null)
 const checked = ref(false)
@@ -29,27 +21,18 @@ const href = (id: DesktopPlatform) => `/download/${id}`
 </script>
 
 <template>
-  <template v-if="variant === 'header'">
-    <!-- Rendered only once we know the computer, so the header never shifts or offers a useless button. -->
-    <a
-      v-if="target"
-      :href="href(target)"
-      class="btn btn-sm hidden shrink-0 sm:inline-flex"
-      :title="`Download Invade for ${targetLabel(target)}`"
-    >
-      <Download :size="13" />Download
+  <div class="flex flex-col items-start gap-2.5">
+    <a v-if="target" :href="href(target)" class="btn btn-primary !px-5 !py-2.5 !text-[13.5px]">
+      <Download :size="15" />Download for {{ targetLabel(target) }}
     </a>
-  </template>
-
-  <div v-else class="flex flex-col items-center gap-2">
-    <a v-if="target" :href="href(target)" class="btn btn-primary">
-      <Download :size="14" />Download Invade for {{ targetLabel(target) }}
+    <a v-else-if="checked" href="#download" class="btn btn-primary !px-5 !py-2.5 !text-[13.5px]">
+      <Download :size="15" />Download
     </a>
-    <p v-else-if="checked" class="text-[12px] text-ink-3">
-      Invade runs on Windows and macOS computers.
-    </p>
+    <!-- Before the browser is inspected, keep the space so nothing jumps. -->
+    <span v-else class="block h-[40px]" aria-hidden="true" />
     <p v-if="checked" class="text-[11.5px] text-ink-3">
-      Also for
+      <template v-if="!target">Invade runs on Windows and macOS computers. </template>
+      <template v-else>Also for </template>
       <template
         v-for="(other, index) in DESKTOP_TARGETS.filter((t) => t.id !== target)"
         :key="other.id"
