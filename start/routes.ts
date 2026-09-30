@@ -26,6 +26,7 @@ const MatchesController = () => import('#controllers/matches_controller')
 const PlayerInsightsController = () => import('#controllers/player_insights_controller')
 const AssetsController = () => import('#controllers/assets_controller')
 const DownloadsController = () => import('#controllers/downloads_controller')
+const AppPageController = () => import('#controllers/app_page_controller')
 
 // API routes group
 router
@@ -84,6 +85,9 @@ router
 
 /** Desktop app installers, before the summoner catch-all below. */
 router.get('/download/:platform', [DownloadsController, 'show'])
+
+/** The desktop app's landing page, before the summoner catch-all below. */
+router.get('/app', [AppPageController, 'show'])
 
 router.get('/swagger', async () => {
   return AutoSwagger.docs(router.toJSON(), swagger)
