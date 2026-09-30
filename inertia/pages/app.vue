@@ -51,7 +51,6 @@ onBeforeUnmount(() => watch?.disconnect())
   <AppHeader />
 
   <main class="overflow-x-clip">
-    <!-- Hero: the app, large, running off the edge of the screen -->
     <section class="hero relative">
       <div
         class="mx-auto grid w-full max-w-[1320px] px-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-10"
@@ -84,8 +83,6 @@ onBeforeUnmount(() => watch?.disconnect())
         </div>
       </div>
     </section>
-
-    <!-- Proof -->
     <section class="relative z-10 border-y border-line bg-bg">
       <ul
         class="mx-auto grid w-full max-w-[1320px] grid-cols-2 gap-y-5 px-5 py-6 lg:grid-cols-4 lg:py-7"
@@ -101,8 +98,6 @@ onBeforeUnmount(() => watch?.disconnect())
         </li>
       </ul>
     </section>
-
-    <!-- 1. Overlay: the showpiece -->
     <section id="overlay" class="pt-24 sm:pt-36">
       <div class="mx-auto w-full max-w-[1320px] px-5">
         <div class="grid gap-6 lg:grid-cols-2 lg:items-end">
@@ -119,8 +114,6 @@ onBeforeUnmount(() => watch?.disconnect())
         <OverlayStage class="mt-10 sm:mt-14" />
       </div>
     </section>
-
-    <!-- 2. Champ select -->
     <section id="champ-select" class="pt-28 sm:pt-44">
       <div
         class="mx-auto grid w-full max-w-[1320px] items-center gap-10 px-5 lg:grid-cols-[minmax(0,7fr)_minmax(0,4fr)] lg:gap-16"
@@ -143,8 +136,6 @@ onBeforeUnmount(() => watch?.disconnect())
         </div>
       </div>
     </section>
-
-    <!-- 3. After the game: the scoreboard, with one score pulled out -->
     <section id="history" class="pt-28 sm:pt-44">
       <div class="mx-auto w-full max-w-[1320px] px-5">
         <div class="max-w-[640px]">
@@ -173,8 +164,6 @@ onBeforeUnmount(() => watch?.disconnect())
         </div>
       </div>
     </section>
-
-    <!-- 4. Champions: two views, staggered -->
     <section id="champions" class="pt-28 sm:pt-44">
       <div class="mx-auto w-full max-w-[1320px] px-5">
         <div class="grid gap-6 lg:grid-cols-2 lg:items-end">
@@ -208,8 +197,6 @@ onBeforeUnmount(() => watch?.disconnect())
         </div>
       </div>
     </section>
-
-    <!-- 5. Recordings -->
     <section id="recording" class="pt-28 sm:pt-44">
       <div class="mx-auto w-full max-w-[1320px] px-5">
         <p class="label flex items-center gap-2.5"><span class="bar" />Recording</p>
@@ -229,8 +216,6 @@ onBeforeUnmount(() => watch?.disconnect())
         />
       </div>
     </section>
-
-    <!-- Download -->
     <section id="download" ref="end" class="scroll-mt-20 pt-28 pb-20 sm:pt-44 sm:pb-28">
       <div class="mx-auto w-full max-w-[1320px] px-5">
         <div class="relative">
@@ -275,8 +260,6 @@ onBeforeUnmount(() => watch?.disconnect())
       Inc.
     </div>
   </footer>
-
-  <!-- Always one click away once the hero has scrolled past -->
   <Transition name="dock">
     <div v-if="dock" class="dock">
       <a :href="mine ? `/download/${mine}` : '#download'" class="btn btn-primary dock-btn">

@@ -60,6 +60,22 @@ test.group('Riot asset paths', () => {
     assert.isAbove(manifest['3153'].sources.length, 1)
   })
 
+  test('resolves unique wrapped item IDs without replacing real items', ({ assert }) => {
+    const item = (id: number) => ({ id, name: String(id), iconPath: '/lol-game-data/assets/item.png' })
+    const manifest = parseManifest('item', [item(70000), item(3153), item(68689), item(65536)])
+    assert.equal(manifest['4464'].name, '70000')
+    assert.equal(manifest['3153'].name, '3153')
+    assert.notProperty(manifest, '0')
+  })
+
+  test('does not guess when two item IDs wrap to the same ID', ({ assert }) => {
+    const item = (id: number) => ({ id, name: String(id), iconPath: '/lol-game-data/assets/item.png' })
+    const manifest = parseManifest('item', [item(70000), item(135536)])
+    assert.notProperty(manifest, '4464')
+    assert.property(manifest, '70000')
+    assert.property(manifest, '135536')
+  })
+
   test('parses summoner spells', ({ assert }) => {
     const manifest = parseManifest('spell', [
       {
