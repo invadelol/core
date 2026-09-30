@@ -22,13 +22,14 @@
      signal        distinction: the top score tier, the MVP
    ────────────────────────────────────────────────────────────── */
 @theme {
-  /* Surfaces */
-  --color-bg: #f3f3f7;
+  /* Surfaces. Light is a white page: plates are separated from it by
+     hairlines, and only hover and wells take a faint cool tint. */
+  --color-bg: #ffffff;
   --color-panel: #ffffff;
-  --color-raised: #f5f5f9;
-  --color-sunken: #e9e9f0;
-  --color-line: #e3e3eb;
-  --color-line-2: #cfcfdb;
+  --color-raised: #f6f6f9;
+  --color-sunken: #efeff4;
+  --color-line: #e6e6ee;
+  --color-line-2: #d2d2de;
 
   /* Text */
   --color-ink: #0c0c14;
@@ -71,7 +72,7 @@
   --map-tone: saturate(0.5) brightness(1.06) contrast(0.9);
 
   --shadow-e1: 0 1px 2px rgb(12 12 20 / 0.06);
-  --shadow-e2: 0 18px 44px -16px rgb(12 12 20 / 0.24);
+  --shadow-e2: 0 18px 44px -16px rgb(12 12 20 / 0.2);
 
   /* Facets, not bubbles. */
   --radius-xs: 2px;

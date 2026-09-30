@@ -492,6 +492,31 @@
     clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
   }
 
+  /* The same cut on a bordered element sitting on the stage: the corner is
+     painted in the stage colour and the border continues along the cut. */
+  .facet {
+    --facet: 12px;
+    position: relative;
+  }
+
+  .facet::after {
+    content: '';
+    position: absolute;
+    z-index: 2;
+    top: -1px;
+    right: -1px;
+    width: calc(var(--facet) + 1px);
+    height: calc(var(--facet) + 1px);
+    background: linear-gradient(
+      225deg,
+      var(--color-bg) calc(50% - 0.5px),
+      var(--facet-line, var(--color-line)) calc(50% - 0.5px),
+      var(--facet-line, var(--color-line)) calc(50% + 0.5px),
+      transparent calc(50% + 0.5px)
+    );
+    pointer-events: none;
+  }
+
   /* ── The result slash, on the left edge of a row ──────────────── */
   .slash-mark {
     position: relative;
@@ -513,7 +538,7 @@
      The column beside a profile is one dossier, not a stack of cards:
      after the identity plate, each panel is a section on the stage,
      separated by a hairline. */
-  .rail > .card:not(.chamfer) {
+  .rail > .card:not(.facet) {
     margin-top: 22px;
     background: transparent;
     border: 0;
@@ -522,17 +547,17 @@
     overflow: visible;
   }
 
-  .rail > .card:not(.chamfer) > .section {
+  .rail > .card:not(.facet) > .section {
     margin: 0;
     padding: 18px 0 12px;
     border-bottom: 0;
   }
 
-  .rail > .card:not(.chamfer) > .section + * {
+  .rail > .card:not(.facet) > .section + * {
     padding: 0 0 4px;
   }
 
-  .rail > .card:not(.chamfer) > ul[class*='!px-2'] {
+  .rail > .card:not(.facet) > ul[class*='!px-2'] {
     margin-inline: -16px;
     padding-top: 0 !important;
   }

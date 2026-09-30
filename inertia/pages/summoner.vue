@@ -539,7 +539,7 @@ async function sync() {
 <template>
   <Head :title="`${parsed.gameName}#${parsed.tagLine}`" />
 
-  <AppHeader :crumbs="[{ label: `${parsed.gameName}#${parsed.tagLine}` }]" />
+  <AppHeader />
 
   <main class="mx-auto max-w-[1320px] px-5 pb-12 pt-6 2xl:max-w-[1480px]">
     <!-- Loading -->

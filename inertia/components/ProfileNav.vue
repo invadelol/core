@@ -97,7 +97,7 @@ const TABS = [
   }
 
   .profile-nav a[data-active='true'] {
-    background: var(--color-panel);
+    background: var(--color-raised);
   }
 
   /* The slash, as in the desktop app's sidebar. */
