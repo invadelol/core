@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
 import { onMounted, ref } from 'vue'
-import { Github, X } from 'lucide-vue-next'
+import { ArrowRight, Github, X } from 'lucide-vue-next'
 import SearchBar from '../components/SearchBar.vue'
 import ThemeToggle from '../components/ui/ThemeToggle.vue'
 import Glyph from '../components/ui/Glyph.vue'
@@ -50,6 +50,11 @@ function forget() {
     </header>
 
     <main class="mx-auto flex w-full max-w-[560px] flex-1 flex-col justify-center px-5 pb-28">
+      <Link href="/app" class="app-tag mx-auto mb-9">
+        <span class="app-tag-new">New</span>
+        Get the Invade app now
+        <ArrowRight :size="13" class="app-tag-arrow" />
+      </Link>
       <Glyph :size="46" class="mx-auto" />
       <h1 class="display mt-6 text-center text-[clamp(34px,5.4vw,52px)] font-extrabold text-ink">
         Find a summoner
@@ -98,3 +103,43 @@ function forget() {
     </footer>
   </div>
 </template>
+
+<style scoped>
+/* A pointer to the desktop app, above the search. */
+.app-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 4px 12px 4px 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-ink-2);
+  background: var(--color-panel);
+  border: 1px solid var(--color-line-2);
+  transition:
+    color var(--t-base) var(--ease),
+    border-color var(--t-base) var(--ease);
+}
+.app-tag:hover {
+  color: var(--color-ink);
+  border-color: color-mix(in srgb, var(--color-brand) 55%, transparent);
+}
+.app-tag-new {
+  padding: 2px 7px 2px 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-accent-fg);
+  background: var(--color-accent);
+  clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 0 100%);
+}
+.app-tag-arrow {
+  color: var(--color-ink-3);
+  transition: translate var(--t-base) var(--ease);
+}
+.app-tag:hover .app-tag-arrow {
+  translate: 2px 0;
+  color: var(--color-brand);
+}
+</style>
