@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3'
+import { computed } from 'vue'
+import { Link, usePage } from '@inertiajs/vue3'
 import { Github } from 'lucide-vue-next'
-import DownloadButton from './DownloadButton.vue'
 import SearchBar from './SearchBar.vue'
 import ThemeToggle from './ui/ThemeToggle.vue'
 import Wordmark from './ui/Wordmark.vue'
 import { REPO_URL } from '../lib/links.js'
+
+const onApp = computed(() => usePage().url.split('?')[0] === '/app')
 
 defineProps<{
   /** Breadcrumb shown after the wordmark, e.g. the summoner being viewed. */
@@ -44,7 +46,14 @@ defineProps<{
       </div>
 
       <div class="flex shrink-0 items-center gap-1.5">
-        <DownloadButton />
+        <Link
+          href="/app"
+          class="btn btn-sm hidden sm:inline-flex"
+          :aria-current="onApp ? 'page' : undefined"
+          title="The Invade desktop app"
+        >
+          App
+        </Link>
         <ThemeToggle />
         <a
           :href="REPO_URL"

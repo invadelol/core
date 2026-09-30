@@ -2,7 +2,6 @@
 import { Head, Link } from '@inertiajs/vue3'
 import { onMounted, ref } from 'vue'
 import { Github, X } from 'lucide-vue-next'
-import DownloadButton from '../components/DownloadButton.vue'
 import SearchBar from '../components/SearchBar.vue'
 import ThemeToggle from '../components/ui/ThemeToggle.vue'
 import Glyph from '../components/ui/Glyph.vue'
@@ -33,7 +32,9 @@ function forget() {
     <header class="mx-auto flex w-full max-w-[1080px] items-center gap-4 px-5 py-5">
       <Wordmark :size="20" />
       <div class="ml-auto flex items-center gap-1.5">
-        <DownloadButton />
+        <Link href="/app" class="btn btn-sm hidden sm:inline-flex" title="The Invade desktop app">
+          App
+        </Link>
         <ThemeToggle />
         <a
           :href="REPO_URL"
