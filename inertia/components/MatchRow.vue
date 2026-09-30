@@ -46,6 +46,8 @@ const detail = shallowRef<Match | null>(null)
 const loading = ref(false)
 const failed = ref(false)
 const focusPuuid = ref('')
+/** Timeline and build tabs always show somebody: the profile's player until another is picked. */
+const activePuuid = computed(() => focusPuuid.value || props.puuid)
 const copied = ref(false)
 
 async function fetchDetail() {
@@ -80,11 +82,11 @@ watch(
 const full = computed(() => detail.value ?? props.match)
 const frames = computed(() => indexTimeline(detail.value))
 const focusRunes = computed(() => {
-  const player = full.value.participants.find((p) => p.puuid === focusPuuid.value)
-  return runeSet(frames.value[focusPuuid.value] ?? [], player)
+  const player = full.value.participants.find((p) => p.puuid === activePuuid.value)
+  return runeSet(frames.value[activePuuid.value] ?? [], player)
 })
 const focusPlayer = computed(() =>
-  full.value.participants.find((p) => p.puuid === focusPuuid.value)
+  full.value.participants.find((p) => p.puuid === activePuuid.value)
 )
 
 function maxOf(participants: Participant[], read: (p: Participant) => number) {
@@ -147,10 +149,10 @@ async function copyLink() {
 
 <template>
   <div
-    class="match-row slash-mark @container relative overflow-hidden rounded-lg border border-line bg-panel"
+    class="match-row @container relative overflow-hidden rounded-lg border border-line bg-panel"
     :data-result="row.win ? 'win' : 'loss'"
   >
-    <div class="flex items-stretch">
+    <div class="slash-mark flex items-stretch">
       <button
         type="button"
         class="flex min-w-0 flex-1 items-center gap-2.5 py-3 pl-6 pr-2 text-left transition-colors hover:bg-raised sm:gap-4 sm:pl-7 sm:pr-4"
@@ -162,10 +164,11 @@ async function copyLink() {
           <span class="display block text-[15px]" :class="row.win ? 'text-win' : 'text-loss'">
             {{ row.win ? 'Victory' : 'Defeat' }}
           </span>
-          <span class="mt-1 block truncate text-[11px] font-medium text-ink-2">{{
-            row.queue
-          }}</span>
-          <span class="num mt-px block truncate text-[10.5px] text-ink-3">
+          <span
+            class="mt-1 block text-[11px] font-medium leading-tight text-ink-2 [overflow-wrap:anywhere]"
+            >{{ row.queue }}</span
+          >
+          <span class="num mt-0.5 block text-[10.5px] leading-tight text-ink-3">
             {{ row.duration }} · {{ row.ago }}
           </span>
         </span>
@@ -363,7 +366,11 @@ async function copyLink() {
         </div>
 
         <div v-else-if="view === 'timeline'" class="px-4 py-5">
-          <MatchTimeline :match="full" :selected-puuid="focusPuuid" @select="focusPuuid = $event" />
+          <MatchTimeline
+            :match="full"
+            :selected-puuid="activePuuid"
+            @select="focusPuuid = $event"
+          />
         </div>
 
         <div v-else class="px-4 py-5">
@@ -374,7 +381,7 @@ async function copyLink() {
               type="button"
               class="rounded-sm border p-[3px] transition-colors"
               :class="
-                focusPuuid === p.puuid ? 'border-ink-2' : 'border-transparent hover:border-line-2'
+                activePuuid === p.puuid ? 'border-ink-2' : 'border-transparent hover:border-line-2'
               "
               :title="`${p.gameName} · ${championName(p.championId)}`"
               @click="focusPuuid = p.puuid"

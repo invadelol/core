@@ -1,8 +1,28 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
+import { nextTick, onMounted, useTemplateRef, watch } from 'vue'
 import { ArrowLeftRight, LayoutGrid, Radio, Swords, Users } from 'lucide-vue-next'
 
-defineProps<{ slug: string; section: string }>()
+const props = defineProps<{ slug: string; section: string }>()
+
+const nav = useTemplateRef<HTMLElement>('nav')
+
+/* On narrow screens the tabs scroll sideways: bring the current one into view. */
+function reveal() {
+  const el = nav.value
+  const active = el?.querySelector<HTMLElement>('[data-active="true"]')
+  if (el && active && el.scrollWidth > el.clientWidth) {
+    el.scrollTo({
+      left: active.offsetLeft - (el.clientWidth - active.offsetWidth) / 2,
+      behavior: 'smooth',
+    })
+  }
+}
+onMounted(reveal)
+watch(
+  () => props.section,
+  () => nextTick(reveal)
+)
 
 const TABS = [
   { key: 'overview', label: 'Overview', icon: LayoutGrid },
@@ -15,7 +35,7 @@ const TABS = [
 
 <template>
   <!-- Sections of the profile: a vertical list in the rail on wide screens, tabs on narrow ones. -->
-  <nav class="profile-nav" aria-label="Player sections">
+  <nav ref="nav" class="profile-nav" aria-label="Player sections">
     <Link
       v-for="item in TABS"
       :key="item.key"

@@ -46,7 +46,10 @@ const path = computed(() => profilePath(props.summoner.gameName, props.summoner.
         </span>
       </div>
 
-      <h1 class="display mt-4 truncate text-[36px] text-ink" :title="`${summoner.gameName}#${summoner.tagLine}`">
+      <h1
+        class="display mt-4 text-[36px] leading-[1.08] text-ink [overflow-wrap:anywhere]"
+        :title="`${summoner.gameName}#${summoner.tagLine}`"
+      >
         {{ summoner.gameName
         }}<span class="ml-0.5 text-[22px] font-semibold text-ink-3">#{{ summoner.tagLine }}</span>
       </h1>
@@ -99,6 +102,12 @@ const path = computed(() => profilePath(props.summoner.gameName, props.summoner.
   box-shadow:
     0 0 0 2px var(--color-panel),
     0 0 0 3px var(--color-brand);
-  clip-path: polygon(-4px -4px, calc(100% - 12px) -4px, calc(100% + 4px) 12px, calc(100% + 4px) calc(100% + 4px), -4px calc(100% + 4px));
+  clip-path: polygon(
+    -4px -4px,
+    calc(100% - 12px) -4px,
+    calc(100% + 4px) 12px,
+    calc(100% + 4px) calc(100% + 4px),
+    -4px calc(100% + 4px)
+  );
 }
 </style>
