@@ -114,8 +114,8 @@ const columnCount = 10
 </script>
 
 <template>
-  <div class="scroll-x">
-    <table class="dt dt-hover num" :class="dense ? 'min-w-[880px]' : 'min-w-[1060px]'">
+  <div class="scroll-x [container-type:inline-size]">
+    <table class="dt dt-hover num" :class="dense ? 'min-w-[880px]' : 'min-w-[960px]'">
       <thead>
         <tr>
           <th class="w-[30%] !pl-3">Player</th>
@@ -213,12 +213,13 @@ const columnCount = 10
                 <RuneGlyphs :runes="row.runes" size="xs" class="hidden shrink-0 sm:flex" />
 
                 <span class="min-w-0 flex-1">
-                  <span class="flex items-center gap-1.5">
+                  <span class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
                     <PlayerLink
                       :game-name="row.p.gameName"
                       :tag-line="row.p.tagLine"
                       :is-self="row.p.puuid === ownerPuuid"
-                      class="max-w-[15ch] text-[12.5px]"
+                      wrap
+                      class="text-[12.5px] leading-tight"
                       @click.stop
                     />
                     <span
@@ -229,9 +230,14 @@ const columnCount = 10
                       {{ row.badge }}
                     </span>
                   </span>
-                  <span class="flex items-center gap-1 truncate text-[10.5px] text-ink-3">
-                    <RoleIcon v-if="row.p.position" :role="row.p.position" :size="11" />
-                    <span class="truncate">
+                  <span class="flex items-center gap-1 text-[10.5px] text-ink-3">
+                    <RoleIcon
+                      v-if="row.p.position"
+                      :role="row.p.position"
+                      :size="11"
+                      class="shrink-0"
+                    />
+                    <span class="[overflow-wrap:anywhere]">
                       {{ row.role ? `${row.role} · ` : '' }}{{ row.champion }}
                     </span>
                   </span>
@@ -310,15 +316,18 @@ const columnCount = 10
           <!-- The player deep dive opens in place, not on a second screen. -->
           <tr v-if="openPuuid === row.p.puuid">
             <td :colspan="columnCount" class="!bg-raised !px-3 !py-0">
-              <PlayerRowDetail
-                :match="match"
-                :player="row.p"
-                :totals="totals"
-                :lobby="lobby"
-                :maxima="maxima"
-                :frames="timeline?.[row.p.puuid] ?? []"
-                :all-frames="timeline"
-              />
+              <!-- Stays as wide as the visible strip, however far the table is scrolled. -->
+              <div class="sticky left-0 w-[calc(100cqw-24px)]">
+                <PlayerRowDetail
+                  :match="match"
+                  :player="row.p"
+                  :totals="totals"
+                  :lobby="lobby"
+                  :maxima="maxima"
+                  :frames="timeline?.[row.p.puuid] ?? []"
+                  :all-frames="timeline"
+                />
+              </div>
             </td>
           </tr>
         </template>

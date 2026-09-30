@@ -12,8 +12,10 @@ const props = withDefaults(
     /** Marks the player whose profile is being viewed. */
     isSelf?: boolean
     bold?: boolean
+    /** Lets a long name wrap onto a second line instead of being cut (the full Riot ID is always the tooltip). */
+    wrap?: boolean
   }>(),
-  { showTag: false, isSelf: false, bold: false }
+  { showTag: false, isSelf: false, bold: false, wrap: false }
 )
 
 /**
@@ -29,13 +31,17 @@ const href = computed(() => profilePath(props.gameName, props.tagLine))
   <component
     :is="linkable ? Link : 'span'"
     v-bind="linkable ? { href } : {}"
-    class="inline-flex min-w-0 items-baseline gap-1 truncate"
+    :title="gameName && tagLine ? `${gameName}#${tagLine}` : undefined"
+    class="inline-flex min-w-0 items-baseline gap-1"
     :class="[
+      wrap ? 'flex-wrap break-words' : 'truncate',
       linkable ? 'transition-colors hover:text-ink hover:underline underline-offset-2' : '',
       isSelf || bold ? 'font-semibold text-ink' : 'font-medium text-ink',
     ]"
   >
-    <span class="truncate">{{ gameName || 'Unknown player' }}</span>
+    <span :class="wrap ? 'break-words [overflow-wrap:anywhere]' : 'truncate'">{{
+      gameName || 'Unknown player'
+    }}</span>
     <span v-if="showTag && tagLine" class="shrink-0 text-[0.9em] font-normal text-ink-3">
       #{{ tagLine }}
     </span>
