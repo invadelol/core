@@ -165,7 +165,7 @@ class RiotAssetsService {
     const url = MANIFESTS[kind]
     if (!url) return {}
 
-    const key = `riot:manifest:${kind}`
+    const key = `riot:manifest:${kind}${kind === 'item' ? ':uint16-v1' : ''}`
 
     try {
       const cached = await cache.get<Manifest>({ key })
