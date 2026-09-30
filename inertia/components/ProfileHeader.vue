@@ -22,12 +22,12 @@ const path = computed(() => profilePath(props.summoner.gameName, props.summoner.
 
 <template>
   <!-- The identity plate at the top of the profile rail: who this is, and what you can do. -->
-  <header class="card chamfer relative isolate">
+  <header class="card facet isolate !overflow-visible">
     <img
       v-if="mainChampion"
       :src="championSplash(mainChampion)"
       :alt="`${championName(mainChampion)} champion artwork`"
-      class="profile-splash absolute inset-x-0 top-0 -z-10 h-[132px] w-full object-cover object-[60%_22%]"
+      class="profile-splash absolute inset-x-0 top-0 -z-10 h-[132px] w-full rounded-t-[5px] object-cover object-[60%_22%]"
     />
 
     <div class="px-5 pb-5" :class="mainChampion ? 'pt-[72px]' : 'pt-5'">

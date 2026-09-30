@@ -189,7 +189,7 @@ function submit() {
 
 <template>
   <div class="relative w-full">
-    <div class="relative">
+    <div class="relative" :class="{ 'facet [--facet-line:var(--color-line-2)]': props.size === 'lg' }">
       <Search
         class="pointer-events-none absolute top-1/2 z-10 -translate-y-1/2 text-ink-3"
         :class="props.size === 'lg' ? 'left-4 h-[19px] w-[19px]' : 'left-3 h-4 w-4'"
@@ -207,7 +207,7 @@ function submit() {
         class="field"
         :class="
           props.size === 'lg'
-            ? 'chamfer !rounded-sm !border-line-2 !bg-panel !py-4 !pl-12 !pr-14 !text-[16px]'
+            ? '!rounded-sm !border-line-2 !bg-panel !py-4 !pl-12 !pr-14 !text-[16px]'
             : '!py-[7px] !pl-9 !pr-12 !text-[12.5px]'
         "
         @focus="isOpen = entries.length > 0"
