@@ -17,7 +17,6 @@ const query = ref('')
 const expanded = ref(false)
 
 const points = computed(() => props.mastery.reduce((n, c) => n + c.championPoints, 0))
-const levels = computed(() => props.mastery.reduce((n, c) => n + c.championLevel, 0))
 const most = computed(() => Math.max(...props.mastery.map((c) => c.championPoints), 1))
 
 const filtered = computed(() =>
@@ -52,12 +51,12 @@ const headline = computed(() => {
   <div>
     <div v-if="loading" class="skel h-[320px]" />
 
-    <p v-else-if="error" class="card py-16 text-center text-[12.5px] text-ink-3">
+    <p v-else-if="error" class="flex items-center gap-3 py-6 text-[13px] text-ink-2">
       Riot did not return this player's mastery.
-      <button class="btn btn-sm ml-2" @click="$emit('retry')">Try again</button>
+      <button class="btn btn-sm" @click="$emit('retry')">Retry</button>
     </p>
 
-    <p v-else-if="!mastery.length" class="card py-16 text-center text-[12.5px] text-ink-3">
+    <p v-else-if="!mastery.length" class="py-6 text-[13px] text-ink-2">
       No champion mastery recorded.
     </p>
 
@@ -65,28 +64,20 @@ const headline = computed(() => {
       <div class="section flex-wrap !items-center">
         <h2>Mastery</h2>
         <span class="meta num">
-          <b class="font-semibold text-ink">{{ mastery.length }}</b> champions
-          <span class="text-ink-4">·</span>
-          <b class="font-semibold text-ink">{{ levels }}</b> levels
-          <span class="text-ink-4">·</span>
-          <b class="font-semibold text-ink">{{ compact(points) }}</b> points
+          {{ mastery.length }} champions <span class="text-ink-4">·</span>
+          {{ compact(points) }} points
           <template v-if="headline.levelTen">
-            <span class="text-ink-4">·</span>
-            <b class="font-semibold text-ink">{{ headline.levelTen }}</b> at level 10+
-          </template>
-          <template v-if="headline.tokens">
-            <span class="text-ink-4">·</span>
-            <b class="font-semibold text-ink">{{ headline.tokens }}</b> tokens
+            <span class="text-ink-4">·</span> {{ headline.levelTen }} at level 10 or more
           </template>
         </span>
-        <label class="relative ml-auto w-[180px]">
+        <label class="relative ml-auto w-[200px]">
           <Search
-            :size="12"
+            :size="13"
             class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-3"
           />
           <input
             v-model="query"
-            class="field !py-1 !pl-7 !text-[12px]"
+            class="field !h-[30px] !pl-8"
             aria-label="Search mastery"
             placeholder="Find a champion"
           />
@@ -94,37 +85,35 @@ const headline = computed(() => {
       </div>
 
       <div>
-        <ul class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        <ul class="grid gap-x-8 sm:grid-cols-2 xl:grid-cols-3">
           <li
             v-for="c in visible"
             :key="c.championId"
-            class="flex items-center gap-3 rounded-md bg-raised px-3 py-2.5"
+            class="flex h-[56px] items-center gap-3 border-b border-line"
           >
-            <img
-              :src="champIcon(c.championId)"
-              :alt="championName(c.championId)"
-              width="36"
-              height="36"
-              loading="lazy"
-              class="thumb h-9 w-9 rounded-sm"
-            />
+            <span class="portrait h-9 w-9">
+              <img
+                :src="champIcon(c.championId)"
+                :alt="championName(c.championId)"
+                width="36"
+                height="36"
+                loading="lazy"
+              />
+            </span>
             <span class="min-w-0 flex-1">
               <span class="flex items-baseline justify-between gap-2">
                 <span class="truncate text-[13px] font-semibold text-ink">
                   {{ championName(c.championId) }}
                 </span>
-                <span class="stat shrink-0 text-[14px] text-ink">
+                <span class="num shrink-0 text-[13px] font-semibold text-ink">
                   {{ compact(c.championPoints) }}
                 </span>
               </span>
               <span class="mt-1.5 flex items-center gap-2">
-                <span class="meter min-w-0 flex-1">
-                  <span
-                    class="!bg-ink-3"
-                    :style="{ width: `${(c.championPoints / most) * 100}%` }"
-                  />
+                <span class="meter !h-[3px] min-w-0 flex-1">
+                  <span :style="{ width: `${(c.championPoints / most) * 100}%` }" />
                 </span>
-                <span class="num shrink-0 text-[10.5px] text-ink-3">
+                <span class="num shrink-0 text-[11px] text-ink-3">
                   <template v-if="progress(c)">
                     {{ compact(progress(c)!.remaining) }} to next
                   </template>
@@ -132,17 +121,16 @@ const headline = computed(() => {
                 </span>
               </span>
             </span>
-            <span
-              class="flex w-9 shrink-0 flex-col items-end border-l border-line-2 pl-2.5"
-              title="Mastery level"
-            >
-              <span class="label !text-[9px]">Lvl</span>
-              <span class="stat mt-0.5 text-[18px] text-ink">{{ c.championLevel }}</span>
+            <span class="num w-10 shrink-0 text-right" title="Mastery level">
+              <span class="block text-[11px] leading-3 text-ink-3">Level</span>
+              <span class="block text-[15px] font-semibold leading-5 text-ink">
+                {{ c.championLevel }}
+              </span>
             </span>
           </li>
         </ul>
 
-        <p v-if="!visible.length" class="py-10 text-center text-[12.5px] text-ink-3">
+        <p v-if="!visible.length" class="py-6 text-[13px] text-ink-2">
           No champion matches “{{ query }}”.
         </p>
 

@@ -92,8 +92,8 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside))
   <div ref="root" class="relative">
     <button
       type="button"
-      class="flex h-[30px] w-full items-center gap-2 rounded-sm border bg-sunken px-2.5 text-[12px] font-medium transition-colors"
-      :class="open ? 'border-line-2' : 'border-transparent hover:border-line-2'"
+      class="flex h-[30px] w-full items-center gap-2 rounded-[5px] bg-control px-2.5 text-[12.5px] font-medium transition-[background-color,box-shadow]"
+      :class="open ? 'bg-track shadow-[var(--focus)]' : 'hover:bg-track'"
       :aria-expanded="open"
       aria-haspopup="listbox"
       @click="open = !open"
@@ -103,7 +103,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside))
         v-if="selected?.icon"
         :src="selected.icon"
         alt=""
-        class="thumb h-[17px] w-[17px] rounded-[3px]"
+        class="thumb h-[18px] w-[18px] rounded-[3px]"
       />
       <span class="min-w-0 flex-1 truncate text-left" :class="selected ? 'text-ink' : 'text-ink-3'">
         {{ selected?.label ?? placeholder }}
@@ -117,7 +117,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside))
 
     <div
       v-if="open"
-      class="menu absolute z-40 mt-1.5 max-h-[320px] overflow-hidden"
+      class="menu absolute z-40 mt-1.5 max-h-[340px] overflow-hidden"
       :class="align === 'right' ? 'right-0' : 'left-0'"
       :style="{ width }"
     >
@@ -130,7 +130,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside))
           <input
             ref="input"
             v-model="query"
-            class="field !py-1.5 !pl-7 !text-[12px]"
+            class="field !pl-7"
             :placeholder="searchPlaceholder ?? 'Filter…'"
             @keydown.down.prevent="move(1)"
             @keydown.up.prevent="move(-1)"
@@ -140,7 +140,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside))
         </div>
       </div>
 
-      <div ref="list" role="listbox" class="max-h-[264px] overflow-y-auto py-1">
+      <div ref="list" role="listbox" class="max-h-[280px] overflow-y-auto p-1">
         <button
           v-for="(option, index) in visible"
           :key="String(option.value)"
@@ -152,14 +152,14 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside))
           @mouseenter="active = index"
           @click="choose(option.value)"
         >
-          <img v-if="option.icon" :src="option.icon" alt="" class="thumb h-5 w-5 rounded-sm" />
+          <img v-if="option.icon" :src="option.icon" alt="" class="thumb h-6 w-6 rounded-[5px]" />
           <span class="min-w-0 flex-1 truncate">{{ option.label }}</span>
-          <span v-if="option.meta" class="num shrink-0 text-[11px] text-ink-3">{{
+          <span v-if="option.meta" class="num shrink-0 text-[12px] text-ink-3">{{
             option.meta
           }}</span>
           <Check v-if="option.value === model" :size="13" class="shrink-0 text-ink" />
         </button>
-        <p v-if="!visible.length" class="px-3 py-4 text-center text-[12px] text-ink-3">
+        <p v-if="!visible.length" class="px-3 py-4 text-[13px] text-ink-2">
           No champion matches “{{ query }}”.
         </p>
       </div>

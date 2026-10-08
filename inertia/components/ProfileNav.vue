@@ -45,19 +45,20 @@ const TABS = [
       preserve-state
       preserve-scroll
     >
-      <component :is="item.icon" :size="15" />
+      <component :is="item.icon" :size="16" />
       {{ item.label }}
     </Link>
   </nav>
 </template>
 
 <style scoped>
+/* Narrow screens: tabs with a straight brand underline. */
 .profile-nav {
   display: flex;
-  gap: 2px;
+  gap: 20px;
   overflow-x: auto;
   scrollbar-width: none;
-  border-bottom: 1px solid var(--color-line);
+  box-shadow: inset 0 -1px 0 var(--color-line);
 }
 
 .profile-nav::-webkit-scrollbar {
@@ -68,15 +69,19 @@ const TABS = [
   position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  font-size: 13.5px;
-  font-weight: 560;
+  gap: 8px;
+  height: 40px;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--color-ink-3);
   white-space: nowrap;
   transition:
-    color var(--t-fast) ease,
-    background-color var(--t-fast) ease;
+    color var(--t-fast) var(--ease),
+    background-color var(--t-fast) var(--ease);
+}
+
+.profile-nav a :deep(svg) {
+  display: none;
 }
 
 .profile-nav a:hover {
@@ -85,47 +90,54 @@ const TABS = [
 
 .profile-nav a[data-active='true'] {
   color: var(--color-ink);
-  font-weight: 650;
-}
-
-.profile-nav a[data-active='true'] :deep(svg) {
-  color: var(--color-brand);
 }
 
 .profile-nav a[data-active='true']::after {
   content: '';
   position: absolute;
-  inset: auto 8px -1px;
+  inset: auto 0 0;
   height: 2px;
   background: var(--color-brand);
 }
 
+/* Wide screens: a vertical list in the rail, like the desktop app's sidebar. */
 @media (min-width: 64rem) {
   .profile-nav {
     flex-direction: column;
-    border-bottom: 0;
+    gap: 2px;
+    box-shadow: none;
   }
 
   .profile-nav a {
-    height: 36px;
-    padding: 0 12px;
+    height: 34px;
+    gap: 10px;
+    padding: 0 10px;
     border-radius: var(--radius-sm);
+    color: var(--color-ink-2);
+  }
+
+  .profile-nav a :deep(svg) {
+    display: block;
+    flex: none;
+    color: var(--color-ink-3);
+    transition: color var(--t-fast) var(--ease);
   }
 
   .profile-nav a:hover {
-    background: color-mix(in srgb, var(--color-ink) 4%, transparent);
+    background: var(--color-panel);
   }
 
   .profile-nav a[data-active='true'] {
+    font-weight: 600;
     background: var(--color-raised);
   }
 
-  /* The slash, as in the desktop app's sidebar. */
+  .profile-nav a[data-active='true'] :deep(svg) {
+    color: var(--color-brand-hi);
+  }
+
   .profile-nav a[data-active='true']::after {
-    inset: 10px auto 10px 0;
-    width: 3px;
-    height: auto;
-    transform: skewX(var(--slash));
+    display: none;
   }
 }
 </style>

@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import MatchRow from './MatchRow.vue'
 import { loadChampions, loadItems, loadRunes } from '../lib/assets.js'
 import { dayLabel } from '../lib/format.js'
+import { isRemake } from '../lib/match.js'
 import type { Match } from '../lib/types.js'
 
 const props = defineProps<{
@@ -10,6 +11,8 @@ const props = defineProps<{
   puuid: string
   summonerSlug: string
 }>()
+
+defineEmits<{ clear: [] }>()
 
 const expanded = ref<string | null>(null)
 
@@ -19,7 +22,7 @@ onMounted(() => {
   loadRunes()
 })
 
-/** One flat list, banded by day, rather than fifteen separate cards. */
+/** One flat list, grouped by day, each day with its record. */
 const days = computed(() => {
   const groups: Array<{ label: string; wins: number; losses: number; matches: Match[] }> = []
   for (const match of props.matches) {
@@ -31,7 +34,7 @@ const days = computed(() => {
     }
     group.matches.push(match)
     const me = match.participants.find((p) => p.puuid === props.puuid)
-    if (me) me.win ? group.wins++ : group.losses++
+    if (me && !isRemake(match)) me.win ? group.wins++ : group.losses++
   }
   return groups
 })
@@ -42,24 +45,19 @@ function toggle(matchId: string) {
 </script>
 
 <template>
-  <div v-if="!matches.length" class="card py-16 text-center">
-    <p class="display text-[17px] text-ink">No matches here</p>
-    <p class="mx-auto mt-1.5 max-w-[46ch] text-[12px] leading-relaxed text-ink-3">
-      Nothing matches these filters.
-    </p>
-  </div>
+  <p v-if="!matches.length" class="flex items-center gap-3 py-6 text-[13px] text-ink-2">
+    No games match these filters.
+    <button class="btn btn-sm" @click="$emit('clear')">Clear filters</button>
+  </p>
 
-  <div v-else class="space-y-5">
-    <section v-for="day in days" :key="day.label">
-      <div class="mb-2 flex items-baseline justify-between gap-3 px-1">
-        <span class="label !text-ink-2">{{ day.label }}</span>
-        <span class="num stat text-[12.5px]">
-          <b class="text-win">{{ day.wins }}W</b>
-          <b class="ml-1.5 text-loss">{{ day.losses }}L</b>
-        </span>
-      </div>
+  <div v-else>
+    <section v-for="day in days" :key="day.label" class="mt-5 first:mt-0">
+      <h3 class="mb-2 flex items-baseline justify-between gap-3 px-0.5 text-[12px] font-semibold">
+        <span class="text-ink-2">{{ day.label }}</span>
+        <span class="num font-medium text-ink-3">{{ day.wins }}W {{ day.losses }}L</span>
+      </h3>
 
-      <div class="space-y-1.5">
+      <div class="grid gap-1">
         <MatchRow
           v-for="match in day.matches"
           :key="match.matchId"

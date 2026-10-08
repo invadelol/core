@@ -14,11 +14,12 @@ const props = defineProps<{
 
 const emit = defineEmits<{ pick: [championId: number] }>()
 
-const rows = computed(() => {
-  const list = props.champions.slice(0, props.limit ?? 5)
-  const most = Math.max(...list.map((c) => c.games), 1)
-  return list.map((c) => ({ ...c, share: (c.games / most) * 100 }))
-})
+/** Below this many games a win rate is an anecdote: it is shown, but quietly. */
+const SAMPLE = 3
+
+const rows = computed(() =>
+  props.champions.slice(0, props.limit ?? 5).map((c) => ({ ...c, thin: c.games < SAMPLE }))
+)
 </script>
 
 <template>
@@ -33,44 +34,42 @@ const rows = computed(() => {
       </Link>
     </div>
 
-    <ul class="space-y-0.5 !px-2 !pb-2 !pt-2">
+    <ul class="-mx-2">
       <li v-for="champ in rows" :key="champ.championId">
         <button
-          class="flex w-full items-center gap-3 rounded-sm px-2 py-2 text-left transition-colors hover:bg-raised"
-          :class="
-            active === champ.championId
-              ? 'bg-raised shadow-[inset_3px_0_0_var(--color-accent)]'
-              : ''
-          "
+          class="flex h-[48px] w-full items-center gap-3 rounded-[5px] px-2 text-left transition-colors hover:bg-panel"
+          :class="active === champ.championId ? '!bg-raised' : ''"
+          :aria-pressed="active === champ.championId"
+          :title="`Show ${championName(champ.championId)} games`"
           @click="emit('pick', champ.championId)"
         >
-          <img
-            :src="champIcon(champ.championId)"
-            :alt="championName(champ.championId)"
-            width="34"
-            height="34"
-            loading="lazy"
-            class="thumb h-[34px] w-[34px] rounded-sm"
-          />
+          <span class="portrait h-8 w-8">
+            <img
+              :src="champIcon(champ.championId)"
+              :alt="championName(champ.championId)"
+              width="32"
+              height="32"
+              loading="lazy"
+            />
+          </span>
           <span class="min-w-0 flex-1">
-            <span class="flex items-baseline justify-between gap-2">
-              <span class="truncate text-[13px] font-semibold text-ink">
-                {{ championName(champ.championId) }}
-              </span>
-              <span
-                class="num stat shrink-0 text-[15px]"
-                :class="champ.winrate >= 0.5 ? 'text-win' : 'text-loss'"
-              >
-                {{ Math.round(champ.winrate * 100) }}%
-              </span>
+            <span class="block truncate text-[13px] font-semibold leading-[17px] text-ink">
+              {{ championName(champ.championId) }}
             </span>
-            <span class="mt-1 flex items-center gap-2">
-              <span class="meter min-w-0 flex-1">
-                <span class="!bg-ink-3" :style="{ width: `${champ.share}%` }" />
-              </span>
-              <span class="num shrink-0 text-[10.5px] text-ink-3">
-                {{ champ.games }}g · {{ champ.kda.toFixed(1) }} KDA
-              </span>
+            <span class="num block text-[12px] leading-4 text-ink-3">
+              {{ champ.games }} {{ champ.games === 1 ? 'game' : 'games' }}
+              <span class="text-ink-4">·</span> {{ champ.kda.toFixed(1) }} KDA
+            </span>
+          </span>
+          <span class="num shrink-0 text-right">
+            <span
+              class="block text-[13px] font-semibold leading-[17px]"
+              :class="champ.thin ? 'text-ink-3' : 'text-ink'"
+            >
+              {{ Math.round(champ.winrate * 100) }}%
+            </span>
+            <span class="block text-[12px] leading-4 text-ink-3">
+              {{ champ.wins }}W {{ champ.games - champ.wins }}L
             </span>
           </span>
         </button>

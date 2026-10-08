@@ -22,14 +22,14 @@ const href = (id: DesktopPlatform) => `/download/${id}`
 
 <template>
   <div class="flex flex-col items-start gap-2.5">
-    <a v-if="target" :href="href(target)" class="btn btn-primary !px-5 !py-2.5 !text-[13.5px]">
+    <a v-if="target" :href="href(target)" class="btn btn-primary btn-lg">
       <Download :size="15" />Download for {{ targetLabel(target) }}
     </a>
-    <a v-else-if="checked" href="#download" class="btn btn-primary !px-5 !py-2.5 !text-[13.5px]">
+    <a v-else-if="checked" href="#download" class="btn btn-primary btn-lg">
       <Download :size="15" />Download
     </a>
-    <span v-else class="block h-[40px]" aria-hidden="true" />
-    <p v-if="checked" class="text-[11.5px] text-ink-3">
+    <span v-else class="block h-[36px]" aria-hidden="true" />
+    <p v-if="checked" class="text-[12.5px] text-ink-3">
       <template v-if="!target">Invade runs on Windows and macOS computers. </template>
       <template v-else>Also for </template>
       <template

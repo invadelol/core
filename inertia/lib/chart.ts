@@ -9,27 +9,33 @@ import { token } from './theme.js'
  * product rather than a second, hard-coded one for charts.
  */
 export const palette = reactive({
-  ink: '#0e0f13',
-  ink2: '#565b69',
-  ink3: '#868c9c',
-  line: '#e7e7ed',
+  ink: '#0c0c14',
+  ink2: '#4a4a5c',
+  ink3: '#77778a',
+  ink4: '#a8a8b8',
+  line: '#e7e7ee',
+  line2: '#dcdce5',
   surface: '#ffffff',
   accent: '#5a4bf0',
-  win: '#0d8a63',
-  loss: '#d0384f',
-  blue: '#2f6fe0',
-  red: '#dc5844',
-  gold: '#96701a',
-  muted: '#868c9c',
+  accentFill: 'rgb(90 75 240 / 0.1)',
+  win: '#1f6fe0',
+  loss: '#d42f4b',
+  blue: '#1f6fe0',
+  red: '#d42f4b',
+  gold: '#9a6d0f',
+  muted: '#77778a',
 })
 
 export function refreshPalette() {
   palette.ink = token('--color-ink', palette.ink)
   palette.ink2 = token('--color-ink-2', palette.ink2)
   palette.ink3 = token('--color-ink-3', palette.ink3)
+  palette.ink4 = token('--color-ink-4', palette.ink4)
   palette.line = token('--color-line', palette.line)
-  palette.surface = token('--color-panel', palette.surface)
+  palette.line2 = token('--color-line-2', palette.line2)
+  palette.surface = token('--color-solid', palette.surface)
   palette.accent = token('--color-brand', palette.accent)
+  palette.accentFill = `rgb(${token('--brand-rgb', '90 75 240')} / 0.1)`
   palette.win = token('--color-win', palette.win)
   palette.loss = token('--color-loss', palette.loss)
   palette.blue = token('--color-blue', palette.blue)
@@ -55,19 +61,21 @@ export function watchPalette() {
 /** Kept for call sites that want a named series colour. */
 export const CHART_COLORS = palette
 
-const AXIS_FONT = { size: 10, weight: 500 as const }
+const AXIS_FONT = { size: 11, weight: 500 as const, family: 'Archivo, Inter, sans-serif' }
 
+/** Tooltips are popovers: opaque surface, a hairline border, 12px text. */
 function tooltipStyle() {
   return {
-    backgroundColor: palette.ink,
-    titleColor: palette.surface,
-    bodyColor: palette.surface,
-    borderWidth: 0,
+    backgroundColor: palette.surface,
+    titleColor: palette.ink,
+    bodyColor: palette.ink2,
+    borderColor: palette.line2,
+    borderWidth: 1,
     padding: 10,
     cornerRadius: 8,
     displayColors: false,
-    titleFont: { size: 11, weight: 600 as const },
-    bodyFont: { size: 11 },
+    titleFont: { size: 12, weight: 600 as const, family: AXIS_FONT.family },
+    bodyFont: { size: 12, family: AXIS_FONT.family },
   }
 }
 
@@ -108,7 +116,9 @@ export function lineOptions(
     responsive: true,
     maintainAspectRatio: false,
     interaction: { mode: 'index' as const, intersect: false },
-    animation: { duration: 320 },
+    animation: { duration: 240 },
+    /* Straight segments: a smoothed line invents values between games. */
+    elements: { line: { tension: 0 } },
     plugins: {
       legend: { display: false },
       tooltip: {

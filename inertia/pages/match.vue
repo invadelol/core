@@ -6,6 +6,7 @@ import MatchHeader from '../components/MatchHeader.vue'
 import MatchCharts from '../components/MatchCharts.vue'
 import MatchTimeline from '../components/MatchTimeline.vue'
 import Scoreboard from '../components/Scoreboard.vue'
+import SiteFooter from '../components/SiteFooter.vue'
 import { loadChampions, loadItems, loadRunes } from '../lib/assets.js'
 import { decodeSlug, parseSlug, profilePath } from '../lib/format.js'
 import { indexTimeline } from '../lib/match.js'
@@ -66,70 +67,80 @@ const SECTIONS = [
 <template>
   <Head :title="`${parsed.gameName} · match`" />
 
-  <AppHeader
-    :crumbs="[
-      {
-        label: `${parsed.gameName}#${parsed.tagLine}`,
-        href: profilePath(parsed.gameName, parsed.tagLine),
-      },
-      { label: 'Match' },
-    ]"
-  />
+  <div class="flex min-h-screen flex-col">
+    <AppHeader
+      :crumbs="[
+        {
+          label: `${parsed.gameName}#${parsed.tagLine}`,
+          href: profilePath(parsed.gameName, parsed.tagLine),
+        },
+        { label: 'Match' },
+      ]"
+    />
 
-  <main class="mx-auto max-w-[1320px] px-5 py-7">
-    <div v-if="isLoading" class="space-y-6">
-      <div class="skel h-[150px]" />
-      <div class="skel h-[420px]" />
-      <div class="skel h-[260px]" />
-    </div>
+    <main class="mx-auto w-full max-w-[1320px] flex-1 px-5 pt-6 sm:px-6 2xl:max-w-[1480px]">
+      <div v-if="isLoading" class="space-y-6">
+        <div class="skel h-[184px]" />
+        <div class="skel h-[480px]" />
+        <div class="skel h-[260px]" />
+      </div>
 
-    <div v-else-if="error" class="py-24 text-center">
-      <p class="display text-[26px] text-ink">{{ error }}</p>
-      <a :href="`/${encodeURIComponent(slug)}`" class="btn mt-5">Back to profile</a>
-    </div>
+      <div v-else-if="error" class="mx-auto max-w-[520px] py-24">
+        <p class="text-[20px] font-semibold text-ink">{{ error }}</p>
+        <a :href="`/${encodeURIComponent(slug)}`" class="btn mt-5">Back to profile</a>
+      </div>
 
-    <template v-else-if="match">
-      <MatchHeader :match="match" />
+      <template v-else-if="match">
+        <MatchHeader :match="match" :owner-puuid="ownerPuuid" />
 
-      <nav
-        class="sticky top-[57px] z-20 -mx-5 mt-6 flex gap-6 border-b border-line bg-bg/90 px-5 pt-3 backdrop-blur"
-      >
-        <a v-for="item in SECTIONS" :key="item.id" :href="`#${item.id}`" class="tabs-link">
-          {{ item.label }}
-        </a>
-      </nav>
+        <nav
+          class="tabs sticky top-[57px] z-20 -mx-5 mt-4 bg-bg/90 px-5 backdrop-blur sm:-mx-6 sm:px-6"
+          aria-label="Sections"
+        >
+          <a v-for="item in SECTIONS" :key="item.id" :href="`#${item.id}`" class="tabs-link">
+            {{ item.label }}
+          </a>
+        </nav>
 
-      <section id="scoreboard" class="scroll-mt-28 pt-6">
-        <div class="section">
-          <h2>Scoreboard</h2>
-          <span class="meta">Click a player for the full breakdown</span>
-        </div>
-        <div class="card">
-          <Scoreboard
+        <section id="scoreboard" class="scroll-mt-28 pt-6">
+          <div class="section">
+            <h2>Scoreboard</h2>
+            <span class="meta">Select a player for the full breakdown</span>
+          </div>
+          <div class="card">
+            <Scoreboard
+              :match="match"
+              :owner-puuid="ownerPuuid"
+              :timeline="timeline"
+              :open-puuid="openPuuid"
+              @open="toggleRow"
+            />
+          </div>
+        </section>
+
+        <section id="analysis" class="scroll-mt-28 pt-8">
+          <MatchCharts
             :match="match"
             :owner-puuid="ownerPuuid"
-            :timeline="timeline"
-            :open-puuid="openPuuid"
-            @open="toggleRow"
+            :selected-puuid="focusPuuid"
+            @select="toggleRow"
           />
-        </div>
-      </section>
+        </section>
 
-      <section id="analysis" class="scroll-mt-28 pt-10">
-        <MatchCharts
-          :match="match"
-          :owner-puuid="ownerPuuid"
-          :selected-puuid="focusPuuid"
-          @select="toggleRow"
-        />
-      </section>
+        <section id="timeline" class="scroll-mt-28 pt-8">
+          <div class="section">
+            <h2>Timeline</h2>
+          </div>
+          <MatchTimeline
+            :match="match"
+            :selected-puuid="focusPuuid"
+            :owner-puuid="ownerPuuid"
+            @select="toggleRow"
+          />
+        </section>
+      </template>
+    </main>
 
-      <section id="timeline" class="scroll-mt-28 pt-10">
-        <div class="section">
-          <h2>Timeline</h2>
-        </div>
-        <MatchTimeline :match="match" :selected-puuid="focusPuuid" @select="toggleRow" />
-      </section>
-    </template>
-  </main>
+    <SiteFooter v-if="!isLoading" />
+  </div>
 </template>

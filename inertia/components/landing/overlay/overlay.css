@@ -1,0 +1,525 @@
+/*
+ * The desktop app's in-game overlay, as it draws its widgets (invade: src/style.css), for the
+ * /app page's demo. Same plates, sizes, figures and colours; only the selectors are prefixed
+ * with .ov so nothing here leaks into the site. The overlay is always dark: it sits on the game.
+ */
+.ov {
+  --ov-alpha: 0.86;
+  --bg: rgb(11 11 17 / var(--ov-alpha));
+  --border: rgb(255 255 255 / 0.08);
+  --text: #ececf3;
+  --text-2: #a6a7b8;
+  --muted: #8f8fa6;
+  --ally: #4c9bff;
+  --enemy: #ff5d6e;
+  --up: #4c9bff;
+  --down: #ff5d6e;
+  --gold: #e2b25a;
+  --warn: #ffb547;
+  --brand: #7b6dff;
+  --brand-hi: #a99fff;
+  --brand-rgb: 123 109 255;
+  --blue-rgb: 76 155 255;
+  --red-rgb: 255 93 110;
+  /* The overlay keeps its condensed figures (approved October 2026 layout). */
+  --narrow: 78%;
+  --semi: 88%;
+  font:
+    500 12px/1.3 'Archivo',
+    system-ui,
+    sans-serif;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+.ov *,
+.ov *::before,
+.ov *::after {
+  box-sizing: border-box;
+}
+
+.ov .muted {
+  color: var(--muted);
+}
+.ov .ally {
+  color: var(--ally);
+}
+.ov .enemy {
+  color: var(--enemy);
+}
+.ov .gold {
+  color: var(--gold);
+}
+
+.ov-panel {
+  margin: 0;
+  padding: 9px 11px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.04),
+    0 6px 20px rgb(0 0 0 / 0.35);
+}
+
+/* ── Sparklines ─────────────────────────────────────────────── */
+.ov .spark {
+  display: block;
+  max-width: 100%;
+  margin: 6px 0;
+  overflow: visible;
+}
+.ov .spark .line {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.ov .spark .dot {
+  fill: none;
+  stroke: var(--text);
+  stroke-width: 5;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.ov .spark .area.enemy {
+  fill: var(--enemy);
+  opacity: 0.32;
+}
+.ov .spark .area.ally {
+  fill: var(--ally);
+  opacity: 0.32;
+}
+.ov .spark .baseline {
+  stroke: var(--muted);
+  stroke-dasharray: 2 3;
+  stroke-width: 1;
+}
+
+/* ── Performance ────────────────────────────────────────────── */
+.ov .perf {
+  width: 192px;
+  padding: 8px 10px 9px;
+}
+.ov .perf-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 18px;
+  margin-bottom: 5px;
+}
+.ov .perf-head svg {
+  color: var(--brand);
+}
+.ov .perf-word {
+  font-size: 10.5px;
+  font-stretch: 88%;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--text);
+}
+.ov .perf-target {
+  margin-left: auto;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.ov .perf-rows {
+  display: grid;
+  gap: 1px;
+}
+.ov .perf-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 6px;
+  height: 21px;
+}
+.ov .perf-label {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.ov .perf-val {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 2px;
+  font-size: 13.5px;
+  font-stretch: var(--semi);
+  font-weight: 760;
+  white-space: nowrap;
+  transition: color 300ms ease;
+}
+.ov .perf-val small {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.ov .perf-val.ahead,
+.ov .perf-ind.ahead {
+  color: var(--up);
+}
+.ov .perf-val.behind,
+.ov .perf-ind.behind {
+  color: var(--down);
+}
+.ov .perf-ind {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 16px;
+  color: var(--muted);
+}
+.ov .perf-ind svg {
+  display: block;
+  overflow: visible;
+}
+.ov .perf-ind .line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.ov .perf-ind .end,
+.ov .perf-ind .arrow {
+  fill: currentColor;
+}
+.ov .perf-ind .even {
+  width: 8px;
+  height: 2px;
+  background: currentColor;
+  border-radius: 1px;
+}
+
+/* ── Win & gold ─────────────────────────────────────────────── */
+.ov .lead {
+  width: 192px;
+  padding: 9px 10px 8px;
+}
+.ov .lead-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.ov .lead-diff {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 19px;
+  font-stretch: var(--narrow);
+  font-weight: 800;
+  line-height: 1;
+}
+.ov .lead-diff svg {
+  width: 9px;
+  height: 9px;
+  fill: currentColor;
+}
+.ov .lead-win {
+  font-size: 13px;
+  font-stretch: var(--semi);
+  font-weight: 750;
+}
+.ov .lead-win small {
+  margin-left: 3px;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.ov .lead-bar {
+  height: 3px;
+  margin: 7px 0 6px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: rgb(var(--red-rgb) / 0.55);
+}
+.ov .lead-bar i {
+  display: block;
+  height: 100%;
+  background: var(--ally);
+  transform-origin: left;
+  transition: transform 600ms ease;
+}
+.ov .lead .spark {
+  margin: 0;
+}
+.ov .lead-kills {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+  font-size: 10.5px;
+  font-weight: 650;
+  color: var(--muted);
+}
+
+/* ── Objectives ─────────────────────────────────────────────── */
+.ov .obj {
+  padding: 5px;
+}
+.ov .obj-pills {
+  display: flex;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ov .obj-pill {
+  --c: #ff7a45;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 9px 0 7px;
+  color: var(--c);
+  background: rgb(255 255 255 / 0.04);
+  border: 1px solid rgb(255 255 255 / 0.05);
+  border-radius: 6px;
+  transition:
+    background-color 300ms ease,
+    border-color 300ms ease;
+}
+.ov .obj-pill.grubs {
+  --c: #c77dff;
+}
+.ov .obj-pill.herald {
+  --c: #b98cff;
+}
+.ov .obj-pill.baron,
+.ov .obj-pill.baronBuff {
+  --c: var(--brand-hi);
+}
+.ov .obj-pill.elderBuff {
+  --c: #f4d27a;
+}
+.ov .obj-pill b {
+  min-width: 30px;
+  font-size: 13.5px;
+  font-stretch: var(--semi);
+  font-weight: 760;
+  color: var(--text);
+}
+.ov .obj-pill.soon b {
+  color: var(--warn);
+}
+.ov .obj-pill.up {
+  background: rgb(232 176 79 / 0.14);
+  border-color: rgb(232 176 79 / 0.4);
+}
+.ov .obj-pill.up b {
+  color: var(--gold);
+}
+.ov .obj-pill.ally {
+  border-color: rgb(var(--blue-rgb) / 0.45);
+}
+.ov .obj-pill.enemy {
+  border-color: rgb(var(--red-rgb) / 0.45);
+}
+.ov .obj-pill.ally b {
+  color: var(--ally);
+}
+.ov .obj-pill.enemy b {
+  color: var(--enemy);
+}
+.ov .obj-drakes {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 7px 1px;
+}
+.ov .obj-drakes span {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 8px;
+}
+.ov .obj-drakes span.enemy {
+  flex-direction: row-reverse;
+}
+.ov .obj-drakes i {
+  width: 7px;
+  height: 7px;
+  transform: rotate(45deg) scale(0.85);
+  border-radius: 1px;
+}
+
+/* ── Next item ──────────────────────────────────────────────── */
+.ov .build {
+  width: 212px;
+  padding: 9px 10px;
+}
+.ov .build-next {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 9px;
+  align-items: center;
+}
+.ov .build-next img {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.12);
+  transition: box-shadow 300ms ease;
+}
+.ov .build-next.ready img {
+  box-shadow: 0 0 0 1.5px var(--gold);
+}
+.ov .build-next-text {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.ov .build-next-text b {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.ov .build-cost {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--muted);
+}
+.ov .build-cost.ready {
+  color: var(--gold);
+}
+.ov .build-path,
+.ov .build-options {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ov .build-path {
+  margin-top: 8px;
+}
+.ov .build-path img,
+.ov .build-options img {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  transition:
+    opacity 400ms ease,
+    filter 400ms ease,
+    box-shadow 300ms ease;
+}
+.ov .build-path img.owned {
+  opacity: 0.3;
+  filter: grayscale(1);
+}
+.ov .build-path img.next {
+  box-shadow: 0 0 0 1.5px var(--gold);
+}
+.ov .build-options {
+  margin-top: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.ov .build-options img {
+  width: 20px;
+  height: 20px;
+}
+
+/* ── Runes & build (champ select) ───────────────────────────── */
+.ov .runes {
+  width: 232px;
+  padding: 9px 11px 8px;
+}
+.ov .runes-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 7px;
+}
+.ov .runes-head strong {
+  font-size: 14px;
+  font-stretch: var(--semi);
+  font-weight: 760;
+}
+.ov .runes-head .muted {
+  margin-left: auto;
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.ov .rune-page {
+  display: grid;
+  gap: 3px;
+}
+.ov .rune-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ov .rune-row img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+.ov .rune-row img.tree {
+  width: 16px;
+  height: 16px;
+  margin-right: 2px;
+  opacity: 0.8;
+}
+.ov .rune-row img.key {
+  width: 32px;
+  height: 32px;
+  background: radial-gradient(circle, rgb(var(--brand-rgb) / 0.35), rgb(var(--brand-rgb) / 0.08));
+  box-shadow: 0 0 0 1px rgb(var(--brand-rgb) / 0.5);
+}
+.ov .runes-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 7px;
+  padding-top: 7px;
+  border-top: 1px solid rgb(255 255 255 / 0.07);
+}
+.ov .runes-row img {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+}
+.ov .runes-row .skills {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  color: var(--brand-hi);
+}
+.ov .runes-items {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+}
+.ov .runes-items img {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+}
+.ov .runes-items .sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 2px;
+  background: rgb(255 255 255 / 0.12);
+}
+.ov .runes-import {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 7px;
+  font-size: 10px;
+  font-weight: 650;
+  color: var(--muted);
+}
+.ov .runes-import svg {
+  color: var(--up);
+}

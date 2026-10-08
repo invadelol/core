@@ -6,80 +6,95 @@
 @source '../';
 
 /* ──────────────────────────────────────────────────────────────
-   Tokens ("Shard", shared with the desktop app: src/theme.css)
+   Tokens (v2), mirrored from the desktop app (src/theme.css) and
+   its design direction (redesign/DIRECTION.md §3).
 
-   Night ink with a violet undertone, one violet taken from the
-   Invade glyph, and two marks drawn from its facets: the chamfer
-   (a cut top-right corner, on identity and primary elements) and
-   the slash (a 14deg bar: active tab, results, form strips).
+   Night ink, translucent surfaces lit from above, and colour only
+   where it means something:
+     win    good for you: a win, your team, ahead   (blue)
+     loss   bad for you: a loss, the enemy, behind  (red)
+     brand  Invade itself: the glyph, the active place, focus, the
+            primary action, the viewed player's own row and series
+     gold   gold amounts where gold is the subject, MVP
+     tier   rank names next to their crest
+   Figures stay white.
 
-   Violet is Invade itself: the active place, focus, the primary
-   action, the viewed player's own series. It never encodes data.
-   Meaning is carried by a fixed set of hues:
-     win / loss    an outcome
-     blue / red    a side of the map
-     gold          the economy
-     signal        distinction: the top score tier, the MVP
+   The Tailwind names below (panel, raised, sunken, ink…) are the
+   ones the templates use; their values follow the v2 scale:
+     chrome  --ink-0      header
+     bg      --ink-1      page
+     panel   --surface-1  panels, match rows
+     raised  --surface-2  hover, open row
+     control --surface-3  buttons, inputs, segmented controls
+     track   --surface-4  active segment, bar tracks
+     well / sunken        inset areas: item wells, empty slots
+     solid / solid-2      anything that must be opaque
    ────────────────────────────────────────────────────────────── */
 @theme {
-  /* Surfaces. Light is a white page: plates are separated from it by
-     hairlines, and only hover and wells take a faint cool tint. */
-  --color-bg: #ffffff;
+  /* Light (website only): a pale page, white panels lifted by a soft shadow. */
+  --color-chrome: #ffffff;
+  --color-bg: #f7f7fa;
   --color-panel: #ffffff;
-  --color-raised: #f6f6f9;
-  --color-sunken: #efeff4;
-  --color-line: #e6e6ee;
-  --color-line-2: #d2d2de;
+  --color-raised: #f3f3f8;
+  --color-control: #ededf3;
+  --color-track: #e4e4ec;
+  --color-well: #f0f0f5;
+  --color-sunken: #f0f0f5;
+  --color-solid: #ffffff;
+  --color-solid-2: #f7f7fa;
+  --color-line: #e7e7ee;
+  --color-line-2: #dcdce5;
+  --color-line-3: #c8c8d4;
 
-  /* Text */
   --color-ink: #0c0c14;
-  --color-ink-2: #454558;
-  --color-ink-3: #75758a;
-  --color-ink-4: #a7a7b8;
+  --color-ink-2: #4a4a5c;
+  --color-ink-3: #77778a;
+  --color-ink-4: #a8a8b8;
 
-  /* Brand: the glyph violet, deepened on paper to hold contrast. */
   --color-brand: #5a4bf0;
   --color-brand-hi: #4a3bdf;
-  --color-brand-soft: #ecebff;
-  /* Interaction fill (primary buttons) and the text on it. */
+  --color-brand-soft: rgb(90 75 240 / 0.08);
   --color-accent: #5a4bf0;
   --color-accent-fg: #ffffff;
-  --color-signal: #a57a12;
 
-  /* Outcome */
-  --color-win: #0e8a5f;
-  --color-win-soft: #e1f3eb;
+  --color-win: #1f6fe0;
+  --color-win-soft: rgb(31 111 224 / 0.07);
   --color-loss: #d42f4b;
-  --color-loss-soft: #fbe7ea;
+  --color-loss-soft: rgb(212 47 75 / 0.07);
+  /* Sides and teams use the same two hues: your team is blue wherever it played. */
+  --color-blue: #1f6fe0;
+  --color-red: #d42f4b;
 
-  /* Sides */
-  --color-blue: #2462d6;
-  --color-blue-soft: #e6eefc;
-  --color-red: #cf4326;
-  --color-red-soft: #fbe9e4;
+  --color-gold: #9a6d0f;
+  --color-signal: #9a6d0f;
 
-  /* Economy */
-  --color-gold: #946b0c;
-  --color-gold-bright: #c8aa6e;
+  --color-tier-iron: #6e6460;
+  --color-tier-bronze: #8f5534;
+  --color-tier-silver: #64798a;
+  --color-tier-gold: #9a7414;
+  --color-tier-platinum: #1f8676;
+  --color-tier-emerald: #138a55;
+  --color-tier-diamond: #3d5fe0;
+  --color-tier-master: #8a3fd6;
+  --color-tier-grandmaster: #d03a4c;
+  --color-tier-challenger: #a07a10;
 
-  /* Categorical series, only where a chart needs three of them */
-  --color-s1: #2b2b38;
-  --color-s2: #2462d6;
-  --color-s3: #b07d10;
+  /* Series that are neither you nor a side: physical / magic / true damage. */
+  --color-s1: #4a4a5c;
+  --color-s2: #8f8fa3;
+  --color-s3: #c4c4d1;
 
-  /* Riot's minimap is painted for the client, not for a page of numbers.
-     This pulls it back so the player markers on top of it stay the subject. */
+  /* Riot's minimap is painted for the client, not for a page of numbers. */
   --map-tone: saturate(0.5) brightness(1.06) contrast(0.9);
 
   --shadow-e1: 0 1px 2px rgb(12 12 20 / 0.06);
-  --shadow-e2: 0 18px 44px -16px rgb(12 12 20 / 0.2);
+  --shadow-e2: 0 16px 40px -12px rgb(12 12 20 / 0.22);
 
-  /* Facets, not bubbles. */
-  --radius-xs: 2px;
-  --radius-sm: 4px;
-  --radius-md: 5px;
-  --radius-lg: 6px;
-  --radius-xl: 10px;
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 12px;
 
   --breakpoint-xs: 26rem;
 
@@ -90,104 +105,195 @@
 }
 
 :root {
-  --cut: 8px;
-  --slash: -14deg;
+  /* The light that falls on a panel: a shadow on paper, a top highlight at night. */
+  --hi: 0 1px 2px rgb(12 12 20 / 0.05), 0 0 0 1px rgb(12 12 20 / 0.025);
+  --backdrop:
+    radial-gradient(1100px 620px at 82% -14%, rgb(90 75 240 / 0.05), transparent 70%),
+    var(--color-bg);
+  --focus: 0 0 0 2px rgb(90 75 240 / 0.5);
+  --brand-rgb: 90 75 240;
+  --win-rgb: 31 111 224;
+  --loss-rgb: 212 47 75;
+  /* The performance plate's own scale (DIRECTION.md §8.1): prestige, never win/loss or Invade. */
+  --perf-elite: 168 116 6;
+  --perf-great: 139 106 34;
+  --perf-good: 46 46 60;
+  --perf-fair: 122 122 142;
+  --perf-poor: 196 83 46;
+  /* On paper the figure is dark to stay legible; the light it gives off stays the bright hue. */
+  --perf-elite-fill: 245 176 40;
+  --perf-great-fill: 222 181 98;
+  --perf-cap: rgb(12 12 20 / 0.045);
+  --perf-cap-ring: rgb(12 12 20 / 0.07);
+  --perf-track: rgb(12 12 20 / 0.1);
+  /* Large figures (20px and up) may tighten slightly; nothing narrower. */
+  --fig: 92%;
   --t-fast: 120ms;
   --t-base: 180ms;
-  --t-slow: 260ms;
+  --t-slow: 240ms;
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
-/* Dark is the product's home, and the same ink as the desktop app. */
+/* Dark is the product's home, and the same ink as the desktop app. Both blocks below carry
+   the same values: the first follows the system, the second an explicit choice. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --color-bg: #07070b;
-    --color-panel: #101016;
-    --color-raised: #15151d;
-    --color-sunken: #1c1c26;
-    --color-line: #1c1c25;
-    --color-line-2: #2a2a36;
+    --color-chrome: #08090c;
+    --color-bg: #0d0e13;
+    --color-panel: rgb(190 190 255 / 0.04);
+    --color-raised: rgb(190 190 255 / 0.065);
+    --color-control: rgb(190 190 255 / 0.09);
+    --color-track: rgb(190 190 255 / 0.14);
+    --color-well: rgb(0 0 0 / 0.22);
+    --color-sunken: rgb(0 0 0 / 0.22);
+    --color-solid: #14151c;
+    --color-solid-2: #1b1c25;
+    --color-line: rgb(255 255 255 / 0.06);
+    --color-line-2: rgb(255 255 255 / 0.1);
+    --color-line-3: rgb(255 255 255 / 0.16);
 
-    --color-ink: #eeeef5;
-    --color-ink-2: #a3a3b8;
-    --color-ink-3: #6c6c82;
-    --color-ink-4: #474759;
+    --color-ink: #ececf3;
+    --color-ink-2: #a6a7b8;
+    --color-ink-3: #6f7085;
+    --color-ink-4: #4a4b5c;
 
     --color-brand: #7b6dff;
     --color-brand-hi: #a99fff;
-    --color-brand-soft: #1b1830;
+    --color-brand-soft: rgb(123 109 255 / 0.08);
     --color-accent: #7b6dff;
     --color-accent-fg: #ffffff;
-    --color-signal: #ffd166;
 
-    --color-win: #34d39e;
-    --color-win-soft: #0d261e;
-    --color-loss: #ff4d6a;
-    --color-loss-soft: #2b111a;
+    --color-win: #4c9bff;
+    --color-win-soft: rgb(76 155 255 / 0.06);
+    --color-loss: #ff5d6e;
+    --color-loss-soft: rgb(255 93 110 / 0.06);
+    --color-blue: #4c9bff;
+    --color-red: #ff5d6e;
 
-    --color-blue: #4d8dff;
-    --color-blue-soft: #111c33;
-    --color-red: #ff6a4d;
-    --color-red-soft: #2b1510;
+    --color-gold: #e2b25a;
+    --color-signal: #e2b25a;
 
-    --color-gold: #e8b04f;
-    --color-gold-bright: #efc98a;
+    --color-tier-iron: #8a7f7a;
+    --color-tier-bronze: #b0714d;
+    --color-tier-silver: #9fb1bd;
+    --color-tier-gold: #e1b75a;
+    --color-tier-platinum: #4fb8a8;
+    --color-tier-emerald: #2ec27e;
+    --color-tier-diamond: #6f8cff;
+    --color-tier-master: #b36bff;
+    --color-tier-grandmaster: #ff5d6c;
+    --color-tier-challenger: #f4d27a;
 
     --color-s1: #d4d4e0;
-    --color-s2: #4d8dff;
-    --color-s3: #e8b04f;
+    --color-s2: #8b8ca0;
+    --color-s3: #55566a;
 
     --map-tone: saturate(0.34) brightness(0.46) contrast(1.16);
 
     --shadow-e1: 0 1px 2px rgb(0 0 0 / 0.5);
-    --shadow-e2: 0 18px 48px -16px rgb(0 0 0 / 0.75);
+    --shadow-e2: 0 16px 40px -12px rgb(0 0 0 / 0.7);
+
+    --hi: inset 0 1px 0 rgb(255 255 255 / 0.05);
+    --backdrop:
+      radial-gradient(1100px 620px at 78% -12%, rgb(123 109 255 / 0.07), transparent 70%),
+      radial-gradient(900px 600px at -8% 112%, rgb(76 155 255 / 0.045), transparent 70%),
+      var(--color-bg);
+    --focus: 0 0 0 2px rgb(123 109 255 / 0.55);
+    --brand-rgb: 123 109 255;
+    --win-rgb: 76 155 255;
+    --loss-rgb: 255 93 110;
+    --perf-elite: 255 207 102;
+    --perf-great: 238 216 162;
+    --perf-good: 232 233 243;
+    --perf-fair: 150 151 170;
+    --perf-poor: 240 140 92;
+    --perf-elite-fill: 255 196 80;
+    --perf-great-fill: 238 216 162;
+    --perf-cap: rgb(0 0 0 / 0.26);
+    --perf-cap-ring: rgb(255 255 255 / 0.06);
+    --perf-track: rgb(255 255 255 / 0.08);
 
     color-scheme: dark;
   }
 }
 
-/* An explicit choice wins over the system preference, so this sits after. */
-:root[data-theme='dark'] {
-  --color-bg: #07070b;
-  --color-panel: #101016;
-  --color-raised: #15151d;
-  --color-sunken: #1c1c26;
-  --color-line: #1c1c25;
-  --color-line-2: #2a2a36;
+/* .theme-dark: a piece of the desktop app shown on the page (it only has the dark theme). */
+:root[data-theme='dark'],
+.theme-dark {
+  --color-chrome: #08090c;
+  --color-bg: #0d0e13;
+  --color-panel: rgb(190 190 255 / 0.04);
+  --color-raised: rgb(190 190 255 / 0.065);
+  --color-control: rgb(190 190 255 / 0.09);
+  --color-track: rgb(190 190 255 / 0.14);
+  --color-well: rgb(0 0 0 / 0.22);
+  --color-sunken: rgb(0 0 0 / 0.22);
+  --color-solid: #14151c;
+  --color-solid-2: #1b1c25;
+  --color-line: rgb(255 255 255 / 0.06);
+  --color-line-2: rgb(255 255 255 / 0.1);
+  --color-line-3: rgb(255 255 255 / 0.16);
 
-  --color-ink: #eeeef5;
-  --color-ink-2: #a3a3b8;
-  --color-ink-3: #6c6c82;
-  --color-ink-4: #474759;
+  --color-ink: #ececf3;
+  --color-ink-2: #a6a7b8;
+  --color-ink-3: #6f7085;
+  --color-ink-4: #4a4b5c;
 
   --color-brand: #7b6dff;
   --color-brand-hi: #a99fff;
-  --color-brand-soft: #1b1830;
+  --color-brand-soft: rgb(123 109 255 / 0.08);
   --color-accent: #7b6dff;
   --color-accent-fg: #ffffff;
-  --color-signal: #ffd166;
 
-  --color-win: #34d39e;
-  --color-win-soft: #0d261e;
-  --color-loss: #ff4d6a;
-  --color-loss-soft: #2b111a;
+  --color-win: #4c9bff;
+  --color-win-soft: rgb(76 155 255 / 0.06);
+  --color-loss: #ff5d6e;
+  --color-loss-soft: rgb(255 93 110 / 0.06);
+  --color-blue: #4c9bff;
+  --color-red: #ff5d6e;
 
-  --color-blue: #4d8dff;
-  --color-blue-soft: #111c33;
-  --color-red: #ff6a4d;
-  --color-red-soft: #2b1510;
+  --color-gold: #e2b25a;
+  --color-signal: #e2b25a;
 
-  --color-gold: #e8b04f;
-  --color-gold-bright: #efc98a;
+  --color-tier-iron: #8a7f7a;
+  --color-tier-bronze: #b0714d;
+  --color-tier-silver: #9fb1bd;
+  --color-tier-gold: #e1b75a;
+  --color-tier-platinum: #4fb8a8;
+  --color-tier-emerald: #2ec27e;
+  --color-tier-diamond: #6f8cff;
+  --color-tier-master: #b36bff;
+  --color-tier-grandmaster: #ff5d6c;
+  --color-tier-challenger: #f4d27a;
 
   --color-s1: #d4d4e0;
-  --color-s2: #4d8dff;
-  --color-s3: #e8b04f;
+  --color-s2: #8b8ca0;
+  --color-s3: #55566a;
 
   --map-tone: saturate(0.34) brightness(0.46) contrast(1.16);
 
   --shadow-e1: 0 1px 2px rgb(0 0 0 / 0.5);
-  --shadow-e2: 0 18px 48px -16px rgb(0 0 0 / 0.75);
+  --shadow-e2: 0 16px 40px -12px rgb(0 0 0 / 0.7);
+
+  --hi: inset 0 1px 0 rgb(255 255 255 / 0.05);
+  --backdrop:
+    radial-gradient(1100px 620px at 78% -12%, rgb(123 109 255 / 0.07), transparent 70%),
+    radial-gradient(900px 600px at -8% 112%, rgb(76 155 255 / 0.045), transparent 70%),
+    var(--color-bg);
+  --focus: 0 0 0 2px rgb(123 109 255 / 0.55);
+  --brand-rgb: 123 109 255;
+  --win-rgb: 76 155 255;
+  --loss-rgb: 255 93 110;
+  --perf-elite: 255 207 102;
+  --perf-great: 238 216 162;
+  --perf-good: 232 233 243;
+  --perf-fair: 150 151 170;
+  --perf-poor: 240 140 92;
+  --perf-elite-fill: 255 196 80;
+  --perf-great-fill: 238 216 162;
+  --perf-cap: rgb(0 0 0 / 0.26);
+  --perf-cap-ring: rgb(255 255 255 / 0.06);
+  --perf-track: rgb(255 255 255 / 0.08);
 
   color-scheme: dark;
 }
@@ -218,15 +324,18 @@
     background: var(--color-bg);
   }
 
+  /* The backdrop sits behind the content only, never repeated per panel. */
   body {
     min-height: 100%;
-    background: var(--color-bg);
+    background: var(--backdrop);
+    background-attachment: fixed;
     color: var(--color-ink);
     font-family: var(--font-sans);
-    font-size: 13px;
-    line-height: 1.45;
+    font-size: 14px;
+    line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-variant-numeric: tabular-nums;
   }
 
   /* Every number in the app lines up in a column. */
@@ -256,13 +365,12 @@
   }
 
   :is(button, a, input, select, [tabindex]):focus-visible {
-    outline: 2px solid var(--color-brand);
-    outline-offset: 2px;
-    border-radius: 2px;
+    outline: none;
+    box-shadow: var(--focus);
   }
 
   ::selection {
-    background: color-mix(in srgb, var(--color-brand) 30%, transparent);
+    background: rgb(var(--brand-rgb) / 0.28);
     color: var(--color-ink);
   }
 

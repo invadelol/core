@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { CornerDownLeft, Search } from 'lucide-vue-next'
-import { profileIcon } from '../lib/assets.js'
+import { profileIcon, regionLabel } from '../lib/assets.js'
 
 const props = withDefaults(
   defineProps<{
@@ -17,6 +17,17 @@ interface Result {
   gameName: string
   tagLine: string
   profileIconId: number | null
+  platform?: string
+  summonerLevel?: number | null
+}
+
+interface Entry {
+  gameName: string
+  tagLine: string
+  direct: boolean
+  icon?: number | null
+  region?: string
+  level?: number | null
 }
 
 const query = ref('')
@@ -58,12 +69,18 @@ const typedTarget = computed(() => {
 
 /** Flat list of everything selectable, so arrow keys have one index space. */
 const entries = computed(() => {
-  const list: Array<{ gameName: string; tagLine: string; direct: boolean; icon?: number | null }> =
-    []
+  const list: Entry[] = []
   if (typedTarget.value) list.push({ ...typedTarget.value, direct: true })
   for (const r of results.value) {
     if (typedTarget.value && r.gameName === typedTarget.value.gameName) continue
-    list.push({ gameName: r.gameName, tagLine: r.tagLine, direct: false, icon: r.profileIconId })
+    list.push({
+      gameName: r.gameName,
+      tagLine: r.tagLine,
+      direct: false,
+      icon: r.profileIconId,
+      region: regionLabel(r.platform),
+      level: r.summonerLevel,
+    })
   }
   return list
 })
@@ -181,6 +198,11 @@ function handleBlur() {
   setTimeout(() => (isOpen.value = false), 150)
 }
 
+/** Icons fade in once they have loaded, so a slow one never shows as an empty square. */
+function shown(event: Event) {
+  ;(event.target as HTMLImageElement).dataset.loaded = 'true'
+}
+
 function submit() {
   const entry = entries.value[activeIndex.value]
   if (entry) go(entry)
@@ -188,11 +210,11 @@ function submit() {
 </script>
 
 <template>
-  <div class="relative w-full">
-    <div class="relative" :class="{ 'facet [--facet-line:var(--color-line-2)]': props.size === 'lg' }">
+  <div class="search relative w-full" :class="`search-${props.size}`">
+    <div class="relative">
       <Search
         class="pointer-events-none absolute top-1/2 z-10 -translate-y-1/2 text-ink-3"
-        :class="props.size === 'lg' ? 'left-4 h-[19px] w-[19px]' : 'left-3 h-4 w-4'"
+        :class="props.size === 'lg' ? 'left-4 h-[18px] w-[18px]' : 'left-2.5 h-[15px] w-[15px]'"
       />
       <input
         ref="input"
@@ -201,15 +223,8 @@ function submit() {
         spellcheck="false"
         autocomplete="off"
         :autofocus="props.autofocus"
-        :placeholder="
-          props.size === 'lg' ? 'Search any Riot ID, e.g. Faker#KR1' : 'Search a player'
-        "
-        class="field"
-        :class="
-          props.size === 'lg'
-            ? '!rounded-sm !border-line-2 !bg-panel !py-4 !pl-12 !pr-14 !text-[16px]'
-            : '!py-[7px] !pl-9 !pr-12 !text-[12.5px]'
-        "
+        :placeholder="props.size === 'lg' ? 'Search a Riot ID, e.g. Faker#KR1' : 'Search a player'"
+        class="field search-input"
         @focus="isOpen = entries.length > 0"
         @blur="handleBlur"
         @keydown.down.prevent="move(1)"
@@ -220,25 +235,23 @@ function submit() {
 
       <span
         v-if="isLoading"
-        class="absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin rounded-full border-2 border-line-2 border-t-accent"
+        class="absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin rounded-full border-2 border-line-2 border-t-ink-2"
       />
       <kbd
         v-else-if="!query"
-        class="pointer-events-none absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-[4px] border border-line-2 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-ink-3 sm:block"
+        class="pointer-events-none absolute right-2.5 top-1/2 hidden h-[20px] -translate-y-1/2 items-center rounded-[4px] bg-control px-1.5 font-sans text-[11px] font-medium text-ink-3 sm:flex"
       >
         ⌘K
       </kbd>
     </div>
 
-    <ul
-      v-if="showDropdown"
-      class="menu absolute z-50 mt-2 w-full py-1"
-      :class="props.size === 'lg' ? 'text-[13.5px]' : 'text-[12.5px]'"
-    >
+    <ul v-if="showDropdown" class="menu absolute z-50 mt-1.5 w-full p-1" role="listbox">
       <li
         v-for="(entry, index) in entries"
         :key="`${entry.gameName}-${entry.tagLine}-${index}`"
-        class="menu-item cursor-pointer"
+        class="menu-item cursor-pointer !min-h-[40px]"
+        role="option"
+        :aria-selected="index === activeIndex"
         :data-active="index === activeIndex"
         @mouseenter="highlight(index, entry)"
         @mousedown.prevent="go(entry)"
@@ -247,26 +260,61 @@ function submit() {
           v-if="!entry.direct"
           :src="profileIcon(entry.icon)"
           alt=""
-          width="26"
-          height="26"
-          loading="lazy"
+          width="28"
+          height="28"
           decoding="async"
-          class="thumb h-[26px] w-[26px] rounded-sm"
+          class="result-icon h-7 w-7 shrink-0 rounded-[5px] object-cover"
+          @load="shown"
         />
-        <span
-          v-else
-          class="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-sm bg-sunken text-ink-2"
-        >
-          <Search class="h-3.5 w-3.5" />
+        <span v-else class="grid h-7 w-7 shrink-0 place-items-center text-ink-3">
+          <CornerDownLeft :size="15" />
         </span>
 
         <span class="min-w-0 flex-1 truncate">
+          <span v-if="entry.direct" class="text-ink-3">Go to </span>
           <span class="font-medium text-ink">{{ entry.gameName }}</span>
           <span class="text-ink-3">#{{ entry.tagLine }}</span>
         </span>
 
-        <CornerDownLeft v-if="index === activeIndex" :size="13" class="shrink-0 text-ink-4" />
+        <span v-if="!entry.direct" class="num shrink-0 text-[12px] text-ink-3">
+          {{ entry.region }}<template v-if="entry.level"> · Lv {{ entry.level }}</template>
+        </span>
       </li>
     </ul>
   </div>
 </template>
+
+<style scoped>
+.search-sm .search-input {
+  padding-left: 32px;
+  padding-right: 44px;
+}
+
+/* The home search is the page's subject: taller, and set a size up. */
+.search-lg .search-input {
+  height: 52px;
+  padding-left: 46px;
+  padding-right: 56px;
+  font-size: 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-panel);
+  box-shadow: var(--hi);
+}
+
+.search-lg .search-input:focus {
+  box-shadow: var(--hi), var(--focus);
+}
+
+.search-lg kbd {
+  right: 14px;
+}
+
+.result-icon {
+  opacity: 0;
+  transition: opacity var(--t-base) var(--ease);
+}
+
+.result-icon[data-loaded='true'] {
+  opacity: 1;
+}
+</style>

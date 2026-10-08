@@ -86,15 +86,13 @@ const totals = computed(() => {
   }
 })
 
-/** Four steps of one neutral, so intensity reads as intensity. */
-
 /* The player's own activity: the brand violet, from empty to full. */
 const SHADES = [
-  'var(--color-sunken)',
-  'color-mix(in srgb, var(--color-brand) 30%, var(--color-sunken))',
-  'color-mix(in srgb, var(--color-brand) 55%, var(--color-sunken))',
-  'color-mix(in srgb, var(--color-brand) 80%, var(--color-sunken))',
-  'var(--color-brand-hi)',
+  'var(--color-control)',
+  'rgb(var(--brand-rgb) / 0.3)',
+  'rgb(var(--brand-rgb) / 0.5)',
+  'rgb(var(--brand-rgb) / 0.75)',
+  'var(--color-brand)',
 ]
 
 function tooltip(cell: Cell) {
@@ -113,15 +111,13 @@ function tooltip(cell: Cell) {
   <section class="card">
     <div class="section">
       <h3>Activity</h3>
-      <span class="meta">last {{ WEEKS }} weeks</span>
+      <span class="meta">Last {{ WEEKS }} weeks</span>
       <span v-if="activity.length" class="num meta ml-auto">
-        {{ totals.games }} games
-        <span class="text-ink-4">·</span>
-        <span :class="totals.winrate >= 50 ? 'text-win' : 'text-loss'">{{ totals.winrate }}%</span>
+        {{ totals.games }} games <span class="text-ink-4">·</span> {{ totals.winrate }}%
       </span>
     </div>
 
-    <p v-if="!activity.length" class="text-[12px] text-ink-3">No recorded activity.</p>
+    <p v-if="!activity.length" class="text-[13px] text-ink-2">No games recorded yet.</p>
 
     <div v-else>
       <div class="scroll-x pb-1">
@@ -130,14 +126,14 @@ function tooltip(cell: Cell) {
             <span
               v-for="(label, index) in DAY_LABELS"
               :key="index"
-              class="h-[10px] text-[9px] leading-[10px] text-ink-4"
+              class="h-[10px] text-[10px] leading-[10px] text-ink-4"
             >
               {{ label }}
             </span>
           </div>
 
           <div v-for="(column, index) in weeks" :key="index" class="flex flex-1 flex-col gap-[3px]">
-            <span class="h-[10px] text-[9px] leading-[10px] text-ink-4">{{ column.month }}</span>
+            <span class="h-[10px] text-[10px] leading-[10px] text-ink-4">{{ column.month }}</span>
             <template v-for="(cell, dayIndex) in column.days" :key="dayIndex">
               <span
                 v-if="cell"
@@ -151,7 +147,7 @@ function tooltip(cell: Cell) {
         </div>
       </div>
 
-      <div class="mt-2 flex items-center justify-between text-[10.5px] text-ink-3">
+      <div class="mt-2.5 flex items-center justify-between text-[12px] text-ink-3">
         <span class="num">{{ totals.perActiveDay }} games per active day</span>
         <span class="flex items-center gap-1.5">
           <span

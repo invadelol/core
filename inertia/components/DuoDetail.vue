@@ -73,20 +73,22 @@ const splits = computed(() =>
       >
         <template v-if="duo.apartGames">
           <span />
-          <span class="label !text-[9.5px] text-right">With</span>
-          <span class="label !text-[9.5px] text-right">Without</span>
+          <span class="label text-right">With</span>
+          <span class="label text-right">Without</span>
         </template>
 
         <template v-for="split in splits" :key="split.key">
           <span class="truncate text-ink-2">{{ split.label }}</span>
-          <span class="stat text-right text-[14px]" :class="split.tone">{{ split.here }}</span>
+          <span class="text-right text-[13px] font-semibold" :class="split.tone">{{
+            split.here
+          }}</span>
           <span v-if="duo.apartGames" class="text-right text-ink-3">{{ split.there }}</span>
         </template>
       </div>
     </section>
 
     <!-- What the pairing was made of -->
-    <section class="min-w-0 border-l border-line-2 pl-7">
+    <section class="min-w-0 border-l border-line pl-7">
       <div v-if="duo.roles.length" class="label mb-3">Lanes</div>
       <ul v-if="duo.roles.length" class="space-y-2.5">
         <li v-for="row in duo.roles" :key="row.label" class="flex items-center gap-2">
@@ -95,7 +97,7 @@ const splits = computed(() =>
             <RoleIcon :role="row.theirRole" :size="13" />
           </span>
           <span class="min-w-0 flex-1 truncate text-ink-2">{{ row.label }}</span>
-          <span class="num shrink-0 text-[11.5px] text-ink-3">
+          <span class="num shrink-0 text-[12px] text-ink-3">
             {{ row.wins }}W {{ row.games - row.wins }}L
           </span>
         </li>
@@ -126,7 +128,7 @@ const splits = computed(() =>
               <span class="text-ink-4">+</span>
               {{ championName(pick.theirs) }}
             </span>
-            <span class="num shrink-0 text-[11.5px] text-ink-3">
+            <span class="num shrink-0 text-[12px] text-ink-3">
               {{ pick.wins }}W {{ pick.games - pick.wins }}L
             </span>
           </div>
@@ -135,10 +137,10 @@ const splits = computed(() =>
     </section>
 
     <!-- The games themselves -->
-    <section class="min-w-0 border-l border-line-2 pl-7">
+    <section class="min-w-0 border-l border-line pl-7">
       <div class="label mb-3 flex items-baseline gap-2">
         <span>Games together</span>
-        <span class="num !tracking-normal text-ink-4">
+        <span class="num text-ink-4">
           {{
             games.length < duo.games.length
               ? `${games.length} of ${duo.games.length}`
@@ -154,12 +156,11 @@ const splits = computed(() =>
           class="flex items-center gap-2"
           :title="`${queueName(game.queueId)} · ${duration(game.duration)}`"
         >
-          <span
-            class="display w-[10px] shrink-0 text-[12px]"
-            :class="game.win ? 'text-win' : 'text-loss'"
-          >
-            {{ game.win ? 'W' : 'L' }}
-          </span>
+          <i
+            class="h-2 w-2 shrink-0 rounded-[2px]"
+            :style="{ background: game.win ? 'var(--color-win)' : 'var(--color-loss)' }"
+            :title="game.win ? 'Win' : 'Loss'"
+          />
 
           <span class="flex shrink-0 items-center gap-1">
             <img
@@ -181,12 +182,11 @@ const splits = computed(() =>
             <RoleIcon :role="game.theirRole" :size="11" class="text-ink-4" />
           </span>
 
-          <span class="stat ml-auto shrink-0 text-[13px] text-ink">
-            {{ game.kills }}<span class="text-ink-4">/</span
-            ><span class="text-loss">{{ game.deaths }}</span
-            ><span class="text-ink-4">/</span>{{ game.assists }}
+          <span class="num ml-auto shrink-0 text-[12.5px] font-semibold text-ink">
+            {{ game.kills }}<span class="mx-[2px] font-normal text-ink-4">/</span>{{ game.deaths
+            }}<span class="mx-[2px] font-normal text-ink-4">/</span>{{ game.assists }}
           </span>
-          <span class="num w-[52px] shrink-0 whitespace-nowrap text-right text-ink-4">
+          <span class="num w-[52px] shrink-0 whitespace-nowrap text-right text-ink-3">
             {{ shortDate(game.gameStartMs) }}
           </span>
         </li>

@@ -1,37 +1,51 @@
 /* ──────────────────────────────────────────────────────────────
-   Primitives
+   Primitives (DIRECTION.md §4–§7)
 
    Only the shapes that repeat. Anything used once lives in the
-   component that uses it.
+   component that uses it. Geometry stays plain: no cut corners, no
+   slanted marks, no outlines on every side.
    ────────────────────────────────────────────────────────────── */
 @layer components {
   /* ── Type ───────────────────────────────────────────────────── */
 
-  /* Headings and hero figures: the same family, pulled a little narrow. */
+  /* Titles: the one family at normal width, set a little tight. */
   .display {
-    font-stretch: 78%;
-    font-weight: 760;
-    letter-spacing: -0.01em;
-    line-height: 1;
+    font-weight: 600;
+    letter-spacing: -0.012em;
+    line-height: 1.15;
   }
 
-  /* A figure that is meant to be read first. */
-  .stat {
-    font-stretch: 80%;
-    font-weight: 720;
-    letter-spacing: -0.005em;
+  /* A large figure (20px and up): heavier than its label, slightly tightened. */
+  .fig {
+    font-stretch: var(--fig);
+    font-weight: 700;
+    letter-spacing: -0.01em;
     line-height: 1;
     font-variant-numeric: tabular-nums;
   }
 
+  /* A figure inside a row or a table. */
+  .stat {
+    font-weight: 600;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Labels are sentence case, small and quiet. */
   .label {
-    font-size: 10.5px;
-    font-stretch: 85%;
-    font-weight: 650;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
     color: var(--color-ink-3);
     white-space: nowrap;
+  }
+
+  /* Units after a figure: one step smaller, quieter. */
+  .unit {
+    margin-left: 3px;
+    font-size: 0.82em;
+    font-weight: 500;
+    color: var(--color-ink-3);
   }
 
   /* ── Section headings ───────────────────────────────────────── */
@@ -39,119 +53,120 @@
     display: flex;
     align-items: baseline;
     gap: 10px;
-    margin-bottom: 12px;
+    min-height: 32px;
+    margin-bottom: 8px;
   }
 
   .section > h2,
   .section > h3 {
-    font-size: 15px;
-    font-stretch: 86%;
-    font-weight: 720;
-    line-height: 1;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 20px;
+    letter-spacing: -0.005em;
     color: var(--color-ink);
     white-space: nowrap;
   }
 
   .section > h3 {
-    font-size: 13.5px;
+    font-size: 14px;
   }
 
-  .section > .meta {
-    font-size: 11.5px;
+  .section > .meta,
+  .meta {
+    font-size: 12px;
+    font-weight: 500;
     color: var(--color-ink-3);
   }
 
-  /* ── Cards ──────────────────────────────────────────────────── */
+  /* ── Panels ─────────────────────────────────────────────────── */
 
-  /* A plate sitting on the stage: one topic each. Plates do not nest:
-     inside one, structure comes from rules and spacing. */
+  /* One topic each, lit from above. Panels do not nest: inside one,
+     structure comes from spacing, rules and type. */
   .card,
   .frame {
-    border: 1px solid var(--color-line);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
     background: var(--color-panel);
+    box-shadow: var(--hi);
     overflow: hidden;
   }
 
   .card-pad {
-    padding: 14px 16px 16px;
+    padding: 16px;
   }
 
-  /* A card's own heading row, used when the card is the section. */
+  /* A panel's own header line, used when the panel is the section. */
   .card > .section {
     margin: 0;
-    padding: 13px 16px 11px;
-    border-bottom: 1px solid var(--color-line);
+    padding: 12px 16px 0;
   }
 
   .card > .section + * {
-    padding: 12px 16px 16px;
+    padding: 8px 16px 16px;
   }
 
-  /* ── Meters ─────────────────────────────────────────────────── */
+  /* ── Bars ───────────────────────────────────────────────────── */
   .meter {
     position: relative;
-    height: 3px;
-    border-radius: 0;
-    background: var(--color-sunken);
+    height: 4px;
+    border-radius: 2px;
+    background: var(--color-control);
     overflow: hidden;
   }
 
   .meter > span {
     position: absolute;
     inset: 0 auto 0 0;
-    border-radius: 0;
-    background: var(--color-ink-2);
-    transition: width 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+    border-radius: 2px;
+    background: var(--color-ink-3);
+    transition: width var(--t-slow) var(--ease);
   }
 
-  /* ── Segmented control ──────────────────────────────────────── */
+  /* ── Segmented control: filters (queue, role, sort) ─────────── */
   .seg {
     display: inline-flex;
     align-items: stretch;
     gap: 2px;
     padding: 2px;
-    border: 1px solid var(--color-line);
-    border-radius: var(--radius-sm);
+    border-radius: 7px;
     background: var(--color-panel);
+    box-shadow: var(--hi);
   }
 
   .seg > button {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 4px 10px;
-    border-radius: var(--radius-xs);
-    font-size: 12px;
-    font-stretch: 88%;
-    font-weight: 620;
+    justify-content: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    font-weight: 500;
     color: var(--color-ink-3);
     white-space: nowrap;
     transition:
-      color 0.12s ease,
-      background 0.12s ease;
+      color var(--t-fast) var(--ease),
+      background-color var(--t-fast) var(--ease);
   }
 
   .seg > button:hover {
     color: var(--color-ink);
-    background: var(--color-raised);
   }
 
-  /* The chosen segment is lifted and carries a violet base edge. */
   .seg > button[data-active='true'],
   .seg > button[data-active='true']:hover {
-    background: var(--color-sunken);
+    background: var(--color-track);
     color: var(--color-ink);
-    box-shadow: inset 0 -2px 0 var(--color-brand);
   }
 
-  /* ── Tabs ───────────────────────────────────────────────────── */
+  /* ── Tabs: switching views inside a page ────────────────────── */
   .tabs {
     display: flex;
     align-items: stretch;
-    gap: 26px;
+    gap: 24px;
     overflow-x: auto;
     scrollbar-width: none;
+    box-shadow: inset 0 -1px 0 var(--color-line);
   }
 
   .tabs::-webkit-scrollbar {
@@ -159,49 +174,37 @@
   }
 
   .tabs > a,
-  .tabs > button {
+  .tabs > button,
+  .tabs-link {
     position: relative;
     display: inline-flex;
     align-items: center;
-    gap: 7px;
-    padding: 0 0 12px;
-    font-size: 13.5px;
-    font-weight: 550;
-    white-space: nowrap;
-    color: var(--color-ink-3);
-    transition: color 0.12s ease;
-  }
-
-  .tabs > :is(a, button):hover {
-    color: var(--color-ink);
-  }
-
-  .tabs > :is(a, button)[data-active='true'] {
-    color: var(--color-ink);
-    font-weight: 650;
-  }
-
-  .tabs > :is(a, button)[data-active='true']::after {
-    content: '';
-    position: absolute;
-    inset: auto 0 -1px;
-    height: 2px;
-    background: var(--color-brand);
-  }
-
-  /* An in-page anchor styled like a tab, for long analysis pages. */
-  .tabs-link {
-    position: relative;
-    padding: 0 0 11px;
+    gap: 6px;
+    height: 40px;
     font-size: 13px;
-    font-weight: 550;
-    color: var(--color-ink-3);
+    font-weight: 500;
     white-space: nowrap;
-    transition: color 0.12s ease;
+    color: var(--color-ink-3);
+    transition: color var(--t-fast) var(--ease);
   }
 
+  .tabs > :is(a, button):hover,
   .tabs-link:hover {
     color: var(--color-ink);
+  }
+
+  .tabs > :is(a, button)[data-active='true'],
+  .tabs-link[data-active='true'] {
+    color: var(--color-ink);
+  }
+
+  .tabs > :is(a, button)[data-active='true']::after,
+  .tabs-link[data-active='true']::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    height: 2px;
+    background: var(--color-brand);
   }
 
   /* ── Buttons ────────────────────────────────────────────────── */
@@ -210,46 +213,45 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    padding: 6px 12px;
+    height: 30px;
+    padding: 0 12px;
     font-size: 12.5px;
-    font-stretch: 88%;
-    font-weight: 640;
+    font-weight: 600;
+    line-height: 1;
     border-radius: var(--radius-sm);
-    border: 1px solid var(--color-line-2);
-    background: var(--color-raised);
+    background: var(--color-control);
     color: var(--color-ink);
     white-space: nowrap;
     transition:
-      background var(--t-fast) ease,
-      border-color var(--t-fast) ease,
-      filter var(--t-fast) ease;
+      background-color var(--t-fast) var(--ease),
+      color var(--t-fast) var(--ease),
+      filter var(--t-fast) var(--ease);
   }
 
   .btn:hover:not(:disabled) {
-    background: var(--color-sunken);
-    border-color: color-mix(in srgb, var(--color-ink) 22%, transparent);
+    background: var(--color-track);
+  }
+
+  .btn:active:not(:disabled) {
+    translate: 0 1px;
   }
 
   .btn:disabled {
     opacity: 0.5;
   }
 
-  /* Primary: solid glyph violet with the chamfer. One per view. */
+  /* One per view at most. */
   .btn-primary {
     background: var(--color-accent);
-    border-color: transparent;
     color: var(--color-accent-fg);
-    clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
   }
 
   .btn-primary:hover:not(:disabled) {
     background: var(--color-accent);
-    border-color: transparent;
     filter: brightness(1.1);
   }
 
   .btn-ghost {
-    border-color: transparent;
     background: transparent;
     color: var(--color-ink-2);
   }
@@ -260,9 +262,16 @@
   }
 
   .btn-sm {
-    padding: 5px 9px;
+    height: 26px;
+    padding: 0 9px;
     font-size: 12px;
     gap: 5px;
+  }
+
+  .btn-lg {
+    height: 36px;
+    padding: 0 16px;
+    font-size: 13.5px;
   }
 
   .icon-btn {
@@ -274,8 +283,8 @@
     border-radius: var(--radius-sm);
     color: var(--color-ink-3);
     transition:
-      background 0.12s ease,
-      color 0.12s ease;
+      background-color var(--t-fast) var(--ease),
+      color var(--t-fast) var(--ease);
   }
 
   .icon-btn:hover {
@@ -286,34 +295,31 @@
   /* ── Inputs ─────────────────────────────────────────────────── */
   .field {
     width: 100%;
-    padding: 6px 10px;
-    font-size: 12.5px;
+    height: 32px;
+    padding: 0 10px;
+    font-size: 13px;
     color: var(--color-ink);
-    background: var(--color-sunken);
-    border: 1px solid transparent;
-    border-radius: var(--radius-md);
+    background: var(--color-control);
+    border: 0;
+    border-radius: var(--radius-sm);
     transition:
-      border-color 0.12s ease,
-      background 0.12s ease;
+      box-shadow var(--t-fast) var(--ease),
+      background-color var(--t-fast) var(--ease);
   }
 
   .field::placeholder {
     color: var(--color-ink-3);
   }
 
-  .field:hover {
-    border-color: var(--color-line-2);
-  }
-
-  .field:focus {
+  .field:focus,
+  .field:focus-visible {
     outline: none;
-    border-color: color-mix(in srgb, var(--color-brand) 70%, transparent);
-    background: var(--color-panel);
+    box-shadow: var(--focus);
   }
 
-  /* ── Popovers ───────────────────────────────────────────────── */
+  /* ── Popovers, menus, tooltips: opaque, the only things that cast a shadow ── */
   .menu {
-    background: var(--color-panel);
+    background: var(--color-solid);
     border: 1px solid var(--color-line-2);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-e2);
@@ -323,34 +329,52 @@
   .menu-item {
     display: flex;
     align-items: center;
-    gap: 9px;
+    gap: 10px;
     width: 100%;
-    padding: 7px 11px;
-    font-size: 12.5px;
+    min-height: 32px;
+    padding: 5px 10px;
+    font-size: 13px;
     color: var(--color-ink-2);
     text-align: left;
+    border-radius: var(--radius-sm);
     transition:
-      background 0.1s ease,
-      color 0.1s ease;
+      background-color var(--t-fast) var(--ease),
+      color var(--t-fast) var(--ease);
   }
 
   .menu-item:hover,
   .menu-item[data-active='true'] {
-    background: var(--color-raised);
+    background: var(--color-control);
     color: var(--color-ink);
   }
 
   /* ── Game art ───────────────────────────────────────────────── */
   .thumb {
-    background: var(--color-sunken);
+    background: var(--color-well);
     object-fit: cover;
     flex-shrink: 0;
+  }
+
+  /* Champion portraits: Riot bakes a thin border into the square; a slight crop drops it. */
+  .portrait {
+    display: block;
+    overflow: hidden;
+    flex-shrink: 0;
+    border-radius: var(--radius-sm);
+    background: var(--color-well);
+  }
+
+  .portrait > img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scale(1.08);
   }
 
   /* Rune glyphs are drawn as light artwork on transparency. */
   .glyph {
     border-radius: 50%;
-    background: var(--color-sunken);
     flex-shrink: 0;
   }
 
@@ -358,47 +382,51 @@
   .lvl {
     display: grid;
     place-items: center;
-    min-width: 16px;
-    height: 16px;
+    min-width: 17px;
+    height: 15px;
     padding: 0 3px;
     border-radius: var(--radius-xs);
-    background: var(--color-bg);
-    border: 1px solid var(--color-line-2);
-    color: var(--color-ink);
-    font-size: 9.5px;
-    font-stretch: 80%;
-    font-weight: 700;
+    background: var(--color-solid);
+    color: var(--color-ink-2);
+    font-size: 10.5px;
+    font-weight: 600;
     line-height: 1;
     font-variant-numeric: tabular-nums;
   }
 
-  /* ── Tags ───────────────────────────────────────────────────── */
+  /* ── Badges: earned from data, never decoration ─────────────── */
   .tag {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 2px 6px;
+    height: 18px;
+    padding: 0 6px;
     border-radius: var(--radius-xs);
-    font-size: 9.5px;
-    font-stretch: 80%;
-    font-weight: 750;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    line-height: 1.2;
-    background: var(--color-sunken);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    background: var(--color-control);
     color: var(--color-ink-2);
     white-space: nowrap;
   }
 
-  .tag-signal {
-    background: color-mix(in srgb, var(--color-signal) 16%, transparent);
-    color: var(--color-signal);
+  /* MVP and other gold distinctions. */
+  .tag-signal,
+  .tag-gold {
+    background: color-mix(in srgb, var(--color-gold) 13%, transparent);
+    color: var(--color-gold);
+  }
+
+  /* "You". */
+  .tag-brand {
+    background: var(--color-brand-soft);
+    color: var(--color-brand-hi);
   }
 
   /* ── Data tables ────────────────────────────────────────────── */
   .dt {
     width: 100%;
-    font-size: 12.5px;
+    font-size: 13px;
     border-collapse: separate;
     border-spacing: 0;
   }
@@ -407,21 +435,20 @@
     position: sticky;
     top: 0;
     z-index: 2;
-    padding: 8px 10px;
-    font-size: 10.5px;
-    font-stretch: 82%;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    height: 32px;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 500;
     color: var(--color-ink-3);
     text-align: left;
     white-space: nowrap;
-    background: var(--color-panel);
-    border-bottom: 1px solid var(--color-line-2);
+    background: var(--color-solid);
+    border-bottom: 1px solid var(--color-line);
   }
 
   .dt td {
-    padding: 8px 10px;
+    height: 40px;
+    padding: 6px 10px;
     border-bottom: 1px solid var(--color-line);
     vertical-align: middle;
   }
@@ -434,20 +461,28 @@
     background: var(--color-raised);
   }
 
-  /* A full-width heading row inside a table, used to band two teams
-     together in one table instead of splitting them into two. */
+  /* The viewed player's row: a brand fill and a straight brand edge. */
+  .dt tr.is-self td {
+    background: rgb(var(--brand-rgb) / 0.08);
+  }
+
+  .dt tr.is-self td:first-child {
+    box-shadow: inset 2px 0 0 var(--color-brand);
+  }
+
+  /* A full-width heading row inside a table, banding two teams together. */
   .dt .band td {
-    padding: 9px 10px;
-    background: var(--color-raised);
+    height: 40px;
+    padding: 8px 10px;
+    background: transparent;
     border-bottom: 1px solid var(--color-line);
-    border-top: 1px solid var(--color-line);
   }
 
-  .dt tbody:first-of-type .band td {
-    border-top: 0;
+  .dt tbody + tbody .band td {
+    border-top: 1px solid var(--color-line-2);
   }
 
-  /* ── Skeletons ──────────────────────────────────────────────── */
+  /* ── Skeletons: the shape of what is coming ─────────────────── */
   .skel {
     background: linear-gradient(
       90deg,
@@ -456,8 +491,7 @@
       var(--color-panel) 63%
     );
     background-size: 400% 100%;
-    border: 1px solid var(--color-line);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
     animation: skel 1.4s ease-in-out infinite;
   }
 
@@ -470,103 +504,55 @@
     }
   }
 
-  /* ── Form strip: one slash per game, oldest to newest ───────── */
-  .form-strip {
+  /* ── Recent form: one square per game, oldest to newest ─────── */
+  .form {
     display: flex;
-    gap: 2px;
+    flex-wrap: wrap;
+    gap: 3px;
   }
 
-  .form-strip > i {
-    width: 5px;
-    height: 15px;
-    background: var(--color-loss);
-    transform: skewX(var(--slash));
+  .form > i {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: rgb(var(--loss-rgb) / 0.85);
   }
 
-  .form-strip > i.w {
-    background: var(--color-win);
+  .form > i.w {
+    background: rgb(var(--win-rgb) / 0.85);
   }
 
-  /* ── The chamfer: the glyph's cut corner, for identity only ── */
-  .chamfer {
-    clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
-  }
-
-  /* The same cut on a bordered element sitting on the stage: the corner is
-     painted in the stage colour and the border continues along the cut. */
-  .facet {
-    --facet: 12px;
-    position: relative;
-  }
-
-  .facet::after {
-    content: '';
-    position: absolute;
-    z-index: 2;
-    top: -1px;
-    right: -1px;
-    width: calc(var(--facet) + 1px);
-    height: calc(var(--facet) + 1px);
-    background: linear-gradient(
-      225deg,
-      var(--color-bg) calc(50% - 0.5px),
-      var(--facet-line, var(--color-line)) calc(50% - 0.5px),
-      var(--facet-line, var(--color-line)) calc(50% + 0.5px),
-      transparent calc(50% + 0.5px)
-    );
-    pointer-events: none;
-  }
-
-  /* ── The result slash, on the left edge of a row ──────────────── */
-  .slash-mark {
-    position: relative;
-  }
-
-  .slash-mark::before {
-    content: '';
-    position: absolute;
-    left: 8px;
-    top: 50%;
-    width: 4px;
-    height: 28px;
-    margin-top: -14px;
-    background: var(--mark, var(--color-ink-4));
-    transform: skewX(var(--slash));
+  .form > i.r {
+    background: var(--color-ink-4);
   }
 
   /* ── Profile rail ───────────────────────────────────────────────
      The column beside a profile is one dossier, not a stack of cards:
-     after the identity plate, each panel is a section on the stage,
+     after the identity panel, each panel is a section on the page,
      separated by a hairline. */
-  .rail > .card:not(.facet) {
-    margin-top: 22px;
+  .rail > .card:not(.identity) {
+    margin-top: 20px;
     background: transparent;
-    border: 0;
+    box-shadow: none;
     border-top: 1px solid var(--color-line);
     border-radius: 0;
     overflow: visible;
   }
 
-  .rail > .card:not(.facet) > .section {
+  .rail > .card:not(.identity) > .section {
     margin: 0;
-    padding: 18px 0 12px;
-    border-bottom: 0;
+    padding: 16px 0 6px;
   }
 
-  .rail > .card:not(.facet) > .section + * {
+  .rail > .card:not(.identity) > .section + * {
     padding: 0 0 4px;
-  }
-
-  .rail > .card:not(.facet) > ul[class*='!px-2'] {
-    margin-inline: -16px;
-    padding-top: 0 !important;
   }
 
   /* ── Scroll strips ──────────────────────────────────────────── */
   .scroll-x {
     overflow-x: auto;
     scrollbar-width: thin;
-    scrollbar-color: var(--color-line-2) transparent;
+    scrollbar-color: var(--color-track) transparent;
   }
 
   .scroll-x::-webkit-scrollbar {
@@ -578,24 +564,34 @@
   }
 
   .scroll-x::-webkit-scrollbar-thumb {
-    background: var(--color-line-2);
+    background: var(--color-track);
     border-radius: 999px;
   }
 
-  /* ── Notices ────────────────────────────────────────────────── */
+  /* ── Notices: one line, a quiet panel, the problem's colour on its mark only ── */
   .notice {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 10px 14px;
-    font-size: 12.5px;
+    min-height: 44px;
+    padding: 7px 8px 7px 14px;
+    font-size: 13px;
     border-radius: var(--radius-md);
-    border: 1px solid color-mix(in srgb, var(--color-loss) 45%, transparent);
-    background: var(--color-loss-soft);
-    color: var(--color-ink);
+    background: var(--color-panel);
+    box-shadow: var(--hi);
+    color: var(--color-ink-2);
   }
 
-  /* ── Live pulse ─────────────────────────────────────────────── */
+  .notice::before {
+    content: '';
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--color-loss);
+  }
+
+  /* ── Live dot ───────────────────────────────────────────────── */
   .pulse {
     position: relative;
     display: inline-block;
@@ -639,14 +635,14 @@
 
   .scrub::-webkit-slider-runnable-track {
     height: 4px;
-    border-radius: 1px;
-    background: var(--color-sunken);
+    border-radius: 2px;
+    background: var(--color-track);
   }
 
   .scrub::-moz-range-track {
     height: 4px;
-    border-radius: 1px;
-    background: var(--color-sunken);
+    border-radius: 2px;
+    background: var(--color-track);
   }
 
   .scrub::-webkit-slider-thumb {

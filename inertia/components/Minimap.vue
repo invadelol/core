@@ -11,8 +11,10 @@ const props = withDefaults(
     highlight?: string
     /** Riot's map id; 11 is Summoner's Rift. */
     mapId?: number
+    /** The team drawn in blue, as the game draws your allies. */
+    allyTeam?: number
   }>(),
-  { highlight: '', mapId: 11 }
+  { highlight: '', mapId: 11, allyTeam: 100 }
 )
 
 /**
@@ -42,7 +44,7 @@ watch(() => props.mapId, resolveArt)
 </script>
 
 <template>
-  <div class="relative aspect-square w-full overflow-hidden rounded-md bg-sunken">
+  <div class="relative aspect-square w-full overflow-hidden rounded-[8px] bg-well">
     <img
       v-if="art"
       :src="art"
@@ -61,24 +63,6 @@ watch(() => props.mapId, resolveArt)
       </g>
     </svg>
 
-    <!-- Which end of the map is which, readable at a glance -->
-    <div
-      class="pointer-events-none absolute inset-0"
-      style="
-        background:
-          radial-gradient(
-            circle at 0% 100%,
-            color-mix(in srgb, var(--color-blue) 42%, transparent),
-            transparent 34%
-          ),
-          radial-gradient(
-            circle at 100% 0%,
-            color-mix(in srgb, var(--color-red) 42%, transparent),
-            transparent 34%
-          );
-      "
-    />
-
     <!-- Positions, on whichever ground is showing -->
     <svg viewBox="0 0 100 100" class="absolute inset-0 h-full w-full">
       <defs>
@@ -91,7 +75,7 @@ watch(() => props.mapId, resolveArt)
           :key="`trail-${dot.puuid}`"
           :points="(trails[dot.puuid] ?? []).map((p) => `${p.x},${p.y}`).join(' ')"
           fill="none"
-          :stroke="dot.teamId === 100 ? 'var(--color-blue)' : 'var(--color-red)'"
+          :stroke="dot.teamId === allyTeam ? 'var(--color-win)' : 'var(--color-loss)'"
           stroke-width="1"
           stroke-linecap="round"
           stroke-linejoin="round"
@@ -119,7 +103,7 @@ watch(() => props.mapId, resolveArt)
           :cy="dot.y"
           r="3"
           fill="none"
-          :stroke="dot.teamId === 100 ? 'var(--color-blue)' : 'var(--color-red)'"
+          :stroke="dot.teamId === allyTeam ? 'var(--color-win)' : 'var(--color-loss)'"
           :stroke-width="dot.puuid === highlight ? 1.1 : 0.8"
         />
         <circle

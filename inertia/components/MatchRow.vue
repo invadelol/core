@@ -1,33 +1,48 @@
 <script setup lang="ts">
 import { computed, ref, shallowRef, watch } from 'vue'
 import { Link } from '@inertiajs/vue3'
-import { Check, ChevronDown, Link2 } from 'lucide-vue-next'
+import { ArrowUpRight, Check, ChevronDown, Link2 } from 'lucide-vue-next'
 import ItemRow from './ItemRow.vue'
-import RuneGlyphs from './RuneGlyphs.vue'
+import PerfPlate from './PerfPlate.vue'
 import RuneTrees from './RuneTrees.vue'
-import RoleIcon from './RoleIcon.vue'
-import ScoreRing from './ScoreRing.vue'
 import Scoreboard from './Scoreboard.vue'
 import MatchTimeline from './MatchTimeline.vue'
-import { champIcon, championName, queueName, spellIcon, POSITION_NAMES } from '../lib/assets.js'
-import { compact, duration, kda, ordinal, timeAgo } from '../lib/format.js'
 import {
+  champIcon,
+  championName,
+  queueName,
+  runeIcon,
+  runeName,
+  runeStyleIcon,
+  spellIcon,
+} from '../lib/assets.js'
+import { compact, duration, kda } from '../lib/format.js'
+import {
+  earnedBadges,
   indexTimeline,
+  isLanedMode,
+  isRemake,
   killParticipation,
+  laneOpponent,
   matchMinutes,
   rankLobby,
   runeSet,
-  teamMembers,
-  teamOrder,
   teamTotals,
 } from '../lib/match.js'
-import type { Match, Participant } from '../lib/types.js'
+import type { Match } from '../lib/types.js'
 
+/**
+ * One game in one line (DIRECTION.md §8). The result is the row's straight edge and a faint
+ * tint, nothing else; figures stay white. The whole row toggles the detail below it, and the
+ * full match page is an action inside that detail.
+ */
 const props = defineProps<{
   match: Match
   puuid: string
   summonerSlug: string
   expanded: boolean
+  /** Opens a player's breakdown in the scoreboard from outside (the /app page's demo). */
+  focus?: string
 }>()
 
 defineEmits<{ toggle: [] }>()
@@ -46,6 +61,13 @@ const detail = shallowRef<Match | null>(null)
 const loading = ref(false)
 const failed = ref(false)
 const focusPuuid = ref('')
+watch(
+  () => props.focus,
+  (puuid) => {
+    if (puuid !== undefined) focusPuuid.value = puuid
+  },
+  { immediate: true }
+)
 /** Timeline and build tabs always show somebody: the profile's player until another is picked. */
 const activePuuid = computed(() => focusPuuid.value || props.puuid)
 const copied = ref(false)
@@ -89,45 +111,40 @@ const focusPlayer = computed(() =>
   full.value.participants.find((p) => p.puuid === activePuuid.value)
 )
 
-function maxOf(participants: Participant[], read: (p: Participant) => number) {
-  let max = 1
-  for (const p of participants) {
-    const value = read(p) || 0
-    if (value > max) max = value
-  }
-  return max
-}
-
 /** Derived once: a template expression would re-run on every render. */
 const row = computed(() => {
   const match = props.match
   const me = match.participants.find((p) => p.puuid === props.puuid)
-  const totals = teamTotals(match)
+  const remake = isRemake(match)
   const lobby = rankLobby(match)
   const minutes = matchMinutes(match)
+  const opponent = me && isLanedMode(match) ? laneOpponent(match, me) : undefined
 
   return {
     me,
-    win: Boolean(me?.win),
+    remake,
+    result: remake ? 'remake' : me?.win ? 'win' : 'loss',
+    outcome: remake ? 'Remake' : me?.win ? 'Win' : 'Loss',
     queue: queueName(match.queueId),
     duration: duration(match.duration),
-    ago: timeAgo(match.gameStartMs),
     champion: championName(me?.championId ?? 0),
-    role: POSITION_NAMES[me?.position ?? ''] ?? '',
     runes: runeSet([], me),
-    ratio: kda(me?.kills ?? 0, me?.deaths ?? 0, me?.assists ?? 0).toFixed(2),
-    kp: me ? Math.round(killParticipation(me, totals)) : 0,
+    ratio:
+      me && me.deaths === 0 && me.kills + me.assists > 0
+        ? 'Perfect'
+        : kda(me?.kills ?? 0, me?.deaths ?? 0, me?.assists ?? 0).toFixed(2),
+    kp: me ? Math.round(killParticipation(me, teamTotals(match))) : 0,
     csMin: ((me?.cs ?? 0) / minutes).toFixed(1),
-    gold: compact(me?.goldEarned ?? 0),
     damage: compact(me?.totalDamageDealtToChampions ?? 0),
-    damageBar:
-      ((me?.totalDamageDealtToChampions ?? 0) /
-        maxOf(match.participants, (p) => p.totalDamageDealtToChampions)) *
-      100,
+    opponent,
     standing: lobby.rank[props.puuid] ?? 0,
     score: lobby.score[props.puuid] ?? null,
-    badge: props.puuid === lobby.mvpPuuid ? 'MVP' : props.puuid === lobby.acePuuid ? 'ACE' : null,
-    teams: teamOrder(match).map((teamId) => ({ teamId, members: teamMembers(match, teamId) })),
+    tag: (props.puuid === lobby.mvpPuuid
+      ? 'MVP'
+      : props.puuid === lobby.acePuuid
+        ? 'ACE'
+        : null) as 'MVP' | 'ACE' | null,
+    badges: remake || !me ? [] : earnedBadges(match, me).slice(0, 2),
   }
 })
 
@@ -148,186 +165,124 @@ async function copyLink() {
 </script>
 
 <template>
-  <div
-    class="match-row @container relative overflow-hidden rounded-lg border border-line bg-panel"
-    :data-result="row.win ? 'win' : 'loss'"
-  >
-    <div class="slash-mark flex items-stretch">
-      <button
-        type="button"
-        class="flex min-w-0 flex-1 items-center gap-2.5 py-3 pl-6 pr-2 text-left transition-colors hover:bg-raised sm:gap-4 sm:pl-7 sm:pr-4"
-        :aria-expanded="expanded"
-        @click="$emit('toggle')"
-      >
-        <!-- Result -->
-        <span class="w-[64px] shrink-0 sm:w-[86px]">
-          <span class="display block text-[15px]" :class="row.win ? 'text-win' : 'text-loss'">
-            {{ row.win ? 'Victory' : 'Defeat' }}
-          </span>
-          <span
-            class="mt-1 block text-[11px] font-medium leading-tight text-ink-2 [overflow-wrap:anywhere]"
-            >{{ row.queue }}</span
-          >
-          <span class="num mt-0.5 block text-[10.5px] leading-tight text-ink-3">
-            {{ row.duration }} · {{ row.ago }}
-          </span>
-        </span>
-
-        <!-- Champion -->
-        <span class="flex shrink-0 items-center gap-1.5">
-          <span class="relative">
-            <img
-              :src="champIcon(row.me?.championId ?? 0)"
-              :alt="row.champion"
-              width="46"
-              height="46"
-              loading="lazy"
-              decoding="async"
-              class="thumb h-[40px] w-[40px] rounded-md sm:h-[46px] sm:w-[46px]"
-            />
-            <span class="lvl absolute -bottom-1 -right-1">{{ row.me?.champLevel }}</span>
-          </span>
-          <span class="flex flex-col gap-[3px]">
-            <img
-              v-for="spell in (row.me?.spells ?? []).slice(0, 2)"
-              :key="spell"
-              :src="spellIcon(spell)"
-              alt=""
-              loading="lazy"
-              class="thumb h-[18px] w-[18px] rounded-[4px] sm:h-[20px] sm:w-[20px]"
-            />
-          </span>
-          <RuneGlyphs :runes="row.runes" size="xs" class="hidden xs:flex xs:flex-col" />
-        </span>
-
-        <!-- Who they played -->
-        <span class="hidden w-[92px] shrink-0 @min-[58rem]:block">
-          <span class="block truncate text-[13px] font-semibold text-ink">{{ row.champion }}</span>
-          <span class="mt-0.5 flex items-center gap-1 text-[10.5px] text-ink-3">
-            <RoleIcon v-if="row.me?.position" :role="row.me.position" :size="11" />
-            {{ row.role || '—' }}
-          </span>
-        </span>
-
-        <!-- Score line -->
-        <span class="w-[72px] shrink-0 whitespace-nowrap sm:w-[96px]">
-          <span class="num stat block text-[18px] text-ink sm:text-[21px]">
-            {{ row.me?.kills }}<span class="text-ink-4"> / </span
-            ><span class="text-loss">{{ row.me?.deaths }}</span
-            ><span class="text-ink-4"> / </span>{{ row.me?.assists }}
-          </span>
-          <span class="num mt-1 block text-[10.5px] text-ink-2">
-            <b class="font-semibold text-ink">{{ row.ratio }}</b> KDA
-            <span class="hidden text-ink-3 sm:inline">· {{ row.kp }}% KP</span>
-          </span>
-        </span>
-
-        <!-- Economy and contribution, all four numbers kept -->
-        <span class="num hidden w-[128px] shrink-0 whitespace-nowrap @min-[40rem]:block">
-          <span class="block text-[11.5px] text-ink-2">
-            <b class="font-semibold text-ink">{{ row.me?.cs }}</b> CS
-            <span class="text-ink-3">{{ row.csMin }}/m</span>
-          </span>
-          <span class="mt-0.5 block text-[10.5px] text-ink-3">
-            <span class="text-gold">{{ row.gold }}</span> gold · {{ row.me?.visionScore }} vis
-          </span>
-          <span class="mt-1.5 flex items-center gap-1.5">
-            <span class="meter w-[56px]"><span :style="{ width: `${row.damageBar}%` }" /></span>
-            <span class="text-[10px] text-ink-3">{{ row.damage }}</span>
-          </span>
-        </span>
-
-        <!-- Build -->
-        <span class="hidden shrink-0 @min-[48rem]:block">
-          <ItemRow :items="row.me?.items ?? []" size="sm" />
-        </span>
-
-        <!-- Both line-ups, winning side first -->
-        <span class="ml-auto hidden shrink-0 flex-col gap-[3px] @min-[72rem]:flex">
-          <span
-            v-for="team in row.teams"
-            :key="team.teamId"
-            class="flex gap-[2px] border-l-2 pl-1.5"
-            :style="{ borderColor: team.teamId === 100 ? 'var(--color-blue)' : 'var(--color-red)' }"
-          >
-            <img
-              v-for="member in team.members"
-              :key="member.puuid"
-              :src="champIcon(member.championId)"
-              :alt="championName(member.championId)"
-              :title="`${member.gameName} · ${championName(member.championId)}`"
-              loading="lazy"
-              decoding="async"
-              class="thumb h-[17px] w-[17px] rounded-[3px]"
-              :class="
-                member.puuid === puuid
-                  ? 'ring-1 ring-ink-2 ring-offset-1 ring-offset-panel'
-                  : 'opacity-75'
-              "
-            />
-          </span>
-        </span>
-
-        <ChevronDown
-          :size="15"
-          class="ml-auto hidden shrink-0 text-ink-4 transition-transform duration-200 sm:block @min-[72rem]:ml-1"
-          :class="expanded ? 'rotate-180' : ''"
-        />
-      </button>
-
-      <!-- The score gets its own column, so it reads as the verdict on the game -->
-      <button
-        type="button"
-        class="flex w-[54px] shrink-0 items-center justify-center gap-3 border-l border-line px-2 transition-colors hover:bg-raised sm:w-[132px] sm:justify-start sm:px-4"
-        :title="
-          row.score !== null
-            ? `Score ${row.score} · ${ordinal(row.standing)} of 10 in this lobby`
-            : 'Games under five minutes are not scored'
-        "
-        :aria-expanded="expanded"
-        @click="$emit('toggle')"
-      >
-        <template v-if="row.score !== null">
-          <ScoreRing :score="row.score" :size="44" :stroke="4" class="max-sm:hidden" />
-          <ScoreRing :score="row.score" :size="36" :stroke="3.5" class="sm:hidden" />
-          <span class="hidden min-w-0 flex-col sm:flex">
-            <span class="label">Score</span>
-            <span
-              class="num mt-1 text-[13px] font-semibold"
-              :class="row.badge === 'MVP' ? 'text-signal' : row.badge ? 'text-ink' : 'text-ink-2'"
-            >
-              {{ row.badge ?? ordinal(row.standing) }}
-            </span>
-          </span>
-        </template>
-        <template v-else>
-          <span class="tag max-sm:!hidden">Remake</span>
-          <span class="text-ink-4 sm:hidden">—</span>
-        </template>
-      </button>
-
-      <Link
-        :href="matchHref"
-        class="flex w-[36px] shrink-0 items-center justify-center border-l sm:w-[40px] border-line text-ink-3 transition-colors hover:bg-raised hover:text-ink"
-        title="Open full match analysis"
-      >
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-          <path
-            d="M6 3h7v7M13 3 4 12"
-            stroke="currentColor"
-            stroke-width="1.6"
-            stroke-linecap="round"
-            stroke-linejoin="round"
+  <div class="mrow-wrap @container" :class="{ open: expanded }">
+    <button
+      type="button"
+      class="mrow"
+      :class="row.result"
+      :aria-expanded="expanded"
+      :title="`${row.champion} · ${row.queue}`"
+      @click="$emit('toggle')"
+    >
+      <!-- Champion -->
+      <span class="mrow-champ">
+        <span class="portrait h-full w-full">
+          <img
+            :src="champIcon(row.me?.championId ?? 0)"
+            :alt="row.champion"
+            width="44"
+            height="44"
+            loading="lazy"
+            decoding="async"
           />
-        </svg>
-        <span class="sr-only">Open match</span>
-      </Link>
-    </div>
+        </span>
+        <span class="lvl absolute -bottom-1 -right-1">{{ row.me?.champLevel }}</span>
+      </span>
 
-    <!-- Expanded: the same depth the match page has, in place -->
-    <div v-if="expanded" class="relative border-t border-line bg-panel">
-      <div class="flex flex-wrap items-center gap-3 px-4 py-2.5">
-        <div class="seg">
+      <!-- Spells and runes, two by two -->
+      <span class="mrow-load">
+        <img
+          v-for="(spell, i) in (row.me?.spells ?? []).slice(0, 2)"
+          :key="`s${i}`"
+          :src="spellIcon(spell)"
+          alt=""
+          loading="lazy"
+          class="spell"
+        />
+        <img
+          v-if="row.runes.keystone"
+          :src="runeIcon(row.runes.keystone)"
+          :alt="runeName(row.runes.keystone)"
+          :title="runeName(row.runes.keystone)"
+          loading="lazy"
+          class="key"
+        />
+        <i v-else />
+        <img
+          v-if="row.runes.secondaryStyle"
+          :src="runeStyleIcon(row.runes.secondaryStyle)"
+          :alt="runeName(row.runes.secondaryStyle)"
+          :title="runeName(row.runes.secondaryStyle)"
+          loading="lazy"
+          class="sub"
+        />
+        <i v-else />
+      </span>
+
+      <!-- The game -->
+      <span class="mrow-game">
+        <b>{{ row.queue }}</b>
+        <small>
+          <span class="text-ink-2">{{ row.outcome }}</span>
+          <span class="text-ink-4"> · </span>{{ row.duration }}
+        </small>
+      </span>
+
+      <!-- KDA -->
+      <span class="mrow-kda">
+        <b> {{ row.me?.kills }}<i>/</i>{{ row.me?.deaths }}<i>/</i>{{ row.me?.assists }} </b>
+        <small>
+          {{ row.ratio }} KDA<span class="mrow-kp"> · {{ row.kp }}% KP</span>
+        </small>
+      </span>
+
+      <!-- Farm and damage -->
+      <span class="mrow-farm">
+        <b>{{ row.csMin }}<span class="unit">CS/min</span></b>
+        <small>{{ row.damage }} dmg</small>
+      </span>
+
+      <!-- Items in one well, then what the game earned -->
+      <span class="mrow-items">
+        <span class="mrow-well"><ItemRow :items="row.me?.items ?? []" size="row" /></span>
+        <span v-if="row.badges.length" class="flex gap-1">
+          <span v-for="badge in row.badges" :key="badge.key" class="tag" :title="badge.tip">
+            {{ badge.label }}
+          </span>
+        </span>
+      </span>
+
+      <!-- Lane opponent -->
+      <span class="mrow-vs">
+        <template v-if="row.opponent">
+          <small>vs</small>
+          <span class="portrait h-7 w-7" :title="championName(row.opponent.championId)">
+            <img
+              :src="champIcon(row.opponent.championId)"
+              :alt="championName(row.opponent.championId)"
+              loading="lazy"
+            />
+          </span>
+        </template>
+      </span>
+
+      <!-- Score: the row's focal point, the performance plate -->
+      <span class="mrow-score">
+        <PerfPlate
+          :score="row.score"
+          :place="row.standing"
+          :of="match.participants.length"
+          :tag="row.tag"
+        />
+      </span>
+
+      <ChevronDown :size="16" class="mrow-chev" />
+    </button>
+
+    <!-- Expanded: the same depth as the match page, in place -->
+    <div v-if="expanded" class="mrow-detail">
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4">
+        <nav class="tabs min-w-0 flex-1 !shadow-none" aria-label="Match detail">
           <button
             v-for="option in VIEWS"
             :key="option.value"
@@ -337,13 +292,16 @@ async function copyLink() {
           >
             {{ option.label }}
           </button>
-        </div>
-        <button class="btn btn-sm btn-ghost ml-auto" @click="copyLink">
+        </nav>
+        <button class="btn btn-sm btn-ghost" @click="copyLink">
           <Check v-if="copied" :size="13" />
           <Link2 v-else :size="13" />
           {{ copied ? 'Copied' : 'Copy link' }}
         </button>
-        <Link :href="matchHref" class="btn btn-sm">Open full analysis</Link>
+        <Link :href="matchHref" class="btn btn-sm">
+          Open match page
+          <ArrowUpRight :size="13" />
+        </Link>
       </div>
 
       <div class="border-t border-line">
@@ -357,40 +315,37 @@ async function copyLink() {
           @open="openPlayer"
         />
 
-        <div v-else-if="loading" class="py-12 text-center text-[12.5px] text-ink-3">
-          Loading match details
+        <div v-else-if="loading" class="px-4 py-5">
+          <div class="skel h-[220px]" />
         </div>
-        <div v-else-if="failed" class="flex items-center justify-center gap-3 py-12 text-[12.5px]">
+        <div v-else-if="failed" class="flex items-center justify-center gap-3 py-12 text-[13px]">
           <span class="text-ink-2">This match could not be loaded.</span>
-          <button class="btn btn-sm" @click="fetchDetail">Try again</button>
+          <button class="btn btn-sm" @click="fetchDetail">Retry</button>
         </div>
 
         <div v-else-if="view === 'timeline'" class="px-4 py-5">
           <MatchTimeline
             :match="full"
             :selected-puuid="activePuuid"
+            :owner-puuid="puuid"
             @select="focusPuuid = $event"
           />
         </div>
 
         <div v-else class="px-4 py-5">
-          <div class="mb-4 flex flex-wrap items-center gap-2">
+          <div class="mb-5 flex flex-wrap items-center gap-1">
             <button
               v-for="p in full.participants"
               :key="p.puuid"
               type="button"
-              class="rounded-sm border p-[3px] transition-colors"
-              :class="
-                activePuuid === p.puuid ? 'border-ink-2' : 'border-transparent hover:border-line-2'
-              "
+              class="pick"
+              :data-active="activePuuid === p.puuid"
               :title="`${p.gameName} · ${championName(p.championId)}`"
               @click="focusPuuid = p.puuid"
             >
-              <img
-                :src="champIcon(p.championId)"
-                :alt="championName(p.championId)"
-                class="thumb h-7 w-7 rounded-sm"
-              />
+              <span class="portrait h-7 w-7">
+                <img :src="champIcon(p.championId)" :alt="championName(p.championId)" />
+              </span>
             </button>
           </div>
           <div class="grid gap-8 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
@@ -410,17 +365,250 @@ async function copyLink() {
 </template>
 
 <style scoped>
-/* The outcome reads as a mark before it reads as a word: the slash on the left edge. */
-.match-row[data-result='win'] {
-  --mark: var(--color-win);
+.mrow-wrap {
+  border-radius: var(--radius-sm);
 }
 
-.match-row[data-result='loss'] {
-  --mark: var(--color-loss);
+.mrow {
+  --edge: transparent;
+  --tint: transparent;
+  position: relative;
+  display: grid;
+  grid-template-columns:
+    44px 42px minmax(96px, 1.1fr) minmax(104px, 1fr) minmax(80px, 0.8fr)
+    auto 56px 84px 16px;
+  align-items: center;
+  column-gap: 14px;
+  width: 100%;
+  height: 68px;
+  padding: 0 14px 0 16px;
+  text-align: left;
+  color: var(--color-ink);
+  background: linear-gradient(var(--tint), var(--tint)), var(--color-panel);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--hi);
+  transition: background-color var(--t-fast) var(--ease);
 }
 
-.match-row::before {
-  z-index: 1;
-  pointer-events: none;
+/* The result: a straight edge and a faint tint of the same hue. */
+.mrow::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--edge);
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+
+.mrow.win {
+  --edge: var(--color-win);
+  --tint: rgb(var(--win-rgb) / 0.06);
+}
+
+.mrow.loss {
+  --edge: var(--color-loss);
+  --tint: rgb(var(--loss-rgb) / 0.06);
+}
+
+.mrow.remake {
+  opacity: 0.6;
+}
+
+.mrow:hover,
+.open .mrow {
+  --plate-hover: 1;
+  background: linear-gradient(var(--tint), var(--tint)), var(--color-raised);
+}
+
+.open .mrow {
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.open .mrow::before {
+  border-radius: var(--radius-sm) 0 0 0;
+}
+
+.mrow img {
+  display: block;
+}
+
+.mrow-champ {
+  position: relative;
+  width: 44px;
+  height: 44px;
+}
+
+.mrow-load {
+  display: grid;
+  grid-template-columns: 20px 20px;
+  grid-template-rows: 20px 20px;
+  gap: 2px;
+  place-items: center;
+}
+
+.mrow-load img {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-xs);
+}
+
+.mrow-load img.key {
+  border-radius: 0;
+}
+
+.mrow-load img.sub {
+  width: 14px;
+  height: 14px;
+  border-radius: 0;
+  opacity: 0.85;
+}
+
+.mrow-game,
+.mrow-kda,
+.mrow-farm {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.mrow b {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mrow-game b,
+.mrow-farm b {
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+}
+
+.mrow small {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--color-ink-3);
+}
+
+.mrow-kda b {
+  font-size: 15px;
+  line-height: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mrow-kda b i {
+  margin: 0 4px;
+  font-style: normal;
+  font-weight: 400;
+  color: var(--color-ink-4);
+}
+
+.mrow-items {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+}
+
+.mrow-well {
+  display: flex;
+  padding: 3px;
+  background: var(--color-well);
+  border-radius: var(--radius-sm);
+}
+
+.mrow-vs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mrow-vs small {
+  font-size: 11px;
+  color: var(--color-ink-4);
+}
+
+.mrow-score {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.mrow-chev {
+  color: var(--color-ink-4);
+  transition:
+    transform var(--t-base) var(--ease),
+    color var(--t-fast) var(--ease);
+}
+
+.mrow:hover .mrow-chev {
+  color: var(--color-ink-2);
+}
+
+.open .mrow-chev {
+  transform: rotate(180deg);
+}
+
+.mrow-detail {
+  background: var(--color-panel);
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+}
+
+.pick {
+  padding: 2px;
+  border-radius: 7px;
+  transition: box-shadow var(--t-fast) var(--ease);
+}
+
+.pick[data-active='true'] {
+  box-shadow: inset 0 0 0 2px var(--color-brand);
+}
+
+.pick:not([data-active='true']):hover {
+  box-shadow: inset 0 0 0 2px var(--color-line-2);
+}
+
+/* Narrower containers drop the matchup, then the farm, then the build. */
+@container (max-width: 920px) {
+  .mrow {
+    grid-template-columns: 44px 42px minmax(92px, 1fr) minmax(100px, 1fr) auto 84px 16px;
+  }
+  .mrow-farm,
+  .mrow-vs {
+    display: none;
+  }
+}
+
+@container (max-width: 700px) {
+  .mrow {
+    grid-template-columns: 44px 42px minmax(0, 1fr) minmax(0, 1fr) 84px 16px;
+    column-gap: 12px;
+  }
+  .mrow-items {
+    display: none;
+  }
+}
+
+@container (max-width: 480px) {
+  .mrow {
+    grid-template-columns: 40px minmax(0, 1fr) auto 84px;
+    height: 64px;
+    padding: 0 12px 0 14px;
+  }
+  .mrow-champ {
+    width: 40px;
+    height: 40px;
+  }
+  .mrow-load,
+  .mrow-chev,
+  .mrow-kp {
+    display: none;
+  }
+  .mrow-kda {
+    justify-items: end;
+    text-align: right;
+  }
 }
 </style>

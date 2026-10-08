@@ -63,25 +63,45 @@ export function timeAgo(ms: number) {
   return `${Math.floor(months / 12)}y ago`
 }
 
+/**
+ * The site is written in English, so dates are too. Formatting with the
+ * browser's own locale printed "sam. 19 sept." on an English page.
+ */
+export const UI_LOCALE = 'en-US'
+
 export function shortDate(value: string | number | Date) {
-  return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  return new Date(Number(value) || value).toLocaleDateString(UI_LOCALE, {
+    month: 'short',
+    day: 'numeric',
+  })
 }
 
 export function longDate(value: string | number | Date) {
-  return new Date(value).toLocaleDateString('en-US', {
+  return new Date(Number(value) || value).toLocaleDateString(UI_LOCALE, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   })
 }
 
-/** "Sat 20 Sep", the heading a day of matches sits under. */
-export function dayLabel(ms: number) {
-  return new Date(Number(ms)).toLocaleDateString(undefined, {
-    weekday: 'short',
+/** "Today", "Yesterday", "Monday, October 5": the heading a day of matches sits under. */
+export function dayLabel(ms: number | string) {
+  const date = new Date(Number(ms))
+  const start = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  const days = Math.round((start(new Date()) - start(date)) / 86_400_000)
+  if (days === 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  return date.toLocaleDateString(UI_LOCALE, {
+    weekday: 'long',
+    month: 'long',
     day: 'numeric',
-    month: 'short',
+    ...(date.getFullYear() === new Date().getFullYear() ? {} : { year: 'numeric' }),
   })
+}
+
+/** "1 view", "163 views". */
+export function plural(count: number, word: string, many = `${word}s`) {
+  return `${count.toLocaleString(UI_LOCALE)} ${count === 1 ? word : many}`
 }
 
 export function ordinal(value: number) {
