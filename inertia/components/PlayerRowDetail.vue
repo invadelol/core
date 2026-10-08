@@ -410,7 +410,8 @@ const checkpoints = computed(() => {
         </table>
       </div>
 
-      <div class="mt-5 border-t border-line pt-4">
+      <!-- The League client does not report pings: desktop games leave them out rather than show 0. -->
+      <div v-if="match.completeness?.pings !== false" class="mt-5 border-t border-line pt-4">
         <div class="label mb-2.5">Pings · {{ totalPings(player) }}</div>
         <ul v-if="pings.length" class="space-y-2">
           <li v-for="ping in pings" :key="ping.label">

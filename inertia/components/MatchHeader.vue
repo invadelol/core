@@ -11,6 +11,14 @@ const props = defineProps<{ match: Match; ownerPuuid?: string }>()
 
 const totals = computed(() => teamTotals(props.match))
 
+/** One quiet line for games the desktop app recorded; Riot's own games need none. */
+const provenance = computed(() => {
+  if (props.match.source !== 'desktop') return ''
+  return props.match.verification === 'verified'
+    ? 'Recorded by the Invade app, verified by Riot'
+    : 'Recorded by the Invade app'
+})
+
 /** The viewed player's team on the left; blue side when nobody is being viewed. */
 const order = computed(() => {
   const owner = props.match.participants.find((p) => p.puuid === props.ownerPuuid)
@@ -58,6 +66,9 @@ async function copyId() {
           {{ longDate(match.gameStartMs) }}, {{ timeAgo(match.gameStartMs) }}
           <span class="text-ink-4">·</span> Patch {{ match.patch }}
           <span class="text-ink-4">·</span> {{ regionLabel(match.platform) }}
+          <template v-if="provenance">
+            <span class="text-ink-4">·</span> {{ provenance }}
+          </template>
         </p>
       </div>
 
