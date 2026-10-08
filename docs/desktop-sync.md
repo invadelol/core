@@ -32,15 +32,16 @@ Both sides implement exactly this document. Anything not written here is out of 
 - Base URL: `https://invade.lol` (desktop debug builds: env `INVADE_CORE_URL`, e.g. `http://localhost:3335`).
   Release builds ignore the variable.
 - JSON bodies, UTF-8. Every desktop request sends `User-Agent: Invade/<version> (<os>)`.
-- Authenticated routes take `Authorization: Bearer <token>`. Tokens are 32 random bytes,
-  base64url, prefixed `inv_dev_`. Core stores only their SHA-256, never the token.
+- Authenticated routes take `Authorization: Bearer <token>` **and a signature (§1.1)**. Tokens are
+  32 random bytes, base64url, prefixed `inv_dev_`. Core stores only their SHA-256, never the token.
 - Errors use core's existing shape: `{ "errors": [{ "message": "...", "code": "E_..." }], "retryAfter"?: s }`
   plus a `Retry-After` header for 429/503.
 
 | status | code | desktop reaction |
 | --- | --- | --- |
 | 400/422 | `E_VALIDATION_ERROR`, `E_INVALID_MATCH`, `E_INVALID_LP`, `E_RIOT_ID_MISMATCH` | permanent: drop the item, remember the code |
-| 401 | `E_DEVICE_UNAUTHORIZED` | forget the token, register again (once), retry |
+| 401 | `E_DEVICE_UNAUTHORIZED`, `E_BAD_SIGNATURE` | forget the token, register again (once), retry |
+| 401 | `E_CLOCK_SKEW`, `E_REPLAY` | correct the clock offset from `Date` / re-sign with a fresh timestamp, retry once (§1.1) |
 | 403 | `E_NOT_LINKED` | link the uploader (§2.3), retry once |
 | 404 | `E_SUMMONER_NOT_FOUND` | resolve: "no such Riot ID" |
 | 413 | `E_PAYLOAD_TOO_LARGE` | permanent: drop the timeline, retry once without it |
@@ -52,6 +53,50 @@ Core notes: every `/api/desktop/*` client error carries a `code` from this table
 entries also keep VineJS's `field` and `rule`). Riot rate limiting answers 429 `E_RIOT_RATE_LIMITED`;
 any other Riot failure, a rejected API key included, answers 503 `E_RIOT_UNAVAILABLE`. A 413 is
 answered after reading the body (up to 16 MB), so the app receives it instead of a broken pipe.
+
+### 1.1 Request signing and replay protection (contract v1.2)
+
+TLS (certificate validation, no cross-host redirects) already stops anyone on the network from
+reading or altering a call. Signing adds two things: the device secret never travels after
+registration (a leaked log, proxy capture or HAR file is useless), and a captured request cannot
+be replayed or modified.
+
+- `POST /api/desktop/devices` answers `{ "deviceId", "token", "secret" }`. `secret` is 32 random
+  bytes, hex (64 chars), shown once. Core stores it encrypted with the app key (`encryption`
+  service, never in clear, never logged); the token stays SHA-256 only.
+- Every authenticated request (`Authorization: Bearer <token>`) also sends:
+  - `X-Invade-Timestamp`: epoch milliseconds;
+  - `X-Invade-Signature`: lowercase hex HMAC-SHA256 with the secret over
+    `"v1\n" + timestamp + "\n" + METHOD + "\n" + path_with_query + "\n" + hex(SHA-256(raw body bytes))`
+    (empty body → SHA-256 of the empty string).
+- Core rejects (401) a missing or wrong signature (`E_BAD_SIGNATURE`), a timestamp more than 5 min
+  away from its clock (`E_CLOCK_SKEW`, the response's `Date` header lets the app correct its offset
+  and retry once), and a signature already seen in the last 10 min (`E_REPLAY`, Redis `SET NX` with
+  a 10-min TTL). Comparison is constant-time. Optional-auth routes (`/resolve`) verify the signature
+  whenever a token is sent.
+- Desktop reactions: `E_CLOCK_SKEW` → offset from `Date`, re-sign, retry once; `E_BAD_SIGNATURE` →
+  register again (like `E_DEVICE_UNAUTHORIZED`); `E_REPLAY` → re-sign with a fresh timestamp, retry
+  once. The app never logs the token, the secret or a signature.
+- A device registered before signing existed has no secret: it gets 401 `E_DEVICE_UNAUTHORIZED`
+  and registers again.
+
+### 1.2 What signing cannot stop, and what core does about it
+
+Whoever controls a computer can read its device secret and craft requests: no desktop app can
+prevent that. So core never takes desktop data on faith:
+
+- everything is validated (shape, ranges, consistency) and rate limited per device and IP;
+- desktop data is stored with its provenance (`source = 'desktop'`, `device_id`) and Riot's own
+  data always supersedes it;
+- **trust is slow to earn**: ≥ 5 uploads verified against match-v5, on ≥ 3 different days, from a
+  device at least 3 days old, with no mismatch;
+- **trust is checked continuously**: 1 in 10 trusted match uploads and 1 in 20 applied player
+  snapshots are verified against Riot afterwards (one call, budgeted, best effort);
+- **a lie costs the device everything**: one mismatch revokes it, marks all its data `conflict`,
+  deletes the `riot_rank` rows it wrote (`device_id` on desktop rows) and re-reads the affected
+  players from Riot when they are next viewed;
+- other players' ranks from an untrusted device are only applied when a second device on another
+  network confirms them (§6.4).
 
 ## 2. Endpoints
 
@@ -71,8 +116,8 @@ from `DESKTOP_MIN_APP_VERSION` (unset: `null`).
 
 ### 2.2 `POST /api/desktop/devices` (public, 10 / hour / IP)
 
-Request `{ "app": "0.2.7", "os": "macos" | "windows" }` → `201 { "deviceId": "<uuid>", "token": "inv_dev_…" }`.
-The token is shown once. `DELETE /api/desktop/devices/me` (auth) revokes it → `204`.
+Request `{ "app": "0.2.7", "os": "macos" | "windows" }` → `201 { "deviceId": "<uuid>", "token": "inv_dev_…", "secret": "<64 hex>" }`.
+The token and the secret are shown once (§1.1). `DELETE /api/desktop/devices/me` (auth) revokes it → `204`.
 
 ### 2.3 `POST /api/desktop/link` (auth, 20 / hour / device)
 
