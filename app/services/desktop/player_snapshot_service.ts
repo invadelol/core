@@ -119,9 +119,9 @@ function previousOf(row: PlayerObservation | undefined): PreviousReport | null {
  * champion-mastery-v4. So nothing here calls Riot on the way in. A report
  * is mapped to its API PUUID for free (alias, else the stored player with
  * that Riot ID on that platform) or kept `staged` until core learns whose
- * it is; it is applied only when the device is trusted, the player is one
- * of the device's own accounts, or a second device on another network
- * agrees; and it never overwrites anything newer, nor anything Riot said
+ * it is; it is applied only when the device is trusted or a second device
+ * on another network agrees (linking an account proves nothing), and it
+ * never overwrites anything newer, nor anything Riot said
  * later. A sample of what trusted devices report is checked against
  * league-v4 afterwards, and one lie undoes everything the device wrote.
  */
@@ -292,18 +292,19 @@ export class PlayerSnapshotService {
       await this.mark(player, 'held', puuid)
       return 'held'
     }
+    // Linking takes nothing but a Riot ID, so an untrusted device's word on its "own" account
+    // counts no more than on anyone else's: held until another network agrees or it is trusted.
     if (
       !trusted &&
-      !own &&
       !corroborates(previous, player, { deviceId: device.id, ipHash: reporter.ipHash })
     ) {
       await this.mark(player, 'held', puuid)
       return 'held'
     }
 
-    // Losses are only believed from the account itself or a trusted device.
+    // Losses are only believed from a trusted device about its own account.
     const snapshot: PlayerSnapshot =
-      trusted || own
+      trusted && own
         ? player
         : { ...player, ranks: player.ranks?.map((rank) => ({ ...rank, losses: null })) ?? null }
 

@@ -101,8 +101,32 @@ test.group('Desktop player snapshots API', (group) => {
     client: http,
     assert,
   }) => {
-    const { app, stored, rawPuuid } = await linked(http)
+    const { app, stored, rawPuuid, deviceId } = await linked(http)
     const observedAt = Date.now() - 30_000
+
+    // A new device is not believed about the account it linked: any Riot ID can be linked.
+    const claim = player({
+      rawPuuid,
+      gameName: stored.game_name,
+      tagLine: 'TST',
+      self: true,
+      context: 'self',
+      observedAt: observedAt - 60_000,
+    })
+    const early = await app.post('/api/desktop/players', batch([claim]))
+    early.assertStatus(200)
+    assert.deepEqual(early.body(), { results: [{ rawPuuid, status: 'held' }] })
+
+    // The same device once trusted (§4.2: verified uploads on several days, a few days old).
+    await db
+      .from('desktop_device')
+      .where('id', deviceId)
+      .update({
+        verified_uploads: 5,
+        verified_days: 3,
+        created_at: new Date(Date.now() - 4 * 86_400_000),
+      })
+
     const self = player({
       rawPuuid,
       gameName: stored.game_name,
@@ -196,6 +220,7 @@ test.group('Desktop player snapshots API', (group) => {
       batch(Array.from({ length: 26 }, () => player())),
       { ...batch([player()]), schema: 2 },
       batch([one, { ...one }]),
+      batch([one, { ...one, rawPuuid: one.rawPuuid.toUpperCase() }]),
       batch([42]),
       { schema: 1, platform: 'EUW1', app: '0.2.7' },
     ]
