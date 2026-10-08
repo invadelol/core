@@ -17,6 +17,11 @@ export function signed(value: number, zero = '0') {
   return `${rounded > 0 ? '+' : '−'}${compact(Math.abs(value))}`
 }
 
+/** "+19 LP", "−18 LP", "0 LP". */
+export function lp(delta: number) {
+  return `${signed(delta)} LP`
+}
+
 export function percent(ratio: number, decimals = 0) {
   return `${(ratio * 100).toFixed(decimals)}%`
 }

@@ -115,6 +115,21 @@ export interface Match {
   participants: Participant[]
   /** Loaded on demand: large, and only needed once a match is opened. */
   timeline?: TimelineEntry[]
+  /** Where the stored game came from: Riot's match-v5, or the Invade desktop app. */
+  source?: 'riot' | 'desktop'
+  verification?: 'verified' | 'unverified' | 'corroborated' | 'conflict'
+  /** What a desktop game could not report; null when nothing is missing. */
+  completeness?: MatchCompleteness | null
+  /** The listed player's LP change in this game, when the desktop app reported it. */
+  lpChange?: number | null
+}
+
+export interface MatchCompleteness {
+  pings: boolean
+  summonerLevel: boolean
+  statPerks: boolean
+  timeline: boolean
+  position: 'riot' | 'inferred' | 'absent'
 }
 
 export interface Rank {

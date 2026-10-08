@@ -2,7 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import MatchRow from './MatchRow.vue'
 import { loadChampions, loadItems, loadRunes } from '../lib/assets.js'
-import { dayLabel } from '../lib/format.js'
+import { dayLabel, lp } from '../lib/format.js'
 import { isRemake } from '../lib/match.js'
 import type { Match } from '../lib/types.js'
 
@@ -24,15 +24,23 @@ onMounted(() => {
 
 /** One flat list, grouped by day, each day with its record. */
 const days = computed(() => {
-  const groups: Array<{ label: string; wins: number; losses: number; matches: Match[] }> = []
+  const groups: Array<{
+    label: string
+    wins: number
+    losses: number
+    /** Net LP over the day's games whose change is known; null when none is. */
+    lp: number | null
+    matches: Match[]
+  }> = []
   for (const match of props.matches) {
     const label = dayLabel(match.gameStartMs)
     let group = groups[groups.length - 1]
     if (!group || group.label !== label) {
-      group = { label, wins: 0, losses: 0, matches: [] }
+      group = { label, wins: 0, losses: 0, lp: null, matches: [] }
       groups.push(group)
     }
     group.matches.push(match)
+    if (typeof match.lpChange === 'number') group.lp = (group.lp ?? 0) + match.lpChange
     const me = match.participants.find((p) => p.puuid === props.puuid)
     if (me && !isRemake(match)) me.win ? group.wins++ : group.losses++
   }
@@ -54,7 +62,10 @@ function toggle(matchId: string) {
     <section v-for="day in days" :key="day.label" class="mt-5 first:mt-0">
       <h3 class="mb-2 flex items-baseline justify-between gap-3 px-0.5 text-[12px] font-semibold">
         <span class="text-ink-2">{{ day.label }}</span>
-        <span class="num font-medium text-ink-3">{{ day.wins }}W {{ day.losses }}L</span>
+        <span class="num font-medium text-ink-3">
+          {{ day.wins }}W {{ day.losses }}L
+          <template v-if="day.lp !== null">· {{ lp(day.lp) }}</template>
+        </span>
       </h3>
 
       <div class="grid gap-1">

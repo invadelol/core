@@ -16,7 +16,7 @@ import {
   runeStyleIcon,
   spellIcon,
 } from '../lib/assets.js'
-import { compact, duration, kda } from '../lib/format.js'
+import { compact, duration, kda, lp } from '../lib/format.js'
 import {
   earnedBadges,
   indexTimeline,
@@ -124,7 +124,15 @@ const row = computed(() => {
     me,
     remake,
     result: remake ? 'remake' : me?.win ? 'win' : 'loss',
-    outcome: remake ? 'Remake' : me?.win ? 'Win' : 'Loss',
+    // The LP change says the result and what it was worth; the word is the fallback.
+    outcome:
+      !remake && typeof match.lpChange === 'number'
+        ? lp(match.lpChange)
+        : remake
+          ? 'Remake'
+          : me?.win
+            ? 'Win'
+            : 'Loss',
     queue: queueName(match.queueId),
     duration: duration(match.duration),
     champion: championName(me?.championId ?? 0),
