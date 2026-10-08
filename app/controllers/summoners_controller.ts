@@ -15,6 +15,17 @@ import {
 import { invalidateResponseCache } from '#services/http_response_cache'
 import { SyncGuard } from '#utils/sync_guard'
 import { translateRiotError } from '#utils/riot_errors'
+import deviceService from '#services/desktop/device_service'
+import type Summoner from '#models/summoner'
+
+/**
+ * How current a profile is: the last Riot refresh, and the newest game the
+ * desktop app delivered. A failed lookup only costs the second figure.
+ */
+async function freshness(summoner: Summoner) {
+  const lastDesktopSyncAt = await deviceService.lastSyncAt(summoner.puuid).catch(() => null)
+  return { lastRefreshAt: summoner.lastRefreshAt ?? null, lastDesktopSyncAt }
+}
 
 const syncGuard = new SyncGuard()
 
@@ -81,21 +92,24 @@ export default class SummonersController {
    * Get summoner details
    * @paramPath summoner - GameName-TagLine
    * @paramPath platform - Region (e.g., EUW1)
-   * @responseBody 200 - { summoner: <Summoner> }
+   * @responseBody 200 - { summoner: <Summoner>, freshness: { lastRefreshAt, lastDesktopSyncAt } }
    */
   async show({ params, response }: HttpContext) {
     const { summoner, platform } = params
 
     try {
       const resolvedSummoner = await summonerService.resolveAndUpsert(summoner, platform)
-      return response.ok({ summoner: resolvedSummoner })
+      return response.ok({
+        summoner: resolvedSummoner,
+        freshness: await freshness(resolvedSummoner),
+      })
     } catch (error) {
       // A profile we already hold is worth serving even when Riot is down;
       // stale beats an error page.
       const stored = await summonerService.findStored(summoner, platform).catch(() => null)
       if (stored) {
         logger.warn({ err: error, summoner, platform }, 'Riot lookup failed, serving stored row')
-        return response.ok({ summoner: stored, stale: true })
+        return response.ok({ summoner: stored, stale: true, freshness: await freshness(stored) })
       }
 
       throw translateRiotError(error)

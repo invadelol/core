@@ -477,6 +477,38 @@ export class MatchRepository {
   }
 
   /**
+   * The few facts two descriptions of a game must agree on (champions,
+   * K/D/A, results, duration), for checking an upload against a stored game
+   * without asking Riot. Two flat reads by match id, nothing else.
+   */
+  async getFacts(matchId: string) {
+    const escapedMatchId = escapeClickhouseString(matchId)
+    const [matches, players] = await Promise.all([
+      rawRows(
+        `SELECT duration_sec, map_id FROM matches PREWHERE match_id = '${escapedMatchId}' LIMIT 1`
+      ),
+      rawRows(
+        `SELECT team_id, champion_id, kills, deaths, assists, win
+         FROM participants
+         PREWHERE match_id = '${escapedMatchId}'`
+      ),
+    ])
+    if (!matches.length || !players.length) return null
+    return {
+      duration: Number(matches[0][0]) || 0,
+      mapId: Number(matches[0][1]) || 0,
+      players: players.map((row) => ({
+        teamId: Number(row[0]) || 0,
+        championId: Number(row[1]) || 0,
+        kills: Number(row[2]) || 0,
+        deaths: Number(row[3]) || 0,
+        assists: Number(row[4]) || 0,
+        win: Number(row[5]) === 1,
+      })),
+    }
+  }
+
+  /**
    * Get recent match participants for upsert operations.
    *
    * Same reason as the match list for using an `IN` set rather than a join:

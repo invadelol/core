@@ -60,4 +60,18 @@ export default await Env.create(new URL('../', import.meta.url), {
   REDIS_HOST: Env.schema.string({ format: 'host' }),
   REDIS_PORT: Env.schema.number(),
   REDIS_PASSWORD: Env.schema.string.optional(),
+  /** Logical database, so a second checkout can share one Redis without sharing keys. */
+  REDIS_DB: Env.schema.number.optional(),
+
+  /*
+  |----------------------------------------------------------
+  | Desktop app sync (docs/desktop-sync.md)
+  |----------------------------------------------------------
+  | Kill switches, read by the app through GET /api/desktop/config.
+  | Both default to on; `false` pauses the feature with a 503.
+  */
+  DESKTOP_UPLOADS_ENABLED: Env.schema.boolean.optional(),
+  DESKTOP_RESOLVE_ENABLED: Env.schema.boolean.optional(),
+  /** Oldest app version allowed to upload, e.g. "0.2.7". Unset means any. */
+  DESKTOP_MIN_APP_VERSION: Env.schema.string.optional(),
 })
