@@ -1,5 +1,6 @@
 import { RiotUpstreamException, unwrapCacheFactoryError } from '#utils/riot_errors'
 import { DesktopException } from '#exceptions/desktop_exception'
+import { payloadLimitOf } from '#middleware/body_parser_middleware'
 import app from '@adonisjs/core/services/app'
 import { HttpContext, ExceptionHandler } from '@adonisjs/core/http'
 
@@ -9,7 +10,10 @@ import { HttpContext, ExceptionHandler } from '@adonisjs/core/http'
  * `{ errors: [{ message, code }], retryAfter? }`, with `Retry-After` on 429/503.
  * Upstream codes keep their meaning but take the statuses the app expects.
  */
-function desktopError(error: any): { status: number; body: Record<string, unknown> } | null {
+function desktopError(
+  error: any,
+  url: string
+): { status: number; body: Record<string, unknown> } | null {
   const reply = (status: number, code: string, message: string, retryAfter?: number) => ({
     status,
     body: {
@@ -40,7 +44,13 @@ function desktopError(error: any): { status: number; body: Record<string, unknow
     }
   }
   if (error?.code === 'E_REQUEST_ENTITY_TOO_LARGE') {
-    return reply(413, 'E_PAYLOAD_TOO_LARGE', 'The upload is larger than 2 MB')
+    const limit = payloadLimitOf(url)
+    const size = !limit
+      ? '1 MB'
+      : limit >= 1_000_000
+        ? `${limit / 1_000_000} MB`
+        : `${Math.round(limit / 1024)} KB`
+    return reply(413, 'E_PAYLOAD_TOO_LARGE', `The request body is larger than ${size}`)
   }
 
   const status = Number(error?.status ?? error?.statusCode ?? 500)
@@ -66,7 +76,7 @@ export default class HttpExceptionHandler extends ExceptionHandler {
   async handle(error: unknown, ctx: HttpContext) {
     error = unwrapCacheFactoryError(error)
     if (ctx.request.url().startsWith('/api/desktop/')) {
-      const reply = desktopError(error)
+      const reply = desktopError(error, ctx.request.url())
       if (reply) {
         const retryAfter = reply.body.retryAfter
         if (retryAfter) ctx.response.header('Retry-After', String(retryAfter))

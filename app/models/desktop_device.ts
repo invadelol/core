@@ -35,4 +35,15 @@ export default class DesktopDevice extends BaseModel {
 
   @column()
   declare mismatches: number
+
+  /** The signing secret (§1.1), encrypted with the app key; null for devices from before signing. */
+  @column({ columnName: 'secret_encrypted', serializeAs: null })
+  declare secretEncrypted: string | null
+
+  /** Distinct UTC days on which Riot confirmed one of this device's games. */
+  @column({ columnName: 'verified_days' })
+  declare verifiedDays: number
+
+  @column.date({ columnName: 'last_verified_on' })
+  declare lastVerifiedOn: DateTime | null
 }

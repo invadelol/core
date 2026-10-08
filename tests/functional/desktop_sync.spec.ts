@@ -10,8 +10,10 @@ import publicationService from '#services/desktop/publication_service'
 import rateLimiter from '#services/desktop/rate_limiter'
 import { RetryScheduler } from '#services/desktop/retry_scheduler'
 import { RiotUpstreamException } from '#utils/riot_errors'
+import encryption from '@adonisjs/core/services/encryption'
 import { apiPuuids, makeUpload, riotMatch, UPLOADER_PARTICIPANT } from '#tests/fixtures/desktop'
 import { DesktopSeed } from '#tests/fixtures/desktop_db'
+import { desktopClient } from '#tests/fixtures/desktop_http'
 
 /**
  * The desktop routes end to end, against the isolated Postgres and
@@ -63,11 +65,18 @@ test.group('Desktop sync API', (group) => {
     await seed.players(upload, puuids, [UPLOADER_PARTICIPANT])
     // A Riot-path upload stores every participant as a player; clean them all up.
     seed.puuids.push(...puuids.values())
-    const { device, token } = await seed.device()
+    const { device, token, secret } = await seed.device()
     const identity = upload.game.participantIdentities.find(
       (i) => i.participantId === UPLOADER_PARTICIPANT
     )!.player
-    return { upload, puuids, device, token, identity, puuid: puuids.get(upload.uploader)! }
+    return {
+      upload,
+      puuids,
+      device,
+      credentials: { token, secret },
+      identity,
+      puuid: puuids.get(upload.uploader)!,
+    }
   }
 
   test('config exposes the kill switches and the payload limit', async ({ client: http }) => {
@@ -81,15 +90,22 @@ test.group('Desktop sync API', (group) => {
     })
   })
 
-  test('registers a device and returns its token once', async ({ client: http, assert }) => {
+  test('registers a device and returns its token and secret once', async ({
+    client: http,
+    assert,
+  }) => {
     const response = await http.post('/api/desktop/devices').json({ app: '0.2.7', os: 'windows' })
     response.assertStatus(201)
-    const { deviceId, token } = response.body()
+    const { deviceId, token, secret } = response.body()
     seed.devices.push(deviceId)
     assert.match(token, /^inv_dev_[A-Za-z0-9_-]{43}$/)
+    assert.match(secret, /^[0-9a-f]{64}$/)
     const row = await db.from('desktop_device').where('id', deviceId).first()
     assert.notEqual(row.token_hash, token)
     assert.lengthOf(row.token_hash, 64)
+    // Stored encrypted with the app key, never in clear.
+    assert.notInclude(row.secret_encrypted, secret)
+    assert.equal(encryption.decrypt(row.secret_encrypted), secret)
 
     const invalid = await http.post('/api/desktop/devices').json({ app: '0.2.7', os: 'linux' })
     invalid.assertStatus(422)
@@ -100,10 +116,10 @@ test.group('Desktop sync API', (group) => {
     client: http,
     assert,
   }) => {
-    const { upload, puuids, token, identity, puuid } = await onboarded()
-    const auth = { Authorization: `Bearer ${token}` }
+    const { upload, puuids, credentials, identity, puuid } = await onboarded()
+    const app = desktopClient(http, credentials)
 
-    const link = await http.post('/api/desktop/link').headers(auth).json({
+    const link = await app.post('/api/desktop/link', {
       gameName: identity.gameName,
       tagLine: identity.tagLine,
       platform: 'EUW1',
@@ -145,7 +161,7 @@ test.group('Desktop sync API', (group) => {
       },
     }
 
-    const first = await http.post('/api/desktop/matches').headers(auth).json(upload)
+    const first = await app.post('/api/desktop/matches', upload)
     first.assertStatus(200)
     first.assertBody({
       matchId: upload.matchId,
@@ -155,7 +171,7 @@ test.group('Desktop sync API', (group) => {
     })
     assert.deepEqual(calls, [upload.matchId])
 
-    const again = await http.post('/api/desktop/matches').headers(auth).json(upload)
+    const again = await app.post('/api/desktop/matches', upload)
     again.assertStatus(200)
     again.assertBodyContains({ status: 'duplicate', lp: 'stored' })
     assert.lengthOf(calls, 1)
@@ -193,12 +209,9 @@ test.group('Desktop sync API', (group) => {
     client: http,
     assert,
   }) => {
-    const { upload, token } = await onboarded()
+    const { upload, credentials } = await onboarded()
     seed.matchIds.push(upload.matchId)
-    const response = await http
-      .post('/api/desktop/matches')
-      .header('Authorization', `Bearer ${token}`)
-      .json(upload)
+    const response = await desktopClient(http, credentials).post('/api/desktop/matches', upload)
     response.assertStatus(403)
     assert.equal(response.body().errors[0].code, 'E_NOT_LINKED')
   })
@@ -207,29 +220,26 @@ test.group('Desktop sync API', (group) => {
     client: http,
     assert,
   }) => {
-    const { upload, device, token, puuid } = await onboarded()
+    const { upload, device, credentials, puuid } = await onboarded()
     await seed.link(device.id, puuid, upload.uploader)
-    const auth = { Authorization: `Bearer ${token}` }
+    const app = desktopClient(http, credentials)
 
     upload.game.queueId = 830
-    const invalid = await http.post('/api/desktop/matches').headers(auth).json(upload)
+    const invalid = await app.post('/api/desktop/matches', upload)
     invalid.assertStatus(422)
     assert.deepEqual(invalid.body().errors[0], {
       message: 'Invalid match: queue 830 is not accepted',
       code: 'E_INVALID_MATCH',
     })
 
-    const malformed = await http
-      .post('/api/desktop/matches')
-      .headers(auth)
-      .json({ schema: 1, matchId: upload.matchId })
+    const malformed = await app.post('/api/desktop/matches', {
+      schema: 1,
+      matchId: upload.matchId,
+    })
     malformed.assertStatus(422)
     assert.equal(malformed.body().errors[0].code, 'E_VALIDATION_ERROR')
 
-    const lp = await http
-      .post('/api/desktop/matches')
-      .headers(auth)
-      .json({ ...upload, lp: 'gold' })
+    const lp = await app.post('/api/desktop/matches', { ...upload, lp: 'gold' })
     lp.assertStatus(422)
     assert.equal(lp.body().errors[0].code, 'E_INVALID_LP')
   })
@@ -238,21 +248,21 @@ test.group('Desktop sync API', (group) => {
     client: http,
     assert,
   }) => {
-    const { token } = await onboarded()
-    const auth = { Authorization: `Bearer ${token}` }
+    const { credentials } = await onboarded()
+    const app = desktopClient(http, credentials)
 
-    const huge = await http
-      .post('/api/desktop/matches')
-      .headers(auth)
-      .json({ schema: 1, padding: 'x'.repeat(2_100_000) })
+    const huge = await app.post('/api/desktop/matches', {
+      schema: 1,
+      padding: 'x'.repeat(2_100_000),
+    })
     huge.assertStatus(413)
     assert.equal(huge.body().errors[0].code, 'E_PAYLOAD_TOO_LARGE')
 
     // 1.5 MB passes the parser on the upload route (and fails validation instead)...
-    const large = await http
-      .post('/api/desktop/matches')
-      .headers(auth)
-      .json({ schema: 1, padding: 'x'.repeat(1_500_000) })
+    const large = await app.post('/api/desktop/matches', {
+      schema: 1,
+      padding: 'x'.repeat(1_500_000),
+    })
     large.assertStatus(422)
 
     // ...while every other route keeps the default 1 MB limit. Those routes do
@@ -271,18 +281,18 @@ test.group('Desktop sync API', (group) => {
     client: http,
     assert,
   }) => {
-    const { upload, device, token, puuid } = await onboarded()
+    const { upload, device, credentials, puuid } = await onboarded()
     await seed.link(device.id, puuid, upload.uploader)
-    const auth = { Authorization: `Bearer ${token}` }
+    const app = desktopClient(http, credentials)
 
-    const unlink = await http.delete(`/api/desktop/link/${puuid}`).headers(auth)
+    const unlink = await app.delete(`/api/desktop/link/${puuid}`)
     unlink.assertStatus(204)
-    const notLinked = await http.post('/api/desktop/matches').headers(auth).json(upload)
+    const notLinked = await app.post('/api/desktop/matches', upload)
     notLinked.assertStatus(403)
 
-    const revoke = await http.delete('/api/desktop/devices/me').headers(auth)
+    const revoke = await app.delete('/api/desktop/devices/me')
     revoke.assertStatus(204)
-    const gone = await http.post('/api/desktop/matches').headers(auth).json(upload)
+    const gone = await app.post('/api/desktop/matches', upload)
     gone.assertStatus(401)
     assert.equal(gone.body().errors[0].code, 'E_DEVICE_UNAUTHORIZED')
   })
@@ -329,6 +339,8 @@ test.group('Desktop sync API', (group) => {
         lastPlayTime: 1791400000000,
         championPointsUntilNextLevel: 0,
         tokensEarned: 0,
+        source: 'riot' as const,
+        observedAt: 1791450000000,
       }))
 
     const response = await http

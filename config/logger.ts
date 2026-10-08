@@ -14,6 +14,31 @@ const loggerConfig = defineConfig({
       enabled: true,
       name: env.get('APP_NAME'),
       level: env.get('LOG_LEVEL'),
+      /**
+       * Credentials never reach a log line, whatever object carries them:
+       * request headers (the desktop app's bearer token and request
+       * signature), and the device token and signing secret by name.
+       */
+      redact: {
+        paths: [
+          'authorization',
+          'headers.authorization',
+          'headers["x-invade-signature"]',
+          'req.headers.authorization',
+          'req.headers["x-invade-signature"]',
+          'request.headers.authorization',
+          'request.headers["x-invade-signature"]',
+          'err.config.headers',
+          'err.headers.authorization',
+          'token',
+          'secret',
+          'signature',
+          '*.token',
+          '*.secret',
+          '*.signature',
+        ],
+        censor: '[redacted]',
+      },
       transport: {
         targets: targets()
           .pushIf(!app.inProduction, targets.pretty())

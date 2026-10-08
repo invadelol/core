@@ -20,6 +20,24 @@ export class DesktopException extends Exception {
     return new DesktopException('Unknown or revoked device token', 401, 'E_DEVICE_UNAUTHORIZED')
   }
 
+  /** A missing, malformed or wrong signature (§1.1): the app registers again. */
+  static badSignature() {
+    return new DesktopException('Missing or invalid request signature', 401, 'E_BAD_SIGNATURE')
+  }
+
+  /** The timestamp is too far from core's clock; the `Date` header gives core's time. */
+  static clockSkew() {
+    return new DesktopException(
+      'Request timestamp is too far from server time',
+      401,
+      'E_CLOCK_SKEW'
+    )
+  }
+
+  static replay() {
+    return new DesktopException('This signed request was already received', 401, 'E_REPLAY')
+  }
+
   static notLinked() {
     return new DesktopException('The uploader is not linked to this device', 403, 'E_NOT_LINKED')
   }

@@ -1,12 +1,25 @@
+import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
 import DesktopDevice from '#models/desktop_device'
 import deviceService from '#services/desktop/device_service'
+import { apiPuuid } from '#tests/fixtures/desktop'
 import type { MatchUpload } from '#types/desktop'
 
 /**
  * Rows the desktop tests create in the (isolated) Postgres database, tracked
  * so every test removes exactly what it added.
  */
+/** Counters that make a device trusted under §1.2 (5 verified games, 3 days, 3 days old). */
+export const TRUSTED = { verifiedUploads: 5, verifiedDays: 3, ageDays: 4 } as const
+
+export interface DeviceCounters {
+  verifiedUploads?: number
+  verifiedDays?: number
+  mismatches?: number
+  /** How long ago the device registered. */
+  ageDays?: number
+}
+
 export class DesktopSeed {
   devices: string[] = []
   puuids: string[] = []
@@ -45,17 +58,40 @@ export class DesktopSeed {
     )
   }
 
-  async device(counters: { verifiedUploads?: number; mismatches?: number } = {}) {
-    const { deviceId, token } = await deviceService.register('0.2.7', 'macos')
+  /** A registered device with its token and signing secret, and the given trust counters. */
+  async device(counters: DeviceCounters = {}) {
+    const { deviceId, token, secret } = await deviceService.register('0.2.7', 'macos')
     this.devices.push(deviceId)
     await db
       .from('desktop_device')
       .where('id', deviceId)
       .update({
         verified_uploads: counters.verifiedUploads ?? 0,
+        verified_days: counters.verifiedDays ?? 0,
         mismatches: counters.mismatches ?? 0,
+        ...(counters.ageDays
+          ? { created_at: DateTime.now().minus({ days: counters.ageDays }).toJSDate() }
+          : {}),
       })
-    return { device: (await DesktopDevice.findOrFail(deviceId))!, token }
+    return { device: (await DesktopDevice.findOrFail(deviceId))!, token, secret }
+  }
+
+  /** A stored player of our own, with nothing else attached. */
+  async player(platform = 'EUW1', overrides: Record<string, unknown> = {}) {
+    const suffix = Math.random().toString(36).slice(2, 8)
+    const row = {
+      puuid: apiPuuid(),
+      platform,
+      game_name: `Seed${suffix}`,
+      tag_line: 'TST',
+      profile_icon_id: 1,
+      summoner_level: 100,
+      last_refresh_at: DateTime.now().minus({ days: 2 }).toJSDate(),
+      ...overrides,
+    }
+    this.puuids.push(row.puuid)
+    await db.table('riot_player').insert(row)
+    return row
   }
 
   async link(deviceId: string, puuid: string, rawPuuid: string | null, platform = 'EUW1') {

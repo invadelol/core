@@ -157,27 +157,35 @@ full contract, shared with the app, is [docs/desktop-sync.md](docs/desktop-sync.
 | Method | Endpoint | Auth | Description |
 | --- | --- | --- | --- |
 | `GET` | `/api/desktop/config` | - | Kill switches and the 2 MB upload limit |
-| `POST` | `/api/desktop/devices` | - | Register a device; returns its `inv_dev_` token once (10/h per IP) |
-| `DELETE` | `/api/desktop/devices/me` | token | Revoke this device |
-| `POST` | `/api/desktop/link` | token | Make an account one of the device's uploaders (20/h) |
-| `DELETE` | `/api/desktop/link/:puuid` | token | Unlink an account |
+| `POST` | `/api/desktop/devices` | - | Register a device; returns its `inv_dev_` token and signing secret once (10/h per IP) |
+| `DELETE` | `/api/desktop/devices/me` | signed | Revoke this device |
+| `POST` | `/api/desktop/link` | signed | Make an account one of the device's uploaders (20/h) |
+| `DELETE` | `/api/desktop/link/:puuid` | signed | Unlink an account |
 | `GET` | `/api/desktop/resolve?gameName=&tagLine=` | optional | Onboard by Riot ID from stored data (30/h per device, 20/h per IP) |
-| `POST` | `/api/desktop/matches` | token | Upload a finished game (30/h per device, 120/h per IP) |
+| `POST` | `/api/desktop/matches` | signed | Upload a finished game (30/h per device, 120/h per IP) |
 
-Only the token's SHA-256 is stored. A game already stored costs no Riot call,
-nor does one from a device Riot has confirmed five times; anything else costs
-one `getMatchById`, and a game Riot has not published yet is retried in-process
-2, 5 and 15 minutes later. Desktop games show their provenance on the match
+"Signed" means a bearer token plus `X-Invade-Timestamp` and an HMAC-SHA256
+`X-Invade-Signature` over method, path, query and body (contract §1.1); stale
+timestamps and replays are refused. Only the token's SHA-256 is stored, and the
+secret only encrypted with `APP_KEY` (rotating the key makes every device
+register again).
+
+A game already stored costs no Riot call, nor does one from a trusted device
+(five games Riot confirmed, on three different days, from a device at least
+three days old); anything else costs one `getMatchById`, and a game Riot has
+not published yet is retried in-process 2, 5 and 15 minutes later. One trusted
+game in ten is checked against Riot afterwards; one lie revokes the device and
+deletes the ranks it wrote. Desktop games show their provenance on the match
 page, the LP change on the match row, and hide what the League client does not
 report (pings). The code lives in `app/services/desktop/`.
 
 Run `node ace migration:run` to create the tables (`desktop_device`,
 `desktop_device_account`, `riot_puuid_alias`, `desktop_match_upload`,
-`match_source`, `lp_change`, and `riot_rank.source`).
+`match_source`, `lp_change`, and `riot_rank.source` / `riot_rank.device_id`).
 
 Tests: `node ace test --tags=@desktop` runs the rules (conversion, structural
-checks, LP, identity mapping, publication policy, auth, rate limits) and the
-routes end to end (`tests/functional/desktop_sync.spec.ts`). They use the
+checks, LP, identity mapping, publication policy, signing, trust, auth, rate
+limits) and the routes end to end (`tests/functional/desktop_*.spec.ts`). They use the
 databases and Redis in `.env` with Riot stubbed, so point `DB_DATABASE`,
 `CLICKHOUSE_DB` and `REDIS_DB` at throwaway ones.
 
