@@ -351,7 +351,7 @@ test.group('Desktop sync API', (group) => {
       puuid,
       gameName: identity.gameName,
       platform: 'EUW1',
-      solo: { tier: 'EMERALD', division: 'II', lp: 64, wins: 61, losses: 52 },
+      solo: { tier: 'EMERALD', division: 'II', lp: 64, wins: 61, losses: 52, source: 'riot' },
       flex: null,
       recent: [],
       stale: false,

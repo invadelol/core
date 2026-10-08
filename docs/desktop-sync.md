@@ -192,7 +192,12 @@ the player is stored).
 Core notes: an optional `platform` query parameter skips platform discovery. `recent` holds the
 player's latest 20 stored games, newest first, and `mastery` the 5 entries with the most points.
 A token that is present must be valid (401 otherwise); without one the IP limit applies. When a
-rank or mastery refresh fails, the stored values are returned with `stale: true`.
+rank or mastery refresh fails, the stored values are returned with `stale: true`. Since v1.1 the
+10-min rule counts a desktop rank and a rank confirmation as well (§6.5), and `mastery` comes from
+a desktop snapshot younger than 24 h when there is one. `solo`/`flex` also carry `source` (`riot` |
+`desktop`) and `observedAt` (epoch ms), and `mastery` entries `source` and `observedAt`. **`losses`
+is `null`** when the newest rank of that queue came from another player's client (§6.4), which
+hides losses.
 
 ### 2.5 `POST /api/desktop/matches` (auth, 30 / hour / device, 120 / hour / IP, body ≤ 2 MB)
 
@@ -430,6 +435,14 @@ newer data), `held` (not applied: untrusted device or implausible change, §6.4)
 (with `code`, e.g. `E_INVALID_PLAYER`). A malformed body (not 1–25 players, wrong schema) is
 422 `E_VALIDATION_ERROR` for the whole batch; other errors as §1.
 
+Core notes: a `rejected` result also carries `message` (the rule broken). The batch is 422 when
+`players` is missing, empty or longer than 25, `schema` is not 1, an entry is not an object with a
+string `rawPuuid`, or a `rawPuuid` appears twice (case-insensitive). Requests are counted (device,
+IP) before validation and players after it; a batch that would take the device past 1500 players
+is refused whole (429), and refused attempts still count (fixed windows). `DESKTOP_UPLOADS_ENABLED`
+also pauses this route (503 `E_UPLOADS_PAUSED`). An unsupported `platform` rejects every player
+(§6.2). Results are in the order of `players`.
+
 ### 6.2 Validation (per player → `rejected`)
 
 UUID `rawPuuid`; Riot ID 1–16 + 1–5 characters, no `#`; platform supported; `observedAt` within
@@ -438,6 +451,14 @@ the last 24 h and not more than 5 min in the future; tier ∈ IRON…CHALLENGER,
 when `self`; at most 2 rank entries (solo, flex); mastery ≤ 10 entries, known champion ids,
 level 0–1000, points 0–100 000 000, `lastPlayTime` not in the future; level 1–5000; icon id
 0–100 000.
+
+Core notes: Riot ID lengths are in characters (not bytes), without leading or trailing spaces.
+`profileIconId`, `summonerLevel`, `privacy` and `context` may be absent or `null` (not applied);
+an absent `self` is `false`; absent `ranks`/`mastery` mean not read. Tier and division are
+case-insensitive; an apex division may be `"I"`, `""` or `null`. A `provisional: true` entry is
+dropped (placements have no rank to apply) rather than rejecting the player. A champion listed
+twice in `mastery` is rejected; a `PRIVATE` profile's mastery is discarded. "Not in the future"
+allows the same 5-min skew as `observedAt`.
 
 ### 6.3 Identity and storage (core)
 
@@ -449,6 +470,17 @@ that platform, without any Riot call. Unmapped observations stay `staged`; whene
 the API PUUID of a Riot ID (`resolveAndPersist`, `upsertFromParticipants`, a verified match
 upload's aliases), it applies the staged observation of that Riot ID if it is still recent
 (≤ 24 h) and records the alias as `asserted`.
+
+Core notes: a report older than the stored one of its raw PUUID is `stale` and not stored (equal
+timestamps are processed again). Mapping is `identity_service` itself, so §3's conflict rules hold
+within a batch and against existing aliases: two raw PUUIDs landing on one account are both
+`conflict` and the reports stay `staged`. A mapping through `riot_player` records the `asserted`
+alias at once. Staged reports are looked up by Riot ID and platform after `resolveAndPersist` and
+`upsertFromParticipants`, and by raw PUUID after a verified upload taught core its aliases; the
+lookup runs in the background (one probe of a partial index holding only staged rows) and never
+delays or fails the flow that triggered it. A staged report is applied through the same rules as
+a fresh one (§6.4), and never when its device has been revoked since. `player_observation` also
+keeps `self`, `context` and a keyed hash of the sender's IP (for corroboration).
 
 ### 6.4 Applying (core) — never overwrite newer or more authoritative data
 
@@ -471,6 +503,35 @@ upload's aliases), it applies the staged observation of that Riot ID if it is st
   stored rank is current without asking Riot.
 - Writes invalidate the response cache of `summoner:<puuid>`.
 
+Core notes:
+
+- *Self* means the player is one of the device's links (by API PUUID, or by the raw PUUID the link
+  proved); the `self` flag alone is not believed. Losses are kept only from a linked account or a
+  trusted device; a corroborated report is applied with `losses` `NULL`.
+- Corroboration needs the stored report of the same raw PUUID to come from another device, from
+  another IP (keyed hash), within 6 h, with the same Riot ID and platform, and the same tier,
+  division and LP per queue (both having read ranks). `conflict` reports never corroborate. Held
+  reports are not replayed when a device becomes trusted; its next report applies.
+- The 800-point rule holds trusted devices too and holds the whole report.
+- Per queue: a report equal to the newest row only confirms it (`unchanged`); a different report
+  older than the newest row is `stale` for that queue; a different, newer one is a new row. A
+  queue absent from a read `ranks` with no stored row is confirmed unranked (a confirmation without
+  a rank row); a stored queue the report lacks is left alone.
+- A Riot read (`updateRanks`) writes a row when a queue changed or its newest row is not Riot's,
+  and otherwise only confirms it (`riot_rank_confirmed.device_id` `NULL`), so a later Riot read
+  always supersedes desktop data without duplicating history.
+- `riot_rank_confirmed` and `player_mastery` also carry `device_id`, for rollback (§1.2).
+  `player_mastery` also keeps Riot's top 10 after every champion-mastery-v4 read (`source riot`),
+  so an older desktop snapshot never stands in for a newer Riot read.
+- Icon and level are compared with `riot_player.last_refresh_at`, which desktop data never moves.
+  An icon change or rename adds a `riot_player_history` row. A rename to a Riot ID another stored
+  player still holds on that platform is skipped (Riot settles it).
+- The player's status: `applied` when any part was written, `unchanged` when nothing was but
+  freshness moved (or nothing applied), `stale` when every part was older than core's data.
+- `riot_rank.losses` has been nullable since the table was created; the migration only guarantees
+  it. Rolling the migration back fills `NULL` losses from the newest earlier row of that queue
+  with losses, else 0.
+
 ### 6.5 Fewer Riot calls (core)
 
 - League-v4 is skipped when the newest rank of the player (Riot or desktop, or its confirmation)
@@ -481,6 +542,17 @@ upload's aliases), it applies the staged observation of that Riot ID if it is st
 - APIs expose provenance: rank and mastery responses carry `source` (`riot` = Riot API,
   `desktop` = reported by the Invade app) and `observedAt`; `freshness` of the summoner gains
   `lastObservedAt`.
+
+Core notes: "the newest rank" is the latest `riot_rank.fetched_at` or
+`riot_rank_confirmed.confirmed_at` of any queue. Website profile reads never called league-v4
+(only Update does), so the 10-min rule applies to `/resolve`. The website's Mastery panel lists
+every champion, which no snapshot covers, so it still reads champion-mastery-v4 (cached 1 h);
+`GET /api/summoners/puuid/:puuid/mastery?count=N` with N ≤ 10 is served from a desktop snapshot
+younger than 24 h, and the profile now asks for `?count=10`, loading the full list only on
+Champions → Mastery. Shapes: rank entries (`current`, `history`) gain `source` and `observedAt`
+(ISO; for a current rank the later of its row and its confirmation) and may have `losses: null`;
+mastery entries gain `source` and `observedAt` (epoch ms; `null` for a Riot read cached before
+v1.1); `freshness.lastObservedAt` is the newest applied or unchanged report (ISO, or `null`).
 
 ### 6.6 Desktop behaviour
 

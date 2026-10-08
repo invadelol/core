@@ -19,9 +19,14 @@ declare module '@adonisjs/core/http' {
 
 /** Largest game upload the desktop app may send (docs/desktop-sync.md §2.5). */
 export const DESKTOP_MAX_PAYLOAD_BYTES = 2_000_000
+/** Largest batch of player snapshots (docs/desktop-sync.md §6.1). */
+export const DESKTOP_MAX_PLAYERS_BYTES = 256 * 1024
 
 /** Routes with a JSON limit of their own; every other route keeps the default 1 MB. */
-const JSON_LIMITS = new Map([['/api/desktop/matches', DESKTOP_MAX_PAYLOAD_BYTES]])
+const JSON_LIMITS = new Map([
+  ['/api/desktop/matches', DESKTOP_MAX_PAYLOAD_BYTES],
+  ['/api/desktop/players', DESKTOP_MAX_PLAYERS_BYTES],
+])
 
 /** The limit a 413 on this URL refers to, when the route has one of its own. */
 export function payloadLimitOf(url: string): number | null {
@@ -85,8 +90,9 @@ function digestBody(request: IncomingMessage, hasBody: boolean): Promise<string>
 /**
  * The framework's body parser, with two additions for the desktop routes:
  * per-route JSON limits (a finished game with its timeline can approach
- * 2 MB; every other route keeps refusing anything over 1 MB before reading
- * it), and the hash of the raw body their signatures need.
+ * 2 MB, a batch of players is capped at 256 KB, every other route keeps
+ * refusing anything over 1 MB before reading it), and the hash of the raw
+ * body their signatures need.
  */
 export default class BodyParser {
   async handle(ctx: HttpContext, next: NextFn) {

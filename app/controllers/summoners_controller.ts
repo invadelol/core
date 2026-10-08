@@ -16,15 +16,23 @@ import { invalidateResponseCache } from '#services/http_response_cache'
 import { SyncGuard } from '#utils/sync_guard'
 import { translateRiotError } from '#utils/riot_errors'
 import deviceService from '#services/desktop/device_service'
+import playerSnapshotService from '#services/desktop/player_snapshot_service'
 import type Summoner from '#models/summoner'
 
+/** The website's Update skips league-v4 when the ranks were known current this recently (§6.5). */
+const SYNC_RANK_FRESHNESS = { minutes: 3 }
+
 /**
- * How current a profile is: the last Riot refresh, and the newest game the
- * desktop app delivered. A failed lookup only costs the second figure.
+ * How current a profile is: the last Riot refresh, the newest game the
+ * desktop app delivered, and the newest snapshot of the player it reported
+ * (§6.5). A failed lookup only costs its own figure.
  */
 async function freshness(summoner: Summoner) {
-  const lastDesktopSyncAt = await deviceService.lastSyncAt(summoner.puuid).catch(() => null)
-  return { lastRefreshAt: summoner.lastRefreshAt ?? null, lastDesktopSyncAt }
+  const [lastDesktopSyncAt, lastObservedAt] = await Promise.all([
+    deviceService.lastSyncAt(summoner.puuid).catch(() => null),
+    playerSnapshotService.lastObservedAt(summoner.puuid).catch(() => null),
+  ])
+  return { lastRefreshAt: summoner.lastRefreshAt ?? null, lastDesktopSyncAt, lastObservedAt }
 }
 
 const syncGuard = new SyncGuard()
@@ -74,10 +82,16 @@ export default class SummonersController {
         throw translateRiotError(error)
       }
 
-      // Ranks change even when all recent matches were ingested by another player's update.
+      // Ranks change even when all recent matches were ingested by another player's
+      // update; league-v4 is skipped only when Riot or the app said so minutes ago.
       let rankRefreshFailed = false
       try {
-        await summonerService.updateRanks(resolvedSummoner.puuid, resolvedSummoner.platform)
+        const fresh = await summonerService
+          .ranksFresh(resolvedSummoner.puuid, SYNC_RANK_FRESHNESS)
+          .catch(() => false)
+        if (!fresh) {
+          await summonerService.updateRanks(resolvedSummoner.puuid, resolvedSummoner.platform)
+        }
         await invalidateResponseCache([`summoner:${resolvedSummoner.puuid}`])
       } catch (error) {
         rankRefreshFailed = true
@@ -92,7 +106,7 @@ export default class SummonersController {
    * Get summoner details
    * @paramPath summoner - GameName-TagLine
    * @paramPath platform - Region (e.g., EUW1)
-   * @responseBody 200 - { summoner: <Summoner>, freshness: { lastRefreshAt, lastDesktopSyncAt } }
+   * @responseBody 200 - { summoner: <Summoner>, freshness: { lastRefreshAt, lastDesktopSyncAt, lastObservedAt } }
    */
   async show({ params, response }: HttpContext) {
     const { summoner, platform } = params

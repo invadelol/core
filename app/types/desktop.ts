@@ -126,3 +126,53 @@ export interface MatchUpload {
   timeline: LcuTimeline | null
   lp: LpReport | null | unknown
 }
+
+/** One ranked queue as the client showed it (docs/desktop-sync.md §6.1). */
+export interface ObservedRank {
+  queue: RankedQueue
+  tier: string
+  /** `"I"` for apex tiers, like league-v4. */
+  division: string
+  lp: number
+  wins: number
+  /** Only the signed-in account's own: the client hides everyone else's. */
+  losses: number | null
+  provisional?: boolean
+}
+
+export interface ObservedMastery {
+  championId: number
+  championLevel: number
+  championPoints: number
+  lastPlayTime: number
+}
+
+export type ObservationContext = 'self' | 'profile' | 'champ_select' | 'in_game'
+
+/** A player as the League client showed it, after the per-player checks of §6.2. */
+export interface PlayerSnapshot {
+  /** Lower case. */
+  rawPuuid: string
+  gameName: string
+  tagLine: string
+  platform: string
+  profileIconId: number | null
+  summonerLevel: number | null
+  privacy: 'PUBLIC' | 'PRIVATE' | null
+  self: boolean
+  context: ObservationContext | null
+  /** Epoch ms the client answered. */
+  observedAt: number
+  /** Null: not read. []: read, unranked in both queues. Provisional entries are dropped. */
+  ranks: ObservedRank[] | null
+  /** Null: not read, or a private profile. Top 10 by points. */
+  mastery: ObservedMastery[] | null
+}
+
+/** `POST /api/desktop/players`; players are checked one by one, not by the validator. */
+export interface PlayerBatch {
+  schema: 1
+  platform: string
+  app: string
+  players: Array<Record<string, unknown> & { rawPuuid: string }>
+}

@@ -1,4 +1,3 @@
-import { DateTime } from 'luxon'
 import cache from '@adonisjs/cache/services/main'
 import db from '@adonisjs/lucid/services/db'
 import logger from '@adonisjs/core/services/logger'
@@ -21,7 +20,12 @@ export interface ResolvedRank {
   division: string | null
   lp: number
   wins: number
-  losses: number
+  /** Null when the newest rank came from another player's client, which hides losses (§6.4). */
+  losses: number | null
+  /** `riot`, or `desktop` when the Invade app reported it (§6.5). */
+  source: 'riot' | 'desktop'
+  /** Epoch ms the rank was last known true: its row or its confirmation, whichever is later. */
+  observedAt: number
 }
 
 /**
@@ -79,30 +83,47 @@ class ResolveService {
   }
 
   private async latestRanks(puuid: string) {
-    return db
-      .from('riot_rank')
-      .distinctOn('queue_type')
-      .select('queue_type', 'tier', 'division', 'league_points', 'wins', 'losses', 'fetched_at')
-      .where('puuid', puuid)
-      .orderBy('queue_type')
-      .orderBy('fetched_at', 'desc')
+    const [rows, confirmations] = await Promise.all([
+      db
+        .from('riot_rank')
+        .distinctOn('queue_type')
+        .select(
+          'queue_type',
+          'tier',
+          'division',
+          'league_points',
+          'wins',
+          'losses',
+          'fetched_at',
+          'source'
+        )
+        .where('puuid', puuid)
+        .orderBy('queue_type')
+        .orderBy('fetched_at', 'desc'),
+      db.from('riot_rank_confirmed').select('queue_type', 'confirmed_at').where('puuid', puuid),
+    ])
+    const confirmed = new Map<string, number>(
+      confirmations.map((row) => [row.queue_type, new Date(row.confirmed_at).getTime()])
+    )
+    return rows.map((row) => ({
+      ...row,
+      observed_at: Math.max(new Date(row.fetched_at).getTime(), confirmed.get(row.queue_type) ?? 0),
+    }))
   }
 
   /**
-   * Stored ranks, refreshed from league-v4 when there are none or the newest
-   * is older than ten minutes. The refresh is remembered for ten minutes
-   * too, so an unranked player (who never gets a row) costs one call per
-   * window instead of one per request.
+   * Stored ranks, refreshed from league-v4 when none was known current in
+   * the last ten minutes: a rank row or a confirmation, from Riot or from
+   * the desktop app (§6.5). The refresh is remembered for ten minutes too,
+   * so an unranked player (who never gets a row) costs one call per window
+   * instead of one per request.
    */
   async ranks(player: Summoner) {
     let rows = await this.latestRanks(player.puuid)
     let stale = false
-    const newest = rows.reduce<DateTime | null>((latest, row) => {
-      const at = DateTime.fromJSDate(new Date(row.fetched_at))
-      return !latest || at > latest ? at : latest
-    }, null)
+    const fresh = await summonerService.ranksFresh(player.puuid, RANK_FRESHNESS).catch(() => false)
 
-    if (!newest || newest < DateTime.now().minus(RANK_FRESHNESS)) {
+    if (!fresh) {
       try {
         await cache.getOrSet({
           key: `desktop:ranks-refreshed:${player.puuid}`,
@@ -129,25 +150,29 @@ class ResolveService {
         division: row.division,
         lp: Number(row.league_points) || 0,
         wins: Number(row.wins) || 0,
-        losses: Number(row.losses) || 0,
+        losses: row.losses === null || row.losses === undefined ? null : Number(row.losses),
+        source: row.source ?? 'riot',
+        observedAt: row.observed_at,
       })
     }
     return { byQueue, stale }
   }
 
-  /** Top champions by points, from the website's own cached mastery read (1 h). */
+  /**
+   * Top champions by points: from a desktop snapshot younger than a day,
+   * else from the website's own cached mastery read (1 h).
+   */
   async mastery(puuid: string) {
     try {
-      const all = await playerInsightsService.mastery(puuid)
-      const entries = [...all]
-        .sort((a, b) => b.championPoints - a.championPoints)
-        .slice(0, TOP_MASTERY)
-        .map((entry) => ({
-          championId: entry.championId,
-          championLevel: entry.championLevel,
-          championPoints: entry.championPoints,
-          lastPlayTime: entry.lastPlayTime,
-        }))
+      const top = await playerInsightsService.top(puuid, TOP_MASTERY)
+      const entries = top.map((entry) => ({
+        championId: entry.championId,
+        championLevel: entry.championLevel,
+        championPoints: entry.championPoints,
+        lastPlayTime: entry.lastPlayTime,
+        source: entry.source,
+        observedAt: entry.observedAt,
+      }))
       return { entries, stale: false }
     } catch (error) {
       logger.warn({ err: error, puuid }, 'mastery unavailable for desktop resolve')
