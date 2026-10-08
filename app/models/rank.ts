@@ -30,7 +30,11 @@ export default class Rank extends BaseModel {
   @column.dateTime({ columnName: 'fetched_at' })
   declare fetchedAt: DateTime
 
-  /** `riot` from league-v4, `desktop` from the app's post-game LP snapshot. */
+  /** `riot` from league-v4, `desktop` from the app (post-game LP snapshot or player snapshot). */
   @column()
   declare source: 'riot' | 'desktop'
+
+  /** The device that reported a desktop row, kept for rollback (§1.2); never served. */
+  @column({ columnName: 'device_id', serializeAs: null })
+  declare deviceId: string | null
 }

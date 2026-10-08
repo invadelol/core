@@ -67,7 +67,7 @@ class LpService {
       .onConflict(['match_id', 'puuid'])
       .ignore()
 
-    await this.storeRank(context.puuid, queue, after).catch((error) =>
+    await this.storeRank(context.puuid, queue, after, context.deviceId).catch((error) =>
       logger.warn({ err: error, matchId: context.matchId }, 'desktop rank snapshot not stored')
     )
     return 'stored'
@@ -88,7 +88,8 @@ class LpService {
       wins: number
       losses: number
       at: number
-    }
+    },
+    deviceId: string
   ) {
     const latest = await db
       .from('riot_rank')
@@ -113,6 +114,8 @@ class LpService {
         losses: after.losses,
         fetched_at: at.toJSDate(),
         source: 'desktop',
+        // Provenance, so the row goes if the device is ever caught lying (§1.2).
+        device_id: deviceId,
       })
       .onConflict(['puuid', 'queue_type', 'fetched_at'])
       .ignore()

@@ -1,6 +1,7 @@
 import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
 import logger from '@adonisjs/core/services/logger'
+import encryption from '@adonisjs/core/services/encryption'
 import DesktopDevice from '#models/desktop_device'
 import DesktopDeviceAccount from '#models/desktop_device_account'
 import Summoner from '#models/summoner'
@@ -9,19 +10,43 @@ import identityService from '#services/desktop/identity_service'
 import { invalidateResponseCache } from '#services/http_response_cache'
 import { normalizePlatform } from '#services/riot/routing'
 import { generateToken, hashToken } from '#services/desktop/tokens'
+import { generateSecret, isSecret } from '#services/desktop/signing'
 import { riotErrorStatus } from '#utils/riot_errors'
 import { DesktopException } from '#exceptions/desktop_exception'
 import { SITE_ORIGIN } from '#services/sitemap'
 
-/** A device earns the free publication path after this many games Riot confirmed (§4.2). */
-export const TRUSTED_AFTER = 5
+/**
+ * Trust is slow to earn (docs/desktop-sync.md §1.2): this many games Riot
+ * confirmed, on this many different days, from a device at least this old,
+ * and never a single game Riot contradicted.
+ */
+export const TRUST = { verifiedUploads: 5, verifiedDays: 3, minAgeDays: 3 } as const
 
 export function profileUrl(gameName: string, tagLine: string) {
   return `${SITE_ORIGIN}/${encodeURIComponent(`${gameName}-${tagLine}`)}`
 }
 
-export function isTrusted(device: Pick<DesktopDevice, 'verifiedUploads' | 'mismatches'>) {
-  return device.verifiedUploads >= TRUSTED_AFTER && device.mismatches === 0
+export function isTrusted(
+  device: Pick<
+    DesktopDevice,
+    'verifiedUploads' | 'mismatches' | 'verifiedDays' | 'createdAt' | 'revokedAt'
+  >,
+  now: DateTime = DateTime.now()
+) {
+  return (
+    !device.revokedAt &&
+    device.mismatches === 0 &&
+    device.verifiedUploads >= TRUST.verifiedUploads &&
+    (device.verifiedDays ?? 0) >= TRUST.verifiedDays &&
+    Boolean(device.createdAt) &&
+    device.createdAt <= now.minus({ days: TRUST.minAgeDays })
+  )
+}
+
+/** The matches and players a rolled-back device's data touched; their caches are dropped. */
+export interface Rollback {
+  matches: string[]
+  players: string[]
 }
 
 /**
@@ -31,16 +56,30 @@ export function isTrusted(device: Pick<DesktopDevice, 'verifiedUploads' | 'misma
 class DeviceService {
   async register(app: string, os: string) {
     const token = generateToken()
+    const secret = generateSecret()
     const device = await DesktopDevice.create({
       tokenHash: hashToken(token),
+      secretEncrypted: encryption.encrypt(secret),
       app,
       os,
       lastSeenAt: DateTime.now(),
       verifiedUploads: 0,
+      verifiedDays: 0,
       mismatches: 0,
     })
-    // The only time the token exists outside the app.
-    return { deviceId: device.id, token }
+    // The only time the token and the secret exist outside the app.
+    return { deviceId: device.id, token, secret }
+  }
+
+  /**
+   * The device's signing secret, decrypted with the app key. Null for a
+   * device registered before signing existed, or one whose secret no longer
+   * decrypts (a rotated app key): both must register again.
+   */
+  secretOf(device: Pick<DesktopDevice, 'secretEncrypted'>): string | null {
+    if (!device.secretEncrypted) return null
+    const secret = encryption.decrypt<string>(device.secretEncrypted)
+    return isSecret(secret) ? secret : null
   }
 
   /** The unrevoked device a bearer token belongs to. */
@@ -159,19 +198,50 @@ class DeviceService {
     return row?.at ? DateTime.fromJSDate(new Date(row.at)) : null
   }
 
+  /**
+   * Riot confirmed one of the device's games. The day count moves when the
+   * (UTC) day differs from the last confirmation's: confirmations arrive in
+   * time order, so that counts distinct days without keeping each one.
+   */
   async verified(deviceId: string) {
-    await db.from('desktop_device').where('id', deviceId).increment('verified_uploads', 1)
+    await db.rawQuery(
+      `UPDATE desktop_device
+       SET verified_uploads = verified_uploads + 1,
+           verified_days = verified_days
+             + CASE WHEN last_verified_on IS DISTINCT FROM (now() AT TIME ZONE 'UTC')::date
+                    THEN 1 ELSE 0 END,
+           last_verified_on = (now() AT TIME ZONE 'UTC')::date
+       WHERE id = ?`,
+      [deviceId]
+    )
   }
 
   /**
-   * Riot contradicted this device. It is revoked, and every game only it
-   * vouched for loses its credibility: marked `conflict`, its LP hidden.
-   * The rows stay in ClickHouse until the game is re-ingested from Riot.
+   * Riot contradicted this device (a game, or a sampled player snapshot).
+   * A lie costs it everything (§1.2): it is revoked, every game only it
+   * vouched for is marked `conflict` with its LP hidden, and the ranks it
+   * wrote are deleted, so the profiles fall back to Riot's own data. Games
+   * stay in ClickHouse until they are re-ingested from Riot.
    */
-  async mismatch(deviceId: string, matchId: string, differences: string[]) {
-    logger.warn({ deviceId, matchId, differences }, 'desktop upload contradicted by Riot')
+  async mismatch(deviceId: string, reference: string, differences: string[]): Promise<Rollback> {
+    logger.warn({ deviceId, reference, differences }, 'desktop data contradicted by Riot')
     await db.from('desktop_device').where('id', deviceId).increment('mismatches', 1)
     await this.revoke(deviceId, 'mismatch')
+    const rollback = await this.rollback(deviceId)
+
+    await invalidateResponseCache([
+      ...rollback.matches.map((id) => `match:${id}`),
+      ...rollback.players.map((puuid) => `summoner:${puuid}`),
+    ]).catch((error) => logger.warn({ err: error, deviceId }, 'cache invalidation failed'))
+    return rollback
+  }
+
+  /** Undoes what a device wrote; returns the matches and players it touched. */
+  async rollback(deviceId: string): Promise<Rollback> {
+    const players = new Set<string>()
+    const puuidsOf = (rows: Array<{ puuid: string | null }>) => {
+      for (const row of rows) if (row.puuid) players.add(row.puuid)
+    }
 
     const matches: string[] = await db
       .from('match_source')
@@ -181,19 +251,20 @@ class DeviceService {
       .returning('match_id')
       .then((rows: Array<{ match_id: string }>) => rows.map((row) => row.match_id))
 
-    const hidden: Array<{ match_id: string; puuid: string }> = matches.length
-      ? await db
+    if (matches.length) {
+      puuidsOf(
+        await db
           .from('lp_change')
           .whereIn('match_id', matches)
           .where('status', 'accepted')
           .update({ status: 'conflict' })
-          .returning(['match_id', 'puuid'])
-      : []
+          .returning(['puuid'])
+      )
+    }
 
-    await invalidateResponseCache([
-      ...matches.map((id) => `match:${id}`),
-      ...hidden.map((row) => `summoner:${row.puuid}`),
-    ]).catch((error) => logger.warn({ err: error, deviceId }, 'cache invalidation failed'))
+    puuidsOf(await db.from('riot_rank').where('device_id', deviceId).delete().returning(['puuid']))
+
+    return { matches, players: [...players] }
   }
 }
 

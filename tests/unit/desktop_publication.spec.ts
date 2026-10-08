@@ -11,7 +11,7 @@ import { uploadFacts } from '#services/desktop/conversion'
 import DesktopDevice from '#models/desktop_device'
 import MatchSource from '#models/match_source'
 import { apiPuuids, makeUpload, riotMatch, UPLOADER_PARTICIPANT } from '#tests/fixtures/desktop'
-import { DesktopSeed } from '#tests/fixtures/desktop_db'
+import { DesktopSeed, TRUSTED, type DeviceCounters } from '#tests/fixtures/desktop_db'
 import type { MatchUpload } from '#types/desktop'
 
 /**
@@ -91,7 +91,7 @@ test.group('Desktop publication policy', (group) => {
   const notFound = () => new Exception('Not found', { status: 404 })
 
   /** A fresh game, its players stored, and a device linked to the uploader. */
-  async function scenario(counters: { verifiedUploads?: number } = {}) {
+  async function scenario(counters: DeviceCounters = {}) {
     const upload = makeUpload({ fresh: true, gameId: 9e9 + Math.floor(Math.random() * 1e9) })
     const puuids = apiPuuids(upload)
     await seed.players(upload, puuids, [UPLOADER_PARTICIPANT])
@@ -151,7 +151,7 @@ test.group('Desktop publication policy', (group) => {
   })
 
   test('a trusted device whose players are all known publishes for free', async ({ assert }) => {
-    const { upload, puuids, device } = await scenario({ verifiedUploads: 5 })
+    const { upload, puuids, device } = await scenario(TRUSTED)
     await seed.aliases(upload, puuids)
     riot(new Error('Riot must not be called'))
 
@@ -173,7 +173,7 @@ test.group('Desktop publication policy', (group) => {
   })
 
   test('one trusted upload in ten is checked against Riot afterwards', async ({ assert }) => {
-    const { upload, puuids, device } = await scenario({ verifiedUploads: 7 })
+    const { upload, puuids, device } = await scenario({ ...TRUSTED, verifiedUploads: 7 })
     await seed.aliases(upload, puuids)
     publicationService.sample = () => true
     riot(riotMatch(upload, puuids))
@@ -191,7 +191,7 @@ test.group('Desktop publication policy', (group) => {
   })
 
   test('a trusted device with an unknown player still goes through Riot', async ({ assert }) => {
-    const { upload, puuids, device } = await scenario({ verifiedUploads: 9 })
+    const { upload, puuids, device } = await scenario({ ...TRUSTED, verifiedUploads: 9 })
     riot(riotMatch(upload, puuids))
     assert.equal(await statusOf(upload, device), 'verified')
     assert.lengthOf(calls.match, 1)
@@ -272,7 +272,7 @@ test.group('Desktop publication policy', (group) => {
   test('a second device: agreement from elsewhere corroborates, disagreement is a conflict', async ({
     assert,
   }) => {
-    const { upload, puuids, device } = await scenario({ verifiedUploads: 5 })
+    const { upload, puuids, device } = await scenario(TRUSTED)
     await seed.aliases(upload, puuids)
     await send(upload, device, '198.51.100.1')
 
@@ -335,6 +335,12 @@ test.group('Desktop publication policy', (group) => {
       .where('puuid', uploader)
       .orderBy('fetched_at', 'desc')
       .first()
-    assert.include(rank, { tier: 'EMERALD', division: 'II', league_points: 64, source: 'desktop' })
+    assert.include(rank, {
+      tier: 'EMERALD',
+      division: 'II',
+      league_points: 64,
+      source: 'desktop',
+      device_id: device.id,
+    })
   })
 })

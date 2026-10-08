@@ -79,6 +79,19 @@ be replayed or modified.
   once. The app never logs the token, the secret or a signature.
 - A device registered before signing existed has no secret: it gets 401 `E_DEVICE_UNAUTHORIZED`
   and registers again.
+- The HMAC key is the secret exactly as received: its 64 hex characters as ASCII bytes (Node
+  `createHmac('sha256', secret)` with the hex string), not the 32 bytes they encode.
+
+Core notes: `path_with_query` is the request target exactly as it appears in the request line
+(`/api/desktop/resolve?gameName=Louhi&tagLine=727`, encoded as sent). The body hash covers the bytes
+as they arrived, hashed while the body parser reads them. Checks run in this order: token
+(`E_DEVICE_UNAUTHORIZED`), secret present (`E_DEVICE_UNAUTHORIZED`), both headers present and well
+formed — a timestamp of digits, a signature of exactly 64 lowercase hex characters
+(`E_BAD_SIGNATURE`), clock (`E_CLOCK_SKEW`, ±5 min inclusive), signature (`E_BAD_SIGNATURE`),
+replay (`E_REPLAY`). Only a valid signature enters the replay cache, under a SHA-256 of itself; if
+Redis is down the request is allowed (the 5-min window still bounds a replay), as the rate
+limiter does. Body-size limits (413) apply before authentication. Core's logs redact
+`Authorization`, `X-Invade-Signature` and any `token`/`secret`/`signature` field.
 
 ### 1.2 What signing cannot stop, and what core does about it
 
@@ -97,6 +110,23 @@ prevent that. So core never takes desktop data on faith:
   players from Riot when they are next viewed;
 - other players' ranks from an untrusted device are only applied when a second device on another
   network confirms them (§6.4).
+
+Core notes: days are UTC days, counted when the day of a match-v5 confirmation differs from the
+previous one (`desktop_device.verified_days`); a player-snapshot audit that passes does not count
+towards trust. The sample rates are constants (`MATCH_AUDIT_ONE_IN = 10`, `PLAYER_AUDIT_ONE_IN =
+20`). A sampled snapshot is read back with one league-v4 call a minute after it is applied (one
+retry at 4 min on a Riot 5xx; skipped while Riot rate limits) and judged only if Riot was read
+within 10 min of `observedAt`. Only what no honest client could report is a mismatch: fewer wins
+(or fewer known losses) than reported, or — when no game provably ended in between — another
+tier or division, or LP more than 30 away. A game that ended since (more wins, more known
+losses) makes the queue inconclusive, and for another player, whose losses are hidden, a drop of
+up to 100 ladder points (one unseen loss, a demotion) is inconclusive too. Riot's answer is
+stored like any league-v4 read. On any mismatch (match or player) the device is revoked; its
+unverified games become `conflict` with their LP hidden; its player reports become `conflict`;
+the `riot_rank` rows, rank confirmations and mastery snapshots it wrote are deleted; the response
+caches of every player touched are dropped. Profiles then show Riot's own older rows, and the
+next read past the freshness windows of §6.5 (resolve, the website's Update) asks Riot again.
+Icons, levels and verified renames a device applied are not reverted.
 
 ## 2. Endpoints
 

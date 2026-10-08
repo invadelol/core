@@ -50,10 +50,11 @@ export default class DesktopController {
   }
 
   /**
-   * Register a device; the token is returned once and never stored
+   * Register a device; the token and the signing secret are returned once
+   * and never stored in clear
    * @tag Desktop
    * @requestBody {"app": "0.2.7", "os": "macos"}
-   * @responseBody 201 - {"deviceId": "uuid", "token": "inv_dev_..."}
+   * @responseBody 201 - {"deviceId": "uuid", "token": "inv_dev_...", "secret": "64 hex"}
    * @responseBody 429 - Too many registrations from this address
    */
   async register({ request, response }: HttpContext) {

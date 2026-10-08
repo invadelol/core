@@ -1,4 +1,3 @@
-import { randomInt } from 'node:crypto'
 import logger from '@adonisjs/core/services/logger'
 import db from '@adonisjs/lucid/services/db'
 import env from '#start/env'
@@ -18,6 +17,7 @@ import identityService, {
 import deviceService, { isTrusted, profileUrl } from '#services/desktop/device_service'
 import lpService from '#services/desktop/lp_service'
 import { RetryScheduler } from '#services/desktop/retry_scheduler'
+import { MATCH_AUDIT_ONE_IN, oneIn } from '#services/desktop/sampling'
 import { validateStructure } from '#services/desktop/match_validation'
 import { hashAddress } from '#services/desktop/tokens'
 import {
@@ -99,7 +99,7 @@ export class PublicationService {
   retries = new RetryScheduler()
 
   /** One upload in ten from a trusted device is still checked against match-v5. */
-  sample = () => randomInt(10) === 0
+  sample = () => oneIn(MATCH_AUDIT_ONE_IN)
   now = () => Date.now()
 
   /** Concurrent uploads of one game run one after the other in this process. */
