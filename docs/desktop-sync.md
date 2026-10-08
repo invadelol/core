@@ -11,9 +11,9 @@ Both sides implement exactly this document. Anything not written here is out of 
 
 ## 0. Ground rules
 
-- **Consent.** The desktop app uploads nothing unless the player switched on *Publish my games on
-  invade.lol* (off by default). Turning it off stops uploads immediately; *Unlink this computer*
-  revokes the device on the server.
+- **Publishing is part of using the app.** Every finished, matchmade game the signed-in account
+  played is uploaded; the app says so in Settings → invade.lol (what is sent and when) and
+  there is no switch. A device is registered as soon as an account signs in or onboarding ends.
 - **Only finished games the uploader played.** Never champ select, never a game in progress, never
   data the client hides (enemy names in ranked champ select). Only matchmade games
   (`gameType == "MATCHED_GAME"`) in the queues of §4.3.
@@ -92,8 +92,8 @@ earlier `lcu` link stored.
 
 ### 2.4 `GET /api/desktop/resolve?gameName=…&tagLine=…` (auth optional: 30 / hour / device, 20 / hour / IP without a token)
 
-Onboarding without the League client. A player who has not switched publishing on has no device
-token yet: the IP limit applies. Uses `summonerService.resolveAndUpsert` (coalesced, cached),
+Onboarding without the League client. The device may not be registered yet at that point: the IP
+limit applies. Uses `summonerService.resolveAndUpsert` (coalesced, cached),
 ranks from `riot_rank` (league-v4 only when none is stored or the newest is older than 10 min),
 mastery top 5 (champion-mastery-v4, cached 1 h), and recent games **from ClickHouse only** (no
 match-v5 call during onboarding).
