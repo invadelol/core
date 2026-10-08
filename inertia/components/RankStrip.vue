@@ -110,9 +110,12 @@ const options = computed(() =>
     tooltipLabel: (ctx) => {
       const entry = charted.value?.history[ctx.dataIndex]
       if (!entry) return ''
+      const when = longDate(entry.fetchedAt ?? Date.now())
+      // Another player's client hides losses: wins alone, no made-up win rate.
+      if (entry.losses === null || entry.losses === undefined) return [`${entry.wins}W`, when]
       const total = entry.wins + entry.losses
       const wr = total ? Math.round((entry.wins / total) * 100) : 0
-      return [`${entry.wins}W ${entry.losses}L · ${wr}%`, longDate(entry.fetchedAt ?? Date.now())]
+      return [`${entry.wins}W ${entry.losses}L · ${wr}%`, when]
     },
   })
 )
@@ -128,9 +131,27 @@ const peak = computed(() => {
   )
 })
 
+const knownLosses = (rank: Rank) => rank.losses !== null && rank.losses !== undefined
+
+/**
+ * Wins and losses when both are known. A rank the Invade app read from
+ * another player's client has no losses (the client hides them), so its
+ * line shows wins only and the win rate comes from the newest row of the
+ * queue that has losses, if any; never a made-up 100%.
+ */
 function record(rank: Rank) {
-  const total = rank.wins + rank.losses
-  return { total, winrate: total ? Math.round((rank.wins / total) * 100) : 0 }
+  const basis = knownLosses(rank)
+    ? rank
+    : (props.ranks?.history ?? [])
+        .filter((r) => r.queueType === rank.queueType && knownLosses(r))
+        .sort(
+          (a, b) => new Date(b.fetchedAt ?? 0).getTime() - new Date(a.fetchedAt ?? 0).getTime()
+        )[0]
+  const total = basis ? basis.wins + (basis.losses ?? 0) : 0
+  return {
+    losses: knownLosses(rank) ? rank.losses : null,
+    winrate: basis && total ? Math.round((basis.wins / total) * 100) : null,
+  }
 }
 </script>
 
@@ -159,8 +180,14 @@ function record(rank: Rank) {
             />
           </span>
           <div class="min-w-0 flex-1">
-            <div class="text-[12px] text-ink-3">
-              Ranked {{ QUEUE_LABELS[rank.queueType] || rank.queueType }}
+            <div class="flex items-baseline justify-between gap-2 text-[12px] text-ink-3">
+              <span>Ranked {{ QUEUE_LABELS[rank.queueType] || rank.queueType }}</span>
+              <span
+                v-if="rank.source === 'desktop'"
+                title="Read from the League client by the Invade app"
+              >
+                Via Invade app
+              </span>
             </div>
             <div class="flex items-baseline justify-between gap-2">
               <span
@@ -175,9 +202,11 @@ function record(rank: Rank) {
               </span>
             </div>
             <div class="num text-[12px] text-ink-3">
-              {{ rank.wins }}W {{ rank.losses }}L
-              <span class="text-ink-4">·</span>
-              {{ record(rank).winrate }}%
+              {{ rank.wins }}W{{ record(rank).losses === null ? '' : ` ${record(rank).losses}L` }}
+              <template v-if="record(rank).winrate !== null">
+                <span class="text-ink-4">·</span>
+                {{ record(rank).winrate }}%
+              </template>
             </div>
           </div>
         </li>
