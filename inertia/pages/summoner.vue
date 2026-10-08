@@ -28,10 +28,11 @@ import FriendsPanel from '../components/FriendsPanel.vue'
 import LiveMatch from '../components/LiveMatch.vue'
 import PlayerCompare from '../components/PlayerCompare.vue'
 import ShareProfile from '../components/ShareProfile.vue'
-import Glyph from '../components/ui/Glyph.vue'
+import SiteFooter from '../components/SiteFooter.vue'
 import { loadChampions } from '../lib/assets.js'
 import { decodeSlug, parseSlug } from '../lib/format.js'
-import { rememberPlayer } from '../lib/recent.js'
+import { isRemake } from '../lib/match.js'
+import { rememberPlayer, updateRecent } from '../lib/recent.js'
 import type {
   ActivityDay,
   GlobalStats,
@@ -87,11 +88,14 @@ let filterController: AbortController | undefined
 let masteryController: AbortController | undefined
 
 const mainChampion = computed(() => champions.value[0]?.championId ?? mastery.value[0]?.championId)
-const displayedMatches = computed(() => filteredMatches.value ?? matches.value)
+const loadedMatches = computed(() => filteredMatches.value ?? matches.value)
+/** Custom games (practice tool, lobbies with friends) are not part of anyone's record. */
+const displayedMatches = computed(() => loadedMatches.value.filter((m) => m.queueId !== 0))
+const hiddenCustoms = computed(() => loadedMatches.value.length - displayedMatches.value.length)
 
 /** What the current filters actually returned, printed next to them. */
 const filterSummary = computed(() => {
-  const list = displayedMatches.value
+  const list = displayedMatches.value.filter((m) => !isRemake(m))
   if (!list.length) return ''
   let wins = 0
   for (const match of list) {
@@ -234,7 +238,7 @@ async function applyFilters(append = false) {
     if (isChampions) filteredChampions.value = data
     else {
       const incoming = data as Match[]
-      const existing = append ? displayedMatches.value : []
+      const existing = append ? loadedMatches.value : []
       filteredMatches.value = [
         ...new Map([...existing, ...incoming].map((match) => [match.matchId, match])).values(),
       ]
@@ -425,6 +429,8 @@ async function load() {
       gameName: result.gameName,
       tagLine: result.tagLine,
       profileIconId: result.profileIconId,
+      platform: result.platform,
+      level: result.summonerLevel,
     })
     // Start the visit timer independently of slow analytics.
     viewTimer = setTimeout(async () => {
@@ -445,6 +451,14 @@ async function load() {
     void loadStats()
     if (section.value === 'friends') void loadFriendMatches()
     await loadAnalytics(result.puuid, signal)
+    if (!signal.aborted && ranks.value) {
+      const solo = ranks.value.current?.find((r) => r.queueType === 'RANKED_SOLO_5x5' && r.tier)
+      updateRecent(result, {
+        rank: solo
+          ? { tier: solo.tier, division: solo.division, leaguePoints: solo.leaguePoints }
+          : null,
+      })
+    }
     if (
       !signal.aborted &&
       (filters.value.type !== 'all' || filters.value.role !== 'all' || filters.value.champion)
@@ -539,219 +553,237 @@ async function sync() {
 <template>
   <Head :title="`${parsed.gameName}#${parsed.tagLine}`" />
 
-  <AppHeader />
+  <div class="flex min-h-screen flex-col">
+    <AppHeader />
 
-  <main class="mx-auto max-w-[1320px] px-5 pb-12 pt-6 2xl:max-w-[1480px]">
-    <!-- Loading -->
-    <div v-if="isLoading" class="grid gap-8 lg:grid-cols-[312px_minmax(0,1fr)] xl:grid-cols-[328px_minmax(0,1fr)]">
-      <div class="space-y-4">
-        <div class="skel h-[330px]" />
-        <div class="skel h-[190px]" />
-      </div>
-      <div class="space-y-6">
-        <div class="skel h-[300px]" />
-        <div class="skel h-[520px]" />
-      </div>
-    </div>
-
-    <!-- Error -->
-    <div v-else-if="error" class="py-24 text-center">
-      <p class="display text-[26px] text-ink">
-        {{
-          error === 'not-found'
-            ? 'Summoner not found'
-            : error === 'riot-unavailable'
-              ? "Riot's API isn't answering"
-              : "Couldn't load this profile"
-        }}
-      </p>
-      <p class="mx-auto mt-2 max-w-[48ch] text-[12.5px] leading-relaxed text-ink-3">
-        {{
-          error === 'not-found'
-            ? `No League profile was found for ${parsed.gameName}#${parsed.tagLine} across the supported regions.`
-            : error === 'riot-unavailable'
-              ? 'This profile is not stored yet and Riot is rate limiting us. It usually clears in a minute.'
-              : 'Something broke on our side while looking this player up.'
-        }}
-      </p>
-      <div class="mt-5 flex justify-center gap-2">
-        <button class="btn btn-sm btn-primary" @click="retry">Try again</button>
-        <a href="/" class="btn btn-sm">Back to search</a>
-      </div>
-    </div>
-
-    <!-- The dossier: identity, sections and the player's tendencies on the left; performance and
-         games on the right. The same composition as the desktop app's profile. -->
-    <div
-      v-else-if="profile"
-      class="grid items-start gap-x-8 gap-y-6 lg:grid-cols-[312px_minmax(0,1fr)] lg:grid-rows-[auto_1fr] xl:grid-cols-[328px_minmax(0,1fr)]"
-    >
-      <!-- Identity and sections come first everywhere; on narrow screens the tendencies
-           below them move after the games, so the feed is not pushed off the first screens. -->
-      <div class="rail min-w-0 lg:col-start-1 lg:row-start-1">
-        <ProfileHeader
-          :summoner="profile"
-          :view-count="viewCount"
-          :is-syncing="isSyncing"
-          :sync-message="syncMessage"
-          :last-game-ms="lastGameMs"
-          :main-champion="mainChampion"
-          @sync="sync"
-          @share="shareOpen = true"
-        />
-
-        <ProfileNav class="mt-4" :slug="slug" :section="section" />
-      </div>
-
-      <aside
-        v-if="section === 'overview'"
-        class="rail -mt-6 min-w-0 max-lg:order-last lg:col-start-1 lg:row-start-2"
+    <main class="mx-auto w-full max-w-[1320px] flex-1 px-5 pt-6 sm:px-6 2xl:max-w-[1480px]">
+      <!-- Loading: the shape of the profile that is coming -->
+      <div
+        v-if="isLoading"
+        class="grid gap-8 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[316px_minmax(0,1fr)]"
       >
-        <template v-if="section === 'overview'">
-          <div v-if="pending.ranks" class="skel mt-6 h-[140px]" />
-          <RankStrip v-else-if="ranks?.current?.some((rank) => rank.tier)" :ranks="ranks" />
+        <div class="space-y-4">
+          <div class="skel h-[236px]" />
+          <div class="skel h-[180px]" />
+        </div>
+        <div>
+          <div class="skel h-[272px]" />
+          <div class="mt-10 grid gap-1">
+            <div v-for="i in 6" :key="i" class="skel h-[68px] !rounded-[5px]" />
+          </div>
+        </div>
+      </div>
 
-          <div v-if="pending.champions" class="skel mt-6 h-[200px]" />
-          <ChampionPool
-            v-else
-            :champions="champions"
-            :slug="slug"
-            :active="filters.champion"
-            :limit="5"
-            @pick="championMatches"
-          />
-
-          <div v-if="pending.matches" class="skel mt-6 h-[140px]" />
-          <RoleSplit v-else :matches="matches" :puuid="profile.puuid" />
-
-          <div v-if="pending.teammates" class="skel mt-6 h-[160px]" />
-          <TeammatesPanel v-else :teammates="teammates" />
-
-          <div v-if="pending.activity" class="skel mt-6 h-[140px]" />
-          <ActivityHeatmap v-else :activity="activity" />
-        </template>
-      </aside>
-
-      <div class="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1">
-        <p v-if="failedPanels.length" class="notice mb-5" role="alert">
-          <span>Some data could not be loaded ({{ failedPanels.join(', ') }}).</span>
-          <button class="btn btn-sm ml-auto" @click="retry">Retry</button>
+      <!-- Error -->
+      <div v-else-if="error" class="mx-auto max-w-[520px] py-24">
+        <p class="text-[20px] font-semibold text-ink">
+          {{
+            error === 'not-found'
+              ? 'Summoner not found'
+              : error === 'riot-unavailable'
+                ? "Riot's API isn't answering"
+                : "Couldn't load this profile"
+          }}
         </p>
+        <p class="mt-2 text-[14px] leading-relaxed text-ink-2">
+          {{
+            error === 'not-found'
+              ? `No League profile was found for ${parsed.gameName}#${parsed.tagLine} across the supported regions.`
+              : error === 'riot-unavailable'
+                ? 'This profile is not stored yet and Riot is rate limiting us. It usually clears in a minute.'
+                : 'Something broke on our side while looking this player up.'
+          }}
+        </p>
+        <div class="mt-5 flex gap-2">
+          <button class="btn btn-primary" @click="retry">Try again</button>
+          <a href="/" class="btn">Back to search</a>
+        </div>
+      </div>
 
-        <!-- ── Overview ─────────────────────────────────────────── -->
-        <template v-if="section === 'overview'">
-          <div v-if="pending.stats" class="skel h-[330px]" />
-          <StatBoard
-            v-else
-            :stats="stats?.global ?? null"
-            :previous="previousStats"
-            :matches="performanceMatches"
-            :puuid="profile.puuid"
-            :window="STATS_WINDOW"
+      <!-- The dossier: identity, sections and the player's tendencies on the left; performance and
+           games on the right. The same composition as the desktop app's profile. -->
+      <div
+        v-else-if="profile"
+        class="grid items-start gap-x-8 gap-y-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:grid-rows-[auto_1fr] xl:grid-cols-[316px_minmax(0,1fr)]"
+      >
+        <!-- Identity and sections come first everywhere; on narrow screens the tendencies
+             below them move after the games, so the feed is not pushed off the first screens. -->
+        <div class="rail min-w-0 lg:col-start-1 lg:row-start-1">
+          <ProfileHeader
+            :summoner="profile"
+            :view-count="viewCount"
+            :is-syncing="isSyncing"
+            :sync-message="syncMessage"
+            :last-game-ms="lastGameMs"
+            :main-champion="mainChampion"
+            @sync="sync"
+            @share="shareOpen = true"
           />
 
-          <section id="matches" class="min-w-0 scroll-mt-20 pt-9">
-            <div class="section flex-wrap">
-              <h2>Match history</h2>
-              <span class="meta num">{{ filterSummary }}</span>
+          <ProfileNav class="mt-4" :slug="slug" :section="section" />
+        </div>
+
+        <aside
+          v-if="section === 'overview'"
+          class="rail -mt-6 min-w-0 max-lg:order-last lg:col-start-1 lg:row-start-2"
+        >
+          <template v-if="section === 'overview'">
+            <div v-if="pending.ranks" class="skel mt-6 h-[140px]" />
+            <RankStrip v-else-if="!failedPanels.includes('ranks')" :ranks="ranks" />
+
+            <div v-if="pending.champions" class="skel mt-6 h-[200px]" />
+            <ChampionPool
+              v-else
+              :champions="champions"
+              :slug="slug"
+              :active="filters.champion"
+              :limit="5"
+              @pick="championMatches"
+            />
+
+            <div v-if="pending.matches" class="skel mt-6 h-[140px]" />
+            <RoleSplit v-else :matches="matches" :puuid="profile.puuid" />
+
+            <div v-if="pending.teammates" class="skel mt-6 h-[160px]" />
+            <TeammatesPanel v-else :teammates="teammates" />
+
+            <div v-if="pending.activity" class="skel mt-6 h-[140px]" />
+            <ActivityHeatmap v-else :activity="activity" />
+          </template>
+        </aside>
+
+        <div class="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+          <p v-if="failedPanels.length" class="notice mb-5" role="alert">
+            <span>Some data could not be loaded ({{ failedPanels.join(', ') }}).</span>
+            <button class="btn btn-sm ml-auto" @click="retry">Retry</button>
+          </p>
+
+          <!-- ── Overview ─────────────────────────────────────────── -->
+          <template v-if="section === 'overview'">
+            <div v-if="pending.stats" class="skel h-[300px]" />
+            <StatBoard
+              v-else
+              :stats="stats?.global ?? null"
+              :previous="previousStats"
+              :matches="performanceMatches"
+              :puuid="profile.puuid"
+              :window="STATS_WINDOW"
+            />
+
+            <section id="matches" class="min-w-0 scroll-mt-20 pt-8">
+              <div class="section flex-wrap">
+                <h2>Match history</h2>
+                <span class="meta num">{{ filterSummary }}</span>
+                <span v-if="hiddenCustoms" class="meta num ml-auto text-ink-4">
+                  {{ hiddenCustoms }} custom {{ hiddenCustoms === 1 ? 'game' : 'games' }} not shown
+                </span>
+              </div>
+
+              <MatchFilters v-model="filters" :champions="champions" :busy="filterBusy" />
+
+              <p v-if="filterError" class="notice mt-4" role="alert">
+                <span>{{ filterError }}</span>
+                <button class="btn btn-sm ml-auto" @click="applyFilters()">Retry</button>
+              </p>
+
+              <div v-if="pending.matches" class="mt-5 grid gap-1">
+                <div v-for="i in 6" :key="i" class="skel h-[68px] !rounded-[5px]" />
+              </div>
+              <div v-else class="mt-5">
+                <MatchList
+                  :matches="displayedMatches"
+                  :puuid="profile.puuid"
+                  :summoner-slug="slug"
+                  @clear="filters = { type: 'all', champion: 0, role: 'all' }"
+                />
+              </div>
+
+              <InfiniteScroll
+                v-if="!filterError"
+                :has-more="hasMore"
+                :loading="pending.matches || filterBusy"
+                :error="appendError"
+                :empty="!displayedMatches.length"
+                @load="applyFilters(true)"
+              />
+            </section>
+          </template>
+
+          <!-- ── Champions ────────────────────────────────────────── -->
+          <div v-else-if="section === 'champions'">
+            <div class="mb-5 flex flex-wrap items-center gap-3">
+              <div class="seg">
+                <button
+                  v-for="option in CHAMPION_VIEWS"
+                  :key="option.value"
+                  type="button"
+                  :data-active="championsView === option.value"
+                  @click="championsView = option.value"
+                >
+                  {{ option.label }}
+                </button>
+              </div>
+              <MatchFilters
+                v-if="championsView === 'stats'"
+                v-model="filters"
+                hide-champion
+                :busy="filterBusy"
+              />
             </div>
 
-            <MatchFilters v-model="filters" :champions="champions" :busy="filterBusy" />
-
-            <p v-if="filterError" class="notice mt-4" role="alert">
+            <p v-if="filterError" class="notice mb-4" role="alert">
               <span>{{ filterError }}</span>
               <button class="btn btn-sm ml-auto" @click="applyFilters()">Retry</button>
             </p>
 
-            <div v-if="pending.matches" class="skel mt-4 h-[520px]" />
-            <div v-else class="mt-4">
-              <MatchList :matches="displayedMatches" :puuid="profile.puuid" :summoner-slug="slug" />
-            </div>
-
-            <InfiniteScroll
-              v-if="!filterError"
-              :has-more="hasMore"
-              :loading="pending.matches || filterBusy"
-              :error="appendError"
-              :empty="!displayedMatches.length"
-              @load="applyFilters(true)"
-            />
-          </section>
-        </template>
-
-        <!-- ── Champions ────────────────────────────────────────── -->
-        <div v-else-if="section === 'champions'">
-          <div class="mb-5 flex flex-wrap items-center gap-3">
-            <div class="seg">
-              <button
-                v-for="option in CHAMPION_VIEWS"
-                :key="option.value"
-                type="button"
-                :data-active="championsView === option.value"
-                @click="championsView = option.value"
-              >
-                {{ option.label }}
-              </button>
-            </div>
-            <MatchFilters
+            <ChampionExplorer
               v-if="championsView === 'stats'"
-              v-model="filters"
-              hide-champion
-              :busy="filterBusy"
+              :champions="filteredChampions ?? champions"
+              :busy="filterBusy || pending.champions"
+              @matches="championMatches"
+            />
+            <MasteryPanel
+              v-else
+              :mastery="mastery"
+              :loading="masteryLoading"
+              :error="masteryError"
+              @retry="loadMastery"
             />
           </div>
 
-          <p v-if="filterError" class="notice mb-4" role="alert">
-            <span>{{ filterError }}</span>
-            <button class="btn btn-sm ml-auto" @click="applyFilters()">Retry</button>
-          </p>
-
-          <ChampionExplorer
-            v-if="championsView === 'stats'"
-            :champions="filteredChampions ?? champions"
-            :busy="filterBusy || pending.champions"
-            @matches="championMatches"
+          <!-- ── Friends ──────────────────────────────────────────── -->
+          <FriendsPanel
+            v-else-if="section === 'friends'"
+            :matches="friendMatches"
+            :puuid="profile.puuid"
+            :loading="friendsLoading"
           />
-          <MasteryPanel
-            v-else
-            :mastery="mastery"
-            :loading="masteryLoading"
-            :error="masteryError"
-            @retry="loadMastery"
+
+          <!-- ── Live ─────────────────────────────────────────────── -->
+          <LiveMatch
+            v-else-if="section === 'live'"
+            :puuid="profile.puuid"
+            :name="profile.gameName"
+          />
+
+          <!-- ── Compare ──────────────────────────────────────────── -->
+          <PlayerCompare
+            v-else-if="section === 'compare'"
+            :profile="profile"
+            :champions="champions"
           />
         </div>
-
-        <!-- ── Friends ──────────────────────────────────────────── -->
-        <FriendsPanel
-          v-else-if="section === 'friends'"
-          :matches="friendMatches"
-          :puuid="profile.puuid"
-          :loading="friendsLoading"
-        />
-
-        <!-- ── Live ─────────────────────────────────────────────── -->
-        <LiveMatch v-else-if="section === 'live'" :puuid="profile.puuid" :name="profile.gameName" />
-
-        <!-- ── Compare ──────────────────────────────────────────── -->
-        <PlayerCompare v-else-if="section === 'compare'" :profile="profile" :champions="champions" />
       </div>
 
-    </div>
+      <ShareProfile
+        v-if="profile && shareOpen"
+        :profile="profile"
+        :stats="stats?.global ?? null"
+        :champion="mainChampion"
+        @close="shareOpen = false"
+      />
+    </main>
 
-    <ShareProfile
-      v-if="profile && shareOpen"
-      :profile="profile"
-      :stats="stats?.global ?? null"
-      :champion="mainChampion"
-      @close="shareOpen = false"
-    />
-
-    <footer
-      v-if="profile && !isLoading && !error"
-      class="mt-14 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5 text-[10.5px] text-ink-4"
-    >
-      <span class="flex items-center gap-2"><Glyph :size="13" />invade.lol</span>
-      <span>Not endorsed by Riot Games. League of Legends is a trademark of Riot Games.</span>
-    </footer>
-  </main>
+    <SiteFooter v-if="!isLoading" />
+  </div>
 </template>

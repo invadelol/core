@@ -1,10 +1,9 @@
 /* ──────────────────────────────────────────────────────────────
    Archivo, self-hosted, as one variable file per script.
    Both axes ship in the same file: weight (100–900) and width
-   (62–125%). Headings and big figures are the same family pulled
-   narrow with font-stretch, so a condensed broadcast look costs no
-   second download. Each unicode-range is fetched only if the page
-   uses a character from it.
+   (62–125%). Everything is set at normal width; large figures may
+   tighten slightly (--fig). Each unicode-range is fetched only if
+   the page uses a character from it.
 
    Inter stays behind it for Cyrillic, which Archivo does not cover.
    A browser only fetches a fallback face for characters the first

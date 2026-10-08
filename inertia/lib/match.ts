@@ -173,6 +173,11 @@ const ROLE_WEIGHTS: Record<string, Record<ScoreCategory, number>> = {
 /** Below this a game is a remake, and a score would only be noise. */
 const MIN_SCORED_SECONDS = 300
 
+/** A game that ended before five minutes: no result worth reading, no score. */
+export function isRemake(match: Pick<Match, 'duration'>) {
+  return (match.duration || 0) < MIN_SCORED_SECONDS
+}
+
 export interface PlayerScore {
   /** 0–100 overall. */
   score: number
@@ -319,31 +324,74 @@ export function rankLobby(match: Match): LobbyRanking {
   }
 }
 
-export type ScoreTier = 'elite' | 'great' | 'good' | 'fair' | 'poor'
+/* ── Earned badges ────────────────────────────────────────────────
 
-export function scoreTier(score: number): ScoreTier {
-  if (score >= 85) return 'elite'
-  if (score >= 70) return 'great'
-  if (score >= 55) return 'good'
-  if (score >= 40) return 'fair'
-  return 'poor'
+   What the data says a player did best in one game, as the desktop app
+   names it. Only what the list payload can prove: no first blood or
+   multikills, which need the timeline's events. Rarest first; a row
+   shows two at most. */
+
+export interface Badge {
+  key: string
+  label: string
+  tip: string
 }
 
-/** Gold for the top tier, then down the outcome scale. */
-export const SCORE_TONE: Record<ScoreTier, string> = {
-  elite: 'var(--color-signal)',
-  great: 'var(--color-win)',
-  good: 'var(--color-brand)',
-  fair: 'var(--color-ink-2)',
-  poor: 'var(--color-loss)',
+const BADGES: Array<{
+  key: string
+  label: string
+  tip: string
+  read: (p: Participant) => number | undefined
+  /** Below this the "most" is not worth a badge (an ARAM's vision score). */
+  floor?: number
+}> = [
+  {
+    key: 'carry_damage',
+    label: 'Most damage',
+    tip: 'Most damage to champions in the game',
+    read: (p) => p.totalDamageDealtToChampions,
+  },
+  {
+    key: 'objectives',
+    label: 'Objectives',
+    tip: 'Most damage to objectives in the game',
+    read: (p) => p.damageDealtToObjectives,
+  },
+  {
+    key: 'vision',
+    label: 'Best vision',
+    tip: 'Highest vision score in the game',
+    read: (p) => p.visionScore,
+    floor: 10,
+  },
+  {
+    key: 'tank',
+    label: 'Most tanked',
+    tip: 'Most damage taken in the game',
+    read: (p) => p.damageTaken,
+  },
+]
+
+const DEATHLESS: Badge = {
+  key: 'deathless',
+  label: 'Deathless',
+  tip: 'No deaths in a game of 15 minutes or more',
 }
 
-export const SCORE_LABEL: Record<ScoreTier, string> = {
-  elite: 'Elite',
-  great: 'Great',
-  good: 'Solid',
-  fair: 'Average',
-  poor: 'Rough',
+export function earnedBadges(match: Match, p: Participant): Badge[] {
+  if (isRemake(match)) return []
+  const earned: Badge[] = []
+  for (const badge of BADGES) {
+    const mine = badge.read(p)
+    if (mine !== undefined && mine !== null && mine > (badge.floor ?? 0)) {
+      const best = Math.max(...match.participants.map((o) => badge.read(o) ?? 0))
+      if (mine >= best) earned.push({ key: badge.key, label: badge.label, tip: badge.tip })
+    }
+    /* Deathless ranks just after the carry badge, before the support ones. */
+    if (badge.key === 'carry_damage' && p.deaths === 0 && (match.duration || 0) >= 900)
+      earned.push(DEATHLESS)
+  }
+  return earned
 }
 
 /** The enemy in the same lane, falling back to the mirrored slot in modes

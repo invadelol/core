@@ -145,7 +145,7 @@ function submit() {
         spellcheck="false"
         autocomplete="off"
         :placeholder="placeholder"
-        class="field !h-9 !py-0 !pl-9 !pr-9 !text-[13px]"
+        class="field !pl-9 !pr-9"
         @focus="open = entries.length > 0"
         @blur="closeSoon"
         @keydown.down.prevent="move(1)"
@@ -159,7 +159,7 @@ function submit() {
       />
     </div>
 
-    <ul v-if="open && entries.length" class="menu absolute z-40 mt-1.5 w-full py-1">
+    <ul v-if="open && entries.length" class="menu absolute z-40 mt-1.5 w-full p-1">
       <li
         v-for="(entry, index) in entries"
         :key="`${entry.gameName}-${entry.tagLine}-${index}`"
@@ -174,20 +174,16 @@ function submit() {
           alt=""
           width="24"
           height="24"
-          loading="lazy"
-          class="thumb h-6 w-6 rounded-sm"
+          class="thumb h-6 w-6 rounded-[5px]"
         />
-        <span
-          v-else
-          class="grid h-6 w-6 shrink-0 place-items-center rounded-sm bg-sunken text-ink-3"
-        >
-          <Search :size="12" />
+        <span v-else class="grid h-6 w-6 shrink-0 place-items-center text-ink-3">
+          <CornerDownLeft :size="14" />
         </span>
         <span class="min-w-0 flex-1 truncate">
+          <span v-if="entry.direct" class="text-ink-3">Compare with </span>
           <span class="font-semibold text-ink">{{ entry.gameName }}</span>
           <span class="text-ink-3">#{{ entry.tagLine }}</span>
         </span>
-        <CornerDownLeft v-if="index === active" :size="12" class="shrink-0 text-ink-4" />
       </li>
     </ul>
   </div>

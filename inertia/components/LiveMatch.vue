@@ -8,10 +8,12 @@ import {
   queueName,
   runeIcon,
   runeStyleIcon,
+  rankCrest,
+  rankName,
   spellIcon,
-  TIER_NAMES,
+  tierColor,
 } from '../lib/assets.js'
-import { duration } from '../lib/format.js'
+import { duration, UI_LOCALE } from '../lib/format.js'
 import type { LiveGame } from '../lib/types.js'
 
 const props = defineProps<{ puuid: string; name: string }>()
@@ -50,7 +52,10 @@ async function refresh(background = false) {
     if (signal.aborted) return
     error.value = ''
     game.value = data.game
-    checkedAt.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    checkedAt.value = new Date().toLocaleTimeString(UI_LOCALE, {
+      hour: 'numeric',
+      minute: '2-digit',
+    })
   } catch (e) {
     if (!signal.aborted) error.value = (e as Error).message
   } finally {
@@ -107,11 +112,17 @@ function split(riotId?: string) {
   return { gameName: riotId.slice(0, hash), tagLine: riotId.slice(hash + 1) }
 }
 
+/** The viewed player's team first, in blue; the enemy in red. */
+const allyTeam = computed(
+  () => game.value?.participants.find((p) => p.puuid === props.puuid)?.teamId ?? 100
+)
+
 const sides = computed(() =>
-  [100, 200].map((teamId) => ({
+  [allyTeam.value, allyTeam.value === 100 ? 200 : 100].map((teamId) => ({
     teamId,
-    label: teamId === 100 ? 'Blue side' : 'Red side',
-    color: teamId === 100 ? 'var(--color-blue)' : 'var(--color-red)',
+    label: teamId === allyTeam.value ? `${props.name}'s team` : 'Enemy team',
+    side: teamId === 100 ? 'Blue side' : 'Red side',
+    color: teamId === allyTeam.value ? 'var(--color-win)' : 'var(--color-loss)',
     bans: (game.value?.bannedChampions ?? []).filter(
       (b) => b.teamId === teamId && b.championId > 0
     ),
@@ -122,35 +133,33 @@ const sides = computed(() =>
 
 <template>
   <section>
-    <div v-if="error" class="card py-20 text-center" role="alert">
-      <p class="display text-[18px] text-ink">Unable to check live status</p>
-      <p class="mx-auto mt-2 max-w-[44ch] text-[12px] text-ink-3">{{ error }}</p>
-      <button class="btn btn-sm mt-4" @click="refresh()">Try again</button>
+    <p v-if="error" class="notice" role="alert">
+      <span>{{ error }}</span>
+      <button class="btn btn-sm ml-auto" @click="refresh()">Retry</button>
+    </p>
+
+    <div v-else-if="loading && !game" class="grid gap-3 lg:grid-cols-2">
+      <div class="skel h-[360px]" />
+      <div class="skel h-[360px]" />
     </div>
 
-    <div v-else-if="loading && !game" class="skel h-[420px]" />
-
-    <div v-else-if="!game" class="card py-24 text-center">
-      <span class="pulse mx-auto mb-4 block !h-2 !w-2" />
-      <p class="display text-[20px] text-ink">No live match found for {{ name }}</p>
-      <p class="mx-auto mt-2 max-w-[48ch] text-[12.5px] leading-relaxed text-ink-3">
-        Riot hasn't returned an active match. We'll check again automatically every 30 seconds.
+    <div v-else-if="!game" class="flex flex-wrap items-center gap-x-4 gap-y-3 py-2">
+      <p class="text-[13px] text-ink-2">
+        {{ name }} is not in a game right now.
+        <span class="text-ink-3">Checked again every 30 seconds.</span>
       </p>
-      <button class="btn btn-sm mt-5" :disabled="loading" @click="refresh()">
+      <button class="btn btn-sm" :disabled="loading" @click="refresh()">
         <RefreshCw :size="12" :class="{ 'animate-spin': loading }" />
-        Check again
-        <span v-if="checkedAt" class="text-ink-3">· {{ checkedAt }}</span>
+        Check now
+        <span v-if="checkedAt" class="font-medium text-ink-3">· last {{ checkedAt }}</span>
       </button>
     </div>
 
     <template v-else>
       <div class="section !items-center">
-        <h2>Live</h2>
-        <span class="meta flex items-center gap-1.5">
-          <span class="pulse" />
-          {{ queueName(game.gameQueueConfigId) }}
-        </span>
-        <span class="stat ml-auto text-[24px] text-ink">{{ duration(elapsed) }}</span>
+        <h2 class="flex items-center gap-2"><span class="pulse" />Live game</h2>
+        <span class="meta">{{ queueName(game.gameQueueConfigId) }}</span>
+        <span class="fig ml-auto text-[22px] text-ink">{{ duration(elapsed) }}</span>
         <button class="btn btn-sm" :disabled="loading" @click="refresh()">
           <RefreshCw :size="12" :class="{ 'animate-spin': loading }" />
           Refresh
@@ -158,65 +167,73 @@ const sides = computed(() =>
       </div>
 
       <div class="grid gap-3 lg:grid-cols-2">
-        <!-- One lobby card per team -->
-        <section v-for="side in sides" :key="side.teamId" class="card">
+        <!-- One panel per team: a thin rule says which side is whose -->
+        <section
+          v-for="side in sides"
+          :key="side.teamId"
+          class="card"
+          :style="{ boxShadow: `inset 0 2px 0 ${side.color}` }"
+        >
           <div class="section !items-center">
-            <span class="h-3 w-[3px] shrink-0 -skew-x-[14deg]" :style="{ background: side.color }" />
             <h3>{{ side.label }}</h3>
-            <span v-if="side.bans.length" class="ml-auto flex items-center gap-1.5">
-              <span class="label !text-[9.5px]">Bans</span>
+            <span class="meta">{{ side.side }}</span>
+            <span v-if="side.bans.length" class="ml-auto flex items-center gap-1">
+              <span class="mr-1 text-[12px] text-ink-3">Bans</span>
               <img
                 v-for="(ban, i) in side.bans"
                 :key="i"
                 :src="champIcon(ban.championId)"
                 :alt="championName(ban.championId)"
                 :title="championName(ban.championId)"
-                class="thumb h-[18px] w-[18px] rounded-[4px] opacity-45 grayscale"
+                class="thumb h-[18px] w-[18px] rounded-[3px] opacity-40 grayscale"
               />
             </span>
           </div>
 
-          <ul class="divide-y divide-line !p-0">
+          <ul class="!px-0 !pb-1.5">
             <li
               v-for="(p, i) in side.players"
               :key="p.puuid ?? i"
-              class="flex items-center gap-3 px-4 py-2.5"
+              class="flex h-[56px] items-center gap-3 border-t border-line px-4"
               :class="
-                p.puuid === puuid ? 'bg-raised shadow-[inset_3px_0_0_var(--color-accent)]' : ''
+                p.puuid === puuid
+                  ? 'bg-[rgb(var(--brand-rgb)/0.08)] shadow-[inset_2px_0_0_var(--color-brand)]'
+                  : ''
               "
             >
-              <img
-                :src="champIcon(p.championId)"
-                :alt="championName(p.championId)"
-                loading="lazy"
-                class="thumb h-10 w-10 rounded-sm"
-              />
-
-              <span class="flex shrink-0 flex-col gap-[2px]">
+              <span class="portrait h-10 w-10">
                 <img
-                  :src="spellIcon(p.spell1Id)"
-                  alt=""
-                  class="thumb h-[19px] w-[19px] rounded-[4px]"
-                />
-                <img
-                  :src="spellIcon(p.spell2Id)"
-                  alt=""
-                  class="thumb h-[19px] w-[19px] rounded-[4px]"
+                  :src="champIcon(p.championId)"
+                  :alt="championName(p.championId)"
+                  loading="lazy"
                 />
               </span>
 
-              <span class="flex shrink-0 flex-col items-center gap-[2px]">
+              <span
+                class="grid shrink-0 grid-cols-[18px_18px] grid-rows-[18px_18px] place-items-center gap-[2px]"
+              >
+                <img
+                  :src="spellIcon(p.spell1Id)"
+                  alt=""
+                  class="thumb h-[18px] w-[18px] rounded-[3px]"
+                />
                 <img
                   v-if="p.perks?.perkIds?.[0]"
                   :src="runeIcon(p.perks.perkIds[0])"
                   alt="Keystone"
-                  class="glyph h-[22px] w-[22px]"
+                  class="h-[18px] w-[18px]"
+                />
+                <i v-else />
+                <img
+                  :src="spellIcon(p.spell2Id)"
+                  alt=""
+                  class="thumb h-[18px] w-[18px] rounded-[3px]"
                 />
                 <img
                   v-if="p.perks?.perkSubStyle"
                   :src="runeStyleIcon(p.perks.perkSubStyle)"
                   alt="Secondary tree"
-                  class="h-[14px] w-[14px]"
+                  class="h-[13px] w-[13px] opacity-85"
                 />
               </span>
 
@@ -226,27 +243,32 @@ const sides = computed(() =>
                   class="max-w-full text-[13px]"
                   :is-self="p.puuid === puuid"
                 />
-                <span class="num mt-0.5 block truncate text-[10.5px] text-ink-3">
-                  <span class="font-medium text-ink-2">{{ championName(p.championId) }}</span>
+                <span class="num block truncate text-[12px] text-ink-3">
+                  {{ championName(p.championId) }}
                   <template v-if="p.championStats">
                     <span class="text-ink-4">·</span>
-                    {{ p.championStats.games }} tracked ·
-                    <span :class="p.championStats.winrate >= 0.5 ? 'text-win' : 'text-loss'">
-                      {{ Math.round(p.championStats.winrate * 100) }}% WR
-                    </span>
+                    <span class="text-ink-2">{{ Math.round(p.championStats.winrate * 100) }}%</span>
+                    in {{ p.championStats.games }}
+                    {{ p.championStats.games === 1 ? 'game' : 'games' }}
                   </template>
                 </span>
               </span>
 
-              <span v-if="p.rank" class="shrink-0 text-right">
-                <span class="stat block text-[14px] text-ink">
-                  {{ TIER_NAMES[p.rank.tier] || p.rank.tier }} {{ p.rank.division }}
+              <span v-if="p.rank" class="flex shrink-0 items-center gap-2 text-right">
+                <span>
+                  <span
+                    class="block text-[13px] font-semibold leading-[17px]"
+                    :style="{ color: tierColor(p.rank.tier) }"
+                  >
+                    {{ rankName(p.rank.tier, p.rank.division) }}
+                  </span>
+                  <span class="num block text-[12px] leading-4 text-ink-3">
+                    {{ p.rank.leaguePoints }} LP
+                  </span>
                 </span>
-                <span class="num mt-0.5 block text-[10.5px] text-ink-3">
-                  {{ p.rank.leaguePoints }} LP
-                </span>
+                <img :src="rankCrest(p.rank.tier)" alt="" class="h-7 w-7" />
               </span>
-              <span v-else class="shrink-0 text-[11px] text-ink-4">Unranked</span>
+              <span v-else class="shrink-0 text-[12px] text-ink-3">Unranked</span>
             </li>
           </ul>
         </section>

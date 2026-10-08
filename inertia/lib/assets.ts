@@ -46,6 +46,33 @@ export function rankCrest(tier: string) {
   return `${CDN}/rank/${tier.toLowerCase()}.png`
 }
 
+const TIERS = [
+  'iron',
+  'bronze',
+  'silver',
+  'gold',
+  'platinum',
+  'emerald',
+  'diamond',
+  'master',
+  'grandmaster',
+  'challenger',
+]
+
+/** A tier's own colour, for its name next to the crest and nowhere else. */
+export function tierColor(tier: string | null | undefined) {
+  const id = (tier ?? '').toLowerCase()
+  return TIERS.includes(id) ? `var(--color-tier-${id})` : 'var(--color-ink-2)'
+}
+
+/** Master and above have no divisions: "Master", not "Master I". */
+export function rankName(tier: string, division?: string | null) {
+  const name = TIER_NAMES[tier?.toUpperCase()] ?? tier
+  return ['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tier?.toUpperCase()) || !division
+    ? name
+    : `${name} ${division}`
+}
+
 /* ── Display names ──────────────────────────────────────────── */
 const champions = reactive<Record<number, string>>({})
 const items = reactive<Record<number, string>>({})
@@ -153,6 +180,31 @@ export const TIER_NAMES: Record<string, string> = {
   MASTER: 'Master',
   GRANDMASTER: 'Grandmaster',
   CHALLENGER: 'Challenger',
+}
+
+/** Riot's platform ids as players say them: "EUW1" → "EUW". */
+const REGION_LABELS: Record<string, string> = {
+  EUW1: 'EUW',
+  EUN1: 'EUNE',
+  NA1: 'NA',
+  BR1: 'BR',
+  LA1: 'LAN',
+  LA2: 'LAS',
+  OC1: 'OCE',
+  JP1: 'JP',
+  KR: 'KR',
+  TR1: 'TR',
+  ME1: 'ME',
+  RU: 'RU',
+  SG2: 'SEA',
+  TW2: 'TW',
+  VN2: 'VN',
+}
+
+export function regionLabel(platform: string | null | undefined) {
+  if (!platform) return ''
+  const key = platform.toUpperCase()
+  return REGION_LABELS[key] ?? key.replace(/\d+$/, '')
 }
 
 export const QUEUE_LABELS: Record<string, string> = {

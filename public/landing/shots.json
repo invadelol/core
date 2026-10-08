@@ -1,0 +1,114 @@
+{
+  "ov-objectives": {
+    "width": 576,
+    "height": 108
+  },
+  "ov-lead": {
+    "width": 384,
+    "height": 206
+  },
+  "ov-perf": {
+    "width": 384,
+    "height": 346
+  },
+  "ov-build": {
+    "width": 424,
+    "height": 228
+  },
+  "overlay": [
+    {
+      "id": "objectives",
+      "title": "Objectives",
+      "x": 0.36,
+      "y": 0.012,
+      "w": 0.18
+    },
+    {
+      "id": "lead",
+      "title": "Win & gold",
+      "x": 0.01,
+      "y": 0.1,
+      "w": 0.12
+    },
+    {
+      "id": "perf",
+      "title": "Performance",
+      "x": 0.01,
+      "y": 0.36,
+      "w": 0.12
+    },
+    {
+      "id": "build",
+      "title": "Next item",
+      "x": 0.78,
+      "y": 0.62,
+      "w": 0.1325
+    }
+  ],
+  "game-frame": {
+    "width": 1920,
+    "height": 1080
+  },
+  "app-dashboard": {
+    "width": 2880,
+    "height": 1800
+  },
+  "app-champion": {
+    "width": 2880,
+    "height": 1800,
+    "header": {
+      "x": 0.1611,
+      "y": 0.1111,
+      "w": 0.8222,
+      "h": 0.1333
+    },
+    "build": {
+      "x": 0.1611,
+      "y": 0.4111,
+      "w": 0.8222,
+      "h": 0.56
+    },
+    "runes": {
+      "x": 0.1611,
+      "y": 0.4111,
+      "w": 0.1944,
+      "h": 0.56
+    },
+    "action": {
+      "x": 0.8441,
+      "y": 0.3256,
+      "w": 0.1309,
+      "h": 0.0356
+    }
+  },
+  "app-tierlist": {
+    "width": 2880,
+    "height": 1800,
+    "focus": {
+      "x": 0.1639,
+      "y": 0.8667,
+      "w": 0.8167,
+      "h": 0.0444
+    }
+  },
+  "rift-loop-poster": {
+    "width": 1280,
+    "height": 720
+  },
+  "clip-kill": {
+    "width": 480,
+    "height": 270
+  },
+  "clip-baron": {
+    "width": 480,
+    "height": 270
+  },
+  "clip-saved": {
+    "width": 480,
+    "height": 270
+  },
+  "clip-death": {
+    "width": 480,
+    "height": 270
+  }
+}

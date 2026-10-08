@@ -7,7 +7,7 @@ import RoleIcon from './RoleIcon.vue'
 import { LineChart } from '../lib/lazy_charts.js'
 import { champIcon, championName } from '../lib/assets.js'
 import { clock, compact, signed } from '../lib/format.js'
-import { areaFill, lineOptions, palette } from '../lib/chart.js'
+import { lineOptions, palette } from '../lib/chart.js'
 import {
   frameAt,
   frameTimes,
@@ -22,7 +22,7 @@ import {
 } from '../lib/match.js'
 import type { Match } from '../lib/types.js'
 
-const props = defineProps<{ match: Match; selectedPuuid: string }>()
+const props = defineProps<{ match: Match; selectedPuuid: string; ownerPuuid?: string }>()
 const emit = defineEmits<{ select: [puuid: string] }>()
 
 const times = computed(() => frameTimes(props.match))
@@ -54,9 +54,23 @@ function toggle() {
 
 onBeforeUnmount(stop)
 
+/* Your team reads as blue and above the line wherever it played; blue side when nobody is viewed. */
+const owner = computed(() => props.match.participants.find((p) => p.puuid === props.ownerPuuid))
+const ally = computed(() => owner.value?.teamId ?? 100)
+const names = computed(() =>
+  owner.value ? { ally: 'Your team', enemy: 'Enemy' } : { ally: 'Blue side', enemy: 'Red side' }
+)
+
 /* ── Gold advantage, as the chart the match is actually read from ── */
-const gold = computed(() => teamSeries(props.match, 'gold'))
-const kills = computed(() => killsPerFrame(props.match))
+const gold = computed(() => {
+  const raw = teamSeries(props.match, 'gold')
+  if (ally.value === 100) return raw
+  return { times: raw.times, blue: raw.red, red: raw.blue, diff: raw.diff.map((d) => -d) }
+})
+const kills = computed(() => {
+  const raw = killsPerFrame(props.match)
+  return ally.value === 100 ? raw : { times: raw.times, blue: raw.red, red: raw.blue }
+})
 
 /** `gutter` is the right-hand strip the axis labels live in. */
 const CHART = { w: 1000, h: 190, pad: 22, foot: 16, gutter: 58 }
@@ -144,26 +158,28 @@ function onUp(event: PointerEvent) {
 
 /* ── The lobby, frozen at the scrubbed minute ──────────────────── */
 const standings = computed(() =>
-  teamOrder(props.match).map((teamId) => ({
-    teamId,
-    label: teamId === 100 ? 'Blue' : 'Red',
-    color: teamId === 100 ? 'var(--color-blue)' : 'var(--color-red)',
-    players: props.match.participants
-      .filter((p) => p.teamId === teamId)
-      .map((p) => {
-        const frame = frameAt(frames.value[p.puuid] ?? [], now.value)
-        return {
-          p,
-          level: frame?.level ?? 0,
-          gold: frame?.goldTotal ?? 0,
-          cs: (frame?.cs ?? 0) + (frame?.jungleCs ?? 0),
-          kills: frame?.kills ?? 0,
-          deaths: frame?.deaths ?? 0,
-          assists: frame?.assists ?? 0,
-        }
-      })
-      .sort((a, b) => b.gold - a.gold),
-  }))
+  (owner.value ? [ally.value, ally.value === 100 ? 200 : 100] : teamOrder(props.match)).map(
+    (teamId) => ({
+      teamId,
+      label: `${teamId === ally.value && owner.value ? 'Your team' : owner.value ? 'Enemy team' : teamId === 100 ? 'Blue side' : 'Red side'}`,
+      side: teamId === 100 ? 'Blue side' : 'Red side',
+      players: props.match.participants
+        .filter((p) => p.teamId === teamId)
+        .map((p) => {
+          const frame = frameAt(frames.value[p.puuid] ?? [], now.value)
+          return {
+            p,
+            level: frame?.level ?? 0,
+            gold: frame?.goldTotal ?? 0,
+            cs: (frame?.cs ?? 0) + (frame?.jungleCs ?? 0),
+            kills: frame?.kills ?? 0,
+            deaths: frame?.deaths ?? 0,
+            assists: frame?.assists ?? 0,
+          }
+        })
+        .sort((a, b) => b.gold - a.gold),
+    })
+  )
 )
 
 /** The richest player at this instant, so every gold bar shares one scale. */
@@ -199,23 +215,23 @@ function duelChart(key: 'gold' | 'xp' | 'cs') {
       {
         label: player.value?.gameName ?? 'Player',
         data: mineFrames.value.map((f) => frameValue(f, key)),
-        borderColor: palette.ink,
-        backgroundColor: areaFill(palette.ink),
-        borderWidth: 1.75,
+        borderColor: palette.accent,
+        backgroundColor: palette.accentFill,
+        borderWidth: 1.5,
         pointRadius: 0,
         pointHoverRadius: 3,
-        tension: 0.25,
+        tension: 0,
         fill: true,
       },
       {
         label: opponent.value?.gameName ?? 'Opponent',
         data: theirFrames.value.map((f) => frameValue(f, key)),
         borderColor: palette.ink3,
-        borderWidth: 1.5,
-        borderDash: [4, 3],
+        borderWidth: 1,
+        borderDash: [3, 3],
         pointRadius: 0,
         pointHoverRadius: 3,
-        tension: 0.25,
+        tension: 0,
         fill: false,
       },
     ],
@@ -232,12 +248,12 @@ const duelDiffChart = computed(() => {
       {
         label: 'Gold difference',
         data: mine.map((value, i) => value - (theirs[i] ?? 0)),
-        borderColor: palette.ink,
-        backgroundColor: areaFill(palette.ink),
-        borderWidth: 1.75,
+        borderColor: palette.accent,
+        backgroundColor: palette.accentFill,
+        borderWidth: 1.5,
         pointRadius: 0,
         pointHoverRadius: 3,
-        tension: 0.25,
+        tension: 0,
         fill: 'origin' as const,
       },
     ],
@@ -256,16 +272,16 @@ const diffOptions = computed(() =>
 </script>
 
 <template>
-  <div v-if="!times.length" class="tl-card card py-14 text-center text-[13px] text-ink-3">
-    No timeline stored for this match
-  </div>
+  <p v-if="!times.length" class="py-6 text-[13px] text-ink-2">
+    No timeline is stored for this match.
+  </p>
 
   <div v-else class="space-y-4">
     <!-- One chart the whole match can be read off -->
     <section class="tl-card card">
-      <div class="flex flex-wrap items-center gap-x-4 gap-y-2.5 border-b border-line px-4 py-3">
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2.5 px-4 pt-3">
         <button
-          class="icon-btn shrink-0 border border-line-2 bg-raised"
+          class="icon-btn shrink-0 bg-control text-ink-2"
           :aria-label="playing ? 'Pause' : 'Play'"
           @click="toggle"
         >
@@ -273,7 +289,7 @@ const diffOptions = computed(() =>
           <Play v-else :size="14" />
         </button>
 
-        <span class="stat w-[64px] shrink-0 text-[24px] text-ink">{{ clock(now) }}</span>
+        <span class="fig w-[64px] shrink-0 text-[22px] text-ink">{{ clock(now) }}</span>
 
         <input
           v-model.number="index"
@@ -285,20 +301,26 @@ const diffOptions = computed(() =>
           @input="stop"
         />
 
-        <div class="flex shrink-0 items-baseline gap-3">
-          <span class="stat text-[14px] text-blue">{{ compact(teamGoldNow.blue) }}</span>
+        <div class="num flex shrink-0 items-baseline gap-3 text-[13px]">
+          <span class="text-ink-2" :title="names.ally">{{ compact(teamGoldNow.blue) }}</span>
           <span
-            class="stat min-w-[52px] text-center text-[18px]"
-            :class="teamGoldNow.blue >= teamGoldNow.red ? 'text-blue' : 'text-red'"
+            class="min-w-[52px] text-center text-[16px] font-semibold"
+            :class="
+              teamGoldNow.blue === teamGoldNow.red
+                ? 'text-ink-3'
+                : teamGoldNow.blue > teamGoldNow.red
+                  ? 'text-win'
+                  : 'text-loss'
+            "
           >
             {{ signed(teamGoldNow.blue - teamGoldNow.red, 'even') }}
           </span>
-          <span class="stat text-[14px] text-red">{{ compact(teamGoldNow.red) }}</span>
+          <span class="text-ink-2" :title="names.enemy">{{ compact(teamGoldNow.red) }}</span>
         </div>
       </div>
 
       <div class="px-4 pb-4 pt-3">
-        <div v-if="chart" class="tl-plot relative overflow-hidden rounded-md bg-raised">
+        <div v-if="chart" class="tl-plot relative overflow-hidden rounded-[8px] bg-well">
           <svg
             ref="surface"
             :viewBox="`0 0 ${CHART.w} ${CHART.h}`"
@@ -335,14 +357,14 @@ const diffOptions = computed(() =>
             </defs>
             <path
               :d="chart.area"
-              fill="var(--color-blue)"
-              fill-opacity="0.22"
+              fill="var(--color-win)"
+              fill-opacity="0.16"
               clip-path="url(#tl-above)"
             />
             <path
               :d="chart.area"
-              fill="var(--color-red)"
-              fill-opacity="0.22"
+              fill="var(--color-loss)"
+              fill-opacity="0.16"
               clip-path="url(#tl-below)"
             />
             <line
@@ -357,8 +379,8 @@ const diffOptions = computed(() =>
             <polyline
               :points="chart.line"
               fill="none"
-              stroke="var(--color-ink)"
-              stroke-width="1.75"
+              stroke="var(--color-ink-2)"
+              stroke-width="1.5"
               stroke-linejoin="round"
               vector-effect="non-scaling-stroke"
             />
@@ -372,11 +394,12 @@ const diffOptions = computed(() =>
                 :y="event.side === 'blue' ? chart.zero - 5 - event.count * 3 : chart.zero + 5"
                 width="3"
                 :height="event.count * 3"
-                :fill="event.side === 'blue' ? 'var(--color-blue)' : 'var(--color-red)'"
+                :fill="event.side === 'blue' ? 'var(--color-win)' : 'var(--color-loss)'"
                 :opacity="0.75"
               >
                 <title>
-                  {{ event.count }} {{ event.side }} side {{ event.count === 1 ? 'kill' : 'kills' }}
+                  {{ event.count }} {{ event.count === 1 ? 'kill' : 'kills' }} for
+                  {{ event.side === 'blue' ? names.ally : names.enemy }}
                 </title>
               </rect>
             </g>
@@ -395,29 +418,29 @@ const diffOptions = computed(() =>
           </svg>
 
           <!-- Axes, in HTML so the type does not stretch with the chart -->
-          <span class="label pointer-events-none absolute left-3 top-2.5 !text-[9.5px]">
-            Gold advantage
+          <span class="label pointer-events-none absolute left-3 top-2">
+            Gold lead · {{ names.ally.toLowerCase() }}
           </span>
           <span
-            class="num pointer-events-none absolute right-3 -translate-y-1/2 text-[10px] text-blue"
+            class="num pointer-events-none absolute right-3 -translate-y-1/2 text-[11px] text-ink-3"
             :style="{ top: `${(chart.top / CHART.h) * 100}%` }"
           >
             +{{ compact(chart.up) }}
           </span>
           <span
-            class="num pointer-events-none absolute right-3 -translate-y-1/2 text-[10px] text-ink-4"
+            class="num pointer-events-none absolute right-3 -translate-y-1/2 text-[11px] text-ink-4"
             :style="{ top: `${(chart.zero / CHART.h) * 100}%` }"
           >
             0
           </span>
           <span
-            class="num pointer-events-none absolute right-3 -translate-y-1/2 text-[10px] text-red"
+            class="num pointer-events-none absolute right-3 -translate-y-1/2 text-[11px] text-ink-3"
             :style="{ top: `${((chart.top + chart.inner) / CHART.h) * 100}%` }"
           >
             −{{ compact(chart.down) }}
           </span>
           <div class="pointer-events-none absolute inset-x-0 bottom-1.5">
-            <div class="num relative h-3 text-[10px] text-ink-4">
+            <div class="num relative h-3 text-[11px] text-ink-4">
               <span
                 v-for="minute in chart.minutes"
                 :key="minute.label"
@@ -430,14 +453,14 @@ const diffOptions = computed(() =>
           </div>
         </div>
 
-        <p class="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-ink-3">
+        <p class="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-ink-3">
           <span class="flex items-center gap-1.5">
-            <i class="h-2.5 w-[3px] rounded-[1px]" style="background: var(--color-blue)" />
-            blue kills
+            <i class="h-2.5 w-[3px] rounded-[1px]" style="background: var(--color-win)" />
+            {{ names.ally }} kills
           </span>
           <span class="flex items-center gap-1.5">
-            <i class="h-2.5 w-[3px] rounded-[1px]" style="background: var(--color-red)" />
-            red kills
+            <i class="h-2.5 w-[3px] rounded-[1px]" style="background: var(--color-loss)" />
+            {{ names.enemy }} kills
           </span>
           <span class="text-ink-4">per minute</span>
         </p>
@@ -452,8 +475,14 @@ const diffOptions = computed(() =>
           <span class="meta num">{{ clock(now) }}</span>
         </div>
         <div>
-          <Minimap :dots="dots" :trails="trails" :highlight="selectedPuuid" :map-id="match.mapId" />
-          <p v-if="!dots.length" class="mt-2 text-center text-[11px] text-ink-3">
+          <Minimap
+            :dots="dots"
+            :trails="trails"
+            :highlight="selectedPuuid"
+            :map-id="match.mapId"
+            :ally-team="ally"
+          />
+          <p v-if="!dots.length" class="mt-2 text-[12px] text-ink-3">
             No positions recorded for this frame.
           </p>
         </div>
@@ -477,14 +506,11 @@ const diffOptions = computed(() =>
             <tbody v-for="team in standings" :key="team.teamId">
               <tr class="band">
                 <td colspan="5" class="!px-4">
-                  <span class="flex items-center gap-2">
-                    <span class="h-3 w-[3px] -skew-x-[14deg]" :style="{ background: team.color }" />
-                    <span class="display text-[13px] text-ink">{{ team.label }} side</span>
-                    <span class="ml-auto text-[11px] text-ink-3">
-                      <b class="stat text-[13px] text-gold">
-                        {{ compact(team.players.reduce((sum, entry) => sum + entry.gold, 0)) }}
-                      </b>
-                      gold
+                  <span class="flex items-center gap-2 text-[13px]">
+                    <span class="font-semibold text-ink">{{ team.label }}</span>
+                    <span v-if="owner" class="text-ink-3">· {{ team.side }}</span>
+                    <span class="num ml-auto text-[12px] text-ink-3">
+                      {{ compact(team.players.reduce((sum, entry) => sum + entry.gold, 0)) }} gold
                     </span>
                   </span>
                 </td>
@@ -493,23 +519,23 @@ const diffOptions = computed(() =>
                 v-for="entry in team.players"
                 :key="entry.p.puuid"
                 class="cursor-pointer"
-                :class="
-                  entry.p.puuid === selectedPuuid
-                    ? '[&>td]:!bg-raised [&>td:first-child]:shadow-[inset_2px_0_0_var(--color-ink-2)]'
-                    : ''
-                "
+                :class="[
+                  entry.p.puuid === ownerPuuid ? 'is-self' : '',
+                  entry.p.puuid === selectedPuuid ? '[&>td]:!bg-raised' : '',
+                ]"
                 @click="emit('select', entry.p.puuid)"
               >
                 <td class="w-[42px] !pl-4">
                   <span class="relative block w-7">
-                    <img
-                      :src="champIcon(entry.p.championId)"
-                      :alt="championName(entry.p.championId)"
-                      loading="lazy"
-                      class="thumb h-7 w-7 rounded-sm"
-                    />
+                    <span class="portrait block h-7 w-7">
+                      <img
+                        :src="champIcon(entry.p.championId)"
+                        :alt="championName(entry.p.championId)"
+                        loading="lazy"
+                      />
+                    </span>
                     <span
-                      class="lvl absolute -bottom-1 -right-1 !h-[14px] !min-w-[14px] !text-[8.5px]"
+                      class="lvl absolute -bottom-1 -right-1 !h-[14px] !min-w-[15px] !text-[10px]"
                     >
                       {{ entry.level }}
                     </span>
@@ -531,22 +557,25 @@ const diffOptions = computed(() =>
                     />
                   </span>
                 </td>
-                <td class="stat text-right text-[13.5px] text-ink">
-                  {{ entry.kills }}<span class="text-ink-4">/</span
-                  ><span class="text-loss">{{ entry.deaths }}</span
-                  ><span class="text-ink-4">/</span>{{ entry.assists }}
+                <td class="whitespace-nowrap text-right text-[13px] font-semibold text-ink">
+                  {{ entry.kills }}<span class="mx-[3px] font-normal text-ink-4">/</span
+                  >{{ entry.deaths }}<span class="mx-[3px] font-normal text-ink-4">/</span
+                  >{{ entry.assists }}
                 </td>
                 <td class="w-[34%] min-w-[110px]">
                   <span class="flex items-center gap-2">
-                    <span class="meter h-[5px] flex-1">
+                    <span class="meter !h-[3px] flex-1">
                       <span
                         :style="{
                           width: `${(entry.gold / peakGold) * 100}%`,
-                          background: team.color,
+                          background:
+                            entry.p.puuid === ownerPuuid
+                              ? 'var(--color-brand)'
+                              : 'var(--color-ink-4)',
                         }"
                       />
                     </span>
-                    <span class="num w-[38px] text-right font-semibold text-gold">
+                    <span class="num w-[38px] text-right text-ink">
                       {{ compact(entry.gold) }}
                     </span>
                   </span>
@@ -571,7 +600,7 @@ const diffOptions = computed(() =>
         </span>
         <span class="meta ml-auto hidden items-center gap-4 sm:flex">
           <span class="flex items-center gap-1.5 text-ink-2">
-            <i class="h-[2px] w-4 rounded-full bg-ink" />
+            <i class="h-[2px] w-4 rounded-full bg-brand" />
             {{ player.gameName }}
           </span>
           <span class="flex items-center gap-1.5">
@@ -580,8 +609,8 @@ const diffOptions = computed(() =>
               style="
                 background: repeating-linear-gradient(
                   90deg,
-                  var(--color-ink-3) 0 4px,
-                  transparent 4px 7px
+                  var(--color-ink-3) 0 3px,
+                  transparent 3px 6px
                 );
               "
             />
@@ -611,14 +640,14 @@ const diffOptions = computed(() =>
 <style scoped>
 /* Inside an expanded match row the row itself is the card, and cards do
    not nest: there the blocks fall back to plain sections split by rules. */
-:global(.match-row .tl-card) {
-  border: 0;
+:global(.mrow-detail .tl-card) {
   border-radius: 0;
   background: transparent;
+  box-shadow: none;
   overflow: visible;
 }
 
-:global(.match-row .tl-card > *) {
+:global(.mrow-detail .tl-card > *) {
   padding-inline: 0;
 }
 </style>

@@ -36,20 +36,26 @@ const rows = computed(() => {
   <section v-if="rows.length" class="card">
     <div class="section">
       <h3>Roles</h3>
-      <span class="meta">{{ matches.length }} games</span>
+      <span class="meta num">{{ rows.reduce((n, row) => n + row.games, 0) }} laned games</span>
     </div>
 
-    <ul class="space-y-3">
-      <li v-for="row in rows" :key="row.position" class="flex items-center gap-2.5">
-        <RoleIcon :role="row.position" :size="16" class="text-ink-2" />
-        <span class="w-[50px] shrink-0 text-[12px] font-medium text-ink">{{ row.label }}</span>
-        <span class="meter min-w-0 flex-1 !h-[6px]">
-          <span class="!bg-ink" :style="{ width: `${row.share}%` }" />
+    <ul class="space-y-2.5">
+      <li
+        v-for="row in rows"
+        :key="row.position"
+        class="grid grid-cols-[16px_52px_minmax(0,1fr)_52px_36px] items-center gap-2.5"
+      >
+        <RoleIcon :role="row.position" :size="16" class="text-ink-3" />
+        <span class="text-[13px] text-ink-2">{{ row.label }}</span>
+        <span class="meter">
+          <span :style="{ width: `${row.share}%` }" />
         </span>
-        <span class="num w-[26px] shrink-0 text-right text-[11px] text-ink-3">{{ row.games }}</span>
+        <span class="num text-right text-[12px] text-ink-3">
+          {{ row.games }} {{ row.games === 1 ? 'game' : 'games' }}
+        </span>
         <span
-          class="num stat w-[38px] shrink-0 text-right text-[14px]"
-          :class="row.winrate >= 50 ? 'text-win' : 'text-loss'"
+          class="num text-right text-[13px] font-semibold"
+          :class="row.games < 3 ? 'text-ink-3' : 'text-ink'"
         >
           {{ row.winrate }}%
         </span>
