@@ -305,3 +305,126 @@ the next game end or app start.
 LCU first (`/lol-summoner/v1/current-summoner` + ranked + mastery + recent games), else
 `GET /api/desktop/resolve`, else the local database. The resolved account is stored locally so
 the app is personalised before the League client is ever opened.
+
+## 6. Player snapshots (contract v1.1)
+
+Whenever the desktop app reads a player from the League client (a profile it opens, a scouting
+card, the allies of a champ select, the ten players of a game, the signed-in account), it sends
+core what the client showed: identity, ranks, champion mastery. Core uses it to keep web
+profiles fresh **instead of** league-v4 / champion-mastery-v4 calls. Match histories of other
+players are never read for this and never sent; finished games stay on §2.5.
+
+### 6.1 `POST /api/desktop/players` (auth; 60 requests and 1500 players / hour / device, 240 requests / hour / IP; body ≤ 256 KB)
+
+```jsonc
+{
+  "schema": 1,
+  "platform": "EUW1",                 // the client's platform (the players were read on it)
+  "app": "0.2.7",
+  "players": [                        // 1–25, unique rawPuuid
+    {
+      "rawPuuid": "5c8a…",            // LCU puuid (36-char UUID)
+      "gameName": "Kesha", "tagLine": "EUW",
+      "profileIconId": 4568, "summonerLevel": 245,
+      "privacy": "PUBLIC",            // "PUBLIC" | "PRIVATE" (the client's flag)
+      "self": false,                  // the account signed in to this client
+      "context": "in_game",           // "self" | "profile" | "champ_select" | "in_game"
+      "observedAt": 1791450000000,    // epoch ms the client answered
+      "ranks": [                      // null: not read. []: read, unranked in both queues
+        { "queue": "RANKED_SOLO_5x5", "tier": "EMERALD", "division": "II", "lp": 64,
+          "wins": 61, "losses": null, // losses: a number only when self (the client hides others')
+          "provisional": false }
+      ],
+      "mastery": [                    // null: not read, or a PRIVATE profile. Top 10 by points
+        { "championId": 45, "championLevel": 38, "championPoints": 402115, "lastPlayTime": 1791400000000 }
+      ]
+    }
+  ]
+}
+```
+
+Apex tiers use division `"I"` (like league-v4). Response `200`:
+
+```json
+{ "results": [ { "rawPuuid": "5c8a…", "status": "applied" } ] }
+```
+
+`status` per player: `applied` (stored on the web profile), `staged` (kept until core can tell
+whose it is, §6.3), `unchanged` (same as stored; only its freshness moved), `stale` (core holds
+newer data), `held` (not applied: untrusted device or implausible change, §6.4), `rejected`
+(with `code`, e.g. `E_INVALID_PLAYER`). A malformed body (not 1–25 players, wrong schema) is
+422 `E_VALIDATION_ERROR` for the whole batch; other errors as §1.
+
+### 6.2 Validation (per player → `rejected`)
+
+UUID `rawPuuid`; Riot ID 1–16 + 1–5 characters, no `#`; platform supported; `observedAt` within
+the last 24 h and not more than 5 min in the future; tier ∈ IRON…CHALLENGER, division ∈ I–IV
+(apex: I), LP 0–100 below Master, 0–5000 from Master; wins/losses 0–5000; `losses` non-null only
+when `self`; at most 2 rank entries (solo, flex); mastery ≤ 10 entries, known champion ids,
+level 0–1000, points 0–100 000 000, `lastPlayTime` not in the future; level 1–5000; icon id
+0–100 000.
+
+### 6.3 Identity and storage (core)
+
+`player_observation (raw_puuid PK, game_name, tag_line, platform, profile_icon_id, summoner_level,
+privacy, ranks jsonb, mastery jsonb, observed_at, received_at, device_id, payload_hash,
+puuid NULL, applied_at NULL, status)` keeps the **latest** observation per raw PUUID (an older
+one never replaces a newer one). Mapping uses §3 order: alias, then `riot_player` by Riot ID on
+that platform, without any Riot call. Unmapped observations stay `staged`; whenever core learns
+the API PUUID of a Riot ID (`resolveAndPersist`, `upsertFromParticipants`, a verified match
+upload's aliases), it applies the staged observation of that Riot ID if it is still recent
+(≤ 24 h) and records the alias as `asserted`.
+
+### 6.4 Applying (core) — never overwrite newer or more authoritative data
+
+- **Trust:** a trusted device (§4.2) applies anything; an untrusted device applies only its own
+  linked accounts (`self`). Other players from untrusted devices are `held` until a second
+  device (different IP) reports the same Riot ID with the same rank within 6 h, or the device
+  becomes trusted. A rank more than 800 ladder points (§4.4 `ladder()`) away from the stored
+  one within 24 h is `held`.
+- **Ranks:** per queue, insert a `riot_rank` row (`source = 'desktop'`, `fetched_at = observedAt`)
+  only when `observedAt` is newer than the newest row of that queue (any source) and something
+  changed; `losses` is `NULL` when unknown (the column becomes nullable; readers show W/L only
+  when losses are known and fall back to the newest row that has them for the win rate). Riot's
+  own rows are always written when fetched, so a later Riot read supersedes desktop data.
+- **Profile:** icon and level update `riot_player` when `observedAt` is newer than the last
+  refresh. A different Riot ID for the same PUUID is applied only through a `verified` alias
+  (a rename), with a `riot_player_history` row, as the Riot path does.
+- **Mastery:** `player_mastery (puuid PK, entries jsonb, observed_at, source)`; newest wins.
+- **Freshness:** `unchanged` still moves `player_observation.observed_at` and the rank's
+  "confirmed at" (`riot_rank_confirmed (puuid, queue_type, confirmed_at)`), so core knows the
+  stored rank is current without asking Riot.
+- Writes invalidate the response cache of `summoner:<puuid>`.
+
+### 6.5 Fewer Riot calls (core)
+
+- League-v4 is skipped when the newest rank of the player (Riot or desktop, or its confirmation)
+  is younger than 10 min for profile reads and `GET /api/desktop/resolve`, and younger than 3 min
+  for the website's Update (`POST /api/summoners/sync`).
+- Champion-mastery-v4 is skipped when a desktop mastery snapshot younger than 24 h covers what
+  the request needs (the top 10).
+- APIs expose provenance: rank and mastery responses carry `source` (`riot` = Riot API,
+  `desktop` = reported by the Invade app) and `observedAt`; `freshness` of the summoner gains
+  `lastObservedAt`.
+
+### 6.6 Desktop behaviour
+
+- **What is observed** (LCU only; never another player's match history):
+  - **profile**: every player card built from the client (`players::card`, i.e. profile pages and
+    scouting), from data already fetched (no extra request);
+  - **self**: the signed-in account at sign-in and at each 30-min refresh (losses included);
+  - **champ select**: allies whose PUUID the client shows, once per champ select (summoner,
+    ranked, mastery: 3 requests each, ~250 ms apart). Hidden players (empty PUUID: enemies in
+    ranked champ select) are never looked up;
+  - **in game**: the ten players of the game from the gameflow session, 45 s after the game
+    starts, skipping bots, players observed in the last 6 h and cards already in the cache.
+- **Privacy:** `PRIVATE` profiles send no mastery. Bots and players without a Riot ID are skipped.
+- **Dedup and queue:** `player_snapshots (raw_puuid PK, payload, hash, observed_at, state,
+  attempts, next_at)` coalesces per player (the newest observation replaces a pending one);
+  `player_sent (raw_puuid PK, hash, sent_at)` skips a snapshot identical to the last one sent
+  less than 6 h ago. The hash excludes `observedAt` and `context`.
+- **Sending:** the §5.3 sender sends pending games first, then players in batches of ≤ 25, never
+  during a game. Backoff per batch 1 min, 5 min, 15 min, 1 h; a snapshot is dropped after
+  5 attempts or 24 h. 429 / 503 pause the whole queue.
+- **Fallback:** with the client closed, a profile the app does not hold is resolved through
+  `GET /api/desktop/resolve` (as onboarding does) and shown as a saved profile.
