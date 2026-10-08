@@ -74,6 +74,8 @@ const nextOffset = ref(0)
 const appendError = ref(false)
 const failedPanels = ref<string[]>([])
 const mastery = shallowRef<ChampionMastery[]>([])
+/** Whether `mastery` is every champion, or only the top few the overview needs. */
+const masteryComplete = ref(false)
 const masteryLoading = ref(false)
 const masteryError = ref(false)
 
@@ -180,7 +182,12 @@ async function loadFriendMatches() {
   }
 }
 
-async function loadMastery() {
+/**
+ * The Mastery panel lists every champion; the rest of the profile only needs
+ * the top ones, which the API can answer from a snapshot the Invade app
+ * reported instead of asking Riot.
+ */
+async function loadMastery(complete = section.value === 'champions') {
   if (!profile.value) return
   masteryController?.abort()
   masteryController = new AbortController()
@@ -188,13 +195,18 @@ async function loadMastery() {
   masteryLoading.value = true
   masteryError.value = false
   try {
-    const response = await fetch(`/api/summoners/puuid/${profile.value.puuid}/mastery`, { signal })
+    const query = complete ? '' : '?count=10'
+    const response = await fetch(`/api/summoners/puuid/${profile.value.puuid}/mastery${query}`, {
+      signal,
+    })
     if (!response.ok) throw new Error()
     const data = await response.json()
-    if (!signal.aborted)
+    if (!signal.aborted) {
+      masteryComplete.value = complete
       mastery.value = data.sort(
         (a: ChampionMastery, b: ChampionMastery) => b.championPoints - a.championPoints
       )
+    }
   } catch {
     if (!signal.aborted) masteryError.value = true
   } finally {
@@ -264,7 +276,7 @@ watch(
 )
 
 watch(section, () => {
-  if (section.value === 'champions' && !mastery.value.length) void loadMastery()
+  if (section.value === 'champions' && !masteryComplete.value) void loadMastery(true)
   if (section.value === 'friends') void loadFriendMatches()
   if (['overview', 'champions'].includes(section.value)) void applyFilters()
 })
@@ -400,6 +412,7 @@ async function load() {
   filteredMatches.value = null
   filteredChampions.value = null
   mastery.value = []
+  masteryComplete.value = false
   friendMatches.value = []
   profile.value = props.initialProfile ?? null
   isLoading.value = !profile.value
@@ -747,7 +760,7 @@ async function sync() {
               :mastery="mastery"
               :loading="masteryLoading"
               :error="masteryError"
-              @retry="loadMastery"
+              @retry="loadMastery(true)"
             />
           </div>
 

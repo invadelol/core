@@ -138,8 +138,13 @@ export interface Rank {
   division: string
   leaguePoints: number
   wins: number
-  losses: number
+  /** Null when the rank came from another player's client, which hides losses. */
+  losses: number | null
   fetchedAt?: string
+  /** `desktop` when the Invade app reported it, `riot` when the Riot API did. */
+  source?: 'riot' | 'desktop'
+  /** When the rank was last known true. */
+  observedAt?: string
 }
 
 export interface RanksPayload {
@@ -211,8 +216,11 @@ export interface ChampionMastery {
   championLevel: number
   championPoints: number
   lastPlayTime: number
-  championPointsUntilNextLevel: number
-  tokensEarned: number
+  /** Riot only: the League client's top-ten snapshot does not carry them. */
+  championPointsUntilNextLevel?: number
+  tokensEarned?: number
+  source?: 'riot' | 'desktop'
+  observedAt?: number | null
 }
 
 export interface LiveGame {
