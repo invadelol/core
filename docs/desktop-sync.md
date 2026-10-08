@@ -108,8 +108,10 @@ prevent that. So core never takes desktop data on faith:
 - **a lie costs the device everything**: one mismatch revokes it, marks all its data `conflict`,
   deletes the `riot_rank` rows it wrote (`device_id` on desktop rows) and re-reads the affected
   players from Riot when they are next viewed;
-- other players' ranks from an untrusted device are only applied when a second device on another
-  network confirms them (§6.4).
+- player snapshots from an untrusted device, its own linked accounts included (linking only takes
+  a Riot ID, so it proves nothing), are only applied when a second device on another network
+  confirms them (§6.4). A new player's rank still moves with each game through the Riot-verified
+  match upload and its LP change (§4).
 
 Core notes: days are UTC days, counted when the day of a match-v5 confirmation differs from the
 previous one (`desktop_device.verified_days`); a player-snapshot audit that passes does not count
@@ -484,10 +486,10 @@ keeps `self`, `context` and a keyed hash of the sender's IP (for corroboration).
 
 ### 6.4 Applying (core) — never overwrite newer or more authoritative data
 
-- **Trust:** a trusted device (§4.2) applies anything; an untrusted device applies only its own
-  linked accounts (`self`). Other players from untrusted devices are `held` until a second
-  device (different IP) reports the same Riot ID with the same rank within 6 h, or the device
-  becomes trusted. A rank more than 800 ladder points (§4.4 `ladder()`) away from the stored
+- **Trust:** a trusted device (§4.2) applies anything. Everything from an untrusted device, its
+  own linked accounts (`self`) included, is `held` until a second device (different IP) reports
+  the same Riot ID with the same rank within 6 h, or the device becomes trusted: linking an
+  account only takes a Riot ID, so it is no proof of being its client. A rank more than 800 ladder points (§4.4 `ladder()`) away from the stored
   one within 24 h is `held`.
 - **Ranks:** per queue, insert a `riot_rank` row (`source = 'desktop'`, `fetched_at = observedAt`)
   only when `observedAt` is newer than the newest row of that queue (any source) and something
@@ -506,8 +508,8 @@ keeps `self`, `context` and a keyed hash of the sender's IP (for corroboration).
 Core notes:
 
 - *Self* means the player is one of the device's links (by API PUUID, or by the raw PUUID the link
-  proved); the `self` flag alone is not believed. Losses are kept only from a linked account or a
-  trusted device; a corroborated report is applied with `losses` `NULL`.
+  proved); the `self` flag alone is not believed. Losses are kept only from a trusted device about
+  one of its linked accounts; a corroborated report is applied with `losses` `NULL`.
 - Corroboration needs the stored report of the same raw PUUID to come from another device, from
   another IP (keyed hash), within 6 h, with the same Riot ID and platform, and the same tier,
   division and LP per queue (both having read ranks). `conflict` reports never corroborate. Held

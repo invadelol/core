@@ -1,4 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import { errors as vineErrors } from '@vinejs/vine'
 import env from '#start/env'
 import deviceService from '#services/desktop/device_service'
 import publicationService from '#services/desktop/publication_service'
@@ -162,6 +163,17 @@ export default class DesktopController {
     if (!publicationService.enabled()) throw DesktopException.paused('uploads')
 
     const batch = (await ctx.request.validateUsing(playersValidator)) as unknown as PlayerBatch
+    // `distinct` compares the input as sent: catch a PUUID repeated in another case too.
+    if (new Set(batch.players.map((player) => player.rawPuuid)).size !== batch.players.length) {
+      throw new vineErrors.E_VALIDATION_ERROR([
+        {
+          message: 'The players field has duplicate values',
+          rule: 'distinct',
+          field: 'players',
+          meta: { fields: 'rawPuuid' },
+        },
+      ])
+    }
     await limit(DESKTOP_LIMITS.playersDevicePlayers, current.id, batch.players.length)
     return ctx.response.ok(await playerSnapshotService.ingest(batch, { device: current, ip }))
   }

@@ -279,7 +279,7 @@ test.group('Desktop player snapshots', (group) => {
   })
 
   test('the account itself keeps its losses', async ({ assert }) => {
-    const { device } = await seed.device()
+    const { device } = await seed.device(TRUSTED)
     const player = await seed.player()
     const raw = randomUUID()
     await seed.link(device.id, player.puuid, raw)
@@ -292,9 +292,29 @@ test.group('Desktop player snapshots', (group) => {
         { queue: 'RANKED_SOLO_5x5', tier: 'GOLD', division: 'I', lp: 12, wins: 40, losses: 38 },
       ],
     })
-    // An untrusted device still applies its own linked account.
     assert.equal(await statusOf(device, own), 'applied')
     assert.include(await newestRank(player.puuid), { tier: 'GOLD', wins: 40, losses: 38 })
+  })
+
+  test('linking an account does not make an untrusted device believed about it', async ({
+    assert,
+  }) => {
+    // Anyone can link any Riot ID: a script claiming to be its client must not move its rank.
+    const { device } = await seed.device()
+    const player = await seed.player()
+    const raw = randomUUID()
+    await seed.link(device.id, player.puuid, raw)
+    const claim = snapshot({
+      rawPuuid: raw,
+      gameName: player.game_name,
+      self: true,
+      context: 'self',
+      ranks: [
+        { queue: 'RANKED_SOLO_5x5', tier: 'GOLD', division: 'I', lp: 12, wins: 40, losses: 38 },
+      ],
+    })
+    assert.equal(await statusOf(device, claim), 'held')
+    assert.isNull(await newestRank(player.puuid))
   })
 
   test('icon and level only when newer than the last refresh', async ({ assert }) => {
