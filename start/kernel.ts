@@ -47,4 +47,7 @@ server.use([
  * The router middleware stack runs middleware on all the HTTP
  * requests with a registered route.
  */
-router.use([() => import('@adonisjs/core/bodyparser_middleware')])
+router.use([
+  // The framework's parser, with a 2 MB JSON limit for desktop game uploads only.
+  () => import('#middleware/body_parser_middleware'),
+])

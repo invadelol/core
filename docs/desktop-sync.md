@@ -1,0 +1,307 @@
+# Desktop ↔ core: onboarding and match sync (contract v1)
+
+The Invade desktop app (`invadelol/app`, Tauri + Rust) reads League data from the League client's
+local API (LCU) on the player's computer. This contract lets it:
+
+1. **Onboard** a player by Riot ID when the League client is closed (core resolves it with the Riot API).
+2. **Upload finished games** the player took part in, with their LP change when it is known, so the
+   website shows them seconds after the game without match-v5 calls.
+
+Both sides implement exactly this document. Anything not written here is out of scope for v1.
+
+## 0. Ground rules
+
+- **Consent.** The desktop app uploads nothing unless the player switched on *Publish my games on
+  invade.lol* (off by default). Turning it off stops uploads immediately; *Unlink this computer*
+  revokes the device on the server.
+- **Only finished games the uploader played.** Never champ select, never a game in progress, never
+  data the client hides (enemy names in ranked champ select). Only matchmade games
+  (`gameType == "MATCHED_GAME"`) in the queues of §4.3.
+- **Never invent data.** A field the client does not give is absent, not zero. The server records
+  what is missing (`completeness`) and the website hides it. An LP change exists only when the
+  app holds a ranked snapshot from before the game and one after it, exactly one game apart (§4.4).
+- **Two identities.** The LCU identifies players by a raw PUUID (36-char UUID,
+  `5c8a…-…`). The Riot API returns PUUIDs encrypted per API key (78 chars). They are never
+  compared to each other. Core maps raw → API PUUIDs through Riot IDs (§3).
+- **Riot policy.** Desktop data is what Riot already makes public through match-v5 for the
+  player's own games. Core keeps every existing Riot API limit (`CoalescingRiotAPI`, the
+  `@fightmegg` limiter); this design only removes calls.
+
+## 1. Transport and authentication
+
+- Base URL: `https://invade.lol` (desktop debug builds: env `INVADE_CORE_URL`, e.g. `http://localhost:3335`).
+  Release builds ignore the variable.
+- JSON bodies, UTF-8. Every desktop request sends `User-Agent: Invade/<version> (<os>)`.
+- Authenticated routes take `Authorization: Bearer <token>`. Tokens are 32 random bytes,
+  base64url, prefixed `inv_dev_`. Core stores only their SHA-256, never the token.
+- Errors use core's existing shape: `{ "errors": [{ "message": "...", "code": "E_..." }], "retryAfter"?: s }`
+  plus a `Retry-After` header for 429/503.
+
+| status | code | desktop reaction |
+| --- | --- | --- |
+| 400/422 | `E_VALIDATION_ERROR`, `E_INVALID_MATCH`, `E_INVALID_LP`, `E_RIOT_ID_MISMATCH` | permanent: drop the item, remember the code |
+| 401 | `E_DEVICE_UNAUTHORIZED` | forget the token, register again (once), retry |
+| 403 | `E_NOT_LINKED` | link the uploader (§2.3), retry once |
+| 404 | `E_SUMMONER_NOT_FOUND` | resolve: "no such Riot ID" |
+| 413 | `E_PAYLOAD_TOO_LARGE` | permanent: drop the timeline, retry once without it |
+| 429 | `E_RATE_LIMITED`, `E_RIOT_RATE_LIMITED` | wait `Retry-After` (min 60 s) |
+| 503 | `E_UPLOADS_PAUSED`, `E_RIOT_UNAVAILABLE` | wait `Retry-After` (min 5 min) |
+| 5xx / network | — | exponential backoff (§5.3) |
+
+Core notes: every `/api/desktop/*` client error carries a `code` from this table (`E_VALIDATION_ERROR`
+entries also keep VineJS's `field` and `rule`). Riot rate limiting answers 429 `E_RIOT_RATE_LIMITED`;
+any other Riot failure, a rejected API key included, answers 503 `E_RIOT_UNAVAILABLE`. A 413 is
+answered after reading the body (up to 16 MB), so the app receives it instead of a broken pipe.
+
+## 2. Endpoints
+
+All under `/api/desktop`. Rate limits are Redis fixed windows per device and per client IP;
+exceeding one answers 429 with `Retry-After`.
+
+### 2.1 `GET /api/desktop/config` (public)
+
+```json
+{ "uploads": true, "resolve": true, "maxPayloadBytes": 2000000, "minAppVersion": null }
+```
+
+Kill switches from env (`DESKTOP_UPLOADS_ENABLED`, `DESKTOP_RESOLVE_ENABLED`, default true). The
+desktop reads it at most every 6 h, and before its first upload after a launch. A switched-off feature
+answers 503 `E_UPLOADS_PAUSED` (resolve included) with `Retry-After: 1800`. `minAppVersion` comes
+from `DESKTOP_MIN_APP_VERSION` (unset: `null`).
+
+### 2.2 `POST /api/desktop/devices` (public, 10 / hour / IP)
+
+Request `{ "app": "0.2.7", "os": "macos" | "windows" }` → `201 { "deviceId": "<uuid>", "token": "inv_dev_…" }`.
+The token is shown once. `DELETE /api/desktop/devices/me` (auth) revokes it → `204`.
+
+### 2.3 `POST /api/desktop/link` (auth, 20 / hour / device)
+
+Makes an account one of this device's uploaders.
+
+```json
+{ "gameName": "Louhi", "tagLine": "727", "platform": "EUW1", "rawPuuid": "5c8a…" | null, "source": "lcu" | "riot_id" }
+```
+
+Core resolves the Riot ID to the API PUUID (stored `riot_player` first, else account-v1 + the
+existing multi-platform discovery), stores the link and, when `rawPuuid` is given, the alias
+`rawPuuid → API puuid` (§3). → `200 { "puuid": "<api puuid>", "profileUrl": "https://invade.lol/Louhi-727" }`.
+Unknown Riot ID: 404. `DELETE /api/desktop/link/:puuid` (auth) unlinks → `204`.
+A `rawPuuid` that match-v5 already tied to another account answers 422 `E_RIOT_ID_MISMATCH`; an
+unsupported platform answers 422 `E_VALIDATION_ERROR`. A later `riot_id` link keeps the raw PUUID an
+earlier `lcu` link stored.
+
+### 2.4 `GET /api/desktop/resolve?gameName=…&tagLine=…` (auth optional: 30 / hour / device, 20 / hour / IP without a token)
+
+Onboarding without the League client. A player who has not switched publishing on has no device
+token yet: the IP limit applies. Uses `summonerService.resolveAndUpsert` (coalesced, cached),
+ranks from `riot_rank` (league-v4 only when none is stored or the newest is older than 10 min),
+mastery top 5 (champion-mastery-v4, cached 1 h), and recent games **from ClickHouse only** (no
+match-v5 call during onboarding).
+
+```json
+{
+  "puuid": "<api puuid>", "gameName": "Louhi", "tagLine": "727", "platform": "EUW1",
+  "profileIconId": 6634, "summonerLevel": 412,
+  "solo": { "tier": "EMERALD", "division": "II", "lp": 64, "wins": 61, "losses": 52 } | null,
+  "flex": null,
+  "mastery": [{ "championId": 45, "championLevel": 38, "championPoints": 402115, "lastPlayTime": 1791400000000 }],
+  "recent": [{ "matchId": "EUW1_…", "championId": 45, "win": true, "queueId": 420, "gameStartMs": 1791400000000, "durationSec": 1810, "kills": 7, "deaths": 2, "assists": 9 }],
+  "profileUrl": "https://invade.lol/Louhi-727",
+  "fetchedAt": 1791450000000, "stale": false
+}
+```
+
+Errors: 404 `E_SUMMONER_NOT_FOUND`, 429, 503 (`stale: true` with stored data when Riot fails but
+the player is stored).
+
+Core notes: an optional `platform` query parameter skips platform discovery. `recent` holds the
+player's latest 20 stored games, newest first, and `mastery` the 5 entries with the most points.
+A token that is present must be valid (401 otherwise); without one the IP limit applies. When a
+rank or mastery refresh fails, the stored values are returned with `stale: true`.
+
+### 2.5 `POST /api/desktop/matches` (auth, 30 / hour / device, 120 / hour / IP, body ≤ 2 MB)
+
+```jsonc
+{
+  "schema": 1,
+  "matchId": "EUW1_7998180573",          // `${game.platformId}_${game.gameId}`
+  "uploader": "5c8a…",                    // raw PUUID of the signed-in account; a participant
+  "capturedAt": 1791450000000,            // epoch ms the app read the game from the client
+  "app": "0.2.7",
+  "game": {                               // LCU GET /lol-match-history/v1/games/{gameId}, trimmed:
+    "gameId": 7998180573, "platformId": "EUW1", "gameCreation": 1791448000000, "gameDuration": 1810,
+    "queueId": 420, "mapId": 11, "gameMode": "CLASSIC", "gameType": "MATCHED_GAME", "gameVersion": "16.20.721.4471",
+    "participantIdentities": [
+      { "participantId": 1, "player": { "puuid": "<raw>", "gameName": "Louhi", "tagLine": "727", "profileIcon": 6634 } }
+    ],
+    "participants": [
+      { "participantId": 1, "teamId": 100, "championId": 45, "spell1Id": 4, "spell2Id": 14,
+        "position": "MIDDLE",              // inferred by the app (TOP JUNGLE MIDDLE BOTTOM UTILITY), absent off Summoner's Rift
+        "stats": { /* the client's stats object: numbers and booleans only, keys unchanged */ },
+        "timeline": { "lane": "MIDDLE", "role": "SOLO" } }
+    ],
+    "teams": [
+      { "teamId": 100, "win": "Win", "bans": [{ "championId": 238, "pickTurn": 1 }],
+        "baronKills": 1, "dragonKills": 3, "hordeKills": 3, "riftHeraldKills": 1, "towerKills": 8, "inhibitorKills": 2,
+        "firstBlood": true, "firstTower": true, "firstBaron": true, "firstDargon": false, "firstInhibitor": true }
+    ]
+  },
+  "timeline": null | {                    // LCU GET /lol-match-history/v1/game-timelines/{gameId}, trimmed:
+    "frameInterval": 60000,
+    "frames": [{
+      "timestamp": 60000,
+      "participantFrames": { "1": { "participantId": 1, "totalGold": 500, "currentGold": 500, "xp": 280, "level": 1,
+                                    "minionsKilled": 4, "jungleMinionsKilled": 0, "position": { "x": 6000, "y": 6100 } } },
+      "events": [ /* types: CHAMPION_KILL ELITE_MONSTER_KILL BUILDING_KILL SKILL_LEVEL_UP ITEM_PURCHASED ITEM_SOLD
+                     ITEM_UNDO ITEM_DESTROYED WARD_PLACED WARD_KILL; fields kept: type timestamp participantId killerId
+                     victimId assistingParticipantIds teamId monsterType monsterSubType buildingType towerType laneType
+                     itemId afterId beforeId skillSlot levelUpType wardType creatorId position */ ]
+    }]
+  },
+  "lp": null | {
+    "queue": "RANKED_SOLO_5x5" | "RANKED_FLEX_SR",
+    "before": { "tier": "EMERALD", "division": "II", "lp": 45, "wins": 60, "losses": 52, "at": 1791447900000 },
+    "after":  { "tier": "EMERALD", "division": "II", "lp": 64, "wins": 61, "losses": 52, "at": 1791450100000 }
+  }
+}
+```
+
+Response `200`:
+
+```json
+{ "matchId": "EUW1_7998180573", "status": "stored" | "duplicate" | "verified" | "deferred",
+  "lp": "stored" | "rejected" | "none", "url": "https://invade.lol/Louhi-727/match/EUW1_7998180573" }
+```
+
+`deferred`: accepted but not published yet (§4.2); the desktop marks the item done, core finishes
+it. Re-sending the same match from the same device is idempotent (`duplicate`, with the `lp` answer
+of the first send).
+
+Core notes: `deferred` is also the answer when Riot is rate limiting or unavailable during the
+upload, not only when match-v5 has no game yet. 422 `E_INVALID_LP` is reserved for an `lp` that is
+neither an object nor `null`; a malformed or implausible LP object only makes `lp: "rejected"`. An
+`uploader` that is not one of the participants is a 422 `E_INVALID_MATCH` (linking would not fix it);
+403 `E_NOT_LINKED` means a participant uploader that this device has no link for.
+
+## 3. Identity mapping (core)
+
+Table `riot_puuid_alias (raw_puuid uuid PK, puuid text, game_name, tag_line, status, observed_at)`.
+For each participant of an upload, in order, without any Riot call:
+
+1. alias by `raw_puuid` (status `verified` or `asserted`);
+2. `riot_player` by `(game_name, tag_line)` (citext, the Riot ID at game time) → alias `asserted`.
+
+Participants still unmapped are mapped by the one match-v5 call of §4.2 (match participants by
+`participantId`, checked against Riot ID and champion) → alias `verified`. Core never calls
+account-v1 per participant. Two different raw PUUIDs claiming one API PUUID: both aliases
+`conflict`, the upload is deferred to Riot. (When one of the two claims is already `verified`, only
+the other one becomes `conflict`; a `verified` alias learned from match-v5 overwrites any other.)
+
+## 4. Validation and publication (core)
+
+### 4.1 Structural checks (→ 422 `E_INVALID_MATCH`)
+
+- `matchId` matches `/^[A-Z0-9]+_[0-9]+$/`, equals `${platformId}_${gameId}`, platform is a
+  supported platform and the device's linked account plays there.
+- `gameType == "MATCHED_GAME"`, queue in §4.3, `mapId` in {11, 12, 30}.
+- `gameCreation` within the last 7 days and not in the future (5 min skew), `gameDuration` 0–7200 s,
+  `capturedAt ≥ gameCreation + gameDuration·1000 − 5 min`.
+- Participants: 10 on maps 11/12 (two teams of 5), 2–16 on Arena; unique `participantId`s and raw
+  PUUIDs; each has an identity; champion ids known to the bundled champion list; stats numeric
+  and within plausible ranges (kills, deaths, assists ≤ 100; CS ≤ 2000; gold ≤ 150000; damage ≤
+  500000); team kills consistent with participant kills; exactly one winning team (maps 11/12).
+- `uploader` is a participant and is linked to the device (else 403 `E_NOT_LINKED`).
+- Size ≤ 2 MB.
+
+### 4.2 Publication policy
+
+Postgres `desktop_match_upload (match_id, device_id, uploader_puuid, payload_hash, status, received_at, …)`,
+unique `(match_id, device_id)`; Postgres `match_source (match_id PK, source, verification,
+completeness jsonb, first_device_id, created_at, verified_at)` is the single writer lock:
+`INSERT … ON CONFLICT DO NOTHING` decides who ingests a match into ClickHouse (its tables are plain
+`MergeTree`, so a second insert would duplicate rows).
+
+- Match already in ClickHouse (from Riot or an earlier upload): no write; compare the canonical
+  hash with the first upload → `corroborated` when a second device (different IP) agrees,
+  `conflict` when it disagrees. → `duplicate`.
+- New match, **trusted device** (≥ 5 verified uploads, no mismatch) and every participant mapped
+  for free: ingest the desktop data (`source desktop`, `verification unverified`). Zero Riot calls.
+  One upload in ten is still checked against match-v5 afterwards (sampling).
+- Otherwise: **one** `getMatchById` call. Found → ingest the **Riot** match (complete, `verification
+  verified`) with the desktop's timeline (saves the timeline call; Riot's timeline if the upload
+  has none), learn every alias, compare with the upload (champions, K/D/A, result, duration) and
+  count the device verified or mismatched. Not available yet (404) → `deferred`: retried by core
+  2, 5 and 15 minutes later (in-process timer, best effort); after that the normal web sync picks
+  the match up.
+- A device with a mismatch is revoked; its unverified matches are marked `conflict` and hidden
+  from LP display (they stay in ClickHouse until re-ingested from Riot).
+
+Core notes: the web sync takes the same lock (a `riot`/`verified` row) before it ingests, so the two
+writers can never both insert a game. A duplicate of a game whose stored rows came from Riot (or
+were verified) is compared with those rows at no Riot cost and counts the device verified or
+mismatched like the Riot path. A conflict between two devices, and the one-in-ten sample of trusted
+uploads, are checked against match-v5 with the same 2/5/15-minute retries; the stored rows are then
+marked `verified` or `conflict`, and each device involved is counted.
+
+LCU → match-v5 conversion maps the LCU fields onto `MatchDTO.info` for the existing row builders
+(`buildMatchRow`, `buildParticipantRows`, `buildTimelineRows`). Fields the LCU does not give
+(`summonerLevel`, pings, `challenges`, objective kills per team beyond the team totals above) stay
+0 in ClickHouse and are listed in `match_source.completeness` (`{ "pings": false, "summonerLevel":
+false, "timeline": true, "position": "inferred" }`, plus `"statPerks": false`: the client's history
+has no stat shards) so readers can hide them. Riot games store `{ …: true, "position": "riot" }`.
+
+### 4.3 Queues
+
+400, 420, 430, 440, 450, 480, 490, 700, 720, 900, 1020, 1700, 1710, 1900, 2300, 2400.
+(Nexus Blitz, 1300, is played on map 21, which §4.1 does not accept.)
+
+### 4.4 LP changes (→ `lp: "rejected"` with the reason logged; the match itself is still accepted)
+
+Stored in Postgres `lp_change (match_id, puuid, queue, before…, after…, delta, source, device_id,
+status, created_at)`, unique `(match_id, puuid)`, only for the uploader. Accepted when:
+
+- queue 420 ↔ `RANKED_SOLO_5x5`, 440 ↔ `RANKED_FLEX_SR`;
+- `after.wins + after.losses == before.wins + before.losses + 1`, and the result matches
+  (`after.wins == before.wins + 1` for a win);
+- `before.at < game end` (the app takes it when the game clock starts, after the loading screen,
+  so it may trail `gameCreation` by minutes), `after.at ≥ game end`, `after.at − game end ≤ 30 min`,
+  where game end is `gameCreation + gameDuration·1000`;
+- `delta = ladder(after) − ladder(before)` (Iron IV 0 = 0, +100 per division, Master+ on one
+  ladder from 2800), positive for a win and negative for a loss except at 0 LP / promotions, and
+  `|delta| ≤ 100`; tiers and divisions valid; neither snapshot provisional.
+  (Core reads the exceptions as: a loss may be `0` when `before.lp` is 0; a win may be `0` only
+  when `after` is a higher division or tier. Apex divisions are ignored, `"I"` as league-v4 sends
+  them. Provisional: a tier outside the ten ranked tiers, e.g. `""`/`NONE` during placements, or
+  `provisional: true` if the app ever sends it.)
+
+The `after` snapshot is also written to `riot_rank` (`source desktop`) when it is newer than the
+stored one: the web shows the fresh rank without a league-v4 call.
+
+## 5. Desktop behaviour
+
+### 5.1 When a game ends
+
+The poll loop already waits for the new game in the client's history. With publishing on and the
+signed-in account linked: fetch the full game and timeline from the client **once** (raw JSON),
+trim them to §2.5, compute the LP change from the snapshot taken when the game started and the
+one taken when LP settled (up to 150 s after), and store the payload in the local queue. Nothing
+is sent during a game.
+
+### 5.2 Local queue
+
+SQLite table `uploads (match_id PK, puuid, payload BLOB deflated, state, attempts, next_at, last_error,
+created_at, sent_at)`. States: `pending`, `sent`, `dropped`. Kept 30 days after sending.
+
+### 5.3 Sender
+
+One task, woken by an enqueue, by app start when `pending` items exist, or by its own timer; it
+never polls an empty queue and never sends while a game is running. Backoff per item:
+1 min, 5 min, 15 min, 1 h, 6 h, 24 h; dropped after 8 attempts. One request at a time.
+A 503 / 429 pauses the whole queue for `Retry-After`. Offline = connect errors: the queue waits for
+the next game end or app start.
+
+### 5.4 Onboarding
+
+LCU first (`/lol-summoner/v1/current-summoner` + ranked + mastery + recent games), else
+`GET /api/desktop/resolve`, else the local database. The resolved account is stored locally so
+the app is personalised before the League client is ever opened.

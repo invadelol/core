@@ -27,6 +27,7 @@ const PlayerInsightsController = () => import('#controllers/player_insights_cont
 const AssetsController = () => import('#controllers/assets_controller')
 const DownloadsController = () => import('#controllers/downloads_controller')
 const AppPageController = () => import('#controllers/app_page_controller')
+const DesktopController = () => import('#controllers/desktop_controller')
 
 // API routes group
 router
@@ -69,6 +70,21 @@ router
     router.put('/summoners/puuid/:puuid/increment', [SummonersController, 'incrementViews'])
 
     router.get('/health', [HealthChecksController, 'handle'])
+
+    /** The desktop app's onboarding and match uploads (docs/desktop-sync.md). */
+    router
+      .group(() => {
+        router.get('/config', [DesktopController, 'config'])
+        router.post('/devices', [DesktopController, 'register'])
+        router.delete('/devices/me', [DesktopController, 'revoke']).use(middleware.desktopAuth())
+        router.post('/link', [DesktopController, 'link']).use(middleware.desktopAuth())
+        router.delete('/link/:puuid', [DesktopController, 'unlink']).use(middleware.desktopAuth())
+        router
+          .get('/resolve', [DesktopController, 'resolve'])
+          .use(middleware.desktopAuth({ optional: true }))
+        router.post('/matches', [DesktopController, 'upload']).use(middleware.desktopAuth())
+      })
+      .prefix('/desktop')
   })
   .prefix('/api')
 

@@ -10,6 +10,9 @@ import { invalidateResponseCache } from '#services/http_response_cache'
 import type { PlatformId } from '@fightmegg/riot-api'
 import { DEFAULT_MATCH_COUNT } from '#config/constants'
 import { SyncGuard } from '#utils/sync_guard'
+import { platformFromMatchId, toInt } from '#utils/clickhouse'
+import matchSourceService from '#services/match_source_service'
+import { riotCompleteness } from '#services/desktop/conversion'
 
 type MatchCluster = Exclude<RiotAPITypes.Cluster, PlatformId.ESPORTS>
 
@@ -65,16 +68,32 @@ class MatchesService {
       cluster,
     })
 
-    const filePath = `matches/${matchId}.json`
-    const r2 = drive.use('r2')
+    await this.archive(matchId, matchData)
 
-    const fileExists = await r2.exists(filePath)
-    if (!fileExists) {
-      const compressed = await compressionService.compress(matchData)
-      await r2.put(filePath, compressed)
+    // The desktop app may be publishing this very game. Only the writer that
+    // claims the match ingests it; the other one would duplicate every row.
+    const claimed = await matchSourceService.claim(matchId, {
+      source: 'riot',
+      verification: 'verified',
+      completeness: riotCompleteness(true),
+    })
+    if (!claimed) {
+      const info = matchData.info
+      return {
+        matchId,
+        platform:
+          (typeof info.platformId === 'string' && info.platformId) || platformFromMatchId(matchId),
+        gameStartMs: toInt(info.gameStartTimestamp ?? info.gameCreation ?? 0, 0),
+      }
     }
 
-    const meta = await ingestionService.ingestMatch(matchId, matchData)
+    let meta: Awaited<ReturnType<typeof ingestionService.ingestMatch>>
+    try {
+      meta = await ingestionService.ingestMatch(matchId, matchData)
+    } catch (error) {
+      await matchSourceService.release(matchId).catch(() => {})
+      throw error
+    }
 
     const timelineData = await riotApiService.client.matchV5.getMatchTimelineById({
       matchId,
@@ -91,6 +110,18 @@ class MatchesService {
     return {
       matchId,
       ...meta,
+    }
+  }
+
+  /** Riot's JSON, kept so a game can be re-ingested without asking Riot again. */
+  async archive(matchId: string, matchData: RiotAPITypes.MatchV5.MatchDTO) {
+    const filePath = `matches/${matchId}.json`
+    const r2 = drive.use('r2')
+
+    const fileExists = await r2.exists(filePath)
+    if (!fileExists) {
+      const compressed = await compressionService.compress(matchData)
+      await r2.put(filePath, compressed)
     }
   }
 }

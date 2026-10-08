@@ -1,6 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 
 import matchRepository from '#services/analytics/match_repository'
+import matchSourceService from '#services/match_source_service'
 import { matchIdParamsValidator } from '#validators/match'
 
 export default class MatchesController {
@@ -18,7 +19,9 @@ export default class MatchesController {
       return response.notFound({ message: 'Match not found' })
     }
 
-    return response.ok(match)
+    // Provenance travels with the match, so the page can say where a game came
+    // from and hide what a desktop upload could not know.
+    const [described] = await matchSourceService.decorate([match])
+    return response.ok(described)
   }
 }
-

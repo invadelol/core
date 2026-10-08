@@ -10,6 +10,7 @@ import type { RiotAPITypes } from '#services/riot/api'
 import riotApiService from '#services/riot/api'
 import statsRepository from '#services/analytics/stats_repository'
 import matchRepository from '#services/analytics/match_repository'
+import matchSourceService from '#services/match_source_service'
 import Summoner from '#models/summoner'
 import SummonerHistory from '#models/summoner_history'
 import Rank from '#models/rank'
@@ -298,7 +299,7 @@ class SummonerService {
   ) {
     const queueIds = filters.type && filters.type !== 'all' ? QUEUE_IDS[filters.type] || [] : []
 
-    return matchRepository.getByPuuid(puuid, {
+    const matches = await matchRepository.getByPuuid(puuid, {
       queueIds,
       view: filters.view,
       count: filters.count ?? DEFAULT_MATCH_COUNT,
@@ -306,6 +307,8 @@ class SummonerService {
       championId: filters.champion,
       role: filters.role === 'SUPPORT' ? 'UTILITY' : filters.role,
     })
+    // Where each game came from, and this player's LP change when the app reported one.
+    return matchSourceService.decorate(matches, puuid)
   }
 
   /**

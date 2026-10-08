@@ -149,6 +149,38 @@ All routes require a valid PUUID and are cached.
 | `GET` | `/matches/:id` | One match in full, with its timeline |
 | `PUT` | `/summoners/puuid/:puuid/increment` | Increment profile view count |
 
+### Desktop sync
+
+The Invade desktop app onboards players and uploads the games they finish. The
+full contract, shared with the app, is [docs/desktop-sync.md](docs/desktop-sync.md).
+
+| Method | Endpoint | Auth | Description |
+| --- | --- | --- | --- |
+| `GET` | `/api/desktop/config` | - | Kill switches and the 2 MB upload limit |
+| `POST` | `/api/desktop/devices` | - | Register a device; returns its `inv_dev_` token once (10/h per IP) |
+| `DELETE` | `/api/desktop/devices/me` | token | Revoke this device |
+| `POST` | `/api/desktop/link` | token | Make an account one of the device's uploaders (20/h) |
+| `DELETE` | `/api/desktop/link/:puuid` | token | Unlink an account |
+| `GET` | `/api/desktop/resolve?gameName=&tagLine=` | optional | Onboard by Riot ID from stored data (30/h per device, 20/h per IP) |
+| `POST` | `/api/desktop/matches` | token | Upload a finished game (30/h per device, 120/h per IP) |
+
+Only the token's SHA-256 is stored. A game already stored costs no Riot call,
+nor does one from a device Riot has confirmed five times; anything else costs
+one `getMatchById`, and a game Riot has not published yet is retried in-process
+2, 5 and 15 minutes later. Desktop games show their provenance on the match
+page, the LP change on the match row, and hide what the League client does not
+report (pings). The code lives in `app/services/desktop/`.
+
+Run `node ace migration:run` to create the tables (`desktop_device`,
+`desktop_device_account`, `riot_puuid_alias`, `desktop_match_upload`,
+`match_source`, `lp_change`, and `riot_rank.source`).
+
+Tests: `node ace test --tags=@desktop` runs the rules (conversion, structural
+checks, LP, identity mapping, publication policy, auth, rate limits) and the
+routes end to end (`tests/functional/desktop_sync.spec.ts`). They use the
+databases and Redis in `.env` with Riot stubbed, so point `DB_DATABASE`,
+`CLICKHOUSE_DB` and `REDIS_DB` at throwaway ones.
+
 ---
 
 ## Interface
@@ -190,6 +222,10 @@ See [docs/design.md](docs/design.md) for the palette and primitives, and
 | `REDIS_HOST` | yes | Redis host |
 | `REDIS_PORT` | yes | Redis port |
 | `REDIS_PASSWORD` | no | Redis password |
+| `REDIS_DB` | no | Redis logical database (default 0) |
+| `DESKTOP_UPLOADS_ENABLED` | no | Desktop game uploads on/off (default true) |
+| `DESKTOP_RESOLVE_ENABLED` | no | Desktop Riot ID onboarding on/off (default true) |
+| `DESKTOP_MIN_APP_VERSION` | no | Oldest desktop app version told to upload (default none) |
 
 See `.env.example` for all defaults.
 

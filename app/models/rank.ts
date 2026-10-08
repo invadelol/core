@@ -29,4 +29,8 @@ export default class Rank extends BaseModel {
 
   @column.dateTime({ columnName: 'fetched_at' })
   declare fetchedAt: DateTime
+
+  /** `riot` from league-v4, `desktop` from the app's post-game LP snapshot. */
+  @column()
+  declare source: 'riot' | 'desktop'
 }
