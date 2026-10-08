@@ -219,9 +219,11 @@ class DeviceService {
   /**
    * Riot contradicted this device (a game, or a sampled player snapshot).
    * A lie costs it everything (§1.2): it is revoked, every game only it
-   * vouched for is marked `conflict` with its LP hidden, and the ranks it
-   * wrote are deleted, so the profiles fall back to Riot's own data. Games
-   * stay in ClickHouse until they are re-ingested from Riot.
+   * vouched for is marked `conflict` with its LP hidden, its player reports
+   * are marked `conflict`, and the ranks, confirmations and mastery it wrote
+   * are deleted, so the profiles fall back to Riot's own data (and the next
+   * read past the freshness windows asks Riot again). Games stay in
+   * ClickHouse until they are re-ingested from Riot.
    */
   async mismatch(deviceId: string, reference: string, differences: string[]): Promise<Rollback> {
     logger.warn({ deviceId, reference, differences }, 'desktop data contradicted by Riot')
@@ -262,7 +264,17 @@ class DeviceService {
       )
     }
 
-    puuidsOf(await db.from('riot_rank').where('device_id', deviceId).delete().returning(['puuid']))
+    puuidsOf(
+      await db
+        .from('player_observation')
+        .where('device_id', deviceId)
+        .whereNot('status', 'conflict')
+        .update({ status: 'conflict' })
+        .returning(['puuid'])
+    )
+    for (const table of ['riot_rank', 'riot_rank_confirmed', 'player_mastery']) {
+      puuidsOf(await db.from(table).where('device_id', deviceId).delete().returning(['puuid']))
+    }
 
     return { matches, players: [...players] }
   }

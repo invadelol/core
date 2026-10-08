@@ -1,4 +1,4 @@
-import { DateTime } from 'luxon'
+import { DateTime, type DurationLike } from 'luxon'
 import { Exception } from '@adonisjs/core/exceptions'
 import cache from '@adonisjs/cache/services/main'
 import db from '@adonisjs/lucid/services/db'
@@ -11,6 +11,7 @@ import riotApiService from '#services/riot/api'
 import statsRepository from '#services/analytics/stats_repository'
 import matchRepository from '#services/analytics/match_repository'
 import matchSourceService from '#services/match_source_service'
+import * as snapshotHooks from '#services/desktop/snapshot_hooks'
 import Summoner from '#models/summoner'
 import SummonerHistory from '#models/summoner_history'
 import Rank from '#models/rank'
@@ -227,6 +228,8 @@ class SummonerService {
       })
     }
 
+    // A desktop snapshot of this Riot ID may have been waiting to be told whose it is.
+    snapshotHooks.riotIdsLearned([{ gameName, tagLine, platform }])
     return player
   }
 
@@ -238,8 +241,28 @@ class SummonerService {
     return statsRepository.getSummonerFriends(puuid)
   }
 
+  /**
+   * Current rank per queue and the history behind it, with provenance
+   * (docs/desktop-sync.md §6.5): `source` says who reported a row (`riot`,
+   * or `desktop` for the Invade app), `observedAt` when it was last known
+   * true — for a current rank, the later of its row and its confirmation.
+   * `losses` is null on rows from another player's client snapshot.
+   */
   async getRanks(puuid: string) {
-    const history = await Rank.query().where('puuid', puuid).orderBy('fetchedAt', 'desc')
+    const [history, confirmations] = await Promise.all([
+      Rank.query().where('puuid', puuid).orderBy('fetchedAt', 'desc'),
+      db.from('riot_rank_confirmed').select('queue_type', 'confirmed_at').where('puuid', puuid),
+    ])
+    const confirmed = new Map<string, DateTime>(
+      confirmations.map((row) => [row.queue_type, DateTime.fromJSDate(new Date(row.confirmed_at))])
+    )
+
+    const describe = (rank: Rank, current: boolean) => {
+      const confirmation = current ? confirmed.get(rank.queueType) : undefined
+      const observedAt =
+        confirmation && confirmation > rank.fetchedAt ? confirmation : rank.fetchedAt
+      return { ...rank.serialize(), source: rank.source ?? 'riot', observedAt: observedAt.toISO() }
+    }
 
     const currentMap = new Map<string, Rank>()
     for (const rank of history) {
@@ -249,9 +272,31 @@ class SummonerService {
     }
 
     return {
-      current: Array.from(currentMap.values()),
-      history,
+      current: Array.from(currentMap.values()).map((rank) => describe(rank, true)),
+      history: history.map((rank) => describe(rank, false)),
     }
+  }
+
+  /**
+   * When the player's ranks were last known to be current: the newest rank
+   * row or confirmation of any queue, from Riot or the desktop app (§6.5).
+   */
+  async ranksKnownAt(puuid: string): Promise<DateTime | null> {
+    const result = await db.rawQuery(
+      `SELECT GREATEST(
+         (SELECT max(fetched_at) FROM riot_rank WHERE puuid = ?),
+         (SELECT max(confirmed_at) FROM riot_rank_confirmed WHERE puuid = ?)
+       ) AS at`,
+      [puuid, puuid]
+    )
+    const at = result.rows?.[0]?.at
+    return at ? DateTime.fromJSDate(new Date(at)) : null
+  }
+
+  /** Whether league-v4 can be skipped: the ranks were known current within `maxAge`. */
+  async ranksFresh(puuid: string, maxAge: DurationLike): Promise<boolean> {
+    const at = await this.ranksKnownAt(puuid)
+    return Boolean(at && at > DateTime.now().minus(maxAge))
   }
 
   async getStats(
@@ -382,7 +427,26 @@ class SummonerService {
       region: region as any,
       puuid,
     })
+    await this.storeRanks(puuid, entries)
+  }
 
+  /**
+   * Stores a league-v4 answer. A queue gets a new row when it changed or when
+   * its newest row did not come from Riot: Riot's own read always supersedes
+   * the desktop app's (docs/desktop-sync.md §6.4). An unchanged queue is only
+   * confirmed, so its freshness moves without a duplicate history row.
+   */
+  async storeRanks(
+    puuid: string,
+    entries: Array<{
+      queueType: string
+      tier: string
+      rank: string
+      leaguePoints: number
+      wins: number
+      losses: number
+    }>
+  ) {
     if (!entries.length) return
 
     // One `DISTINCT ON` read for the newest row per queue, rather than a
@@ -392,7 +456,7 @@ class SummonerService {
     const latest = await db
       .from('riot_rank')
       .distinctOn('queue_type')
-      .select('queue_type', 'tier', 'division', 'league_points', 'wins', 'losses')
+      .select('queue_type', 'tier', 'division', 'league_points', 'wins', 'losses', 'source')
       .where('puuid', puuid)
       .whereIn(
         'queue_type',
@@ -404,30 +468,48 @@ class SummonerService {
     const byQueue = new Map(latest.map((row) => [row.queue_type, row]))
     const fetchedAt = DateTime.now()
 
-    const changed = entries
-      .filter((entry) => {
-        const previous = byQueue.get(entry.queueType)
-        return (
-          !previous ||
-          previous.tier !== entry.tier ||
-          previous.division !== entry.rank ||
-          previous.league_points !== entry.leaguePoints ||
-          previous.wins !== entry.wins ||
-          previous.losses !== entry.losses
-        )
-      })
-      .map((entry) => ({
-        puuid,
-        queueType: entry.queueType,
-        tier: entry.tier,
-        division: entry.rank,
-        leaguePoints: entry.leaguePoints,
-        wins: entry.wins,
-        losses: entry.losses,
-        fetchedAt,
-      }))
+    const isChanged = (entry: (typeof entries)[number]) => {
+      const previous = byQueue.get(entry.queueType)
+      return (
+        !previous ||
+        previous.source !== 'riot' ||
+        previous.tier !== entry.tier ||
+        previous.division !== entry.rank ||
+        previous.league_points !== entry.leaguePoints ||
+        previous.wins !== entry.wins ||
+        previous.losses !== entry.losses
+      )
+    }
+
+    const changed = entries.filter(isChanged).map((entry) => ({
+      puuid,
+      queueType: entry.queueType,
+      tier: entry.tier,
+      division: entry.rank,
+      leaguePoints: entry.leaguePoints,
+      wins: entry.wins,
+      losses: entry.losses,
+      fetchedAt,
+      source: 'riot' as const,
+    }))
+    const unchanged = entries.filter((entry) => !isChanged(entry))
 
     if (changed.length) await Rank.createMany(changed)
+    if (unchanged.length) {
+      await db
+        .knexQuery()
+        .table('riot_rank_confirmed')
+        .insert(
+          unchanged.map((entry) => ({
+            puuid,
+            queue_type: entry.queueType,
+            confirmed_at: fetchedAt.toJSDate(),
+            device_id: null,
+          }))
+        )
+        .onConflict(['puuid', 'queue_type'])
+        .merge(['confirmed_at', 'device_id'])
+    }
   }
 
   /**
@@ -489,6 +571,9 @@ class SummonerService {
       await SummonerHistory.createMany(historyToCreate)
     }
 
+    snapshotHooks.riotIdsLearned(
+      summonersToUpsert.map((p) => ({ gameName: p.gameName, tagLine: p.tagLine, platform }))
+    )
     return summonersToUpsert.length
   }
 }

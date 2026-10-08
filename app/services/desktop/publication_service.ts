@@ -20,6 +20,7 @@ import { RetryScheduler } from '#services/desktop/retry_scheduler'
 import { MATCH_AUDIT_ONE_IN, oneIn } from '#services/desktop/sampling'
 import { validateStructure } from '#services/desktop/match_validation'
 import { hashAddress } from '#services/desktop/tokens'
+import * as snapshotHooks from '#services/desktop/snapshot_hooks'
 import {
   canonicalHash,
   compareFacts,
@@ -291,7 +292,10 @@ export class PublicationService {
     const agrees = differences.length === 0
 
     if (agrees) {
-      await identityService.learnVerified(verifiedAliases(payload, match.info))
+      const aliases = verifiedAliases(payload, match.info)
+      await identityService.learnVerified(aliases)
+      // Snapshots of these players may have been waiting for exactly this (§6.3).
+      snapshotHooks.aliasesVerified(aliases.map((alias) => alias.rawPuuid))
       await deviceService.verified(device.id)
     } else {
       await deviceService.mismatch(device.id, payload.matchId, differences)

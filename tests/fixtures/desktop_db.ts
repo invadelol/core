@@ -105,6 +105,12 @@ export class DesktopSeed {
   }
 
   async cleanup() {
+    if (this.raws.length) {
+      await db.from('player_observation').whereIn('raw_puuid', this.raws).delete()
+    }
+    if (this.puuids.length) {
+      await db.from('player_observation').whereIn('puuid', this.puuids).delete()
+    }
     if (this.matchIds.length) {
       await db.from('lp_change').whereIn('match_id', this.matchIds).delete()
       await db.from('match_source').whereIn('match_id', this.matchIds).delete()

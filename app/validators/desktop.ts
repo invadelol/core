@@ -143,3 +143,26 @@ export const uploadValidator = vine.compile(
     lp: vine.any().optional(),
   })
 )
+
+/**
+ * A batch of player snapshots (§6.1). Only the batch is checked here: 1–25
+ * players, each an object with a raw PUUID, no PUUID twice. Everything else
+ * is checked player by player (`player_rules.ts`), so one bad player is
+ * `rejected` on its own instead of failing the batch.
+ */
+export const playersValidator = vine.compile(
+  vine.object({
+    schema: vine.literal(1),
+    platform: vine.string().trim().toUpperCase().maxLength(8),
+    app: vine.string().trim().maxLength(32),
+    players: vine
+      .array(
+        vine
+          .object({ rawPuuid: vine.string().trim().toLowerCase().maxLength(64) })
+          .allowUnknownProperties()
+      )
+      .minLength(1)
+      .maxLength(25)
+      .distinct('rawPuuid'),
+  })
+)

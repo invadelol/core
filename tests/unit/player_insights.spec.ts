@@ -10,7 +10,7 @@ const context = {
   get params() {
     return { puuid }
   },
-  request: { validateUsing: async () => ({ puuid }) },
+  request: { validateUsing: async () => ({ puuid }), qs: () => ({}) },
   response: { ok: (value: unknown) => value, header: () => {} },
 } as unknown as HttpContext
 

@@ -3,23 +3,26 @@ import env from '#start/env'
 import deviceService from '#services/desktop/device_service'
 import publicationService from '#services/desktop/publication_service'
 import resolveService from '#services/desktop/resolve_service'
+import playerSnapshotService from '#services/desktop/player_snapshot_service'
 import rateLimiter, { DESKTOP_LIMITS } from '#services/desktop/rate_limiter'
 import { DESKTOP_MAX_PAYLOAD_BYTES } from '#middleware/body_parser_middleware'
 import { DesktopException } from '#exceptions/desktop_exception'
 import {
   linkValidator,
+  playersValidator,
   registerDeviceValidator,
   resolveValidator,
   unlinkValidator,
   uploadValidator,
 } from '#validators/desktop'
 import type DesktopDevice from '#models/desktop_device'
-import type { MatchUpload } from '#types/desktop'
+import type { MatchUpload, PlayerBatch } from '#types/desktop'
 
 type Limit = (typeof DESKTOP_LIMITS)[keyof typeof DESKTOP_LIMITS]
 
-async function limit(rule: Limit, id: string) {
-  const result = await rateLimiter.hit(rule.bucket, id, rule.limit)
+/** Counts `amount` units against an hourly limit; over it answers 429 with `Retry-After`. */
+async function limit(rule: Limit, id: string, amount = 1) {
+  const result = await rateLimiter.hit(rule.bucket, id, rule.limit, 3600, amount)
   if (!result.allowed) throw DesktopException.rateLimited(result.retryAfter)
 }
 
@@ -142,5 +145,24 @@ export default class DesktopController {
     const payload = (await ctx.request.validateUsing(uploadValidator)) as unknown as MatchUpload
     const result = await publicationService.upload(payload, { device: current, ip })
     return ctx.response.ok(result)
+  }
+
+  /**
+   * Report players the League client showed (identity, ranks, mastery)
+   * @tag Desktop
+   * @responseBody 200 - {"results": [{"rawPuuid": "uuid", "status": "applied"}]}
+   * @responseBody 413 - Larger than 256 KB
+   * @responseBody 422 - Not 1-25 players, or not schema 1
+   */
+  async players(ctx: HttpContext) {
+    const current = device(ctx)
+    const ip = ctx.request.ip()
+    await limit(DESKTOP_LIMITS.playersDevice, current.id)
+    await limit(DESKTOP_LIMITS.playersIp, ip)
+    if (!publicationService.enabled()) throw DesktopException.paused('uploads')
+
+    const batch = (await ctx.request.validateUsing(playersValidator)) as unknown as PlayerBatch
+    await limit(DESKTOP_LIMITS.playersDevicePlayers, current.id, batch.players.length)
+    return ctx.response.ok(await playerSnapshotService.ingest(batch, { device: current, ip }))
   }
 }

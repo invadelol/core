@@ -11,15 +11,15 @@ export interface RateLimitResult {
 
 /** The subset of the Redis client the limiter needs, so tests can stand in for it. */
 export interface RateLimitStore {
-  incrementWindow(key: string, ttlSeconds: number): Promise<number>
+  incrementWindow(key: string, ttlSeconds: number, amount?: number): Promise<number>
 }
 
 const redisStore: RateLimitStore = {
-  async incrementWindow(key, ttlSeconds) {
+  async incrementWindow(key, ttlSeconds, amount = 1) {
     // One round trip. Re-arming the expiry on every hit is harmless: the key
     // carries the window number, so it never outlives the window by more
     // than one TTL and never leaks into the next one.
-    const results = await redis.multi().incr(key).expire(key, ttlSeconds).exec()
+    const results = await redis.multi().incrby(key, amount).expire(key, ttlSeconds).exec()
     const [error, count] = results?.[0] ?? [new Error('empty Redis reply'), null]
     if (error) throw error
     return Number(count)
@@ -39,11 +39,16 @@ export class FixedWindowLimiter {
     private clock: () => number = Date.now
   ) {}
 
+  /**
+   * Counts `amount` units (requests, or the players of a batch) against the
+   * limit. A batch that would overflow it is refused whole.
+   */
   async hit(
     bucket: string,
     id: string,
     limit: number,
-    windowSeconds = 3600
+    windowSeconds = 3600,
+    amount = 1
   ): Promise<RateLimitResult> {
     const now = this.clock()
     const windowMs = windowSeconds * 1000
@@ -52,7 +57,8 @@ export class FixedWindowLimiter {
     try {
       const count = await this.store.incrementWindow(
         `${this.prefix}${bucket}:${id}:${window}`,
-        windowSeconds
+        windowSeconds,
+        amount
       )
       return { allowed: count <= limit, count, retryAfter }
     } catch (error) {
@@ -64,7 +70,7 @@ export class FixedWindowLimiter {
   }
 }
 
-/** The per-hour limits of docs/desktop-sync.md §2. */
+/** The per-hour limits of docs/desktop-sync.md §2 and §6.1. */
 export const DESKTOP_LIMITS = {
   register: { bucket: 'devices:ip', limit: 10 },
   link: { bucket: 'link:device', limit: 20 },
@@ -72,6 +78,10 @@ export const DESKTOP_LIMITS = {
   resolveIp: { bucket: 'resolve:ip', limit: 20 },
   uploadDevice: { bucket: 'matches:device', limit: 30 },
   uploadIp: { bucket: 'matches:ip', limit: 120 },
+  playersDevice: { bucket: 'players:device', limit: 60 },
+  /** Players, not requests: a batch counts as many as it carries. */
+  playersDevicePlayers: { bucket: 'players:device:players', limit: 1500 },
+  playersIp: { bucket: 'players:ip', limit: 240 },
 } as const
 
 export default new FixedWindowLimiter()

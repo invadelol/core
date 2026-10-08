@@ -60,3 +60,10 @@ export const getMatchesValidator = vine.compile(
     role: vine.enum(['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'SUPPORT', 'all']).optional(),
   })
 )
+
+/** `count` asks for the top entries only; up to 10 can come from a desktop snapshot (§6.5). */
+export const getMasteryValidator = vine.compile(
+  vine.object({
+    count: vine.number().withoutDecimals().min(1).max(1000).optional(),
+  })
+)
