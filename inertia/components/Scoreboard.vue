@@ -5,7 +5,7 @@ import ItemRow from './ItemRow.vue'
 import RuneGlyphs from './RuneGlyphs.vue'
 import PlayerLink from './PlayerLink.vue'
 import PlayerRowDetail from './PlayerRowDetail.vue'
-import PerfPlate from './PerfPlate.vue'
+import PerfDial from './PerfDial.vue'
 import ObjectiveTally from './ObjectiveTally.vue'
 import RoleIcon from './RoleIcon.vue'
 import { champIcon, championName, spellIcon, POSITION_NAMES } from '../lib/assets.js'
@@ -237,7 +237,7 @@ const columnCount = 10
             </td>
 
             <td class="text-right">
-              <PerfPlate
+              <PerfDial
                 size="sm"
                 :score="row.score"
                 :place="row.rank"

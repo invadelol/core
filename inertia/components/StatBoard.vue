@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import Sparkline from './ui/Sparkline.vue'
-import PerfPlate from './PerfPlate.vue'
+import PerfDial from './PerfDial.vue'
 import { compact, percent } from '../lib/format.js'
 import {
   isRemake,
@@ -175,7 +175,7 @@ const cells = computed(() => {
             Average score
           </div>
           <div class="mt-2 flex items-center gap-3">
-            <PerfPlate
+            <PerfDial
               :score="score.average"
               caption=""
               :hint="`Average score ${score.average} of 100 over ${score.count} scored games`"

@@ -112,18 +112,6 @@
   --brand-rgb: 90 75 240;
   --win-rgb: 31 111 224;
   --loss-rgb: 212 47 75;
-  /* The performance plate's own scale (DIRECTION.md §8.1): prestige, never win/loss or Invade. */
-  --perf-elite: 168 116 6;
-  --perf-great: 139 106 34;
-  --perf-good: 46 46 60;
-  --perf-fair: 122 122 142;
-  --perf-poor: 196 83 46;
-  /* On paper the figure is dark to stay legible; the light it gives off stays the bright hue. */
-  --perf-elite-fill: 245 176 40;
-  --perf-great-fill: 222 181 98;
-  --perf-cap: rgb(12 12 20 / 0.045);
-  --perf-cap-ring: rgb(12 12 20 / 0.07);
-  --perf-track: rgb(12 12 20 / 0.1);
   /* Large figures (20px and up) may tighten slightly; nothing narrower. */
   --fig: 92%;
   --t-fast: 120ms;
@@ -198,16 +186,6 @@
     --brand-rgb: 123 109 255;
     --win-rgb: 76 155 255;
     --loss-rgb: 255 93 110;
-    --perf-elite: 255 207 102;
-    --perf-great: 238 216 162;
-    --perf-good: 232 233 243;
-    --perf-fair: 150 151 170;
-    --perf-poor: 240 140 92;
-    --perf-elite-fill: 255 196 80;
-    --perf-great-fill: 238 216 162;
-    --perf-cap: rgb(0 0 0 / 0.26);
-    --perf-cap-ring: rgb(255 255 255 / 0.06);
-    --perf-track: rgb(255 255 255 / 0.08);
 
     color-scheme: dark;
   }
@@ -278,16 +256,6 @@
   --brand-rgb: 123 109 255;
   --win-rgb: 76 155 255;
   --loss-rgb: 255 93 110;
-  --perf-elite: 255 207 102;
-  --perf-great: 238 216 162;
-  --perf-good: 232 233 243;
-  --perf-fair: 150 151 170;
-  --perf-poor: 240 140 92;
-  --perf-elite-fill: 255 196 80;
-  --perf-great-fill: 238 216 162;
-  --perf-cap: rgb(0 0 0 / 0.26);
-  --perf-cap-ring: rgb(255 255 255 / 0.06);
-  --perf-track: rgb(255 255 255 / 0.08);
 
   color-scheme: dark;
 }
