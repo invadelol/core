@@ -6,7 +6,9 @@ import ItemRow from './ItemRow.vue'
 import PerfPlate from './PerfPlate.vue'
 import RuneTrees from './RuneTrees.vue'
 import Scoreboard from './Scoreboard.vue'
-import MatchTimeline from './MatchTimeline.vue'
+import MatchBreakdown from './MatchBreakdown.vue'
+import GoldChart from './GoldChart.vue'
+import EventTimeline from './EventTimeline.vue'
 import {
   champIcon,
   championName,
@@ -29,6 +31,7 @@ import {
   runeSet,
   teamTotals,
 } from '../lib/match.js'
+import { matchView } from '../lib/match_view.js'
 import type { Match } from '../lib/types.js'
 
 /**
@@ -47,16 +50,18 @@ const props = defineProps<{
 
 defineEmits<{ toggle: [] }>()
 
-type View = 'scoreboard' | 'timeline' | 'runes'
+type View = 'scoreboard' | 'breakdown' | 'gold' | 'timeline' | 'runes'
 const view = ref<View>('scoreboard')
 const VIEWS: Array<{ value: View; label: string }> = [
   { value: 'scoreboard', label: 'Scoreboard' },
+  { value: 'breakdown', label: 'Breakdown' },
+  { value: 'gold', label: 'Gold' },
   { value: 'timeline', label: 'Timeline' },
   { value: 'runes', label: 'Build & runes' },
 ]
 
-/* The list payload carries the scoreboard already; only the timeline and the
-   full rune pages need the heavier per-match request. */
+/* The list payload carries the scoreboard already; every other view needs the
+   heavier per-match request (full stats, timeline, events). */
 const detail = shallowRef<Match | null>(null)
 const loading = ref(false)
 const failed = ref(false)
@@ -96,7 +101,7 @@ function openPlayer(puuid: string) {
 watch(
   () => [props.expanded, view.value] as const,
   ([open, current]) => {
-    if (open && (current === 'timeline' || current === 'runes')) void fetchDetail()
+    if (open && current !== 'scoreboard') void fetchDetail()
   },
   { immediate: true }
 )
@@ -110,6 +115,17 @@ const focusRunes = computed(() => {
 const focusPlayer = computed(() =>
   full.value.participants.find((p) => p.puuid === activePuuid.value)
 )
+
+/* Breakdown, Gold and Timeline read the match as the desktop app does. */
+const detailView = computed(() => (detail.value ? matchView(detail.value) : null))
+const selectedIndex = computed(() =>
+  Math.max(0, detailView.value?.players.findIndex((p) => p.puuid === activePuuid.value) ?? 0)
+)
+const viewer = computed(() => detailView.value?.players.find((p) => p.puuid === props.puuid))
+function selectIndex(i: number) {
+  const p = detailView.value?.players[i]
+  if (p) focusPuuid.value = p.puuid
+}
 
 /** Derived once: a template expression would re-run on every render. */
 const row = computed(() => {
@@ -331,12 +347,34 @@ async function copyLink() {
           <button class="btn btn-sm" @click="fetchDetail">Retry</button>
         </div>
 
-        <div v-else-if="view === 'timeline'" class="px-4 py-5">
-          <MatchTimeline
-            :match="full"
-            :selected-puuid="activePuuid"
-            :owner-puuid="puuid"
-            @select="focusPuuid = $event"
+        <div v-else-if="view === 'breakdown'" class="px-4 py-5">
+          <MatchBreakdown
+            v-if="detailView"
+            :detail="detailView"
+            :selected="selectedIndex"
+            :me="viewer"
+            @select="selectIndex"
+          />
+        </div>
+
+        <div v-else-if="view === 'gold' || view === 'timeline'" class="px-4 py-5">
+          <p v-if="!detailView || !detailView.timeline" class="py-6 text-[13px] text-ink-2">
+            No timeline is stored for this match.
+          </p>
+          <GoldChart
+            v-else-if="view === 'gold'"
+            :detail="detailView"
+            :timeline="detailView.timeline"
+            :selected="selectedIndex"
+            :me="viewer"
+          />
+          <EventTimeline
+            v-else
+            :detail="detailView"
+            :timeline="detailView.timeline"
+            :selected="selectedIndex"
+            :me="viewer"
+            @select="selectIndex"
           />
         </div>
 

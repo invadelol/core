@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { LineChart } from '../lib/lazy_charts.js'
+import { computed } from 'vue'
 import PlayerLink from './PlayerLink.vue'
 import { champIcon, championName } from '../lib/assets.js'
-import { clock, compact, signed } from '../lib/format.js'
-import { lineOptions, niceMax, palette } from '../lib/chart.js'
-import { objectives, teamSeries, teamTotals, type SeriesKey } from '../lib/match.js'
+import { compact } from '../lib/format.js'
+import { objectives, teamTotals } from '../lib/match.js'
 import type { Match, Participant } from '../lib/types.js'
 
 const props = defineProps<{ match: Match; ownerPuuid?: string; selectedPuuid?: string }>()
@@ -68,61 +66,6 @@ const damageRows = computed(() => {
       dealt: (p.totalDamageDealtToChampions / scale) * 100,
       taken: (p.damageTaken / scale) * 100,
     }))
-})
-
-/* ── One metric, both sides, over time ───────────────────────── */
-const metric = ref<SeriesKey>('gold')
-const METRICS: Array<{ value: SeriesKey; label: string }> = [
-  { value: 'gold', label: 'Gold' },
-  { value: 'xp', label: 'Experience' },
-  { value: 'cs', label: 'Creep score' },
-  { value: 'kills', label: 'Kills' },
-]
-
-const series = computed(() => {
-  const raw = teamSeries(props.match, metric.value)
-  if (ally.value === 100) return raw
-  return { times: raw.times, blue: raw.red, red: raw.blue, diff: raw.diff.map((d) => -d) }
-})
-const hasTimeline = computed(() => series.value.times.length > 1)
-
-const chartData = computed(() => ({
-  labels: series.value.times.map(clock),
-  datasets: [
-    {
-      label: names.value.ally,
-      data: series.value.blue,
-      borderColor: palette.win,
-      backgroundColor: 'transparent',
-      borderWidth: 1.5,
-      pointRadius: 0,
-      pointHoverRadius: 3,
-      tension: 0,
-    },
-    {
-      label: names.value.enemy,
-      data: series.value.red,
-      borderColor: palette.loss,
-      backgroundColor: 'transparent',
-      borderWidth: 1.5,
-      pointRadius: 0,
-      pointHoverRadius: 3,
-      tension: 0,
-    },
-  ],
-}))
-
-const chartOptions = computed(() =>
-  lineOptions({
-    yTicks: 5,
-    xTicks: 7,
-    yMax: niceMax(Math.max(...series.value.blue, ...series.value.red, 1)),
-  })
-)
-
-const finalLead = computed(() => {
-  const diff = series.value.diff
-  return diff.length ? diff[diff.length - 1] : 0
 })
 </script>
 
@@ -247,47 +190,6 @@ const finalLead = computed(() => {
           </span>
         </li>
       </ul>
-    </section>
-
-    <!-- The game over time -->
-    <section v-if="hasTimeline" class="card min-w-0 xl:col-span-2">
-      <div class="section flex-wrap !items-center gap-y-2">
-        <h2>Over time</h2>
-        <span
-          class="num text-[13px] font-semibold"
-          :class="finalLead > 0 ? 'text-win' : finalLead < 0 ? 'text-loss' : 'text-ink-3'"
-        >
-          {{ finalLead === 0 ? 'Level' : `${signed(finalLead)} at the end` }}
-        </span>
-        <div class="seg ml-auto">
-          <button
-            v-for="option in METRICS"
-            :key="option.value"
-            type="button"
-            :data-active="metric === option.value"
-            @click="metric = option.value"
-          >
-            {{ option.label }}
-          </button>
-        </div>
-      </div>
-
-      <div>
-        <div class="h-[240px]">
-          <LineChart :data="chartData" :options="chartOptions" />
-        </div>
-
-        <div class="mt-3 flex justify-center gap-6 text-[12px] text-ink-2">
-          <span class="flex items-center gap-1.5">
-            <i class="h-[2px] w-4 rounded-full" style="background: var(--color-win)" />
-            {{ names.ally }}
-          </span>
-          <span class="flex items-center gap-1.5">
-            <i class="h-[2px] w-4 rounded-full" style="background: var(--color-loss)" />
-            {{ names.enemy }}
-          </span>
-        </div>
-      </div>
     </section>
   </div>
 </template>

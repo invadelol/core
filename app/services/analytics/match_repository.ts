@@ -1,4 +1,5 @@
 import clickhouse from 'adonisjs-clickhouse/services/main'
+import logger from '@adonisjs/core/services/logger'
 import { asString, escapeClickhouseString } from '#utils/clickhouse'
 import { plan, type ColumnPlan } from '#services/analytics/columns'
 import { DEFAULT_MATCH_COUNT, DEFAULT_OFFSET } from '#config/constants'
@@ -301,6 +302,36 @@ async function rawRows(query: string): Promise<unknown[][]> {
   return (await result.json<unknown[]>()) ?? []
 }
 
+const EVENT_COLUMNS = [
+  't_ms',
+  'kind',
+  'sub',
+  'lane',
+  'team_id',
+  'killer',
+  'victim',
+  'assists',
+  'pos_x',
+  'pos_y',
+] as const
+
+/** Kills and objectives, in the shape the match page reads (seconds, participant ids). */
+const eventPlan = plan<any>(
+  EVENT_COLUMNS,
+  {
+    kind: 'kind',
+    sub: 'sub',
+    lane: 'lane',
+    team: 'team_id',
+    killer: 'killer',
+    victim: 'victim',
+    assists: 'assists',
+    x: 'pos_x',
+    y: 'pos_y',
+  },
+  (row, at) => ({ t: Math.round(Number(row[at('t_ms')]) / 1000) })
+)
+
 async function readRows<T>(query: string, columns: ColumnPlan<T>): Promise<T[]> {
   const raw = await rawRows(query)
   const out: T[] = new Array(raw.length)
@@ -441,13 +472,13 @@ export class MatchRepository {
   /**
    * Load full match details (including timeline) by match id.
    *
-   * Three parallel flat reads, no joins and no GROUP BY. The timeline arrives
+   * Four parallel flat reads, no joins and no GROUP BY. The timeline arrives
    * ordered by frame, so nothing downstream has to sort it.
    */
   async getById(matchId: string) {
     const escapedMatchId = escapeClickhouseString(matchId)
 
-    const [matches, participants, timeline] = await Promise.all([
+    const [matches, participants, timeline, events] = await Promise.all([
       readRows<any>(
         `SELECT ${matchPlan.select}
          FROM matches
@@ -468,12 +499,23 @@ export class MatchRepository {
          ORDER BY frame_ms ASC`,
         timelinePlan
       ),
+      // Optional: a match page must still open where `match_events` is not migrated yet.
+      readRows<any>(
+        `SELECT DISTINCT ${eventPlan.select}
+         FROM match_events
+         PREWHERE match_id = '${escapedMatchId}'
+         ORDER BY t_ms ASC`,
+        eventPlan
+      ).catch((error) => {
+        logger.warn({ err: error, matchId }, 'match events unavailable')
+        return []
+      }),
     ])
 
     const base = matches[0]
     if (!base?.matchId) return null
 
-    return { ...base, participants, timeline }
+    return { ...base, participants, timeline, events }
   }
 
   /**

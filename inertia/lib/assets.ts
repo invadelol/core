@@ -37,11 +37,6 @@ export function runeStyleIcon(id: number) {
   return `${CDN}/perkstyle/${id}.png`
 }
 
-/** Riot's own 2D minimap for a map id: 11 is the Rift, 12 the Howling Abyss. */
-export function mapImage(id: number) {
-  return `${CDN}/map/${id || 11}.png`
-}
-
 export function rankCrest(tier: string) {
   return `${CDN}/rank/${tier.toLowerCase()}.png`
 }

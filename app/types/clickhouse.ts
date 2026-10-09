@@ -145,3 +145,28 @@ export type ClickhouseTimelineRow = {
 
   time_cc: number
 }
+
+export type ClickhouseEventRow = {
+  match_id: string
+  platform: string
+  game_start_ms: number
+  /** Milliseconds into the game. */
+  t_ms: number
+
+  /** `kill`, or an objective: `dragon` `baron` `herald` `grubs` `monster` `tower` `inhibitor`. */
+  kind: string
+  /** Dragon type (`FIRE_DRAGON`…), tower type (`OUTER_TURRET`…) or other monster type. */
+  sub: string
+  /** `TOP_LANE` `MID_LANE` `BOT_LANE` for buildings. */
+  lane: string
+  /** Kills: the killer's team. Objectives: the team that took it. */
+  team_id: number
+
+  /** Participant ids (1‥10); 0 = executed / minions / unknown. */
+  killer: number
+  victim: number
+  assists: number[]
+
+  pos_x: number
+  pos_y: number
+}

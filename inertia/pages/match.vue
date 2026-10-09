@@ -4,12 +4,13 @@ import { computed, onMounted, ref, shallowRef } from 'vue'
 import AppHeader from '../components/AppHeader.vue'
 import MatchHeader from '../components/MatchHeader.vue'
 import MatchCharts from '../components/MatchCharts.vue'
-import MatchTimeline from '../components/MatchTimeline.vue'
+import EventTimeline from '../components/EventTimeline.vue'
 import Scoreboard from '../components/Scoreboard.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import { loadChampions, loadItems, loadRunes } from '../lib/assets.js'
 import { decodeSlug, parseSlug, profilePath } from '../lib/format.js'
 import { indexTimeline } from '../lib/match.js'
+import { matchView } from '../lib/match_view.js'
 import type { Match } from '../lib/types.js'
 
 const props = defineProps<{ summoner: string; matchId: string }>()
@@ -57,11 +58,22 @@ function toggleRow(puuid: string) {
   openPuuid.value = openPuuid.value === puuid ? '' : puuid
 }
 
-const SECTIONS = [
+/* The timeline reads the match as the desktop app does, and follows the focused player. */
+const view = computed(() => (match.value ? matchView(match.value) : null))
+const focusIndex = computed(() =>
+  Math.max(0, view.value?.players.findIndex((p) => p.puuid === focusPuuid.value) ?? 0)
+)
+const viewer = computed(() => view.value?.players.find((p) => p.puuid === ownerPuuid.value))
+function focusIndexed(i: number) {
+  const p = view.value?.players[i]
+  if (p) openPuuid.value = p.puuid
+}
+
+const SECTIONS = computed(() => [
   { id: 'scoreboard', label: 'Scoreboard' },
   { id: 'analysis', label: 'Analysis' },
-  { id: 'timeline', label: 'Timeline' },
-]
+  ...(view.value?.timeline ? [{ id: 'timeline', label: 'Timeline' }] : []),
+])
 </script>
 
 <template>
@@ -127,16 +139,19 @@ const SECTIONS = [
           />
         </section>
 
-        <section id="timeline" class="scroll-mt-28 pt-8">
+        <section v-if="view?.timeline" id="timeline" class="scroll-mt-28 pt-8">
           <div class="section">
             <h2>Timeline</h2>
           </div>
-          <MatchTimeline
-            :match="match"
-            :selected-puuid="focusPuuid"
-            :owner-puuid="ownerPuuid"
-            @select="toggleRow"
-          />
+          <div class="card card-pad">
+            <EventTimeline
+              :detail="view"
+              :timeline="view.timeline"
+              :selected="focusIndex"
+              :me="viewer"
+              @select="focusIndexed"
+            />
+          </div>
         </section>
       </template>
     </main>
