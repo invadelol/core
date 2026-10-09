@@ -122,6 +122,27 @@ export interface Match {
   completeness?: MatchCompleteness | null
   /** The listed player's LP change in this game, when the desktop app reported it. */
   lpChange?: number | null
+  /** Kills and objectives, loaded with the timeline (empty for matches stored before them). */
+  events?: MatchEvent[]
+}
+
+/** A kill or an objective. Participant ids match `TimelineEntry.participantId`. */
+export interface MatchEvent {
+  /** Seconds into the game. */
+  t: number
+  kind: 'kill' | 'dragon' | 'baron' | 'herald' | 'grubs' | 'monster' | 'tower' | 'inhibitor'
+  /** Dragon type (`FIRE_DRAGON`…), tower type (`OUTER_TURRET`…) or other monster type. */
+  sub: string
+  /** `TOP_LANE` `MID_LANE` `BOT_LANE` for buildings. */
+  lane: string
+  /** Kills: the killer's team. Objectives: the team that took it. */
+  team: number
+  /** 0 = executed, minions or unknown. */
+  killer: number
+  victim: number
+  assists: number[]
+  x: number
+  y: number
 }
 
 export interface MatchCompleteness {

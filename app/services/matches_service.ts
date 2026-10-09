@@ -16,9 +16,14 @@ import { riotCompleteness } from '#services/desktop/conversion'
 
 type MatchCluster = Exclude<RiotAPITypes.Cluster, PlatformId.ESPORTS>
 
+/** A match whose events could not be fetched is not asked for again before this. */
+const BACKFILL_RETRY_MS = 10 * 60 * 1000
+
 class MatchesService {
   private updates = new SyncGuard()
   private matches = new SyncGuard()
+  private backfills = new SyncGuard()
+  private backfillFailures = new Map<string, number>()
 
   async update(puuid: string, cluster: MatchCluster) {
     return this.updates.run(`${cluster}:${puuid}`, () => this.updatePlayer(puuid, cluster))
@@ -56,6 +61,52 @@ class MatchesService {
     }
 
     return results
+  }
+
+  /**
+   * Kill and objective events of a match stored before they were kept: one timeline request,
+   * once. A failed attempt is not retried for a while, so a page opened repeatedly never turns
+   * into a stream of Riot calls. Returns whether events were stored.
+   */
+  async backfillEvents(match: {
+    matchId: string
+    platform: string
+    gameStartMs: number
+    participants: Array<{ puuid: string; teamId: number }>
+  }) {
+    const last = this.backfillFailures.get(match.matchId)
+    if (last && Date.now() - last < BACKFILL_RETRY_MS) return false
+    if (this.backfillFailures.size > 5000) this.backfillFailures.clear()
+    const run = async () => {
+      try {
+        const timeline = await riotApiService.client.matchV5.getMatchTimelineById({
+          matchId: match.matchId,
+          cluster: riotApiService.platformToRegion(match.platform) as MatchCluster,
+        })
+        const teamByPuuid = new Map(match.participants.map((p) => [p.puuid, p.teamId]))
+        const teamOf = new Map<number, number>()
+        for (const p of timeline.info?.participants ?? []) {
+          const team = teamByPuuid.get(p.puuid)
+          if (team) teamOf.set(p.participantId, team)
+        }
+        const stored = await ingestionService.ingestEvents(
+          match.matchId,
+          match.platform,
+          match.gameStartMs,
+          timeline,
+          teamOf
+        )
+        if (!stored) return false
+        await invalidateResponseCache([`match:${match.matchId}`]).catch(() => {})
+        return true
+      } catch (error) {
+        this.backfillFailures.set(match.matchId, Date.now())
+        logger.warn({ err: error, matchId: match.matchId }, 'match events backfill failed')
+        return false
+      }
+    }
+    // The guard itself throws while Riot rate-limits us: the page opens without events.
+    return this.backfills.run(match.matchId, run).catch(() => false)
   }
 
   async fetchAndStoreMatch(matchId: string, cluster: MatchCluster) {

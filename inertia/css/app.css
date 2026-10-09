@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import './fonts.css';
 @import './components.css';
+@import './match-detail.css';
 
 /* Every class used by the app lives under inertia/. */
 @source '../';
@@ -83,9 +84,6 @@
   --color-s1: #4a4a5c;
   --color-s2: #8f8fa3;
   --color-s3: #c4c4d1;
-
-  /* Riot's minimap is painted for the client, not for a page of numbers. */
-  --map-tone: saturate(0.5) brightness(1.06) contrast(0.9);
 
   --shadow-e1: 0 1px 2px rgb(12 12 20 / 0.06);
   --shadow-e2: 0 16px 40px -12px rgb(12 12 20 / 0.22);
@@ -188,8 +186,6 @@
     --color-s2: #8b8ca0;
     --color-s3: #55566a;
 
-    --map-tone: saturate(0.34) brightness(0.46) contrast(1.16);
-
     --shadow-e1: 0 1px 2px rgb(0 0 0 / 0.5);
     --shadow-e2: 0 16px 40px -12px rgb(0 0 0 / 0.7);
 
@@ -269,8 +265,6 @@
   --color-s1: #d4d4e0;
   --color-s2: #8b8ca0;
   --color-s3: #55566a;
-
-  --map-tone: saturate(0.34) brightness(0.46) contrast(1.16);
 
   --shadow-e1: 0 1px 2px rgb(0 0 0 / 0.5);
   --shadow-e2: 0 16px 40px -12px rgb(0 0 0 / 0.7);

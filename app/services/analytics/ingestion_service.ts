@@ -5,6 +5,7 @@ import {
   buildMatchRow,
   buildParticipantRows,
   buildTimelineRows,
+  buildEventRows,
 } from '#utils/clickhouse'
 import { RiotAPITypes } from '@fightmegg/riot-api'
 
@@ -71,6 +72,30 @@ export class IngestionService {
         format: 'JSONEachRow',
       })
     }
+
+    const participants: any[] = Array.isArray(info?.participants) ? info.participants : []
+    const teamOf = new Map(
+      participants.map((p: any) => [toInt(p.participantId ?? 0, 0), toInt(p.teamId ?? 0, 0)])
+    )
+    await this.ingestEvents(matchId, platform, gameStartMs, timelineData, teamOf)
+  }
+
+  /**
+   * Kill and objective events of a timeline (`match_events`). Also used on its own to backfill
+   * the events of a match stored before they were kept.
+   */
+  async ingestEvents(
+    matchId: string,
+    platform: string,
+    gameStartMs: number,
+    timelineData: RiotAPITypes.MatchV5.MatchTimelineDTO,
+    teamOf: Map<number, number>
+  ) {
+    const rows = buildEventRows(matchId, platform, gameStartMs, timelineData, teamOf)
+    if (rows.length) {
+      await clickhouse.insert({ table: 'match_events', values: rows, format: 'JSONEachRow' })
+    }
+    return rows.length
   }
 }
 

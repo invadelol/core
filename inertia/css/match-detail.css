@@ -1,0 +1,1202 @@
+/*
+ * Match detail views, shared with the desktop app (src/profile/detail.css there): Breakdown
+ * (brk-), Gold (gch-) and Timeline (evt-). The desktop's token names are mapped onto the site's
+ * here, so both files stay line-for-line comparable and follow the light and dark themes.
+ * Ally / enemy colours are read from the viewed player's side: `.ally` blue, `.enemy` red.
+ */
+.brk,
+.gch,
+.evt {
+  --text-1: var(--color-ink);
+  --text-2: var(--color-ink-2);
+  --text-3: var(--color-ink-3);
+  --text-4: var(--color-ink-4);
+  --line: var(--color-line);
+  --line-2: var(--color-line-2);
+  --line-3: var(--color-line-3);
+  --surface-1: var(--color-panel);
+  --surface-2: var(--color-raised);
+  --surface-4: var(--color-track);
+  --solid-1: var(--color-solid);
+  --brand: var(--color-brand);
+  --brand-a08: var(--color-brand-soft);
+  --win: var(--color-win);
+  --loss: var(--color-loss);
+  --r-xs: var(--radius-xs);
+  --r-sm: var(--radius-sm);
+  --r-md: var(--radius-md);
+  container: mx / inline-size;
+}
+:is(.brk, .gch, .evt) .ally {
+  --side: var(--color-win);
+}
+:is(.brk, .gch, .evt) .enemy {
+  --side: var(--color-loss);
+}
+
+/* --- Timeline -------------------------------------------------------------------------------------- */
+.evt {
+  display: grid;
+  gap: 10px;
+}
+.evt-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.evt-scope {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.evt-all {
+  height: 26px;
+  padding: 0 10px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-3);
+  background: var(--surface-1);
+  border-radius: var(--r-sm);
+  transition:
+    color var(--t-fast),
+    background-color var(--t-fast);
+}
+.evt-all:hover:not(:disabled) {
+  color: var(--text-1);
+  background: var(--surface-2);
+}
+.evt-all.on,
+.evt-all.on:hover:not(:disabled) {
+  color: var(--text-1);
+  background: var(--surface-4);
+}
+.evt-team {
+  display: flex;
+  gap: 3px;
+}
+.evt-team button {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  overflow: hidden;
+  background: none;
+  border-radius: var(--r-xs);
+  opacity: 0.45;
+  transition:
+    opacity var(--t-fast),
+    box-shadow var(--t-fast);
+}
+.evt-team button:hover:not(:disabled) {
+  opacity: 0.9;
+  background: none;
+}
+.evt-team button.on {
+  opacity: 1;
+  box-shadow: inset 0 0 0 2px var(--brand);
+}
+.evt-team img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: scale(1.08);
+  transition: transform var(--t-base) var(--ease);
+}
+.evt-team button.on img {
+  transform: scale(0.8);
+  border-radius: 2px;
+}
+.evt-who {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.evt-who b {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.evt-who small {
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--text-3);
+}
+
+/* The feed scrolls on its own; its edges fade only where there is more to see. */
+.evt-feed {
+  --fade: 28px;
+  max-height: 560px;
+  margin: 0 -8px;
+  padding: 0 8px 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-4) transparent;
+}
+.evt-feed.fade-top {
+  mask-image: linear-gradient(to bottom, transparent, #000 var(--fade));
+}
+.evt-feed.fade-bottom {
+  mask-image: linear-gradient(to top, transparent, #000 var(--fade));
+}
+.evt-feed.fade-top.fade-bottom {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000 var(--fade),
+    #000 calc(100% - var(--fade)),
+    transparent
+  );
+}
+
+/* Chapters: what each stretch of the game came to, then its events. */
+.evt-phase {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  padding: 18px 0 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+.evt-chapter:first-child .evt-phase {
+  padding-top: 6px;
+}
+.evt-phase-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.evt-phase-time {
+  font-variant-numeric: tabular-nums;
+}
+.evt-phase-facts {
+  display: flex;
+  gap: 14px;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.evt-phase-facts b {
+  font-weight: 600;
+  color: var(--text-1);
+}
+.evt-phase-facts b.ally,
+.evt-phase-facts b.enemy {
+  color: var(--side);
+}
+.evt-phase-facts i {
+  padding: 0 2px;
+  font-style: normal;
+  color: var(--text-4);
+}
+.evt-quiet {
+  margin: 0;
+  padding: 2px 0 4px 54px;
+  font-size: 12px;
+  color: var(--text-4);
+}
+
+/* The rail: one thin line per chapter, the events hang off it. */
+.evt-list {
+  --time: 40px;
+  --dot: 14px;
+  position: relative;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.evt-list::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: calc(var(--time) + 10px + var(--dot) / 2 - 0.5px);
+  width: 1px;
+  background: var(--line-2);
+}
+.evt-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--time) var(--dot) minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 10px;
+  min-height: 34px;
+  isolation: isolate;
+  animation: evt-in 260ms var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 14ms);
+}
+@keyframes evt-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+/* Hover: a soft plate behind the event only, never under the rail. */
+.evt-row::after {
+  content: '';
+  position: absolute;
+  inset: 2px 0 2px calc(var(--time) + var(--dot) + 14px);
+  z-index: -1;
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
+  opacity: 0;
+  transition: opacity var(--t-fast);
+}
+.evt-row.on::after {
+  opacity: 1;
+}
+.evt-row time {
+  font-size: 11.5px;
+  font-weight: 500;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-3);
+}
+.evt-row.nested {
+  min-height: 30px;
+}
+.evt-row.nested time {
+  font-size: 11px;
+  color: var(--text-4);
+}
+.evt-row.context {
+  opacity: 0.5;
+  transition: opacity var(--t-fast);
+}
+.evt-row.context.on {
+  opacity: 0.95;
+}
+
+.evt-dot {
+  justify-self: center;
+  width: 7px;
+  height: 7px;
+  color: var(--text-3);
+  background: currentColor;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px var(--solid-1);
+  transition: transform var(--t-fast) var(--ease);
+}
+.evt-dot.ally {
+  color: var(--win);
+}
+.evt-dot.enemy {
+  color: var(--loss);
+}
+.evt-dot.hollow {
+  background: var(--solid-1);
+  box-shadow:
+    inset 0 0 0 1.5px currentColor,
+    0 0 0 3px var(--solid-1);
+}
+/* A fight: a ring, the same hue as whoever won it. */
+.evt-dot.ring {
+  width: 11px;
+  height: 11px;
+  background: var(--solid-1);
+  box-shadow:
+    inset 0 0 0 2px currentColor,
+    0 0 0 3px var(--solid-1);
+}
+.evt-row.nested .evt-dot {
+  width: 5px;
+  height: 5px;
+}
+.evt-row.on .evt-dot {
+  transform: scale(1.5);
+}
+
+.evt-body {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 0 8px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.evt-body > b {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  color: var(--text-1);
+}
+.evt-verb {
+  color: var(--text-3);
+}
+.evt-target {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-2);
+}
+.evt-meta {
+  font-size: 12px;
+  color: var(--text-3);
+}
+.evt-art {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  overflow: hidden;
+  border-radius: var(--r-xs);
+}
+.evt-art img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: scale(1.08);
+}
+.evt-art.dead img {
+  filter: grayscale(0.75) brightness(0.8);
+}
+.evt-row.nested .evt-art {
+  width: 18px;
+  height: 18px;
+}
+.evt-stack {
+  display: flex;
+  padding-left: 4px;
+}
+.evt-stack img {
+  width: 16px;
+  height: 16px;
+  margin-left: -4px;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1.5px var(--solid-1);
+  opacity: 0.85;
+}
+.evt-stack.solo {
+  margin-left: 2px;
+}
+.evt-obj {
+  display: inline-flex;
+  color: var(--side, var(--text-2));
+}
+.evt-body .tag {
+  margin-left: 2px;
+}
+
+.evt-fight .evt-body > b {
+  font-size: 13px;
+}
+.evt-score {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.evt-score em,
+.evt-state em {
+  font-style: normal;
+  color: var(--side);
+}
+.evt-score i,
+.evt-state i {
+  padding: 0 2px;
+  font-style: normal;
+  color: var(--text-4);
+}
+
+/* The state of the game at the hovered second. */
+.evt-state {
+  display: flex;
+  gap: 10px;
+  padding-right: 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+  animation: evt-fade 120ms var(--ease) both;
+}
+.evt-state .ally,
+.evt-state .enemy {
+  color: var(--side);
+}
+@keyframes evt-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@container mx (max-width: 560px) {
+  .evt-phase-time,
+  .evt-stack {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .evt-row,
+  .evt-state {
+    animation: none;
+  }
+}
+
+/* --- Gold ------------------------------------------------------------------------------------------- */
+.gch {
+  display: grid;
+  gap: 8px;
+}
+.gch-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 26px;
+}
+.gch-read {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-3);
+}
+.gch-when {
+  min-width: 74px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.gch-read b {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+.gch-read b.ally,
+.gch-read b.enemy {
+  color: var(--side);
+}
+
+.gch-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 208px;
+  gap: 16px;
+  align-items: start;
+}
+.gch-plot {
+  position: relative;
+  min-width: 0;
+  border-radius: var(--r-sm);
+  outline: none;
+}
+.gch-plot:focus-visible {
+  box-shadow: 0 0 0 2px rgb(var(--brand-rgb) / 0.55);
+}
+.gch-plot svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+  touch-action: none;
+  cursor: crosshair;
+}
+.gch-grid line {
+  stroke: var(--line);
+}
+.gch-grid line.v {
+  stroke: color-mix(in srgb, var(--color-ink) 3%, transparent);
+}
+.gch-grid text,
+.gch-lead text {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  fill: var(--text-3);
+}
+
+/* Lines: faint by default, pinned ones in full, the hot one above everything. */
+.gch-line {
+  fill: none;
+  stroke: var(--c);
+  stroke-width: 1.25;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  stroke-opacity: 0.22;
+  stroke-dasharray: 1;
+  animation: gch-draw 700ms var(--ease) both;
+  transition:
+    stroke-opacity var(--t-fast),
+    stroke-width var(--t-fast);
+}
+@keyframes gch-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+.gch-line.pin {
+  stroke-width: 1.75;
+  stroke-opacity: 0.9;
+}
+.gch-line.self {
+  stroke-width: 2.25;
+  stroke-opacity: 1;
+}
+.has-hot .gch-line {
+  stroke-opacity: 0.1;
+}
+.has-hot .gch-line.pin,
+.has-hot .gch-line.self {
+  stroke-opacity: 0.35;
+}
+.has-hot .gch-line.hot {
+  stroke-width: 2.5;
+  stroke-opacity: 1;
+}
+.gch-cross {
+  stroke: var(--line-3);
+  pointer-events: none;
+}
+.gch-dot {
+  stroke: var(--solid-1);
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.gch-lead .up {
+  fill: rgb(var(--win-rgb) / 0.2);
+}
+.gch-lead .down {
+  fill: rgb(var(--loss-rgb) / 0.2);
+}
+.gch-lead .zero {
+  stroke: var(--line-2);
+}
+.gch-lead .line {
+  fill: none;
+  stroke: var(--text-2);
+  stroke-width: 1.25;
+  stroke-linejoin: round;
+}
+.gch-band-label {
+  position: absolute;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+  pointer-events: none;
+}
+.gch-mark {
+  position: absolute;
+  display: inline-flex;
+  color: var(--side, var(--text-3));
+  opacity: 0.8;
+  transform: translate(-50%, -50%);
+  transition: opacity var(--t-fast);
+}
+.gch-mark:hover {
+  opacity: 1;
+}
+
+.gch-end {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--r-xs);
+  box-shadow: 0 0 0 1.5px var(--c);
+  opacity: 0.35;
+  transform: translateY(-50%);
+  cursor: pointer;
+  transition:
+    opacity var(--t-fast),
+    transform var(--t-fast) var(--ease);
+}
+.gch-end.pin,
+.gch-end.self {
+  opacity: 1;
+}
+.gch-end.dim {
+  opacity: 0.2;
+}
+.gch-end.hot {
+  opacity: 1;
+  transform: translateY(-50%) scale(1.25);
+}
+
+.gch-chip,
+.gch-tip {
+  position: absolute;
+  z-index: 2;
+  font-size: 12px;
+  background: var(--solid-1);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-e2);
+  pointer-events: none;
+}
+.gch-chip {
+  top: -4px;
+  padding: 2px 7px;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+  transform: translate(-50%, -100%);
+}
+.gch-tip {
+  display: grid;
+  gap: 5px;
+  min-width: 188px;
+  padding: 10px 12px;
+  transform: translate(16px, -50%);
+  animation: evt-fade 120ms var(--ease) both;
+}
+.gch-tip.flip {
+  transform: translate(calc(-100% - 16px), -50%);
+}
+.gch-tip p {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+}
+.gch-tip-who {
+  align-items: center !important;
+  padding-bottom: 2px;
+}
+.gch-tip-who img {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--r-xs);
+  box-shadow: 0 0 0 1.5px var(--c);
+}
+.gch-tip-who b {
+  max-width: 120px;
+  overflow: hidden;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.gch-tip-who small {
+  font-size: 11px;
+  color: var(--text-3);
+}
+.gch-tip-v b {
+  font-size: 18px;
+  font-weight: 700;
+  font-stretch: 92%;
+  font-variant-numeric: tabular-nums;
+}
+.gch-tip-v span {
+  color: var(--text-3);
+}
+.gch-tip-v .gch-tip-place {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.gch-tip-row {
+  justify-content: space-between;
+  color: var(--text-3);
+}
+.gch-tip-row b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-1);
+}
+.gch-tip-row b.ally,
+.gch-tip-row b.enemy {
+  color: var(--side);
+}
+.gch-tip-time {
+  padding-top: 4px;
+  font-size: 11px;
+  color: var(--text-4);
+  border-top: 1px solid var(--line);
+}
+
+/* The legend is the readout: values follow the minute under the pointer. */
+.gch-legend {
+  display: grid;
+  gap: 12px;
+}
+.gch-team h5 {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 4px;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--side);
+}
+.gch-team h5 b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+}
+.gch-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 26px;
+  padding: 0 6px;
+  font-size: 12px;
+  text-align: left;
+  color: var(--text-2);
+  background: none;
+  border-radius: var(--r-xs);
+  isolation: isolate;
+  transition:
+    background-color var(--t-fast),
+    color var(--t-fast);
+}
+/* The bar: this player's value on the lobby's scale at the minute read. */
+.gch-row::before {
+  content: '';
+  position: absolute;
+  left: 30px;
+  right: 6px;
+  bottom: 3px;
+  height: 2px;
+  z-index: -1;
+  background: linear-gradient(to right, var(--c) var(--w), var(--line) var(--w));
+  border-radius: 1px;
+  opacity: 0.35;
+  transition: opacity var(--t-fast);
+}
+.gch-row:hover:not(:disabled),
+.gch-row.hot {
+  color: var(--text-1);
+  background: var(--surface-2);
+}
+.gch-row.pin {
+  color: var(--text-1);
+}
+.gch-row.pin::before,
+.gch-row.hot::before {
+  opacity: 0.9;
+}
+.gch-row img {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--r-xs);
+  opacity: 0.55;
+  transition:
+    opacity var(--t-fast),
+    box-shadow var(--t-fast);
+}
+.gch-row.pin img,
+.gch-row.hot img {
+  opacity: 1;
+  box-shadow: 0 0 0 1.5px var(--c);
+}
+.gch-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.gch-row b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.gch-row.self .gch-name {
+  font-weight: 600;
+}
+.gch-hint {
+  margin: 0;
+  padding: 0 6px;
+  font-size: 11px;
+  color: var(--text-4);
+}
+
+@container mx (max-width: 640px) {
+  .gch-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .gch-legend {
+    grid-template-columns: 1fr 1fr;
+  }
+  .gch-hint {
+    grid-column: 1 / -1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gch-line,
+  .gch-tip {
+    animation: none;
+  }
+}
+
+/* --- Breakdown -------------------------------------------------------------------------------------- */
+.brk {
+  display: grid;
+  gap: 20px;
+}
+
+/* What stood out: figures on one line, split by hairlines, no boxes. */
+.brk-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  padding: 4px 0;
+}
+.brk-fact {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  min-width: 0;
+  padding: 2px 16px;
+  border-left: 1px solid var(--line);
+  animation: evt-in 320ms var(--ease) both;
+}
+.brk-fact:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+.brk-fact:nth-child(2) {
+  animation-delay: 40ms;
+}
+.brk-fact:nth-child(3) {
+  animation-delay: 80ms;
+}
+.brk-fact:nth-child(4) {
+  animation-delay: 120ms;
+}
+.brk-fig {
+  font-size: 24px;
+  font-weight: 700;
+  font-stretch: 92%;
+  line-height: 28px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-1);
+}
+.brk-fig.ally,
+.brk-fig.enemy {
+  color: var(--side);
+}
+.brk-label {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-2);
+}
+.brk-rank {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+/* Duels: one diverging axis per stat. */
+.brk-duels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px 32px;
+}
+.brk-duel-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.brk-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.brk-side.right {
+  justify-content: flex-end;
+}
+.brk-side b {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.brk-side b.ally,
+.brk-side b.enemy {
+  color: var(--side);
+}
+.brk-side img {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-xs);
+  box-shadow: 0 0 0 1.5px var(--side, var(--line-3));
+}
+.brk-side img.self {
+  box-shadow: 0 0 0 1.5px var(--brand);
+}
+.brk-vs {
+  font-size: 11px;
+  color: var(--text-4);
+}
+.brk-rows {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.brk-row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 64px;
+  align-items: baseline;
+  row-gap: 4px;
+  padding: 5px 0 6px;
+}
+.brk-n {
+  font-size: 13px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-3);
+  transition: color var(--t-fast);
+}
+.brk-n.right {
+  text-align: right;
+}
+.brk-n.win {
+  font-weight: 650;
+  color: var(--text-1);
+}
+.brk-row-label {
+  font-size: 12px;
+  text-align: center;
+  color: var(--text-3);
+}
+.brk-split {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: var(--a) calc(100% - var(--a));
+  gap: 2px;
+  height: 3px;
+}
+.brk-split i {
+  min-width: 2px;
+  background: var(--side, var(--brand));
+  border-radius: 2px 0 0 2px;
+  opacity: 0.28;
+  transform-origin: right;
+  animation: brk-grow 520ms var(--ease) both;
+}
+.brk-split i.b {
+  border-radius: 0 2px 2px 0;
+  transform-origin: left;
+}
+.brk-split i.self {
+  background: var(--brand);
+}
+@keyframes brk-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+.brk-split i.brk-ahead {
+  opacity: 0.9;
+}
+.brk-split i.brk-even {
+  opacity: 0.5;
+}
+.brk-row:hover .brk-split i {
+  opacity: 1;
+}
+.brk-row:hover .brk-n {
+  color: var(--text-1);
+}
+.brk-at15 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 8px 0 0;
+  padding-top: 8px;
+  font-size: 12px;
+  color: var(--text-3);
+  border-top: 1px solid var(--line);
+}
+.brk-at15 b {
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-1);
+}
+.brk-at15 b.ally,
+.brk-at15 b.enemy {
+  color: var(--side);
+}
+
+/* The table: every stat, every player. */
+.brk-table-wrap {
+  margin: 0 -16px;
+  padding: 0 16px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-4) transparent;
+}
+.brk-table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.brk-c-label {
+  width: 150px;
+}
+.brk-c-gap {
+  width: 10px;
+}
+.brk-c {
+  transition: background-color var(--t-fast);
+}
+.brk-c.hover {
+  background: var(--surface-1);
+}
+.brk-c.on {
+  background: var(--brand-a08);
+}
+/* Opaque so the selected column's tint never spreads under a team's spanning label. */
+.brk-teams th {
+  padding: 0 0 6px;
+  background: var(--solid-1);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--side);
+}
+.brk-heads th {
+  padding: 0 0 8px;
+}
+.brk-pick {
+  display: block;
+  width: 26px;
+  height: 26px;
+  margin: 0 auto;
+  padding: 0;
+  overflow: hidden;
+  background: none;
+  border-radius: var(--r-xs);
+  opacity: 0.6;
+  transition:
+    opacity var(--t-fast),
+    box-shadow var(--t-fast);
+}
+.brk-pick:hover:not(:disabled) {
+  opacity: 1;
+  background: none;
+}
+.brk-pick.on {
+  opacity: 1;
+  box-shadow: 0 0 0 2px var(--brand);
+}
+.brk-pick img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: scale(1.08);
+}
+.brk-section th {
+  padding: 16px 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--text-1);
+}
+.brk-table tbody:first-of-type .brk-section th {
+  padding-top: 4px;
+}
+.brk-table tbody tr:not(.brk-section) {
+  height: 34px;
+  border-top: 1px solid var(--line);
+}
+.brk-table tbody th[scope='row'] {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  padding-right: 8px;
+  overflow: hidden;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-2);
+  background: var(--solid-1);
+}
+.brk-table td {
+  position: relative;
+  padding: 0;
+  text-align: center;
+  color: var(--text-2);
+  cursor: pointer;
+}
+.brk-table tbody tr:not(.brk-section):hover td:not(.brk-gap),
+.brk-table tbody tr:not(.brk-section):hover th {
+  box-shadow: inset 0 0 0 999px color-mix(in srgb, var(--color-ink) 3%, transparent);
+}
+.brk-table tbody tr:not(.brk-section):hover th {
+  color: var(--text-1);
+}
+.brk-table td.zero {
+  color: var(--text-4);
+}
+.brk-table td.on {
+  color: var(--text-1);
+}
+.brk-table td.best {
+  font-weight: 700;
+  color: var(--text-1);
+}
+.brk-v {
+  position: relative;
+  transition: transform var(--t-base) var(--ease);
+}
+.brk-table tr:hover .brk-v {
+  transform: translateY(-2px);
+}
+.brk-bar {
+  position: absolute;
+  left: 50%;
+  bottom: 5px;
+  width: 28px;
+  height: 2px;
+  background: var(--line);
+  border-radius: 1px;
+  opacity: 0;
+  transform: translateX(-50%) scaleX(0.3);
+  transition:
+    opacity var(--t-base) var(--ease),
+    transform var(--t-base) var(--ease);
+}
+/* The row under the pointer shows its distribution. */
+.brk-table tr:hover .brk-bar {
+  opacity: 1;
+  transform: translateX(-50%) scaleX(1);
+}
+.brk-bar i {
+  display: block;
+  height: 100%;
+  background: var(--line-3);
+  border-radius: 1px;
+}
+td.best .brk-bar i {
+  background: var(--text-2);
+}
+td.on .brk-bar i {
+  background: var(--brand);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brk-fact,
+  .brk-split i {
+    animation: none;
+  }
+}
+
+.evt-empty {
+  margin: 0;
+  padding: 24px 0;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.seg.seg-sm > button {
+  height: 22px;
+  padding: 0 8px;
+  font-size: 12px;
+}

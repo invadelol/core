@@ -1,4 +1,5 @@
 import type {
+  ClickhouseEventRow,
   ClickhouseMatchRow,
   ClickhouseParticipantRow,
   ClickhouseTimelineRow,
@@ -331,3 +332,100 @@ export function buildTimelineRows(
 
   return rows.filter((row) => row.puuid)
 }
+
+const MONSTERS: Record<string, string> = {
+  DRAGON: 'dragon',
+  BARON_NASHOR: 'baron',
+  RIFTHERALD: 'herald',
+  HORDE: 'grubs',
+}
+
+/**
+ * Kill and objective events of a match-v5 timeline, as `match_events` rows. `teamOf` maps a
+ * participant id to its team (100 / 200): from the match's participants when a match is
+ * ingested, from the stored participants when its events are backfilled.
+ */
+export function buildEventRows(
+  matchId: string,
+  platform: string,
+  gameStartMs: number,
+  timeline: any,
+  teamOf: Map<number, number>
+): ClickhouseEventRow[] {
+  const frames: any[] = Array.isArray(timeline?.info?.frames) ? timeline.info.frames : []
+  const rows: ClickhouseEventRow[] = []
+  const base = { match_id: matchId, platform, game_start_ms: gameStartMs }
+  const position = (event: any) => ({
+    pos_x: Math.max(0, Math.min(65535, toInt(event?.position?.x ?? 0, 0))),
+    pos_y: Math.max(0, Math.min(65535, toInt(event?.position?.y ?? 0, 0))),
+  })
+
+  for (const frame of frames) {
+    const events: any[] = Array.isArray(frame?.events) ? frame.events : []
+    for (const event of events) {
+      const type = asString(event?.type)
+      const t = Math.max(0, toInt(event?.timestamp ?? 0, 0))
+      const killer = Math.max(0, toInt(event?.killerId ?? 0, 0))
+
+      if (type === 'CHAMPION_KILL') {
+        const victim = Math.max(0, toInt(event?.victimId ?? 0, 0))
+        // Executed (tower, minions): the kill counts for the victim's enemies.
+        const victimTeam = teamOf.get(victim) ?? 0
+        const team = teamOf.get(killer) ?? (victimTeam === 100 ? 200 : victimTeam === 200 ? 100 : 0)
+        rows.push({
+          ...base,
+          t_ms: t,
+          kind: 'kill',
+          sub: '',
+          lane: '',
+          team_id: team,
+          killer,
+          victim,
+          assists: Array.isArray(event?.assistingParticipantIds)
+            ? event.assistingParticipantIds
+                .map((id: any) => toInt(id, 0))
+                .filter((id: number) => id > 0)
+            : [],
+          ...position(event),
+        })
+      } else if (type === 'ELITE_MONSTER_KILL') {
+        // `killerTeamId` is set even when a minion or a pet lands the last hit.
+        const team = toInt(event?.killerTeamId ?? 0, 0) || teamOf.get(killer) || 0
+        if (team !== 100 && team !== 200) continue
+        const monster = asString(event?.monsterType)
+        const kind = MONSTERS[monster] ?? 'monster'
+        rows.push({
+          ...base,
+          t_ms: t,
+          kind,
+          sub: kind === 'dragon' ? asString(event?.monsterSubType) : kind === 'monster' ? monster : '',
+          lane: '',
+          team_id: team,
+          killer,
+          victim: 0,
+          assists: [],
+          ...position(event),
+        })
+      } else if (type === 'BUILDING_KILL') {
+        // `teamId` is the side that lost the building.
+        const lost = toInt(event?.teamId ?? 0, 0)
+        if (lost !== 100 && lost !== 200) continue
+        const inhibitor = asString(event?.buildingType) === 'INHIBITOR_BUILDING'
+        rows.push({
+          ...base,
+          t_ms: t,
+          kind: inhibitor ? 'inhibitor' : 'tower',
+          sub: inhibitor ? '' : asString(event?.towerType),
+          lane: asString(event?.laneType),
+          team_id: lost === 100 ? 200 : 100,
+          killer,
+          victim: 0,
+          assists: [],
+          ...position(event),
+        })
+      }
+    }
+  }
+  return rows
+}
+
