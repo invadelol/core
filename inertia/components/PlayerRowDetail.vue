@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import ItemRow from './ItemRow.vue'
-import PerfPlate from './PerfPlate.vue'
+import PerfDial from './PerfDial.vue'
 import RuneTrees from './RuneTrees.vue'
 import RoleIcon from './RoleIcon.vue'
 import { champIcon, championName, spellIcon, POSITION_NAMES } from '../lib/assets.js'
@@ -246,7 +246,7 @@ const checkpoints = computed(() => {
     <section class="min-w-0 lg:border-l lg:border-line lg:pl-8">
       <div v-if="breakdown" class="mb-6">
         <div class="flex items-center gap-3">
-          <PerfPlate
+          <PerfDial
             :score="breakdown.score"
             :place="breakdown.rank"
             :of="match.participants.length"

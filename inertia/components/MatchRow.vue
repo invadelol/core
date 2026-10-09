@@ -3,7 +3,7 @@ import { computed, ref, shallowRef, watch } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { ArrowUpRight, Check, ChevronDown, Link2 } from 'lucide-vue-next'
 import ItemRow from './ItemRow.vue'
-import PerfPlate from './PerfPlate.vue'
+import PerfDial from './PerfDial.vue'
 import RuneTrees from './RuneTrees.vue'
 import Scoreboard from './Scoreboard.vue'
 import MatchBreakdown from './MatchBreakdown.vue'
@@ -290,9 +290,9 @@ async function copyLink() {
         </template>
       </span>
 
-      <!-- Score: the row's focal point, the performance plate -->
+      <!-- Score: the row's focal point, the performance dial -->
       <span class="mrow-score">
-        <PerfPlate
+        <PerfDial
           :score="row.score"
           :place="row.standing"
           :of="match.participants.length"
@@ -422,7 +422,7 @@ async function copyLink() {
   display: grid;
   grid-template-columns:
     44px 42px minmax(96px, 1.1fr) minmax(104px, 1fr) minmax(80px, 0.8fr)
-    auto 56px 84px 16px;
+    auto 56px 52px 16px;
   align-items: center;
   column-gap: 14px;
   width: 100%;
@@ -462,7 +462,6 @@ async function copyLink() {
 
 .mrow:hover,
 .open .mrow {
-  --plate-hover: 1;
   background: linear-gradient(var(--tint), var(--tint)), var(--color-raised);
 }
 
@@ -619,7 +618,7 @@ async function copyLink() {
 /* Narrower containers drop the matchup, then the farm, then the build. */
 @container (max-width: 920px) {
   .mrow {
-    grid-template-columns: 44px 42px minmax(92px, 1fr) minmax(100px, 1fr) auto 84px 16px;
+    grid-template-columns: 44px 42px minmax(92px, 1fr) minmax(100px, 1fr) auto 52px 16px;
   }
   .mrow-farm,
   .mrow-vs {
@@ -629,7 +628,7 @@ async function copyLink() {
 
 @container (max-width: 700px) {
   .mrow {
-    grid-template-columns: 44px 42px minmax(0, 1fr) minmax(0, 1fr) 84px 16px;
+    grid-template-columns: 44px 42px minmax(0, 1fr) minmax(0, 1fr) 52px 16px;
     column-gap: 12px;
   }
   .mrow-items {
@@ -639,7 +638,7 @@ async function copyLink() {
 
 @container (max-width: 480px) {
   .mrow {
-    grid-template-columns: 40px minmax(0, 1fr) auto 84px;
+    grid-template-columns: 40px minmax(0, 1fr) auto 52px;
     height: 64px;
     padding: 0 12px 0 14px;
   }
