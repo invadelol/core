@@ -83,6 +83,7 @@ router
           .get('/resolve', [DesktopController, 'resolve'])
           .use(middleware.desktopAuth({ optional: true }))
         router.post('/matches', [DesktopController, 'upload']).use(middleware.desktopAuth())
+        router.post('/matches/known', [DesktopController, 'known']).use(middleware.desktopAuth())
         router.post('/players', [DesktopController, 'players']).use(middleware.desktopAuth())
       })
       .prefix('/desktop')

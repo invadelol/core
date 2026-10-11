@@ -192,6 +192,7 @@ class DeviceService {
     const row = await db
       .from('desktop_match_upload')
       .where('uploader_puuid', puuid)
+      .where('observed', false)
       .whereIn('status', ['stored', 'verified', 'duplicate', 'deferred'])
       .max('received_at as at')
       .first()

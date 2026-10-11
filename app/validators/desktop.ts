@@ -166,3 +166,22 @@ export const playersValidator = vine.compile(
       .distinct('rawPuuid'),
   })
 )
+
+/** Most match ids one `known` request may ask about (§2.6). */
+export const MAX_KNOWN_IDS = 100
+
+/** Which of these games core already holds (§2.6): 1–100 distinct match ids. */
+export const knownValidator = vine.compile(
+  vine.object({
+    matchIds: vine
+      .array(
+        vine
+          .string()
+          .maxLength(32)
+          .regex(/^[A-Z0-9]+_[0-9]+$/)
+      )
+      .minLength(1)
+      .maxLength(MAX_KNOWN_IDS)
+      .distinct(),
+  })
+)

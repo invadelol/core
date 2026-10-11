@@ -1,5 +1,6 @@
 import { test } from '@japa/runner'
 import { randomUUID } from 'node:crypto'
+import { deflateSync, gzipSync } from 'node:zlib'
 import { Exception } from '@adonisjs/core/exceptions'
 import db from '@adonisjs/lucid/services/db'
 import clickhouse from 'adonisjs-clickhouse/services/main'
@@ -13,7 +14,7 @@ import { RiotUpstreamException } from '#utils/riot_errors'
 import encryption from '@adonisjs/core/services/encryption'
 import { apiPuuids, makeUpload, riotMatch, UPLOADER_PARTICIPANT } from '#tests/fixtures/desktop'
 import { DesktopSeed } from '#tests/fixtures/desktop_db'
-import { desktopClient } from '#tests/fixtures/desktop_http'
+import { compressedPost, desktopClient } from '#tests/fixtures/desktop_http'
 
 /**
  * The desktop routes end to end, against the isolated Postgres and
@@ -85,9 +86,97 @@ test.group('Desktop sync API', (group) => {
     response.assertBody({
       uploads: true,
       resolve: true,
+      observed: true,
+      encodings: ['gzip', 'deflate'],
       maxPayloadBytes: 2000000,
       minAppVersion: null,
     })
+  })
+
+  test('an observed game: asked about first, sent deflated, published without LP (v1.3)', async ({
+    client: http,
+    assert,
+  }) => {
+    const { upload, puuids, device, credentials } = await onboarded()
+    // The viewer signed in to the client is linked, and is not one of the ten.
+    const viewer = await seed.player()
+    const viewerRaw = randomUUID()
+    seed.raws.push(viewerRaw)
+    await seed.link(device.id, viewer.puuid, viewerRaw)
+    upload.uploader = viewerRaw
+    upload.lp = {
+      queue: 'RANKED_SOLO_5x5',
+      before: { tier: 'GOLD', division: 'I', lp: 10, wins: 1, losses: 1, at: 1 },
+      after: { tier: 'GOLD', division: 'I', lp: 30, wins: 2, losses: 1, at: 2 },
+    }
+    const app = desktopClient(http, credentials)
+    riotApiService.client = {
+      matchV5: { getMatchById: async () => riotMatch(upload, puuids) },
+    } as unknown as typeof client
+
+    const unknown = await app.post('/api/desktop/matches/known', { matchIds: [upload.matchId] })
+    unknown.assertStatus(200)
+    unknown.assertBody({ known: [] })
+
+    // The stored blob as it is: zlib, signed over the bytes sent.
+    const body = deflateSync(JSON.stringify(upload))
+    const sent = await compressedPost(http, credentials, '/api/desktop/matches', body, 'deflate')
+    sent.assertStatus(200)
+    sent.assertBodyContains({ matchId: upload.matchId, status: 'verified', lp: 'rejected' })
+
+    const known = await app.post('/api/desktop/matches/known', {
+      matchIds: [upload.matchId, 'EUW1_1'],
+    })
+    known.assertBody({ known: [upload.matchId] })
+
+    const row = await db
+      .from('desktop_match_upload')
+      .where('match_id', upload.matchId)
+      .where('device_id', device.id)
+      .first()
+    assert.isTrue(row.observed)
+    const changes = await db.from('lp_change').where('match_id', upload.matchId)
+    assert.lengthOf(changes, 0, 'an observed game carries no LP change')
+    const profile = await http.get(`/api/summoners/${viewer.game_name}-${viewer.tag_line}`)
+    assert.isNull(profile.body().freshness.lastDesktopSyncAt, "not the viewer's game")
+  })
+
+  test('gzip bodies are signed over the bytes sent; known takes 1-100 match ids', async ({
+    client: http,
+  }) => {
+    const { credentials } = await onboarded()
+    const path = '/api/desktop/matches/known'
+    const body = gzipSync(JSON.stringify({ matchIds: ['EUW1_1'] }))
+    const ok = await compressedPost(http, credentials, path, body, 'gzip')
+    ok.assertStatus(200)
+    ok.assertBody({ known: [] })
+
+    // Signed over the JSON instead of the compressed bytes: refused.
+    const json = JSON.stringify({ matchIds: ['EUW1_1'] })
+    const wrong = await compressedPost(http, credentials, path, gzipSync(json), 'gzip', json)
+    wrong.assertStatus(401)
+
+    // The limit holds for what the body inflates to: 3 MB of blanks deflate to a few KB.
+    const bomb = deflateSync(Buffer.alloc(3_000_000, ' '))
+    const tooLarge = await compressedPost(
+      http,
+      credentials,
+      '/api/desktop/matches',
+      bomb,
+      'deflate'
+    )
+    tooLarge.assertStatus(413)
+
+    const app = desktopClient(http, credentials)
+    for (const matchIds of [
+      [],
+      Array.from({ length: 101 }, (_, i) => `EUW1_${i}`),
+      ['euw1_1'],
+      ['EUW1_1', 'EUW1_1'],
+    ]) {
+      const refused = await app.post(path, { matchIds })
+      refused.assertStatus(422)
+    }
   })
 
   test('registers a device and returns its token and secret once', async ({

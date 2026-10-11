@@ -18,7 +18,7 @@ import deviceService, { isTrusted, profileUrl } from '#services/desktop/device_s
 import lpService from '#services/desktop/lp_service'
 import { RetryScheduler } from '#services/desktop/retry_scheduler'
 import { MATCH_AUDIT_ONE_IN, oneIn } from '#services/desktop/sampling'
-import { validateStructure } from '#services/desktop/match_validation'
+import { isObserved, validateStructure } from '#services/desktop/match_validation'
 import { hashAddress } from '#services/desktop/tokens'
 import * as snapshotHooks from '#services/desktop/snapshot_hooks'
 import {
@@ -59,6 +59,22 @@ interface Upload {
   link: DesktopDeviceAccount
   platform: string
   record: Pick<DesktopMatchUpload, 'payloadHash' | 'ipHash'>
+}
+
+/**
+ * Past this, a game still `deferred` lost its retries (a restart forgets
+ * them: the last one runs 15 minutes after the upload), so the app's second
+ * send of it is processed again instead of answered `duplicate`.
+ */
+export const RESEND_AFTER_MS = 20 * 60_000
+
+/** A previous send of the same game by the same device that a new send replaces (§4.2). */
+export function resendable(
+  previous: Pick<DesktopMatchUpload, 'status' | 'receivedAt'>,
+  now: number
+) {
+  if (previous.status === 'expired') return true
+  return previous.status === 'deferred' && now - previous.receivedAt.toMillis() >= RESEND_AFTER_MS
 }
 
 /** What happened to a game, and whether its LP report may be stored. */
@@ -124,6 +140,11 @@ export class PublicationService {
     return env.get('DESKTOP_UPLOADS_ENABLED', true)
   }
 
+  /** Observed games (v1.3) have their own switch: each one may cost a match-v5 call. */
+  observedEnabled() {
+    return this.enabled() && env.get('DESKTOP_OBSERVED_ENABLED', true)
+  }
+
   async upload(payload: MatchUpload, context: { device: DesktopDevice; ip: string }) {
     if (!this.enabled()) throw DesktopException.paused('uploads')
 
@@ -132,11 +153,14 @@ export class PublicationService {
       championIds: await this.championIds(),
     })
     if (problem) throw DesktopException.invalidMatch(problem)
+    const observed = isObserved(payload)
+    if (observed && !this.observedEnabled()) throw DesktopException.paused('uploads')
 
     const platform = payload.game.platformId
     const raw = payload.uploader.toLowerCase()
     let link = await deviceService.uploaderLink(context.device.id, raw)
-    if (!link) {
+    // An observed game has no identity of the uploader to bridge a Riot ID link with.
+    if (!link && !observed) {
       // Linked by Riot ID only: the uploader's own identity is the bridge.
       const identity = identitiesOf(payload).find((entry) => entry.rawPuuid === raw)!
       const mapped = await identityService.map(platform, [identity])
@@ -152,7 +176,7 @@ export class PublicationService {
     const url = `${profileUrl(uploader?.gameName ?? '', uploader?.tagLine ?? '')}/match/${payload.matchId}`
     const ipHash = hashAddress(context.ip, appKey.release())
     return this.serialize(payload.matchId, () =>
-      this.publish(payload, { device: context.device, link, platform, ipHash, url })
+      this.publish(payload, { device: context.device, link, platform, ipHash, url, observed })
     )
   }
 
@@ -175,17 +199,22 @@ export class PublicationService {
       platform: string
       ipHash: string
       url: string
+      observed: boolean
     }
   ): Promise<UploadResult> {
     const { matchId } = payload
-    const { device, link, url } = context
+    const { device, link, url, observed } = context
 
-    // The same device sending the same game again changes nothing.
+    // The same device sending the same game again changes nothing, unless
+    // core gave up on it (or lost its retries) while Riot did not have it.
     const previous = await DesktopMatchUpload.query()
       .where('match_id', matchId)
       .where('device_id', device.id)
       .first()
-    if (previous) return { matchId, status: 'duplicate', lp: previous.lpStatus, url }
+    if (previous && !resendable(previous, this.now())) {
+      return { matchId, status: 'duplicate', lp: previous.lpStatus, url }
+    }
+    await previous?.delete()
 
     let record: DesktopMatchUpload
     try {
@@ -199,6 +228,7 @@ export class PublicationService {
         lpStatus: 'none',
         ipHash: context.ipHash,
         app: payload.app,
+        observed,
       })
     } catch (error) {
       // Another server process took the same re-send first.
@@ -211,13 +241,15 @@ export class PublicationService {
     try {
       const upload: Upload = { payload, device, link, platform: context.platform, record }
       const outcome = await this.decide(upload)
-      const lp: LpStatus = outcome.lp
-        ? await lpService.record(payload, { matchId, puuid: link.puuid, deviceId: device.id })
-        : payload.lp
-          ? 'rejected'
-          : 'none'
+      // An observed game is not the uploader's: it has no LP change of theirs.
+      const lp: LpStatus =
+        outcome.lp && !observed
+          ? await lpService.record(payload, { matchId, puuid: link.puuid, deviceId: device.id })
+          : payload.lp
+            ? 'rejected'
+            : 'none'
       await this.finish(matchId, device.id, outcome.status, lp)
-      await this.invalidate([`summoner:${link.puuid}`], matchId)
+      await this.invalidate(observed ? [] : [`summoner:${link.puuid}`], matchId)
       return { matchId, status: outcome.status, lp, url }
     } catch (error) {
       // Leave nothing behind, so the app's retry is processed from scratch.
@@ -478,7 +510,8 @@ export class PublicationService {
 
   /**
    * Riot has not published the game: answer `deferred` and try again in
-   * 2, 5 and 15 minutes. Past that the web sync picks the game up.
+   * 1, 3, 6 and 15 minutes. Past that the app's second send (§5.3) or the
+   * web sync picks the game up.
    */
   private defer(upload: Upload) {
     const { matchId } = upload.payload
