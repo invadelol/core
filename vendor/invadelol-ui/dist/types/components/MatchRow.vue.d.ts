@@ -16,6 +16,7 @@ import '../styles/primitives.css';
  */
 type __VLS_Props = {
     game: MatchSummary;
+    /** None (unscored, or not yet): no dial, the column keeps its width. */
     score?: ScoreRow | null;
     /** LP gained or lost, when known. */
     lp?: number | null;
