@@ -4,6 +4,9 @@ import { desktopReleases } from '#services/desktop_release'
 /** The page is useful without the version, so a slow GitHub never holds it up. */
 const VERSION_WAIT_MS = 600
 
+const DESCRIPTION =
+  'Invade is a free League of Legends companion for Windows and macOS: objective timers and your pace in game, runes set in champ select, a score for every game, and automatic clips.'
+
 export default class AppPageController {
   /** `/app`: what the desktop app does, and where to get it. */
   async show({ inertia }: HttpContext) {
@@ -13,14 +16,14 @@ export default class AppPageController {
     ])
     return inertia.render('app', {
       version: release?.version ?? null,
+      description: DESCRIPTION,
       social: {
         type: 'website',
         title: 'Invade for desktop · invade.lol',
-        description:
-          'A free League of Legends companion for Windows and macOS: in-game overlay, champ select scouting, match analysis, builds and recording.',
+        description: DESCRIPTION,
         url: 'https://invade.lol/app',
-        image: 'https://invade.lol/landing/og.png',
-        alt: 'The Invade desktop app showing a dashboard with win rate, form and recent games',
+        image: 'https://invade.lol/landing/app-og.png',
+        alt: 'Every game of League, timed, scored and clipped: the Invade desktop app’s Home, with rank and LP, scored games, clips and performance',
       },
     })
   }
