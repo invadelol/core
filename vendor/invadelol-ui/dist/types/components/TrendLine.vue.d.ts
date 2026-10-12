@@ -2,7 +2,8 @@ import '../styles/base.css';
 /**
  * A straight-segment line: the player's series in brand, an
  * optional dashed baseline (what a delta is computed against) and an optional shaded band over
- * the last points (what "last 5" means). Stretches to its box; strokes keep their width.
+ * the last points (what "last 5" means). Stretches to its box; strokes keep their width. With
+ * `area` it is a sparkline instead: a smooth line over a soft fade, nothing else.
  */
 type __VLS_Props = {
     values: number[];

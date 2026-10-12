@@ -1,12 +1,16 @@
 import '../styles/base.css';
 /**
- * Riot's ranked crest for a tier. Small sizes use the flat mini crests bundled with the package
- * (sharp at 12–28px, offline); from 40px up the full emblem from the host (`assetUrl('rank', tier)`),
- * which falls back to the mini crest if it cannot load. A host without one gets the mini crest.
+ * Riot's ranked crest for a tier: the flat mini crest bundled with the package (sharp at any size,
+ * offline), or with `emblem` the full emblem from the host (`assetUrl('rank', tier)`) for the few
+ * places designed around it. The emblem is a 1280×720 frame whose wings reach far past the crest,
+ * so it gets a box of its own, wider than tall and faded at the edges, never over the text beside
+ * it. An image that fails or is not that frame (a proxy placeholder) leaves the mini crest.
+ * `size` is the crest's size; a host may override the emblem's with `--iv-crest`.
  */
 type __VLS_Props = {
     tier?: string | null;
     size?: number;
+    emblem?: boolean;
 };
 declare const __VLS_export: import("vue").DefineComponent<__VLS_Props, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<__VLS_Props> & Readonly<{}>, {
     tier: string | null;

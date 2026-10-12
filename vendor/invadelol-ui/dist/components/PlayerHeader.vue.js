@@ -84,7 +84,8 @@ const P = { class: "iv-pf-head" }, B = ["src"], E = ["src"], M = { class: "iv-pf
         }, [
           h(F, {
             tier: e.rank?.tier,
-            size: e.rank ? 40 : 28
+            size: e.rank ? 40 : 28,
+            emblem: ""
           }, null, 8, ["tier", "size"]),
           l("div", null, [
             l("p", null, [

@@ -4,9 +4,10 @@ import '../styles/primitives.css';
 import '../styles/profile.css';
 /**
  * LP history (the desktop app records a snapshot of its own accounts whenever the rank
- * changes). Plots the continuous ladder value, so a promotion is a rise and not a drop to 0 LP;
- * one point per change, straight segments, division lines labelled with the rank in its tier
- * colour. Hovering reads a point; at rest the panel says how far the line went.
+ * changes). Plots the continuous ladder value, so a promotion is a rise and not a drop to 0 LP:
+ * one point per change, one smooth line in brand over a soft fade, and hairlines at the two or
+ * three division (or tier) lines it moves around, named on the right edge. Hovering, or the arrow
+ * keys, reads a change.
  */
 type __VLS_Props = {
     points: LpPoint[];

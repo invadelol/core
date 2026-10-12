@@ -1,235 +1,255 @@
 import '../styles/base.css';
 import '../styles/primitives.css';
 import '../styles/profile.css';
-import { defineComponent as ee, useId as le, shallowRef as E, computed as y, watchEffect as te, onMounted as oe, onBeforeUnmount as ne, openBlock as u, createElementBlock as i, createElementVNode as t, toDisplayString as s, unref as o, normalizeClass as w, createCommentVNode as k, Fragment as M, normalizeStyle as P, createTextVNode as C, renderList as se, createVNode as U } from "vue";
-import { useInvadeUi as ae, useFormat as ue } from "../context.js";
-import { signedLp as W } from "../logic/format.js";
-import { tierColor as N, rankLabel as L, count as ie } from "../logic/labels.js";
-import Z from "./RankCrest.vue.js";
+import { defineComponent as ae, useId as ue, shallowRef as P, computed as y, watchEffect as ie, onMounted as re, onBeforeUnmount as ve, openBlock as u, createElementBlock as i, createElementVNode as o, toDisplayString as s, unref as t, normalizeClass as G, createCommentVNode as m, createTextVNode as U, Fragment as H, renderList as ce, normalizeStyle as V, createVNode as Z } from "vue";
+import { useInvadeUi as pe, useFormat as de } from "../context.js";
+import { monotone as fe } from "../curve.js";
+import { signedLp as K } from "../logic/format.js";
+import { rankLabel as M, count as he, tierColor as W } from "../logic/labels.js";
+import X from "./RankCrest.vue.js";
 /* empty css               */
 /* empty css                 */
 /* empty css                       */
 /* empty css                    */
-const re = { class: "iv-panel-head" }, ce = {
+const ye = { class: "iv-panel-head" }, me = {
   key: 0,
   class: "iv-seg sm"
-}, ve = {
+}, ge = {
   key: 1,
   class: "meta"
-}, de = { class: "iv-pf-lpg-read" }, pe = { class: "iv-unit" }, fe = { class: "iv-unit" }, he = ["viewBox", "aria-label"], ye = { class: "iv-pf-lpg-grid" }, me = ["x2", "y1", "y2"], ge = ["y"], xe = ["d", "fill"], _e = ["d"], ke = ["x1", "x2", "y2"], Me = ["cx", "cy"], be = ["cx", "cy"], Ie = {
-  key: 1,
-  class: "iv-pf-note"
-}, Le = {
+}, xe = {
+  key: 0,
+  class: "iv-pf-lpg-read"
+}, _e = { class: "iv-unit" }, ke = { key: 0 }, Me = { key: 1 }, Le = ["aria-label"], $e = ["viewBox"], be = { class: "iv-pf-lpg-guides" }, Ie = ["x2", "y1", "y2"], Re = ["x", "y"], we = ["d", "fill"], Ee = ["d"], Pe = ["x1", "x2"], Be = ["cx", "cy"], De = ["cx", "cy"], Ne = ["cx", "cy"], Se = { key: 0 }, Te = {
   key: 2,
+  class: "iv-pf-note"
+}, Ve = {
+  key: 3,
   class: "iv-pf-facts"
-}, $e = { key: 0 }, Re = { key: 1 }, $ = 132, O = 14, S = 6, Te = /* @__PURE__ */ ee({
+}, Ce = { key: 0 }, ze = { key: 1 }, L = 128, Y = 14, Ae = 10, Fe = 64, je = /* @__PURE__ */ ae({
   __name: "LpGraph",
   props: {
     points: {},
     card: {}
   },
-  setup(H) {
-    const R = H, { t: a } = ae(), { date: X } = ue(), A = `iv-lpg-${le()}`, v = E("solo"), b = y(() => ["solo", "flex"].filter((e) => R.points.filter((l) => l.queue === e).length > 1));
-    te(() => {
-      b.value.length && !b.value.includes(v.value) && (v.value = b.value[0]);
+  setup(j) {
+    const I = j, { t: a } = pe(), { date: J } = de(), C = `iv-lpg-${ue()}`, d = P("solo"), $ = y(() => ["solo", "flex"].filter((e) => I.points.some((l) => l.queue === e)));
+    ie(() => {
+      $.value.length && !$.value.includes(d.value) && (d.value = $.value[0]);
     });
-    const m = y(() => R.points.filter((e) => e.queue === v.value)), g = y(() => v.value === "solo" ? R.card.solo : R.card.flex), x = E(300), D = E(null);
-    let V;
-    oe(() => {
-      V = new ResizeObserver(([e]) => {
-        e.contentRect.width && (x.value = Math.round(e.contentRect.width));
-      }), D.value && V.observe(D.value);
-    }), ne(() => V?.disconnect());
-    const Y = ["IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "EMERALD", "DIAMOND"], j = ["IV", "III", "II", "I"];
-    function J(e) {
-      if (e >= 2800) return { tier: "MASTER", name: `${L({ tier: "MASTER", division: "", lp: 0 }, !1, a)}+` };
-      const l = Y[Math.floor(e / 400)] ?? "IRON", n = j[Math.floor(e % 400 / 100)] ?? "IV";
-      return { tier: l, name: L({ tier: l, division: n, lp: 0 }, !1, a) };
+    const f = y(() => I.points.filter((e) => e.queue === d.value)), R = y(() => f.value[f.value.length - 1]), x = y(() => d.value === "solo" ? I.card.solo : I.card.flex), g = P(300), B = P(null);
+    let D;
+    re(() => {
+      D = new ResizeObserver(([e]) => {
+        e.contentRect.width && (g.value = Math.round(e.contentRect.width));
+      }), B.value && D.observe(B.value);
+    }), ve(() => D?.disconnect());
+    const Q = ["IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "EMERALD", "DIAMOND"], ee = ["IV", "III", "II", "I"];
+    function le(e, l) {
+      if (e > 2800) return `${e - 2800} ${a("LP")}`;
+      if (e === 2800) return `${M({ tier: "MASTER", division: "", lp: 0 }, !1, a)}+`;
+      const n = Q[Math.floor(e / 400)] ?? "IRON";
+      return M({ tier: n, division: l ? "" : ee[Math.floor(e % 400 / 100)] ?? "IV", lp: 0 }, !1, a);
     }
     const c = y(() => {
-      const e = m.value;
+      const e = f.value;
       if (e.length < 2) return null;
-      const l = e.map((r) => r.value), n = Math.max(0, Math.floor((Math.min(...l) - 10) / 100) * 100);
-      let f = Math.ceil((Math.max(...l) + 10) / 100) * 100;
-      f - n < 200 && (f = n + 200);
-      const B = f - n > 800 ? 400 : 100, F = (r) => 4 + r * (x.value - 8) / (e.length - 1), T = (r) => O + (f - r) * ($ - O - S) / (f - n);
-      let z = "";
-      e.forEach((r, h) => z += `${h ? "L" : "M"}${F(h).toFixed(1)} ${T(r.value).toFixed(1)}`);
-      const G = [];
-      for (let r = Math.ceil(n / B) * B; r < f; r += B) {
-        const h = J(r);
-        G.push({ y: T(r), label: h.name, color: N(h.tier) });
-      }
-      const Q = `${z}L${F(e.length - 1).toFixed(1)} ${$ - S}L4 ${$ - S}Z`;
-      return { line: z, area: Q, grid: G, dots: e.map((r, h) => ({ x: F(h), y: T(r.value) })) };
-    }), p = E(null);
-    function K(e) {
-      const l = e.currentTarget, n = m.value.length;
-      if (n < 2) return;
-      const f = e.offsetX / l.clientWidth * x.value;
-      p.value = Math.max(0, Math.min(n - 1, Math.round((f - 4) / (x.value - 8) * (n - 1))));
+      const l = e.map((r) => r.value), n = Math.min(...l), k = Math.max(...l), z = Math.max(k - n, 60) * 0.3, T = Math.max(0, n - z), w = k + z, E = [100, 400, 800, 1600].find((r) => Math.floor(w / r) - Math.ceil(T / r) < 3) ?? 2800, A = g.value - Fe, ne = (r) => 2 + r * (A - 4) / (e.length - 1), F = (r) => Y + (w - r) * (L - Y - Ae) / (w - T), O = [];
+      for (let r = Math.ceil(T / E) * E; r <= w; r += E) O.push({ y: F(r), name: le(r, E >= 400) });
+      const b = e.map((r, se) => [ne(se), F(r.value)]), q = fe(b);
+      return { right: A, guides: O, dots: b, line: q, area: `${q}L${b[b.length - 1][0].toFixed(1)} ${L}L${b[0][0].toFixed(1)} ${L}Z` };
+    }), p = P(null), h = y(() => f.value.length - 1);
+    function te(e) {
+      const l = c.value;
+      if (!l) return;
+      const n = e.currentTarget.getBoundingClientRect(), k = (e.clientX - n.left) / n.width * g.value;
+      p.value = Math.max(0, Math.min(h.value, Math.round((k - 2) / (l.right - 4) * h.value)));
     }
-    const d = y(() => {
-      const e = m.value, l = p.value;
-      return l === null || !e[l] ? null : { point: e[l], change: l > 0 ? Math.round(e[l].value - e[l - 1].value) : null };
-    }), I = y(() => {
-      const e = m.value;
+    function oe(e) {
+      const l = p.value ?? h.value;
+      if (e.key === "ArrowLeft") p.value = Math.max(0, l - 1);
+      else if (e.key === "ArrowRight") p.value = Math.min(h.value, l + 1);
+      else if (e.key === "Home") p.value = 0;
+      else if (e.key === "End") p.value = h.value;
+      else if (e.key === "Escape") p.value = null;
+      else return;
+      e.preventDefault();
+    }
+    const v = y(() => {
+      const e = p.value, l = f.value[e ?? -1];
+      if (e === null || !l || !c.value) return null;
+      const [n, k] = c.value.dots[e];
+      return {
+        point: l,
+        x: n,
+        y: k,
+        change: e > 0 ? Math.round(l.value - f.value[e - 1].value) : null,
+        // Beside the point, on the side with room.
+        style: n > c.value.right / 2 ? { right: `${g.value - n + 10}px` } : { left: `${n + 10}px` }
+      };
+    }), N = y(() => {
+      const e = f.value;
       return e.length > 1 ? { lp: Math.round(e[e.length - 1].value - e[0].value), since: e[0].t } : null;
     }), _ = y(() => {
-      const e = m.value;
+      const e = f.value;
       return e.length < 2 ? null : e.reduce((l, n) => n.value > l.value ? n : l);
-    }), q = (e, l = !1) => X(e, { day: "numeric", month: "short", ...l ? { hour: "2-digit", minute: "2-digit" } : {} });
+    }), S = (e, l = !1) => J(e, { day: "numeric", month: "short", ...l ? { hour: "2-digit", minute: "2-digit" } : {} });
     return (e, l) => (u(), i("section", {
       ref_key: "box",
-      ref: D,
+      ref: B,
       class: "iv-panel iv-pf-panel iv-pf-lpg"
     }, [
-      t("header", re, [
-        t("h3", null, s(o(a)("LP history")), 1),
-        b.value.length > 1 ? (u(), i("div", ce, [
-          t("button", {
+      o("header", ye, [
+        o("h3", null, s(t(a)("LP history")), 1),
+        $.value.length > 1 ? (u(), i("div", me, [
+          o("button", {
             type: "button",
-            class: w({ on: v.value === "solo" }),
-            onClick: l[0] || (l[0] = (n) => v.value = "solo")
-          }, s(o(a)("Solo/Duo")), 3),
-          t("button", {
+            class: G({ on: d.value === "solo" }),
+            onClick: l[0] || (l[0] = (n) => d.value = "solo")
+          }, s(t(a)("Solo/Duo")), 3),
+          o("button", {
             type: "button",
-            class: w({ on: v.value === "flex" }),
-            onClick: l[1] || (l[1] = (n) => v.value = "flex")
-          }, s(o(a)("Flex")), 3)
-        ])) : b.value.length ? (u(), i("span", ve, s(v.value === "solo" ? o(a)("Solo/Duo") : o(a)("Flex")), 1)) : k("", !0)
+            class: G({ on: d.value === "flex" }),
+            onClick: l[1] || (l[1] = (n) => d.value = "flex")
+          }, s(t(a)("Flex")), 3)
+        ])) : $.value.length ? (u(), i("span", ge, s(d.value === "solo" ? t(a)("Solo/Duo") : t(a)("Flex")), 1)) : m("", !0)
       ]),
-      c.value ? (u(), i(M, { key: 0 }, [
-        t("p", de, [
-          d.value ? (u(), i(M, { key: 0 }, [
-            t("b", {
-              style: P({ color: o(N)(d.value.point.tier) })
-            }, s(o(L)(d.value.point, !1, o(a))), 5),
-            t("span", null, [
-              C(s(d.value.point.lp), 1),
-              t("span", pe, s(o(a)("LP")), 1)
-            ]),
-            d.value.change !== null ? (u(), i("span", {
-              key: 0,
-              class: w(["iv-pf-delta", d.value.change > 0 ? "up" : d.value.change < 0 ? "down" : ""])
-            }, s(o(W)(d.value.change)), 3)) : k("", !0),
-            t("small", null, s(q(d.value.point.t, !0)), 1)
-          ], 64)) : I.value ? (u(), i(M, { key: 1 }, [
-            t("span", {
-              class: w(["iv-pf-delta", I.value.lp > 0 ? "up" : I.value.lp < 0 ? "down" : ""])
-            }, [
-              C(s(o(W)(I.value.lp)), 1),
-              t("span", fe, s(o(a)("LP")), 1)
-            ], 2),
-            t("small", null, s(o(a)("since {date}", { date: q(I.value.since) })) + " · " + s(o(ie)(m.value.length - 1, "changes", o(a))), 1)
-          ], 64)) : k("", !0)
+      R.value ? (u(), i("p", xe, [
+        o("span", null, s(t(M)(R.value, !1, t(a))), 1),
+        o("b", null, [
+          U(s(R.value.lp), 1),
+          o("span", _e, s(t(a)("LP")), 1)
         ]),
+        N.value ? (u(), i("small", ke, s(t(K)(N.value.lp)) + " " + s(t(a)("LP")) + " · " + s(t(a)("since {date}", { date: S(N.value.since) })) + " · " + s(t(he)(f.value.length - 1, "changes", t(a))), 1)) : (u(), i("small", Me, s(S(R.value.t, !0)), 1))
+      ])) : m("", !0),
+      c.value ? (u(), i("div", {
+        key: 1,
+        class: "iv-pf-lpg-plot",
+        tabindex: "0",
+        role: "img",
+        "aria-label": t(a)("LP history"),
+        onKeydown: oe,
+        onBlur: l[3] || (l[3] = (n) => p.value = null)
+      }, [
         (u(), i("svg", {
-          class: "iv-pf-lpg-svg",
-          viewBox: `0 0 ${x.value} ${$}`,
-          role: "img",
-          "aria-label": o(a)("LP history"),
-          onPointermove: K,
+          viewBox: `0 0 ${g.value} ${L}`,
+          height: L,
+          "aria-hidden": "true",
+          onPointermove: te,
           onPointerleave: l[2] || (l[2] = (n) => p.value = null)
         }, [
-          t("defs", null, [
-            t("linearGradient", {
-              id: A,
+          o("defs", null, [
+            o("linearGradient", {
+              id: C,
               x1: "0",
               x2: "0",
               y1: "0",
               y2: "1"
-            }, [...l[3] || (l[3] = [
-              t("stop", {
+            }, [...l[4] || (l[4] = [
+              o("stop", {
                 offset: "0",
                 "stop-color": "var(--brand)",
-                "stop-opacity": "0.16"
+                "stop-opacity": "0.12"
               }, null, -1),
-              t("stop", {
+              o("stop", {
                 offset: "1",
                 "stop-color": "var(--brand)",
                 "stop-opacity": "0"
               }, null, -1)
             ])])
           ]),
-          t("g", ye, [
-            (u(!0), i(M, null, se(c.value.grid, (n) => (u(), i(M, {
+          o("g", be, [
+            (u(!0), i(H, null, ce(c.value.guides, (n) => (u(), i(H, {
               key: n.y
             }, [
-              t("line", {
+              o("line", {
                 x1: "0",
-                x2: x.value,
+                x2: g.value,
                 y1: n.y,
                 y2: n.y
-              }, null, 8, me),
-              t("text", {
-                x: "0",
-                y: n.y - 4,
-                style: P({ fill: n.color })
-              }, s(n.label), 13, ge)
+              }, null, 8, Ie),
+              o("text", {
+                x: g.value,
+                y: n.y - 4
+              }, s(n.name), 9, Re)
             ], 64))), 128))
           ]),
-          t("path", {
+          o("path", {
             d: c.value.area,
-            fill: `url(#${A})`
-          }, null, 8, xe),
-          t("path", {
+            fill: `url(#${C})`
+          }, null, 8, we),
+          o("path", {
             d: c.value.line,
             class: "iv-pf-lpg-line"
-          }, null, 8, _e),
-          p.value !== null ? (u(), i(M, { key: 0 }, [
-            t("line", {
-              x1: c.value.dots[p.value].x,
-              x2: c.value.dots[p.value].x,
-              y1: O,
-              y2: $ - S,
-              class: "iv-pf-lpg-cross"
-            }, null, 8, ke),
-            t("circle", {
-              cx: c.value.dots[p.value].x,
-              cy: c.value.dots[p.value].y,
-              r: "3.5",
-              class: "iv-pf-lpg-dot"
-            }, null, 8, Me)
-          ], 64)) : (u(), i("circle", {
-            key: 1,
-            cx: c.value.dots[c.value.dots.length - 1].x,
-            cy: c.value.dots[c.value.dots.length - 1].y,
+          }, null, 8, Ee),
+          v.value ? (u(), i("line", {
+            key: 0,
+            x1: v.value.x,
+            x2: v.value.x,
+            y1: "0",
+            y2: L,
+            class: "iv-pf-lpg-cross"
+          }, null, 8, Pe)) : m("", !0),
+          o("circle", {
+            cx: c.value.dots[h.value][0],
+            cy: c.value.dots[h.value][1],
+            r: "7",
+            class: "iv-pf-lpg-halo"
+          }, null, 8, Be),
+          o("circle", {
+            cx: c.value.dots[h.value][0],
+            cy: c.value.dots[h.value][1],
             r: "3",
             class: "iv-pf-lpg-dot"
-          }, null, 8, be))
-        ], 40, he))
-      ], 64)) : (u(), i("p", Ie, s(o(a)("Your LP history builds up as you play ranked games with Invade running.")), 1)),
-      _.value || g.value?.previous ? (u(), i("dl", Le, [
-        _.value ? (u(), i("div", $e, [
-          t("dt", null, s(o(a)("Peak")), 1),
-          t("dd", null, [
-            U(Z, {
+          }, null, 8, De),
+          v.value ? (u(), i("circle", {
+            key: 1,
+            cx: v.value.x,
+            cy: v.value.y,
+            r: "3",
+            class: "iv-pf-lpg-dot"
+          }, null, 8, Ne)) : m("", !0)
+        ], 40, $e)),
+        v.value ? (u(), i("p", {
+          key: 0,
+          class: "iv-pf-lpg-tip",
+          style: V(v.value.style)
+        }, [
+          o("span", null, s(S(v.value.point.t, !0)), 1),
+          o("b", null, s(t(M)(v.value.point, !1, t(a))) + " " + s(v.value.point.lp) + " " + s(t(a)("LP")), 1),
+          v.value.change !== null ? (u(), i("span", Se, s(t(K)(v.value.change)), 1)) : m("", !0)
+        ], 4)) : m("", !0)
+      ], 40, Le)) : (u(), i("p", Te, s(t(a)("Your LP history builds up as you play ranked games with Invade running.")), 1)),
+      _.value || x.value?.previous ? (u(), i("dl", Ve, [
+        _.value ? (u(), i("div", Ce, [
+          o("dt", null, s(t(a)("Peak")), 1),
+          o("dd", null, [
+            Z(X, {
               tier: _.value.tier,
               size: 16
             }, null, 8, ["tier"]),
-            t("b", {
-              style: P({ color: o(N)(_.value.tier) })
-            }, s(o(L)(_.value, !1, o(a))), 5),
-            C(" " + s(_.value.lp) + " " + s(o(a)("LP")), 1)
+            o("b", {
+              style: V({ color: t(W)(_.value.tier) })
+            }, s(t(M)(_.value, !1, t(a))), 5),
+            U(" " + s(_.value.lp) + " " + s(t(a)("LP")), 1)
           ])
-        ])) : k("", !0),
-        g.value?.previous ? (u(), i("div", Re, [
-          t("dt", null, s(o(a)("Last season")), 1),
-          t("dd", null, [
-            U(Z, {
-              tier: g.value.previous,
+        ])) : m("", !0),
+        x.value?.previous ? (u(), i("div", ze, [
+          o("dt", null, s(t(a)("Last season")), 1),
+          o("dd", null, [
+            Z(X, {
+              tier: x.value.previous,
               size: 16
             }, null, 8, ["tier"]),
-            t("b", {
-              style: P({ color: o(N)(g.value.previous) })
-            }, s(o(L)({ ...g.value, tier: g.value.previous, division: "" }, !1, o(a))), 5)
+            o("b", {
+              style: V({ color: t(W)(x.value.previous) })
+            }, s(t(M)({ ...x.value, tier: x.value.previous, division: "" }, !1, t(a))), 5)
           ])
-        ])) : k("", !0)
-      ])) : k("", !0)
+        ])) : m("", !0)
+      ])) : m("", !0)
     ], 512));
   }
 });
 export {
-  Te as default
+  je as default
 };
