@@ -148,9 +148,9 @@ const sides = computed(() =>
     </div>
 
     <template v-else>
-      <div class="section !items-center">
+      <div class="section flex-wrap !items-center gap-y-2">
         <h2 class="flex items-center gap-2"><span class="pulse" />Live game</h2>
-        <span class="meta">{{ queueName(game.gameQueueConfigId) }}</span>
+        <span class="meta whitespace-nowrap">{{ queueName(game.gameQueueConfigId) }}</span>
         <span class="fig ml-auto text-[22px] text-ink">{{ duration(elapsed) }}</span>
         <button class="iv-btn sm" :disabled="loading" @click="refresh()">
           <RefreshCw :size="12" :class="{ 'animate-spin': loading }" />
@@ -163,13 +163,13 @@ const sides = computed(() =>
         <section
           v-for="side in sides"
           :key="side.teamId"
-          class="iv-panel"
+          class="iv-panel min-w-0"
           :style="{ boxShadow: `inset 0 2px 0 ${side.color}` }"
         >
-          <div class="section !items-center">
-            <h3>{{ side.label }}</h3>
-            <span class="meta">{{ side.side }}</span>
-            <span v-if="side.bans.length" class="ml-auto flex items-center gap-1">
+          <div class="section flex-wrap !items-center gap-y-1.5">
+            <h3 class="min-w-0 truncate">{{ side.label }}</h3>
+            <span class="meta whitespace-nowrap">{{ side.side }}</span>
+            <span v-if="side.bans.length" class="ml-auto flex shrink-0 items-center gap-1">
               <span class="mr-1 text-[12px] text-ink-3">Bans</span>
               <img
                 v-for="(ban, i) in side.bans"
