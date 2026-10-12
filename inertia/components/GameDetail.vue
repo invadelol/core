@@ -6,7 +6,7 @@ const cache = new Map<string, MatchDetail>()
 </script>
 
 <script setup lang="ts">
-import { shallowRef, watch } from 'vue'
+import { computed, shallowRef, watch } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { Icon, MatchDetailPanel } from '@invadelol/ui'
 import { detailOf } from '../lib/match.js'
@@ -43,6 +43,21 @@ async function load() {
   }
 }
 watch(() => props.match.matchId, load, { immediate: true })
+
+const href = computed(
+  () =>
+    `${profilePath(props.gameName, props.tagLine)}/match/${encodeURIComponent(props.match.matchId)}`
+)
+const copied = shallowRef(false)
+async function copyLink() {
+  try {
+    await navigator.clipboard.writeText(`${location.origin}${href.value}`)
+    copied.value = true
+    setTimeout(() => (copied.value = false), 1600)
+  } catch {
+    /* the match page is still one click away */
+  }
+}
 </script>
 
 <template>
@@ -55,20 +70,19 @@ watch(() => props.match.matchId, load, { immediate: true })
     @retry="load"
   />
   <p v-if="detail" class="game-detail-page">
-    <Link
-      :href="`${profilePath(gameName, tagLine)}/match/${encodeURIComponent(match.matchId)}`"
-      class="iv-btn ghost sm"
-    >
-      Match page<Icon name="arrow" :size="13" />
-    </Link>
+    <button type="button" class="iv-btn ghost sm" @click="copyLink">
+      <Icon :name="copied ? 'check' : 'copy'" :size="13" />{{ copied ? 'Copied' : 'Copy link' }}
+    </button>
+    <Link :href="href" class="iv-btn ghost sm">Match page<Icon name="arrow" :size="13" /></Link>
   </p>
 </template>
 
 <style scoped>
-/* The game's own page, quietly under the detail. */
+/* The game's own page and its link, quietly under the detail. */
 .game-detail-page {
   display: flex;
   justify-content: flex-end;
+  gap: 4px;
   padding: 0 8px 8px;
 }
 </style>
