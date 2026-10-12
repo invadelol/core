@@ -177,7 +177,6 @@ defineProps<{ version: string | null }>()
 /* The window on the page: its own rim, and a long soft shadow under it. */
 .shot {
   position: relative;
-  max-width: 1240px;
   margin-inline: auto;
   border-radius: 12px;
   box-shadow:

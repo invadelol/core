@@ -111,15 +111,16 @@
   margin-top: clamp(36px, 4vw, 52px);
 }
 
-@media (min-width: 640px) {
+@media (min-width: 720px) {
   .ap-points {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr));
+    gap: 28px 32px;
   }
 }
 
 @media (min-width: 1024px) {
   .ap-points {
-    grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr));
+    gap: 28px 40px;
   }
 }
 
