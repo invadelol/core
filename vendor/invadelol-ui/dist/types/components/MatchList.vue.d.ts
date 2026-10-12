@@ -6,7 +6,8 @@ import '../styles/profile.css';
  * The feed: one filter bar, one summary line of what it shows (record, KDA, form), then the
  * games grouped by day (or by champion). A row opens the host's `detail` slot right below it
  * (`{ game }`: the host loads the game and renders `MatchDetail`). With `loadMore`, older games
- * load as the end comes into view (`MoreMatches`, paced per player).
+ * load as the end comes into view (`MoreMatches`): stored pages freely, and the list ends quietly when
+ * the source holds older games back.
  */
 type __VLS_Props = {
     /** Whose games these are (favorites). */
@@ -22,9 +23,12 @@ type __VLS_Props = {
     private?: boolean;
     /** Older games may exist (`loadMore` asks for them). */
     more?: boolean;
-    /** Loads the next page of older games into `games` (see `MoreMatches`). */
+    /**
+     * Loads the next page of older games into `games`; resolves `{ retryAfterMs }` when the source
+     * held older games back (see `MoreMatches`).
+     */
     loadMore?: () => Promise<void | {
-        wait: number;
+        retryAfterMs: number;
     }>;
     /** A game to open and scroll to once it is in the list (a deep link). */
     focus?: number | null;
@@ -59,7 +63,7 @@ declare const __VLS_base: import("vue").DefineComponent<__VLS_PublicProps, {}, {
     error: string;
     private: boolean;
     loadMore: () => Promise<void | {
-        wait: number;
+        retryAfterMs: number;
     }>;
     focus: number | null;
 }, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;

@@ -166,7 +166,10 @@ export interface MatchSummary {
 export interface MatchPage {
     games: MatchSummary[];
     more: boolean;
-    /** Ms before older games may be asked again (the paging rule held this page back; none loaded). */
+    /**
+     * Ms the source holds older games back (invade.lol's Riot budget is spent): the list ends quietly
+     * (`MoreMatches`: `{ retryAfterMs }`) and may ask again after it. `games` holds what it had.
+     */
     wait?: number;
 }
 export interface TeamView {
