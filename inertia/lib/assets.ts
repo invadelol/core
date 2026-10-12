@@ -9,7 +9,8 @@ import type { AssetKind, NameKind } from '@invadelol/ui'
  */
 const PATHS: Record<AssetKind, string> = {
   champion: 'champion',
-  splash: 'splash',
+  // The page header's art is the centred crop: the champion stays in frame at any width.
+  splash: 'centered',
   item: 'item',
   spell: 'spell',
   rune: 'perk',

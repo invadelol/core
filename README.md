@@ -204,6 +204,19 @@ trust and rollback, auth, rate limits) and the routes end to end
 `.env` with Riot stubbed, so point `DB_DATABASE`, `CLICKHOUSE_DB` and
 `REDIS_DB` at throwaway ones.
 
+### Game art
+
+Every image the site and the desktop app draw comes from `/cdn`, a caching
+proxy in front of Data Dragon and Community Dragon: allow-listed kinds and id
+shapes only, one upstream fetch per asset per patch, mirrored to the bucket.
+Kinds, upstream mapping, caching and limits: [docs/cdn.md](docs/cdn.md).
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/cdn/:patch/:kind/:id` | An asset pinned to a patch (`/cdn/16.20/champion/266.png`), immutable |
+| `GET` | `/cdn/:kind/:id` | The same on the live patch, cached for a day |
+| `GET` | `/cdn/names/:kind` | Id → display name for champions, items, spells, runes, augments |
+
 ---
 
 ## Interface

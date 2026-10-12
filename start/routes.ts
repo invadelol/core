@@ -90,12 +90,15 @@ router
   .prefix('/api')
 
 /**
- * Riot game art, proxied and mirrored so the client never talks to Riot's
- * CDNs directly. Registered before the summoner catch-all below.
+ * Riot game art, proxied and mirrored so the site and the desktop app never
+ * talk to Riot's CDNs directly (docs/cdn.md). `/:patch/:kind/:id` pins a patch
+ * and is immutable; `/:kind/:id` follows the live one. Registered before the
+ * summoner catch-all below.
  */
 router
   .group(() => {
     router.get('/names/:kind', [AssetsController, 'names'])
+    router.get('/:patch/:kind/:id', [AssetsController, 'show'])
     router.get('/:kind/:id', [AssetsController, 'show'])
   })
   .prefix('/cdn')

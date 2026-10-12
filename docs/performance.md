@@ -285,8 +285,8 @@ ingestion invalidates the match and every participant's analytics before
 returning; rank updates invalidate again after ranks are stored. Redis failures
 fall back to the controller response.
 
-Hot game images use an LRU bounded to 512 entries and 32 MiB per server process.
-Real assets expire after one hour; placeholders after 30 seconds. Mirror reads
+Hot game images use an LRU bounded to 2048 entries and 64 MiB per server process
+([cdn.md](cdn.md)). Real assets expire after one hour; placeholders after 30 seconds. Mirror reads
 use two concurrent requests instead of three sequential requests.
 
 ### Local measurements
