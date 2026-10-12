@@ -8,15 +8,23 @@ import { REPO_URL } from '../lib/links.js'
 
 <template>
   <footer class="mt-16 border-t border-line">
-    <div class="page flex flex-wrap items-center gap-x-6 gap-y-2 py-6 text-[12px] text-ink-3">
-      <Link href="/" class="flex items-center gap-2 font-medium text-ink-2 hover:text-ink">
+    <div class="page flex flex-wrap items-center gap-x-6 gap-y-2 py-6 text-[12px] text-ink-3 pointer-coarse:gap-y-0 pointer-coarse:py-3">
+      <Link
+        href="/"
+        class="flex items-center gap-2 font-medium text-ink-2 hover:text-ink pointer-coarse:h-11"
+      >
         <Logo :size="14" />invade.lol
       </Link>
-      <Link href="/app" class="transition-colors hover:text-ink">Desktop app</Link>
-      <a :href="REPO_URL" target="_blank" rel="noreferrer" class="transition-colors hover:text-ink">
+      <Link href="/app" class="transition-colors hover:text-ink pointer-coarse:py-3.5">Desktop app</Link>
+      <a
+        :href="REPO_URL"
+        target="_blank"
+        rel="noreferrer"
+        class="transition-colors hover:text-ink pointer-coarse:py-3.5"
+      >
         Source on GitHub
       </a>
-      <span class="w-full text-ink-4 sm:ml-auto sm:w-auto">
+      <span class="w-full text-ink-4 sm:ml-auto sm:w-auto pointer-coarse:pb-3">
         Not endorsed by Riot Games. League of Legends is a trademark of Riot Games, Inc.
       </span>
     </div>

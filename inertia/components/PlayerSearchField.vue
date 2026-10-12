@@ -159,11 +159,13 @@ function submit() {
       />
     </div>
 
-    <ul v-if="open && entries.length" class="menu absolute z-40 mt-1.5 w-full p-1">
+    <ul v-if="open && entries.length" class="menu absolute z-40 mt-1.5 w-full p-1" role="listbox">
       <li
         v-for="(entry, index) in entries"
         :key="`${entry.gameName}-${entry.tagLine}-${index}`"
         class="menu-item cursor-pointer"
+        role="option"
+        :aria-selected="index === active"
         :data-active="index === active"
         @mouseenter="active = index"
         @mousedown.prevent="choose(entry)"

@@ -165,7 +165,13 @@ function onHotkey(event: KeyboardEvent) {
   }
 }
 
-onMounted(() => window.addEventListener('keydown', onHotkey))
+/** The narrowest phones have room for a short placeholder only. */
+const tight = ref(false)
+
+onMounted(() => {
+  window.addEventListener('keydown', onHotkey)
+  tight.value = window.matchMedia('(max-width: 359px)').matches
+})
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onHotkey)
   clearTimeout(debounce)
@@ -223,7 +229,15 @@ function submit() {
         spellcheck="false"
         autocomplete="off"
         :autofocus="props.autofocus"
-        :placeholder="props.size === 'lg' ? 'Search a Riot ID, e.g. Faker#KR1' : 'Search a player'"
+        :placeholder="
+          props.size === 'lg'
+            ? tight
+              ? 'Search a Riot ID'
+              : 'Search a Riot ID, e.g. Faker#KR1'
+            : tight
+              ? 'Search'
+              : 'Search a player'
+        "
         class="field search-input"
         @focus="isOpen = entries.length > 0"
         @blur="handleBlur"
@@ -245,7 +259,13 @@ function submit() {
       </kbd>
     </div>
 
-    <ul v-if="showDropdown" class="menu absolute z-50 mt-1.5 w-full p-1" role="listbox">
+    <!-- In the header of a phone the field is narrow: the list takes the screen's width. -->
+    <ul
+      v-if="showDropdown"
+      class="menu absolute z-50 mt-1.5 w-full p-1"
+      :class="props.size === 'sm' ? 'max-sm:fixed max-sm:inset-x-2 max-sm:top-[54px] max-sm:w-auto' : ''"
+      role="listbox"
+    >
       <li
         v-for="(entry, index) in entries"
         :key="`${entry.gameName}-${entry.tagLine}-${index}`"
@@ -288,6 +308,17 @@ function submit() {
 .search-sm .search-input {
   padding-left: 32px;
   padding-right: 44px;
+}
+
+/* No ⌘K on a phone: the placeholder takes its room. */
+@media (max-width: 39.99rem) {
+  .search-sm .search-input {
+    padding-right: 12px;
+  }
+
+  .search-lg .search-input {
+    padding-right: 16px;
+  }
 }
 
 /* The home search is the page's subject: taller, and set a size up. */

@@ -23,7 +23,11 @@ withDefaults(
 <template>
   <header class="chrome sticky top-0 z-30">
     <div class="page flex h-[56px] items-center gap-3 sm:gap-5">
-      <Link href="/" class="shrink-0" aria-label="invade.lol home">
+      <Link
+        href="/"
+        class="shrink-0 pointer-coarse:flex pointer-coarse:h-10 pointer-coarse:items-center"
+        aria-label="invade.lol home"
+      >
         <Logo :size="22" word />
       </Link>
 
