@@ -1,97 +1,95 @@
 import '../styles/base.css';
 import '../styles/primitives.css';
 import '../styles/profile.css';
-import { defineComponent as w, shallowRef as _, onMounted as x, watch as T, onBeforeUnmount as M, openBlock as a, createElementBlock as u, createBlock as B, createVNode as b, createTextVNode as k, toDisplayString as v, unref as i, createElementVNode as N, createCommentVNode as V, nextTick as C } from "vue";
-import { useInvadeUi as I } from "../context.js";
-import { mmss as $ } from "../logic/format.js";
-import { pager as z } from "../logic/pager.js";
+import { defineComponent as g, shallowRef as y, onMounted as x, watch as w, onBeforeUnmount as M, openBlock as i, createElementBlock as d, createBlock as T, createVNode as _, createTextVNode as b, toDisplayString as f, unref as v, createElementVNode as B, createCommentVNode as N, nextTick as V } from "vue";
+import { useInvadeUi as C } from "../context.js";
+import { endOfList as I } from "../logic/pager.js";
 import h from "./Icon.vue.js";
-import E from "./MatchRowSkeleton.vue.js";
+import O from "./MatchRowSkeleton.vue.js";
 /* empty css                      */
 /* empty css                 */
 /* empty css                       */
 /* empty css                    */
-const O = ["aria-busy"], U = {
+const z = ["aria-busy"], A = {
   key: 1,
   class: "iv-error",
   role: "alert"
-}, D = {
+}, E = {
   key: 2,
-  class: "iv-more-line"
-}, F = {
-  key: 3,
   class: "iv-more-line iv-more-end",
   role: "status"
-}, P = /* @__PURE__ */ w({
+}, G = /* @__PURE__ */ g({
   __name: "MoreMatches",
   props: {
     more: { type: Boolean },
     load: { type: Function }
   },
-  setup(d) {
-    const f = d, { t: n } = I(), p = z(), e = _("idle"), y = _(0), t = _(null);
-    let s = !1, l, o;
-    async function m(c = !1) {
-      if (clearTimeout(l), !f.more || e.value === "loading" || !(s || c)) return;
-      const r = p.wait();
-      if (y.value = Math.ceil(r / 1e3), r > 0) {
-        s && (l = setTimeout(m, r % 1e3 || 1e3));
-        return;
-      }
+  setup(p) {
+    const l = p, { t: c } = C(), n = I(), e = y("idle"), t = y(null);
+    let a = !1, o;
+    async function u(r = !1) {
+      if (!l.more || e.value === "loading" || !a || n.held() && !(r && n.ask())) return;
+      const s = t.value?.offsetTop;
       e.value = "loading";
       try {
-        const g = await f.load();
-        g?.wait ? p.hold(g.wait) : p.take(), e.value = "idle";
+        const m = await l.load();
+        if (e.value = "idle", m && typeof m.retryAfterMs == "number") {
+          n.hold(m.retryAfterMs);
+          return;
+        }
+        n.clear();
       } catch {
         e.value = "error";
         return;
       }
-      await C(), t.value && o && (o.unobserve(t.value), o.observe(t.value));
+      await V(), t.value && o && t.value.offsetTop !== s && (o.unobserve(t.value), o.observe(t.value));
+    }
+    function k() {
+      e.value = "idle", a = !0, u(!0);
     }
     return x(() => {
       o = new IntersectionObserver(
-        ([c]) => {
-          s = c.isIntersecting, s ? m() : clearTimeout(l);
+        ([r]) => {
+          const s = a;
+          a = r.isIntersecting, a && u(!s);
         },
         { rootMargin: "240px 0px" }
       ), t.value && o.observe(t.value);
-    }), T(
-      () => f.more,
-      () => {
-        m();
+    }), w(
+      () => l.more,
+      (r) => {
+        r && n.clear(), u();
       }
-    ), M(() => {
-      o?.disconnect(), clearTimeout(l);
-    }), (c, r) => (a(), u("div", {
+    ), M(() => o?.disconnect()), (r, s) => (i(), d("div", {
       ref_key: "el",
       ref: t,
       class: "iv-more",
       "aria-busy": e.value === "loading"
     }, [
-      e.value === "loading" ? (a(), B(E, {
+      e.value === "loading" ? (i(), T(O, {
         key: 0,
         count: 3
-      })) : e.value === "error" ? (a(), u("p", U, [
-        b(h, {
+      })) : e.value === "error" ? (i(), d("p", A, [
+        _(h, {
           name: "x",
           size: 15
         }),
-        k(v(i(n)("Older games could not be loaded.")) + " ", 1),
-        N("button", {
+        b(f(v(c)("Older games could not be loaded.")) + " ", 1),
+        B("button", {
           type: "button",
           class: "iv-btn sm",
-          onClick: r[0] || (r[0] = (g) => m(!0))
+          onClick: k
         }, [
-          b(h, {
+          _(h, {
             name: "refresh",
             size: 13
           }),
-          k(v(i(n)("Try again")), 1)
+          b(f(v(c)("Try again")), 1)
         ])
-      ])) : d.more && y.value > 0 ? (a(), u("p", D, v(i(n)("More games in {time}", { time: i($)(y.value) })), 1)) : d.more ? V("", !0) : (a(), u("p", F, v(i(n)("That's every tracked game")), 1))
-    ], 8, O));
+      ])) : p.more ? N("", !0) : (i(), d("p", E, f(v(c)("That's every tracked game")), 1))
+    ], 8, z));
   }
 });
 export {
-  P as default
+  G as default
 };
