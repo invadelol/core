@@ -35,10 +35,18 @@ const line = pts
 const area = `${line}L${W} ${H}L0 ${H}Z`
 
 const STATS = [
-  { value: '0', unit: '', text: 'overlay windows between games: the overlay opens with champ select and closes after the game' },
+  {
+    value: '0',
+    unit: '',
+    text: 'overlay windows between games: the overlay opens with champ select and closes after the game',
+  },
   { value: '20', unit: 'kB', text: 'per game sent to invade.lol, compressed' },
-  { value: 'GPU', unit: '', text: 'recording runs on your graphics card\'s encoder, never on the CPU' },
-  { value: '8.8', unit: 'MB', text: 'the app\'s executable, its game data included' },
+  {
+    value: 'GPU',
+    unit: '',
+    text: "recording runs on your graphics card's encoder, never on the CPU",
+  },
+  { value: '8.8', unit: 'MB', text: "the app's executable, its game data included" },
 ]
 </script>
 
@@ -81,7 +89,9 @@ const STATS = [
 
       <ul class="stats">
         <li v-for="s in STATS" :key="s.text" v-reveal class="iv-panel">
-          <b>{{ s.value }}<small v-if="s.unit">{{ s.unit }}</small></b>
+          <b
+            >{{ s.value }}<small v-if="s.unit">{{ s.unit }}</small></b
+          >
           <span>{{ s.text }}</span>
         </li>
       </ul>

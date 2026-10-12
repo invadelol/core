@@ -24,7 +24,8 @@ const game = shallowRef({ cs: 104, missing: 780, kills: 6, assists: 9, grubsUp: 
 function tick() {
   const next = t.value + 1 >= START + LOOP ? START : t.value + 1
   const at = next - START
-  const g = at === 0 ? { cs: 104, missing: 780, kills: 6, assists: 9, grubsUp: false } : { ...game.value }
+  const g =
+    at === 0 ? { cs: 104, missing: 780, kills: 6, assists: 9, grubsUp: false } : { ...game.value }
   g.missing = Math.max(0, g.missing - 3)
   if (at % 6 === 2) {
     g.cs += 1
@@ -124,10 +125,18 @@ const ABILITIES = ['q', 'w', 'e', 'r'].map((k) => `/cdn/ability/64-${k}.png`)
 
     <!-- Champions on the field: only their health bars, as the game floats them -->
     <div v-if="!stack" class="gs-units" aria-hidden="true">
-      <span class="unit me" style="left: 560px; top: 352px"><i>12</i><b><em style="width: 78%" /></b></span>
-      <span class="unit ally" style="left: 452px; top: 300px"><i>11</i><b><em style="width: 54%" /></b></span>
-      <span class="unit enemy" style="left: 742px; top: 316px"><i>11</i><b><em style="width: 31%" /></b></span>
-      <span class="unit enemy" style="left: 812px; top: 392px"><i>10</i><b><em style="width: 66%" /></b></span>
+      <span class="unit me" style="left: 560px; top: 352px"
+        ><i>12</i><b><em style="width: 78%" /></b
+      ></span>
+      <span class="unit ally" style="left: 452px; top: 300px"
+        ><i>11</i><b><em style="width: 54%" /></b
+      ></span>
+      <span class="unit enemy" style="left: 742px; top: 316px"
+        ><i>11</i><b><em style="width: 31%" /></b
+      ></span>
+      <span class="unit enemy" style="left: 812px; top: 392px"
+        ><i>10</i><b><em style="width: 66%" /></b
+      ></span>
     </div>
 
     <div v-if="!stack" class="gs-stats" aria-hidden="true">
@@ -165,7 +174,11 @@ const ABILITIES = ['q', 'w', 'e', 'r'].map((k) => `/cdn/ability/64-${k}.png`)
     <!-- The overlay -->
     <div class="ov gs-ov">
       <div class="gs-w" style="left: 461px; top: 9px">
-        <OvObjectives :t="t" :timers="timers" :drakes="{ ally: ['Fire', 'Hextech'], enemy: ['Water'] }" />
+        <OvObjectives
+          :t="t"
+          :timers="timers"
+          :drakes="{ ally: ['Fire', 'Hextech'], enemy: ['Water'] }"
+        />
       </div>
       <div class="gs-w" style="left: 13px; top: 259px">
         <OvPerf
@@ -210,7 +223,13 @@ const ABILITIES = ['q', 'w', 'e', 'r'].map((k) => `/cdn/ability/64-${k}.png`)
   top: 46%;
   width: 120%;
   height: 120px;
-  background: linear-gradient(90deg, transparent, rgb(110 150 170 / 0.07) 30%, rgb(110 150 170 / 0.05) 70%, transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(110 150 170 / 0.07) 30%,
+    rgb(110 150 170 / 0.05) 70%,
+    transparent
+  );
   transform: rotate(-14deg);
 }
 
@@ -379,6 +398,7 @@ const ABILITIES = ['q', 'w', 'e', 'r'].map((k) => `/cdn/ability/64-${k}.png`)
   bottom: 8px;
   width: 150px;
   height: 150px;
+  overflow: hidden;
   background: rgb(10 14 16 / 0.9);
   border: 1px solid rgb(255 255 255 / 0.1);
   border-radius: 4px;

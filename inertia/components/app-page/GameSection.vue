@@ -19,7 +19,13 @@ import { vReveal } from './reveal.js'
     </header>
 
     <div v-reveal class="ap-frame game-frame">
-      <Stage :w="1280" :h="720" :narrow-at="0" class="wide-only" label="A game at 14 minutes with Invade's Objectives, Performance and Next item overlays">
+      <Stage
+        :w="1280"
+        :h="720"
+        :narrow-at="0"
+        class="wide-only"
+        label="A game at 14 minutes with Invade's Objectives, Performance and Next item overlays"
+      >
         <GameScene />
       </Stage>
       <div class="narrow-only">
@@ -58,8 +64,8 @@ import { vReveal } from './reveal.js'
         <Stage
           :w="1280"
           :h="720"
-          :crop="{ x: 150, y: 132, w: 980, h: 352 }"
-          :focus="{ x: 400, y: 132, w: 480, h: 352 }"
+          :crop="{ x: 150, y: 116, w: 980, h: 368 }"
+          :focus="{ x: 400, y: 116, w: 480, h: 368 }"
           label="The scoreboard held open with Tab, and Invade's gold difference down its middle"
         >
           <TabScene />

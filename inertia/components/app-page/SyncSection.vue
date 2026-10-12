@@ -80,7 +80,10 @@ onMounted(() => (mounted.value = true))
       </li>
       <li v-reveal>
         <b>Search anyone</b>
-        <p>Ctrl K (⌘K on a Mac) finds a page, a champion or a Riot ID, with players suggested as you type.</p>
+        <p>
+          Ctrl K (⌘K on a Mac) finds a page, a champion or a Riot ID, with players suggested as you
+          type.
+        </p>
       </li>
     </ul>
   </section>

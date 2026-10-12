@@ -20,11 +20,31 @@ const ROWS = [0, 1, 2, 3, 4].map((i) => y(388 + i * 84))
 const ROW_H = 82 * S
 
 const LANES = [
-  { ally: { id: 266, name: 'Northwind', kda: '2/3/4', cs: 128 }, enemy: { id: 897, name: 'Silver Thread', kda: '3/2/2', cs: 136 }, gold: -750 },
-  { ally: { id: 64, name: 'Kestrel', kda: '6/2/9', cs: 104 }, enemy: { id: 234, name: 'Nightfall', kda: '3/4/3', cs: 96 }, gold: 800 },
-  { ally: { id: 45, name: 'River Moon', kda: '5/1/4', cs: 141 }, enemy: { id: 103, name: 'Foxglove', kda: '2/5/3', cs: 122 }, gold: 1500 },
-  { ally: { id: 222, name: 'Afterglow', kda: '4/2/5', cs: 152 }, enemy: { id: 145, name: 'Daybreak', kda: '4/3/2', cs: 144 }, gold: 750 },
-  { ally: { id: 412, name: 'Lantern', kda: '0/3/12', cs: 22 }, enemy: { id: 111, name: 'Deep Blue', kda: '1/3/7', cs: 26 }, gold: -200 },
+  {
+    ally: { id: 266, name: 'Northwind', kda: '2/3/4', cs: 128 },
+    enemy: { id: 897, name: 'Silver Thread', kda: '3/2/2', cs: 136 },
+    gold: -750,
+  },
+  {
+    ally: { id: 64, name: 'Kestrel', kda: '6/2/9', cs: 104 },
+    enemy: { id: 234, name: 'Nightfall', kda: '3/4/3', cs: 96 },
+    gold: 800,
+  },
+  {
+    ally: { id: 45, name: 'River Moon', kda: '5/1/4', cs: 141 },
+    enemy: { id: 103, name: 'Foxglove', kda: '2/5/3', cs: 122 },
+    gold: 1500,
+  },
+  {
+    ally: { id: 222, name: 'Afterglow', kda: '4/2/5', cs: 152 },
+    enemy: { id: 145, name: 'Daybreak', kda: '4/3/2', cs: 144 },
+    gold: 750,
+  },
+  {
+    ally: { id: 412, name: 'Lantern', kda: '0/3/12', cs: 22 },
+    enemy: { id: 111, name: 'Deep Blue', kda: '1/3/7', cs: 26 },
+    gold: -200,
+  },
 ]
 const TEAM_GOLD = 2100
 
@@ -62,20 +82,38 @@ const ITEMS = [6692, 3047, 1036, 3364]
       <div
         class="ts-row left"
         aria-hidden="true"
-        :style="{ top: `${ROWS[i] - ROW_H / 2}px`, height: `${ROW_H}px`, left: `${FRAME.left + 8}px` }"
+        :style="{
+          top: `${ROWS[i] - ROW_H / 2}px`,
+          height: `${ROW_H}px`,
+          left: `${FRAME.left + 8}px`,
+        }"
       >
         <img :src="`/cdn/champion/${lane.ally.id}.png`" alt="" width="34" height="34" />
         <b>{{ lane.ally.name }}</b>
         <span class="kda">{{ lane.ally.kda }}</span>
         <span class="cs">{{ lane.ally.cs }}</span>
-        <span class="items"><i v-for="it in ITEMS" :key="it" :style="{ backgroundImage: `url(/cdn/item/${it}.png)` }" /></span>
+        <span class="items"
+          ><i
+            v-for="it in ITEMS"
+            :key="it"
+            :style="{ backgroundImage: `url(/cdn/item/${it}.png)` }"
+        /></span>
       </div>
       <div
         class="ts-row right"
         aria-hidden="true"
-        :style="{ top: `${ROWS[i] - ROW_H / 2}px`, height: `${ROW_H}px`, right: `${W - FRAME.right + 8}px` }"
+        :style="{
+          top: `${ROWS[i] - ROW_H / 2}px`,
+          height: `${ROW_H}px`,
+          right: `${W - FRAME.right + 8}px`,
+        }"
       >
-        <span class="items"><i v-for="it in ITEMS" :key="it" :style="{ backgroundImage: `url(/cdn/item/${it}.png)` }" /></span>
+        <span class="items"
+          ><i
+            v-for="it in ITEMS"
+            :key="it"
+            :style="{ backgroundImage: `url(/cdn/item/${it}.png)` }"
+        /></span>
         <span class="cs">{{ lane.enemy.cs }}</span>
         <span class="kda">{{ lane.enemy.kda }}</span>
         <b>{{ lane.enemy.name }}</b>

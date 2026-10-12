@@ -25,13 +25,34 @@ defineProps<{
     </div>
     <RunePage :page="page" />
     <div class="runes-row">
-      <img v-for="id in spells" :key="id" :src="assetUrl('spell', id)" alt="" width="22" height="22" />
+      <img
+        v-for="id in spells"
+        :key="id"
+        :src="assetUrl('spell', id)"
+        alt=""
+        width="22"
+        height="22"
+      />
       <span class="skills">{{ skills }}</span>
     </div>
     <div class="runes-items">
-      <img v-for="id in boots" :key="`b${id}`" :src="assetUrl('item', id)" alt="" width="24" height="24" />
+      <img
+        v-for="id in boots"
+        :key="`b${id}`"
+        :src="assetUrl('item', id)"
+        alt=""
+        width="24"
+        height="24"
+      />
       <i class="sep" />
-      <img v-for="id in core" :key="`c${id}`" :src="assetUrl('item', id)" alt="" width="24" height="24" />
+      <img
+        v-for="id in core"
+        :key="`c${id}`"
+        :src="assetUrl('item', id)"
+        alt=""
+        width="24"
+        height="24"
+      />
     </div>
     <p class="runes-import"><Icon name="check" :size="11" />Runes set in the client</p>
   </div>

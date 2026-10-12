@@ -37,13 +37,20 @@ const GRID = [5, 254, 113, 104, 59, 120, 76, 28, 141, 427, 11, 421, 107, 60, 154
       <ul class="ds-team">
         <li v-for="a in ALLIES" :key="a.id" :class="{ me: a.me }">
           <img :src="`/cdn/champion/${a.id}.png`" alt="" width="40" height="40" />
-          <span><b>{{ a.name }}</b><small>{{ a.role }}</small></span>
+          <span
+            ><b>{{ a.name }}</b
+            ><small>{{ a.role }}</small></span
+          >
         </li>
       </ul>
       <div class="ds-grid">
         <span class="ds-search" />
         <div>
-          <i v-for="id in GRID" :key="id" :style="{ backgroundImage: `url(/cdn/champion/${id}.png)` }" />
+          <i
+            v-for="id in GRID"
+            :key="id"
+            :style="{ backgroundImage: `url(/cdn/champion/${id}.png)` }"
+          />
           <i class="on" :style="{ backgroundImage: 'url(/cdn/champion/64.png)' }" />
         </div>
         <span class="ds-lock">Lock in</span>
@@ -81,8 +88,7 @@ const GRID = [5, 254, 113, 104, 59, 120, 76, 28, 141, 427, 11, 421, 107, 60, 154
   inset: 0;
   background:
     url('../../css/grain.png'),
-    radial-gradient(80% 70% at 50% 40%, rgb(40 44 58 / 0.5), transparent 75%),
-    #0a0b0f;
+    radial-gradient(80% 70% at 50% 40%, rgb(40 44 58 / 0.5), transparent 75%), #0a0b0f;
 }
 
 .ds-client {

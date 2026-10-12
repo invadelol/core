@@ -44,14 +44,22 @@ const FILTERS = [
               <span class="rec-used">4.9 GB used</span>
             </div>
             <div class="iv-seg rec-filters">
-              <button v-for="f in FILTERS" :key="f.label" type="button" :class="{ on: f.on }" tabindex="-1">
+              <button
+                v-for="f in FILTERS"
+                :key="f.label"
+                type="button"
+                :class="{ on: f.on }"
+                tabindex="-1"
+              >
                 {{ f.label }}<small v-if="f.n !== null">{{ f.n }}</small>
               </button>
             </div>
 
             <div class="rec-game">
               <img :src="`/cdn/champion/64.png`" alt="" width="36" height="36" />
-              <span class="rec-name"><b>Lee Sin</b><small>Summoner's Rift · Today, 9:40 PM</small></span>
+              <span class="rec-name"
+                ><b>Lee Sin</b><small>Summoner's Rift · Today, 9:40 PM</small></span
+              >
               <span class="rec-kda"><b>11<i>/</i>2<i>/</i>15</b><small>Win · 31:14</small></span>
               <span class="rec-count">4 clips</span>
               <Icon name="star" :size="16" class="rec-star" />
@@ -60,7 +68,14 @@ const FILTERS = [
             <ul class="rec-grid">
               <li v-for="clip in CLIPS" :key="clip.title" class="rec-card">
                 <span class="rec-thumb">
-                  <img :src="clip.img" alt="" width="480" height="270" loading="lazy" decoding="async" />
+                  <img
+                    :src="clip.img"
+                    alt=""
+                    width="480"
+                    height="270"
+                    loading="lazy"
+                    decoding="async"
+                  />
                   <span class="rec-len">{{ clip.length }}</span>
                 </span>
                 <b>{{ clip.title }}</b>
@@ -81,7 +96,10 @@ const FILTERS = [
           <li>
             <span>
               <b>Record all PC sound</b>
-              <small>Discord, music and any other app in your clips, at their own volume. Off by default.</small>
+              <small
+                >Discord, music and any other app in your clips, at their own volume. Off by
+                default.</small
+              >
             </span>
             <Switch v-model="allSound" label="Record all PC sound" />
           </li>
@@ -90,7 +108,12 @@ const FILTERS = [
             <span class="keys"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>H</kbd></span>
           </li>
           <li>
-            <span><b>Folder</b><small>One folder per game. Starred games and favorite clips are never cleaned up.</small></span>
+            <span
+              ><b>Folder</b
+              ><small
+                >One folder per game. Starred games and favorite clips are never cleaned up.</small
+              ></span
+            >
           </li>
         </ul>
         <p class="path">~/Movies/Invade<small>Videos\Invade on Windows</small></p>
@@ -100,7 +123,9 @@ const FILTERS = [
     <ul class="ap-points" style="--n: 3">
       <li v-reveal>
         <b>Nothing to start</b>
-        <p>Recording starts a few seconds into the game and stops when it ends. Nothing to press.</p>
+        <p>
+          Recording starts a few seconds into the game and stops when it ends. Nothing to press.
+        </p>
       </li>
       <li v-reveal>
         <b>Cut, not re-encoded</b>
@@ -181,8 +206,7 @@ const FILTERS = [
   margin-top: 4px;
   padding: 0 14px 0 16px;
   background:
-    linear-gradient(rgb(var(--win-rgb) / 0.06), rgb(var(--win-rgb) / 0.06)),
-    var(--surface-1);
+    linear-gradient(rgb(var(--win-rgb) / 0.06), rgb(var(--win-rgb) / 0.06)), var(--surface-1);
   border-radius: var(--r-sm);
   box-shadow: var(--hi);
 }
