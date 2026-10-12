@@ -35,7 +35,7 @@ const line = pts
 const area = `${line}L${W} ${H}L0 ${H}Z`
 
 const STATS = [
-  { value: '0.02', unit: '%', text: 'of one CPU core at rest, League closed' },
+  { value: '0', unit: '', text: 'overlay windows between games: the overlay opens with champ select and closes after the game' },
   { value: '20', unit: 'kB', text: 'per game sent to invade.lol, compressed' },
   { value: 'GPU', unit: '', text: 'recording runs on your graphics card\'s encoder, never on the CPU' },
   { value: '8.8', unit: 'MB', text: 'the app\'s executable, its game data included' },

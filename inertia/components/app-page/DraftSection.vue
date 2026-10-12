@@ -18,7 +18,7 @@ import { vReveal } from './reveal.js'
     </header>
 
     <div v-reveal class="ap-frame">
-      <Stage :w="1440" :h="810" :narrow-at="0" class="wide-only" label="Champ select with Invade's Runes and build, Draft odds and Counters overlays around the League client">
+      <Stage :w="1280" :h="720" :narrow-at="0" class="wide-only" label="Champ select with Invade's Runes and build, Draft odds and Counters overlays around the League client">
         <DraftScene />
       </Stage>
       <div class="narrow-only">

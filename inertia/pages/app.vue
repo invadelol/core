@@ -91,7 +91,7 @@ defineProps<{ version: string | null }>()
 
 /* ── Hero ── */
 .hero {
-  padding-top: clamp(56px, 11vh, 120px);
+  padding-top: clamp(48px, 9vh, 96px);
 }
 
 .hero-copy {
@@ -147,7 +147,7 @@ defineProps<{ version: string | null }>()
 
 .hero-lead {
   max-width: 600px;
-  margin: 24px 0 36px;
+  margin: 22px 0 32px;
   font-size: clamp(16px, 1.5vw, 18px);
   line-height: 1.55;
   color: var(--text-2);
@@ -171,7 +171,7 @@ defineProps<{ version: string | null }>()
 }
 
 .hero-shot {
-  margin-top: clamp(48px, 8vh, 88px);
+  margin-top: clamp(44px, 7vh, 72px);
 }
 
 /* The window on the page: its own rim, and a long soft shadow under it. */

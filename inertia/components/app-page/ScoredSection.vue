@@ -94,7 +94,7 @@ const FACTORS = [
 
       <div v-reveal class="score iv-panel">
         <div class="score-top">
-          <PerfDial :score="87" tag="mvp" />
+          <PerfDial :score="81" tag="mvp" />
           <div>
             <h3>The Invade score</h3>
             <p>

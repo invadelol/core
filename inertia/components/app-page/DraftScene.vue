@@ -6,7 +6,7 @@ import { DRAFT } from './draft.js'
 import './overlay/overlay.css'
 
 /**
- * Champ select on a 1440 × 810 screen: the League client in the middle (in outline), and the
+ * Champ select on a 1280 × 720 screen: the League client in the middle (in outline), and the
  * champ select overlay where the app puts it by default (overlay-config.ts), around it: Runes &
  * build and Draft odds on the left, Counters on the right. The overlay covers the client's
  * monitor, so the widgets sit beside the client window.
@@ -57,9 +57,9 @@ const GRID = [5, 254, 113, 104, 59, 120, 76, 28, 141, 427, 11, 421, 107, 60, 154
 
     <!-- The overlay -->
     <div class="ov ds-ov">
-      <div class="ds-w" style="left: 14px; top: 81px"><OvRunes v-bind="DRAFT.runes" /></div>
-      <div class="ds-w" style="left: 14px; top: 446px"><OvDraftOdds v-bind="DRAFT.odds" /></div>
-      <div class="ds-w" style="left: 1166px; top: 81px"><OvCounters v-bind="DRAFT.counters" /></div>
+      <div class="ds-w" style="left: 13px; top: 72px"><OvRunes v-bind="DRAFT.runes" /></div>
+      <div class="ds-w" style="left: 13px; top: 396px"><OvDraftOdds v-bind="DRAFT.odds" /></div>
+      <div class="ds-w" style="left: 1035px; top: 72px"><OvCounters v-bind="DRAFT.counters" /></div>
     </div>
   </div>
 </template>
@@ -67,8 +67,8 @@ const GRID = [5, 254, 113, 104, 59, 120, 76, 28, 141, 427, 11, 421, 107, 60, 154
 <style scoped>
 .ds {
   position: relative;
-  width: 1440px;
-  height: 810px;
+  width: 1280px;
+  height: 720px;
   overflow: hidden;
   font-family: var(--font);
   color: #ececf3;
@@ -87,13 +87,13 @@ const GRID = [5, 254, 113, 104, 59, 120, 76, 28, 141, 427, 11, 421, 107, 60, 154
 
 .ds-client {
   position: absolute;
-  left: 270px;
-  top: 135px;
+  left: 258px;
+  top: 120px;
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr) 76px;
-  grid-template-rows: 44px minmax(0, 1fr);
-  width: 900px;
-  height: 540px;
+  grid-template-columns: 176px minmax(0, 1fr) 64px;
+  grid-template-rows: 40px minmax(0, 1fr);
+  width: 764px;
+  height: 480px;
   overflow: hidden;
   background: linear-gradient(180deg, #12151b, #0d0f14);
   border: 1px solid rgb(255 255 255 / 0.08);
@@ -132,7 +132,7 @@ const GRID = [5, 254, 113, 104, 59, 120, 76, 28, 141, 427, 11, 421, 107, 60, 154
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 56px;
+  height: 50px;
   padding: 0 8px;
   border-radius: 4px;
 }
@@ -143,8 +143,8 @@ const GRID = [5, 254, 113, 104, 59, 120, 76, 28, 141, 427, 11, 421, 107, 60, 154
 }
 
 .ds-team img {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   object-fit: cover;
   box-shadow: 0 0 0 1px rgb(255 255 255 / 0.12);
@@ -192,14 +192,14 @@ const GRID = [5, 254, 113, 104, 59, 120, 76, 28, 141, 427, 11, 421, 107, 60, 154
 
 .ds-grid > div {
   display: grid;
-  grid-template-columns: repeat(6, 66px);
+  grid-template-columns: repeat(6, 60px);
   align-content: start;
   gap: 10px;
 }
 
 .ds-grid i {
-  width: 66px;
-  height: 66px;
+  width: 60px;
+  height: 60px;
   background: center / 108% no-repeat;
   border-radius: 3px;
   opacity: 0.42;
