@@ -3,7 +3,7 @@ import '../styles/primitives.css';
 import '../styles/profile.css';
 /**
  * The profile page's frame: the header band on top, then the side panels beside the feed (the
- * feed is the page's subject). Narrow: the side panels go above the feed in two balanced columns.
+ * feed is the page's subject). Narrow: the side panels go above the feed, paired in a grid.
  * Without side panels the content takes the whole width (another section of the profile).
  * Pass `loading` for the page's own loading shapes instead of the slots.
  */
