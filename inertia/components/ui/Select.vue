@@ -53,7 +53,8 @@ watch(open, async (isOpen) => {
     visible.value.findIndex((o) => o.value === model.value)
   )
   await nextTick()
-  if (props.searchable) input.value?.focus()
+  // On a touch screen the keyboard would cover the list before anyone asked to type.
+  if (props.searchable && !matchMedia('(pointer: coarse)').matches) input.value?.focus()
   scrollToActive()
 })
 
@@ -92,7 +93,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside))
   <div ref="root" class="relative">
     <button
       type="button"
-      class="control flex h-[30px] w-full items-center gap-2 rounded-[5px] px-2.5 text-[12.5px] font-medium transition-[background-color,box-shadow]"
+      class="control flex h-[30px] w-full pointer-coarse:h-[38px] items-center gap-2 rounded-[5px] px-2.5 text-[12.5px] font-medium transition-[background-color,box-shadow]"
       :aria-expanded="open"
       aria-haspopup="listbox"
       @click="open = !open"
@@ -118,7 +119,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside))
       v-if="open"
       class="menu absolute z-40 mt-1.5 max-h-[340px] overflow-hidden"
       :class="align === 'right' ? 'right-0' : 'left-0'"
-      :style="{ width }"
+      :style="{ width: `min(${width}, calc(100vw - 32px))` }"
     >
       <div v-if="searchable" class="border-b border-line p-2">
         <div class="relative">

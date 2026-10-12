@@ -171,6 +171,15 @@
     color: var(--text-3);
   }
 
+  /* iOS zooms the page into any field under 16px when it is focused, and leaves it zoomed: on a
+     touch screen every field is set at 16px. */
+  @media (pointer: coarse) {
+    .field {
+      min-height: 38px;
+      font-size: 16px;
+    }
+  }
+
   .field:focus,
   .field:focus-visible {
     outline: none;
@@ -215,6 +224,12 @@
     transition:
       background-color var(--t-fast) var(--ease),
       color var(--t-fast) var(--ease);
+  }
+
+  @media (pointer: coarse) {
+    .menu-item {
+      min-height: 40px;
+    }
   }
 
   .menu-item:hover,
