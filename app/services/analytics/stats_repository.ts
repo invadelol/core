@@ -33,6 +33,11 @@ function integer(value: number | undefined, fallback: number) {
  * filter. Expressing the same restriction as a JOIN instead would stream the
  * whole `participants` table through the join on every request, which is the
  * difference between reading a few thousand rows and reading all of them.
+ *
+ * A CTE is inlined wherever it is referenced, so each reference to the
+ * player's window is another read of their slice in every monthly partition.
+ * The player's own rows already *are* that window, so they are read from it
+ * rather than looked up again by match id.
  */
 export class StatsRepository {
   /**
@@ -131,8 +136,10 @@ export class StatsRepository {
     }
     const whereSql = whereClauses.length ? `AND ${whereClauses.join(' AND ')}` : ''
 
+    // The player's own rows in the window: everything about them is read
+    // from here, and only their teams' totals need the rest of each game.
     const filteredMatches = `
-      SELECT match_id
+      SELECT match_id, champion_id, win, kills, deaths, assists
       FROM participants
       PREWHERE puuid = '${escapedPuuid}'
       WHERE 1=1 ${whereSql}
@@ -140,27 +147,29 @@ export class StatsRepository {
       LIMIT ${count} OFFSET ${offset}
     `
 
-    // The player's own rows are selected in their own subquery rather than
-    // left to predicate pushdown, so the join can never widen the read.
+    // One pass over the window's games: each team's totals, with the
+    // player's own figures picked out of the team they played on.
+    const mine = (column: string) => `sumIf(${column}, puuid = '${escapedPuuid}')`
     const query = `
       WITH filtered_matches AS (${filteredMatches}),
-      mine AS (
-        SELECT match_id, team_id, total_cs, vision_score, gold_earned, dmg_to_champ,
-               kills, deaths, assists, win
-        FROM participants
-        WHERE match_id IN (SELECT match_id FROM filtered_matches)
-          AND puuid = '${escapedPuuid}'
-      ),
-      team_totals AS (
+      teams AS (
         SELECT
           match_id,
-          team_id,
+          ${mine('total_cs')} as my_cs,
+          ${mine('vision_score')} as my_vision,
+          ${mine('gold_earned')} as my_gold,
+          ${mine('dmg_to_champ')} as my_dmg,
+          ${mine('kills')} as my_kills,
+          ${mine('deaths')} as my_deaths,
+          ${mine('assists')} as my_assists,
+          ${mine('win')} as my_win,
           sum(dmg_to_champ) as total_dmg,
           sum(gold_earned) as total_gold,
           sum(kills) as total_kills
         FROM participants
         WHERE match_id IN (SELECT match_id FROM filtered_matches)
         GROUP BY match_id, team_id
+        HAVING countIf(puuid = '${escapedPuuid}') > 0
       ),
       durations AS (
         SELECT match_id, duration_sec
@@ -168,31 +177,27 @@ export class StatsRepository {
         WHERE match_id IN (SELECT match_id FROM filtered_matches)
       )
       SELECT
-        avg(p.total_cs / (m.duration_sec / 60.0)) as csMin,
-        avg(p.vision_score / (m.duration_sec / 60.0)) as visionMin,
-        avg(p.gold_earned / (m.duration_sec / 60.0)) as goldPerMinute,
-        avg(p.dmg_to_champ / (m.duration_sec / 60.0)) as damagePerMinute,
-        avg((p.kills + p.assists) / if(p.deaths = 0, 1, p.deaths)) as kda,
-        avg(p.win) as winrate,
+        avg(t.my_cs / (m.duration_sec / 60.0)) as csMin,
+        avg(t.my_vision / (m.duration_sec / 60.0)) as visionMin,
+        avg(t.my_gold / (m.duration_sec / 60.0)) as goldPerMinute,
+        avg(t.my_dmg / (m.duration_sec / 60.0)) as damagePerMinute,
+        avg((t.my_kills + t.my_assists) / if(t.my_deaths = 0, 1, t.my_deaths)) as kda,
+        avg(t.my_win) as winrate,
         count() as total,
-        avg(p.dmg_to_champ / if(t.total_dmg = 0, 1, t.total_dmg)) as damageShare,
-        avg(p.gold_earned / if(t.total_gold = 0, 1, t.total_gold)) as goldShare,
-        avg((p.kills + p.assists) / if(t.total_kills = 0, 1, t.total_kills)) as killParticipation
-      FROM mine p
-      JOIN durations m ON p.match_id = m.match_id
-      JOIN team_totals t ON p.match_id = t.match_id AND p.team_id = t.team_id
+        avg(t.my_dmg / if(t.total_dmg = 0, 1, t.total_dmg)) as damageShare,
+        avg(t.my_gold / if(t.total_gold = 0, 1, t.total_gold)) as goldShare,
+        avg((t.my_kills + t.my_assists) / if(t.total_kills = 0, 1, t.total_kills)) as killParticipation
+      FROM teams t
+      JOIN durations m ON t.match_id = m.match_id
     `
 
     const champsQuery = `
-      WITH filtered_matches AS (${filteredMatches})
       SELECT
         champion_id as championId,
         count() as games,
         avg(win) as winrate,
         avg((kills + assists) / if(deaths = 0, 1, deaths)) as kda
-      FROM participants
-      WHERE match_id IN (SELECT match_id FROM filtered_matches)
-        AND puuid = '${escapedPuuid}'
+      FROM (${filteredMatches})
       GROUP BY championId
       ORDER BY games DESC, kda DESC
       LIMIT ${TOP_CHAMPIONS_COUNT}
@@ -244,6 +249,35 @@ export class StatsRepository {
   }
 
   /**
+   * Each player's games and winrate on one champion over their last `count`
+   * games: a live lobby's ten players in one read rather than one query each.
+   */
+  async getChampionRecords(
+    players: Array<{ puuid: string; championId: number }>,
+    count: number
+  ): Promise<Map<string, { games: number; winrate: number }>> {
+    if (!players.length) return new Map()
+    const quoted = (puuid: string) => `'${escapeClickhouseString(puuid)}'`
+    const result = await rows(`
+      SELECT puuid, count() as games, avg(win) as winrate
+      FROM (
+        SELECT puuid, champion_id, win
+        FROM participants
+        PREWHERE puuid IN (${players.map((p) => quoted(p.puuid)).join(',')})
+        ORDER BY game_start_ms DESC, match_id DESC
+        LIMIT ${integer(count, DEFAULT_STATS_COUNT)} BY puuid
+      )
+      WHERE (puuid, champion_id) IN (${players
+        .map((p) => `(${quoted(p.puuid)}, ${Math.trunc(Number(p.championId)) || 0})`)
+        .join(',')})
+      GROUP BY puuid
+    `)
+    return new Map(
+      result.map((row) => [asString(row[0]), { games: number(row[1]), winrate: number(row[2]) }])
+    )
+  }
+
+  /**
    * Get per-champion statistics
    */
   async getSummonerChampionStats(
@@ -260,25 +294,19 @@ export class StatsRepository {
         `team_position = '${escapeClickhouseString(filters.role === 'SUPPORT' ? 'UTILITY' : filters.role)}'`
       )
     const result = await rows(`
-      WITH my_matches AS (
-        SELECT match_id
+      WITH mine AS (
+        SELECT match_id, champion_id, win, kills, deaths, assists,
+               total_cs, gold_earned, dmg_to_champ
         FROM participants
         PREWHERE puuid = '${escapedPuuid}'
         ${conditions.length ? 'WHERE ' + conditions.join(' AND ') : ''}
         ORDER BY game_start_ms DESC, match_id DESC
         LIMIT ${integer(count, DEFAULT_STATS_COUNT)}
       ),
-      mine AS (
-        SELECT match_id, champion_id, win, kills, deaths, assists,
-               total_cs, gold_earned, dmg_to_champ
-        FROM participants
-        WHERE match_id IN (SELECT match_id FROM my_matches)
-          AND puuid = '${escapedPuuid}'
-      ),
       durations AS (
         SELECT match_id, duration_sec
         FROM matches
-        WHERE match_id IN (SELECT match_id FROM my_matches)
+        WHERE match_id IN (SELECT match_id FROM mine)
       )
       SELECT
         p.champion_id as championId,

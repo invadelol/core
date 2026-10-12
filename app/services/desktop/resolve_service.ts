@@ -183,27 +183,7 @@ class ResolveService {
   /** The player's latest games, from ClickHouse only. */
   async recent(puuid: string) {
     try {
-      const matches = await matchRepository.getByPuuid(puuid, {
-        view: 'summary',
-        count: RECENT_GAMES,
-      })
-      return matches.flatMap((match: any) => {
-        const me = match.participants.find((p: any) => p.puuid === puuid)
-        if (!me) return []
-        return [
-          {
-            matchId: match.matchId,
-            championId: Number(me.championId),
-            win: Boolean(Number(me.win)),
-            queueId: Number(match.queueId),
-            gameStartMs: Number(match.gameStartMs),
-            durationSec: Number(match.duration),
-            kills: Number(me.kills),
-            deaths: Number(me.deaths),
-            assists: Number(me.assists),
-          },
-        ]
-      })
+      return await matchRepository.getOwnRecent(puuid, RECENT_GAMES)
     } catch (error) {
       logger.warn({ err: error, puuid }, 'recent games unavailable for desktop resolve')
       return []
