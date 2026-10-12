@@ -70,7 +70,7 @@ const headline = computed(() => {
             <span class="text-ink-4">·</span> {{ headline.levelTen }} at level 10 or more
           </template>
         </span>
-        <label class="relative ml-auto w-[200px]">
+        <label class="relative ml-auto w-[200px] max-sm:ml-0 max-sm:w-full">
           <Search
             :size="13"
             class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-3"
