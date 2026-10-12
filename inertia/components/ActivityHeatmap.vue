@@ -126,14 +126,14 @@ function tooltip(cell: Cell) {
             <span
               v-for="(label, index) in DAY_LABELS"
               :key="index"
-              class="h-[10px] text-[10px] leading-[10px] text-ink-4"
+              class="h-[10px] text-[10px] leading-[10px] text-ink-4 max-lg:text-[11px]"
             >
               {{ label }}
             </span>
           </div>
 
           <div v-for="(column, index) in weeks" :key="index" class="flex flex-1 flex-col gap-[3px]">
-            <span class="h-[10px] text-[10px] leading-[10px] text-ink-4">{{ column.month }}</span>
+            <span class="h-[10px] text-[10px] leading-[10px] text-ink-4 max-lg:text-[11px]">{{ column.month }}</span>
             <template v-for="(cell, dayIndex) in column.days" :key="dayIndex">
               <span
                 v-if="cell"

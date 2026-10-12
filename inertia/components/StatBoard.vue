@@ -154,7 +154,7 @@ const cells = computed(() => {
     </p>
 
     <div v-else class="iv-panel">
-      <div class="grid gap-x-10 gap-y-6 p-5 md:grid-cols-[auto_auto_minmax(0,1fr)]">
+      <div class="grid gap-x-10 gap-y-6 p-5 sm:grid-cols-[auto_auto] xl:grid-cols-[auto_auto_minmax(0,1fr)]">
         <!-- Record -->
         <div>
           <div class="label">Win rate</div>
@@ -206,7 +206,7 @@ const cells = computed(() => {
         <!-- What the score is made of: plain figures, thin neutral bars -->
         <ul
           v-if="score"
-          class="grid grid-cols-3 content-start gap-x-5 gap-y-4 sm:grid-cols-5 md:border-l md:border-line md:pl-10"
+          class="grid grid-cols-3 content-start gap-x-5 gap-y-4 sm:col-span-2 sm:grid-cols-5 xl:col-span-1 xl:border-l xl:border-line xl:pl-10"
         >
           <li v-for="category in score.categories" :key="category.key" class="min-w-0">
             <div class="truncate text-[12px] text-ink-3">{{ category.label }}</div>
@@ -225,7 +225,7 @@ const cells = computed(() => {
         <li
           v-for="cell in cells"
           :key="cell.label"
-          class="grid h-[48px] grid-cols-[96px_minmax(0,1fr)_64px_48px] items-center gap-4 border-b border-line last:border-b-0 sm:grid-cols-[140px_minmax(0,1fr)_80px_56px] sm:gap-6"
+          class="grid h-[48px] grid-cols-[minmax(0,92px)_minmax(0,1fr)_minmax(44px,auto)_minmax(32px,auto)] items-center gap-3 border-b border-line last:border-b-0 xs:grid-cols-[96px_minmax(0,1fr)_64px_48px] xs:gap-4 sm:grid-cols-[140px_minmax(0,1fr)_80px_56px] sm:gap-6"
         >
           <span class="truncate text-[13px] text-ink-2">{{ cell.label }}</span>
           <span role="img" :aria-label="`${cell.label} over the last ${cell.trend.length} games`">

@@ -76,11 +76,13 @@ const championModel = computed({
     :class="busy ? 'opacity-55' : ''"
     :aria-busy="busy"
   >
-    <div class="iv-seg" role="group" aria-label="Queue">
+    <!-- On a phone each control takes the line, its segments sharing it. -->
+    <div class="iv-seg max-sm:flex max-sm:w-full max-sm:flex-nowrap" role="group" aria-label="Queue">
       <button
         v-for="[value, label] in QUEUES"
         :key="value"
         type="button"
+        class="max-sm:min-w-0 max-sm:flex-auto max-sm:!px-1.5"
         :class="{ on: modelValue.type === value }"
         @click="set('type', value)"
       >
@@ -88,10 +90,10 @@ const championModel = computed({
       </button>
     </div>
 
-    <div class="iv-seg" role="group" aria-label="Role">
+    <div class="iv-seg max-sm:flex max-sm:w-full max-sm:flex-nowrap" role="group" aria-label="Role">
       <button
         type="button"
-        class="!px-2.5"
+        class="!px-2.5 max-sm:flex-1"
         :class="{ on: modelValue.role === 'all' }"
         @click="set('role', 'all')"
       >
@@ -101,7 +103,7 @@ const championModel = computed({
         v-for="[value, label] in ROLES"
         :key="value"
         type="button"
-        class="!px-2.5"
+        class="!px-2.5 max-sm:flex-1"
         :title="label"
         :aria-label="label"
         :class="{ on: modelValue.role === value }"
@@ -119,7 +121,7 @@ const championModel = computed({
       search-placeholder="Find a champion"
       placeholder="All champions"
       width="16rem"
-      class="w-[160px]"
+      class="w-[160px] max-sm:w-full"
     />
 
     <button

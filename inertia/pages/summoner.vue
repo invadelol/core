@@ -518,7 +518,19 @@ function retry() {
   void load()
 }
 
+/**
+ * Where the rail sits beside the games (lg and up) the list loads older games as its end comes
+ * into view. Narrower, the rail (rank, champions, roles…) follows the games: there each page waits
+ * for a tap, or the rail would never be reached.
+ */
+const wide = ref(true)
+let wideQuery: MediaQueryList | undefined
+const onWide = () => (wide.value = Boolean(wideQuery?.matches))
+
 onMounted(() => {
+  wideQuery = window.matchMedia('(min-width: 64rem)')
+  onWide()
+  wideQuery.addEventListener('change', onWide)
   watch(
     () => props.summoner,
     () => void load(),
@@ -527,6 +539,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  wideQuery?.removeEventListener('change', onWide)
   filterController?.abort()
   moreController?.abort()
   masteryController?.abort()
@@ -744,6 +757,7 @@ async function sync() {
                 :key="profile.puuid"
                 :more="hasMore"
                 :load="loadMore"
+                :auto="wide"
               />
             </section>
           </template>

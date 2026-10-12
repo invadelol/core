@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
-import { nextTick, onMounted, useTemplateRef, watch } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { ArrowLeftRight, LayoutGrid, Radio, Swords, Users } from 'lucide-vue-next'
 
 const props = defineProps<{ slug: string; section: string }>()
@@ -18,7 +18,22 @@ function reveal() {
     })
   }
 }
-onMounted(reveal)
+/* While tabs remain past an edge, that edge fades: there is more to scroll to. */
+const before = ref(false)
+const more = ref(false)
+function measure() {
+  const el = nav.value
+  before.value = Boolean(el && el.scrollLeft > 4)
+  more.value = Boolean(el && el.scrollLeft + el.clientWidth < el.scrollWidth - 4)
+}
+let resize: ResizeObserver | undefined
+onMounted(() => {
+  reveal()
+  measure()
+  resize = new ResizeObserver(measure)
+  if (nav.value) resize.observe(nav.value)
+})
+onBeforeUnmount(() => resize?.disconnect())
 watch(
   () => props.section,
   () => nextTick(reveal)
@@ -36,7 +51,13 @@ const TABS = [
 <template>
   <!-- Sections of the profile: the shared tabs on narrow screens, a vertical list in the rail on
        wide ones, like the desktop app's sidebar. -->
-  <nav ref="nav" class="profile-nav iv-tabs" aria-label="Player sections">
+  <nav
+    ref="nav"
+    class="profile-nav iv-tabs"
+    :class="{ 'fade-l': before, 'fade-r': more, 'fade-x': before && more }"
+    aria-label="Player sections"
+    @scroll.passive="measure"
+  >
     <Link
       v-for="item in TABS"
       :key="item.key"
