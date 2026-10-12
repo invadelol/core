@@ -1,10 +1,11 @@
 import type { Match, Participant } from '../../lib/types.js'
+import { DEMO } from './demo.js'
 
 /**
- * The game the /app page's "After the game" chapter opens: a sample game (the same lobby as the
- * champ select chapter, with made-up names), drawn by the shared match row and detail. Scores,
- * places, MVP and ACE are computed from these stats by the same code as every real game. No tag
- * lines, so nothing links to a profile.
+ * The game the /app page opens: a sample game with made-up names (Kestrel, the demo player, on
+ * Lee Sin in the jungle), drawn by the shared match row and detail. Scores, places, MVP and ACE
+ * are computed from these stats by the same code as every real game. No tag lines, so nothing
+ * links to a profile.
  */
 const ZERO_PINGS = {
   allInPings: 0,
@@ -64,42 +65,42 @@ const LINES: Line[] = [
     [0.92, 0.02, 0.06],
   ],
   [
-    'demo-jungle',
-    'River Moon',
+    'demo-you',
+    'Kestrel',
     100,
     'JUNGLE',
     64,
-    [5, 5, 14],
-    178,
-    12000,
-    18900,
-    29400,
-    38,
-    41300,
-    15,
-    [6692, 3047, 3071, 6333, 0, 0, 3364],
+    [11, 2, 15],
+    214,
+    16900,
+    33800,
+    30200,
+    46,
+    52300,
+    17,
+    [6692, 3047, 3071, 6333, 3053, 0, 3364],
     [4, 11],
-    [8000, 8010, 8100],
-    [0.86, 0.04, 0.1],
+    [8000, 8010, 8400],
+    [0.84, 0.02, 0.14],
   ],
   [
-    'demo-you',
-    'You',
+    'demo-mid',
+    'River Moon',
     100,
     'MIDDLE',
     45,
-    [15, 1, 12],
-    314,
-    21300,
-    64000,
-    27000,
-    44,
-    26000,
-    18,
-    [6657, 3020, 3040, 3089, 4645, 3135, 3363],
+    [7, 3, 9],
+    268,
+    14200,
+    38400,
+    16100,
+    21,
+    6100,
+    17,
+    [6655, 3020, 4645, 3089, 3135, 0, 3363],
     [4, 12],
-    [8300, 8369, 8200],
-    [0.03, 0.94, 0.03],
+    [8100, 8112, 8200],
+    [0.02, 0.94, 0.04],
   ],
   [
     'demo-bot',
@@ -304,8 +305,8 @@ const DAY = 86_400_000
 export const DEMO_MATCH: Match = {
   matchId: 'DEMO_1',
   platform: 'EUW1',
-  /** A fixed evening, so the page renders the same on the server and in the browser. */
-  gameStartMs: Date.UTC(2026, 9, 5, 19, 40),
+  /** Ended a few minutes ago (the views with dates are drawn in the browser only). */
+  gameStartMs: DEMO.now - (31 * 60 + 14) * 1000,
   duration: 31 * 60 + 14,
   queueId: 420,
   mapId: 11,
@@ -348,7 +349,7 @@ export const DEMO_EARLIER: Match[] = [
             totalDamageDealtToChampions: 21800,
             goldEarned: 10400,
             champLevel: 15,
-            items: [6657, 3020, 3040, 0, 0, 0, 3363],
+            items: [6692, 3047, 3071, 0, 0, 0, 3364],
           }
         : {}),
     })),
@@ -362,20 +363,17 @@ export const DEMO_EARLIER: Match[] = [
       p.puuid === DEMO_PUUID
         ? {
             ...p,
-            championId: 103,
+            championId: 254,
             kills: 7,
             deaths: 4,
             assists: 10,
-            cs: 262,
-            totalDamageDealtToChampions: 31200,
-            magicDamageDealtToChampions: 28000,
-            goldEarned: 14100,
-            items: [6655, 3020, 4645, 3165, 3089, 0, 3363],
-            perks: { primary: 8100, keystone: 8112, sub: 8200 },
+            cs: 188,
+            totalDamageDealtToChampions: 27200,
+            physicalDamageDealtToChampions: 24800,
+            goldEarned: 13600,
+            items: [6692, 3047, 3071, 6333, 0, 0, 3364],
           }
-        : p.puuid === 'demo-e-mid'
-          ? { ...p, championId: 45 }
-          : p
+        : p
     ),
   },
 ]
