@@ -166,6 +166,8 @@ export interface MatchSummary {
 export interface MatchPage {
     games: MatchSummary[];
     more: boolean;
+    /** Ms before older games may be asked again (the paging rule held this page back; none loaded). */
+    wait?: number;
 }
 export interface TeamView {
     teamId: number;

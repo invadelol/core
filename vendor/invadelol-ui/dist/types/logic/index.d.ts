@@ -10,4 +10,5 @@ export * from './labels.js';
 export * from './detail.js';
 export * from './story.js';
 export * from './lp.js';
+export * from './pager.js';
 export * from './core.js';

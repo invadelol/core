@@ -10,7 +10,8 @@ import {
   shallowRef,
   watch,
 } from 'vue'
-import { MatchRowSkeleton } from '@invadelol/ui'
+import { MatchRowSkeleton, MoreMatches } from '@invadelol/ui'
+import { PAGE_SIZE } from '@invadelol/ui/logic'
 import AppHeader from '../components/AppHeader.vue'
 import ProfileHeader from '../components/ProfileHeader.vue'
 import ProfileNav from '../components/ProfileNav.vue'
@@ -22,7 +23,6 @@ import TeammatesPanel from '../components/TeammatesPanel.vue'
 import ActivityHeatmap from '../components/ActivityHeatmap.vue'
 import MatchFilters, { type Filters } from '../components/MatchFilters.vue'
 import MatchList from '../components/MatchList.vue'
-import InfiniteScroll from '../components/InfiniteScroll.vue'
 import ChampionExplorer from '../components/ChampionExplorer.vue'
 import MasteryPanel from '../components/MasteryPanel.vue'
 import FriendsPanel from '../components/FriendsPanel.vue'
@@ -70,8 +70,6 @@ const filteredChampions = shallowRef<ChampionStats[] | null>(null)
 const filterBusy = ref(false)
 const filterError = ref('')
 const hasMore = ref(false)
-const nextOffset = ref(0)
-const appendError = ref(false)
 const failedPanels = ref<string[]>([])
 const mastery = shallowRef<ChampionMastery[]>([])
 /** Whether `mastery` is every champion, or only the top few the overview needs. */
@@ -87,6 +85,7 @@ const CHAMPION_VIEWS = [
 ]
 
 let filterController: AbortController | undefined
+let moreController: AbortController | undefined
 let masteryController: AbortController | undefined
 
 const mainChampion = computed(() => champions.value[0]?.championId ?? mastery.value[0]?.championId)
@@ -214,31 +213,31 @@ async function loadMastery(complete = section.value === 'champions') {
   }
 }
 
-async function applyFilters(append = false) {
+/** The match list's query for the current filters. */
+function matchQuery() {
+  const query = new URLSearchParams({
+    type: filters.value.type,
+    role: filters.value.role,
+    count: String(PAGE_SIZE),
+    view: 'summary',
+  })
+  if (filters.value.champion) query.set('champion', String(filters.value.champion))
+  return query
+}
+
+async function applyFilters() {
   if (!profile.value) return
-  if (
-    append &&
-    (filterBusy.value || pending.matches || !hasMore.value || section.value !== 'overview')
-  )
-    return
+  moreController?.abort()
   filterController?.abort()
   filterController = new AbortController()
   const signal = filterController.signal
   filterBusy.value = true
-  appendError.value = false
   filterError.value = ''
-  if (!append) void loadStats()
+  void loadStats()
   const isChampions = section.value === 'champions'
-  const query = new URLSearchParams({
-    type: filters.value.type,
-    role: filters.value.role,
-    count: isChampions ? '100' : '15',
-  })
-  if (!isChampions) {
-    query.set('view', 'summary')
-    if (filters.value.champion) query.set('champion', String(filters.value.champion))
-    if (append) query.set('offset', String(nextOffset.value))
-  }
+  const query = isChampions
+    ? new URLSearchParams({ type: filters.value.type, role: filters.value.role, count: '100' })
+    : matchQuery()
   try {
     const response = await fetch(
       `/api/summoners/puuid/${profile.value.puuid}/${isChampions ? 'champions' : 'matches'}?${query}`,
@@ -249,21 +248,48 @@ async function applyFilters(append = false) {
     if (signal.aborted) return
     if (isChampions) filteredChampions.value = data
     else {
-      const incoming = data as Match[]
-      const existing = append ? loadedMatches.value : []
-      filteredMatches.value = [
-        ...new Map([...existing, ...incoming].map((match) => [match.matchId, match])).values(),
-      ]
-      nextOffset.value = (append ? nextOffset.value : 0) + incoming.length
-      hasMore.value = data.length === 15
+      filteredMatches.value = data
+      hasMore.value = data.length === PAGE_SIZE
     }
   } catch {
-    if (!signal.aborted) {
-      appendError.value = append
-      if (!append) filterError.value = 'These results could not be loaded.'
-    }
+    if (!signal.aborted) filterError.value = 'These results could not be loaded.'
   } finally {
     if (!signal.aborted) filterBusy.value = false
+  }
+}
+
+/**
+ * The next page of the match history, as its end comes into view (MoreMatches paces it). The
+ * plain list pages by date, so the API fills it from Riot with games it does not hold yet, at its
+ * own pace (a 429 says how long to wait); a filtered list pages through the stored games.
+ */
+async function loadMore(): Promise<void | { wait: number }> {
+  const list = loadedMatches.value
+  if (!profile.value || !list.length || filterBusy.value) return
+  moreController?.abort()
+  moreController = new AbortController()
+  const signal = moreController.signal
+  const query = matchQuery()
+  const { type, role, champion } = filters.value
+  if (type === 'all' && role === 'all' && !champion)
+    query.set('before', String(Number(list[list.length - 1].gameStartMs)))
+  else query.set('offset', String(list.length))
+  try {
+    const response = await fetch(`/api/summoners/puuid/${profile.value.puuid}/matches?${query}`, {
+      signal,
+    })
+    const retryAfter = Number(response.headers.get('retry-after'))
+    if (response.status === 429 && retryAfter) return { wait: retryAfter * 1000 }
+    if (!response.ok) throw new Error()
+    const incoming = (await response.json()) as Match[]
+    if (signal.aborted) return
+    filteredMatches.value = [
+      ...new Map([...list, ...incoming].map((match) => [match.matchId, match])).values(),
+    ]
+    hasMore.value = incoming.length === PAGE_SIZE
+  } catch (error) {
+    // A new list (filters, another player) replaced this one: nothing to say.
+    if (!signal.aborted) throw error
   }
 }
 
@@ -404,6 +430,7 @@ async function load() {
   statsController?.abort()
   friendsController?.abort()
   filterController?.abort()
+  moreController?.abort()
   masteryController?.abort()
   clearTimeout(viewTimer)
   clearTimeout(messageTimer)
@@ -412,8 +439,6 @@ async function load() {
   failedPanels.value = []
   filters.value = { type: 'all', champion: 0, role: 'all' }
   hasMore.value = false
-  nextOffset.value = 0
-  appendError.value = false
   filterBusy.value = false
   filterError.value = ''
   filteredMatches.value = null
@@ -477,10 +502,7 @@ async function load() {
       (filters.value.type !== 'all' || filters.value.role !== 'all' || filters.value.champion)
     )
       await applyFilters()
-    if (!signal.aborted && !filteredMatches.value) {
-      nextOffset.value = matches.value.length
-      hasMore.value = matches.value.length >= 15
-    }
+    if (!signal.aborted && !filteredMatches.value) hasMore.value = matches.value.length >= PAGE_SIZE
   } catch {
     if (!signal.aborted) error.value = 'error'
   } finally {
@@ -502,6 +524,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   filterController?.abort()
+  moreController?.abort()
   masteryController?.abort()
   statsController?.abort()
   friendsController?.abort()
@@ -711,13 +734,12 @@ async function sync() {
                 />
               </div>
 
-              <InfiniteScroll
-                v-if="!filterError"
-                :has-more="hasMore"
-                :loading="pending.matches || filterBusy"
-                :error="appendError"
-                :empty="!displayedMatches.length"
-                @load="applyFilters(true)"
+              <MoreMatches
+                v-if="!pending.matches"
+                v-show="!filterError && loadedMatches.length"
+                :key="profile.puuid"
+                :more="hasMore"
+                :load="loadMore"
               />
             </section>
           </template>
