@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ObjTimer } from './types.js'
-import { Bug, Crown, Eye, Flame } from 'lucide-vue-next'
+import { Icon, type IconName } from '@invadelol/ui'
 import { mmss } from './clock.js'
 
 /**
@@ -9,13 +9,13 @@ import { mmss } from './clock.js'
  */
 defineProps<{ t: number; timers: ObjTimer[]; drakes: { ally: string[]; enemy: string[] } }>()
 
-const ICON = {
-  dragon: Flame,
-  grubs: Bug,
-  herald: Eye,
-  baron: Crown,
-  baronBuff: Crown,
-  elderBuff: Flame,
+const ICON: Record<ObjTimer['key'], IconName> = {
+  dragon: 'flame',
+  grubs: 'bug',
+  herald: 'eye',
+  baron: 'crown',
+  baronBuff: 'crown',
+  elderBuff: 'flame',
 }
 
 const DRAKE_COLORS: Record<string, string> = {
@@ -45,7 +45,7 @@ const DRAKE_COLORS: Record<string, string> = {
         ]"
         :title="tm.label"
       >
-        <component :is="ICON[tm.key]" :size="13" :stroke-width="1.8" />
+        <Icon :name="ICON[tm.key]" :size="13" />
         <b v-if="!tm.team && tm.at <= t">UP</b>
         <b v-else>{{ mmss(Math.max(0, tm.at - t)) }}</b>
       </li>
