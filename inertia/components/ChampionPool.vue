@@ -29,7 +29,7 @@ const rows = computed(() =>
       <h3>Champions</h3>
       <Link
         :href="`/${encodeURIComponent(slug)}/champions`"
-        class="meta ml-auto transition-colors hover:text-ink"
+        class="meta ml-auto transition-colors hover:text-ink pointer-coarse:-my-3 pointer-coarse:py-3 pointer-coarse:pl-4"
       >
         All {{ champions.length }}
       </Link>
