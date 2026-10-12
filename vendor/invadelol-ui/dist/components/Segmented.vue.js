@@ -1,7 +1,11 @@
-import { defineComponent as i, useModel as r, openBlock as s, createElementBlock as o, normalizeClass as n, Fragment as a, renderList as d, toDisplayString as u, mergeModels as m } from "vue";
-const c = ["aria-pressed", "onClick"], k = /* @__PURE__ */ i({
+import '../styles/base.css';
+import '../styles/primitives.css';
+import { defineComponent as r, useModel as n, openBlock as o, createElementBlock as s, normalizeClass as i, Fragment as a, renderList as d, toDisplayString as m, mergeModels as u } from "vue";
+/* empty css                 */
+/* empty css                       */
+const c = ["aria-pressed", "onClick"], _ = /* @__PURE__ */ r({
   __name: "Segmented",
-  props: /* @__PURE__ */ m({
+  props: /* @__PURE__ */ u({
     options: {},
     size: { default: "md" }
   }, {
@@ -10,21 +14,21 @@ const c = ["aria-pressed", "onClick"], k = /* @__PURE__ */ i({
   }),
   emits: ["update:modelValue"],
   setup(t) {
-    const l = r(t, "modelValue");
-    return (p, f) => (s(), o("div", {
-      class: n(["iv-seg", { sm: t.size === "sm" }]),
+    const l = n(t, "modelValue");
+    return (p, f) => (o(), s("div", {
+      class: i(["iv-seg", { sm: t.size === "sm" }]),
       role: "group"
     }, [
-      (s(!0), o(a, null, d(t.options, (e) => (s(), o("button", {
+      (o(!0), s(a, null, d(t.options, (e) => (o(), s("button", {
         key: e.id,
         type: "button",
-        class: n({ on: l.value === e.id }),
+        class: i({ on: l.value === e.id }),
         "aria-pressed": l.value === e.id,
         onClick: (g) => l.value = e.id
-      }, u(e.label), 11, c))), 128))
+      }, m(e.label), 11, c))), 128))
     ], 2));
   }
 });
 export {
-  k as default
+  _ as default
 };

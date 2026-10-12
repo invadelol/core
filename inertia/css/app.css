@@ -1,7 +1,9 @@
 @import 'tailwindcss';
-/* The design tokens and the shared views, the same as the desktop app's (@invadelol/ui). The views'
-   own styles sit in the components layer, under Tailwind's utilities. */
+/* The design tokens (dark, then the light theme the site switches to) and the shared views, the
+   same as the desktop app's (@invadelol/ui). The views' own styles sit in the components layer,
+   under Tailwind's utilities. */
 @import '@invadelol/ui/tokens.css';
+@import '@invadelol/ui/tokens-light.css';
 @import '@invadelol/ui/style.css' layer(components);
 @import './components.css';
 

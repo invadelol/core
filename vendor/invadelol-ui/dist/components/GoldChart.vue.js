@@ -1,13 +1,19 @@
-import { defineComponent as Ve, useId as Xe, shallowRef as O, computed as f, watch as Ge, onMounted as Ue, onBeforeUnmount as Ke, openBlock as c, createElementBlock as i, createElementVNode as a, toDisplayString as r, unref as v, Fragment as w, normalizeClass as L, createCommentVNode as E, renderList as P, normalizeStyle as z, createVNode as We, createTextVNode as Ze } from "vue";
+import '../styles/base.css';
+import '../styles/primitives.css';
+import '../styles/detail.css';
+import { defineComponent as Ve, useId as Xe, shallowRef as O, computed as f, watch as Ge, onMounted as Ue, onBeforeUnmount as Ke, openBlock as i, createElementBlock as c, createElementVNode as a, toDisplayString as r, unref as v, Fragment as w, normalizeClass as L, createCommentVNode as E, renderList as P, normalizeStyle as z, createVNode as We, createTextVNode as Ze } from "vue";
 import { useInvadeUi as qe, useFormat as Je, useNames as Qe } from "../context.js";
 import { relation as de } from "../logic/detail.js";
 import { tk as he } from "../logic/i18n.js";
 import { leadFor as et, storyOf as tt } from "../logic/story.js";
 import lt from "./ObjectiveIcon.vue.js";
+/* empty css                 */
+/* empty css                       */
+/* empty css                   */
 const at = { class: "iv-gch" }, nt = { class: "iv-gch-head" }, st = {
   class: "iv-gch-read",
   "aria-live": "polite"
-}, ot = { class: "iv-gch-when" }, ut = { class: "iv-gch-who" }, ct = { class: "iv-gch-unit" }, it = { class: "iv-seg sm" }, vt = ["onClick"], rt = { class: "iv-gch-main" }, dt = ["aria-label"], ht = ["viewBox"], pt = { class: "iv-gch-grid" }, mt = ["x2", "y1", "y2"], yt = ["x", "y"], xt = ["x1", "x2", "y2"], _t = ["x"], gt = ["x"], ft = ["d"], kt = {
+}, ot = { class: "iv-gch-when" }, ut = { class: "iv-gch-who" }, it = { class: "iv-gch-unit" }, ct = { class: "iv-seg sm" }, vt = ["onClick"], rt = { class: "iv-gch-main" }, dt = ["aria-label"], ht = ["viewBox"], pt = { class: "iv-gch-grid" }, mt = ["x2", "y1", "y2"], yt = ["x", "y"], xt = ["x1", "x2", "y2"], _t = ["x"], gt = ["x"], ft = ["d"], kt = {
   key: 0,
   class: "iv-gch-lead"
 }, bt = ["id"], wt = ["width", "height"], $t = ["id"], Mt = ["y", "width", "height"], It = ["x", "y"], Ct = ["x", "y"], Lt = ["d", "clip-path"], Nt = ["d", "clip-path"], Et = ["x2", "y1", "y2"], Pt = ["d"], At = { key: 1 }, St = ["x1", "x2", "y2"], Tt = ["cx", "cy", "r"], zt = ["cx", "cy"], Ft = ["title"], Bt = ["src", "title", "onPointerenter", "onClick"], Rt = { class: "iv-gch-tip-who" }, Yt = ["src"], Dt = { class: "iv-gch-tip-v" }, Ot = { class: "iv-gch-tip-place" }, jt = {
@@ -16,7 +22,7 @@ const at = { class: "iv-gch" }, nt = { class: "iv-gch-head" }, st = {
 }, Ht = {
   key: 1,
   class: "iv-gch-tip-row"
-}, Vt = { class: "iv-gch-tip-time" }, Xt = ["aria-pressed", "onPointerenter", "onFocus", "onClick"], Gt = ["src"], Ut = { class: "iv-gch-name" }, Kt = { class: "iv-gch-hint" }, b = 40, F = 30, B = 10, W = 236, R = 56, tl = /* @__PURE__ */ Ve({
+}, Vt = { class: "iv-gch-tip-time" }, Xt = ["aria-pressed", "onPointerenter", "onFocus", "onClick"], Gt = ["src"], Ut = { class: "iv-gch-name" }, Kt = { class: "iv-gch-hint" }, b = 40, F = 30, B = 10, W = 236, R = 56, nl = /* @__PURE__ */ Ve({
   __name: "GoldChart",
   props: {
     detail: {},
@@ -41,14 +47,14 @@ const at = { class: "iv-gch" }, nt = { class: "iv-gch-head" }, st = {
       },
       { immediate: !0 }
     );
-    const ge = (t) => I.value = I.value.includes(t) ? I.value.filter((l) => l !== t) : [...I.value, t], d = O(null), G = (t) => t === g.selected ? "var(--brand)" : de(y.value[t].teamId, g.me) === "ally" ? "var(--win)" : "var(--loss)", ce = O(null), fe = O(560);
-    let ie;
+    const ge = (t) => I.value = I.value.includes(t) ? I.value.filter((l) => l !== t) : [...I.value, t], d = O(null), G = (t) => t === g.selected ? "var(--brand)" : de(y.value[t].teamId, g.me) === "ally" ? "var(--win)" : "var(--loss)", ie = O(null), fe = O(560);
+    let ce;
     Ue(() => {
-      ie = new ResizeObserver(([t]) => {
+      ce = new ResizeObserver(([t]) => {
         const l = Math.round(t.contentRect.width);
         l > 0 && (fe.value = l);
-      }), ce.value && ie.observe(ce.value);
-    }), Ke(() => ie?.disconnect());
+      }), ie.value && ce.observe(ie.value);
+    }), Ke(() => ce?.disconnect());
     const ke = B + W + 22, A = ke + 16, ve = A + R + 16, be = ve + 4;
     function we(t, l) {
       const e = t / l || 1, n = 10 ** Math.floor(Math.log10(e)), s = e / n;
@@ -154,20 +160,20 @@ const at = { class: "iv-gch" }, nt = { class: "iv-gch-head" }, st = {
       return { p: y.value[l], d: n, tone: n === 0 ? "" : s ? "ally" : "enemy" };
     }
     const Oe = (t) => h("{n} of {total}", { n: t, total: y.value.length });
-    return (t, l) => (c(), i("div", at, [
+    return (t, l) => (i(), c("div", at, [
       a("header", nt, [
         a("p", st, [
           a("span", ot, r(p.value === null ? v(h)("End of game") : v(j)(k.value[Q.value])), 1),
-          ne.value ? (c(), i(w, { key: 0 }, [
+          ne.value ? (i(), c(w, { key: 0 }, [
             a("span", ut, r(V.me ? v(h)("Your team") : v(h)("Blue side")), 1),
             a("b", {
               class: L(ee.value > 0 ? "ally" : ee.value < 0 ? "enemy" : "")
             }, r(ee.value === 0 ? v(h)("even") : oe(ee.value)), 3),
-            a("span", ct, r(xe.value), 1)
+            a("span", it, r(xe.value), 1)
           ], 64)) : E("", !0)
         ]),
-        a("div", it, [
-          (c(), i(w, null, P(pe, (e) => a("button", {
+        a("div", ct, [
+          (i(), c(w, null, P(pe, (e) => a("button", {
             key: e.id,
             type: "button",
             class: L({ on: $.value === e.id }),
@@ -178,14 +184,14 @@ const at = { class: "iv-gch" }, nt = { class: "iv-gch-head" }, st = {
       a("div", rt, [
         a("div", {
           ref_key: "plot",
-          ref: ce,
+          ref: ie,
           class: "iv-gch-plot",
           tabindex: "0",
           role: "img",
           "aria-label": v(h)("{metric} of each player over the game", { metric: v(h)(pe.find((e) => e.id === $.value).label) }),
           onKeydown: Fe
         }, [
-          u.value ? (c(), i("svg", {
+          u.value ? (i(), c("svg", {
             key: 0,
             viewBox: `0 0 ${u.value.w} ${be}`,
             height: be,
@@ -194,7 +200,7 @@ const at = { class: "iv-gch" }, nt = { class: "iv-gch-head" }, st = {
             onPointerleave: $e
           }, [
             a("g", pt, [
-              (c(!0), i(w, null, P(u.value.yTicks, (e) => (c(), i(w, {
+              (i(!0), c(w, null, P(u.value.yTicks, (e) => (i(), c(w, {
                 key: `y${e.y}`
               }, [
                 a("line", {
@@ -209,7 +215,7 @@ const at = { class: "iv-gch" }, nt = { class: "iv-gch-head" }, st = {
                   "text-anchor": "end"
                 }, r(e.label), 9, yt)
               ], 64))), 128)),
-              (c(!0), i(w, null, P(u.value.xTicks, (e) => (c(), i("line", {
+              (i(!0), c(w, null, P(u.value.xTicks, (e) => (i(), c("line", {
                 key: `x${e.x}`,
                 class: "v",
                 x1: e.x,
@@ -217,7 +223,7 @@ const at = { class: "iv-gch" }, nt = { class: "iv-gch-head" }, st = {
                 y1: B,
                 y2: A + R
               }, null, 8, xt))), 128)),
-              (c(!0), i(w, null, P(u.value.xTicks, (e) => (c(), i("text", {
+              (i(!0), c(w, null, P(u.value.xTicks, (e) => (i(), c("text", {
                 key: `xl${e.x}`,
                 x: e.x,
                 y: ve,
@@ -229,11 +235,11 @@ const at = { class: "iv-gch" }, nt = { class: "iv-gch-head" }, st = {
                 "text-anchor": "end"
               }, r(v(j)(u.value.tmax)), 9, gt)
             ]),
-            (c(), i("g", {
+            (i(), c("g", {
               key: $.value,
               class: "iv-gch-lines"
             }, [
-              (c(!0), i(w, null, P(Be.value, (e) => (c(), i("path", {
+              (i(!0), c(w, null, P(Be.value, (e) => (i(), c("path", {
                 key: e,
                 d: u.value.paths[e],
                 pathLength: "1",
@@ -241,7 +247,7 @@ const at = { class: "iv-gch" }, nt = { class: "iv-gch-head" }, st = {
                 style: z({ "--c": G(e) })
               }, null, 14, ft))), 128))
             ])),
-            ne.value ? (c(), i("g", kt, [
+            ne.value ? (i(), c("g", kt, [
               a("defs", null, [
                 a("clipPath", {
                   id: `${v(q)}-up`
@@ -296,7 +302,7 @@ const at = { class: "iv-gch" }, nt = { class: "iv-gch-head" }, st = {
                 d: u.value.leadLine
               }, null, 8, Pt)
             ])) : E("", !0),
-            p.value !== null ? (c(), i("g", At, [
+            p.value !== null ? (i(), c("g", At, [
               a("line", {
                 class: "iv-gch-cross",
                 x1: u.value.x(k.value[p.value]),
@@ -304,7 +310,7 @@ const at = { class: "iv-gch" }, nt = { class: "iv-gch-head" }, st = {
                 y1: B,
                 y2: A + R
               }, null, 8, St),
-              (c(!0), i(w, null, P(Re.value, (e) => (c(), i("circle", {
+              (i(!0), c(w, null, P(Re.value, (e) => (i(), c("circle", {
                 key: e.i,
                 class: L(["iv-gch-dot", { hot: e.i === d.value }]),
                 cx: u.value.x(k.value[p.value]),
@@ -312,7 +318,7 @@ const at = { class: "iv-gch" }, nt = { class: "iv-gch-head" }, st = {
                 r: e.i === d.value ? 4.5 : 3.5,
                 style: z({ fill: e.color })
               }, null, 14, Tt))), 128)),
-              ne.value ? (c(), i("circle", {
+              ne.value ? (i(), c("circle", {
                 key: 0,
                 class: "iv-gch-dot",
                 cx: u.value.x(k.value[p.value]),
@@ -322,12 +328,12 @@ const at = { class: "iv-gch" }, nt = { class: "iv-gch-head" }, st = {
               }, null, 8, zt)) : E("", !0)
             ])) : E("", !0)
           ], 42, ht)) : E("", !0),
-          u.value ? (c(), i(w, { key: 1 }, [
+          u.value ? (i(), c(w, { key: 1 }, [
             a("span", {
               class: "iv-gch-band-label",
               style: z({ top: `${A - 13}px`, left: `${b}px` })
             }, r(v(h)("Team lead")), 5),
-            (c(!0), i(w, null, P(Ae.value, (e) => (c(), i("span", {
+            (i(!0), c(w, null, P(Ae.value, (e) => (i(), c("span", {
               key: e.key,
               class: L(["iv-gch-mark", e.side]),
               style: z({ left: `${e.x}px`, top: `${ke}px` }),
@@ -338,7 +344,7 @@ const at = { class: "iv-gch" }, nt = { class: "iv-gch-head" }, st = {
                 size: 12
               }, null, 8, ["name"])
             ], 14, Ft))), 128)),
-            (c(!0), i(w, null, P(u.value.ends, (e) => (c(), i("img", {
+            (i(!0), c(w, null, P(u.value.ends, (e) => (i(), c("img", {
               key: e.i,
               class: L(["iv-gch-end", { pin: I.value.includes(e.i), self: e.i === V.selected, hot: e.i === d.value, dim: d.value !== null && e.i !== d.value }]),
               src: v(ae)(y.value[e.i].championId),
@@ -349,12 +355,12 @@ const at = { class: "iv-gch" }, nt = { class: "iv-gch-head" }, st = {
               onPointerleave: l[0] || (l[0] = (n) => d.value = null),
               onClick: (n) => ge(e.i)
             }, null, 46, Bt))), 128)),
-            p.value !== null && !x.value ? (c(), i("span", {
+            p.value !== null && !x.value ? (i(), c("span", {
               key: 0,
               class: "iv-gch-chip",
               style: z({ left: `${u.value.x(k.value[p.value])}px` })
             }, r(v(j)(k.value[p.value])), 5)) : E("", !0),
-            x.value ? (c(), i("div", {
+            x.value ? (i(), c("div", {
               key: 1,
               class: L(["iv-gch-tip", { flip: x.value.flip }]),
               style: z({ left: `${x.value.left}px`, top: `${x.value.top}px`, "--c": G(d.value) })
@@ -373,11 +379,11 @@ const at = { class: "iv-gch" }, nt = { class: "iv-gch-head" }, st = {
                 a("span", null, r(xe.value), 1),
                 a("span", Ot, r(Oe(x.value.place)), 1)
               ]),
-              x.value.gained !== null ? (c(), i("p", jt, [
+              x.value.gained !== null ? (i(), c("p", jt, [
                 a("span", null, r(v(h)("Last minute")), 1),
                 a("b", null, r(oe(x.value.gained)), 1)
               ])) : E("", !0),
-              x.value.vs ? (c(), i("p", Ht, [
+              x.value.vs ? (i(), c("p", Ht, [
                 a("span", null, r(v(h)("vs {name}", { name: v(X)(x.value.vs.p.championId) })), 1),
                 a("b", {
                   class: L(x.value.vs.tone)
@@ -391,7 +397,7 @@ const at = { class: "iv-gch" }, nt = { class: "iv-gch-head" }, st = {
           class: "iv-gch-legend",
           onPointerleave: l[2] || (l[2] = (e) => d.value = null)
         }, [
-          (c(!0), i(w, null, P(Ye.value, (e) => (c(), i("section", {
+          (i(!0), c(w, null, P(Ye.value, (e) => (i(), c("section", {
             key: e.team,
             class: L(["iv-gch-team", e.side])
           }, [
@@ -399,7 +405,7 @@ const at = { class: "iv-gch" }, nt = { class: "iv-gch-head" }, st = {
               a("span", null, r(e.label), 1),
               a("b", null, r(se(e.total)), 1)
             ]),
-            (c(!0), i(w, null, P(e.rows, (n) => (c(), i("button", {
+            (i(!0), c(w, null, P(e.rows, (n) => (i(), c("button", {
               key: n.i,
               type: "button",
               class: L(["iv-gch-row", { pin: I.value.includes(n.i), self: n.i === V.selected, hot: n.i === d.value }]),
@@ -425,5 +431,5 @@ const at = { class: "iv-gch" }, nt = { class: "iv-gch-head" }, st = {
   }
 });
 export {
-  tl as default
+  nl as default
 };

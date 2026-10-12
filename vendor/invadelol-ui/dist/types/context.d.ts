@@ -1,8 +1,8 @@
 /**
  * What the host gives the views: strings, the UI language, where images live, where links go and,
- * optionally, a favorites store. The app resolves images to Data Dragon and navigates in place;
- * the website resolves them to its own asset proxy and real URLs. Every option has a default, so
- * a view renders (in English, without images) even with nothing provided.
+ * optionally, a favorites store. Both hosts resolve images to invade.lol's `/cdn` proxy; the app
+ * navigates in place, the website to real URLs. Every option has a default, so a view renders (in
+ * English, without images) even with nothing provided.
  */
 import { type App, type Ref } from 'vue';
 import { type Translate } from './logic/i18n';

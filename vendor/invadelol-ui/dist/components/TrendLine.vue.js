@@ -1,8 +1,11 @@
+import '../styles/base.css';
+import './TrendLine.css';
 import { defineComponent as _, computed as g, useId as k, openBlock as a, createElementBlock as o, createElementVNode as u, createCommentVNode as d } from "vue";
+/* empty css                 */
 const $ = ["viewBox", "height"], F = { key: 0 }, B = ["x", "width", "height"], w = ["y1", "y2"], N = ["points", "fill"], j = ["points"], A = {
   key: 1,
   class: "iv-trend empty"
-}, y = 3, E = /* @__PURE__ */ _({
+}, y = 3, M = /* @__PURE__ */ _({
   __name: "TrendLine",
   props: {
     values: {},
@@ -84,5 +87,5 @@ const $ = ["viewBox", "height"], F = { key: 0 }, B = ["x", "width", "height"], w
   }
 });
 export {
-  E as default
+  M as default
 };

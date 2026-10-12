@@ -1,3 +1,4 @@
+import '../styles/base.css';
 /** A star that saves something to favorites: a ghost icon button, gold once saved. `label` names what it saves. */
 type __VLS_Props = {
     saved: boolean;

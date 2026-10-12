@@ -1,5 +1,7 @@
+import '../styles/base.css';
 import { defineComponent as t, openBlock as d, createElementBlock as p } from "vue";
-const c = ["width", "height", "innerHTML"], l = /* @__PURE__ */ t({
+/* empty css                 */
+const c = ["width", "height", "innerHTML"], i = /* @__PURE__ */ t({
   __name: "Icon",
   props: {
     name: {},
@@ -61,7 +63,7 @@ const c = ["width", "height", "innerHTML"], l = /* @__PURE__ */ t({
       trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
       command: '<path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3"/>'
     };
-    return (e, M) => (d(), p("svg", {
+    return (e, r) => (d(), p("svg", {
       class: "iv-icon",
       width: a.size ?? 18,
       height: a.size ?? 18,
@@ -77,5 +79,5 @@ const c = ["width", "height", "innerHTML"], l = /* @__PURE__ */ t({
   }
 });
 export {
-  l as default
+  i as default
 };

@@ -1,4 +1,7 @@
 import type { Position } from '../logic/types';
+import '../styles/base.css';
+import '../styles/primitives.css';
+import '../styles/profile.css';
 /** Positions played on Summoner's Rift over the loaded games. A row filters the feed to that role. */
 type __VLS_Props = {
     lanes: [Position, number][];

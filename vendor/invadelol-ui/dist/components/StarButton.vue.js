@@ -1,7 +1,10 @@
+import '../styles/base.css';
+import './StarButton.css';
 import { defineComponent as r, openBlock as i, createElementBlock as n, withModifiers as l, unref as o, normalizeClass as m, createVNode as v } from "vue";
 import f from "./Icon.vue.js";
 import { useInvadeUi as d } from "../context.js";
-const c = ["aria-pressed", "aria-label", "title"], g = /* @__PURE__ */ r({
+/* empty css                 */
+const c = ["aria-pressed", "aria-label", "title"], B = /* @__PURE__ */ r({
   __name: "StarButton",
   props: {
     saved: { type: Boolean },
@@ -26,5 +29,5 @@ const c = ["aria-pressed", "aria-label", "title"], g = /* @__PURE__ */ r({
   }
 });
 export {
-  g as default
+  B as default
 };

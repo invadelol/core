@@ -1,3 +1,4 @@
+import '../styles/base.css';
 /** The Invade glyph, cropped to its bounds, optionally with the wordmark. */
 type __VLS_Props = {
     size?: number;

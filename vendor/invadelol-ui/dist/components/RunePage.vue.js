@@ -1,6 +1,9 @@
+import '../styles/base.css';
+import './RunePage.css';
 import { defineComponent as y, computed as o, openBlock as a, createElementBlock as l, createElementVNode as r, unref as e, Fragment as p, renderList as g, normalizeClass as f, toDisplayString as k } from "vue";
 import { useNames as N } from "../context.js";
-const w = { class: "iv-runes" }, x = { class: "iv-runes-row" }, B = ["src", "alt"], C = ["src", "alt", "title"], E = { class: "iv-runes-row" }, I = ["src", "alt"], j = ["src", "alt", "title"], z = { class: "iv-runes-shards" }, R = /* @__PURE__ */ y({
+/* empty css                 */
+const w = { class: "iv-runes" }, x = { class: "iv-runes-row" }, B = ["src", "alt"], C = ["src", "alt", "title"], E = { class: "iv-runes-row" }, I = ["src", "alt"], j = ["src", "alt", "title"], z = { class: "iv-runes-shards" }, S = /* @__PURE__ */ y({
   __name: "RunePage",
   props: {
     page: {}
@@ -40,5 +43,5 @@ const w = { class: "iv-runes" }, x = { class: "iv-runes-row" }, B = ["src", "alt
   }
 });
 export {
-  R as default
+  S as default
 };

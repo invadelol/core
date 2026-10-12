@@ -1,4 +1,7 @@
 import type { LpPoint, PlayerCard } from '../logic/types';
+import '../styles/base.css';
+import '../styles/primitives.css';
+import '../styles/profile.css';
 /**
  * LP history (the desktop app records a snapshot of its own accounts whenever the rank
  * changes). Plots the continuous ladder value, so a promotion is a rise and not a drop to 0 LP;

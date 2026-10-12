@@ -1,5 +1,9 @@
+import '../styles/base.css';
+import '../styles/primitives.css';
 import { defineComponent as n, openBlock as a, createElementBlock as l, normalizeClass as o, renderSlot as i } from "vue";
-const u = ["type"], f = /* @__PURE__ */ n({
+/* empty css                 */
+/* empty css                       */
+const u = ["type"], s = /* @__PURE__ */ n({
   __name: "Button",
   props: {
     variant: { default: "default" },
@@ -7,15 +11,15 @@ const u = ["type"], f = /* @__PURE__ */ n({
     iconOnly: { type: Boolean, default: !1 },
     type: { default: "button" }
   },
-  setup(e) {
-    return (t, d) => (a(), l("button", {
-      type: e.type,
-      class: o(["iv-btn", [e.variant !== "default" && e.variant, e.size !== "md" && e.size, { "icon-only": e.iconOnly }]])
+  setup(t) {
+    return (e, d) => (a(), l("button", {
+      type: t.type,
+      class: o(["iv-btn", [t.variant !== "default" && t.variant, t.size !== "md" && t.size, { "icon-only": t.iconOnly }]])
     }, [
-      i(t.$slots, "default")
+      i(e.$slots, "default")
     ], 10, u));
   }
 });
 export {
-  f as default
+  s as default
 };

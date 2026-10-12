@@ -1,4 +1,7 @@
 import type { MatchDetail, PlayerView, TimelineView } from '../logic/types';
+import '../styles/base.css';
+import '../styles/primitives.css';
+import '../styles/detail.css';
 /**
  * All ten players over the game, on one chart. Lines are faint by default; the selected player
  * (brand) and their lane opponent are pinned, and the line nearest the pointer lights up with a

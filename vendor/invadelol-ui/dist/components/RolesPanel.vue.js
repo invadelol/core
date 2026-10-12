@@ -1,11 +1,17 @@
+import '../styles/base.css';
+import '../styles/primitives.css';
+import '../styles/profile.css';
 import { defineComponent as f, useModel as v, computed as k, openBlock as i, createElementBlock as c, createElementVNode as o, toDisplayString as a, unref as t, Fragment as y, renderList as g, normalizeClass as C, createVNode as b, normalizeStyle as N, createCommentVNode as w, mergeModels as M } from "vue";
 import { useInvadeUi as S, useFormat as V } from "../context.js";
 import { positionName as d, count as $ } from "../logic/labels.js";
 import x from "./RoleIcon.vue.js";
+/* empty css                 */
+/* empty css                       */
+/* empty css                    */
 const z = {
   key: 0,
   class: "iv-panel iv-pf-panel iv-pf-roles"
-}, B = { class: "iv-panel-head" }, E = ["title", "onClick"], F = { class: "iv-pf-role-name" }, R = { class: "iv-pf-share" }, q = { class: "iv-pf-role-n" }, D = { class: "iv-pf-role-pct" }, A = /* @__PURE__ */ f({
+}, B = { class: "iv-panel-head" }, E = ["title", "onClick"], F = { class: "iv-pf-role-name" }, R = { class: "iv-pf-share" }, q = { class: "iv-pf-role-n" }, D = { class: "iv-pf-role-pct" }, J = /* @__PURE__ */ f({
   __name: "RolesPanel",
   props: /* @__PURE__ */ M({
     lanes: {}
@@ -14,17 +20,17 @@ const z = {
     roleModifiers: {}
   }),
   emits: ["update:role"],
-  setup(u) {
-    const p = u, r = v(u, "role"), { t: n } = S(), { pct: _ } = V(), m = k(() => {
-      const l = p.lanes.reduce((s, [, e]) => s + e, 0);
-      return p.lanes.map(([s, e]) => ({ lane: s, n: e, share: l ? e / l : 0 }));
+  setup(p) {
+    const m = p, r = v(p, "role"), { t: n } = S(), { pct: _ } = V(), u = k(() => {
+      const l = m.lanes.reduce((s, [, e]) => s + e, 0);
+      return m.lanes.map(([s, e]) => ({ lane: s, n: e, share: l ? e / l : 0 }));
     }), h = (l) => r.value = r.value === l ? "" : l;
-    return (l, s) => m.value.length ? (i(), c("section", z, [
+    return (l, s) => u.value.length ? (i(), c("section", z, [
       o("header", B, [
         o("h3", null, a(t(n)("Roles")), 1)
       ]),
       o("ul", null, [
-        (i(!0), c(y, null, g(m.value, (e) => (i(), c("li", {
+        (i(!0), c(y, null, g(u.value, (e) => (i(), c("li", {
           key: e.lane
         }, [
           o("button", {
@@ -51,5 +57,5 @@ const z = {
   }
 });
 export {
-  A as default
+  J as default
 };

@@ -1,4 +1,7 @@
 import type { MatchDetail } from '../logic/types';
+import '../styles/base.css';
+import '../styles/primitives.css';
+import '../styles/detail.css';
 /**
  * Both teams in one table, the viewed player's team first. The team line carries the result
  * word in its colour (the only result colour), objectives with counts, bans and totals; each

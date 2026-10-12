@@ -1,3 +1,6 @@
+import '../styles/base.css';
+import '../styles/primitives.css';
+import './MatchRow.css';
 import { defineComponent as ee, computed as m, openBlock as s, createElementBlock as a, createElementVNode as t, normalizeClass as p, unref as e, toDisplayString as o, createCommentVNode as v, Fragment as k, renderList as S, createTextVNode as g, createBlock as $ } from "vue";
 import { useInvadeUi as le, useFormat as te, useNames as se, gameFavorite as ae } from "../context.js";
 import { hideBroken as d } from "../dom.js";
@@ -7,6 +10,8 @@ import V from "./PerfDial.vue.js";
 /* empty css              */
 import re from "./StarButton.vue.js";
 /* empty css                */
+/* empty css                 */
+/* empty css                       */
 const ce = { class: "iv-mr-wrap" }, me = ["aria-expanded"], ve = { class: "iv-mr-grid" }, de = ["title"], pe = { class: "iv-mr-portrait" }, ke = ["src"], ge = { key: 0 }, ye = {
   key: 0,
   class: "iv-mr-load"
@@ -16,7 +21,7 @@ const ce = { class: "iv-mr-wrap" }, me = ["aria-expanded"], ve = { class: "iv-mr
 }, we = { class: "iv-mr-farm" }, Ee = { class: "iv-unit" }, ze = { class: "iv-mr-well" }, Ce = ["src"], Le = {
   key: 0,
   class: "iv-mr-badges"
-}, xe = ["title"], Re = { class: "iv-mr-vs" }, Ve = ["title"], Ae = ["src", "alt"], De = { class: "iv-mr-score" }, He = /* @__PURE__ */ ee({
+}, xe = ["title"], Re = { class: "iv-mr-vs" }, Ve = ["title"], Ae = ["src", "alt"], De = { class: "iv-mr-score" }, Oe = /* @__PURE__ */ ee({
   __name: "MatchRow",
   props: {
     game: {},
@@ -193,5 +198,5 @@ const ce = { class: "iv-mr-wrap" }, me = ["aria-expanded"], ve = { class: "iv-mr
   }
 });
 export {
-  He as default
+  Oe as default
 };

@@ -1,4 +1,6 @@
+import '../styles/base.css';
 import { defineComponent as i, openBlock as n, createElementBlock as o, createElementVNode as e, createCommentVNode as r } from "vue";
+/* empty css                 */
 const d = ["width", "height"], u = { key: 0 }, h = { key: 1 }, a = { key: 2 }, s = { key: 3 }, f = { key: 4 }, Z = /* @__PURE__ */ i({
   __name: "RoleIcon",
   props: {
