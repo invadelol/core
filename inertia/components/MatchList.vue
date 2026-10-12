@@ -88,7 +88,7 @@ const toggle = (id: string) => (open.value = open.value === id ? null : id)
           />
           <GameDetail
             v-if="open === match.matchId"
-            :match-id="match.matchId"
+            :match="match"
             :puuid="puuid"
             :game-name="gameName"
             :tag-line="tagLine"

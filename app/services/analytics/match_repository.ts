@@ -105,18 +105,20 @@ const SUMMARY_PARTICIPANT_COLUMNS = [
   'dmg_to_objectives',
   // The teammates a profile lists ("Played with") are read from its games.
   'profile_icon_id',
+  // The rest of what the shared detail shows before the full match arrives: an opened row draws
+  // its scoreboard (vision tooltip) and build facts from the list, never from missing numbers.
+  'wards_placed',
+  'wards_killed',
+  'vision_wards_bought',
+  'dmg_to_turrets',
 ] as const
 
 const DETAIL_PARTICIPANT_COLUMNS = [
   'lane',
-  'wards_placed',
-  'wards_killed',
-  'dmg_to_turrets',
   'physical_dmg_dealt',
   'magic_dmg_dealt',
   'true_dmg_dealt',
   'neutral_minions_killed',
-  'vision_wards_bought',
   'all_in_pings',
   'assist_pings',
   'command_pings',
@@ -156,18 +158,18 @@ const SUMMARY_PARTICIPANT_FIELDS = {
   trueDamageDealtToChampions: 'true_dmg_to_champ',
   damageDealtToObjectives: 'dmg_to_objectives',
   profileIconId: 'profile_icon_id',
+  wardsPlaced: 'wards_placed',
+  wardsKilled: 'wards_killed',
+  visionWardsBoughtInGame: 'vision_wards_bought',
+  damageDealtToTurrets: 'dmg_to_turrets',
 }
 
 const DETAIL_PARTICIPANT_FIELDS = {
   lane: 'lane',
-  wardsPlaced: 'wards_placed',
-  wardsKilled: 'wards_killed',
-  damageDealtToTurrets: 'dmg_to_turrets',
   physicalDamageDealt: 'physical_dmg_dealt',
   magicDamageDealt: 'magic_dmg_dealt',
   trueDamageDealt: 'true_dmg_dealt',
   neutralMinionsKilled: 'neutral_minions_killed',
-  visionWardsBoughtInGame: 'vision_wards_bought',
   allInPings: 'all_in_pings',
   assistPings: 'assist_pings',
   commandPings: 'command_pings',
