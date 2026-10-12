@@ -374,6 +374,32 @@
     );
   }
 
+  /* The tip a tap shows for a titled element (an item, a rune, a champion), where there is no
+     hover to show the title (lib/touch_titles.ts). */
+  .touch-tip {
+    position: fixed;
+    z-index: 60;
+    max-width: min(260px, calc(100vw - 16px));
+    padding: 6px 9px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    color: var(--text-1);
+    background: var(--solid-1);
+    border: 1px solid var(--line-2);
+    border-radius: var(--r-sm);
+    box-shadow: var(--shadow-3);
+    pointer-events: none;
+    animation: touch-tip-in 120ms var(--ease) both;
+  }
+
+  @keyframes touch-tip-in {
+    from {
+      opacity: 0;
+      transform: translateY(2px);
+    }
+  }
+
   /* ── Notices: one line, a quiet panel, the problem's colour on its mark only ── */
   .notice {
     display: flex;

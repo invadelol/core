@@ -22,9 +22,17 @@ function read(): ThemeChoice {
   return 'system'
 }
 
+/** The browser's own bars (a phone's status bar, Safari's toolbar) in the header's ink. */
+const BAR = { light: '#ffffff', dark: '#08090c' }
+
 /** The package's tokens read `data-theme`: `system` follows the system's preference. */
 function paint(value: ThemeChoice) {
   document.documentElement.setAttribute('data-theme', value)
+  // A chosen theme holds for both of the head's colour-scheme variants; `system` restores them.
+  document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((meta) => {
+    const scheme = meta.media.includes('dark') ? 'dark' : 'light'
+    meta.content = BAR[value === 'system' ? scheme : value]
+  })
 }
 
 export function useTheme() {

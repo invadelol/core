@@ -8,9 +8,11 @@ import type { DefineComponent } from 'vue'
 import { createInertiaApp } from '@inertiajs/vue3'
 import { resolvePageComponent } from '@adonisjs/inertia/helpers'
 import { installIconFallback } from '../lib/icon_fallback.js'
+import { installTouchTitles } from '../lib/touch_titles.js'
 import { invadeUi } from './ui.js'
 
 installIconFallback()
+installTouchTitles()
 
 const appName = import.meta.env.VITE_APP_NAME || 'invade.lol'
 
