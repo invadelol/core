@@ -4,6 +4,7 @@ import { computed, onMounted, ref, shallowRef } from 'vue'
 import { Breakdown, BuildTab, GoldChart, Scoreboard, Timeline } from '@invadelol/ui'
 import { hasEvents, type MatchDetail } from '@invadelol/ui/logic'
 import AppHeader from '../components/AppHeader.vue'
+import DamageChart from '../components/DamageChart.vue'
 import MatchHeader from '../components/MatchHeader.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import { decodeSlug, parseSlug, profilePath } from '../lib/format.js'
@@ -112,6 +113,14 @@ onMounted(async () => {
           </div>
           <div class="iv-panel iv-md match-part">
             <Breakdown :detail="detail" :selected="selected" :me="me" @select="selected = $event" />
+          </div>
+          <div class="iv-panel match-part mt-3">
+            <DamageChart
+              :detail="detail"
+              :selected="selected"
+              :me="me"
+              @select="selected = $event"
+            />
           </div>
           <div v-if="detail.timeline" class="iv-panel iv-md match-part mt-3">
             <GoldChart :detail="detail" :timeline="detail.timeline" :selected="selected" :me="me" />
