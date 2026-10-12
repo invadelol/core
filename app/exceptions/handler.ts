@@ -63,6 +63,17 @@ function desktopError(
   return null
 }
 
+/**
+ * What an error page may say about the error: its status, and its message only when the app or
+ * the framework wrote it for people (an `E_*` exception). Anything else (a driver, a TypeError)
+ * can carry internals, so it stays in the log; stacks never leave the server.
+ */
+export function publicError(error: Partial<HttpError>) {
+  const status = Number(error.status) || 500
+  const authored = typeof error.code === 'string' && /^E_[A-Z_]+$/.test(error.code)
+  return { status, message: authored && error.message ? error.message : null }
+}
+
 export default class HttpExceptionHandler extends ExceptionHandler {
   /**
    * In debug mode, the exception handler will display verbose errors
@@ -83,7 +94,7 @@ export default class HttpExceptionHandler extends ExceptionHandler {
 
   private page(component: string, error: HttpError, ctx: HttpContext) {
     if (ctx.request.url().startsWith('/api/')) return this.renderError(error, ctx)
-    return ctx.inertia.render(component)
+    return ctx.inertia.render(component, { error: publicError(error) })
   }
 
   /**
