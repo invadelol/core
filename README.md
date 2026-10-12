@@ -147,7 +147,7 @@ All routes require a valid PUUID and are cached.
 | `GET` | `/summoners/puuid/:puuid/ranks` | Current and historical ranks |
 | `GET` | `/summoners/puuid/:puuid/stats` | Overall stats |
 | `GET` | `/summoners/puuid/:puuid/champions` | Per-champion stats |
-| `GET` | `/summoners/puuid/:puuid/matches` | Recent matches (`count`, `offset`, filters); `before=<epoch ms>` pages older games, filling a short unfiltered page from Riot at most 3 pages right away, then 1 per 2 min per player and IP (12, then 1 per 30 s per IP; else 429 with `Retry-After`) |
+| `GET` | `/summoners/puuid/:puuid/matches` | Recent matches (`count`, `offset`, filters); `before=<epoch ms>` pages older games, stored pages are free; a short unfiltered page is filled from Riot at most 3 times right away, then 1 per 2 min per player and IP (12, then 1 per 30 s per IP). Over that (or under Riot's own limit), 200 with the stored games only, possibly none, and `Retry-After`: the list ends quietly for now |
 | `GET` | `/matches/:id` | One match in full, with its timeline |
 | `PUT` | `/summoners/puuid/:puuid/increment` | Increment profile view count |
 

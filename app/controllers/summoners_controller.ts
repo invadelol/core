@@ -14,7 +14,12 @@ import {
 } from '#validators/summoner'
 import { invalidateResponseCache } from '#services/http_response_cache'
 import { SyncGuard } from '#utils/sync_guard'
-import { translateRiotError } from '#utils/riot_errors'
+import {
+  riotErrorStatus,
+  riotRetryAfter,
+  RiotUpstreamException,
+  translateRiotError,
+} from '#utils/riot_errors'
 import matchPager from '#services/match_pager'
 import deviceService from '#services/desktop/device_service'
 import playerSnapshotService from '#services/desktop/player_snapshot_service'
@@ -213,11 +218,14 @@ export default class SummonersController {
 
   /**
    * Get matches. Paged by `before` (an infinite list), the plain list fills a short page from
-   * Riot (older games not stored yet), at the pace of `MatchPager`: over it, 429 with `Retry-After`
+   * Riot (older games not stored yet), at the pace of `MatchPager`. Stored games are never
+   * counted. Over that pace (or when Riot itself is rate limited), the page holds what is stored,
+   * possibly nothing, and `Retry-After` says when older games may be asked for again: the list
+   * quietly ends there for now.
    * @paramPath puuid - Summoner PUUID
    * @requestBody <getMatchesValidator>
    * @responseBody 200 - <Match[]>
-   * @responseBody 429 - {"errors": [{"code": "E_RATE_LIMITED"}], "retryAfter": 120}
+   * @responseHeader 200 - Retry-After - Seconds before older games may be asked from Riot again (only on a held page)
    */
   async matches({ request, params, response }: HttpContext) {
     await request.validateUsing(puuidParamsValidator, { data: params })
@@ -231,15 +239,23 @@ export default class SummonersController {
     if (payload.before === undefined || !plain || matches.length >= count) {
       return response.ok(matches)
     }
-    const wait = await matchPager.take(puuid, request.ip())
-    if (wait) {
-      response.header('Retry-After', String(wait))
-      return response.tooManyRequests({
-        errors: [{ message: 'Older games come one page at a time', code: 'E_RATE_LIMITED' }],
-        retryAfter: wait,
-      })
+    const held = (seconds: number) => {
+      response.header('Retry-After', String(seconds))
+      return response.ok(matches)
     }
-    const stored = await matchService.older(puuid, payload.before, count)
+    const wait = await matchPager.take(puuid, request.ip())
+    if (wait) return held(wait)
+    let stored: number
+    try {
+      stored = await matchService.older(puuid, payload.before, count)
+    } catch (error) {
+      // Riot's own limit on the key: the same quiet end as ours.
+      if (error instanceof RiotUpstreamException && error.code === 'E_RIOT_RATE_LIMITED')
+        return held(error.retryAfter ?? 60)
+      if (!(error instanceof RiotUpstreamException) && riotErrorStatus(error) === 429)
+        return held(riotRetryAfter(error))
+      throw error
+    }
     return response.ok(stored ? await summonerService.getMatches(puuid, payload) : matches)
   }
 

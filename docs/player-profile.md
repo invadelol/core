@@ -32,7 +32,10 @@ Update, Share and Compare) and the sections as a vertical list. Beside it:
   Riot's role glyphs and a searchable champion combobox, then the shared match
   rows grouped by day. A row opens the game in place (Scoreboard, Breakdown,
   Gold, Timeline, Build) with a link to its own page; older games load as you
-  scroll.
+  scroll. Stored games load as fast as the list scrolls. Past them the API asks
+  Riot for a few pages per player and address, then slowly; once that budget is
+  spent the list simply ends, with no countdown, and a later scroll to the end
+  tries again once the API's `Retry-After` has passed.
 
 Under the sections, the rail carries **Ranked** (each queue's crest, LP and
 record, and the LP climb of the queue with the most snapshots), **Champions**

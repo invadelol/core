@@ -259,11 +259,13 @@ async function applyFilters() {
 }
 
 /**
- * The next page of the match history, as its end comes into view (MoreMatches paces it). The
- * plain list pages by date, so the API fills it from Riot with games it does not hold yet, at its
- * own pace (a 429 says how long to wait); a filtered list pages through the stored games.
+ * The next page of the match history, as its end comes into view (MoreMatches asks while it stays
+ * in view; stored pages are free). The plain list pages by date, so the API fills it from Riot
+ * with games it does not hold yet, under its own budget: a page it held back carries what is
+ * stored and `Retry-After`, and the list quietly ends there until a later scroll to the end. A
+ * filtered list pages through the stored games.
  */
-async function loadMore(): Promise<void | { wait: number }> {
+async function loadMore(): Promise<void | { retryAfterMs: number }> {
   const list = loadedMatches.value
   if (!profile.value || !list.length || filterBusy.value) return
   moreController?.abort()
@@ -278,14 +280,16 @@ async function loadMore(): Promise<void | { wait: number }> {
     const response = await fetch(`/api/summoners/puuid/${profile.value.puuid}/matches?${query}`, {
       signal,
     })
+    // A 429 with Retry-After (a limit in front of the API) ends the list as quietly.
     const retryAfter = Number(response.headers.get('retry-after'))
-    if (response.status === 429 && retryAfter) return { wait: retryAfter * 1000 }
+    if (response.status === 429 && retryAfter) return { retryAfterMs: retryAfter * 1000 }
     if (!response.ok) throw new Error()
     const incoming = (await response.json()) as Match[]
     if (signal.aborted) return
     filteredMatches.value = [
       ...new Map([...list, ...incoming].map((match) => [match.matchId, match])).values(),
     ]
+    if (retryAfter > 0) return { retryAfterMs: retryAfter * 1000 }
     hasMore.value = incoming.length === PAGE_SIZE
   } catch (error) {
     // A new list (filters, another player) replaced this one: nothing to say.
