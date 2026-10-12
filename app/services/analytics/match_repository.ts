@@ -396,6 +396,8 @@ export class MatchRepository {
       queueIds?: number[] | readonly number[]
       count?: number
       offset?: number
+      /** Epoch ms: only games that started before it. */
+      before?: number
       championId?: number
       role?: string
     }
@@ -410,6 +412,9 @@ export class MatchRepository {
     }
     if (filters.championId) {
       whereClauses.push(`champion_id = ${Math.trunc(filters.championId)}`)
+    }
+    if (filters.before !== undefined) {
+      whereClauses.push(`game_start_ms < ${Math.trunc(filters.before)}`)
     }
     if (filters.role && filters.role !== 'all') {
       whereClauses.push(`team_position = '${escapeClickhouseString(filters.role)}'`)

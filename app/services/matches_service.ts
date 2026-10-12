@@ -21,6 +21,7 @@ const BACKFILL_RETRY_MS = 10 * 60 * 1000
 
 class MatchesService {
   private updates = new SyncGuard()
+  private olders = new SyncGuard()
   private matches = new SyncGuard()
   private backfills = new SyncGuard()
   private backfillFailures = new Map<string, number>()
@@ -61,6 +62,29 @@ class MatchesService {
     }
 
     return results
+  }
+
+  /**
+   * The games of `puuid` that started before `before` (epoch ms) and are not stored yet: one
+   * match-v5 ids page of `count` from Riot, each new game fetched and stored. Returns how many
+   * were stored; none for a player this server never resolved. The caller paces it (`MatchPager`).
+   */
+  async older(puuid: string, before: number, count: number) {
+    return this.olders.run(`${puuid}:${before}:${count}`, async () => {
+      const summoner = await Summoner.find(puuid)
+      if (!summoner) return 0
+      const cluster = riotApiService.platformToRegion(summoner.platform) as MatchCluster
+      const matchIds = await riotApiService.client.matchV5.getIdsByPuuid({
+        puuid,
+        cluster,
+        params: { count, endTime: Math.ceil(before / 1000) },
+      })
+      if (!matchIds.length) return 0
+      const existing = await matchRepository.getExistingIds(matchIds)
+      const newIds = matchIds.filter((id) => !existing.has(id))
+      await Promise.all(newIds.map((matchId) => this.fetchAndStoreMatch(matchId, cluster)))
+      return newIds.length
+    })
   }
 
   /**

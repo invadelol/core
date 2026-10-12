@@ -338,6 +338,7 @@ class SummonerService {
       type?: RiotQueueType
       count?: number
       offset?: number
+      before?: number
       champion?: number
       role?: RiotRole
     }
@@ -349,6 +350,7 @@ class SummonerService {
       view: filters.view,
       count: filters.count ?? DEFAULT_MATCH_COUNT,
       offset: filters.offset ?? DEFAULT_OFFSET,
+      before: filters.before,
       championId: filters.champion,
       role: filters.role === 'SUPPORT' ? 'UTILITY' : filters.role,
     })
