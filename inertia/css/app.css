@@ -74,6 +74,62 @@
   --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
 }
 
+/* ──────────────────────────────────────────────────────────────
+   Materials, as in the desktop app's window: the header is the
+   chrome, the page a sheet raised over it whose top edge catches
+   the one soft violet light, a fine static grain dithering that
+   light so it never bands. Static paint only: the light and the
+   grain are one fixed layer (no repaint on scroll), the edge one
+   hairline, the header opaque (no backdrop blur).
+   ────────────────────────────────────────────────────────────── */
+:root,
+[data-theme='dark'] {
+  --grain: url('./grain.png');
+  /* The sheet's top edge, brightest under the light. */
+  --edge: linear-gradient(
+    90deg,
+    rgb(255 255 255 / 0.03),
+    rgb(255 255 255 / 0.085) 72%,
+    rgb(255 255 255 / 0.045)
+  );
+  /* The current place: the app's violet-lit pill. */
+  --lit-pill: linear-gradient(
+    90deg,
+    rgb(var(--brand-rgb) / 0.18),
+    rgb(var(--brand-rgb) / 0.06) 70%,
+    rgb(var(--brand-rgb) / 0.03)
+  );
+  --lit-pill-edge:
+    inset 0 1px 0 rgb(255 255 255 / 0.07), inset 0 0 0 1px rgb(var(--brand-rgb) / 0.12);
+}
+
+/* Light: a dark grain at half the strength, the edge a plain hairline. */
+[data-theme='light'] {
+  --grain: url('./grain-light.png');
+  --edge: linear-gradient(var(--line-2), var(--line-2));
+  --lit-pill: linear-gradient(
+    90deg,
+    rgb(var(--brand-rgb) / 0.11),
+    rgb(var(--brand-rgb) / 0.04) 70%,
+    rgb(var(--brand-rgb) / 0.02)
+  );
+  --lit-pill-edge: inset 0 0 0 1px rgb(var(--brand-rgb) / 0.1);
+}
+
+@media (prefers-color-scheme: light) {
+  [data-theme='system'] {
+    --grain: url('./grain-light.png');
+    --edge: linear-gradient(var(--line-2), var(--line-2));
+    --lit-pill: linear-gradient(
+      90deg,
+      rgb(var(--brand-rgb) / 0.11),
+      rgb(var(--brand-rgb) / 0.04) 70%,
+      rgb(var(--brand-rgb) / 0.02)
+    );
+    --lit-pill-edge: inset 0 0 0 1px rgb(var(--brand-rgb) / 0.1);
+  }
+}
+
 @layer base {
   * {
     border-color: var(--line);
@@ -84,12 +140,19 @@
     background: var(--ink-1);
   }
 
-  /* The backdrop sits behind the content only, never repeated per panel. The page is set at the
-     shared views' scale (iv-root on <body>). */
+  /* The page is set at the shared views' scale (iv-root on <body>). */
   body {
     min-height: 100%;
-    background: var(--backdrop);
-    background-attachment: fixed;
+  }
+
+  /* The light and the grain over the page ink, behind the content only (never per panel). */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: var(--grain), var(--light);
+    pointer-events: none;
   }
 
   /* Every number in the app lines up in a column. */

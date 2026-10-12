@@ -21,7 +21,7 @@ withDefaults(
 </script>
 
 <template>
-  <header class="sticky top-0 z-30 border-b border-line bg-chrome/90 backdrop-blur-md">
+  <header class="chrome sticky top-0 z-30">
     <div class="page flex h-[56px] items-center gap-3 sm:gap-5">
       <Link href="/" class="shrink-0" aria-label="invade.lol home">
         <Logo :size="22" word />

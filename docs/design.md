@@ -3,9 +3,11 @@
 invade.lol and the desktop app share one frontend, [`@invadelol/ui`](https://github.com/invadelol/ui):
 the design tokens (dark and light), the primitives and every view that shows a match or a
 profile. A change to how a game or a player is drawn is made there once and shows in both
-products. This repo holds only what the site alone has: search, the header and footer, the
-Champions, Friends, Compare and Live sections, sharing, the activity calendar and the `/app`
-page.
+products. The site keeps its own layout on every page: the package gives it its look and the
+views it shares with the app (match rows, the match detail and its parts, rank crests, the score
+dial, trend lines, icons). The pages, the profile rail, the Performance panel, search, the header
+and footer, the Champions, Friends, Compare and Live sections, sharing and the `/app` page are
+the site's.
 
 ## Using the package
 
@@ -25,9 +27,7 @@ link is a real URL whose plain click is an Inertia visit. The site is English, t
 language, so it passes no strings; `@invadelol/ui/keys.json` lists them for a translated host.
 
 Stored matches go through the package's adapters: `detailOf` (`inertia/lib/match.ts`) runs
-`fromCoreMatch` with the site's score and badges, `summaryOf` makes a feed row of it,
-`profileFromCore` builds the profile from the summoner, ranks, mastery and loaded games, and
-`playedWithFromCore` the teammates.
+`fromCoreMatch` with the site's score and badges, and `summaryOf` makes a feed row of it.
 
 ## Tokens and themes
 
@@ -43,6 +43,18 @@ Dark is the default. `data-theme` on `<html>` is `system` (follows the operating
 `light` or `dark`. `inertia/lib/theme.ts` owns the choice and persists it as `invade-theme`; a
 synchronous script in `resources/views/inertia_layout.edge` replays it before the stylesheet
 loads. Pages are set on `iv-root` (the package's type and colour).
+
+## Materials
+
+The desktop app's window, in both themes. The header is the chrome: unlit ink under a fine grain
+(`inertia/css/grain.png`, a 128px tile of 0–1.6% white; `grain-light.png` is the same at about
+1% black). The page is a sheet raised under it, its top edge a hairline brightest under the
+light. One soft violet light (`--light`) falls from above the top right; it and the grain are a
+single fixed layer behind the content (`body::before`), so scrolling repaints nothing. Panels
+have a lit face (`--sheen`, `--lit`), buttons and selects are keys lit from above, segmented
+controls and fields are inset wells, the current profile section is the app's violet-lit pill,
+and portraits and icons sit in a lit rim (`--portrait`). Static paint only: no blur, no animated
+light.
 
 ## Type
 
@@ -64,13 +76,13 @@ for the best of each team.
 
 The package's: `iv-btn`, `iv-seg`, `iv-tabs`, `iv-panel`, `iv-skel`, `iv-badge`, `iv-table`,
 `iv-select`, `iv-form` and the components. `inertia/css/components.css` adds only the site's
-own repeating shapes: the page width (`page`), `section` headings, `fig`/`stat`/`label`,
-`field`, `menu`, `thumb`/`portrait`, the dense `dt` tables, `meter`, `scroll-x`, `notice` and
-the live `pulse`. Anything used once lives in the component that uses it.
+own repeating shapes: the page width (`page`), the header's `chrome`, `section` headings, the
+profile `rail`, `fig`/`stat`/`label`, `field`, `control`, `menu`, `thumb`/`portrait`, the dense
+`dt` tables, `meter`, `scroll-x`, `notice` and the live `pulse`. Anything used once lives in the component that uses it.
 
 ## Responsiveness
 
 The match row is its own size container and drops the matchup, then farm, then items as it
-narrows. The profile puts its side panels above the feed below 1100px of width, and after it on
-a phone. Every page works at 390px with a 16px gutter and no sideways scroll; wide tables scroll
+narrows. Below 1024px the profile's sections become tabs under the identity panel and the rail's
+panels follow the games. Every page works at 390px with a 16px gutter and no sideways scroll; wide tables scroll
 inside their panel.

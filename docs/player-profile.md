@@ -12,32 +12,33 @@ See [design.md](design.md) for the palette, themes and primitives.
 | `/:summoner/live`                    | Current lineup, spells, runes, tracked champion and rank data |
 | `/:summoner/friends`                 | Lane partnerships and per-teammate synergy                    |
 | `/:summoner/compare?with=Name%23Tag` | Two players on one table, same filters                        |
-| `/:summoner/match/:matchId`          | The game's header and its full detail                         |
+| `/:summoner/match/:matchId`          | The game's header, scoreboard, analysis, timeline and build   |
 | `/:summoner/lens`                    | Redirects to `/champions`                                     |
 | `/:summoner/history`                 | Redirects to the Overview match feed                          |
 
 ## Overview
 
-The desktop app's profile, drawn by the same components (`@invadelol/ui`, see
-[design.md](design.md)). The header band holds the icon, Riot ID, level, last
-game and both ranks with Riot's crest, over the main champion's artwork; the
-sections and the page's actions (Update, Share) sit under it. Then the player's
-tendencies beside their games:
+The site's own layout, drawn with the package's components and materials (see
+[design.md](design.md)). A rail on the left: the identity panel (icon, Riot ID,
+region, level, last game and views over the main champion's artwork, with
+Update, Share and Compare) and the sections as a vertical list. Beside it:
 
-- **LP history**: the stored rank readings of a queue as one line, when there
-  are at least two.
-- **Champions**: the loaded games per champion (record, KDA, CS/min, average
-  score), and lifetime mastery as a second view of the same panel.
-- **Roles** and **Played with** (teammates seen in at least two of the latest
-  40 full games), both read from the loaded games, and the **Activity**
-  calendar.
-- **Match history**: queue, role, champion and order filters over the loaded
-  games, the record and form they describe, and the feed grouped by day. A row
-  opens the game in place (Scoreboard, Breakdown, Gold, Timeline, Build) with a
-  link to its own page; older games load on demand.
+- **Performance**: win rate and the form squares, the average score (the dial)
+  with its best and its trend, the five sub-scores, then KDA, kill
+  participation, CS and gold per minute over the last 30 games, each as a line
+  against the 30 games before it (dashed) with the change. The match-history
+  filters re-cut both windows, so the figures describe the games listed below.
+- **Match history**: the filtered record in the section rule, queue segments,
+  Riot's role glyphs and a searchable champion combobox, then the shared match
+  rows grouped by day. A row opens the game in place (Scoreboard, Breakdown,
+  Gold, Timeline, Build) with a link to its own page; older games load as you
+  scroll.
 
-A champion or role on the left filters the feed. On a phone the games come
-first and the tendencies follow them.
+Under the sections, the rail carries **Ranked** (each queue's crest, LP and
+record, and the LP climb of the queue with the most snapshots), **Champions**
+(the top five, each filtering the feed), **Roles**, **Played with** and the
+**Activity** calendar. On narrow screens the sections become tabs and the rail
+follows the games.
 
 ## Champions
 
@@ -67,12 +68,14 @@ per-game values), so a figure here matches the same figure on the profile.
 
 ## Match page
 
-The match header (queue, date, each team's result and kills, the clock and the
-gold race) over the same detail a profile row opens, every tab of it.
-**Scoreboard** bands both teams with their objectives and bans; **Breakdown**
-reads a player against the lobby and their lane opponent; **Gold** and
-**Timeline** need the stored timeline (and its events), so older games show
-the scoreboard, breakdown and build only.
+One page, no tabs: the header (queue, date, each team's result, kills and
+objectives, the clock and the gold race), then the package's views stacked
+under anchors in a sticky bar. **Scoreboard** bands both teams with their
+objectives and bans; **Analysis** is the Breakdown (a player against the lobby
+and their lane opponent) and, with a stored timeline, the gold, XP and CS race;
+**Timeline** needs the timeline's events; **Build** is the picked player's
+items, runes and spells. Picking a player in one section follows through the
+others; it starts on the player whose profile led here.
 
 Every player name in the product links to that player's profile.
 

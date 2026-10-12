@@ -1,30 +1,28 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3'
-import { computed, onBeforeUnmount, onMounted, reactive, ref, shallowRef, watch } from 'vue'
 import {
-  ChampionTable,
-  Icon,
-  LpGraph,
-  MatchList,
-  PlayedWithPanel,
-  PlayerHeader,
-  ProfileLayout,
-  RolesPanel,
-} from '@invadelol/ui'
-import {
-  playedWithFromCore,
-  profileFromCore,
-  summaryOf,
-  type MatchSummary,
-  type Position,
-  type QueueFilter,
-  type ScoreRow,
-} from '@invadelol/ui/logic'
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  shallowRef,
+  watch,
+} from 'vue'
+import { MatchRowSkeleton } from '@invadelol/ui'
 import AppHeader from '../components/AppHeader.vue'
+import ProfileHeader from '../components/ProfileHeader.vue'
 import ProfileNav from '../components/ProfileNav.vue'
+import StatBoard from '../components/StatBoard.vue'
+import RankStrip from '../components/RankStrip.vue'
+import ChampionPool from '../components/ChampionPool.vue'
+import RoleSplit from '../components/RoleSplit.vue'
+import TeammatesPanel from '../components/TeammatesPanel.vue'
 import ActivityHeatmap from '../components/ActivityHeatmap.vue'
-import GameDetail from '../components/GameDetail.vue'
 import MatchFilters, { type Filters } from '../components/MatchFilters.vue'
+import MatchList from '../components/MatchList.vue'
+import InfiniteScroll from '../components/InfiniteScroll.vue'
 import ChampionExplorer from '../components/ChampionExplorer.vue'
 import MasteryPanel from '../components/MasteryPanel.vue'
 import FriendsPanel from '../components/FriendsPanel.vue'
@@ -33,18 +31,21 @@ import PlayerCompare from '../components/PlayerCompare.vue'
 import ShareProfile from '../components/ShareProfile.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import { decodeSlug, parseSlug } from '../lib/format.js'
-import { detailOf } from '../lib/match.js'
+import { isRemake } from '../lib/match.js'
 import { rememberPlayer, updateRecent } from '../lib/recent.js'
 import type {
   ActivityDay,
+  GlobalStats,
   ChampionMastery,
   ChampionStats,
   Match,
   RanksPayload,
+  StatsPayload,
   Summoner,
+  Teammate,
 } from '../lib/types.js'
 
-type PanelKey = 'matches' | 'ranks' | 'mastery' | 'activity'
+type PanelKey = 'stats' | 'ranks' | 'matches' | 'champions' | 'activity' | 'teammates'
 
 const props = defineProps<{
   summoner: string
@@ -60,167 +61,23 @@ const props = defineProps<{
 
 const section = computed(() => props.section ?? 'overview')
 
-/** The route param, decoded exactly once. Encode from this, never from the prop. */
-const slug = computed(() => decodeSlug(props.summoner))
-const parsed = computed(() => parseSlug(props.summoner))
-
-/** A page of the feed; the first one is the server's preloaded request. */
-const PAGE = 15
-
-/** Used only if the page was served without a panel list. */
-const FALLBACK_PANELS: ReadonlyArray<{ key: PanelKey; path: string }> = [
-  { key: 'matches', path: `matches?count=${PAGE}&view=summary` },
-  { key: 'ranks', path: 'ranks' },
-  { key: 'mastery', path: 'mastery?count=10' },
-  { key: 'activity', path: 'activity' },
-]
-
-const profile = shallowRef<Summoner | null>(props.initialProfile ?? null)
-const matches = shallowRef<Match[]>([])
-const ranks = shallowRef<RanksPayload | null>(null)
-const mastery = shallowRef<ChampionMastery[]>([])
-const activity = shallowRef<ActivityDay[]>([])
-const pending = reactive<Record<PanelKey, boolean>>({
-  matches: true,
-  ranks: true,
-  mastery: true,
-  activity: true,
-})
-const failedPanels = ref<PanelKey[]>([])
-
-/** What went wrong, so the page can say something true about it. */
-type LoadFailure = 'not-found' | 'riot-unavailable' | 'error'
-const isLoading = ref(!profile.value)
-const error = ref<LoadFailure | null>(null)
-
-// ── The feed, in the shared model ────────────────────────────────────────────
-
-/** Custom games (practice tool, lobbies with friends) are not part of anyone's record. */
-const played = computed(() => matches.value.filter((m) => m.queueId !== 0))
-
-/** Each stored game is read once, however often the list is recomputed. */
-const summaries = new WeakMap<Match, MatchSummary | null>()
-function summary(m: Match) {
-  if (!summaries.has(m)) summaries.set(m, summaryOf(detailOf(m), profile.value!.puuid, m.matchId))
-  return summaries.get(m)!
-}
-const games = computed(() => played.value.map(summary).filter((g) => g !== null))
-const scores = computed(
-  () =>
-    new Map<number, ScoreRow>(games.value.flatMap((g) => (g.score ? [[g.gameId, g.score]] : [])))
-)
-/** LP won or lost, for the games the desktop app reported it. */
-const lp = computed(
-  () =>
-    new Map<number, number>(
-      played.value.flatMap((m) => {
-        const g = summary(m)
-        return g && typeof m.lpChange === 'number' ? [[g.gameId, m.lpChange]] : []
-      })
-    )
-)
-
-const view = computed(() =>
-  profile.value
-    ? profileFromCore({
-        summoner: profile.value,
-        ranks: ranks.value,
-        mastery: mastery.value,
-        games: games.value,
-      })
-    : null
-)
-const mates = computed(() =>
-  profile.value && !pending.matches ? playedWithFromCore(played.value, profile.value.puuid) : null
-)
-/** The LP line needs two readings of a queue; the site has no "it fills in as you play". */
-const lpLine = computed(
-  () =>
-    !!view.value &&
-    ['solo', 'flex'].some((q) => view.value!.lp.filter((p) => p.queue === q).length > 1)
-)
-const mainChampion = computed(
-  () => view.value?.champions[0]?.championId ?? mastery.value[0]?.championId
-)
-
-const queue = shallowRef<QueueFilter>('all')
-const champion = shallowRef(0)
-const role = shallowRef<Position | ''>('')
-const order = shallowRef<'recent' | 'champion'>('recent')
-
+/** The profile's headline window, and the one it is compared with. */
+const STATS_WINDOW = 30
+const shareOpen = ref(false)
+const filters = ref<Filters>({ type: 'all', champion: 0, role: 'all' })
+const filteredMatches = shallowRef<Match[] | null>(null)
+const filteredChampions = shallowRef<ChampionStats[] | null>(null)
+const filterBusy = ref(false)
+const filterError = ref('')
 const hasMore = ref(false)
-const loadingMore = ref(false)
-
-async function loadMore() {
-  if (!profile.value || loadingMore.value || !hasMore.value) return
-  const signal = controller!.signal
-  loadingMore.value = true
-  try {
-    const query = `count=${PAGE}&view=summary&offset=${matches.value.length}`
-    const res = await fetch(`/api/summoners/puuid/${profile.value.puuid}/matches?${query}`, {
-      signal,
-    })
-    if (!res.ok) throw new Error()
-    const page = (await res.json()) as Match[]
-    if (signal.aborted) return
-    const known = new Set(matches.value.map((m) => m.matchId))
-    matches.value = [...matches.value, ...page.filter((m) => !known.has(m.matchId))]
-    hasMore.value = page.length === PAGE
-  } catch {
-    if (!signal.aborted) hasMore.value = false
-  } finally {
-    if (!signal.aborted) loadingMore.value = false
-  }
-}
-
-/** Win rate, KDA and farm of the loaded games, for the share card. */
-const shareStats = computed(() => {
-  const list = games.value.filter((g) => !g.remake)
-  if (!list.length) return null
-  const sum = (f: (g: MatchSummary) => number) => list.reduce((s, g) => s + f(g), 0)
-  return {
-    winrate: sum((g) => (g.win ? 1 : 0)) / list.length,
-    kda:
-      (sum((g) => g.kills) + sum((g) => g.assists)) /
-      Math.max(
-        1,
-        sum((g) => g.deaths)
-      ),
-    csMin: sum((g) => g.cs) / Math.max(1, sum((g) => g.duration) / 60),
-  }
-})
-
-// ── Other sections: the whole pool over 100 games, every mastery, duos ───────
-
-const championFilters = ref<Filters>({ type: 'all', champion: 0, role: 'all' })
-const champions = shallowRef<ChampionStats[]>([])
-const championsBusy = ref(false)
-const championsError = ref(false)
-let championsController: AbortController | undefined
-
-async function loadChampions() {
-  if (!profile.value) return
-  championsController?.abort()
-  championsController = new AbortController()
-  const signal = championsController.signal
-  championsBusy.value = true
-  championsError.value = false
-  const { type, role: position } = championFilters.value
-  const query = new URLSearchParams({ type, role: position, count: '100' })
-  try {
-    const res = await fetch(`/api/summoners/puuid/${profile.value.puuid}/champions?${query}`, {
-      signal,
-    })
-    if (!res.ok) throw new Error()
-    const data = await res.json()
-    if (!signal.aborted) champions.value = data
-  } catch {
-    if (!signal.aborted) championsError.value = true
-  } finally {
-    if (!signal.aborted) championsBusy.value = false
-  }
-}
-watch(championFilters, () => void loadChampions(), { deep: true })
+const nextOffset = ref(0)
+const appendError = ref(false)
+const failedPanels = ref<string[]>([])
+const mastery = shallowRef<ChampionMastery[]>([])
+/** Whether `mastery` is every champion, or only the top few the overview needs. */
+const masteryComplete = ref(false)
+const masteryLoading = ref(false)
+const masteryError = ref(false)
 
 /** Champions has two readings of the same pool: recent form, and lifetime. */
 const championsView = ref<'stats' | 'mastery'>('stats')
@@ -229,30 +86,72 @@ const CHAMPION_VIEWS = [
   { value: 'mastery' as const, label: 'Mastery' },
 ]
 
-/** Whether `mastery` is every champion, or only the top ten the overview needs. */
-const masteryComplete = ref(false)
-const masteryLoading = ref(false)
-const masteryError = ref(false)
+let filterController: AbortController | undefined
 let masteryController: AbortController | undefined
 
-async function loadAllMastery() {
+const mainChampion = computed(() => champions.value[0]?.championId ?? mastery.value[0]?.championId)
+const loadedMatches = computed(() => filteredMatches.value ?? matches.value)
+/** Custom games (practice tool, lobbies with friends) are not part of anyone's record. */
+const displayedMatches = computed(() => loadedMatches.value.filter((m) => m.queueId !== 0))
+const hiddenCustoms = computed(() => loadedMatches.value.length - displayedMatches.value.length)
+
+/** What the current filters actually returned, printed next to them. */
+const filterSummary = computed(() => {
+  const list = displayedMatches.value.filter((m) => !isRemake(m))
+  if (!list.length) return ''
+  let wins = 0
+  for (const match of list) {
+    if (match.participants.find((p) => p.puuid === profile.value?.puuid)?.win) wins++
+  }
+  return `${list.length} games · ${wins}W ${list.length - wins}L · ${Math.round((wins / list.length) * 100)}%`
+})
+
+const performanceMatches = shallowRef<Match[]>([])
+let statsController: AbortController | undefined
+
+/**
+ * Stats follow the match filters: changing the queue or the role has to change
+ * the numbers above the feed, or the two disagree. Both windows are fetched
+ * together so the trend is always against a like-for-like sample.
+ */
+async function loadStats() {
   if (!profile.value) return
-  masteryController?.abort()
-  masteryController = new AbortController()
-  const signal = masteryController.signal
-  masteryLoading.value = true
-  masteryError.value = false
+  statsController?.abort()
+  statsController = new AbortController()
+  const signal = statsController.signal
+  pending.stats = true
+  stats.value = null
+  previousStats.value = null
+  performanceMatches.value = []
+
+  const query = (offset: number) => {
+    const params = new URLSearchParams({ count: String(STATS_WINDOW) })
+    if (offset) params.set('offset', String(offset))
+    if (filters.value.type !== 'all') params.set('type', filters.value.type)
+    if (filters.value.role !== 'all') params.set('role', filters.value.role)
+    if (filters.value.champion) params.set('champion', String(filters.value.champion))
+    return params
+  }
+
   try {
-    const res = await fetch(`/api/summoners/puuid/${profile.value.puuid}/mastery`, { signal })
-    if (!res.ok) throw new Error()
-    const data = (await res.json()) as ChampionMastery[]
+    const base = `/api/summoners/puuid/${profile.value.puuid}/stats`
+    const [current, before, recent] = await Promise.all([
+      fetch(`${base}?${query(0)}`, { signal }).then((r) => (r.ok ? r.json() : null)),
+      fetch(`${base}?${query(STATS_WINDOW)}`, { signal }).then((r) => (r.ok ? r.json() : null)),
+      fetch(`/api/summoners/puuid/${profile.value.puuid}/matches?${query(0)}&view=summary`, {
+        signal,
+      }).then((r) => (r.ok ? r.json() : null)),
+    ])
     if (signal.aborted) return
-    mastery.value = data.sort((a, b) => b.championPoints - a.championPoints)
-    masteryComplete.value = true
+    failedPanels.value = failedPanels.value.filter((key) => key !== 'stats')
+    if (!current || !before || !recent) failedPanels.value.push('stats')
+    stats.value = current
+    performanceMatches.value = recent ?? []
+    previousStats.value = before?.global?.total ? before.global : null
   } catch {
-    if (!signal.aborted) masteryError.value = true
+    if (!signal.aborted && !failedPanels.value.includes('stats')) failedPanels.value.push('stats')
   } finally {
-    if (!signal.aborted) masteryLoading.value = false
+    if (!signal.aborted) pending.stats = false
   }
 }
 
@@ -261,7 +160,7 @@ const friendsLoading = ref(false)
 let friendsController: AbortController | undefined
 
 /** Synergy needs roles, which only the match rows carry, so it reads a
- *  wider sample of the player's own games than the feed has loaded. */
+ *  wider sample of the player's own games rather than the friends endpoint. */
 async function loadFriendMatches() {
   if (!profile.value || friendMatches.value.length) return
   friendsController?.abort()
@@ -283,29 +182,171 @@ async function loadFriendMatches() {
   }
 }
 
-/** Each section loads what only it reads, the first time it is opened. */
-function openSection() {
+/**
+ * The Mastery panel lists every champion; the rest of the profile only needs
+ * the top ones, which the API can answer from a snapshot the Invade app
+ * reported instead of asking Riot.
+ */
+async function loadMastery(complete = section.value === 'champions') {
   if (!profile.value) return
-  if (['champions', 'compare'].includes(section.value) && !champions.value.length)
-    void loadChampions()
-  if (section.value === 'champions' && !masteryComplete.value) void loadAllMastery()
+  masteryController?.abort()
+  masteryController = new AbortController()
+  const signal = masteryController.signal
+  masteryLoading.value = true
+  masteryError.value = false
+  try {
+    const query = complete ? '' : '?count=10'
+    const response = await fetch(`/api/summoners/puuid/${profile.value.puuid}/mastery${query}`, {
+      signal,
+    })
+    if (!response.ok) throw new Error()
+    const data = await response.json()
+    if (!signal.aborted) {
+      masteryComplete.value = complete
+      mastery.value = data.sort(
+        (a: ChampionMastery, b: ChampionMastery) => b.championPoints - a.championPoints
+      )
+    }
+  } catch {
+    if (!signal.aborted) masteryError.value = true
+  } finally {
+    if (!signal.aborted) masteryLoading.value = false
+  }
+}
+
+async function applyFilters(append = false) {
+  if (!profile.value) return
+  if (
+    append &&
+    (filterBusy.value || pending.matches || !hasMore.value || section.value !== 'overview')
+  )
+    return
+  filterController?.abort()
+  filterController = new AbortController()
+  const signal = filterController.signal
+  filterBusy.value = true
+  appendError.value = false
+  filterError.value = ''
+  if (!append) void loadStats()
+  const isChampions = section.value === 'champions'
+  const query = new URLSearchParams({
+    type: filters.value.type,
+    role: filters.value.role,
+    count: isChampions ? '100' : '15',
+  })
+  if (!isChampions) {
+    query.set('view', 'summary')
+    if (filters.value.champion) query.set('champion', String(filters.value.champion))
+    if (append) query.set('offset', String(nextOffset.value))
+  }
+  try {
+    const response = await fetch(
+      `/api/summoners/puuid/${profile.value.puuid}/${isChampions ? 'champions' : 'matches'}?${query}`,
+      { signal }
+    )
+    if (!response.ok) throw new Error()
+    const data = await response.json()
+    if (signal.aborted) return
+    if (isChampions) filteredChampions.value = data
+    else {
+      const incoming = data as Match[]
+      const existing = append ? loadedMatches.value : []
+      filteredMatches.value = [
+        ...new Map([...existing, ...incoming].map((match) => [match.matchId, match])).values(),
+      ]
+      nextOffset.value = (append ? nextOffset.value : 0) + incoming.length
+      hasMore.value = data.length === 15
+    }
+  } catch {
+    if (!signal.aborted) {
+      appendError.value = append
+      if (!append) filterError.value = 'These results could not be loaded.'
+    }
+  } finally {
+    if (!signal.aborted) filterBusy.value = false
+  }
+}
+
+watch(
+  filters,
+  () => {
+    if (!pending.matches) void applyFilters()
+  },
+  { deep: true }
+)
+
+watch(section, () => {
+  if (section.value === 'champions' && !masteryComplete.value) void loadMastery(true)
   if (section.value === 'friends') void loadFriendMatches()
-}
-watch(section, openSection)
+  if (['overview', 'champions'].includes(section.value)) void applyFilters()
+})
 
-/** Picking a champion in Champions sends you to that champion's games. */
+/** Picking a champion anywhere sends you to that champion's games. */
 function championMatches(id: number) {
-  champion.value = id
-  router.visit(`/${encodeURIComponent(slug.value)}`, { preserveState: true })
+  filters.value.champion = id
+  if (section.value === 'overview') {
+    void nextTick(() => document.getElementById('matches')?.scrollIntoView({ block: 'start' }))
+    return
+  }
+  router.visit(`/${encodeURIComponent(slug.value)}#matches`, {
+    preserveState: true,
+    preserveScroll: true,
+    onSuccess: () => {
+      void nextTick(() => document.getElementById('matches')?.scrollIntoView({ block: 'start' }))
+    },
+  })
 }
 
-// ── Loading ──────────────────────────────────────────────────────────────────
+/** The route param, decoded exactly once. Encode from this, never from the prop. */
+const slug = computed(() => decodeSlug(props.summoner))
+const parsed = computed(() => parseSlug(props.summoner))
 
+const profile = shallowRef<Summoner | null>(props.initialProfile ?? null)
+const stats = shallowRef<StatsPayload | null>(null)
+const previousStats = shallowRef<GlobalStats | null>(null)
+const ranks = shallowRef<RanksPayload | null>(null)
+const matches = shallowRef<Match[]>([])
+const champions = shallowRef<ChampionStats[]>([])
+const activity = shallowRef<ActivityDay[]>([])
+const teammates = shallowRef<Teammate[]>([])
+
+const isLoading = ref(!profile.value)
+const error = ref<LoadFailure | null>(null)
+const isSyncing = ref(false)
+const syncMessage = ref<string | null>(null)
+const viewCount = ref<number | null>(null)
+
+/** A number, whichever way the database driver returned the bigint. */
+const lastGameMs = computed(() => (matches.value[0] ? Number(matches.value[0].gameStartMs) : null))
+
+const pending = reactive<Record<PanelKey, boolean>>({
+  stats: true,
+  ranks: true,
+  matches: true,
+  champions: true,
+  activity: true,
+  teammates: true,
+})
+
+/** Used only if the page was served without a panel list. */
+const FALLBACK_PANELS: ReadonlyArray<{ key: PanelKey; path: string }> = [
+  { key: 'matches', path: 'matches?count=15&view=summary' },
+  { key: 'stats', path: `stats?count=${STATS_WINDOW}` },
+  { key: 'ranks', path: 'ranks' },
+  { key: 'champions', path: 'champions?count=100' },
+  { key: 'activity', path: 'activity' },
+  { key: 'teammates', path: 'friends' },
+]
+
+let analyticsVersion = 0
 let controller: AbortController | undefined
 let viewTimer: ReturnType<typeof setTimeout> | undefined
 let messageTimer: ReturnType<typeof setTimeout> | undefined
 
-function failureFor(res: Response): LoadFailure {
+/** What went wrong, so the page can say something true about it. */
+type LoadFailure = 'not-found' | 'riot-unavailable' | 'error'
+
+async function failureFor(res: Response): Promise<LoadFailure> {
   if (res.status === 404) return 'not-found'
   // 503 is the API telling us Riot rate limited us or rejected our key.
   if (res.status === 503) return 'riot-unavailable'
@@ -320,56 +361,79 @@ async function loadProfile(signal: AbortSignal): Promise<Summoner | LoadFailure>
 }
 
 /** Where each panel's response lands. */
-const targets: Record<PanelKey, { value: unknown }> = { matches, ranks, mastery, activity }
-
-/** Paint each independent panel as soon as its request finishes. */
-async function loadPanels(puuid: string, signal: AbortSignal) {
-  const base = `/api/summoners/puuid/${puuid}`
-  await Promise.all(
-    (props.panels ?? FALLBACK_PANELS).map(async ({ key, path }) => {
-      try {
-        const res = await fetch(`${base}/${path}`, { signal })
-        if (!res.ok) throw new Error()
-        const data = await res.json()
-        if (!signal.aborted) targets[key].value = data
-      } catch {
-        // Mastery is a bonus (Riot only answers it for players the app never reported).
-        if (!signal.aborted && key !== 'mastery') failedPanels.value.push(key)
-      } finally {
-        if (!signal.aborted) pending[key] = false
-      }
-    })
-  )
-  if (!signal.aborted) hasMore.value = matches.value.length >= PAGE
+const targets: Record<PanelKey, { value: any }> = {
+  matches,
+  stats,
+  ranks,
+  champions,
+  activity,
+  teammates,
 }
 
-const controllers = () => [controller, championsController, masteryController, friendsController]
+/** Paint each independent panel as soon as its request finishes. */
+async function loadAnalytics(puuid: string, signal: AbortSignal) {
+  const version = ++analyticsVersion
+  const base = `/api/summoners/puuid/${puuid}`
+
+  async function panel(key: PanelKey, path: string) {
+    if (key === 'stats') return
+    const target = targets[key]
+    try {
+      const response = await fetch(`${base}/${path}`, { signal })
+      if (!response.ok) throw new Error()
+      const data = await response.json()
+      if (!signal.aborted && version === analyticsVersion) target.value = data
+    } catch {
+      if (!signal.aborted && version === analyticsVersion) failedPanels.value.push(key)
+    } finally {
+      if (!signal.aborted && version === analyticsVersion) pending[key] = false
+    }
+  }
+
+  await Promise.all((props.panels ?? FALLBACK_PANELS).map(({ key, path }) => panel(key, path)))
+}
+
+/** The solo queue rank, remembered with the player in this browser's recent list. */
+function soloRank(payload: RanksPayload) {
+  const solo = payload.current?.find((r) => r.queueType === 'RANKED_SOLO_5x5' && r.tier)
+  return solo ? { tier: solo.tier, division: solo.division, leaguePoints: solo.leaguePoints } : null
+}
 
 async function load() {
-  for (const c of controllers()) c?.abort()
+  controller?.abort()
+  statsController?.abort()
+  friendsController?.abort()
+  filterController?.abort()
+  masteryController?.abort()
   clearTimeout(viewTimer)
   clearTimeout(messageTimer)
   controller = new AbortController()
   const { signal } = controller
+  failedPanels.value = []
+  filters.value = { type: 'all', champion: 0, role: 'all' }
+  hasMore.value = false
+  nextOffset.value = 0
+  appendError.value = false
+  filterBusy.value = false
+  filterError.value = ''
+  filteredMatches.value = null
+  filteredChampions.value = null
+  mastery.value = []
+  masteryComplete.value = false
+  friendMatches.value = []
   profile.value = props.initialProfile ?? null
   isLoading.value = !profile.value
   error.value = null
-  failedPanels.value = []
-  matches.value = []
-  ranks.value = null
-  mastery.value = []
-  activity.value = []
-  champions.value = []
-  friendMatches.value = []
-  masteryComplete.value = false
-  hasMore.value = false
-  loadingMore.value = false
   isSyncing.value = false
   syncMessage.value = null
-  queue.value = 'all'
-  champion.value = 0
-  role.value = ''
-  order.value = 'recent'
+  viewCount.value = null
+  stats.value = null
+  previousStats.value = null
+  ranks.value = null
+  matches.value = []
+  champions.value = []
+  activity.value = []
+  teammates.value = []
   for (const key of Object.keys(pending) as PanelKey[]) pending[key] = true
 
   try {
@@ -388,24 +452,44 @@ async function load() {
       platform: result.platform,
       level: result.summonerLevel,
     })
-    // A visit counts once the page has been read a moment; views order the search.
-    viewTimer = setTimeout(() => {
-      fetch(`/api/summoners/puuid/${result.puuid}/increment`, { method: 'PUT', signal }).catch(
-        () => {}
-      )
+    // Start the visit timer independently of slow analytics.
+    viewTimer = setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/summoners/puuid/${result.puuid}/increment`, {
+          method: 'PUT',
+          signal,
+        })
+        if (response.ok) {
+          const data = await response.json()
+          if (!signal.aborted) viewCount.value = Number(data.viewCount)
+        }
+      } catch {
+        /* view tracking is best-effort */
+      }
     }, 3000)
-    openSection()
-    await loadPanels(result.puuid, signal)
-    const solo = view.value?.card.solo
-    if (!signal.aborted)
-      updateRecent(result, {
-        rank: solo ? { tier: solo.tier, division: solo.division, leaguePoints: solo.lp } : null,
-      })
+    void loadMastery()
+    void loadStats()
+    if (section.value === 'friends') void loadFriendMatches()
+    await loadAnalytics(result.puuid, signal)
+    if (!signal.aborted && ranks.value) updateRecent(result, { rank: soloRank(ranks.value) })
+    if (
+      !signal.aborted &&
+      (filters.value.type !== 'all' || filters.value.role !== 'all' || filters.value.champion)
+    )
+      await applyFilters()
+    if (!signal.aborted && !filteredMatches.value) {
+      nextOffset.value = matches.value.length
+      hasMore.value = matches.value.length >= 15
+    }
   } catch {
     if (!signal.aborted) error.value = 'error'
   } finally {
     if (!signal.aborted) isLoading.value = false
   }
+}
+
+function retry() {
+  void load()
 }
 
 onMounted(() => {
@@ -417,16 +501,14 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  for (const c of controllers()) c?.abort()
+  filterController?.abort()
+  masteryController?.abort()
+  statsController?.abort()
+  friendsController?.abort()
+  controller?.abort()
   clearTimeout(viewTimer)
   clearTimeout(messageTimer)
 })
-
-// ── Update ───────────────────────────────────────────────────────────────────
-
-const isSyncing = ref(false)
-const syncMessage = ref<string | null>(null)
-const shareOpen = ref(false)
 
 async function sync() {
   if (!profile.value || isSyncing.value) return
@@ -441,22 +523,21 @@ async function sync() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ summoner: `${profile.value.gameName}-${profile.value.tagLine}` }),
     })
+
     if (signal.aborted) return
     if (res.ok) {
       const result = await res.json()
       const found = result.matches?.length ?? 0
-      if (result.summoner) profile.value = result.summoner
-      syncMessage.value = result.rankRefreshFailed
-        ? 'Matches updated; rank refresh unavailable'
-        : found
-          ? `${found} new match${found > 1 ? 'es' : ''}`
-          : 'Already up to date'
+      if (result.summoner && !signal.aborted) profile.value = result.summoner
+      if (signal.aborted) return
+      syncMessage.value = found
+        ? `${found} new match${found > 1 ? 'es' : ''}`
+        : 'Already up to date'
       failedPanels.value = []
-      await loadPanels(profile.value!.puuid, signal)
-      champions.value = []
-      friendMatches.value = []
-      masteryComplete.value = false
-      openSection()
+      if (result.rankRefreshFailed) syncMessage.value = 'Matches updated; rank refresh unavailable'
+      await loadAnalytics(profile.value!.puuid, signal)
+      await applyFilters()
+      void loadMastery()
     } else {
       const failure = await res.json().catch(() => null)
       if (signal.aborted) return
@@ -488,9 +569,25 @@ async function sync() {
     <AppHeader />
 
     <main class="page flex-1 pt-6">
-      <ProfileLayout v-if="isLoading" loading />
+      <!-- Loading: the shape of the profile that is coming -->
+      <div
+        v-if="isLoading"
+        class="grid gap-8 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[316px_minmax(0,1fr)]"
+      >
+        <div class="space-y-4">
+          <div class="iv-skel h-[236px]" />
+          <div class="iv-skel h-[180px]" />
+        </div>
+        <div>
+          <div class="iv-skel h-[272px]" />
+          <div class="mt-10">
+            <MatchRowSkeleton :count="6" />
+          </div>
+        </div>
+      </div>
 
-      <div v-else-if="error" class="state">
+      <!-- Error -->
+      <div v-else-if="error" class="mx-auto max-w-[520px] py-24">
         <h1 class="text-[20px] font-semibold text-ink">
           {{
             error === 'not-found'
@@ -510,138 +607,191 @@ async function sync() {
           }}
         </p>
         <div class="mt-5 flex gap-2">
-          <button type="button" class="iv-btn primary" @click="load">
-            <Icon name="refresh" :size="14" />Try again
-          </button>
+          <button type="button" class="iv-btn primary" @click="retry">Try again</button>
           <a href="/" class="iv-btn">Back to search</a>
         </div>
       </div>
 
-      <!-- The desktop app's profile: who they are and where they stand on top, the sections, then
-           the player's tendencies beside their games (every line on the left filters the feed).
-           The other sections take the whole width under the header. -->
-      <ProfileLayout v-else-if="profile && view">
-        <template #header>
-          <h1 class="sr-only">{{ profile.gameName }}#{{ profile.tagLine }}</h1>
-          <PlayerHeader :profile="view" :games="games" />
-          <ProfileNav :slug="slug" :section="section">
-            <span v-if="syncMessage" class="text-[12px] text-ink-3" role="status">
-              {{ syncMessage }}
-            </span>
-            <button type="button" class="iv-btn sm" :disabled="isSyncing" @click="sync">
-              <Icon name="refresh" :size="13" :class="{ spin: isSyncing }" />
-              {{ isSyncing ? 'Updating…' : 'Update' }}
-            </button>
-            <button type="button" class="iv-btn ghost sm" @click="shareOpen = true">Share</button>
-          </ProfileNav>
-          <p v-if="failedPanels.length" class="notice" role="alert">
-            <span>Some data could not be loaded ({{ failedPanels.join(', ') }}).</span>
-            <button type="button" class="iv-btn sm ml-auto" @click="load">Retry</button>
-          </p>
-        </template>
-
-        <template v-if="section === 'overview'" #side>
-          <LpGraph v-if="lpLine" :points="view.lp" :card="view.card" />
-          <ChampionTable
-            v-model:champion="champion"
-            :profile="view"
-            :games="games"
-            :scores="scores"
+      <!-- The dossier: identity, sections and the player's tendencies on the left; performance and
+           games on the right. The same composition as the desktop app's profile. -->
+      <div
+        v-else-if="profile"
+        class="grid items-start gap-x-8 gap-y-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:grid-rows-[auto_1fr] xl:grid-cols-[316px_minmax(0,1fr)]"
+      >
+        <!-- Identity and sections come first everywhere; on narrow screens the tendencies
+             below them move after the games, so the feed is not pushed off the first screens. -->
+        <div class="rail min-w-0 lg:col-start-1 lg:row-start-1">
+          <ProfileHeader
+            :summoner="profile"
+            :view-count="viewCount"
+            :is-syncing="isSyncing"
+            :sync-message="syncMessage"
+            :last-game-ms="lastGameMs"
+            :main-champion="mainChampion"
+            @sync="sync"
+            @share="shareOpen = true"
           />
-          <RolesPanel v-model:role="role" :lanes="view.lanes" />
-          <PlayedWithPanel :data="mates" />
-          <ActivityHeatmap v-if="!pending.activity" :activity="activity" />
-        </template>
 
-        <MatchList
+          <ProfileNav class="mt-4" :slug="slug" :section="section" />
+        </div>
+
+        <aside
           v-if="section === 'overview'"
-          id="matches"
-          v-model:queue="queue"
-          v-model:champion="champion"
-          v-model:role="role"
-          v-model:order="order"
-          :puuid="profile.puuid"
-          :games="games"
-          :scores="scores"
-          :lp="lp"
-          :status="
-            pending.matches ? 'loading' : failedPanels.includes('matches') ? 'error' : 'ready'
-          "
-          error="The match history could not be loaded."
-          :more="hasMore"
-          :loading-more="loadingMore"
-          @more="loadMore"
-          @retry="load"
+          class="rail -mt-6 min-w-0 max-lg:order-last lg:col-start-1 lg:row-start-2"
         >
-          <template #detail="{ game }">
-            <GameDetail
-              :match-id="game.matchId!"
-              :puuid="profile.puuid"
-              :game-name="profile.gameName"
-              :tag-line="profile.tagLine"
-            />
-          </template>
-        </MatchList>
+          <template v-if="section === 'overview'">
+            <div v-if="pending.ranks" class="iv-skel mt-6 h-[140px]" />
+            <RankStrip v-else-if="!failedPanels.includes('ranks')" :ranks="ranks" />
 
-        <section v-else-if="section === 'champions'">
-          <div class="mb-4 flex flex-wrap items-center gap-3">
-            <div class="iv-seg">
-              <button
-                v-for="option in CHAMPION_VIEWS"
-                :key="option.value"
-                type="button"
-                :class="{ on: championsView === option.value }"
-                @click="championsView = option.value"
-              >
-                {{ option.label }}
-              </button>
+            <div v-if="pending.champions" class="iv-skel mt-6 h-[200px]" />
+            <ChampionPool
+              v-else
+              :champions="champions"
+              :slug="slug"
+              :active="filters.champion"
+              :limit="5"
+              @pick="championMatches"
+            />
+
+            <div v-if="pending.matches" class="iv-skel mt-6 h-[140px]" />
+            <RoleSplit v-else :matches="matches" :puuid="profile.puuid" />
+
+            <div v-if="pending.teammates" class="iv-skel mt-6 h-[160px]" />
+            <TeammatesPanel v-else :teammates="teammates" />
+
+            <div v-if="pending.activity" class="iv-skel mt-6 h-[140px]" />
+            <ActivityHeatmap v-else :activity="activity" />
+          </template>
+        </aside>
+
+        <div class="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+          <p v-if="failedPanels.length" class="notice mb-5" role="alert">
+            <span>Some data could not be loaded ({{ failedPanels.join(', ') }}).</span>
+            <button type="button" class="iv-btn sm ml-auto" @click="retry">Retry</button>
+          </p>
+
+          <!-- ── Overview ─────────────────────────────────────────── -->
+          <template v-if="section === 'overview'">
+            <div v-if="pending.stats" class="iv-skel h-[300px]" />
+            <StatBoard
+              v-else
+              :stats="stats?.global ?? null"
+              :previous="previousStats"
+              :matches="performanceMatches"
+              :puuid="profile.puuid"
+              :window="STATS_WINDOW"
+            />
+
+            <section id="matches" class="min-w-0 scroll-mt-20 pt-8">
+              <div class="section flex-wrap">
+                <h2>Match history</h2>
+                <span class="meta num">{{ filterSummary }}</span>
+                <span v-if="hiddenCustoms" class="meta num ml-auto text-ink-4">
+                  {{ hiddenCustoms }} custom {{ hiddenCustoms === 1 ? 'game' : 'games' }} not shown
+                </span>
+              </div>
+
+              <MatchFilters v-model="filters" :champions="champions" :busy="filterBusy" />
+
+              <p v-if="filterError" class="notice mt-4" role="alert">
+                <span>{{ filterError }}</span>
+                <button type="button" class="iv-btn sm ml-auto" @click="applyFilters()">
+                  Retry
+                </button>
+              </p>
+
+              <MatchRowSkeleton v-if="pending.matches" class="mt-5" :count="6" />
+              <div v-else class="mt-5">
+                <MatchList
+                  :matches="displayedMatches"
+                  :puuid="profile.puuid"
+                  :game-name="profile.gameName"
+                  :tag-line="profile.tagLine"
+                  @clear="filters = { type: 'all', champion: 0, role: 'all' }"
+                />
+              </div>
+
+              <InfiniteScroll
+                v-if="!filterError"
+                :has-more="hasMore"
+                :loading="pending.matches || filterBusy"
+                :error="appendError"
+                :empty="!displayedMatches.length"
+                @load="applyFilters(true)"
+              />
+            </section>
+          </template>
+
+          <!-- ── Champions ────────────────────────────────────────── -->
+          <div v-else-if="section === 'champions'">
+            <div class="mb-5 flex flex-wrap items-center gap-3">
+              <div class="iv-seg">
+                <button
+                  v-for="option in CHAMPION_VIEWS"
+                  :key="option.value"
+                  type="button"
+                  :class="{ on: championsView === option.value }"
+                  @click="championsView = option.value"
+                >
+                  {{ option.label }}
+                </button>
+              </div>
+              <MatchFilters
+                v-if="championsView === 'stats'"
+                v-model="filters"
+                hide-champion
+                :busy="filterBusy"
+              />
             </div>
-            <MatchFilters
+
+            <p v-if="filterError" class="notice mb-4" role="alert">
+              <span>{{ filterError }}</span>
+              <button type="button" class="iv-btn sm ml-auto" @click="applyFilters()">Retry</button>
+            </p>
+
+            <ChampionExplorer
               v-if="championsView === 'stats'"
-              v-model="championFilters"
-              hide-champion
-              :busy="championsBusy"
+              :champions="filteredChampions ?? champions"
+              :busy="filterBusy || pending.champions"
+              @matches="championMatches"
+            />
+            <MasteryPanel
+              v-else
+              :mastery="mastery"
+              :loading="masteryLoading"
+              :error="masteryError"
+              @retry="loadMastery(true)"
             />
           </div>
-          <p v-if="championsError && championsView === 'stats'" class="notice mb-4" role="alert">
-            <span>These results could not be loaded.</span>
-            <button type="button" class="iv-btn sm ml-auto" @click="loadChampions">Retry</button>
-          </p>
-          <ChampionExplorer
-            v-if="championsView === 'stats'"
+
+          <!-- ── Friends ──────────────────────────────────────────── -->
+          <FriendsPanel
+            v-else-if="section === 'friends'"
+            :matches="friendMatches"
+            :puuid="profile.puuid"
+            :loading="friendsLoading"
+          />
+
+          <!-- ── Live ─────────────────────────────────────────────── -->
+          <LiveMatch
+            v-else-if="section === 'live'"
+            :puuid="profile.puuid"
+            :name="profile.gameName"
+          />
+
+          <!-- ── Compare ──────────────────────────────────────────── -->
+          <PlayerCompare
+            v-else-if="section === 'compare'"
+            :profile="profile"
             :champions="champions"
-            :busy="championsBusy"
-            @matches="championMatches"
           />
-          <MasteryPanel
-            v-else
-            :mastery="mastery"
-            :loading="masteryLoading"
-            :error="masteryError"
-            @retry="loadAllMastery"
-          />
-        </section>
-
-        <FriendsPanel
-          v-else-if="section === 'friends'"
-          :matches="friendMatches"
-          :puuid="profile.puuid"
-          :loading="friendsLoading"
-        />
-
-        <LiveMatch v-else-if="section === 'live'" :puuid="profile.puuid" :name="profile.gameName" />
-
-        <PlayerCompare
-          v-else-if="section === 'compare'"
-          :profile="profile"
-          :champions="champions"
-        />
-      </ProfileLayout>
+        </div>
+      </div>
 
       <ShareProfile
         v-if="profile && shareOpen"
         :profile="profile"
-        :stats="shareStats"
+        :stats="stats?.global ?? null"
         :champion="mainChampion"
         @close="shareOpen = false"
       />
@@ -650,21 +800,3 @@ async function sync() {
     <SiteFooter v-if="!isLoading" />
   </div>
 </template>
-
-<style scoped>
-.state {
-  max-width: 520px;
-  margin: 0 auto;
-  padding: 96px 0;
-}
-
-.spin {
-  animation: spin 0.9s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-</style>
