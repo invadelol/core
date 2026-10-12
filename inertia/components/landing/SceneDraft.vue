@@ -1,18 +1,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { Check, Zap } from 'lucide-vue-next'
+import { RankCrest, RoleIcon } from '@invadelol/ui'
+import { positionOf, rankLabel, tierColor } from '@invadelol/ui/logic'
 import Screen from './Screen.vue'
-import RoleIcon from '../RoleIcon.vue'
-import {
-  champIcon,
-  itemIcon,
-  rankCrest,
-  rankName,
-  runeIcon,
-  runeStyleIcon,
-  spellIcon,
-  tierColor,
-} from '../../lib/assets.js'
+import { assetUrl, champIcon } from '../../lib/assets.js'
 
 /**
  * Champ select, as the app's Live page shows it: the state line and clock, both teams filling
@@ -295,7 +287,7 @@ const ROWS = [
               :key="seat.role"
               :class="{ me: seat.me, picking: team.states[i] === 'picking' }"
             >
-              <RoleIcon :role="seat.role" :size="16" class="text-ink-3" />
+              <RoleIcon :lane="positionOf(seat.role)" :size="16" class="text-ink-3" />
               <span class="dv-pic portrait">
                 <Transition name="pick">
                   <img
@@ -318,9 +310,11 @@ const ROWS = [
                 :class="{ on: ranks }"
                 :style="{ transitionDelay: ranks ? `${i * 90}ms` : '0ms' }"
               >
-                <img :src="rankCrest(seat.rank.tier)" alt="" />
+                <RankCrest :tier="seat.rank.tier" :size="16" />
                 <b :style="{ color: tierColor(seat.rank.tier) }">
-                  {{ rankName(seat.rank.tier, seat.rank.division) }}
+                  {{
+                    rankLabel({ tier: seat.rank.tier, division: seat.rank.division, lp: 0 }, false)
+                  }}
                 </b>
               </span>
               <span v-else />
@@ -357,15 +351,15 @@ const ROWS = [
           <!-- Runes -->
           <div class="dv-runes">
             <div class="dv-tree">
-              <img :src="runeStyleIcon(RUNES.primary)" alt="Inspiration" class="tree" />
-              <img :src="runeIcon(RUNES.keystone)" alt="First Strike" class="key" />
-              <img v-for="id in RUNES.minor" :key="id" :src="runeIcon(id)" alt="" />
+              <img :src="assetUrl('runeStyle', RUNES.primary)" alt="Inspiration" class="tree" />
+              <img :src="assetUrl('rune', RUNES.keystone)" alt="First Strike" class="key" />
+              <img v-for="id in RUNES.minor" :key="id" :src="assetUrl('rune', id)" alt="" />
             </div>
             <div class="dv-tree">
-              <img :src="runeStyleIcon(RUNES.secondary)" alt="Sorcery" class="tree" />
-              <img v-for="id in RUNES.sub" :key="id" :src="runeIcon(id)" alt="" />
+              <img :src="assetUrl('runeStyle', RUNES.secondary)" alt="Sorcery" class="tree" />
+              <img v-for="id in RUNES.sub" :key="id" :src="assetUrl('rune', id)" alt="" />
               <span class="dv-shards">
-                <img v-for="(id, i) in RUNES.shards" :key="i" :src="runeIcon(id)" alt="" />
+                <img v-for="(id, i) in RUNES.shards" :key="i" :src="assetUrl('rune', id)" alt="" />
               </span>
             </div>
             <p class="text-[12px] text-ink-3"><b class="text-ink">44%</b> win · 108 games</p>
@@ -384,7 +378,7 @@ const ROWS = [
                 <img
                   v-for="(id, i) in row.items"
                   :key="i"
-                  :src="row.kind === 'spell' ? spellIcon(id) : itemIcon(id)"
+                  :src="row.kind === 'spell' ? assetUrl('spell', id) : assetUrl('item', id)"
                   alt=""
                   loading="lazy"
                 />
@@ -405,8 +399,8 @@ const ROWS = [
   width: 1280px;
   height: 720px;
   padding: 24px 34px;
-  background: var(--color-bg);
-  color: var(--color-ink);
+  background: var(--ink-1);
+  color: var(--text-1);
   font-size: 13px;
 }
 
@@ -426,9 +420,9 @@ const ROWS = [
   gap: 2px;
   padding: 2px;
   border-radius: 7px;
-  background: var(--color-panel);
+  background: var(--surface-1);
   font-size: 12.5px;
-  color: var(--color-ink-3);
+  color: var(--text-3);
 }
 
 .dv-seg > * {
@@ -438,8 +432,8 @@ const ROWS = [
 
 .dv-seg b {
   font-weight: 500;
-  color: var(--color-ink);
-  background: var(--color-track);
+  color: var(--text-1);
+  background: var(--surface-4);
 }
 
 .dv-state {
@@ -449,25 +443,25 @@ const ROWS = [
   height: 44px;
   margin-top: 8px;
   font-size: 15px;
-  color: var(--color-ink-3);
+  color: var(--text-3);
 }
 
 .dv-state > b {
   font-weight: 600;
-  color: var(--color-ink);
+  color: var(--text-1);
 }
 
 .dv-state .dot {
-  color: var(--color-ink-4);
+  color: var(--text-4);
 }
 
 .dv-state .me {
   font-weight: 600;
-  color: var(--color-brand-hi);
+  color: var(--brand-hi);
 }
 
 .dv-state .enemy {
-  color: var(--color-loss);
+  color: var(--loss);
 }
 
 .dv-odds {
@@ -495,7 +489,7 @@ const ROWS = [
 .dv-odds > i > i {
   display: block;
   height: 100%;
-  background: var(--color-win);
+  background: var(--win);
   transform-origin: left;
   transition: transform 600ms var(--ease);
 }
@@ -507,7 +501,7 @@ const ROWS = [
   font-weight: 700;
   font-stretch: var(--fig);
   text-align: right;
-  color: var(--color-ink);
+  color: var(--text-1);
 }
 
 .dv-board {
@@ -522,26 +516,26 @@ const ROWS = [
   align-items: center;
   gap: 10px;
   height: 38px;
-  border-top: 2px solid var(--color-win);
+  border-top: 2px solid var(--win);
 }
 
 .dv-team.is-enemy > header {
-  border-top-color: var(--color-loss);
+  border-top-color: var(--loss);
 }
 
 .dv-team > header b {
   font-size: 14px;
   font-weight: 600;
-  color: var(--color-win);
+  color: var(--win);
 }
 
 .dv-team.is-enemy > header b {
-  color: var(--color-loss);
+  color: var(--loss);
 }
 
 .dv-team > header small {
   font-size: 12px;
-  color: var(--color-ink-3);
+  color: var(--text-3);
 }
 
 .dv-bans {
@@ -564,14 +558,14 @@ const ROWS = [
   gap: 12px;
   height: 50px;
   padding: 0 14px 0 12px;
-  border-radius: var(--radius-sm);
-  background: var(--color-panel);
+  border-radius: var(--r-sm);
+  background: var(--surface-1);
   box-shadow: var(--hi);
 }
 
 .dv-team li.me {
   background: rgb(var(--brand-rgb) / 0.1);
-  box-shadow: inset 2px 0 0 var(--color-brand);
+  box-shadow: inset 2px 0 0 var(--brand);
 }
 
 .dv-pic {
@@ -602,11 +596,11 @@ const ROWS = [
 
 .dv-who small {
   font-size: 12px;
-  color: var(--color-ink-3);
+  color: var(--text-3);
 }
 
 .dv-who small.me {
-  color: var(--color-brand-hi);
+  color: var(--brand-hi);
 }
 
 .dv-rank {
@@ -638,20 +632,20 @@ const ROWS = [
 .dv-seat-state {
   font-size: 12.5px;
   text-align: right;
-  color: var(--color-ink-3);
+  color: var(--text-3);
 }
 
 .dv-seat-state.picking {
   font-weight: 600;
-  color: var(--color-ink);
+  color: var(--text-1);
 }
 
 /* ── Your pick ────────────────────────────────────────────────── */
 .dv-pick {
   margin-top: 16px;
   padding: 14px 18px 12px;
-  border-radius: var(--radius-md);
-  background: var(--color-panel);
+  border-radius: var(--r-md);
+  background: var(--surface-1);
   box-shadow: var(--hi);
   opacity: 0.3;
   transition: opacity 500ms var(--ease);
@@ -672,14 +666,14 @@ const ROWS = [
   padding: 0 2px 6px;
   font-size: 13px;
   font-weight: 600;
-  box-shadow: inset 0 -2px 0 var(--color-brand);
+  box-shadow: inset 0 -2px 0 var(--brand);
 }
 
 .dv-tab small {
   margin-left: 4px;
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-ink-3);
+  color: var(--text-3);
 }
 
 .dv-import {
@@ -688,11 +682,11 @@ const ROWS = [
   height: 32px;
   margin-left: auto;
   padding: 0 14px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-sm);
   font-size: 13px;
   font-weight: 600;
   color: #fff;
-  background: var(--color-brand);
+  background: var(--brand);
   transition:
     background-color 300ms var(--ease),
     color 300ms var(--ease);
@@ -700,7 +694,7 @@ const ROWS = [
 
 /* Pressed, the app keeps the button and says what it did. */
 .dv-import.done {
-  background: var(--color-brand);
+  background: var(--brand);
 }
 
 .dv-setup {
@@ -750,7 +744,7 @@ const ROWS = [
   height: 18px;
   padding: 2px;
   border-radius: 50%;
-  background: var(--color-well);
+  background: var(--well);
 }
 
 .dv-rows {
@@ -763,7 +757,7 @@ const ROWS = [
   align-items: center;
   gap: 12px;
   height: 36px;
-  border-bottom: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--line);
 }
 
 .dv-rows li:last-child {
@@ -773,7 +767,7 @@ const ROWS = [
 .dv-rows img {
   width: 26px;
   height: 26px;
-  border-radius: var(--radius-xs);
+  border-radius: var(--r-xs);
 }
 
 .dv-skills {
@@ -785,17 +779,17 @@ const ROWS = [
 
 .dv-skills i {
   font-style: normal;
-  color: var(--color-ink-4);
+  color: var(--text-4);
 }
 
 .dv-stat {
   font-size: 12px;
-  color: var(--color-ink-3);
+  color: var(--text-3);
 }
 
 .dv-stat b {
   font-weight: 600;
-  color: var(--color-ink);
+  color: var(--text-1);
 }
 
 .pick-enter-active {

@@ -1,11 +1,12 @@
 import { test } from '@japa/runner'
+import { randomUUID } from 'node:crypto'
 import db from '@adonisjs/lucid/services/db'
 import { Exception } from '@adonisjs/core/exceptions'
 import riotApiService from '#services/riot/api'
 import ingestionService from '#services/analytics/ingestion_service'
 import matchRepository from '#services/analytics/match_repository'
 import summonerService from '#services/summoner_service'
-import publicationService from '#services/desktop/publication_service'
+import publicationService, { RESEND_AFTER_MS } from '#services/desktop/publication_service'
 import { RetryScheduler } from '#services/desktop/retry_scheduler'
 import { uploadFacts } from '#services/desktop/conversion'
 import DesktopDevice from '#models/desktop_device'
@@ -195,6 +196,61 @@ test.group('Desktop publication policy', (group) => {
     riot(riotMatch(upload, puuids))
     assert.equal(await statusOf(upload, device), 'verified')
     assert.lengthOf(calls.match, 1)
+  })
+
+  test('a game core gave up on is processed again when the device sends it again', async ({
+    assert,
+  }) => {
+    const { upload, puuids, device } = await scenario()
+    publicationService.retries = new RetryScheduler([60_000])
+    riot(notFound())
+    assert.equal(await statusOf(upload, device), 'deferred')
+
+    // Its retries still pending: a second send changes nothing.
+    assert.equal(await statusOf(upload, device), 'duplicate')
+    assert.lengthOf(calls.match, 1)
+
+    // Lost to a restart: still `deferred` long after its last retry.
+    const row = () =>
+      db
+        .from('desktop_match_upload')
+        .where('match_id', upload.matchId)
+        .where('device_id', device.id)
+    await row().update({ received_at: new Date(Date.now() - RESEND_AFTER_MS - 1000) })
+    riot(riotMatch(upload, puuids))
+    assert.equal(await statusOf(upload, device), 'verified')
+    assert.lengthOf(calls.match, 2)
+    const resent = await row().first()
+    assert.equal(resent.status, 'verified')
+
+    // Done: from now on a duplicate again.
+    assert.equal(await statusOf(upload, device), 'duplicate')
+    assert.lengthOf(calls.match, 2)
+  })
+
+  test('an observed game: no LP, no bridge through the participants', async ({ assert }) => {
+    const { upload, puuids, device } = await scenario()
+    const viewer = randomUUID()
+    seed.raws.push(viewer)
+    riot(riotMatch(upload, puuids))
+
+    // Not linked: a game the viewer did not play cannot name the viewer's account.
+    upload.uploader = viewer
+    const refused = await send(upload, device).catch((error) => error)
+    assert.equal(refused.code, 'E_NOT_LINKED')
+
+    const account = await seed.player()
+    await seed.link(device.id, account.puuid, viewer)
+    upload.lp = {
+      queue: 'RANKED_SOLO_5x5',
+      before: { tier: 'GOLD', division: 'I', lp: 10, wins: 1, losses: 1, at: 1 },
+      after: { tier: 'GOLD', division: 'I', lp: 30, wins: 2, losses: 1, at: 2 },
+    }
+    const result = await send(upload, device)
+    assert.include(result, { status: 'verified', lp: 'rejected' })
+    assert.equal(await verifiedUploads(device.id), 1, 'Riot confirmed it: it counts toward trust')
+    const row = await db.from('desktop_match_upload').where('match_id', upload.matchId).first()
+    assert.isTrue(row.observed)
   })
 
   test('a game Riot has not published yet is deferred, then retried', async ({ assert }) => {

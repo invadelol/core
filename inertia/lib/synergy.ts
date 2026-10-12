@@ -1,5 +1,5 @@
-import { POSITION_NAMES, POSITION_ORDER } from './assets.js'
-import { killParticipation, matchMinutes, teamTotals } from './match.js'
+import { positionName, positionOf } from '@invadelol/ui/logic'
+import { POSITIONS, killParticipation, matchMinutes, teamTotals } from './match.js'
 import type { Match, Participant } from './types.js'
 
 /**
@@ -129,7 +129,7 @@ export function teammatesFrom(matches: Match[], puuid: string, minimum = 2): Mat
         wins: draft.wins,
         winrate,
         role,
-        roleLabel: POSITION_NAMES[role] ?? '',
+        roleLabel: positionName(positionOf(role)),
         myRole,
         pairing: pairingFor(myRole, role),
         champions: [...draft.champions.entries()]
@@ -144,7 +144,7 @@ export function teammatesFrom(matches: Match[], puuid: string, minimum = 2): Mat
 }
 
 export function sortRoles(roles: string[]) {
-  return [...roles].sort((a, b) => POSITION_ORDER.indexOf(a) - POSITION_ORDER.indexOf(b))
+  return [...roles].sort((a, b) => POSITIONS.indexOf(a) - POSITIONS.indexOf(b))
 }
 
 /* ── The duo, in detail ─────────────────────────────────────────
@@ -393,7 +393,7 @@ export function duoFrom(matches: Match[], puuid: string, matePuuid: string): Duo
       const entry = roles.get(key) ?? {
         myRole: me.position,
         theirRole: them.position,
-        label: `${POSITION_NAMES[me.position] ?? me.position} + ${POSITION_NAMES[them.position] ?? them.position}`,
+        label: `${positionName(positionOf(me.position)) || me.position} + ${positionName(positionOf(them.position)) || them.position}`,
         games: 0,
         wins: 0,
       }

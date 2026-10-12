@@ -338,6 +338,7 @@ class SummonerService {
       type?: RiotQueueType
       count?: number
       offset?: number
+      before?: number
       champion?: number
       role?: RiotRole
     }
@@ -349,6 +350,7 @@ class SummonerService {
       view: filters.view,
       count: filters.count ?? DEFAULT_MATCH_COUNT,
       offset: filters.offset ?? DEFAULT_OFFSET,
+      before: filters.before,
       championId: filters.champion,
       role: filters.role === 'SUPPORT' ? 'UTILITY' : filters.role,
     })
@@ -514,6 +516,12 @@ class SummonerService {
 
   /**
    * Upsert summoners from match participant data (no API calls).
+   *
+   * Two statements for the whole batch, however large: a sync of fifteen new
+   * games names some 140 players, which used to be a select, a save per
+   * player and an insert per history row. A player whose stored row is
+   * unchanged is not rewritten: an UPDATE writes a new row version and new
+   * index entries, the search vector's included, even when nothing changed.
    */
   async upsertFromParticipants(
     participants: Array<{
@@ -525,56 +533,70 @@ class SummonerService {
     }>,
     platform: string
   ): Promise<number> {
-    const validParticipants = participants.filter((p) => p.puuid && p.gameName && p.tagLine)
-    if (!validParticipants.length) return 0
+    // One statement may not touch a row twice: the last report of a player wins.
+    const players = [
+      ...new Map(
+        participants.filter((p) => p.puuid && p.gameName && p.tagLine).map((p) => [p.puuid, p])
+      ).values(),
+    ]
+    if (!players.length) return 0
 
-    const puuids = validParticipants.map((p) => p.puuid)
-    const existingSummoners = await Summoner.query().whereIn('puuid', puuids)
-    const existingMap = new Map<string, Summoner>()
-
-    for (const summoner of existingSummoners) {
-      existingMap.set(summoner.puuid, summoner)
-    }
-
-    const historyToCreate: Array<{
-      puuid: string
-      gameName: string
-      tagLine: string
-      profileIconId: number
-    }> = []
-
-    const summonersToUpsert = validParticipants.map((p) => {
-      const existing = existingMap.get(p.puuid) || null
-
-      if (this.hasChanged(existing, p.gameName, p.tagLine, p.profileIconId)) {
-        historyToCreate.push({
-          puuid: p.puuid,
-          gameName: p.gameName,
-          tagLine: p.tagLine,
-          profileIconId: p.profileIconId,
-        })
-      }
-
-      return {
-        puuid: p.puuid,
-        platform,
-        gameName: p.gameName,
-        tagLine: p.tagLine,
-        profileIconId: p.profileIconId,
-        summonerLevel: p.summonerLevel,
-      }
+    const existing = await db
+      .from('riot_player')
+      .select('puuid', 'game_name', 'tag_line', 'profile_icon_id')
+      .whereIn(
+        'puuid',
+        players.map((p) => p.puuid)
+      )
+    const known = new Map(existing.map((row) => [row.puuid, row]))
+    const changed = players.filter((p) => {
+      const row = known.get(p.puuid)
+      return (
+        !row ||
+        row.game_name !== p.gameName ||
+        row.tag_line !== p.tagLine ||
+        row.profile_icon_id !== p.profileIconId
+      )
     })
 
-    await Summoner.updateOrCreateMany('puuid', summonersToUpsert)
+    await db
+      .knexQuery()
+      .table('riot_player')
+      .insert(
+        players.map((p) => ({
+          puuid: p.puuid,
+          platform,
+          game_name: p.gameName,
+          tag_line: p.tagLine,
+          profile_icon_id: p.profileIconId,
+          summoner_level: p.summonerLevel,
+        }))
+      )
+      .onConflict('puuid')
+      .merge(['platform', 'game_name', 'tag_line', 'profile_icon_id', 'summoner_level'])
+      // `::text`: citext would call a change of letter case no change at all.
+      .whereRaw(
+        `(riot_player.platform, riot_player.game_name::text, riot_player.tag_line::text,
+          riot_player.profile_icon_id, riot_player.summoner_level)
+         IS DISTINCT FROM (excluded.platform, excluded.game_name::text, excluded.tag_line::text,
+          excluded.profile_icon_id, excluded.summoner_level)`
+      )
 
-    if (historyToCreate.length > 0) {
-      await SummonerHistory.createMany(historyToCreate)
+    if (changed.length) {
+      await db.table('riot_player_history').multiInsert(
+        changed.map((p) => ({
+          puuid: p.puuid,
+          game_name: p.gameName,
+          tag_line: p.tagLine,
+          profile_icon_id: p.profileIconId,
+        }))
+      )
     }
 
     snapshotHooks.riotIdsLearned(
-      summonersToUpsert.map((p) => ({ gameName: p.gameName, tagLine: p.tagLine, platform }))
+      players.map((p) => ({ gameName: p.gameName, tagLine: p.tagLine, platform }))
     )
-    return summonersToUpsert.length
+    return players.length
   }
 }
 

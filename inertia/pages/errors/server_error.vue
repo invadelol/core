@@ -3,7 +3,8 @@ import { Head } from '@inertiajs/vue3'
 import AppHeader from '../../components/AppHeader.vue'
 import SiteFooter from '../../components/SiteFooter.vue'
 
-defineProps<{ error: any }>()
+/** What the server may tell (see `publicError`): never a stack, a message only when it is meant for people. */
+defineProps<{ error?: { status: number; message: string | null } }>()
 
 function retry() {
   location.reload()
@@ -16,8 +17,8 @@ function retry() {
   <div class="flex min-h-screen flex-col">
     <AppHeader />
 
-    <main class="mx-auto w-full max-w-[560px] flex-1 px-5 pt-[clamp(56px,14vh,140px)] sm:px-6">
-      <p class="num text-[13px] font-medium text-ink-3">500</p>
+    <main class="mx-auto w-full max-w-[560px] flex-1 px-4 pt-[clamp(56px,14vh,140px)] sm:px-6">
+      <p class="num text-[13px] font-medium text-ink-3">{{ error?.status ?? 500 }}</p>
       <h1 class="mt-2 text-[28px] font-semibold leading-tight tracking-[-0.012em] text-ink">
         Something broke on our side
       </h1>
@@ -26,13 +27,13 @@ function retry() {
       </p>
       <p
         v-if="error?.message"
-        class="mt-4 rounded-[5px] bg-well px-3 py-2 font-mono text-[12px] text-ink-3"
+        class="mt-4 rounded-[var(--r-sm)] bg-well px-3 py-2 font-mono text-[12px] text-ink-3"
       >
         {{ error.message }}
       </p>
       <div class="mt-6 flex flex-wrap items-center gap-2">
-        <button type="button" class="btn btn-primary" @click="retry">Try again</button>
-        <a href="/" class="btn">Back to search</a>
+        <button type="button" class="iv-btn primary" @click="retry">Try again</button>
+        <a href="/" class="iv-btn">Back to search</a>
       </div>
     </main>
 

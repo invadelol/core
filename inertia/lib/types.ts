@@ -45,6 +45,8 @@ export interface Participant {
   goldEarned: number
   wardsPlaced: number
   wardsKilled: number
+  /** The icon the player had in this game (0 when not stored). */
+  profileIconId?: number
   allInPings: number
   assistPings: number
   commandPings: number
@@ -161,7 +163,7 @@ export interface Rank {
   wins: number
   /** Null when the rank came from another player's client, which hides losses. */
   losses: number | null
-  fetchedAt?: string
+  fetchedAt: string
   /** `desktop` when the Invade app reported it, `riot` when the Riot API did. */
   source?: 'riot' | 'desktop'
   /** When the rank was last known true. */
@@ -221,15 +223,6 @@ export interface Teammate {
   level: number
   games: number
   wins: number
-}
-
-/** Rune selection, normalised from the timeline with a match-row fallback. */
-export interface RuneSet {
-  keystone: number
-  primaryStyle: number
-  secondaryStyle: number
-  runes: number[]
-  statPerks: { offense: number; flex: number; defense: number }
 }
 
 export interface ChampionMastery {

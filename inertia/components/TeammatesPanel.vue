@@ -16,7 +16,7 @@ const rows = computed(() =>
 </script>
 
 <template>
-  <section v-if="rows.length" class="card">
+  <section v-if="rows.length" class="iv-panel">
     <div class="section">
       <h3>Played with</h3>
     </div>

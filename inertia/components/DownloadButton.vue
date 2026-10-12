@@ -22,10 +22,10 @@ const href = (id: DesktopPlatform) => `/download/${id}`
 
 <template>
   <div class="flex flex-col items-start gap-2.5">
-    <a v-if="target" :href="href(target)" class="btn btn-primary btn-lg">
+    <a v-if="target" :href="href(target)" class="iv-btn primary lg">
       <Download :size="15" />Download for {{ targetLabel(target) }}
     </a>
-    <a v-else-if="checked" href="#download" class="btn btn-primary btn-lg">
+    <a v-else-if="checked" href="#download" class="iv-btn primary lg">
       <Download :size="15" />Download
     </a>
     <span v-else class="block h-[36px]" aria-hidden="true" />

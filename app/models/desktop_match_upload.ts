@@ -50,6 +50,10 @@ export default class DesktopMatchUpload extends BaseModel {
   @column()
   declare app: string | null
 
+  /** A game the uploader did not play (v1.3): read from another player's history. */
+  @column()
+  declare observed: boolean
+
   @column.dateTime({ columnName: 'received_at', autoCreate: true })
   declare receivedAt: DateTime
 

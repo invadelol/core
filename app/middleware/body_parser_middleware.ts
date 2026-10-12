@@ -22,9 +22,13 @@ export const DESKTOP_MAX_PAYLOAD_BYTES = 2_000_000
 /** Largest batch of player snapshots (docs/desktop-sync.md §6.1). */
 export const DESKTOP_MAX_PLAYERS_BYTES = 256 * 1024
 
-/** Routes with a JSON limit of their own; every other route keeps the default 1 MB. */
+/**
+ * The desktop routes' JSON limits (every other route keeps the default 1 MB
+ * and its plain parser). They also take compressed bodies (v1.3).
+ */
 const JSON_LIMITS = new Map([
   ['/api/desktop/matches', DESKTOP_MAX_PAYLOAD_BYTES],
+  ['/api/desktop/matches/known', 1024 * 1024],
   ['/api/desktop/players', DESKTOP_MAX_PLAYERS_BYTES],
 ])
 
@@ -38,7 +42,15 @@ const standard = new BodyParserMiddleware(config, app.experimentalFlags)
 const parsers = new Map(
   [...JSON_LIMITS].map(([pattern, limit]) => [
     pattern,
-    new BodyParserMiddleware({ ...config, json: { ...config.json, limit } }, app.experimentalFlags),
+    new BodyParserMiddleware(
+      // `Content-Encoding: gzip | deflate` (v1.3): the JSON parser defaults the
+      // expected length to 0 and only sets it from Content-Length for an
+      // uncompressed body, so every compressed body would fail "request size
+      // did not match content length". Without that default the inflated
+      // size is bounded by `limit` alone, which also stops a zip bomb.
+      { ...config, json: { ...config.json, limit, length: undefined } as typeof config.json },
+      app.experimentalFlags
+    ),
   ])
 )
 

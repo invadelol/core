@@ -103,18 +103,22 @@ const SUMMARY_PARTICIPANT_COLUMNS = [
   'true_dmg_to_champ',
   // Part of every player's score, which the match list shows on each row.
   'dmg_to_objectives',
+  // The teammates a profile lists ("Played with") are read from its games.
+  'profile_icon_id',
+  // The rest of what the shared detail shows before the full match arrives: an opened row draws
+  // its scoreboard (vision tooltip) and build facts from the list, never from missing numbers.
+  'wards_placed',
+  'wards_killed',
+  'vision_wards_bought',
+  'dmg_to_turrets',
 ] as const
 
 const DETAIL_PARTICIPANT_COLUMNS = [
   'lane',
-  'wards_placed',
-  'wards_killed',
-  'dmg_to_turrets',
   'physical_dmg_dealt',
   'magic_dmg_dealt',
   'true_dmg_dealt',
   'neutral_minions_killed',
-  'vision_wards_bought',
   'all_in_pings',
   'assist_pings',
   'command_pings',
@@ -153,18 +157,19 @@ const SUMMARY_PARTICIPANT_FIELDS = {
   magicDamageDealtToChampions: 'magic_dmg_to_champ',
   trueDamageDealtToChampions: 'true_dmg_to_champ',
   damageDealtToObjectives: 'dmg_to_objectives',
+  profileIconId: 'profile_icon_id',
+  wardsPlaced: 'wards_placed',
+  wardsKilled: 'wards_killed',
+  visionWardsBoughtInGame: 'vision_wards_bought',
+  damageDealtToTurrets: 'dmg_to_turrets',
 }
 
 const DETAIL_PARTICIPANT_FIELDS = {
   lane: 'lane',
-  wardsPlaced: 'wards_placed',
-  wardsKilled: 'wards_killed',
-  damageDealtToTurrets: 'dmg_to_turrets',
   physicalDamageDealt: 'physical_dmg_dealt',
   magicDamageDealt: 'magic_dmg_dealt',
   trueDamageDealt: 'true_dmg_dealt',
   neutralMinionsKilled: 'neutral_minions_killed',
-  visionWardsBoughtInGame: 'vision_wards_bought',
   allInPings: 'all_in_pings',
   assistPings: 'assist_pings',
   commandPings: 'command_pings',
@@ -393,6 +398,8 @@ export class MatchRepository {
       queueIds?: number[] | readonly number[]
       count?: number
       offset?: number
+      /** Epoch ms: only games that started before it. */
+      before?: number
       championId?: number
       role?: string
     }
@@ -407,6 +414,9 @@ export class MatchRepository {
     }
     if (filters.championId) {
       whereClauses.push(`champion_id = ${Math.trunc(filters.championId)}`)
+    }
+    if (filters.before !== undefined) {
+      whereClauses.push(`game_start_ms < ${Math.trunc(filters.before)}`)
     }
     if (filters.role && filters.role !== 'all') {
       whereClauses.push(`team_position = '${escapeClickhouseString(filters.role)}'`)
@@ -467,6 +477,43 @@ export class MatchRepository {
         Number(b.gameStartMs) - Number(a.gameStartMs) ||
         (a.matchId < b.matchId ? 1 : a.matchId > b.matchId ? -1 : 0)
     )
+  }
+
+  /**
+   * The player's own line of their latest games and nothing else: the desktop
+   * app's onboarding needs no scoreboards, and reading them fetched every
+   * other participant of every game by match id, ten rows for each one used.
+   */
+  async getOwnRecent(puuid: string, count: number) {
+    const rows = await rawRows(`
+      WITH mine AS (
+        SELECT match_id, champion_id, win, kills, deaths, assists
+        FROM participants
+        PREWHERE puuid = '${escapeClickhouseString(puuid)}'
+        ORDER BY game_start_ms DESC, match_id DESC
+        LIMIT ${integer(count, DEFAULT_MATCH_COUNT)}
+      )
+      SELECT p.match_id, p.champion_id, p.win, m.queue_id, m.game_start_ms, m.duration_sec,
+             p.kills, p.deaths, p.assists
+      FROM mine p
+      JOIN (
+        SELECT match_id, queue_id, game_start_ms, duration_sec
+        FROM matches
+        WHERE match_id IN (SELECT match_id FROM mine)
+      ) m ON p.match_id = m.match_id
+      ORDER BY m.game_start_ms DESC, p.match_id DESC
+    `)
+    return rows.map((row) => ({
+      matchId: asString(row[0]),
+      championId: Number(row[1]),
+      win: Boolean(Number(row[2])),
+      queueId: Number(row[3]),
+      gameStartMs: Number(row[4]),
+      durationSec: Number(row[5]),
+      kills: Number(row[6]),
+      deaths: Number(row[7]),
+      assists: Number(row[8]),
+    }))
   }
 
   /**

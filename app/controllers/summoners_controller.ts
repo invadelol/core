@@ -15,9 +15,11 @@ import {
 import { invalidateResponseCache } from '#services/http_response_cache'
 import { SyncGuard } from '#utils/sync_guard'
 import { translateRiotError } from '#utils/riot_errors'
+import matchPager from '#services/match_pager'
 import deviceService from '#services/desktop/device_service'
 import playerSnapshotService from '#services/desktop/player_snapshot_service'
 import type Summoner from '#models/summoner'
+import { DEFAULT_MATCH_COUNT } from '#config/constants'
 
 /** The website's Update skips league-v4 when the ranks were known current this recently (§6.5). */
 const SYNC_RANK_FRESHNESS = { minutes: 3 }
@@ -69,30 +71,43 @@ export default class SummonersController {
     ])
     const result = await syncGuard.run(key, async () => {
       let resolvedSummoner
-      let newMatches
       try {
         resolvedSummoner = await summonerService.resolveAndUpsert(summoner, platform, {
           refresh: true,
         })
-        newMatches = await matchService.update(
-          resolvedSummoner.puuid,
-          riotApiService.platformToRegion(resolvedSummoner.platform)
-        )
       } catch (error) {
         throw translateRiotError(error)
       }
+      const { puuid } = resolvedSummoner
 
       // Ranks change even when all recent matches were ingested by another player's
       // update; league-v4 is skipped only when Riot or the app said so minutes ago.
+      // It does not depend on the games, so it runs alongside match-v5 rather than
+      // after it.
+      const rankRefresh = (async () => {
+        const fresh = await summonerService
+          .ranksFresh(puuid, SYNC_RANK_FRESHNESS)
+          .catch(() => false)
+        if (!fresh) await summonerService.updateRanks(puuid, resolvedSummoner.platform)
+      })()
+      rankRefresh.catch(() => {})
+
+      let newMatches
+      try {
+        newMatches = await matchService.update(
+          puuid,
+          riotApiService.platformToRegion(resolvedSummoner.platform)
+        )
+      } catch (error) {
+        // Ranks may have been stored meanwhile; they must not hide behind the cache.
+        await rankRefresh.then(() => invalidateResponseCache([`summoner:${puuid}`])).catch(() => {})
+        throw translateRiotError(error)
+      }
+
       let rankRefreshFailed = false
       try {
-        const fresh = await summonerService
-          .ranksFresh(resolvedSummoner.puuid, SYNC_RANK_FRESHNESS)
-          .catch(() => false)
-        if (!fresh) {
-          await summonerService.updateRanks(resolvedSummoner.puuid, resolvedSummoner.platform)
-        }
-        await invalidateResponseCache([`summoner:${resolvedSummoner.puuid}`])
+        await rankRefresh
+        await invalidateResponseCache([`summoner:${puuid}`])
       } catch (error) {
         rankRefreshFailed = true
         logger.warn({ err: error }, 'Match update succeeded but rank refresh failed')
@@ -197,10 +212,12 @@ export default class SummonersController {
   }
 
   /**
-   * Get matches
+   * Get matches. Paged by `before` (an infinite list), the plain list fills a short page from
+   * Riot (older games not stored yet), at the pace of `MatchPager`: over it, 429 with `Retry-After`
    * @paramPath puuid - Summoner PUUID
    * @requestBody <getMatchesValidator>
    * @responseBody 200 - <Match[]>
+   * @responseBody 429 - {"errors": [{"code": "E_RATE_LIMITED"}], "retryAfter": 120}
    */
   async matches({ request, params, response }: HttpContext) {
     await request.validateUsing(puuidParamsValidator, { data: params })
@@ -208,7 +225,22 @@ export default class SummonersController {
     const payload = await request.validateUsing(getMatchesValidator)
 
     const matches = await summonerService.getMatches(puuid, payload)
-    return response.ok(matches)
+    const count = payload.count ?? DEFAULT_MATCH_COUNT
+    const plain =
+      (payload.type ?? 'all') === 'all' && (payload.role ?? 'all') === 'all' && !payload.champion
+    if (payload.before === undefined || !plain || matches.length >= count) {
+      return response.ok(matches)
+    }
+    const wait = await matchPager.take(puuid, request.ip())
+    if (wait) {
+      response.header('Retry-After', String(wait))
+      return response.tooManyRequests({
+        errors: [{ message: 'Older games come one page at a time', code: 'E_RATE_LIMITED' }],
+        retryAfter: wait,
+      })
+    }
+    const stored = await matchService.older(puuid, payload.before, count)
+    return response.ok(stored ? await summonerService.getMatches(puuid, payload) : matches)
   }
 
   /**

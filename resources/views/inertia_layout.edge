@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="system">
 
   <head>
     <meta charset="utf-8" />
@@ -21,6 +21,7 @@
       The stored theme has to be on <html> before the first paint, or a
       dark-theme visitor gets a white flash on every navigation. This is
       the one script that must run synchronously, ahead of the stylesheet.
+      Without a choice the page follows the system (`system`).
     --}}
     <script>
       (function () {
@@ -30,16 +31,6 @@
         } catch (e) {}
       })()
     </script>
-
-    {{--
-      Archivo is served from our own origin. Pulling it from a font CDN cost a
-      DNS lookup, a TLS handshake and a render-blocking stylesheet before the
-      first character could be painted; the @font-face rules now ride along in
-      the app stylesheet we were already fetching. This one variable file carries
-      almost all of the page, so it starts downloading immediately instead of
-      waiting for the stylesheet to be parsed.
-    --}}
-    <link rel="preload" href="/fonts/archivo-latin-wdth.woff2" as="font" type="font/woff2" crossorigin />
 
     {{--
       For a profile we already hold, the analytics requests are known before
@@ -75,7 +66,7 @@
     @stack('dumper')
   </head>
 
-  <body class="min-h-screen">
+  <body class="iv-root min-h-screen">
     @inertia()
   </body>
 

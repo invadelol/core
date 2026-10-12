@@ -64,7 +64,7 @@ const CHAPTERS = {
   postGame: [
     {
       title: 'A score for every game',
-      text: 'The plate lights up with the game, gold for an exceptional one. MVP and ACE go to the best of each team.',
+      text: 'The dial lights up with the game. MVP and ACE go to the best of each team.',
     },
     {
       title: 'All ten players',
@@ -72,7 +72,7 @@ const CHAPTERS = {
     },
     {
       title: 'On invade.lol too',
-      text: 'Look up any player and open a game: each score shows what it is made of, read against the lobby and weighted for the role.',
+      text: 'Look up any player and open a game: the same scoreboard, and a breakdown that reads every player against the lobby and their lane opponent.',
     },
   ],
   champions: [
@@ -253,12 +253,12 @@ onMounted(async () => (mine.value = await detectDesktopTarget()))
           </header>
 
           <div class="download-grid">
-            <ul class="card">
+            <ul class="iv-panel">
               <li v-for="target in downloads" :key="target.id" class="download-row">
                 <span class="min-w-0 flex-1">
                   <span class="block text-[14px] font-semibold text-ink">
                     {{ target.name }}
-                    <span v-if="mine === target.id" class="tag tag-brand ml-1.5 align-[1px]">
+                    <span v-if="mine === target.id" class="iv-badge brand ml-1.5 align-[1px]">
                       This computer
                     </span>
                   </span>
@@ -266,8 +266,8 @@ onMounted(async () => (mine.value = await detectDesktopTarget()))
                 </span>
                 <a
                   :href="`/download/${target.id}`"
-                  class="btn"
-                  :class="mine === target.id ? 'btn-primary' : ''"
+                  class="iv-btn"
+                  :class="{ primary: mine === target.id }"
                 >
                   <Download :size="14" />
                   Download
@@ -365,7 +365,7 @@ onMounted(async () => (mine.value = await detectDesktopTarget()))
   font-weight: 650;
   line-height: 1.03;
   letter-spacing: -0.03em;
-  color: var(--color-ink);
+  color: var(--text-1);
   text-wrap: balance;
 }
 
@@ -373,7 +373,7 @@ onMounted(async () => (mine.value = await detectDesktopTarget()))
   max-width: 560px;
   font-size: 16px;
   line-height: 1.6;
-  color: var(--color-ink-2);
+  color: var(--text-2);
   text-wrap: pretty;
 }
 
@@ -399,7 +399,7 @@ onMounted(async () => (mine.value = await detectDesktopTarget()))
   font-weight: 600;
   line-height: 20px;
   letter-spacing: 0;
-  color: var(--color-ink-3);
+  color: var(--text-3);
 }
 
 .hero h1 .kicker {
@@ -412,7 +412,7 @@ onMounted(async () => (mine.value = await detectDesktopTarget()))
   font-weight: 650;
   line-height: 1.1;
   letter-spacing: -0.022em;
-  color: var(--color-ink);
+  color: var(--text-1);
   text-wrap: balance;
 }
 
@@ -421,7 +421,7 @@ onMounted(async () => (mine.value = await detectDesktopTarget()))
   margin-top: 14px;
   font-size: 16px;
   line-height: 1.6;
-  color: var(--color-ink-2);
+  color: var(--text-2);
   text-wrap: pretty;
 }
 
@@ -453,7 +453,7 @@ onMounted(async () => (mine.value = await detectDesktopTarget()))
   gap: 16px;
   min-height: 64px;
   padding: 12px 20px;
-  border-bottom: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--line);
 }
 
 .download-row:last-child {

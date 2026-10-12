@@ -5,13 +5,13 @@ import { StaticAssetService } from '#services/static_assets'
 import { ASSET_IMMUTABLE_SECONDS, ASSET_REVALIDATE_SECONDS } from '#constants/assets'
 
 /**
- * Serves the built front-end and self-hosted fonts ahead of the generic static
- * middleware, from memory and already compressed.
+ * Serves the built front-end (fonts included, which the bundle now carries)
+ * ahead of the generic static middleware, from memory and already compressed.
  *
- * Only the two directories whose contents we build ourselves are handled here.
+ * Only the directory whose contents we build ourselves is handled here.
  * Anything else in `public/` falls through untouched.
  */
-const SERVED_PREFIXES = ['/assets/', '/fonts/']
+const SERVED_PREFIXES = ['/assets/']
 
 const service = new StaticAssetService(app.publicPath())
 

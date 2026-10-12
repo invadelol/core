@@ -2,9 +2,9 @@ import type { Match, Participant } from '../../lib/types.js'
 
 /**
  * The game the /app page's "After the game" chapter opens: a sample game (the same lobby as the
- * champ select chapter, with the desktop app's preview names), read by the site's own match row
- * and scoreboard. Scores, places, MVP and ACE are computed from these stats by the same code as
- * every real game. No tag lines, so nothing links to a profile.
+ * champ select chapter, with made-up names), drawn by the shared match row and detail. Scores,
+ * places, MVP and ACE are computed from these stats by the same code as every real game. No tag
+ * lines, so nothing links to a profile.
  */
 const ZERO_PINGS = {
   allInPings: 0,
@@ -299,11 +299,13 @@ function participant(line: Line): Participant {
 }
 
 export const DEMO_PUUID = 'demo-you'
+const DAY = 86_400_000
 
 export const DEMO_MATCH: Match = {
   matchId: 'DEMO_1',
   platform: 'EUW1',
-  gameStartMs: 0,
+  /** A fixed evening, so the page renders the same on the server and in the browser. */
+  gameStartMs: Date.UTC(2026, 9, 5, 19, 40),
   duration: 31 * 60 + 14,
   queueId: 420,
   mapId: 11,
@@ -330,6 +332,7 @@ export const DEMO_EARLIER: Match[] = [
   {
     ...DEMO_MATCH,
     matchId: 'DEMO_2',
+    gameStartMs: DEMO_MATCH.gameStartMs - DAY,
     duration: 27 * 60 + 41,
     t1Win: 0,
     t2Win: 1,
@@ -353,6 +356,7 @@ export const DEMO_EARLIER: Match[] = [
   {
     ...DEMO_MATCH,
     matchId: 'DEMO_3',
+    gameStartMs: DEMO_MATCH.gameStartMs - 3 * DAY,
     duration: 34 * 60 + 2,
     participants: DEMO_MATCH.participants.map((p) =>
       p.puuid === DEMO_PUUID

@@ -5,9 +5,10 @@ import riotAssetsService from '#services/riot/assets'
 import { ASSET_KINDS, type AssetKind } from '#constants/assets'
 
 /**
- * Pulls every known game asset through the proxy once, so the bytes are
- * already mirrored before a visitor asks for them. Safe to re-run: anything
- * already in the mirror is served from there and never re-fetched.
+ * Pulls every known game asset of the live patch through the proxy once, so
+ * the bytes are already mirrored before a visitor asks for them. Safe to
+ * re-run: anything already in the mirror is served from there and never
+ * re-fetched. Worth running once after each patch lands.
  */
 export default class WarmAssets extends BaseCommand {
   static commandName = 'assets:warm'
@@ -36,25 +37,10 @@ export default class WarmAssets extends BaseCommand {
     const batchSize = Math.max(1, this.concurrency ?? 12)
 
     for (const kind of kinds) {
-      // 'rank' has no manifest; its ids are the tier names.
-      const ids =
-        kind === 'rank'
-          ? [
-              'iron',
-              'bronze',
-              'silver',
-              'gold',
-              'platinum',
-              'emerald',
-              'diamond',
-              'master',
-              'grandmaster',
-              'challenger',
-            ]
-          : await riotAssetsService.ids(kind)
+      const ids = await riotAssetsService.ids(kind)
 
       if (!ids.length) {
-        this.logger.warning(`${kind}: manifest empty, skipping`)
+        this.logger.warning(`${kind}: no ids known, skipping`)
         continue
       }
 

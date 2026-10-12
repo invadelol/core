@@ -104,6 +104,7 @@ const participant = {
   wards_killed: 3,
   dmg_to_turrets: 1000,
   dmg_to_objectives: 6000,
+  profile_icon_id: 29,
   physical_dmg_dealt: 100000,
   magic_dmg_dealt: 10000,
   true_dmg_dealt: 2000,
@@ -158,6 +159,11 @@ test('summary matches retain scoreboard data while omitting analysis-only column
       'position',
       'goldEarned',
       'damageDealtToObjectives',
+      'profileIconId',
+      'wardsPlaced',
+      'wardsKilled',
+      'visionWardsBoughtInGame',
+      'damageDealtToTurrets',
     ]) {
       assert.deepEqual(player[key], full.participants[0][key], key)
     }
@@ -171,7 +177,8 @@ test('summary matches retain scoreboard data while omitting analysis-only column
     const summaryParticipantRead = fake.queries.at(-1)!
     assert.include(summaryParticipantRead, 'riot_id_game_name')
     assert.notInclude(summaryParticipantRead, 'all_in_pings')
-    assert.isBelow(JSON.stringify(summary).length, JSON.stringify(full).length * 0.7)
+    // A quarter lighter even on this one-player fixture (the pings and splits are what weigh).
+    assert.isBelow(JSON.stringify(summary).length, JSON.stringify(full).length * 0.75)
   } finally {
     clickhouse.query = original
   }

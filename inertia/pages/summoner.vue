@@ -10,6 +10,8 @@ import {
   shallowRef,
   watch,
 } from 'vue'
+import { MatchRowSkeleton, MoreMatches } from '@invadelol/ui'
+import { PAGE_SIZE } from '@invadelol/ui/logic'
 import AppHeader from '../components/AppHeader.vue'
 import ProfileHeader from '../components/ProfileHeader.vue'
 import ProfileNav from '../components/ProfileNav.vue'
@@ -21,7 +23,6 @@ import TeammatesPanel from '../components/TeammatesPanel.vue'
 import ActivityHeatmap from '../components/ActivityHeatmap.vue'
 import MatchFilters, { type Filters } from '../components/MatchFilters.vue'
 import MatchList from '../components/MatchList.vue'
-import InfiniteScroll from '../components/InfiniteScroll.vue'
 import ChampionExplorer from '../components/ChampionExplorer.vue'
 import MasteryPanel from '../components/MasteryPanel.vue'
 import FriendsPanel from '../components/FriendsPanel.vue'
@@ -29,7 +30,6 @@ import LiveMatch from '../components/LiveMatch.vue'
 import PlayerCompare from '../components/PlayerCompare.vue'
 import ShareProfile from '../components/ShareProfile.vue'
 import SiteFooter from '../components/SiteFooter.vue'
-import { loadChampions } from '../lib/assets.js'
 import { decodeSlug, parseSlug } from '../lib/format.js'
 import { isRemake } from '../lib/match.js'
 import { rememberPlayer, updateRecent } from '../lib/recent.js'
@@ -70,8 +70,6 @@ const filteredChampions = shallowRef<ChampionStats[] | null>(null)
 const filterBusy = ref(false)
 const filterError = ref('')
 const hasMore = ref(false)
-const nextOffset = ref(0)
-const appendError = ref(false)
 const failedPanels = ref<string[]>([])
 const mastery = shallowRef<ChampionMastery[]>([])
 /** Whether `mastery` is every champion, or only the top few the overview needs. */
@@ -87,6 +85,7 @@ const CHAMPION_VIEWS = [
 ]
 
 let filterController: AbortController | undefined
+let moreController: AbortController | undefined
 let masteryController: AbortController | undefined
 
 const mainChampion = computed(() => champions.value[0]?.championId ?? mastery.value[0]?.championId)
@@ -214,31 +213,31 @@ async function loadMastery(complete = section.value === 'champions') {
   }
 }
 
-async function applyFilters(append = false) {
+/** The match list's query for the current filters. */
+function matchQuery() {
+  const query = new URLSearchParams({
+    type: filters.value.type,
+    role: filters.value.role,
+    count: String(PAGE_SIZE),
+    view: 'summary',
+  })
+  if (filters.value.champion) query.set('champion', String(filters.value.champion))
+  return query
+}
+
+async function applyFilters() {
   if (!profile.value) return
-  if (
-    append &&
-    (filterBusy.value || pending.matches || !hasMore.value || section.value !== 'overview')
-  )
-    return
+  moreController?.abort()
   filterController?.abort()
   filterController = new AbortController()
   const signal = filterController.signal
   filterBusy.value = true
-  appendError.value = false
   filterError.value = ''
-  if (!append) void loadStats()
+  void loadStats()
   const isChampions = section.value === 'champions'
-  const query = new URLSearchParams({
-    type: filters.value.type,
-    role: filters.value.role,
-    count: isChampions ? '100' : '15',
-  })
-  if (!isChampions) {
-    query.set('view', 'summary')
-    if (filters.value.champion) query.set('champion', String(filters.value.champion))
-    if (append) query.set('offset', String(nextOffset.value))
-  }
+  const query = isChampions
+    ? new URLSearchParams({ type: filters.value.type, role: filters.value.role, count: '100' })
+    : matchQuery()
   try {
     const response = await fetch(
       `/api/summoners/puuid/${profile.value.puuid}/${isChampions ? 'champions' : 'matches'}?${query}`,
@@ -249,21 +248,48 @@ async function applyFilters(append = false) {
     if (signal.aborted) return
     if (isChampions) filteredChampions.value = data
     else {
-      const incoming = data as Match[]
-      const existing = append ? loadedMatches.value : []
-      filteredMatches.value = [
-        ...new Map([...existing, ...incoming].map((match) => [match.matchId, match])).values(),
-      ]
-      nextOffset.value = (append ? nextOffset.value : 0) + incoming.length
-      hasMore.value = data.length === 15
+      filteredMatches.value = data
+      hasMore.value = data.length === PAGE_SIZE
     }
   } catch {
-    if (!signal.aborted) {
-      appendError.value = append
-      if (!append) filterError.value = 'These results could not be loaded.'
-    }
+    if (!signal.aborted) filterError.value = 'These results could not be loaded.'
   } finally {
     if (!signal.aborted) filterBusy.value = false
+  }
+}
+
+/**
+ * The next page of the match history, as its end comes into view (MoreMatches paces it). The
+ * plain list pages by date, so the API fills it from Riot with games it does not hold yet, at its
+ * own pace (a 429 says how long to wait); a filtered list pages through the stored games.
+ */
+async function loadMore(): Promise<void | { wait: number }> {
+  const list = loadedMatches.value
+  if (!profile.value || !list.length || filterBusy.value) return
+  moreController?.abort()
+  moreController = new AbortController()
+  const signal = moreController.signal
+  const query = matchQuery()
+  const { type, role, champion } = filters.value
+  if (type === 'all' && role === 'all' && !champion)
+    query.set('before', String(Number(list[list.length - 1].gameStartMs)))
+  else query.set('offset', String(list.length))
+  try {
+    const response = await fetch(`/api/summoners/puuid/${profile.value.puuid}/matches?${query}`, {
+      signal,
+    })
+    const retryAfter = Number(response.headers.get('retry-after'))
+    if (response.status === 429 && retryAfter) return { wait: retryAfter * 1000 }
+    if (!response.ok) throw new Error()
+    const incoming = (await response.json()) as Match[]
+    if (signal.aborted) return
+    filteredMatches.value = [
+      ...new Map([...list, ...incoming].map((match) => [match.matchId, match])).values(),
+    ]
+    hasMore.value = incoming.length === PAGE_SIZE
+  } catch (error) {
+    // A new list (filters, another player) replaced this one: nothing to say.
+    if (!signal.aborted) throw error
   }
 }
 
@@ -316,7 +342,8 @@ const isSyncing = ref(false)
 const syncMessage = ref<string | null>(null)
 const viewCount = ref<number | null>(null)
 
-const lastGameMs = computed(() => matches.value[0]?.gameStartMs ?? null)
+/** A number, whichever way the database driver returned the bigint. */
+const lastGameMs = computed(() => (matches.value[0] ? Number(matches.value[0].gameStartMs) : null))
 
 const pending = reactive<Record<PanelKey, boolean>>({
   stats: true,
@@ -392,11 +419,18 @@ async function loadAnalytics(puuid: string, signal: AbortSignal) {
   await Promise.all((props.panels ?? FALLBACK_PANELS).map(({ key, path }) => panel(key, path)))
 }
 
+/** The solo queue rank, remembered with the player in this browser's recent list. */
+function soloRank(payload: RanksPayload) {
+  const solo = payload.current?.find((r) => r.queueType === 'RANKED_SOLO_5x5' && r.tier)
+  return solo ? { tier: solo.tier, division: solo.division, leaguePoints: solo.leaguePoints } : null
+}
+
 async function load() {
   controller?.abort()
   statsController?.abort()
   friendsController?.abort()
   filterController?.abort()
+  moreController?.abort()
   masteryController?.abort()
   clearTimeout(viewTimer)
   clearTimeout(messageTimer)
@@ -405,8 +439,6 @@ async function load() {
   failedPanels.value = []
   filters.value = { type: 'all', champion: 0, role: 'all' }
   hasMore.value = false
-  nextOffset.value = 0
-  appendError.value = false
   filterBusy.value = false
   filterError.value = ''
   filteredMatches.value = null
@@ -464,23 +496,13 @@ async function load() {
     void loadStats()
     if (section.value === 'friends') void loadFriendMatches()
     await loadAnalytics(result.puuid, signal)
-    if (!signal.aborted && ranks.value) {
-      const solo = ranks.value.current?.find((r) => r.queueType === 'RANKED_SOLO_5x5' && r.tier)
-      updateRecent(result, {
-        rank: solo
-          ? { tier: solo.tier, division: solo.division, leaguePoints: solo.leaguePoints }
-          : null,
-      })
-    }
+    if (!signal.aborted && ranks.value) updateRecent(result, { rank: soloRank(ranks.value) })
     if (
       !signal.aborted &&
       (filters.value.type !== 'all' || filters.value.role !== 'all' || filters.value.champion)
     )
       await applyFilters()
-    if (!signal.aborted && !filteredMatches.value) {
-      nextOffset.value = matches.value.length
-      hasMore.value = matches.value.length >= 15
-    }
+    if (!signal.aborted && !filteredMatches.value) hasMore.value = matches.value.length >= PAGE_SIZE
   } catch {
     if (!signal.aborted) error.value = 'error'
   } finally {
@@ -493,7 +515,6 @@ function retry() {
 }
 
 onMounted(() => {
-  void loadChampions()
   watch(
     () => props.summoner,
     () => void load(),
@@ -503,6 +524,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   filterController?.abort()
+  moreController?.abort()
   masteryController?.abort()
   statsController?.abort()
   friendsController?.abort()
@@ -569,27 +591,27 @@ async function sync() {
   <div class="flex min-h-screen flex-col">
     <AppHeader />
 
-    <main class="mx-auto w-full max-w-[1320px] flex-1 px-5 pt-6 sm:px-6 2xl:max-w-[1480px]">
+    <main class="page flex-1 pt-6">
       <!-- Loading: the shape of the profile that is coming -->
       <div
         v-if="isLoading"
         class="grid gap-8 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[316px_minmax(0,1fr)]"
       >
         <div class="space-y-4">
-          <div class="skel h-[236px]" />
-          <div class="skel h-[180px]" />
+          <div class="iv-skel h-[236px]" />
+          <div class="iv-skel h-[180px]" />
         </div>
         <div>
-          <div class="skel h-[272px]" />
-          <div class="mt-10 grid gap-1">
-            <div v-for="i in 6" :key="i" class="skel h-[68px] !rounded-[5px]" />
+          <div class="iv-skel h-[272px]" />
+          <div class="mt-10">
+            <MatchRowSkeleton :count="6" />
           </div>
         </div>
       </div>
 
       <!-- Error -->
       <div v-else-if="error" class="mx-auto max-w-[520px] py-24">
-        <p class="text-[20px] font-semibold text-ink">
+        <h1 class="text-[20px] font-semibold text-ink">
           {{
             error === 'not-found'
               ? 'Summoner not found'
@@ -597,7 +619,7 @@ async function sync() {
                 ? "Riot's API isn't answering"
                 : "Couldn't load this profile"
           }}
-        </p>
+        </h1>
         <p class="mt-2 text-[14px] leading-relaxed text-ink-2">
           {{
             error === 'not-found'
@@ -608,8 +630,8 @@ async function sync() {
           }}
         </p>
         <div class="mt-5 flex gap-2">
-          <button class="btn btn-primary" @click="retry">Try again</button>
-          <a href="/" class="btn">Back to search</a>
+          <button type="button" class="iv-btn primary" @click="retry">Try again</button>
+          <a href="/" class="iv-btn">Back to search</a>
         </div>
       </div>
 
@@ -641,10 +663,10 @@ async function sync() {
           class="rail -mt-6 min-w-0 max-lg:order-last lg:col-start-1 lg:row-start-2"
         >
           <template v-if="section === 'overview'">
-            <div v-if="pending.ranks" class="skel mt-6 h-[140px]" />
+            <div v-if="pending.ranks" class="iv-skel mt-6 h-[140px]" />
             <RankStrip v-else-if="!failedPanels.includes('ranks')" :ranks="ranks" />
 
-            <div v-if="pending.champions" class="skel mt-6 h-[200px]" />
+            <div v-if="pending.champions" class="iv-skel mt-6 h-[200px]" />
             <ChampionPool
               v-else
               :champions="champions"
@@ -654,13 +676,13 @@ async function sync() {
               @pick="championMatches"
             />
 
-            <div v-if="pending.matches" class="skel mt-6 h-[140px]" />
+            <div v-if="pending.matches" class="iv-skel mt-6 h-[140px]" />
             <RoleSplit v-else :matches="matches" :puuid="profile.puuid" />
 
-            <div v-if="pending.teammates" class="skel mt-6 h-[160px]" />
+            <div v-if="pending.teammates" class="iv-skel mt-6 h-[160px]" />
             <TeammatesPanel v-else :teammates="teammates" />
 
-            <div v-if="pending.activity" class="skel mt-6 h-[140px]" />
+            <div v-if="pending.activity" class="iv-skel mt-6 h-[140px]" />
             <ActivityHeatmap v-else :activity="activity" />
           </template>
         </aside>
@@ -668,12 +690,12 @@ async function sync() {
         <div class="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1">
           <p v-if="failedPanels.length" class="notice mb-5" role="alert">
             <span>Some data could not be loaded ({{ failedPanels.join(', ') }}).</span>
-            <button class="btn btn-sm ml-auto" @click="retry">Retry</button>
+            <button type="button" class="iv-btn sm ml-auto" @click="retry">Retry</button>
           </p>
 
           <!-- ── Overview ─────────────────────────────────────────── -->
           <template v-if="section === 'overview'">
-            <div v-if="pending.stats" class="skel h-[300px]" />
+            <div v-if="pending.stats" class="iv-skel h-[300px]" />
             <StatBoard
               v-else
               :stats="stats?.global ?? null"
@@ -696,28 +718,28 @@ async function sync() {
 
               <p v-if="filterError" class="notice mt-4" role="alert">
                 <span>{{ filterError }}</span>
-                <button class="btn btn-sm ml-auto" @click="applyFilters()">Retry</button>
+                <button type="button" class="iv-btn sm ml-auto" @click="applyFilters()">
+                  Retry
+                </button>
               </p>
 
-              <div v-if="pending.matches" class="mt-5 grid gap-1">
-                <div v-for="i in 6" :key="i" class="skel h-[68px] !rounded-[5px]" />
-              </div>
+              <MatchRowSkeleton v-if="pending.matches" class="mt-5" :count="6" />
               <div v-else class="mt-5">
                 <MatchList
                   :matches="displayedMatches"
                   :puuid="profile.puuid"
-                  :summoner-slug="slug"
+                  :game-name="profile.gameName"
+                  :tag-line="profile.tagLine"
                   @clear="filters = { type: 'all', champion: 0, role: 'all' }"
                 />
               </div>
 
-              <InfiniteScroll
-                v-if="!filterError"
-                :has-more="hasMore"
-                :loading="pending.matches || filterBusy"
-                :error="appendError"
-                :empty="!displayedMatches.length"
-                @load="applyFilters(true)"
+              <MoreMatches
+                v-if="!pending.matches"
+                v-show="!filterError && loadedMatches.length"
+                :key="profile.puuid"
+                :more="hasMore"
+                :load="loadMore"
               />
             </section>
           </template>
@@ -725,12 +747,12 @@ async function sync() {
           <!-- ── Champions ────────────────────────────────────────── -->
           <div v-else-if="section === 'champions'">
             <div class="mb-5 flex flex-wrap items-center gap-3">
-              <div class="seg">
+              <div class="iv-seg">
                 <button
                   v-for="option in CHAMPION_VIEWS"
                   :key="option.value"
                   type="button"
-                  :data-active="championsView === option.value"
+                  :class="{ on: championsView === option.value }"
                   @click="championsView = option.value"
                 >
                   {{ option.label }}
@@ -746,7 +768,7 @@ async function sync() {
 
             <p v-if="filterError" class="notice mb-4" role="alert">
               <span>{{ filterError }}</span>
-              <button class="btn btn-sm ml-auto" @click="applyFilters()">Retry</button>
+              <button type="button" class="iv-btn sm ml-auto" @click="applyFilters()">Retry</button>
             </p>
 
             <ChampionExplorer

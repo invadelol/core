@@ -1,15 +1,9 @@
 import type { HttpContext } from '@adonisjs/core/http'
 
 import riotAssetsService from '#services/riot/assets'
+import { cacheControl, parseAssetRequest } from '#services/riot/asset_paths'
 import { EncodedPayloadCache, negotiatePayload } from '#services/encoded_payload'
-import {
-  ASSET_KINDS,
-  BROWSER_CACHE_SECONDS,
-  NAMES_CACHE_SECONDS,
-  PLACEHOLDER_CACHE_SECONDS,
-  type AssetKind,
-} from '#constants/assets'
-
+import { MANIFESTS, NAMES_CACHE_SECONDS, type AssetKind } from '#constants/assets'
 /**
  * Every profile page asks for the champion and item name maps, and the item
  * map alone is tens of kilobytes of JSON built from a manifest that changes
@@ -19,35 +13,48 @@ import {
 const namePayloads = new EncodedPayloadCache(NAMES_CACHE_SECONDS * 1000)
 
 /**
- * Proxies Riot's game art through our own origin.
+ * Proxies Riot's game art through our own origin (docs/cdn.md).
  *
- * `show` never fails: an unknown kind, a missing id or a Riot outage all
- * still return an image, so a page can't end up with a broken icon slot.
+ * `GET /cdn/:patch/:kind/:id` pins the patch and is cached forever;
+ * `GET /cdn/:kind/:id` follows the live patch. Only the kinds and id shapes
+ * in `#constants/assets` are answered, anything else is a 404, so this is
+ * never an open proxy. A valid request never fails: a missing id or a Riot
+ * outage still returns an image, so a page can't end up with a broken icon.
  */
 export default class AssetsController {
-  async show({ params, response }: HttpContext) {
-    const kind = this.kind(params.kind)
-    // Ids arrive with a file extension so browsers and CDNs treat them as images.
-    const id = String(params.id ?? '').replace(/\.[a-z0-9]+$/i, '')
+  async show({ params, request, response }: HttpContext) {
+    const asset = parseAssetRequest(params.kind, params.id, params.patch)
+    if (!asset) return response.notFound()
 
-    const asset = await riotAssetsService.get(kind, id)
+    const served = await riotAssetsService.get(asset.kind, asset.id, asset.patch)
 
-    response.header('Content-Type', asset.contentType)
+    response.header('Cache-Control', cacheControl(served))
+    response.header('X-Asset-Source', served.placeholder ? 'placeholder' : 'riot')
+    // Upstream SVGs are served from our origin: opened directly, they can't run anything.
+    response.header('X-Content-Type-Options', 'nosniff')
     response.header(
-      'Cache-Control',
-      asset.placeholder
-        ? `public, max-age=${PLACEHOLDER_CACHE_SECONDS}`
-        : `public, max-age=${BROWSER_CACHE_SECONDS}, immutable`
+      'Content-Security-Policy',
+      "default-src 'none'; style-src 'unsafe-inline'; sandbox"
     )
-    // Lets the CDN and the browser skip re-downloading identical bytes.
-    response.header('X-Asset-Source', asset.placeholder ? 'placeholder' : 'riot')
+    // Lets <img crossorigin>, canvases and other origins' pages (the app's WebView) use the bytes.
+    response.header('Access-Control-Allow-Origin', '*')
+    response.header('Cross-Origin-Resource-Policy', 'cross-origin')
 
-    return response.send(Buffer.from(asset.body))
+    if (served.etag) {
+      response.header('ETag', served.etag)
+      response.header('Last-Modified', served.modified!.toUTCString())
+      if (request.header('if-none-match') === served.etag) return response.status(304).send(null)
+    }
+
+    response.header('Content-Type', served.contentType)
+    return response.send(Buffer.from(served.body))
   }
 
   /** Numeric id to display name, so the client stops fetching Riot's JSON. */
   async names({ params, request, response }: HttpContext) {
-    const kind = this.kind(params.kind)
+    // Only the kinds with a manifest have names; anything else is not ours to answer.
+    if (!Object.hasOwn(MANIFESTS, params.kind)) return response.notFound()
+    const kind = params.kind as AssetKind
     const payload = await namePayloads.get(
       kind,
       () => riotAssetsService.names(kind),
@@ -72,14 +79,5 @@ export default class AssetsController {
     if (encoding) response.header('Content-Encoding', encoding)
 
     return response.send(encoding ? payload.encoded[encoding]! : payload.identity, false)
-  }
-
-  /**
-   * Falls back to `champion` for an unrecognised kind rather than 404ing:
-   * the resolver will fail through to a placeholder, which is still an image.
-   */
-  private kind(value: unknown): AssetKind {
-    const kind = String(value ?? '')
-    return (ASSET_KINDS as readonly string[]).includes(kind) ? (kind as AssetKind) : 'champion'
   }
 }
