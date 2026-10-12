@@ -15,7 +15,14 @@ export default class MatchesController {
   async show({ request, params, response }: HttpContext) {
     await request.validateUsing(matchIdParamsValidator, { data: params })
 
-    let match = await matchRepository.getById(params.id)
+    // Provenance travels with the match, so the page can say where a game came
+    // from and hide what a desktop upload could not know. It needs nothing but
+    // the id, so it is read alongside the match rather than after it.
+    const [stored, [provenance]] = await Promise.all([
+      matchRepository.getById(params.id),
+      matchSourceService.decorate([{ matchId: params.id }]),
+    ])
+    let match = stored
     if (!match) {
       return response.notFound({ message: 'Match not found' })
     }
@@ -27,9 +34,6 @@ export default class MatchesController {
       }
     }
 
-    // Provenance travels with the match, so the page can say where a game came
-    // from and hide what a desktop upload could not know.
-    const [described] = await matchSourceService.decorate([match])
-    return response.ok(described)
+    return response.ok(Object.assign(match, provenance))
   }
 }

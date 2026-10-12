@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PerfInput } from './types.js'
 import { computed } from 'vue'
-import Glyph from '../../ui/Glyph.vue'
+import { Logo } from '@invadelol/ui'
 
 /**
  * Performance, as the overlay draws it: one line per metric with the value, the target in small
@@ -104,7 +104,7 @@ const rows = computed(() => {
 <template>
   <div class="ov-panel perf">
     <div class="perf-head">
-      <Glyph :size="12" />
+      <Logo :size="12" />
       <span class="perf-word">INVADE</span>
       <span class="perf-target">vs {{ rank }}</span>
     </div>

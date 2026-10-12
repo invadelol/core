@@ -22,10 +22,9 @@ function read(): ThemeChoice {
   return 'system'
 }
 
+/** The package's tokens read `data-theme`: `system` follows the system's preference. */
 function paint(value: ThemeChoice) {
-  const root = document.documentElement
-  if (value === 'system') root.removeAttribute('data-theme')
-  else root.setAttribute('data-theme', value)
+  document.documentElement.setAttribute('data-theme', value)
 }
 
 export function useTheme() {
@@ -70,14 +69,4 @@ export function useTheme() {
   }
 
   return { choice, resolved, setTheme, toggle }
-}
-
-/**
- * Reads a themed token at runtime. Chart.js draws to a canvas and so
- * cannot use CSS variables; it asks for the computed value instead.
- */
-export function token(name: string, fallback = '#000') {
-  if (typeof window === 'undefined') return fallback
-  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
-  return value || fallback
 }

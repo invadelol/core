@@ -2,9 +2,14 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Check, Copy, Download, X } from 'lucide-vue-next'
 import { championSplash, profileIcon, regionLabel } from '../lib/assets.js'
-import type { GlobalStats, Summoner } from '../lib/types.js'
+import type { Summoner } from '../lib/types.js'
 
-const props = defineProps<{ profile: Summoner; stats: GlobalStats | null; champion?: number }>()
+const props = defineProps<{
+  profile: Summoner
+  /** Over the games the profile has loaded. */
+  stats: { winrate: number; kda: number; csMin: number } | null
+  champion?: number
+}>()
 const emit = defineEmits<{ close: [] }>()
 
 const dialog = ref<HTMLDialogElement>()
@@ -119,7 +124,7 @@ async function download() {
   >
     <div class="flex items-center px-5 pb-1 pt-4">
       <h2 id="share-title" class="text-[16px] font-semibold">Share this profile</h2>
-      <button class="icon-btn ml-auto" aria-label="Close" @click="emit('close')">
+      <button class="iv-btn ghost icon-only ml-auto" aria-label="Close" @click="emit('close')">
         <X :size="16" />
       </button>
     </div>
@@ -163,7 +168,7 @@ async function download() {
       </div>
 
       <label class="mt-4 flex items-center gap-2 text-[13px] text-ink-2">
-        <input v-model="includeStats" type="checkbox" class="accent-[var(--color-brand)]" />
+        <input v-model="includeStats" type="checkbox" class="accent-brand" />
         Include performance statistics
       </label>
 
@@ -181,12 +186,12 @@ async function download() {
         <span v-if="message" class="mr-auto text-[12px] text-ink-2" role="status">{{
           message
         }}</span>
-        <button class="btn" @click="copy">
+        <button class="iv-btn" @click="copy">
           <Check v-if="copied" :size="13" />
           <Copy v-else :size="13" />
           Copy link
         </button>
-        <button class="btn btn-primary" :disabled="busy" @click="download">
+        <button class="iv-btn primary" :disabled="busy" @click="download">
           <Download :size="13" />
           {{ busy ? 'Rendering…' : 'Download card' }}
         </button>
@@ -198,10 +203,10 @@ async function download() {
 <style scoped>
 /* A dialog is a popover: opaque, a hairline border, the only kind of shadow. */
 .share {
-  background: var(--color-solid);
-  border: 1px solid var(--color-line-2);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-e2);
+  background: var(--solid-1);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-3);
 }
 
 .card-splash {

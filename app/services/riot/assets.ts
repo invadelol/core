@@ -1,19 +1,34 @@
+import { createHash } from 'node:crypto'
 import cache from '@adonisjs/cache/services/main'
 import drive from '@adonisjs/drive/services/main'
 import logger from '@adonisjs/core/services/logger'
 import { ByteCache } from '#utils/byte_cache'
 
-import { ASSET_PREFIX, DDRAGON, FETCH_TIMEOUT_MS, MANIFESTS, MANIFEST_TTL } from '#constants/assets'
+import {
+  ABILITY_KEYS,
+  ASSET_PREFIX,
+  DDRAGON,
+  FETCH_TIMEOUT_MS,
+  MANIFESTS,
+  MANIFEST_TTL,
+  MAX_ASSET_BYTES,
+  TIERS,
+  VERSIONS_TTL_MS,
+} from '#constants/assets'
 import type { AssetKind } from '#constants/assets'
 import {
-  gameDataUrl,
+  LATEST,
+  championSources,
+  contentTypeOf,
   fallbackSources,
-  guessContentType,
+  gameData,
+  parseChampion,
   parseManifest,
-  mapSources,
   placeholderSvg,
-  rankSources,
+  recentReleases,
+  type ChampionArt,
   type Manifest,
+  type Release,
 } from '#services/riot/asset_paths'
 
 export interface AssetPayload {
@@ -21,54 +36,69 @@ export interface AssetPayload {
   contentType: string
   /** True when the bytes are a generated stand-in rather than the real asset. */
   placeholder: boolean
+  /** Strong validator, hashed once when the bytes enter the process. Real assets only. */
+  etag?: string
+  modified?: Date
 }
 
 /**
- * Serves Riot's game art from our own origin.
+ * Serves Riot's game art from our own origin: a caching proxy, nothing more.
  *
- * Three things this buys over pointing <img> straight at Riot. Every asset is
- * mirrored to R2 on first use, so we stop depending on their uptime. Ids
- * resolve through Community Dragon's manifests rather than hand-built paths
- * that break between patches. And, most importantly, a call to this service
+ * Every asset is fetched from upstream once per patch, mirrored to the bucket
+ * under `riot-assets/<patch>/<kind>/<id>`, and from then on answered from this
+ * process's memory or the mirror. Ids resolve through Community Dragon's
+ * manifests rather than hand-built paths that break between patches. A call
  * always resolves to an image: if every upstream source fails we draw a
  * labelled tile instead of letting the page render a broken-image glyph.
  */
-class RiotAssetsService {
-  /** Bound hot image bytes per process; browser/R2 remain the longer-lived caches. */
-  private memory = new ByteCache<AssetPayload>(32 * 1024 * 1024, 512)
+export class RiotAssetsService {
+  /** Bound hot image bytes per process; browser/mirror remain the longer-lived caches. */
+  private memory = new ByteCache<AssetPayload>(64 * 1024 * 1024, 2048)
 
-  /** Dedupes concurrent misses for the same asset within one process. */
-  private inFlight = new Map<string, Promise<AssetPayload>>()
+  /** Concurrent misses for the same asset, manifest or version list share one fetch. */
+  private inFlight = new Map<string, Promise<unknown>>()
+
+  /** Data Dragon's recent releases, read once an hour per process (a minute after a failure). */
+  private releaseList?: { value: Release[]; until: number }
 
   /* ── Public API ─────────────────────────────────────────────── */
 
-  async get(kind: AssetKind, id: string): Promise<AssetPayload> {
-    const key = `${kind}/${id}`
-    const cached = this.memory.get(key)
-    if (cached) return cached
+  /**
+   * One asset, from the release `patch` names (`16.20`) or else the live one.
+   * `pinned` says the bytes belong to the patch the URL named, so never change.
+   */
+  async get(
+    kind: AssetKind,
+    id: string,
+    patch?: string
+  ): Promise<AssetPayload & { pinned: boolean }> {
+    const releases = await this.releases()
+    const named = patch ? releases.find((release) => release.cdragon === patch) : undefined
+    const release = named ?? releases[0] ?? null
+    const key = `${release?.cdragon ?? 'latest'}/${kind}/${id}`
 
-    const existing = this.inFlight.get(key)
-    if (existing) return existing
+    const asset =
+      this.memory.get(key) ??
+      (await this.shared<AssetPayload>(key, () =>
+        this.resolve(kind, id, release)
+          // A throw here would surface as a broken icon, so absorb it.
+          .catch((error) => {
+            logger.error({ err: error, kind, id }, 'asset resolution failed')
+            return this.placeholder(kind, id)
+          })
+          .then((resolved) => {
+            const ttl = resolved.placeholder ? 30_000 : 3_600_000
+            this.memory.set(key, resolved, resolved.body.byteLength, ttl)
+            return resolved
+          })
+      ))
 
-    const pending = this.resolve(kind, id)
-      // A throw here would surface as a broken icon, so absorb it.
-      .catch((error) => {
-        logger.error({ err: error, kind, id }, 'asset resolution failed')
-        return this.placeholder(kind, id)
-      })
-      .then((asset) => {
-        this.memory.set(key, asset, asset.body.byteLength, asset.placeholder ? 30_000 : 3_600_000)
-        return asset
-      })
-      .finally(() => this.inFlight.delete(key))
-
-    this.inFlight.set(key, pending)
-    return pending
+    return { ...asset, pinned: Boolean(named) && !asset.placeholder }
   }
 
   /** Numeric id to display name, for the kinds that carry one. */
   async names(kind: AssetKind): Promise<Record<string, string>> {
-    const manifest = await this.manifest(kind)
+    const manifest = await this.manifest(kind, await this.live())
     const names: Record<string, string> = {}
     for (const [id, entry] of Object.entries(manifest)) {
       if (entry.name) names[id] = entry.name
@@ -76,27 +106,74 @@ class RiotAssetsService {
     return names
   }
 
-  /** Every id the manifest knows about, used by the warming command. */
+  /** Every id of a kind on the live patch, used by the warming command. */
   async ids(kind: AssetKind): Promise<string[]> {
-    return Object.keys(await this.manifest(kind))
+    if (kind === 'rank' || kind === 'emblem') return [...TIERS]
+    const release = await this.live()
+    if (kind !== 'splash' && kind !== 'centered' && kind !== 'loading' && kind !== 'ability') {
+      return Object.keys(await this.manifest(kind, release))
+    }
+    const champions = Object.keys(await this.manifest('champion', release))
+    return kind === 'ability'
+      ? champions.flatMap((champion) => ABILITY_KEYS.map((key) => `${champion}-${key}`))
+      : champions
+  }
+
+  /* ── Releases ───────────────────────────────────────────────── */
+
+  private async live(): Promise<Release> {
+    const [live] = await this.releases()
+    return live ?? LATEST
+  }
+
+  /**
+   * The patches a URL may pin, newest (live) first. Empty while Data Dragon
+   * is unreachable: bytes then come from Community Dragon's `latest`, are not
+   * mirrored (no patch can be put on them) and are served under a short cache.
+   */
+  private releases(): Promise<Release[]> {
+    const memo = this.releaseList
+    if (memo && memo.until > Date.now()) return Promise.resolve(memo.value)
+
+    return this.shared('releases', async () => {
+      const value = recentReleases(await this.downloadJson(`${DDRAGON}/api/versions.json`))
+      if (!value.length) logger.warn('ddragon versions unavailable, serving latest unpinned')
+      // A failed read keeps what we knew and is retried a minute later.
+      this.releaseList = {
+        value: value.length ? value : (memo?.value ?? []),
+        until: Date.now() + (value.length ? VERSIONS_TTL_MS : 60_000),
+      }
+      return this.releaseList.value
+    })
   }
 
   /* ── Resolution ─────────────────────────────────────────────── */
 
-  private async resolve(kind: AssetKind, id: string): Promise<AssetPayload> {
-    const path = `${ASSET_PREFIX}/${kind}/${id}`
+  private async resolve(
+    kind: AssetKind,
+    id: string,
+    release: Release | null
+  ): Promise<AssetPayload> {
+    const path = release && `${ASSET_PREFIX}/${release.cdragon}/${kind}/${id}`
 
-    // 1. The mirror. Once an asset lands here we never ask Riot again.
-    const mirrored = await this.readMirror(path)
+    // 1. The mirror. Once an asset lands here we never ask upstream again this patch.
+    const mirrored = path && (await this.readMirror(path))
     if (mirrored) return mirrored
 
-    // 2. Upstream, trying every known source for this id in order.
-    for (const source of await this.sources(kind, id)) {
-      const fetched = await this.download(source)
-      if (!fetched) continue
+    // 2. Upstream, trying every known source in order: the release's own
+    //    files, then the live ones (an id newer than a pinned patch).
+    const tried = new Set<string>()
+    for (const from of release ? [release, LATEST] : [LATEST]) {
+      for (const source of await this.sources(kind, id, from)) {
+        if (tried.has(source)) continue
+        tried.add(source)
 
-      await this.writeMirror(path, fetched)
-      return fetched
+        const fetched = await this.download(source)
+        if (!fetched) continue
+
+        if (path) await this.writeMirror(path, fetched)
+        return fetched
+      }
     }
 
     // 3. Nothing upstream answered. Draw something rather than show nothing.
@@ -109,84 +186,69 @@ class RiotAssetsService {
    * authoritative; the conventional paths behind it cover the window where a
    * brand new asset exists on one CDN but not yet the other.
    */
-  private async sources(kind: AssetKind, id: string): Promise<string[]> {
-    if (kind === 'rank') return rankSources(id)
-    if (kind === 'map') {
-      const version = await this.ddragonVersion()
-      return [
-        ...(version ? [`${DDRAGON}/cdn/${version}/img/map/map${id}.png`] : []),
-        ...mapSources(id),
-      ]
+  private async sources(kind: AssetKind, id: string, release: Release): Promise<string[]> {
+    if (kind === 'rank' || kind === 'emblem' || kind === 'map') {
+      return fallbackSources(kind, id, release)
     }
-    if (kind === 'splash') {
-      if (!/^\d+$/.test(id)) return []
-      const champion = await this.downloadJson(
-        `${MANIFESTS.champion!.replace('champion-summary.json', `champions/${id}.json`)}`
-      )
-      const skin =
-        champion?.skins?.find((entry: { isBase?: boolean }) => entry.isBase) ?? champion?.skins?.[0]
-      return [
-        ...(skin?.splashPath ? [gameDataUrl(skin.splashPath)] : []),
-        ...fallbackSources(kind, id),
-      ]
+    if (kind === 'splash' || kind === 'centered' || kind === 'loading' || kind === 'ability') {
+      const champion = await this.champion(id.split('-')[0], release)
+      return championSources(kind, id, champion, release)
     }
+    const manifest = await this.manifest(kind, release)
+    return manifest[id]?.sources ?? fallbackSources(kind, id, release)
+  }
 
-    const manifest = await this.manifest(kind)
-    return manifest[id]?.sources ?? fallbackSources(kind, id)
+  /* ── Upstream JSON ──────────────────────────────────────────── */
+
+  private async manifest(kind: AssetKind, release: Release): Promise<Manifest> {
+    const file = MANIFESTS[kind]
+    if (!file) return {}
+
+    const manifest = await this.cached(`riot:manifest:${release.cdragon}:${kind}`, async () => {
+      const raw = await this.downloadJson(`${gameData(release)}/${file}`)
+      const parsed = raw ? parseManifest(kind, raw, release) : {}
+      return Object.keys(parsed).length ? parsed : null
+    })
+    return manifest ?? {}
+  }
+
+  /** The art paths in one champion's own file, shared by its splashes and abilities. */
+  private champion(id: string, release: Release): Promise<ChampionArt | null> {
+    return this.cached(`riot:champion:${release.cdragon}:${id}`, async () =>
+      parseChampion(await this.downloadJson(`${gameData(release)}/v1/champions/${id}.json`))
+    )
   }
 
   /**
-   * The current Data Dragon patch.
-   *
-   * Map art is the one asset family Community Dragon does not expose under a
-   * stable path, and Data Dragon requires a version in the URL. The list is
-   * read once a patch cycle; a failed read is never cached, so a blip does not
-   * cost half a day of missing maps.
+   * Read-through cache for parsed upstream JSON. A miss (null) is never
+   * stored: that would serve nothing for the whole TTL over one blip upstream.
    */
-  private async ddragonVersion(): Promise<string | null> {
-    const key = 'riot:ddragon:version'
-    try {
-      const cached = await cache.get<string>({ key })
-      if (cached) return cached
-
-      const versions = await this.downloadJson(`${DDRAGON}/api/versions.json`)
-      const latest = Array.isArray(versions) && typeof versions[0] === 'string' ? versions[0] : null
-      if (latest) await cache.set({ key, value: latest, ttl: MANIFEST_TTL })
-      return latest
-    } catch (error) {
-      logger.warn({ err: error }, 'ddragon version lookup failed')
-      return null
-    }
+  private cached<T>(key: string, load: () => Promise<T | null>): Promise<T | null> {
+    return this.shared(key, async () => {
+      try {
+        const hit = await cache.get<T>({ key })
+        if (hit) return hit
+      } catch (error) {
+        // A cache outage falls through to upstream.
+        logger.warn({ err: error, key }, 'asset cache read failed')
+      }
+      const value = await load()
+      if (value === null) {
+        logger.warn({ key }, 'riot game data unavailable')
+        return null
+      }
+      await cache.set({ key, value, ttl: MANIFEST_TTL }).catch(() => {})
+      return value
+    })
   }
 
-  /* ── Manifests ──────────────────────────────────────────────── */
-
-  private async manifest(kind: AssetKind): Promise<Manifest> {
-    const url = MANIFESTS[kind]
-    if (!url) return {}
-
-    const key = `riot:manifest:${kind}${kind === 'item' ? ':uint16-v1' : ''}`
-
-    try {
-      const cached = await cache.get<Manifest>({ key })
-      if (cached && Object.keys(cached).length) return cached
-
-      const raw = await this.downloadJson(url)
-      if (!raw) {
-        // Storing this would serve empty names for the whole TTL over one
-        // blip upstream, so it is never written and the next request retries.
-        logger.warn({ kind, url }, 'riot manifest unavailable')
-        return cached ?? {}
-      }
-
-      const manifest = parseManifest(kind, raw)
-      if (Object.keys(manifest).length) await cache.set({ key, value: manifest, ttl: MANIFEST_TTL })
-      return manifest
-    } catch (error) {
-      // A cache outage falls through to the conventional paths.
-      logger.warn({ err: error, kind }, 'manifest cache read failed')
-      return {}
-    }
+  /** Runs `task` once for every concurrent caller asking for the same `key`. */
+  private shared<T>(key: string, task: () => Promise<T>): Promise<T> {
+    const existing = this.inFlight.get(key)
+    if (existing) return existing as Promise<T>
+    const pending = task().finally(() => this.inFlight.delete(key))
+    this.inFlight.set(key, pending)
+    return pending
   }
 
   /* ── Mirror ─────────────────────────────────────────────────── */
@@ -201,17 +263,19 @@ class RiotAssetsService {
         disk.getMetaData(path).catch(() => null),
       ])
       if (!body?.length) return null
-      return {
-        body,
-        contentType: meta?.contentType || guessContentType(path),
-        placeholder: false,
-      }
+      return this.payload(body, contentTypeOf(meta?.contentType, path), meta?.lastModified)
     } catch (error) {
       // A mirror outage must never take the icons down with it.
       const cause = (
-        error as { cause?: { name?: string; $metadata?: { httpStatusCode?: number } } }
+        error as {
+          cause?: { name?: string; code?: string; $metadata?: { httpStatusCode?: number } }
+        }
       )?.cause
-      if (cause?.name !== 'NoSuchKey' && cause?.$metadata?.httpStatusCode !== 404) {
+      const missing =
+        cause?.name === 'NoSuchKey' ||
+        cause?.code === 'ENOENT' ||
+        cause?.$metadata?.httpStatusCode === 404
+      if (!missing) {
         logger.warn({ err: error, path }, 'asset mirror read failed')
       }
       return null
@@ -237,16 +301,14 @@ class RiotAssetsService {
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         headers: { accept: 'image/*' },
       })
-      if (!response.ok) return null
+      if (!response.ok || Number(response.headers.get('content-length')) > MAX_ASSET_BYTES) {
+        return null
+      }
 
       const body = new Uint8Array(await response.arrayBuffer())
-      if (!body.length) return null
+      if (!body.length || body.length > MAX_ASSET_BYTES) return null
 
-      return {
-        body,
-        contentType: response.headers.get('content-type') || guessContentType(url),
-        placeholder: false,
-      }
+      return this.payload(body, contentTypeOf(response.headers.get('content-type'), url))
     } catch {
       return null
     }
@@ -261,7 +323,12 @@ class RiotAssetsService {
     }
   }
 
-  /* ── Placeholder ────────────────────────────────────────────── */
+  /* ── Payloads ───────────────────────────────────────────────── */
+
+  private payload(body: Uint8Array, contentType: string, modified = new Date()): AssetPayload {
+    const etag = `"${createHash('sha1').update(body).digest('base64url')}"`
+    return { body, contentType, placeholder: false, etag, modified }
+  }
 
   private placeholder(kind: AssetKind, id: string): AssetPayload {
     return {

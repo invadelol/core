@@ -25,7 +25,7 @@ export default class SocialCardsController {
             summonerService.getChampionStats(profile.puuid, 100).catch(() => null),
           ])
           const champion = champions?.[0]?.championId
-          const art = champion ? await riotAssets.get('splash', String(champion)) : null
+          const art = champion ? await riotAssets.get('centered', String(champion)) : null
           const ready = Boolean(stats && champions && (!champion || (art && !art.placeholder)))
           const rendered = await renderSocialCard(
             profile,

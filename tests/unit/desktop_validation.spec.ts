@@ -1,5 +1,5 @@
 import { test } from '@japa/runner'
-import { validateStructure } from '#services/desktop/match_validation'
+import { isObserved, validateStructure } from '#services/desktop/match_validation'
 import { makeUpload } from '#tests/fixtures/desktop'
 import type { MatchUpload } from '#types/desktop'
 
@@ -19,6 +19,15 @@ test.group('Desktop upload structural checks (§4.1)', (group) => {
   group.tap((t) => t.tags(['@desktop']))
   test('accepts the fixture game', ({ assert }) => {
     assert.isNull(check())
+  })
+
+  test('a game the uploader did not play is an observed game (v1.3)', ({ assert }) => {
+    const upload = makeUpload({ now: NOW })
+    assert.isFalse(isObserved(upload))
+    upload.uploader = upload.uploader.toUpperCase()
+    assert.isFalse(isObserved(upload), 'raw PUUIDs compare without case')
+    upload.uploader = '00000000-0000-4000-8000-000000000000'
+    assert.isTrue(isObserved(upload))
   })
 
   test('rejects a match id that does not identify the game', ({ assert }) => {
@@ -100,10 +109,8 @@ test.group('Desktop upload structural checks (§4.1)', (group) => {
       check((u) => (u.game.participantIdentities[0].player.tagLine = '')),
       'participant 1 has no Riot ID'
     )
-    assert.equal(
-      check((u) => (u.uploader = '00000000-0000-4000-8000-000000000000')),
-      'the uploader is not a participant'
-    )
+    // Since v1.3 a game the uploader did not play is an observed game, not an error.
+    assert.isNull(check((u) => (u.uploader = '00000000-0000-4000-8000-000000000000')))
     assert.equal(
       check((u) => (participant(u, 5).teamId = 200)),
       'teams are not two teams of five'

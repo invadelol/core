@@ -56,6 +56,8 @@ export const getMatchesValidator = vine.compile(
     type: vine.enum(['normal', 'ranked', 'aram', 'flex', 'all']).optional(),
     count: vine.number().min(1).max(100).optional(),
     offset: vine.number().min(0).optional(),
+    /** Epoch ms: the games that started before it (the next page of an infinite list). */
+    before: vine.number().withoutDecimals().min(0).optional(),
     champion: vine.number().optional(),
     role: vine.enum(['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'SUPPORT', 'all']).optional(),
   })

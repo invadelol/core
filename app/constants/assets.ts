@@ -1,62 +1,126 @@
 /**
- * Community Dragon serves the live game data for whatever patch is current,
- * so nothing here is pinned to a patch number that goes stale.
+ * Upstream hosts. Community Dragon mirrors every live patch under its own
+ * directory (`/16.20/…`) and the current one under `/latest/`, so the proxy can
+ * pin an asset to a patch; Data Dragon is the fallback for the few files it
+ * serves without a version (champion art) or only with one (minimaps).
  */
-export const CDRAGON_GAME_DATA =
-  'https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default'
-
-export const CDRAGON_STATIC_ASSETS =
-  'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default'
-
+export const CDRAGON = 'https://raw.communitydragon.org'
+export const CDRAGON_CDN = 'https://cdn.communitydragon.org/latest'
 export const DDRAGON = 'https://ddragon.leagueoflegends.com'
 
-/** The asset families the proxy knows how to resolve. */
+/**
+ * The asset families the proxy serves, and the only ones: the kind is a path
+ * segment, so anything outside this list is a 404, never an upstream fetch.
+ * docs/cdn.md maps each to its upstream.
+ */
 export const ASSET_KINDS = [
   'champion',
   'splash',
+  'centered',
+  'loading',
+  'ability',
   'item',
   'spell',
   'perk',
   'perkstyle',
   'profile-icon',
+  'augment',
   'rank',
+  'emblem',
   'map',
 ] as const
 
 export type AssetKind = (typeof ASSET_KINDS)[number]
 
+export const TIERS = [
+  'iron',
+  'bronze',
+  'silver',
+  'gold',
+  'platinum',
+  'emerald',
+  'diamond',
+  'master',
+  'grandmaster',
+  'challenger',
+] as const
+
+/** Ability slots, `p` being the passive. */
+export const ABILITY_KEYS = ['p', 'q', 'w', 'e', 'r'] as const
+
+const NUMERIC = /^\d{1,7}$/
+const TIER = new RegExp(`^(${TIERS.join('|')}|unranked)$`)
+
 /**
- * Community Dragon manifests, each mapping a numeric id to an `iconPath`.
- * Resolving through these beats hand-building URLs: the shape of the asset
- * paths changes between patches, the manifests do not.
+ * The exact id each kind accepts. Strict on purpose: an id ends up in an
+ * upstream URL and a mirror key, so nothing but these shapes may reach either.
  */
-export const MANIFESTS: Partial<Record<AssetKind, string>> = {
-  'champion': `${CDRAGON_GAME_DATA}/v1/champion-summary.json`,
-  'item': `${CDRAGON_GAME_DATA}/v1/items.json`,
-  'spell': `${CDRAGON_GAME_DATA}/v1/summoner-spells.json`,
-  'perk': `${CDRAGON_GAME_DATA}/v1/perks.json`,
-  'perkstyle': `${CDRAGON_GAME_DATA}/v1/perkstyles.json`,
-  'profile-icon': `${CDRAGON_GAME_DATA}/v1/profile-icons.json`,
+export const ASSET_IDS: Record<AssetKind, RegExp> = {
+  'champion': NUMERIC,
+  'splash': NUMERIC,
+  'centered': NUMERIC,
+  'loading': NUMERIC,
+  'ability': new RegExp(`^\\d{1,4}-[${ABILITY_KEYS.join('')}]$`),
+  'item': NUMERIC,
+  'spell': NUMERIC,
+  'perk': NUMERIC,
+  'perkstyle': NUMERIC,
+  'profile-icon': NUMERIC,
+  'augment': NUMERIC,
+  'rank': TIER,
+  'emblem': TIER,
+  'map': NUMERIC,
 }
 
-/** How long a parsed manifest stays cached before we look for a new patch. */
+/** A patch in a URL: `16.20`, Community Dragon's granularity. */
+export const PATCH = /^\d{1,2}\.\d{1,2}$/
+
+/**
+ * How many recent patches may be pinned in a URL. Older ones (an app left
+ * un-updated for months) are served the current art under a short cache,
+ * which keeps the mirror bounded to this many copies of the game's art.
+ */
+export const PINNED_PATCHES = 6
+
+/**
+ * Community Dragon manifests, each mapping a numeric id to an icon path, under
+ * a patch's game-data root. Resolving through these beats hand-building URLs:
+ * the shape of the asset paths changes between patches, the manifests do not.
+ */
+export const MANIFESTS: Partial<Record<AssetKind, string>> = {
+  'champion': 'v1/champion-summary.json',
+  'item': 'v1/items.json',
+  'spell': 'v1/summoner-spells.json',
+  'perk': 'v1/perks.json',
+  'perkstyle': 'v1/perkstyles.json',
+  'profile-icon': 'v1/profile-icons.json',
+  'augment': 'v1/cherry-augments.json',
+}
+
+/** How long a parsed manifest stays cached; a pinned patch's never changes. */
 export const MANIFEST_TTL = '12h'
 
-/** Bucket prefix for mirrored asset bytes. */
+/** How often the list of live patches is read again, i.e. how soon a new patch is noticed. */
+export const VERSIONS_TTL_MS = 60 * 60 * 1000
+
+/** Bucket prefix for mirrored asset bytes: `riot-assets/<patch>/<kind>/<id>`. */
 export const ASSET_PREFIX = 'riot-assets'
 
-/**
- * Mirrored bytes never change for a given id within a patch, and a new patch
- * changes them rarely enough that a week of browser caching is the right
- * trade for the request volume it saves.
- */
-export const BROWSER_CACHE_SECONDS = 60 * 60 * 24 * 7
+/** A URL with a patch in it never describes different bytes. */
+export const PINNED_CACHE_SECONDS = 60 * 60 * 24 * 365
 
 /**
- * A generated placeholder is cached far more briefly, so the moment upstream
- * starts serving the real asset the page picks it up.
+ * A URL without a patch follows the live one, so it is fresh for a day and
+ * then revalidated in the background (a 304, thanks to the ETag).
  */
-export const PLACEHOLDER_CACHE_SECONDS = 60 * 5
+export const LATEST_CACHE_SECONDS = 60 * 60 * 24
+export const LATEST_STALE_SECONDS = 60 * 60 * 24 * 7
+
+/**
+ * A generated placeholder is cached briefly, by browsers and by any CDN in
+ * front, so the moment upstream serves the real asset the page picks it up.
+ */
+export const PLACEHOLDER_CACHE_SECONDS = 60
 
 /**
  * Id-to-name maps are derived from a manifest that changes once a patch, and
@@ -64,6 +128,9 @@ export const PLACEHOLDER_CACHE_SECONDS = 60 * 5
  * holding the encoded bytes in the process, costs nothing in freshness.
  */
 export const NAMES_CACHE_SECONDS = 60 * 60
+
+/** The largest file the proxy will take from upstream (a full splash is ~1 MB). */
+export const MAX_ASSET_BYTES = 8 * 1024 * 1024
 
 /** Upstream is given this long before we fall through to the next source. */
 export const FETCH_TIMEOUT_MS = 6000

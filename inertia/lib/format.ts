@@ -10,37 +10,12 @@ export function compact(value: number) {
   return `${Math.round(value)}`
 }
 
-/** Same scale, but always carrying its sign: "+1.2k", "−340", "even". */
-export function signed(value: number, zero = '0') {
-  const rounded = Math.round(value)
-  if (rounded === 0) return zero
-  return `${rounded > 0 ? '+' : '−'}${compact(Math.abs(value))}`
-}
-
-/** "+19 LP", "−18 LP", "0 LP". */
-export function lp(delta: number) {
-  return `${signed(delta)} LP`
-}
-
-export function percent(ratio: number, decimals = 0) {
-  return `${(ratio * 100).toFixed(decimals)}%`
-}
-
-export function kda(kills: number, deaths: number, assists: number) {
-  return (kills + assists) / Math.max(1, deaths)
-}
-
 /** Match duration in seconds → "32:07". */
 export function duration(seconds: number) {
   const total = Math.max(Math.floor(seconds), 0)
   const m = Math.floor(total / 60)
   const s = total % 60
   return `${m}:${String(s).padStart(2, '0')}`
-}
-
-/** Timeline offset in milliseconds → "14:00". */
-export function clock(ms: number) {
-  return duration(Math.floor(ms / 1000))
 }
 
 /** Seconds → "1h 24m", for totals rather than a game clock. */
@@ -81,47 +56,9 @@ export function shortDate(value: string | number | Date) {
   })
 }
 
-export function longDate(value: string | number | Date) {
-  return new Date(Number(value) || value).toLocaleDateString(UI_LOCALE, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
-}
-
-/** "Today", "Yesterday", "Monday, October 5": the heading a day of matches sits under. */
-export function dayLabel(ms: number | string) {
-  const date = new Date(Number(ms))
-  const start = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
-  const days = Math.round((start(new Date()) - start(date)) / 86_400_000)
-  if (days === 0) return 'Today'
-  if (days === 1) return 'Yesterday'
-  return date.toLocaleDateString(UI_LOCALE, {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    ...(date.getFullYear() === new Date().getFullYear() ? {} : { year: 'numeric' }),
-  })
-}
-
-/** "1 view", "163 views". */
-export function plural(count: number, word: string, many = `${word}s`) {
-  return `${count.toLocaleString(UI_LOCALE)} ${count === 1 ? word : many}`
-}
-
-export function ordinal(value: number) {
-  if (!value) return '-'
-  const mod10 = value % 10
-  const mod100 = value % 100
-  if (mod10 === 1 && mod100 !== 11) return `${value}st`
-  if (mod10 === 2 && mod100 !== 12) return `${value}nd`
-  if (mod10 === 3 && mod100 !== 13) return `${value}rd`
-  return `${value}th`
-}
-
 /**
  * Route params reach the page still percent-encoded, so a name with a space
- * arrives as "MRS%20PauluX-KCWIN". Decode once here and keep the plain value
+ * arrives as "Aster%20Vale-EUW". Decode once here and keep the plain value
  * in the page; encode again only when building a URL from it.
  */
 export function decodeSlug(slug: string) {

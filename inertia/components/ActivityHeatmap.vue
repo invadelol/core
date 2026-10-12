@@ -88,11 +88,11 @@ const totals = computed(() => {
 
 /* The player's own activity: the brand violet, from empty to full. */
 const SHADES = [
-  'var(--color-control)',
+  'var(--surface-3)',
   'rgb(var(--brand-rgb) / 0.3)',
   'rgb(var(--brand-rgb) / 0.5)',
   'rgb(var(--brand-rgb) / 0.75)',
-  'var(--color-brand)',
+  'var(--brand)',
 ]
 
 function tooltip(cell: Cell) {
@@ -108,7 +108,7 @@ function tooltip(cell: Cell) {
 </script>
 
 <template>
-  <section class="card">
+  <section class="iv-panel">
     <div class="section">
       <h3>Activity</h3>
       <span class="meta">Last {{ WEEKS }} weeks</span>

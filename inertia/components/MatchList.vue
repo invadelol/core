@@ -1,28 +1,31 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import MatchRow from './MatchRow.vue'
-import { loadChampions, loadItems, loadRunes } from '../lib/assets.js'
-import { dayLabel, lp } from '../lib/format.js'
-import { isRemake } from '../lib/match.js'
+import { computed, shallowRef } from 'vue'
+import { MatchRow, useFormat } from '@invadelol/ui'
+import { summaryOf, type MatchSummary } from '@invadelol/ui/logic'
+import GameDetail from './GameDetail.vue'
+import { detailOf } from '../lib/match.js'
 import type { Match } from '../lib/types.js'
 
 const props = defineProps<{
   matches: Match[]
   puuid: string
-  summonerSlug: string
+  gameName: string
+  tagLine: string
 }>()
 
 defineEmits<{ clear: [] }>()
 
-const expanded = ref<string | null>(null)
+const { dayLabel, signedLp } = useFormat()
 
-onMounted(() => {
-  loadChampions()
-  loadItems()
-  loadRunes()
-})
+/** Each stored game is read once, however often the list is recomputed. */
+const summaries = new WeakMap<Match, MatchSummary | null>()
+function summary(match: Match) {
+  if (!summaries.has(match))
+    summaries.set(match, summaryOf(detailOf(match), props.puuid, match.matchId))
+  return summaries.get(match)!
+}
 
-/** One flat list, grouped by day, each day with its record. */
+/** One flat list of the shared rows, grouped by day, each day with its record. */
 const days = computed(() => {
   const groups: Array<{
     label: string
@@ -30,55 +33,68 @@ const days = computed(() => {
     losses: number
     /** Net LP over the day's games whose change is known; null when none is. */
     lp: number | null
-    matches: Match[]
+    rows: Array<{ match: Match; game: MatchSummary }>
   }> = []
   for (const match of props.matches) {
-    const label = dayLabel(match.gameStartMs)
+    const game = summary(match)
+    if (!game) continue
+    const label = dayLabel(game.creation)
     let group = groups[groups.length - 1]
     if (!group || group.label !== label) {
-      group = { label, wins: 0, losses: 0, lp: null, matches: [] }
+      group = { label, wins: 0, losses: 0, lp: null, rows: [] }
       groups.push(group)
     }
-    group.matches.push(match)
+    group.rows.push({ match, game })
     if (typeof match.lpChange === 'number') group.lp = (group.lp ?? 0) + match.lpChange
-    const me = match.participants.find((p) => p.puuid === props.puuid)
-    if (me && !isRemake(match)) me.win ? group.wins++ : group.losses++
+    if (!game.remake) game.win ? group.wins++ : group.losses++
   }
   return groups
 })
 
-function toggle(matchId: string) {
-  expanded.value = expanded.value === matchId ? null : matchId
-}
+const open = shallowRef<string | null>(null)
+const toggle = (id: string) => (open.value = open.value === id ? null : id)
 </script>
 
 <template>
   <p v-if="!matches.length" class="flex items-center gap-3 py-6 text-[13px] text-ink-2">
     No games match these filters.
-    <button class="btn btn-sm" @click="$emit('clear')">Clear filters</button>
+    <button type="button" class="iv-btn sm" @click="$emit('clear')">Clear filters</button>
   </p>
 
   <div v-else>
-    <section v-for="day in days" :key="day.label" class="mt-5 first:mt-0">
-      <h3 class="mb-2 flex items-baseline justify-between gap-3 px-0.5 text-[12px] font-semibold">
-        <span class="text-ink-2">{{ day.label }}</span>
-        <span class="num font-medium text-ink-3">
+    <section v-for="day in days" :key="day.label" class="iv-pf-day">
+      <h3 class="iv-mr-day mb-2">
+        {{ day.label }}
+        <span class="num">
           {{ day.wins }}W {{ day.losses }}L
-          <template v-if="day.lp !== null">· {{ lp(day.lp) }}</template>
+          <template v-if="day.lp !== null">· {{ signedLp(day.lp) }} LP</template>
         </span>
       </h3>
 
-      <div class="grid gap-1">
-        <MatchRow
-          v-for="match in day.matches"
+      <ul class="iv-mr-list">
+        <li
+          v-for="{ match, game } in day.rows"
           :key="match.matchId"
-          :match="match"
-          :puuid="puuid"
-          :summoner-slug="summonerSlug"
-          :expanded="expanded === match.matchId"
-          @toggle="toggle(match.matchId)"
-        />
-      </div>
+          class="iv-pf-match"
+          :class="{ open: open === match.matchId }"
+        >
+          <MatchRow
+            :game="game"
+            :score="game.score"
+            :lp="match.lpChange ?? null"
+            :open="open === match.matchId"
+            :puuid="puuid"
+            @toggle="toggle(match.matchId)"
+          />
+          <GameDetail
+            v-if="open === match.matchId"
+            :match="match"
+            :puuid="puuid"
+            :game-name="gameName"
+            :tag-line="tagLine"
+          />
+        </li>
+      </ul>
     </section>
   </div>
 </template>

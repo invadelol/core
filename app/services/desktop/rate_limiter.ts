@@ -78,6 +78,10 @@ export const DESKTOP_LIMITS = {
   resolveIp: { bucket: 'resolve:ip', limit: 20 },
   uploadDevice: { bucket: 'matches:device', limit: 30 },
   uploadIp: { bucket: 'matches:ip', limit: 120 },
+  /** Observed games (v1.3) count apart, so they never hold back a game the player just played. */
+  observedDevice: { bucket: 'matches:observed:device', limit: 60 },
+  observedIp: { bucket: 'matches:observed:ip', limit: 240 },
+  knownDevice: { bucket: 'matches:known:device', limit: 60 },
   playersDevice: { bucket: 'players:device', limit: 60 },
   /** Players, not requests: a batch counts as many as it carries. */
   playersDevicePlayers: { bucket: 'players:device:players', limit: 1500 },

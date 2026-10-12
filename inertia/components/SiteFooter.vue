@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
-import Glyph from './ui/Glyph.vue'
+import { Logo } from '@invadelol/ui'
 import { REPO_URL } from '../lib/links.js'
 
 /** The same quiet line at the bottom of every page: where the source lives, and Riot's notice. */
@@ -8,11 +8,9 @@ import { REPO_URL } from '../lib/links.js'
 
 <template>
   <footer class="mt-16 border-t border-line">
-    <div
-      class="mx-auto flex max-w-[1320px] flex-wrap items-center gap-x-6 gap-y-2 px-5 py-6 text-[12px] text-ink-3 sm:px-6 2xl:max-w-[1480px]"
-    >
+    <div class="page flex flex-wrap items-center gap-x-6 gap-y-2 py-6 text-[12px] text-ink-3">
       <Link href="/" class="flex items-center gap-2 font-medium text-ink-2 hover:text-ink">
-        <Glyph :size="14" />invade.lol
+        <Logo :size="14" />invade.lol
       </Link>
       <Link href="/app" class="transition-colors hover:text-ink">Desktop app</Link>
       <a :href="REPO_URL" target="_blank" rel="noreferrer" class="transition-colors hover:text-ink">

@@ -20,7 +20,7 @@ test.group('Champion explorer filters', () => {
         queueIds: [420, 440],
         role: 'SUPPORT',
       })
-      const window = sql.slice(sql.indexOf('WITH my_matches'), sql.indexOf('mine AS'))
+      const window = sql.slice(sql.indexOf('WITH mine'), sql.indexOf('durations AS'))
       assert.include(window, 'queue_id IN (420,440)')
       assert.include(window, "team_position = 'UTILITY'")
       assert.isBelow(window.indexOf('team_position'), window.indexOf('LIMIT 50'))

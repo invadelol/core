@@ -92,8 +92,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside))
   <div ref="root" class="relative">
     <button
       type="button"
-      class="flex h-[30px] w-full items-center gap-2 rounded-[5px] bg-control px-2.5 text-[12.5px] font-medium transition-[background-color,box-shadow]"
-      :class="open ? 'bg-track shadow-[var(--focus)]' : 'hover:bg-track'"
+      class="control flex h-[30px] w-full items-center gap-2 rounded-[5px] px-2.5 text-[12.5px] font-medium transition-[background-color,box-shadow]"
       :aria-expanded="open"
       aria-haspopup="listbox"
       @click="open = !open"

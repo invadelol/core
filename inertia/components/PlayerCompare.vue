@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { X } from 'lucide-vue-next'
+import { RoleIcon } from '@invadelol/ui'
+import { positionOf, queueName } from '@invadelol/ui/logic'
 import MatchFilters, { type Filters } from './MatchFilters.vue'
 import PlayerLink from './PlayerLink.vue'
 import PlayerSearchField from './PlayerSearchField.vue'
-import RoleIcon from './RoleIcon.vue'
 import Sparkline from './ui/Sparkline.vue'
-import { champIcon, championName, profileIcon, queueName, regionLabel } from '../lib/assets.js'
+import { champIcon, championName, profileIcon, regionLabel } from '../lib/assets.js'
 import { compact, duration, timeAgo } from '../lib/format.js'
 import { killParticipation, matchMinutes, teamTotals } from '../lib/match.js'
 import {
@@ -378,7 +379,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
         placeholder="Search a Riot ID to compare against"
         @select="pick"
       />
-      <button v-if="other" class="btn" @click="clear">
+      <button v-if="other" class="iv-btn" @click="clear">
         <X :size="13" />
         Clear
       </button>
@@ -400,7 +401,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
         <div
           v-for="(p, i) in players"
           :key="p.puuid"
-          class="card min-w-0 p-4"
+          class="iv-panel min-w-0 p-4"
           :class="i === 1 ? 'order-2 text-right sm:order-3' : 'order-1'"
         >
           <div class="flex items-center gap-3" :class="i === 1 ? 'flex-row-reverse' : ''">
@@ -456,7 +457,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
             </div>
           </div>
 
-          <div class="form mt-4" :class="i === 1 ? 'justify-end' : ''">
+          <div class="iv-form mt-4" :class="i === 1 ? 'justify-end' : ''">
             <i v-for="(win, index) in form[i]" :key="index" :class="{ w: win }" />
           </div>
         </div>
@@ -474,7 +475,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
       </div>
 
       <!-- Every metric on one axis -->
-      <div class="card mb-8">
+      <div class="iv-panel mb-8">
         <table class="dt num w-full">
           <tbody>
             <tr v-for="metric in METRICS" :key="metric.key">
@@ -511,8 +512,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
                       class="block h-full rounded-l-[2px]"
                       :style="{
                         width: `${weights(metric.key)[0]}%`,
-                        background:
-                          leader(metric.key) === 0 ? 'var(--color-ink)' : 'var(--color-ink-4)',
+                        background: leader(metric.key) === 0 ? 'var(--text-1)' : 'var(--text-4)',
                       }"
                     />
                   </span>
@@ -521,8 +521,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
                       class="block h-full rounded-r-[2px]"
                       :style="{
                         width: `${weights(metric.key)[1]}%`,
-                        background:
-                          leader(metric.key) === 1 ? 'var(--color-ink)' : 'var(--color-ink-4)',
+                        background: leader(metric.key) === 1 ? 'var(--text-1)' : 'var(--text-4)',
                       }"
                     />
                   </span>
@@ -563,7 +562,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
           <span v-if="pairing" class="meta">{{ pairing }}</span>
         </div>
 
-        <div class="card mb-2 flex flex-wrap items-start gap-x-10 gap-y-4 px-4 py-3.5">
+        <div class="iv-panel mb-2 flex flex-wrap items-start gap-x-10 gap-y-4 px-4 py-3.5">
           <div v-if="record.played">
             <div class="label">Record</div>
             <div class="fig mt-1.5 text-[24px]">
@@ -592,7 +591,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
           </div>
         </div>
 
-        <div class="card mb-8">
+        <div class="iv-panel mb-8">
           <div class="scroll-x">
             <table class="dt dt-hover num min-w-[330px]">
               <thead>
@@ -654,7 +653,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
                       </span>
                       <RoleIcon
                         v-if="p.position"
-                        :role="p.position"
+                        :lane="positionOf(p.position)"
                         :size="13"
                         class="text-ink-3"
                       />
@@ -729,7 +728,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
         <div class="section">
           <h3>By role</h3>
         </div>
-        <div class="card mb-8">
+        <div class="iv-panel mb-8">
           <table class="dt num w-full">
             <thead>
               <tr>
@@ -750,7 +749,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
               <tr class="band">
                 <td class="!pl-4" :colspan="2 + ROLE_COLUMNS.length">
                   <span class="flex items-center gap-2">
-                    <RoleIcon :role="row.role" :size="14" class="text-ink-2" />
+                    <RoleIcon :lane="positionOf(row.role)" :size="14" class="text-ink-2" />
                     <span class="text-[12px] font-semibold text-ink-2">{{ row.label }}</span>
                   </span>
                 </td>
@@ -790,7 +789,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
         <div class="section">
           <h3>Champions</h3>
         </div>
-        <div class="card">
+        <div class="iv-panel">
           <table class="dt num w-full">
             <thead>
               <tr>
@@ -887,10 +886,10 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
 
     <div v-else class="grid gap-2">
       <div class="grid grid-cols-2 gap-2">
-        <div class="skel h-[168px]" />
-        <div class="skel h-[168px]" />
+        <div class="iv-skel h-[168px]" />
+        <div class="iv-skel h-[168px]" />
       </div>
-      <div class="skel h-[420px]" />
+      <div class="iv-skel h-[420px]" />
     </div>
   </section>
 </template>

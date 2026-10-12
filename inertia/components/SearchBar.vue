@@ -296,8 +296,8 @@ function submit() {
   padding-left: 46px;
   padding-right: 56px;
   font-size: 16px;
-  border-radius: var(--radius-md);
-  background: var(--color-panel);
+  border-radius: var(--r-md);
+  background: var(--surface-1);
   box-shadow: var(--hi);
 }
 

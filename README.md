@@ -121,10 +121,12 @@ npm test             # test suite
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| `GET` | `/` | Hello world |
-| `GET` | `/health` | Health check |
+| `GET` | `/` | The website's home page |
+| `GET` | `/api/health` | Health check |
 | `GET` | `/docs` | Swagger UI |
 | `GET` | `/swagger` | OpenAPI spec |
+
+The JSON routes below are served under `/api` (`/api/summoners/search`, `/api/matches/:id`…).
 
 ### Summoner
 
@@ -145,7 +147,7 @@ All routes require a valid PUUID and are cached.
 | `GET` | `/summoners/puuid/:puuid/ranks` | Current and historical ranks |
 | `GET` | `/summoners/puuid/:puuid/stats` | Overall stats |
 | `GET` | `/summoners/puuid/:puuid/champions` | Per-champion stats |
-| `GET` | `/summoners/puuid/:puuid/matches` | Recent matches |
+| `GET` | `/summoners/puuid/:puuid/matches` | Recent matches (`count`, `offset`, filters); `before=<epoch ms>` pages older games, filling a short unfiltered page from Riot at most 3 pages right away, then 1 per 2 min per player and IP (12, then 1 per 30 s per IP; else 429 with `Retry-After`) |
 | `GET` | `/matches/:id` | One match in full, with its timeline |
 | `PUT` | `/summoners/puuid/:puuid/increment` | Increment profile view count |
 
@@ -154,7 +156,9 @@ All routes require a valid PUUID and are cached.
 The Invade desktop app onboards players, uploads the games they finish, and
 reports the players the League client shows it (ranks, mastery, icon), so the
 website stays fresh with fewer Riot calls. The full contract, shared with the
-app, is [docs/desktop-sync.md](docs/desktop-sync.md).
+app, is [docs/desktop-sync.md](docs/desktop-sync.md). Contract v1.3 (games the app only
+observed, `POST /api/desktop/matches/known`, compressed bodies), which desktop app 0.2.9 uses,
+is in [invadelol/core#20](https://github.com/invadelol/core/pull/20).
 
 | Method | Endpoint | Auth | Description |
 | --- | --- | --- | --- |
@@ -200,46 +204,38 @@ trust and rollback, auth, rate limits) and the routes end to end
 `.env` with Riot stubbed, so point `DB_DATABASE`, `CLICKHOUSE_DB` and
 `REDIS_DB` at throwaway ones.
 
---- | --- | --- | --- |
-| `GET` | `/api/desktop/config` | - | Kill switches and the 2 MB upload limit |
-| `POST` | `/api/desktop/devices` | - | Register a device; returns its `inv_dev_` token once (10/h per IP) |
-| `DELETE` | `/api/desktop/devices/me` | token | Revoke this device |
-| `POST` | `/api/desktop/link` | token | Make an account one of the device's uploaders (20/h) |
-| `DELETE` | `/api/desktop/link/:puuid` | token | Unlink an account |
-| `GET` | `/api/desktop/resolve?gameName=&tagLine=` | optional | Onboard by Riot ID from stored data (30/h per device, 20/h per IP) |
-| `POST` | `/api/desktop/matches` | token | Upload a finished game (30/h per device, 120/h per IP) |
+### Game art
 
-Only the token's SHA-256 is stored. A game already stored costs no Riot call,
-nor does one from a device Riot has confirmed five times; anything else costs
-one `getMatchById`, and a game Riot has not published yet is retried in-process
-2, 5 and 15 minutes later. Desktop games show their provenance on the match
-page, the LP change on the match row, and hide what the League client does not
-report (pings). The code lives in `app/services/desktop/`.
+Every image the site and the desktop app draw comes from `/cdn`, a caching
+proxy in front of Data Dragon and Community Dragon: allow-listed kinds and id
+shapes only, one upstream fetch per asset per patch, mirrored to the bucket.
+Kinds, upstream mapping, caching and limits: [docs/cdn.md](docs/cdn.md).
 
-Run `node ace migration:run` to create the tables (`desktop_device`,
-`desktop_device_account`, `riot_puuid_alias`, `desktop_match_upload`,
-`match_source`, `lp_change`, and `riot_rank.source`).
-
-Tests: `node ace test --tags=@desktop` runs the rules (conversion, structural
-checks, LP, identity mapping, publication policy, auth, rate limits) and the
-routes end to end (`tests/functional/desktop_sync.spec.ts`). They use the
-databases and Redis in `.env` with Riot stubbed, so point `DB_DATABASE`,
-`CLICKHOUSE_DB` and `REDIS_DB` at throwaway ones.
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/cdn/:patch/:kind/:id` | An asset pinned to a patch (`/cdn/16.20/champion/266.png`), immutable |
+| `GET` | `/cdn/:kind/:id` | The same on the live patch, cached for a day |
+| `GET` | `/cdn/names/:kind` | Id → display name for champions, items, spells, runes, augments |
 
 ---
 
 ## Interface
 
-The app ships a light and a dark theme, both designed rather than derived. The
+The site has a light and a dark theme, both from the package's tokens. The
 theme follows the operating system by default and can be set explicitly from
 the header; the choice is stored in `localStorage` and replayed before first
 paint, so there is no flash.
 
-Structure comes from rules and spacing rather than nested cards, five hues
-carry all the meaning, and Riot's own role glyphs are used wherever a lane is
-named.
+Matches and profiles are drawn by [`@invadelol/ui`](https://github.com/invadelol/ui), the
+same components as the desktop app. The package is on npm; the site installs a built copy from
+`vendor/invadelol-ui` (a `file:` dependency), so a package change can ship here before it is
+released. After a change in the package, refresh it and commit `vendor/`:
 
-See [docs/design.md](docs/design.md) for the palette and primitives, and
+```bash
+node scripts/sync_ui.mjs ../ui   # path to the ui checkout (default ../ui, or $INVADE_UI)
+```
+
+See [docs/design.md](docs/design.md) for the tokens, themes and primitives, and
 [docs/player-profile.md](docs/player-profile.md) for what each page shows.
 
 ---

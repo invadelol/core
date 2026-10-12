@@ -49,18 +49,18 @@ const headline = computed(() => {
 
 <template>
   <div>
-    <div v-if="loading" class="skel h-[320px]" />
+    <div v-if="loading" class="iv-skel h-[320px]" />
 
     <p v-else-if="error" class="flex items-center gap-3 py-6 text-[13px] text-ink-2">
       Riot did not return this player's mastery.
-      <button class="btn btn-sm" @click="$emit('retry')">Retry</button>
+      <button class="iv-btn sm" @click="$emit('retry')">Retry</button>
     </p>
 
     <p v-else-if="!mastery.length" class="py-6 text-[13px] text-ink-2">
       No champion mastery recorded.
     </p>
 
-    <section v-else class="card">
+    <section v-else class="iv-panel">
       <div class="section flex-wrap !items-center">
         <h2>Mastery</h2>
         <span class="meta num">
@@ -136,7 +136,7 @@ const headline = computed(() => {
 
         <button
           v-if="!expanded && filtered.length > 24"
-          class="btn btn-sm mt-4"
+          class="iv-btn sm mt-4"
           @click="expanded = true"
         >
           Show all {{ filtered.length }} champions

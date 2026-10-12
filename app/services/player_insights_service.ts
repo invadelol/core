@@ -87,39 +87,39 @@ class PlayerInsightsService {
           const ids = data.participants
             .map((p: any) => p.puuid)
             .filter((id: unknown) => typeof id === 'string' && /^[a-zA-Z0-9_-]{78}$/.test(id))
-          const ranks = ids.length
-            ? await Rank.query()
-                .whereIn('puuid', ids)
-                .where('queueType', 'RANKED_SOLO_5x5')
-                .distinctOn('puuid')
-                .orderBy('puuid')
-                .orderBy('fetchedAt', 'desc')
-                .catch(() => [])
-            : []
-          const participants = await Promise.all(
-            data.participants.map(async (p: any) => {
-              const champions = ids.includes(p.puuid)
-                ? await statsRepository.getSummonerChampionStats(p.puuid, 100).catch(() => [])
-                : []
-              const champion = champions.find((c) => c.championId === p.championId)
-              const rank = ranks.find((r) => r.puuid === p.puuid)
-              return {
-                puuid: p.puuid,
-                riotId: p.riotId,
-                championId: p.championId,
-                teamId: p.teamId,
-                spell1Id: p.spell1Id,
-                spell2Id: p.spell2Id,
-                perks: p.perks,
-                championStats: champion
-                  ? { games: champion.games, winrate: champion.winrate }
-                  : null,
-                rank: rank
-                  ? { tier: rank.tier, division: rank.division, leaguePoints: rank.leaguePoints }
-                  : null,
-              }
-            })
-          )
+          const [ranks, records] = await Promise.all([
+            ids.length
+              ? Rank.query()
+                  .whereIn('puuid', ids)
+                  .where('queueType', 'RANKED_SOLO_5x5')
+                  .distinctOn('puuid')
+                  .orderBy('puuid')
+                  .orderBy('fetchedAt', 'desc')
+                  .catch(() => [])
+              : [],
+            statsRepository
+              .getChampionRecords(
+                data.participants.filter((p: any) => ids.includes(p.puuid)),
+                100
+              )
+              .catch(() => new Map<string, { games: number; winrate: number }>()),
+          ])
+          const participants = data.participants.map((p: any) => {
+            const rank = ranks.find((r) => r.puuid === p.puuid)
+            return {
+              puuid: p.puuid,
+              riotId: p.riotId,
+              championId: p.championId,
+              teamId: p.teamId,
+              spell1Id: p.spell1Id,
+              spell2Id: p.spell2Id,
+              perks: p.perks,
+              championStats: records.get(p.puuid) ?? null,
+              rank: rank
+                ? { tier: rank.tier, division: rank.division, leaguePoints: rank.leaguePoints }
+                : null,
+            }
+          })
           // Do not send spectator observer credentials to the browser.
           return {
             game: {

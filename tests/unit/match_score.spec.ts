@@ -1,5 +1,6 @@
 import { test } from '@japa/runner'
-import { rankLobby, scoreLobby, SCORE_CATEGORIES } from '../../inertia/lib/match.js'
+import type { Badge } from '@invadelol/ui/logic'
+import { detailOf, scoreLobby, SCORE_CATEGORIES } from '../../inertia/lib/match.js'
 import type { Match, Participant } from '../../inertia/lib/types.js'
 
 const ROLES = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
@@ -23,6 +24,9 @@ function player(index: number, overrides: Partial<Participant> = {}): Participan
     damageDealtToObjectives: 6000,
     goldEarned: 11000,
     position: ROLES[index % 5],
+    items: [],
+    spells: [],
+    perks: { primary: 8000, sub: 8100, keystone: 8005 },
     ...overrides,
   } as Participant
 }
@@ -42,8 +46,11 @@ test.group('Match score', () => {
   test('a remake is not scored', ({ assert }) => {
     const remake = lobby({}, 120)
     assert.deepEqual(scoreLobby(remake), {})
-    assert.deepEqual(rankLobby(remake).rank, {})
-    assert.isNull(rankLobby(remake).mvpPuuid)
+    for (const p of detailOf(remake).players) {
+      assert.isNull(p.score)
+      assert.equal(p.rank, 0)
+      assert.notInclude(p.badges, 'mvp')
+    }
   })
 
   test('scores and every category stay within 0–100', ({ assert }) => {
@@ -83,6 +90,19 @@ test.group('Match score', () => {
     assert.isAbove(scores.p4.weights.vision, scores.p3.weights.vision)
   })
 
+  test('MVP and ACE go to the best of each team', ({ assert }) => {
+    const detail = detailOf(lobby({ 2: { kills: 15 }, 7: { kills: 15 } }))
+    const badged = (badge: Badge) => detail.players.filter((p) => p.badges.includes(badge))
+    assert.deepEqual(
+      badged('mvp').map((p) => p.puuid),
+      ['p2']
+    )
+    assert.deepEqual(
+      badged('ace').map((p) => p.puuid),
+      ['p7']
+    )
+  })
+
   test('a stat missing from the payload is dropped, not zeroed', ({ assert }) => {
     const full = lobby({ 2: { kills: 10 } })
     const summary = match(
@@ -92,7 +112,8 @@ test.group('Match score', () => {
     const without = scoreLobby(summary)
     assert.equal(without.p2.weights.objectives, 0)
     // Objectives are even across this lobby, so dropping them keeps the order.
-    assert.deepEqual(rankLobby(summary).rank, rankLobby(full).rank)
+    const ranks = (m: Match) => detailOf(m).players.map((p) => p.rank)
+    assert.deepEqual(ranks(summary), ranks(full))
     assert.isAbove(without.p2.score, 0)
     assert.exists(withObjectives.p2)
   })

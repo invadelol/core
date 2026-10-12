@@ -1,7 +1,186 @@
 # Performance
 
-Two rounds of work are recorded here. The first reshaped what the profile page
-asks for and when. The second, below it, went after what it costs to answer.
+Three rounds of work are recorded here, newest first. The first reshaped what
+the profile page asks for and when. The second went after what it costs to
+answer. The third measured the API against a production-shaped dataset and
+removed the repeated reads, serial waits and per-row statements that were left.
+
+---
+
+# Round three: repeated reads, serial waits, per-row writes (2026-10-12)
+
+No migration. Every change is a rewritten query or a reordering of work that
+was already being done; responses are unchanged.
+
+## How it was measured
+
+Production holds about 17 600 players (its sitemap). Locally, isolated
+databases were seeded with roughly ten times that, shaped like real use:
+200 000 players, 200 000 matches over 24 monthly partitions, 2 000 000
+participant rows, 6.2 million timeline frames and 1.2 million events for the
+newest 20 000 games. Ten players have 2 000 games each, their duo partners
+1 000; everyone else about ten. Ranks, provenance, LP changes and desktop
+uploads exist for the players who would have them.
+
+The built server ran with `NODE_ENV=production`, so every cache tier was live.
+Cold numbers are first requests for players nobody had asked about; warm ones
+repeat the same URL. Load stayed under 20 requests per second. Postgres
+statements were counted from the server log, ClickHouse queries, rows read and
+server time from `system.query_log`. The baseline build and the changed build
+ran side by side against the same data and every sample asked both, in
+alternating order, so that load from the rest of the machine fell on both.
+Even so, wall-clock times on a shared laptop wander by ±20%; rows read and
+statement counts do not, and they are what the claims below rest on.
+
+Riot could not be reached from the machine used (every Riot host reset the
+connection), so the website Update was measured with Riot answering every call
+after a fixed 150 ms, through the real controller, Postgres, ClickHouse and
+object storage.
+
+Before and after, all 422 analytics and match responses of a comparison suite
+(every filter, both offsets, players with no games, missing matches) were
+identical, floats within 1e-9 and tied rows compared as sets.
+
+## The player's window, read once
+
+Every analytics query starts from the player's window: their newest games,
+`PREWHERE puuid = …`. `participants` is partitioned by month and ordered by
+puuid inside each part, so that lookup touches at least one granule in every
+partition — about 410 000 rows here, whoever the player. ClickHouse inlines a
+CTE at each reference, so each mention of the window paid that again.
+
+The summary statistics referenced it four times across two queries, and then
+looked the player's own rows up a fifth time by match id, although those rows
+_are_ the window. Now the player's figures and their teams' totals come from one
+pass over the window's games (`sumIf(…, puuid = me)` per team), and the top
+champions are aggregated straight from the window. The champion pool did the
+same in miniature and reads its rows from the window too.
+
+The desktop app's onboarding read two full scoreboards per game to keep one
+line of each. It now reads the player's own rows and the durations only.
+
+A live game's lobby asked ClickHouse once per tracked player, ten concurrent
+queries each reading the window twice. It is one query now
+(`LIMIT 100 BY puuid`), run alongside the rank lookup instead of after it.
+
+Server-side ClickHouse cost per cold request, medians of ten players:
+
+| Request                       | Queries | Rows read             | Server time      |
+| ----------------------------- | ------: | --------------------- | ---------------- |
+| Summary stats, ~10 games      |   2 → 2 | 2 525 119 → 1 915 971 | 51 → 37 ms       |
+| Summary stats, 2 000 games    |   2 → 2 | 2 448 754 → 1 834 672 | 29 → 26 ms       |
+| Champion pool, ~10 games      |   1 → 1 | 1 023 877 → 909 189   | 19 → 15 ms       |
+| Champion pool, 2 000 games    |   1 → 1 | 1 209 082 → 958 215   | 24 → 19 ms       |
+| Desktop resolve, recent games |   2 → 1 | 1 310 194 → 891 080   | 117 → 39 ms      |
+| Live game, 10 tracked players |  10 → 1 | ~11 900 000 → 410 620 | 10 × 167 → 32 ms |
+
+Server times for stats and champions are medians of fifteen runs of the exact
+query text, old and new alternating; desktop resolve is the median of ten cold
+requests, and the live game compares five runs of one player's old query with
+the new query for all ten.
+
+A rewrite of teammates that dropped its separate `match_id IN` read 15–30%
+fewer rows but was no faster for most players and slower for the busiest: the
+cheap string set filters rows before the costlier tuple test. It was measured
+and left as it was.
+
+## Waiting for things in parallel
+
+- **Match detail** read provenance from Postgres after the four ClickHouse
+  reads had returned. It needs only the id, so it now runs alongside them.
+- **Cache misses** asked Redis for the cached entry and then, separately, for
+  the generation the miss would be computed against. One `MGET` now answers
+  both. Ranks, which are pure Postgres behind the cache, went from 8.5 to 6.4 ms
+  cold at the median.
+- **The website Update** fetched each new game's timeline only after the game
+  had been fetched, archived, claimed and ingested, and asked league-v4 only
+  after every game was stored. Both were independent: the timeline is now
+  requested with the match, and the rank refresh runs alongside match-v5.
+  The number of Riot calls is unchanged; only a game that ends up not stored
+  (lost to a concurrent desktop upload, or failed) spends its timeline call for
+  nothing.
+
+## Per-row statements
+
+Naming the players of newly stored games (`upsertFromParticipants`, after every
+Update and every desktop upload) went through Lucid's `updateOrCreateMany` and
+`createMany`, which save one row at a time. Fifteen new games name about 140
+players, so an Update of a new player issued some 280 single-row statements.
+It is a single `INSERT … ON CONFLICT` and one multi-row history insert now. A
+player whose identity is unchanged is not rewritten at all, which also spares
+their search vector.
+
+## Results
+
+The website Update of a player with fifteen new games, Riot at 150 ms a call,
+six runs each:
+
+| Measurement                   |                    Before |                      After |
+| ----------------------------- | ------------------------: | -------------------------: |
+| Postgres statements           |                       309 |                         34 |
+| Riot critical path (34 calls) | 1.29–3.13 s, median 1.7 s | 0.66–0.85 s, median 0.68 s |
+| Request wall time             | 1.43–5.13 s, median 2.0 s |  1.18–2.05 s, median 1.5 s |
+
+Cold HTTP requests, interleaved, two runs of 30 players each (p50):
+
+| Request                    |     Before |     After |
+| -------------------------- | ---------: | --------: |
+| Six profile panels at once | 108–147 ms | 98–126 ms |
+| Stats                      |   38–47 ms |  32–39 ms |
+| Champion pool              |   29–38 ms |  24–29 ms |
+| Ranks                      |     8–9 ms |      6 ms |
+| Match detail               |   28–30 ms |  25–26 ms |
+
+Warm requests (served from process memory) were 0.7–1.5 ms before and after.
+Payloads did not change: a summary match list is 55 kB raw and 8 kB in Brotli
+for ten games, a full match with its timeline 185 kB and 10 kB.
+
+## Measured and left alone
+
+- **Postgres.** Every hot read — stored profile, ranks, freshness, provenance,
+  LP changes — is an index scan under a millisecond at this size. No index is
+  missing.
+- **A `participants` projection ordered by `match_id`**, recommended in round
+  two, was built and measured. A single match's participants went from 82 000
+  to 41 000 rows read and a match list barely moved, because the cost that
+  dominates is the window's partition fan-out, which a projection does not
+  touch. Doubling the table's storage for that is not worth it.
+- **Guarding the `search_vector` trigger**, also recommended in round two,
+  would save only the `to_tsvector` call. `view_count` is indexed, so every
+  view is a non-HOT update that writes a new entry to every index of the row,
+  the GIN index included, whether or not the vector changed.
+
+## For production to confirm
+
+A handful of GETs against invade.lol (one TLS connection each, about 17 ms
+round trip) put a cache miss on an analytics panel at 100–250 ms of server
+time — on far less data than was seeded here, where the same requests take
+10–50 ms. A memory hit took about 16 ms, one round trip. So the time goes into
+reaching or running ClickHouse, not into the queries' shape, and is worth
+checking on the server:
+
+```sql
+-- How long the queries themselves take, and how many parts they open.
+SELECT normalized_query_hash, count(), quantile(0.5)(query_duration_ms),
+       quantile(0.5)(read_rows), any(substring(query, 1, 80))
+FROM system.query_log
+WHERE type = 'QueryFinish' AND event_time > now() - INTERVAL 1 DAY
+GROUP BY normalized_query_hash ORDER BY count() DESC LIMIT 20;
+
+SELECT table, count() AS parts, sum(rows) FROM system.parts
+WHERE active AND database = currentDatabase() GROUP BY table;
+```
+
+If query durations are small next to what the app observes, ClickHouse is far
+from the app (another host, or a TLS connection per query) and moving it next
+to the app is the largest win left. If parts number in the hundreds, the
+monthly partitioning is the cost: each player lookup opens every part.
+
+A new player whose tag is not a platform (`Name#727`) is found by probing
+summoner-v4 platform by platform, Americas first, so an EUW player costs five
+sequential calls. account-v1's active-region lookup
+(`/riot/account/v1/region/by-game/lol/by-puuid/{puuid}`) would make that one
+call; it could not be tried from here.
 
 ---
 
@@ -285,8 +464,8 @@ ingestion invalidates the match and every participant's analytics before
 returning; rank updates invalidate again after ranks are stored. Redis failures
 fall back to the controller response.
 
-Hot game images use an LRU bounded to 512 entries and 32 MiB per server process.
-Real assets expire after one hour; placeholders after 30 seconds. Mirror reads
+Hot game images use an LRU bounded to 2048 entries and 64 MiB per server process
+([cdn.md](cdn.md)). Real assets expire after one hour; placeholders after 30 seconds. Mirror reads
 use two concurrent requests instead of three sequential requests.
 
 ### Local measurements

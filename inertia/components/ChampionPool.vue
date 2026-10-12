@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
-import { champIcon, championName } from '../lib/assets.js'
+import { ChampIcon } from '@invadelol/ui'
+import { championName } from '../lib/assets.js'
 import type { ChampionStats } from '../lib/types.js'
 
 const props = defineProps<{
@@ -23,7 +24,7 @@ const rows = computed(() =>
 </script>
 
 <template>
-  <section v-if="rows.length" class="card">
+  <section v-if="rows.length" class="iv-panel">
     <div class="section">
       <h3>Champions</h3>
       <Link
@@ -37,21 +38,14 @@ const rows = computed(() =>
     <ul class="-mx-2">
       <li v-for="champ in rows" :key="champ.championId">
         <button
+          type="button"
           class="flex h-[48px] w-full items-center gap-3 rounded-[5px] px-2 text-left transition-colors hover:bg-panel"
           :class="active === champ.championId ? '!bg-raised' : ''"
           :aria-pressed="active === champ.championId"
           :title="`Show ${championName(champ.championId)} games`"
           @click="emit('pick', champ.championId)"
         >
-          <span class="portrait h-8 w-8">
-            <img
-              :src="champIcon(champ.championId)"
-              :alt="championName(champ.championId)"
-              width="32"
-              height="32"
-              loading="lazy"
-            />
-          </span>
+          <ChampIcon :id="champ.championId" :size="32" />
           <span class="min-w-0 flex-1">
             <span class="block truncate text-[13px] font-semibold leading-[17px] text-ink">
               {{ championName(champ.championId) }}

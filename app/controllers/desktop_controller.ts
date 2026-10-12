@@ -7,8 +7,11 @@ import resolveService from '#services/desktop/resolve_service'
 import playerSnapshotService from '#services/desktop/player_snapshot_service'
 import rateLimiter, { DESKTOP_LIMITS } from '#services/desktop/rate_limiter'
 import { DESKTOP_MAX_PAYLOAD_BYTES } from '#middleware/body_parser_middleware'
+import matchSourceService from '#services/match_source_service'
+import matchRepository from '#services/analytics/match_repository'
 import { DesktopException } from '#exceptions/desktop_exception'
 import {
+  knownValidator,
   linkValidator,
   playersValidator,
   registerDeviceValidator,
@@ -27,6 +30,22 @@ async function limit(rule: Limit, id: string, amount = 1) {
   if (!result.allowed) throw DesktopException.rateLimited(result.retryAfter)
 }
 
+/**
+ * Whether an upload is an observed game (v1.3), read from the body before it
+ * is validated, to pick its rate limit: the uploader is not one of the
+ * identities. Anything unreadable counts as the uploader's own game.
+ */
+function observedBody(body: Record<string, any>) {
+  const uploader = typeof body.uploader === 'string' ? body.uploader.toLowerCase() : null
+  const identities = body.game?.participantIdentities
+  if (!uploader || !Array.isArray(identities)) return false
+  return !identities.some(
+    (identity) =>
+      typeof identity?.player?.puuid === 'string' &&
+      identity.player.puuid.toLowerCase() === uploader
+  )
+}
+
 /** Set by the `desktopAuth` middleware on every authenticated route. */
 function device(ctx: HttpContext): DesktopDevice {
   if (!ctx.desktopDevice) throw DesktopException.unauthorized()
@@ -41,13 +60,16 @@ export default class DesktopController {
   /**
    * Kill switches and limits the app reads before uploading
    * @tag Desktop
-   * @responseBody 200 - {"uploads": true, "resolve": true, "maxPayloadBytes": 2000000, "minAppVersion": null}
+   * @responseBody 200 - {"uploads": true, "resolve": true, "observed": true, "encodings": ["gzip", "deflate"], "maxPayloadBytes": 2000000, "minAppVersion": null}
    */
   async config({ response }: HttpContext) {
     response.header('Cache-Control', 'public, max-age=300')
     return response.ok({
       uploads: publicationService.enabled(),
       resolve: resolveService.enabled(),
+      // Since v1.3: observed games and `POST /matches/known`, and compressed request bodies.
+      observed: publicationService.observedEnabled(),
+      encodings: ['gzip', 'deflate'],
       maxPayloadBytes: DESKTOP_MAX_PAYLOAD_BYTES,
       minAppVersion: env.get('DESKTOP_MIN_APP_VERSION') || null,
     })
@@ -125,7 +147,7 @@ export default class DesktopController {
   }
 
   /**
-   * Upload a finished game the uploader played
+   * Upload a finished game the uploader played, or one the app read (observed)
    * @tag Desktop
    * @responseBody 200 - {"matchId": "EUW1_1", "status": "stored", "lp": "none", "url": "https://invade.lol/Louhi-727/match/EUW1_1"}
    * @responseBody 403 - The uploader is not linked to this device
@@ -135,17 +157,37 @@ export default class DesktopController {
   async upload(ctx: HttpContext) {
     const current = device(ctx)
     const ip = ctx.request.ip()
-    await limit(DESKTOP_LIMITS.uploadDevice, current.id)
-    await limit(DESKTOP_LIMITS.uploadIp, ip)
+    const body = ctx.request.body()
+    const observed = observedBody(body)
+    await limit(observed ? DESKTOP_LIMITS.observedDevice : DESKTOP_LIMITS.uploadDevice, current.id)
+    await limit(observed ? DESKTOP_LIMITS.observedIp : DESKTOP_LIMITS.uploadIp, ip)
     if (!publicationService.enabled()) throw DesktopException.paused('uploads')
 
-    const body = ctx.request.body()
     if (body.lp !== undefined && body.lp !== null && typeof body.lp !== 'object') {
       throw new DesktopException('lp must be an object or null', 422, 'E_INVALID_LP')
     }
     const payload = (await ctx.request.validateUsing(uploadValidator)) as unknown as MatchUpload
     const result = await publicationService.upload(payload, { device: current, ip })
     return ctx.response.ok(result)
+  }
+
+  /**
+   * Which of these games core already holds, so the app sends only the others
+   * @tag Desktop
+   * @requestBody {"matchIds": ["EUW1_7998180573"]}
+   * @responseBody 200 - {"known": ["EUW1_7998180573"]}
+   * @responseBody 422 - Not 1-100 distinct match ids
+   */
+  async known(ctx: HttpContext) {
+    await limit(DESKTOP_LIMITS.knownDevice, device(ctx).id)
+    if (!publicationService.observedEnabled()) throw DesktopException.paused('uploads')
+    const { matchIds } = await ctx.request.validateUsing(knownValidator)
+    // A game is held once a writer claimed it, or when it was stored before the lock existed.
+    const [claimed, stored] = await Promise.all([
+      matchSourceService.claimed(matchIds),
+      matchRepository.getExistingIds(matchIds),
+    ])
+    return ctx.response.ok({ known: matchIds.filter((id) => claimed.has(id) || stored.has(id)) })
   }
 
   /**

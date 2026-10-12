@@ -3,6 +3,7 @@
 import { createInertiaApp } from '@inertiajs/vue3'
 import { renderToString } from '@vue/server-renderer'
 import { createSSRApp, h, type DefineComponent } from 'vue'
+import { invadeUi } from './ui.js'
 
 export default function render(page: any) {
   return createInertiaApp({
@@ -14,7 +15,9 @@ export default function render(page: any) {
     },
 
     setup({ App, props, plugin }) {
-      return createSSRApp({ render: () => h(App, props) }).use(plugin)
+      return createSSRApp({ render: () => h(App, props) })
+        .use(plugin)
+        .use(invadeUi())
     },
   })
 }

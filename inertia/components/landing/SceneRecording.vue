@@ -166,7 +166,7 @@ const cardFrom = (index: number) => {
         <span v-else-if="cut" class="text-[13px] text-ink-3"
           >{{ cut }} {{ cut === 1 ? 'clip' : 'clips' }}</span
         >
-        <Star :size="16" class="ml-auto text-[var(--color-gold)]" fill="currentColor" />
+        <Star :size="16" class="ml-auto text-[var(--gold-c)]" fill="currentColor" />
       </div>
 
       <!-- The full recording and its timeline -->
@@ -227,8 +227,8 @@ const cardFrom = (index: number) => {
   width: 1280px;
   height: 720px;
   padding: 26px 64px;
-  background: var(--color-bg);
-  color: var(--color-ink);
+  background: var(--ink-1);
+  color: var(--text-1);
   font-size: 13px;
 }
 
@@ -249,7 +249,7 @@ const cardFrom = (index: number) => {
   gap: 10px;
   margin-left: auto;
   font-size: 13px;
-  color: var(--color-ink-2);
+  color: var(--text-2);
 }
 
 .rc-switch {
@@ -257,7 +257,7 @@ const cardFrom = (index: number) => {
   width: 30px;
   height: 18px;
   border-radius: 9px;
-  background: var(--color-brand);
+  background: var(--brand);
 }
 
 .rc-switch::after {
@@ -277,9 +277,9 @@ const cardFrom = (index: number) => {
   margin-top: 16px;
   padding: 2px;
   border-radius: 7px;
-  background: var(--color-panel);
+  background: var(--surface-1);
   font-size: 12.5px;
-  color: var(--color-ink-3);
+  color: var(--text-3);
 }
 
 .rc-seg > * {
@@ -289,14 +289,14 @@ const cardFrom = (index: number) => {
 
 .rc-seg b {
   font-weight: 500;
-  color: var(--color-ink);
-  background: var(--color-track);
+  color: var(--text-1);
+  background: var(--surface-4);
 }
 
 .rc-seg small {
   margin-left: 3px;
   font-size: 11px;
-  color: var(--color-ink-4);
+  color: var(--text-4);
 }
 
 .rc-game {
@@ -306,11 +306,11 @@ const cardFrom = (index: number) => {
   height: 56px;
   margin-top: 18px;
   padding: 0 18px 0 16px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--r-sm);
   background:
-    linear-gradient(rgb(var(--win-rgb) / 0.06), rgb(var(--win-rgb) / 0.06)), var(--color-panel);
+    linear-gradient(rgb(var(--win-rgb) / 0.06), rgb(var(--win-rgb) / 0.06)), var(--surface-1);
   box-shadow:
-    inset 3px 0 0 var(--color-win),
+    inset 3px 0 0 var(--win),
     var(--hi);
 }
 
@@ -337,12 +337,12 @@ const cardFrom = (index: number) => {
   margin: 0 4px;
   font-style: normal;
   font-weight: 400;
-  color: var(--color-ink-4);
+  color: var(--text-4);
 }
 
 .rc-game small {
   font-size: 12px;
-  color: var(--color-ink-3);
+  color: var(--text-3);
 }
 
 /* ── The full game ────────────────────────────────────────────── */
@@ -353,8 +353,8 @@ const cardFrom = (index: number) => {
   align-items: center;
   margin-top: 16px;
   padding: 16px;
-  border-radius: var(--radius-md);
-  background: var(--color-panel);
+  border-radius: var(--r-md);
+  background: var(--surface-1);
   box-shadow: var(--hi);
 }
 
@@ -364,8 +364,8 @@ const cardFrom = (index: number) => {
   display: block;
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  border-radius: var(--radius-sm);
-  background: var(--color-well);
+  border-radius: var(--r-sm);
+  background: var(--well);
 }
 
 .rc-thumb img,
@@ -384,7 +384,7 @@ const cardFrom = (index: number) => {
   gap: 5px;
   height: 20px;
   padding: 0 6px;
-  border-radius: var(--radius-xs);
+  border-radius: var(--r-xs);
   font-size: 11.5px;
   font-weight: 600;
   color: #fff;
@@ -396,14 +396,14 @@ const cardFrom = (index: number) => {
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: var(--color-ink-2);
+  color: var(--text-2);
 }
 
 .rc-rec {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--color-loss);
+  background: var(--loss);
 }
 
 .rc-line-head {
@@ -423,7 +423,7 @@ const cardFrom = (index: number) => {
   height: 6px;
   margin-top: 46px;
   border-radius: 3px;
-  background: var(--color-track);
+  background: var(--surface-4);
 }
 
 .rc-fill {
@@ -435,7 +435,7 @@ const cardFrom = (index: number) => {
 }
 
 .rc-mark {
-  --c: var(--color-ink-2);
+  --c: var(--text-2);
   position: absolute;
   top: 50%;
   width: 12px;
@@ -443,7 +443,7 @@ const cardFrom = (index: number) => {
   margin: -6px 0 0 -6px;
   border-radius: 3px;
   background: var(--c);
-  box-shadow: 0 0 0 3px var(--color-solid);
+  box-shadow: 0 0 0 3px var(--solid-1);
   opacity: 0;
   transform: translateY(-14px) scale(0.6);
   transition:
@@ -453,15 +453,15 @@ const cardFrom = (index: number) => {
 
 .rc-mark.kill,
 .rc-mark.assist {
-  --c: var(--color-win);
+  --c: var(--win);
 }
 
 .rc-mark.death {
-  --c: var(--color-loss);
+  --c: var(--loss);
 }
 
 .rc-mark.saved {
-  --c: var(--color-brand);
+  --c: var(--brand);
 }
 
 .rc-mark.on {
@@ -475,7 +475,7 @@ const cardFrom = (index: number) => {
   left: 50%;
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-ink-2);
+  color: var(--text-2);
   white-space: nowrap;
   transform: translateX(-50%);
 }
@@ -485,7 +485,7 @@ const cardFrom = (index: number) => {
   justify-content: space-between;
   margin-top: 10px;
   font-size: 11px;
-  color: var(--color-ink-3);
+  color: var(--text-3);
 }
 
 /* ── Clips ────────────────────────────────────────────────────── */
@@ -520,6 +520,6 @@ const cardFrom = (index: number) => {
 
 .rc-clip small {
   font-size: 12px;
-  color: var(--color-ink-3);
+  color: var(--text-3);
 }
 </style>

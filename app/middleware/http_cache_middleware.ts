@@ -47,12 +47,13 @@ export default class HttpCacheMiddleware {
 
     let generation: string
     try {
-      const cached = await redis.getBuffer(key)
+      // One round trip for both: a miss needs the generation it will compute against.
+      const [cached, current] = await redis.mgetBuffer(key, `${resource}:cache_generation`)
       if (cached) {
         const entry = memoryCache.set(key, resource, cached)
         return await this.send(ctx, cached, entry.hash, 'HIT')
       }
-      generation = (await redis.get(`${resource}:cache_generation`)) ?? '0'
+      generation = current?.toString() ?? '0'
     } catch {
       // Redis is an optimization, never a prerequisite for serving analytics.
       return next()

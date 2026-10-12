@@ -1,16 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import Sparkline from './ui/Sparkline.vue'
-import PerfDial from './PerfDial.vue'
-import { compact, percent } from '../lib/format.js'
+import { PerfDial, TrendLine } from '@invadelol/ui'
+import { compact } from '../lib/format.js'
 import {
   isRemake,
   killParticipation,
   matchMinutes,
   SCORE_CATEGORIES,
-  SCORE_CATEGORY_LABEL,
   scoreLobby,
   teamTotals,
+  type ScoreCategory,
 } from '../lib/match.js'
 import type { GlobalStats, Match } from '../lib/types.js'
 
@@ -19,14 +18,22 @@ const props = defineProps<{
   stats: GlobalStats | null
   /** The window immediately before it, for the trend. */
   previous: GlobalStats | null
-  /** Recent matches, newest first. The sparklines are read from these. */
+  /** Recent matches, newest first. The trend lines are read from these. */
   matches: Match[]
   puuid: string
   /** How many games the window asks for. */
   window: number
 }>()
 
-/** One row per game, oldest first, so every sparkline shares an x axis. */
+const CATEGORY_LABEL: Record<ScoreCategory, string> = {
+  fighting: 'Fighting',
+  damage: 'Damage',
+  farming: 'Farming',
+  vision: 'Vision',
+  objectives: 'Objectives',
+}
+
+/** One row per game, oldest first, so every line shares an x axis. */
 const games = computed(() =>
   props.matches
     .slice(0, props.window)
@@ -74,7 +81,7 @@ const score = computed(() => {
     const value = counted.length
       ? Math.round(counted.reduce((s, g) => s + g.categories[key], 0) / counted.length)
       : null
-    return { key, label: SCORE_CATEGORY_LABEL[key], value }
+    return { key, label: CATEGORY_LABEL[key], value }
   }).filter((c): c is { key: typeof c.key; label: string; value: number } => c.value !== null)
   return {
     categories,
@@ -108,7 +115,7 @@ const cells = computed(() => {
     },
     {
       label: 'Kill participation',
-      value: percent(g.killParticipation),
+      value: `${Math.round(g.killParticipation * 100)}%`,
       trend: games.value.map((x) => x.kp),
       reference: p ? p.killParticipation * 100 : null,
       delta: delta(g.killParticipation, p?.killParticipation),
@@ -146,27 +153,27 @@ const cells = computed(() => {
       No games in this window.
     </p>
 
-    <div v-else class="card">
+    <div v-else class="iv-panel">
       <div class="grid gap-x-10 gap-y-6 p-5 md:grid-cols-[auto_auto_minmax(0,1fr)]">
         <!-- Record -->
         <div>
           <div class="label">Win rate</div>
           <div class="mt-2 flex items-baseline gap-2.5">
-            <span class="fig text-[32px] text-ink">{{ Math.round(stats.winrate * 100) }}%</span>
+            <span class="iv-fig text-[32px] text-ink">{{ Math.round(stats.winrate * 100) }}%</span>
             <span class="num text-[13px] text-ink-3">{{ record.wins }}W {{ record.losses }}L</span>
           </div>
-          <div
+          <span
             v-if="games.length"
-            class="form mt-3 max-w-[220px]"
+            class="iv-form mt-3 max-w-[220px]"
             :title="`Last ${games.length} games, oldest first`"
           >
             <i
               v-for="game in games"
               :key="game.id"
-              :class="{ w: game.win, r: game.remake }"
+              :class="game.remake ? 'r' : game.win ? 'w' : 'l'"
               :title="game.remake ? 'Remake' : game.win ? 'Win' : 'Loss'"
             />
-          </div>
+          </span>
         </div>
 
         <!-- Score -->
@@ -174,12 +181,11 @@ const cells = computed(() => {
           <div class="label" title="0–100, each game rated against the other nine players">
             Average score
           </div>
-          <div class="mt-2 flex items-center gap-3">
-            <PerfDial
-              :score="score.average"
-              caption=""
-              :hint="`Average score ${score.average} of 100 over ${score.count} scored games`"
-            />
+          <div
+            class="mt-2 flex items-center gap-3"
+            :title="`Average score ${score.average} of 100 over ${score.count} scored games`"
+          >
+            <PerfDial :score="score.average" />
             <div class="num text-[12px] leading-[18px] text-ink-3">
               <div>
                 best <span class="font-semibold text-ink-2">{{ score.best }}</span>
@@ -222,14 +228,9 @@ const cells = computed(() => {
           class="grid h-[48px] grid-cols-[96px_minmax(0,1fr)_64px_48px] items-center gap-4 border-b border-line last:border-b-0 sm:grid-cols-[140px_minmax(0,1fr)_80px_56px] sm:gap-6"
         >
           <span class="truncate text-[13px] text-ink-2">{{ cell.label }}</span>
-          <Sparkline
-            class="h-[26px] w-full text-brand"
-            :values="cell.trend"
-            :reference="cell.reference"
-            :label="`${cell.label} over the last ${cell.trend.length} games`"
-            :width="400"
-            :height="26"
-          />
+          <span role="img" :aria-label="`${cell.label} over the last ${cell.trend.length} games`">
+            <TrendLine :values="cell.trend" :baseline="cell.reference" :height="26" />
+          </span>
           <span class="num text-right text-[17px] font-semibold text-ink">{{ cell.value }}</span>
           <span
             class="num text-right text-[12px] font-medium"

@@ -2,8 +2,9 @@
 import { computed } from 'vue'
 import { ArrowLeftRight, RefreshCw, Share2 } from 'lucide-vue-next'
 import { Link } from '@inertiajs/vue3'
+import { useFormat } from '@invadelol/ui'
 import { championName, championSplash, profileIcon, regionLabel } from '../lib/assets.js'
-import { plural, profilePath, timeAgo } from '../lib/format.js'
+import { profilePath } from '../lib/format.js'
 import type { Summoner } from '../lib/types.js'
 
 const props = defineProps<{
@@ -17,12 +18,13 @@ const props = defineProps<{
 
 defineEmits<{ sync: []; share: [] }>()
 
+const { ago } = useFormat()
 const path = computed(() => profilePath(props.summoner.gameName, props.summoner.tagLine))
 </script>
 
 <template>
   <!-- The identity panel at the top of the profile rail: who this is, and what you can do. -->
-  <header class="card identity relative isolate">
+  <header class="iv-panel identity relative isolate overflow-hidden">
     <!-- The main champion, faded in from the right: the player's own material, not wallpaper. -->
     <img
       v-if="mainChampion"
@@ -56,22 +58,28 @@ const path = computed(() => profilePath(props.summoner.gameName, props.summoner.
           <span class="mx-1 text-ink-4">·</span>Level {{ summoner.summonerLevel }}
         </span>
         <br v-if="lastGameMs || viewCount" />
-        <span v-if="lastGameMs">Last game {{ timeAgo(lastGameMs) }}</span>
+        <span v-if="lastGameMs">Last game {{ ago(lastGameMs) }}</span>
         <span v-if="viewCount">
-          <span v-if="lastGameMs" class="mx-1 text-ink-4">·</span>{{ plural(viewCount, 'view') }}
+          <span v-if="lastGameMs" class="mx-1 text-ink-4">·</span>{{ viewCount }}
+          {{ viewCount === 1 ? 'view' : 'views' }}
         </span>
       </p>
 
       <div class="mt-4 flex items-center gap-2">
-        <button class="btn btn-primary flex-1" :disabled="isSyncing" @click="$emit('sync')">
+        <button
+          type="button"
+          class="iv-btn primary flex-1"
+          :disabled="isSyncing"
+          @click="$emit('sync')"
+        >
           <RefreshCw :size="13" :class="{ 'animate-spin': isSyncing }" />
           {{ isSyncing ? 'Updating' : 'Update' }}
         </button>
-        <button class="btn" @click="$emit('share')">
+        <button type="button" class="iv-btn" @click="$emit('share')">
           <Share2 :size="13" />
           Share
         </button>
-        <Link :href="`${path}/compare`" class="btn !px-0 w-[30px]" title="Compare">
+        <Link :href="`${path}/compare`" class="iv-btn icon-only" title="Compare">
           <ArrowLeftRight :size="14" />
           <span class="sr-only">Compare</span>
         </Link>
@@ -84,7 +92,7 @@ const path = computed(() => profilePath(props.summoner.gameName, props.summoner.
 </template>
 
 <style scoped>
-/* ~22% opacity, slightly desaturated, faded out with straight masks to the left and below. */
+/* ~24% opacity, slightly desaturated, faded out with straight masks to the left and below. */
 .splash {
   opacity: 0.24;
   filter: saturate(0.75);

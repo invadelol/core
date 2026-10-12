@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { ChevronRight } from 'lucide-vue-next'
-import RoleIcon from './RoleIcon.vue'
+import { RoleIcon } from '@invadelol/ui'
+import { positionOf } from '@invadelol/ui/logic'
 import PlayerLink from './PlayerLink.vue'
 import DuoDetail from './DuoDetail.vue'
 import { champIcon, championName } from '../lib/assets.js'
@@ -73,7 +74,7 @@ function rate(wins: number, games: number) {
 
 <template>
   <section>
-    <div v-if="loading" class="skel h-[420px]" />
+    <div v-if="loading" class="iv-skel h-[420px]" />
 
     <p v-else-if="!mates.length" class="py-6 text-[13px] text-ink-2">
       Nobody appears in more than one of the last {{ matches.length }} games.
@@ -81,7 +82,7 @@ function rate(wins: number, games: number) {
 
     <div v-else class="space-y-3">
       <!-- Which partnership, not just which person -->
-      <section v-if="pairings.length" class="card">
+      <section v-if="pairings.length" class="iv-panel">
         <div class="section">
           <h2>Lane partnerships</h2>
           <span class="meta">From the last {{ matches.length }} games</span>
@@ -92,8 +93,8 @@ function rate(wins: number, games: number) {
             <div class="flex items-center justify-between gap-3">
               <span class="flex min-w-0 items-center gap-2">
                 <span class="flex shrink-0 items-center gap-0.5 text-ink-3">
-                  <RoleIcon :role="pair.myRole" :size="13" />
-                  <RoleIcon :role="pair.theirRole" :size="13" />
+                  <RoleIcon :lane="positionOf(pair.myRole)" :size="13" />
+                  <RoleIcon :lane="positionOf(pair.theirRole)" :size="13" />
                 </span>
                 <span class="truncate text-[13px] font-semibold text-ink">{{ pair.label }}</span>
               </span>
@@ -155,7 +156,7 @@ function rate(wins: number, games: number) {
       </section>
 
       <!-- Who, and what the record with them is made of -->
-      <section class="card">
+      <section class="iv-panel">
         <div class="section">
           <h2>Played with</h2>
           <span v-if="company.soloGames && company.duoGames" class="meta num">
@@ -212,8 +213,8 @@ function rate(wins: number, games: number) {
                   <td>
                     <span class="flex items-center gap-1.5 text-ink-2">
                       <span class="flex shrink-0 items-center gap-0.5 text-ink-3">
-                        <RoleIcon v-if="mate.myRole" :role="mate.myRole" :size="13" />
-                        <RoleIcon v-if="mate.role" :role="mate.role" :size="13" />
+                        <RoleIcon v-if="mate.myRole" :lane="positionOf(mate.myRole)" :size="13" />
+                        <RoleIcon v-if="mate.role" :lane="positionOf(mate.role)" :size="13" />
                       </span>
                       <span class="truncate">{{
                         mate.pairing?.label || mate.roleLabel || '—'

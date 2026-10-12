@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { X } from 'lucide-vue-next'
+import { RoleIcon } from '@invadelol/ui'
+import { positionOf } from '@invadelol/ui/logic'
 import Select from './ui/Select.vue'
-import RoleIcon from './RoleIcon.vue'
 import { champIcon, championName } from '../lib/assets.js'
 import type { ChampionStats } from '../lib/types.js'
 
@@ -75,23 +76,23 @@ const championModel = computed({
     :class="busy ? 'opacity-55' : ''"
     :aria-busy="busy"
   >
-    <div class="seg" role="group" aria-label="Queue">
+    <div class="iv-seg" role="group" aria-label="Queue">
       <button
         v-for="[value, label] in QUEUES"
         :key="value"
         type="button"
-        :data-active="modelValue.type === value"
+        :class="{ on: modelValue.type === value }"
         @click="set('type', value)"
       >
         {{ label }}
       </button>
     </div>
 
-    <div class="seg" role="group" aria-label="Role">
+    <div class="iv-seg" role="group" aria-label="Role">
       <button
         type="button"
         class="!px-2.5"
-        :data-active="modelValue.role === 'all'"
+        :class="{ on: modelValue.role === 'all' }"
         @click="set('role', 'all')"
       >
         All
@@ -103,10 +104,10 @@ const championModel = computed({
         class="!px-2.5"
         :title="label"
         :aria-label="label"
-        :data-active="modelValue.role === value"
+        :class="{ on: modelValue.role === value }"
         @click="set('role', value)"
       >
-        <RoleIcon :role="value === 'SUPPORT' ? 'UTILITY' : value" :size="15" />
+        <RoleIcon :lane="positionOf(value === 'SUPPORT' ? 'UTILITY' : value)" :size="15" />
       </button>
     </div>
 
@@ -123,7 +124,7 @@ const championModel = computed({
 
     <button
       v-if="dirty"
-      class="btn btn-ghost btn-sm"
+      class="iv-btn ghost sm"
       @click="emit('update:modelValue', { type: 'all', champion: 0, role: 'all' })"
     >
       <X :size="12" />
