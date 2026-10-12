@@ -1,5 +1,6 @@
 /** Position glyphs (Riot's lane marks). Empty for no position (modes without lanes). */
 import type { Position } from '../logic/types';
+import '../styles/base.css';
 type __VLS_Props = {
     lane: Position | null;
     size?: number;

@@ -1,3 +1,6 @@
+import '../styles/base.css';
+import '../styles/primitives.css';
+import '../styles/detail.css';
 import { defineComponent as Ne, shallowRef as C, computed as b, onMounted as Te, onBeforeUnmount as Re, watch as Ae, openBlock as n, createElementBlock as a, createElementVNode as i, unref as l, normalizeClass as _, toDisplayString as o, Fragment as k, renderList as T, createTextVNode as B, createCommentVNode as y, normalizeStyle as se, createVNode as je } from "vue";
 import { useInvadeUi as xe, useFormat as Oe, useNames as Me } from "../context.js";
 import { relation as Se } from "../logic/detail.js";
@@ -5,6 +8,9 @@ import { tk as v } from "../logic/i18n.js";
 import { positionName as $e } from "../logic/labels.js";
 import { storyOf as we, leadFor as Ce, involves as De, isEpic as He, PHASES as Ge, valueAt as le, FIGHT_GAP as Le, scoreAt as Be } from "../logic/story.js";
 import Fe from "./ObjectiveIcon.vue.js";
+/* empty css                 */
+/* empty css                       */
+/* empty css                   */
 const Ue = { class: "iv-evt" }, Pe = { class: "iv-evt-head" }, Ke = ["aria-label"], Ve = ["aria-pressed"], We = ["title", "aria-pressed", "onClick"], ze = ["src"], qe = {
   key: 0,
   class: "iv-evt-who"
@@ -23,7 +29,7 @@ const Ue = { class: "iv-evt" }, Pe = { class: "iv-evt-head" }, Ke = ["aria-label
 }, ct = { class: "iv-evt-body" }, dt = { class: "iv-evt-score" }, vt = { class: "ally" }, ut = { class: "enemy" }, mt = { class: "iv-evt-meta" }, kt = ["onMouseenter"], ht = {
   key: 0,
   class: "iv-evt-body"
-}, ft = { class: "iv-evt-verb" }, pt = { class: "iv-evt-art dead" }, _t = ["src", "title"], yt = { class: "iv-evt-verb" }, gt = { class: "iv-evt-art" }, bt = ["src", "title"], Et = { class: "iv-evt-verb" }, It = { class: "iv-evt-art dead" }, Nt = ["src", "title"], Tt = { class: "iv-evt-art" }, Rt = ["src", "title"], At = { class: "iv-evt-verb" }, jt = { class: "iv-evt-art dead" }, xt = ["src", "title"], Ot = { class: "iv-evt-target" }, Mt = ["title"], St = ["src", "title"], $t = {
+}, pt = { class: "iv-evt-verb" }, ft = { class: "iv-evt-art dead" }, _t = ["src", "title"], yt = { class: "iv-evt-verb" }, gt = { class: "iv-evt-art" }, bt = ["src", "title"], Et = { class: "iv-evt-verb" }, It = { class: "iv-evt-art dead" }, Nt = ["src", "title"], Tt = { class: "iv-evt-art" }, Rt = ["src", "title"], At = { class: "iv-evt-verb" }, jt = { class: "iv-evt-art dead" }, xt = ["src", "title"], Ot = { class: "iv-evt-target" }, Mt = ["title"], St = ["src", "title"], $t = {
   key: 1,
   class: "iv-evt-body"
 }, wt = ["title"], Ct = {
@@ -39,7 +45,7 @@ const Ue = { class: "iv-evt" }, Pe = { class: "iv-evt-head" }, Ke = ["aria-label
   key: 2,
   class: "iv-evt-state",
   "aria-hidden": "true"
-}, Ft = { class: "ally" }, Ut = { class: "enemy" }, Xt = /* @__PURE__ */ Ne({
+}, Ft = { class: "ally" }, Ut = { class: "enemy" }, Zt = /* @__PURE__ */ Ne({
   __name: "Timeline",
   props: {
     detail: {},
@@ -49,7 +55,7 @@ const Ue = { class: "iv-evt" }, Pe = { class: "iv-evt-head" }, Ke = ["aria-label
   },
   emits: ["select"],
   setup(F, { emit: oe }) {
-    const h = F, ne = oe, { t: r } = xe(), { mmss: M, num: ae, signedGold: q } = Oe(), { champIcon: Q, champName: I } = Me(), p = C("player"), re = [
+    const h = F, ne = oe, { t: r } = xe(), { mmss: M, num: ae, signedGold: q } = Oe(), { champIcon: Q, champName: I } = Me(), f = C("player"), re = [
       { id: "all", label: v("All") },
       { id: "kills", label: v("Kills") },
       { id: "objectives", label: v("Objectives") }
@@ -58,7 +64,7 @@ const Ue = { class: "iv-evt" }, Pe = { class: "iv-evt-head" }, Ke = ["aria-label
       return [t.filter((s) => s.p.teamId === N.value), t.filter((s) => s.p.teamId !== N.value)].filter((s) => s.length);
     });
     function ve(t) {
-      p.value = "player", ne("select", t);
+      f.value = "player", ne("select", t);
     }
     const Z = {
       AIR_DRAGON: v("Cloud drake"),
@@ -84,7 +90,7 @@ const Ue = { class: "iv-evt" }, Pe = { class: "iv-evt-head" }, Ke = ["aria-label
       monster: "dragon",
       tower: "tower",
       inhibitor: "inhib"
-    }, ke = { TOP_LANE: v("Top"), MID_LANE: v("Mid"), BOT_LANE: v("Bot") }, he = { OUTER_TURRET: v("outer"), INNER_TURRET: v("inner"), BASE_TURRET: v("base"), NEXUS_TURRET: v("Nexus") }, fe = ["", "", v("Double kill"), v("Triple kill"), v("Quadra kill"), v("Penta kill")], pe = { early: v("Laning phase"), mid: v("Mid game"), late: v("Late game") };
+    }, ke = { TOP_LANE: v("Top"), MID_LANE: v("Mid"), BOT_LANE: v("Bot") }, he = { OUTER_TURRET: v("outer"), INNER_TURRET: v("inner"), BASE_TURRET: v("base"), NEXUS_TURRET: v("Nexus") }, pe = ["", "", v("Double kill"), v("Triple kill"), v("Quadra kill"), v("Penta kill")], fe = { early: v("Laning phase"), mid: v("Mid game"), late: v("Late game") };
     function _e(t) {
       return t.kind === "dragon" && Z[t.sub] ? r(Z[t.sub]) : r(ue[t.kind]);
     }
@@ -97,12 +103,12 @@ const Ue = { class: "iv-evt" }, Pe = { class: "iv-evt-head" }, Ke = ["aria-label
     }, R = (t) => Q(D(t)?.championId ?? 0), A = (t) => {
       const s = D(t);
       return s ? `${s.gameName || I(s.championId)} · ${I(s.championId)}` : "";
-    }, te = (t) => t.first ? r("First blood") : t.multi >= 2 ? r(fe[t.multi]) : "";
+    }, te = (t) => t.first ? r("First blood") : t.multi >= 2 ? r(pe[t.multi]) : "";
     function P(t, s) {
-      return p.value === "game" ? "game" : t.kind === "objective" ? t.obj.killer === s ? "took" : "context" : t.kill.killer === s ? "killer" : t.kill.victim === s ? "victim" : "assist";
+      return f.value === "game" ? "game" : t.kind === "objective" ? t.obj.killer === s ? "took" : "context" : t.kill.killer === s ? "killer" : t.kill.victim === s ? "victim" : "assist";
     }
     const K = b(() => {
-      const t = E.value?.participantId ?? -1, s = U.value, d = ce.value, u = s.events.filter((c) => p.value === "player" ? De(c, t) || He(c) : S.value === "kills" ? c.kind === "kill" : S.value === "objectives" ? c.kind === "objective" : !0), e = [];
+      const t = E.value?.participantId ?? -1, s = U.value, d = ce.value, u = s.events.filter((c) => f.value === "player" ? De(c, t) || He(c) : S.value === "kills" ? c.kind === "kill" : S.value === "objectives" ? c.kind === "objective" : !0), e = [];
       let m = null;
       for (const c of u) {
         const g = c.kind === "kill" ? c.fight : -1, L = m && (g === m.fight || c.kind === "objective" && c.t <= m.end + Le);
@@ -111,8 +117,8 @@ const Ue = { class: "iv-evt" }, Pe = { class: "iv-evt-head" }, Ke = ["aria-label
           continue;
         }
         if (m = null, g >= 0) {
-          const j = s.fights[g], w = j.kills.get(N.value) ?? 0, x = j.kills.get(X.value) ?? 0, f = { key: `f${g}`, t: c.t, lines: [], fight: { ours: w, theirs: x, end: j.end, big: w + x >= 5 }, idx: 0 };
-          f.lines.push({ key: c.key, ev: c, role: P(c, t), offset: 0, idx: 0 }), e.push(f), m = { node: f, fight: g, end: j.end };
+          const j = s.fights[g], w = j.kills.get(N.value) ?? 0, x = j.kills.get(X.value) ?? 0, p = { key: `f${g}`, t: c.t, lines: [], fight: { ours: w, theirs: x, end: j.end, big: w + x >= 5 }, idx: 0 };
+          p.lines.push({ key: c.key, ev: c, role: P(c, t), offset: 0, idx: 0 }), e.push(p), m = { node: p, fight: g, end: j.end };
         } else e.push({ key: c.key, t: c.t, lines: [{ key: c.key, ev: c, role: P(c, t), offset: 0, idx: 0 }], idx: 0 });
       }
       let z = 0;
@@ -121,16 +127,16 @@ const Ue = { class: "iv-evt" }, Pe = { class: "iv-evt-head" }, Ke = ["aria-label
         for (const g of c.lines) g.idx = Math.min(z++, 18);
       }
       return Ge.filter((c) => c.from < d).map((c) => {
-        const g = Math.min(c.to, d), L = (f) => f >= c.from && (f < c.to || c.to === 1 / 0);
+        const g = Math.min(c.to, d), L = (p) => p >= c.from && (p < c.to || c.to === 1 / 0);
         let j = 0, w = 0;
         const x = [0, 0, 0];
-        for (const f of s.events)
-          f.kind !== "kill" || !L(f.t) || (f.team === N.value ? j++ : w++, f.kill.killer === t ? x[0]++ : f.kill.victim === t ? x[1]++ : f.kill.assists.includes(t) && x[2]++);
+        for (const p of s.events)
+          p.kind !== "kill" || !L(p.t) || (p.team === N.value ? j++ : w++, p.kill.killer === t ? x[0]++ : p.kill.victim === t ? x[1]++ : p.kill.assists.includes(t) && x[2]++);
         return {
           id: c.id,
           from: c.from,
           to: g,
-          nodes: e.filter((f) => L(f.t)),
+          nodes: e.filter((p) => L(p.t)),
           ours: j,
           theirs: w,
           kda: x,
@@ -159,10 +165,10 @@ const Ue = { class: "iv-evt" }, Pe = { class: "iv-evt-head" }, Ke = ["aria-label
     let W;
     Te(() => {
       W = new ResizeObserver(G), O.value && W.observe(O.value), G();
-    }), Re(() => W?.disconnect()), Ae([K, p], () => requestAnimationFrame(() => {
+    }), Re(() => W?.disconnect()), Ae([K, f], () => requestAnimationFrame(() => {
       O.value && (O.value.scrollTop = 0), G();
     }));
-    const Ie = b(() => `${p.value}:${h.selected}:${S.value}`);
+    const Ie = b(() => `${f.value}:${h.selected}:${S.value}`);
     return (t, s) => (n(), a("div", Ue, [
       i("header", Pe, [
         i("div", {
@@ -172,9 +178,9 @@ const Ue = { class: "iv-evt" }, Pe = { class: "iv-evt-head" }, Ke = ["aria-label
         }, [
           i("button", {
             type: "button",
-            class: _(["iv-evt-all", { on: p.value === "game" }]),
-            "aria-pressed": p.value === "game",
-            onClick: s[0] || (s[0] = (d) => p.value = "game")
+            class: _(["iv-evt-all", { on: f.value === "game" }]),
+            "aria-pressed": f.value === "game",
+            onClick: s[0] || (s[0] = (d) => f.value = "game")
           }, o(l(r)("Whole game")), 11, Ve),
           (n(!0), a(k, null, T(de.value, (d, u) => (n(), a("span", {
             key: u,
@@ -183,9 +189,9 @@ const Ue = { class: "iv-evt" }, Pe = { class: "iv-evt-head" }, Ke = ["aria-label
             (n(!0), a(k, null, T(d, ({ p: e, i: m }) => (n(), a("button", {
               key: e.participantId,
               type: "button",
-              class: _({ on: p.value === "player" && m === F.selected }),
+              class: _({ on: f.value === "player" && m === F.selected }),
               title: `${e.gameName || l(I)(e.championId)} · ${l(I)(e.championId)}`,
-              "aria-pressed": p.value === "player" && m === F.selected,
+              "aria-pressed": f.value === "player" && m === F.selected,
               onClick: (z) => ve(m)
             }, [
               i("img", {
@@ -195,7 +201,7 @@ const Ue = { class: "iv-evt" }, Pe = { class: "iv-evt-head" }, Ke = ["aria-label
             ], 10, We))), 128))
           ], 2))), 128))
         ], 8, Ke),
-        p.value === "player" && E.value ? (n(), a("p", qe, [
+        f.value === "player" && E.value ? (n(), a("p", qe, [
           i("b", null, o(E.value.gameName || l(I)(E.value.championId)), 1),
           i("small", null, [
             B(o(l(I)(E.value.championId)), 1),
@@ -224,10 +230,10 @@ const Ue = { class: "iv-evt" }, Pe = { class: "iv-evt-head" }, Ke = ["aria-label
           class: "iv-evt-chapter"
         }, [
           i("h4", Ye, [
-            i("span", Ze, o(l(r)(pe[d.id])), 1),
+            i("span", Ze, o(l(r)(fe[d.id])), 1),
             i("span", et, o(l(M)(d.from)) + "–" + o(l(M)(d.to)), 1),
             i("span", tt, [
-              p.value === "player" ? (n(), a("span", {
+              f.value === "player" ? (n(), a("span", {
                 key: 0,
                 title: l(r)("Kills / deaths / assists in this phase")
               }, [
@@ -292,8 +298,8 @@ const Ue = { class: "iv-evt" }, Pe = { class: "iv-evt-head" }, Ke = ["aria-label
                 }, null, 2),
                 be(e.ev) ? (n(), a("span", ht, [
                   e.role === "killer" ? (n(), a(k, { key: 0 }, [
-                    i("span", ft, o(l(r)("Killed")), 1),
-                    i("span", pt, [
+                    i("span", pt, o(l(r)("Killed")), 1),
+                    i("span", ft, [
                       i("img", {
                         src: R(e.ev.kill.victim),
                         alt: "",
@@ -401,12 +407,12 @@ const Ue = { class: "iv-evt" }, Pe = { class: "iv-evt-head" }, Ke = ["aria-label
                 ])) : y("", !0)
               ], 46, kt))), 128))
             ], 2))), 128))
-          ])) : (n(), a("p", at, o(p.value === "player" ? l(r)("Quiet for {name}", { name: l(I)(E.value?.championId ?? 0) }) : l(r)("Nothing here")), 1))
+          ])) : (n(), a("p", at, o(f.value === "player" ? l(r)("Quiet for {name}", { name: l(I)(E.value?.championId ?? 0) }) : l(r)("Nothing here")), 1))
         ]))), 128))
       ], 34))
     ]));
   }
 });
 export {
-  Xt as default
+  Zt as default
 };

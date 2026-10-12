@@ -1,8 +1,11 @@
+import '../styles/base.css';
+import './Logo.css';
 import { defineComponent as s, openBlock as o, createElementBlock as t, createElementVNode as n, createCommentVNode as a } from "vue";
+/* empty css                 */
 const i = { class: "iv-logo" }, d = ["height", "width"], r = {
   key: 0,
   class: "iv-logo-word"
-}, m = /* @__PURE__ */ s({
+}, p = /* @__PURE__ */ s({
   __name: "Logo",
   props: {
     size: { default: 28 },
@@ -25,5 +28,5 @@ const i = { class: "iv-logo" }, d = ["height", "width"], r = {
   }
 });
 export {
-  m as default
+  p as default
 };

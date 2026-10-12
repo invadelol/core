@@ -1,4 +1,7 @@
 import type { MatchSummary, ProfileView } from '../logic/types';
+import '../styles/base.css';
+import '../styles/primitives.css';
+import '../styles/profile.css';
 /**
  * Who the player is and where they stand, in one band: icon, Riot ID, level and last game, and
  * both ranks with Riot's crest. The splash of their most played champion sits behind the right

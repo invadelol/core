@@ -1,3 +1,4 @@
+import '../styles/base.css';
 /** Map objectives as line glyphs (24 × 24, 1.8 stroke, same family as Icon). */
 export type ObjectiveIconName = 'tower' | 'inhib' | 'dragon' | 'grubs' | 'herald' | 'baron';
 type __VLS_Props = {

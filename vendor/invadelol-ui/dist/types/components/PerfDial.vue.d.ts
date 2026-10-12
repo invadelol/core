@@ -1,3 +1,4 @@
+import '../styles/base.css';
 /**
  * The performance indicator: a dial open at the bottom, the Invade score (0‥100) in its centre and
  * the placement (MVP, ACE, 3rd…) in the opening. The arc is the score; its colour slides from red

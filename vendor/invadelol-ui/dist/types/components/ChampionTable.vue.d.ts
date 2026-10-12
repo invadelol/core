@@ -1,4 +1,7 @@
 import type { MatchSummary, ProfileView, ScoreRow } from '../logic/types';
+import '../styles/base.css';
+import '../styles/primitives.css';
+import '../styles/profile.css';
 /**
  * Champions over the loaded games (most played first), and the account's mastery as a second
  * view of the same panel. A row filters the feed to that champion; the selected one is lit.

@@ -1,4 +1,7 @@
 import type { MatchDetail } from '../logic/types';
+import '../styles/base.css';
+import '../styles/primitives.css';
+import '../styles/detail.css';
 /**
  * "Why did this game go this way?" The row right above already says the result, queue, duration
  * and the player's own numbers, so the detail does not repeat them: tabs, the game's patch and

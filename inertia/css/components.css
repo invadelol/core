@@ -28,6 +28,19 @@
     }
   }
 
+  /* ── Chrome: the header, unlit ink under the grain; the page sheet's top edge under it ── */
+  .chrome {
+    background: var(--grain), var(--ink-0);
+  }
+
+  .chrome::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 -1px;
+    height: 1px;
+    background: var(--edge);
+  }
+
   /* ── Type ───────────────────────────────────────────────────── */
 
   /* A large figure (20px and up): heavier than its label, slightly tightened. */
@@ -95,6 +108,27 @@
     padding: 8px 16px 16px;
   }
 
+  /* ── Profile rail ───────────────────────────────────────────────
+     The column beside a profile is one dossier, not a stack of panels:
+     after the identity panel, each panel is a section on the page,
+     separated by a hairline. */
+  .rail > .iv-panel:not(.identity) {
+    margin-top: 20px;
+    background: none;
+    box-shadow: none;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+  }
+
+  .rail > .iv-panel:not(.identity) > .section {
+    margin: 0;
+    padding: 16px 0 6px;
+  }
+
+  .rail > .iv-panel:not(.identity) > .section + * {
+    padding: 0 0 4px;
+  }
+
   /* ── Bars ───────────────────────────────────────────────────── */
   .meter {
     position: relative;
@@ -112,16 +146,17 @@
     transition: width var(--t-slow) var(--ease);
   }
 
-  /* ── Inputs ─────────────────────────────────────────────────── */
+  /* ── Inputs: an inset well, shadowed at the top, a lit lip at the bottom ── */
   .field {
     width: 100%;
     height: 32px;
     padding: 0 10px;
     font-size: 13px;
     color: var(--text-1);
-    background: var(--surface-3);
+    background: var(--inset);
     border: 0;
     border-radius: var(--r-sm);
+    box-shadow: var(--inset-shadow);
     transition:
       box-shadow var(--t-fast) var(--ease),
       background-color var(--t-fast) var(--ease);
@@ -134,7 +169,22 @@
   .field:focus,
   .field:focus-visible {
     outline: none;
-    box-shadow: var(--focus);
+    box-shadow: var(--inset-shadow), var(--focus);
+  }
+
+  /* A control that opens something (a select): a key lit from above, like the shared buttons. */
+  .control {
+    background: var(--btn);
+    box-shadow: var(--btn-shadow);
+  }
+
+  .control:hover,
+  .control[aria-expanded='true'] {
+    background: var(--btn-hover);
+  }
+
+  .control[aria-expanded='true'] {
+    box-shadow: var(--btn-shadow), var(--focus);
   }
 
   /* ── Popovers, menus, tooltips: opaque, the only things that cast a shadow ── */
@@ -168,11 +218,16 @@
     color: var(--text-1);
   }
 
-  /* ── Game art ───────────────────────────────────────────────── */
+  /* ── Game art: media sit in a lit rim with a contact shadow ─── */
   .thumb {
     background: var(--well);
     object-fit: cover;
     flex-shrink: 0;
+    box-shadow: var(--portrait-sm);
+  }
+
+  .identity .thumb {
+    box-shadow: var(--portrait);
   }
 
   /* Champion portraits: Riot bakes a thin border into the square; a slight crop drops it. */
@@ -182,6 +237,7 @@
     flex-shrink: 0;
     border-radius: var(--r-sm);
     background: var(--well);
+    box-shadow: var(--portrait-sm);
   }
 
   .portrait > img {
@@ -272,8 +328,8 @@
     padding: 7px 8px 7px 14px;
     font-size: 13px;
     border-radius: var(--r-md);
-    background: var(--surface-1);
-    box-shadow: var(--hi);
+    background: var(--sheen), var(--surface-1);
+    box-shadow: var(--lit);
     color: var(--text-2);
   }
 

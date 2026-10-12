@@ -1,3 +1,5 @@
+import '../styles/base.css';
+import '../styles/primitives.css';
 /** A button: `primary` is the one violet action of a view; `ghost` sits in toolbars; `danger` deletes. */
 type __VLS_Props = {
     variant?: 'default' | 'primary' | 'ghost' | 'danger';

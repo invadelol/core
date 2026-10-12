@@ -1,4 +1,7 @@
 import type { MatchDetail, PlayerView } from '../logic/types';
+import '../styles/base.css';
+import '../styles/primitives.css';
+import '../styles/detail.css';
 /**
  * One player's kit: the rune page with the runes not taken dimmed, final items and summoner
  * spells, and the facts no other tab shows (wards, crowd control, objectives, sprees, leads at

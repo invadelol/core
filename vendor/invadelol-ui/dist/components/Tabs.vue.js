@@ -1,7 +1,11 @@
-import { defineComponent as l, useModel as n, openBlock as a, createElementBlock as o, Fragment as r, renderList as i, normalizeClass as d, toDisplayString as u, mergeModels as c } from "vue";
-const m = { class: "iv-tabs" }, p = ["aria-pressed", "onClick"], k = /* @__PURE__ */ l({
+import '../styles/base.css';
+import '../styles/primitives.css';
+import { defineComponent as l, useModel as r, openBlock as o, createElementBlock as a, Fragment as n, renderList as i, normalizeClass as d, toDisplayString as u, mergeModels as m } from "vue";
+/* empty css                 */
+/* empty css                       */
+const c = { class: "iv-tabs" }, p = ["aria-pressed", "onClick"], g = /* @__PURE__ */ l({
   __name: "Tabs",
-  props: /* @__PURE__ */ c({
+  props: /* @__PURE__ */ m({
     tabs: {}
   }, {
     modelValue: { required: !0 },
@@ -9,9 +13,9 @@ const m = { class: "iv-tabs" }, p = ["aria-pressed", "onClick"], k = /* @__PURE_
   }),
   emits: ["update:modelValue"],
   setup(s) {
-    const t = n(s, "modelValue");
-    return (_, b) => (a(), o("nav", m, [
-      (a(!0), o(r, null, i(s.tabs, (e) => (a(), o("button", {
+    const t = r(s, "modelValue");
+    return (_, b) => (o(), a("nav", c, [
+      (o(!0), a(n, null, i(s.tabs, (e) => (o(), a("button", {
         key: e.id,
         type: "button",
         class: d({ on: t.value === e.id }),
@@ -22,5 +26,5 @@ const m = { class: "iv-tabs" }, p = ["aria-pressed", "onClick"], k = /* @__PURE_
   }
 });
 export {
-  k as default
+  g as default
 };

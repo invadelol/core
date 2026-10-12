@@ -1,3 +1,5 @@
+import '../styles/base.css';
+import '../styles/primitives.css';
 declare const __VLS_export: <Id extends string | number>(__VLS_props: NonNullable<Awaited<typeof __VLS_setup>>["props"], __VLS_ctx?: __VLS_PrettifyLocal<Pick<NonNullable<Awaited<typeof __VLS_setup>>, "attrs" | "emit" | "slots">>, __VLS_exposed?: NonNullable<Awaited<typeof __VLS_setup>>["expose"], __VLS_setup?: Promise<{
     props: import("vue").PublicProps & __VLS_PrettifyLocal<({
         options: readonly {

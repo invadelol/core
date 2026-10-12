@@ -188,6 +188,11 @@ export interface GlobalStats {
   total: number
 }
 
+export interface StatsPayload {
+  global: GlobalStats
+  champions: Array<{ championId: number; games: number; winrate: number; kda: number }>
+}
+
 export interface ChampionStats {
   championId: number
   games: number
@@ -206,6 +211,16 @@ export interface ChampionStats {
 
 export interface ActivityDay {
   day: string
+  games: number
+  wins: number
+}
+
+export interface Teammate {
+  puuid: string
+  gameName: string
+  tagLine: string
+  profileIconId: number
+  level: number
   games: number
   wins: number
 }

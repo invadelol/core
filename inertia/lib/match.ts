@@ -128,7 +128,7 @@ const ROLE_WEIGHTS: Record<string, Record<ScoreCategory, number>> = {
 const MIN_SCORED_SECONDS = 300
 
 /** A game that ended before five minutes: no result worth reading, no score. */
-function isRemake(match: Pick<Match, 'duration'>) {
+export function isRemake(match: Pick<Match, 'duration'>) {
   return (match.duration || 0) < MIN_SCORED_SECONDS
 }
 

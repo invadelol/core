@@ -1,3 +1,5 @@
+import '../styles/base.css';
+import '../styles/primitives.css';
 /** A loading shape: a block with a slow shimmer (still when motion is reduced). */
 type __VLS_Props = {
     width?: string;

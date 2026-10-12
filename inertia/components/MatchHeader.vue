@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Icon, useFormat } from '@invadelol/ui'
+import { Icon, ObjectiveIcon, useFormat, type ObjectiveIconName } from '@invadelol/ui'
 import { queueName, type MatchDetail } from '@invadelol/ui/logic'
 import { regionLabel } from '../lib/assets.js'
 import type { Match } from '../lib/types.js'
@@ -33,6 +33,19 @@ const sides = computed(() =>
     )
     .map((team) => ({ ...team, side: team.teamId === 100 ? 'Blue side' : 'Red side' }))
 )
+
+/** What each team took, on Summoner's Rift (the other maps have none of these). */
+const OBJECTIVES: Array<{
+  id: ObjectiveIconName
+  key: 'towers' | 'inhibitors' | 'dragons' | 'barons' | 'heralds'
+  label: string
+}> = [
+  { id: 'tower', key: 'towers', label: 'Turrets' },
+  { id: 'inhib', key: 'inhibitors', label: 'Inhibitors' },
+  { id: 'dragon', key: 'dragons', label: 'Dragons' },
+  { id: 'baron', key: 'barons', label: 'Barons' },
+  { id: 'herald', key: 'heralds', label: 'Rift Heralds' },
+]
 
 /** Gold lead of the left team: blue when ahead, red when behind (good or bad for you). */
 const lead = computed(() => sides.value[0].gold - (sides.value[1]?.gold ?? 0))
@@ -96,6 +109,22 @@ async function copyId() {
           <span class="font-medium text-ink-3"> · {{ team.side }}</span>
         </div>
         <div class="iv-fig mt-2 text-[40px] sm:text-[44px]">{{ team.kills }}</div>
+        <div
+          v-if="detail.mapId === 11"
+          class="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 sm:gap-x-3"
+          :class="index ? 'justify-end' : ''"
+        >
+          <span
+            v-for="o in OBJECTIVES"
+            :key="o.id"
+            class="num flex items-center gap-1 text-[13px] font-semibold"
+            :class="team[o.key] ? 'text-ink' : 'text-ink-4'"
+            :title="`${team[o.key]} ${o.label}`"
+          >
+            <ObjectiveIcon :name="o.id" :size="14" :class="{ 'text-ink-3': team[o.key] }" />
+            {{ team[o.key] }}
+          </span>
+        </div>
       </div>
 
       <div class="col-span-2 min-w-0 sm:order-2 sm:col-span-1">

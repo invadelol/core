@@ -1,9 +1,15 @@
+import '../styles/base.css';
+import '../styles/primitives.css';
+import '../styles/profile.css';
 import { defineComponent as ee, useId as le, shallowRef as E, computed as y, watchEffect as te, onMounted as oe, onBeforeUnmount as ne, openBlock as u, createElementBlock as i, createElementVNode as t, toDisplayString as s, unref as o, normalizeClass as w, createCommentVNode as k, Fragment as M, normalizeStyle as P, createTextVNode as C, renderList as se, createVNode as U } from "vue";
 import { useInvadeUi as ae, useFormat as ue } from "../context.js";
 import { signedLp as W } from "../logic/format.js";
 import { tierColor as N, rankLabel as L, count as ie } from "../logic/labels.js";
 import Z from "./RankCrest.vue.js";
 /* empty css               */
+/* empty css                 */
+/* empty css                       */
+/* empty css                    */
 const re = { class: "iv-panel-head" }, ce = {
   key: 0,
   class: "iv-seg sm"
@@ -16,7 +22,7 @@ const re = { class: "iv-panel-head" }, ce = {
 }, Le = {
   key: 2,
   class: "iv-pf-facts"
-}, $e = { key: 0 }, Re = { key: 1 }, $ = 132, O = 14, S = 6, Ve = /* @__PURE__ */ ee({
+}, $e = { key: 0 }, Re = { key: 1 }, $ = 132, O = 14, S = 6, Te = /* @__PURE__ */ ee({
   __name: "LpGraph",
   props: {
     points: {},
@@ -225,5 +231,5 @@ const re = { class: "iv-panel-head" }, ce = {
   }
 });
 export {
-  Ve as default
+  Te as default
 };

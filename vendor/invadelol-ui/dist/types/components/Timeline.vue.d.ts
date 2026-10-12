@@ -1,4 +1,7 @@
 import type { MatchDetail, PlayerView, TimelineView } from '../logic/types';
+import '../styles/base.css';
+import '../styles/primitives.css';
+import '../styles/detail.css';
 /**
  * The game as a story told on one rail. By default it is the selected player's story (their
  * kills, deaths and assists, what they took, and the map-changing objectives as quiet context);

@@ -1,3 +1,5 @@
+import '../styles/base.css';
+import '../styles/primitives.css';
 /** A panel: one topic, with an optional head (title, `meta` text, then the `head` slot on the right). */
 type __VLS_Props = {
     title?: string;

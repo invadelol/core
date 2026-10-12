@@ -108,19 +108,16 @@ function tooltip(cell: Cell) {
 </script>
 
 <template>
-  <!-- A side panel of the profile, drawn like the shared ones. -->
-  <section class="iv-panel iv-pf-panel">
-    <header class="iv-panel-head">
+  <section class="iv-panel">
+    <div class="section">
       <h3>Activity</h3>
-      <span class="meta num">
-        <template v-if="activity.length">
-          {{ totals.games }} games · {{ totals.winrate }}% ·
-        </template>
-        {{ WEEKS }} weeks
+      <span class="meta">Last {{ WEEKS }} weeks</span>
+      <span v-if="activity.length" class="num meta ml-auto">
+        {{ totals.games }} games <span class="text-ink-4">·</span> {{ totals.winrate }}%
       </span>
-    </header>
+    </div>
 
-    <p v-if="!activity.length" class="iv-pf-note">No games recorded yet.</p>
+    <p v-if="!activity.length" class="text-[13px] text-ink-2">No games recorded yet.</p>
 
     <div v-else>
       <div class="scroll-x pb-1">
