@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3'
+import { Head, Link } from '@inertiajs/vue3'
+import { ChevronLeft } from 'lucide-vue-next'
 import { computed, onMounted, ref, shallowRef } from 'vue'
 import { Breakdown, BuildTab, GoldChart, Scoreboard, Timeline } from '@invadelol/ui'
 import { hasEvents, type MatchDetail } from '@invadelol/ui/logic'
@@ -90,9 +91,21 @@ onMounted(async () => {
       <!-- The game read top to bottom: the scoreboard, then what the numbers mean, the story, the
            builds. Each section is the desktop app's view of it. -->
       <template v-else-if="match && detail">
+        <!-- The header's breadcrumb is hidden on a phone: the way back to the player, here. -->
+        <Link
+          :href="profilePath(parsed.gameName, parsed.tagLine)"
+          class="-ml-1 mb-2 inline-flex h-10 max-w-full items-center gap-1 text-[13px] font-medium text-ink-2 md:hidden"
+        >
+          <ChevronLeft :size="16" class="shrink-0 text-ink-3" />
+          <span class="truncate">{{ parsed.gameName }}</span>
+          <span class="shrink-0 text-ink-3">#{{ parsed.tagLine }}</span>
+        </Link>
         <MatchHeader :detail="detail" :match="match" :puuid="ownerPuuid" />
 
-        <nav class="match-nav iv-tabs sticky top-[57px] z-20 mt-4" aria-label="Sections">
+        <nav
+          class="match-nav iv-tabs sticky top-[57px] z-20 mt-4 [@media(max-height:31rem)]:static"
+          aria-label="Sections"
+        >
           <a v-for="item in SECTIONS" :key="item.id" :href="`#${item.id}`">{{ item.label }}</a>
         </nav>
 
