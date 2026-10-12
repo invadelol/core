@@ -1,148 +1,156 @@
-import { english as u, fill as i, tk as n } from "./logic/i18n.js";
-import { ago as c, compact as S, dayKey as h, dayLabel as I, kdaRatio as P, mmss as k, num as R, ordinal as g, pct as y, score100 as E, signedGold as L, signedLp as T } from "./logic/format.js";
-import { BADGES as C, POSITIONS as O, QUEUE_FILTERS as b, QUEUE_SHORT as F, TIERS as U, count as B, kda as G, positionName as w, queueName as A, queueShort as M, rankLabel as N, rankShort as H, rankValue as _, tierColor as D, tierRgb as q, topBadges as Q, winRate as W } from "./logic/labels.js";
-import { RUNE_SLOTS as K, hasEvents as V, lineColor as z, relation as J, riotId as X, side as Y, teamsOf as Z } from "./logic/detail.js";
+import { english as u, fill as i, tk as x } from "./logic/i18n.js";
+import { ago as c, compact as S, dayKey as P, dayLabel as h, kdaRatio as E, mmss as I, num as R, ordinal as g, pct as k, score100 as T, signedGold as y, signedLp as L } from "./logic/format.js";
+import { BADGES as C, POSITIONS as G, QUEUE_FILTERS as O, QUEUE_SHORT as U, TIERS as b, count as A, kda as B, positionName as F, queueName as M, queueShort as _, rankLabel as w, rankShort as N, rankValue as H, tierColor as D, tierRgb as q, topBadges as Q, winRate as V } from "./logic/labels.js";
+import { RUNE_SLOTS as j, hasEvents as K, lineColor as Y, relation as Z, riotId as z, side as J, teamsOf as X } from "./logic/detail.js";
 import { FIGHT_GAP as ee, PHASES as oe, involves as re, isEpic as ae, leadFor as te, scoreAt as fe, storyOf as me, valueAt as le } from "./logic/story.js";
 import { lpByGame as se } from "./logic/lp.js";
-import { fromCoreMatch as ue, gameIdOf as ie, playedWithFromCore as ne, positionOf as xe, profileFromCore as ce, rankFromCore as Se, summaryOf as he } from "./logic/core.js";
-import { createInvadeUi as Pe, gameFavorite as ke, provideInvadeUi as Re, useFormat as ge, useInvadeUi as ye, useNames as Ee } from "./context.js";
-import { default as Te } from "./components/Button.vue.js";
-import { default as Ce } from "./components/Icon.vue.js";
-import { default as be } from "./components/Link.vue.js";
-import { default as Ue } from "./components/Logo.vue.js";
+import { PAGE_BURST as ue, PAGE_EVERY_MS as ie, PAGE_SIZE as xe, nextPage as ne, pager as ce } from "./logic/pager.js";
+import { fromCoreMatch as Pe, gameIdOf as he, playedWithFromCore as Ee, positionOf as Ie, profileFromCore as Re, rankFromCore as ge, summaryOf as ke } from "./logic/core.js";
+import { createInvadeUi as ye, gameFavorite as Le, provideInvadeUi as ve, useFormat as Ce, useInvadeUi as Ge, useNames as Oe } from "./context.js";
+import { default as be } from "./components/Button.vue.js";
+import { default as Be } from "./components/Icon.vue.js";
+import { default as Me } from "./components/Link.vue.js";
+import { default as we } from "./components/Logo.vue.js";
 /* empty css                     */
-import { default as Ge } from "./components/Panel.vue.js";
-import { default as Ae } from "./components/Segmented.vue.js";
-import { default as Ne } from "./components/Skeleton.vue.js";
-import { default as _e } from "./components/StarButton.vue.js";
+import { default as He } from "./components/Panel.vue.js";
+import { default as qe } from "./components/Segmented.vue.js";
+import { default as Ve } from "./components/Skeleton.vue.js";
+import { default as je } from "./components/StarButton.vue.js";
 /* empty css                           */
-import { default as qe } from "./components/Switch.vue.js";
-import { default as We } from "./components/Tabs.vue.js";
-import { default as Ke } from "./components/TrendLine.vue.js";
+import { default as Ye } from "./components/Switch.vue.js";
+import { default as ze } from "./components/Tabs.vue.js";
+import { default as Xe } from "./components/TrendLine.vue.js";
 /* empty css                          */
-import { default as ze } from "./components/ChampIcon.vue.js";
+import { default as eo } from "./components/ChampIcon.vue.js";
 /* empty css                          */
-import { default as Xe } from "./components/ItemIcons.vue.js";
-import { default as Ze } from "./components/ObjectiveIcon.vue.js";
-import { default as eo } from "./components/PerfDial.vue.js";
+import { default as ro } from "./components/ItemIcons.vue.js";
+import { default as to } from "./components/ObjectiveIcon.vue.js";
+import { default as mo } from "./components/PerfDial.vue.js";
 /* empty css                         */
-import { default as ro } from "./components/RankCrest.vue.js";
+import { default as po } from "./components/RankCrest.vue.js";
 /* empty css                          */
-import { default as to } from "./components/RoleIcon.vue.js";
-import { default as mo } from "./components/RunePage.vue.js";
+import { default as uo } from "./components/RoleIcon.vue.js";
+import { default as xo } from "./components/RunePage.vue.js";
 /* empty css                         */
-import { default as po } from "./components/MatchRow.vue.js";
+import { default as co } from "./components/MatchRow.vue.js";
 /* empty css                         */
-import { default as uo } from "./components/MatchRowSkeleton.vue.js";
+import { default as Po } from "./components/MatchRowSkeleton.vue.js";
 /* empty css                                 */
-import { default as no } from "./components/MatchList.vue.js";
-import { default as co } from "./components/MatchDetailPanel.vue.js";
-import { default as ho } from "./components/Scoreboard.vue.js";
-import { default as Po } from "./components/Breakdown.vue.js";
-import { default as Ro } from "./components/GoldChart.vue.js";
-import { default as yo } from "./components/Timeline.vue.js";
-import { default as Lo } from "./components/BuildTab.vue.js";
-import { default as vo } from "./components/PlayerPicker.vue.js";
-import { default as Oo } from "./components/ProfileLayout.vue.js";
-import { default as Fo } from "./components/PlayerHeader.vue.js";
-import { default as Bo } from "./components/ChampionTable.vue.js";
-import { default as wo } from "./components/RolesPanel.vue.js";
-import { default as Mo } from "./components/LpGraph.vue.js";
-import { default as Ho } from "./components/PlayedWithPanel.vue.js";
+import { default as Eo } from "./components/MatchList.vue.js";
+import { default as Ro } from "./components/MoreMatches.vue.js";
+import { default as ko } from "./components/MatchDetailPanel.vue.js";
+import { default as yo } from "./components/Scoreboard.vue.js";
+import { default as vo } from "./components/Breakdown.vue.js";
+import { default as Go } from "./components/GoldChart.vue.js";
+import { default as Uo } from "./components/Timeline.vue.js";
+import { default as Ao } from "./components/BuildTab.vue.js";
+import { default as Fo } from "./components/PlayerPicker.vue.js";
+import { default as _o } from "./components/ProfileLayout.vue.js";
+import { default as No } from "./components/PlayerHeader.vue.js";
+import { default as Do } from "./components/ChampionTable.vue.js";
+import { default as Qo } from "./components/RolesPanel.vue.js";
+import { default as Wo } from "./components/LpGraph.vue.js";
+import { default as Ko } from "./components/PlayedWithPanel.vue.js";
 export {
   C as BADGES,
-  Po as Breakdown,
-  Lo as BuildTab,
-  Te as Button,
-  ze as ChampIcon,
-  Bo as ChampionTable,
+  vo as Breakdown,
+  Ao as BuildTab,
+  be as Button,
+  eo as ChampIcon,
+  Do as ChampionTable,
   ee as FIGHT_GAP,
-  Ro as GoldChart,
-  Ce as Icon,
-  Xe as ItemIcons,
-  be as Link,
-  Ue as Logo,
-  Mo as LpGraph,
-  co as MatchDetailPanel,
-  no as MatchList,
-  po as MatchRow,
-  uo as MatchRowSkeleton,
-  Ze as ObjectiveIcon,
+  Go as GoldChart,
+  Be as Icon,
+  ro as ItemIcons,
+  Me as Link,
+  we as Logo,
+  Wo as LpGraph,
+  ko as MatchDetailPanel,
+  Eo as MatchList,
+  co as MatchRow,
+  Po as MatchRowSkeleton,
+  Ro as MoreMatches,
+  to as ObjectiveIcon,
+  ue as PAGE_BURST,
+  ie as PAGE_EVERY_MS,
+  xe as PAGE_SIZE,
   oe as PHASES,
-  O as POSITIONS,
-  Ge as Panel,
-  eo as PerfDial,
-  Ho as PlayedWithPanel,
-  Fo as PlayerHeader,
-  vo as PlayerPicker,
-  Oo as ProfileLayout,
-  b as QUEUE_FILTERS,
-  F as QUEUE_SHORT,
-  K as RUNE_SLOTS,
-  ro as RankCrest,
-  to as RoleIcon,
-  wo as RolesPanel,
-  mo as RunePage,
-  ho as Scoreboard,
-  Ae as Segmented,
-  Ne as Skeleton,
-  _e as StarButton,
-  qe as Switch,
-  U as TIERS,
-  We as Tabs,
-  yo as Timeline,
-  Ke as TrendLine,
+  G as POSITIONS,
+  He as Panel,
+  mo as PerfDial,
+  Ko as PlayedWithPanel,
+  No as PlayerHeader,
+  Fo as PlayerPicker,
+  _o as ProfileLayout,
+  O as QUEUE_FILTERS,
+  U as QUEUE_SHORT,
+  j as RUNE_SLOTS,
+  po as RankCrest,
+  uo as RoleIcon,
+  Qo as RolesPanel,
+  xo as RunePage,
+  yo as Scoreboard,
+  qe as Segmented,
+  Ve as Skeleton,
+  je as StarButton,
+  Ye as Switch,
+  b as TIERS,
+  ze as Tabs,
+  Uo as Timeline,
+  Xe as TrendLine,
   c as ago,
   S as compact,
-  B as count,
-  Pe as createInvadeUi,
-  h as dayKey,
-  I as dayLabel,
+  A as count,
+  ye as createInvadeUi,
+  P as dayKey,
+  h as dayLabel,
   u as english,
   i as fill,
-  ue as fromCoreMatch,
-  ke as gameFavorite,
-  ie as gameIdOf,
-  V as hasEvents,
+  Pe as fromCoreMatch,
+  Le as gameFavorite,
+  he as gameIdOf,
+  K as hasEvents,
   re as involves,
   ae as isEpic,
-  G as kda,
-  P as kdaRatio,
+  B as kda,
+  E as kdaRatio,
   te as leadFor,
-  z as lineColor,
+  Y as lineColor,
   se as lpByGame,
-  k as mmss,
+  I as mmss,
+  ne as nextPage,
   R as num,
   g as ordinal,
-  y as pct,
-  ne as playedWithFromCore,
-  w as positionName,
-  xe as positionOf,
-  ce as profileFromCore,
-  Re as provideInvadeUi,
-  A as queueName,
-  M as queueShort,
-  Se as rankFromCore,
-  N as rankLabel,
-  H as rankShort,
-  _ as rankValue,
-  J as relation,
-  X as riotId,
-  E as score100,
+  ce as pager,
+  k as pct,
+  Ee as playedWithFromCore,
+  F as positionName,
+  Ie as positionOf,
+  Re as profileFromCore,
+  ve as provideInvadeUi,
+  M as queueName,
+  _ as queueShort,
+  ge as rankFromCore,
+  w as rankLabel,
+  N as rankShort,
+  H as rankValue,
+  Z as relation,
+  z as riotId,
+  T as score100,
   fe as scoreAt,
-  Y as side,
-  L as signedGold,
-  T as signedLp,
+  J as side,
+  y as signedGold,
+  L as signedLp,
   me as storyOf,
-  he as summaryOf,
-  Z as teamsOf,
+  ke as summaryOf,
+  X as teamsOf,
   D as tierColor,
   q as tierRgb,
-  n as tk,
+  x as tk,
   Q as topBadges,
-  ge as useFormat,
-  ye as useInvadeUi,
-  Ee as useNames,
+  Ce as useFormat,
+  Ge as useInvadeUi,
+  Oe as useNames,
   le as valueAt,
-  W as winRate
+  V as winRate
 };
