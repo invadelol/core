@@ -1,8 +1,8 @@
-const s = /* @__PURE__ */ new Map();
+const i = /* @__PURE__ */ new Map();
 function a(t, e = 0, n = "en") {
   const r = `${n}|${e}`;
-  let o = s.get(r);
-  return o || s.set(r, o = new Intl.NumberFormat(n, { minimumFractionDigits: e, maximumFractionDigits: e })), o.format(t);
+  let o = i.get(r);
+  return o || i.set(r, o = new Intl.NumberFormat(n, { minimumFractionDigits: e, maximumFractionDigits: e })), o.format(t);
 }
 function f(t) {
   const e = Math.max(0, Math.floor(t));
@@ -19,11 +19,11 @@ function d(t, e = "en") {
   return t >= 1e5 ? `${a(Math.round(t / 1e3), 0, e)}k` : t >= 1e3 ? `${a(t / 1e3, 1, e)}k` : a(t, 0, e);
 }
 function M(t, e = "en") {
-  if (e === "en") {
+  if (e.startsWith("en")) {
     const n = t % 100, r = n >= 11 && n <= 13 ? "th" : { 1: "st", 2: "nd", 3: "rd" }[t % 10] ?? "th";
     return `${t}${r}`;
   }
-  return e === "fr" ? t === 1 ? "1er" : `${t}e` : `#${t}`;
+  return e.startsWith("fr") ? t === 1 ? "1er" : `${t}e` : `#${t}`;
 }
 const g = (t) => Math.round(Math.max(0, Math.min(10, t)) * 10), $ = (t, e, n, r = "en") => e === 0 ? t + n > 0 ? "∞" : "0" : a((t + n) / e, 2, r), l = (t) => `${t > 0 ? "+" : t < 0 ? "−" : "±"}${Math.abs(t)}`;
 function w(t, e = "en") {
@@ -33,9 +33,9 @@ function w(t, e = "en") {
 function D(t, e, n, r = "en") {
   const o = new Date(t), u = /* @__PURE__ */ new Date();
   u.setHours(0, 0, 0, 0);
-  const i = Math.round((u.getTime() - new Date(o.getFullYear(), o.getMonth(), o.getDate()).getTime()) / 864e5);
-  if (i <= 0) return e;
-  if (i === 1) return n;
+  const s = Math.round((u.getTime() - new Date(o.getFullYear(), o.getMonth(), o.getDate()).getTime()) / 864e5);
+  if (s <= 0) return e;
+  if (s === 1) return n;
   const m = o.getFullYear() === u.getFullYear();
   return new Intl.DateTimeFormat(r, { weekday: "long", day: "numeric", month: "long", year: m ? void 0 : "numeric" }).format(o);
 }

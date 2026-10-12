@@ -1,22 +1,25 @@
 import '../styles/base.css';
 import '../styles/primitives.css';
 import '../styles/detail.css';
-import { defineComponent as O, computed as y, openBlock as n, createElementBlock as o, createVNode as R, createElementVNode as i, toDisplayString as m, unref as l, Fragment as v, renderList as p, normalizeClass as b, createTextVNode as I, createCommentVNode as W } from "vue";
-import { useInvadeUi as z, useFormat as G, useNames as K } from "../context.js";
+import { defineComponent as W, computed as y, openBlock as o, createElementBlock as n, createVNode as z, createElementVNode as i, toDisplayString as v, unref as e, Fragment as m, renderList as p, normalizeClass as _, createTextVNode as T, createCommentVNode as L } from "vue";
+import { useInvadeUi as G, useFormat as K, useNames as Q } from "../context.js";
 import { hideBroken as c } from "../dom.js";
-import { RUNE_SLOTS as T } from "../logic/detail.js";
-import { tk as h } from "../logic/i18n.js";
-import Q from "./PlayerPicker.vue.js";
+import { RUNE_SLOTS as B } from "../logic/detail.js";
+import { tk as f } from "../logic/i18n.js";
+import X from "./PlayerPicker.vue.js";
 /* empty css                 */
 /* empty css                       */
 /* empty css                   */
-const X = { class: "iv-bd" }, q = { class: "iv-bd-grid" }, A = {
+const q = { class: "iv-bd" }, A = { class: "iv-bd-grid" }, H = {
   key: 0,
   class: "iv-bd-runes"
-}, H = { class: "iv-label" }, J = { class: "iv-bd-tree-name" }, Y = ["src"], Z = ["src", "alt", "title"], ee = {
+}, J = { class: "iv-label" }, Y = { class: "iv-bd-tree-name" }, Z = ["src"], ee = ["src", "alt", "title"], le = {
   key: 1,
   class: "iv-bd-slot"
-}, le = ["src", "alt", "title"], te = { class: "iv-bd-kit" }, se = { class: "iv-label" }, ne = { class: "iv-bd-items" }, oe = ["src"], re = { class: "iv-label" }, ie = { class: "iv-bd-spells" }, ae = ["src"], ce = { class: "iv-bd-facts" }, ue = { class: "iv-label" }, ye = /* @__PURE__ */ O({
+}, te = ["src", "alt", "title"], se = {
+  key: 0,
+  class: "iv-bd-tree second"
+}, oe = { class: "iv-bd-slot iv-bd-shards" }, ne = ["src", "alt", "title"], re = { class: "iv-bd-kit" }, ie = { class: "iv-label" }, ae = { class: "iv-bd-items" }, ce = ["src", "alt", "title"], ue = { class: "iv-label" }, de = { class: "iv-bd-spells" }, me = ["src"], ve = { class: "iv-bd-facts" }, pe = { class: "iv-label" }, Se = /* @__PURE__ */ W({
   __name: "BuildTab",
   props: {
     detail: {},
@@ -24,113 +27,126 @@ const X = { class: "iv-bd" }, q = { class: "iv-bd-grid" }, A = {
     me: {}
   },
   emits: ["select"],
-  setup(_, { emit: L }) {
-    const w = _, B = L, { t: r } = z(), { compact: S, signedGold: N } = G(), { itemIcon: C, runeIcon: E, runeName: g, spellIcon: D, spellName: M, styleIcon: V, styleName: j } = K(), u = y(() => w.detail.players[w.selected]), P = y(() => new Set(u.value.perks)), x = y(() => {
-      const [e, t] = u.value.styles;
+  setup(g, { emit: C }) {
+    const N = g, D = C, { t: r } = G(), { compact: S, signedGold: E } = K(), { itemIcon: M, itemName: x, runeIcon: w, runeName: k, spellIcon: V, spellName: j, styleIcon: P, styleName: U } = Q(), u = y(() => N.detail.players[N.selected]), $ = y(() => new Set(u.value.perks)), I = y(() => {
+      const [t, s] = u.value.styles;
       return [
-        { id: e, rows: T[e] ?? null, fallback: u.value.perks.slice(0, 4) },
-        { id: t, rows: T[t]?.slice(1) ?? null, fallback: u.value.perks.slice(4, 6) }
-      ].filter((s) => s.id > 0);
-    }), U = ["", "", h("Double kill"), h("Triple kill"), h("Quadra kill"), h("Penta kill")], $ = y(() => {
-      const e = u.value, t = [
-        { label: r("Wards"), value: r("{placed} placed · {killed} destroyed · {control} control", { placed: e.wardsPlaced, killed: e.wardsKilled, control: e.controlWards }) }
+        { id: t, rows: B[t] ?? null, fallback: u.value.perks.slice(0, 4) },
+        { id: s, rows: B[s]?.slice(1) ?? null, fallback: u.value.perks.slice(4, 6) }
+      ].filter((l) => l.id > 0);
+    }), F = ["", "", f("Double kill"), f("Triple kill"), f("Quadra kill"), f("Penta kill")], O = y(() => {
+      const t = u.value, s = [
+        { label: r("Wards"), value: r("{placed} placed · {killed} destroyed · {control} control", { placed: t.wardsPlaced, killed: t.wardsKilled, control: t.controlWards }) }
       ];
-      if (e.ccTime !== null && t.push({ label: r("Crowd control"), value: r("{n} s", { n: e.ccTime }) }), t.push({ label: r("Objective damage"), value: r("{n} · {towers} to towers", { n: S(e.objectiveDamage), towers: S(e.turretDamage) }) }), e.largestSpree !== null && t.push({ label: r("Largest killing spree"), value: String(e.largestSpree) }), e.largestMulti !== null && e.largestMulti > 1 && t.push({ label: r("Largest multikill"), value: r(U[Math.min(5, e.largestMulti)]) }), e.gold15 !== null || e.xp15 !== null || e.cs15 !== null) {
-        const s = [
-          e.gold15 !== null ? r("{n} gold", { n: N(e.gold15) }) : "",
-          e.xp15 !== null ? r("{n} XP", { n: N(e.xp15) }) : "",
-          e.cs15 !== null ? r("{n} CS", { n: `${e.cs15 > 0 ? "+" : ""}${e.cs15}` }) : ""
+      if (t.ccTime !== null && s.push({ label: r("Crowd control"), value: r("{n} s", { n: t.ccTime }) }), s.push({ label: r("Objective damage"), value: r("{n} · {towers} to towers", { n: S(t.objectiveDamage), towers: S(t.turretDamage) }) }), t.largestSpree !== null && s.push({ label: r("Largest killing spree"), value: String(t.largestSpree) }), t.largestMulti !== null && t.largestMulti > 1 && s.push({ label: r("Largest multikill"), value: r(F[Math.min(5, t.largestMulti)]) }), t.gold15 !== null || t.xp15 !== null || t.cs15 !== null) {
+        const l = [
+          t.gold15 !== null ? r("{n} gold", { n: E(t.gold15) }) : "",
+          t.xp15 !== null ? r("{n} XP", { n: E(t.xp15) }) : "",
+          t.cs15 !== null ? r("{n} CS", { n: `${t.cs15 > 0 ? "+" : ""}${t.cs15}` }) : ""
         ].filter(Boolean);
-        t.push({ label: r("Lead at 15 min"), value: s.join(" · ") });
+        s.push({ label: r("Lead at 15 min"), value: l.join(" · ") });
       }
-      return t;
+      return s;
     });
-    return (e, t) => (n(), o("div", X, [
-      R(Q, {
-        detail: _.detail,
-        selected: _.selected,
-        me: _.me,
-        onSelect: t[0] || (t[0] = (s) => B("select", s))
+    return (t, s) => (o(), n("div", q, [
+      z(X, {
+        detail: g.detail,
+        selected: g.selected,
+        me: g.me,
+        onSelect: s[0] || (s[0] = (l) => D("select", l))
       }, null, 8, ["detail", "selected", "me"]),
-      i("div", q, [
-        x.value.length && u.value.perks[0] ? (n(), o("section", A, [
-          i("h4", H, m(l(r)("Runes")), 1),
-          (n(!0), o(v, null, p(x.value, (s, d) => (n(), o("div", {
-            key: s.id,
-            class: b(["iv-bd-tree", { second: d }])
+      i("div", A, [
+        I.value.length && u.value.perks[0] ? (o(), n("section", H, [
+          i("h4", J, v(e(r)("Runes")), 1),
+          (o(!0), n(m, null, p(I.value, (l, d) => (o(), n("div", {
+            key: l.id,
+            class: _(["iv-bd-tree", { second: d }])
           }, [
-            i("p", J, [
+            i("p", Y, [
               i("img", {
-                src: l(V)(s.id),
+                src: e(P)(l.id),
                 alt: "",
-                onError: t[1] || (t[1] = //@ts-ignore
-                (...a) => l(c) && l(c)(...a))
-              }, null, 40, Y),
-              I(m(l(j)(s.id)), 1)
+                onError: s[1] || (s[1] = //@ts-ignore
+                (...a) => e(c) && e(c)(...a))
+              }, null, 40, Z),
+              T(v(e(U)(l.id)), 1)
             ]),
-            s.rows ? (n(!0), o(v, { key: 0 }, p(s.rows, (a, f) => (n(), o("div", {
-              key: f,
-              class: b(["iv-bd-slot", { keys: !d && !f }])
+            l.rows ? (o(!0), n(m, { key: 0 }, p(l.rows, (a, h) => (o(), n("div", {
+              key: h,
+              class: _(["iv-bd-slot", { keys: !d && !h }])
             }, [
-              (n(!0), o(v, null, p(a, (k) => (n(), o("img", {
-                key: k,
-                src: l(E)(k),
-                alt: l(g)(k),
-                title: l(g)(k),
-                class: b({ off: !P.value.has(k) }),
-                onError: t[2] || (t[2] = //@ts-ignore
-                (...F) => l(c) && l(c)(...F))
-              }, null, 42, Z))), 128))
-            ], 2))), 128)) : (n(), o("div", ee, [
-              (n(!0), o(v, null, p(s.fallback, (a) => (n(), o("img", {
+              (o(!0), n(m, null, p(a, (b) => (o(), n("img", {
+                key: b,
+                src: e(w)(b),
+                alt: e(k)(b),
+                title: e(k)(b),
+                class: _({ off: !$.value.has(b) }),
+                onError: s[2] || (s[2] = //@ts-ignore
+                (...R) => e(c) && e(c)(...R))
+              }, null, 42, ee))), 128))
+            ], 2))), 128)) : (o(), n("div", le, [
+              (o(!0), n(m, null, p(l.fallback, (a) => (o(), n("img", {
                 key: a,
-                src: l(E)(a),
-                alt: l(g)(a),
-                title: l(g)(a),
-                onError: t[3] || (t[3] = //@ts-ignore
-                (...f) => l(c) && l(c)(...f))
-              }, null, 40, le))), 128))
+                src: e(w)(a),
+                alt: e(k)(a),
+                title: e(k)(a),
+                onError: s[3] || (s[3] = //@ts-ignore
+                (...h) => e(c) && e(c)(...h))
+              }, null, 40, te))), 128))
             ]))
-          ], 2))), 128))
-        ])) : W("", !0),
-        i("section", te, [
-          i("h4", se, m(l(r)("Items")), 1),
-          i("div", ne, [
-            (n(!0), o(v, null, p(u.value.items, (s, d) => (n(), o(v, { key: d }, [
-              s ? (n(), o("img", {
+          ], 2))), 128)),
+          u.value.shards ? (o(), n("div", se, [
+            i("div", oe, [
+              (o(!0), n(m, null, p(u.value.shards, (l, d) => (o(), n("img", {
+                key: d,
+                src: e(w)(l),
+                alt: e(k)(l),
+                title: e(k)(l),
+                onError: s[4] || (s[4] = //@ts-ignore
+                (...a) => e(c) && e(c)(...a))
+              }, null, 40, ne))), 128))
+            ])
+          ])) : L("", !0)
+        ])) : L("", !0),
+        i("section", re, [
+          i("h4", ie, v(e(r)("Items")), 1),
+          i("div", ae, [
+            (o(!0), n(m, null, p(u.value.items, (l, d) => (o(), n(m, { key: d }, [
+              l ? (o(), n("img", {
                 key: 0,
-                src: l(C)(s),
-                alt: "",
-                class: b({ trinket: d === 6 }),
-                onError: t[4] || (t[4] = //@ts-ignore
-                (...a) => l(c) && l(c)(...a))
-              }, null, 42, oe)) : (n(), o("i", {
+                src: e(M)(l),
+                alt: e(x)(l),
+                title: e(x)(l),
+                class: _({ trinket: d === 6 }),
+                onError: s[5] || (s[5] = //@ts-ignore
+                (...a) => e(c) && e(c)(...a))
+              }, null, 42, ce)) : (o(), n("i", {
                 key: 1,
-                class: b({ trinket: d === 6 })
+                class: _({ trinket: d === 6 })
               }, null, 2))
             ], 64))), 128))
           ]),
-          i("h4", re, m(l(r)("Summoner spells")), 1),
-          i("div", ie, [
-            (n(!0), o(v, null, p(u.value.spells, (s, d) => (n(), o("span", { key: d }, [
+          i("h4", ue, v(e(r)("Summoner spells")), 1),
+          i("div", de, [
+            (o(!0), n(m, null, p(u.value.spells, (l, d) => (o(), n("span", { key: d }, [
               i("img", {
-                src: l(D)(s),
+                src: e(V)(l),
                 alt: "",
-                onError: t[5] || (t[5] = //@ts-ignore
-                (...a) => l(c) && l(c)(...a))
-              }, null, 40, ae),
-              I(m(l(M)(s)), 1)
+                onError: s[6] || (s[6] = //@ts-ignore
+                (...a) => e(c) && e(c)(...a))
+              }, null, 40, me),
+              T(v(e(j)(l)), 1)
             ]))), 128))
           ])
         ]),
-        i("section", ce, [
-          i("h4", ue, m(l(r)("Details")), 1),
+        i("section", ve, [
+          i("h4", pe, v(e(r)("Details")), 1),
           i("dl", null, [
-            (n(!0), o(v, null, p($.value, (s) => (n(), o("div", {
-              key: s.label
+            (o(!0), n(m, null, p(O.value, (l) => (o(), n("div", {
+              key: l.label
             }, [
-              i("dt", null, m(s.label), 1),
-              i("dd", null, m(s.value), 1)
+              i("dt", null, v(l.label), 1),
+              i("dd", null, v(l.value), 1)
             ]))), 128))
           ])
         ])
@@ -139,5 +155,5 @@ const X = { class: "iv-bd" }, q = { class: "iv-bd-grid" }, A = {
   }
 });
 export {
-  ye as default
+  Se as default
 };

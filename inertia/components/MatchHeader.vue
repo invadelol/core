@@ -110,7 +110,6 @@ async function copyId() {
         </div>
         <div class="iv-fig mt-2 text-[40px] sm:text-[44px]">{{ team.kills }}</div>
         <div
-          v-if="detail.mapId === 11"
           class="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 sm:gap-x-3"
           :class="index ? 'justify-end' : ''"
         >

@@ -213,6 +213,8 @@ export interface PlayerView {
     assists: number;
     kp: number;
     cs: number;
+    /** Jungle monsters among `cs` (the rest are lane minions). */
+    jungleCs: number;
     csMin: number;
     gold: number;
     goldShare: number;
@@ -248,12 +250,30 @@ export interface PlayerView {
     cs15: number | null;
     /** Invade score 0‥10, null for remakes or when unscored. */
     score: number | null;
+    /** What the score is made of for the player's role; empty when unscored. */
+    parts: ScorePart[];
     /** 1 = best of the game, 0 = unranked. */
     rank: number;
     badges: Badge[];
+    /** Skill points in the order they were spent (1 Q, 2 W, 3 E, 4 R); empty without a timeline. */
+    skills: number[];
     augments: number[];
     placement: number;
+    /** Stat shards (offense, flex, defense). Only invade.lol's Riot games carry them. */
+    shards?: number[];
+    /** Pings by kind. Only invade.lol's Riot games carry them: the League client does not report pings. */
+    pings?: Record<Ping, number>;
 }
+export type ScoreCategory = 'fighting' | 'damage' | 'farming' | 'vision' | 'objectives';
+/** One part of a player's score: how they did at it, and how much it counts for their role. */
+export interface ScorePart {
+    key: ScoreCategory;
+    /** 0‥100, 50 = even with the game. */
+    value: number;
+    /** Share of the score, in % (a game's parts add up to about 100). */
+    weight: number;
+}
+export type Ping = 'enemyMissing' | 'onMyWay' | 'danger' | 'assist' | 'allIn' | 'push' | 'getBack' | 'command' | 'needVision' | 'enemyVision' | 'visionCleared' | 'bait' | 'hold';
 export interface Kill {
     t: number;
     killer: number;

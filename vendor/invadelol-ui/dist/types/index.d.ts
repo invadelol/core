@@ -32,6 +32,7 @@ export { default as MatchList } from './components/MatchList.vue';
 export { default as MoreMatches } from './components/MoreMatches.vue';
 export { default as MatchDetailPanel } from './components/MatchDetailPanel.vue';
 export { default as Scoreboard } from './components/Scoreboard.vue';
+export { default as PlayerDetail } from './components/PlayerDetail.vue';
 export { default as Breakdown } from './components/Breakdown.vue';
 export { default as GoldChart } from './components/GoldChart.vue';
 export { default as Timeline } from './components/Timeline.vue';
