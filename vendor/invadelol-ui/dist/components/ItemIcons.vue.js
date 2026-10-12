@@ -1,21 +1,22 @@
-import { defineComponent as m, openBlock as e, createElementBlock as t, Fragment as n, renderList as u, unref as a, createCommentVNode as i } from "vue";
-import { useNames as l } from "../context.js";
-const p = ["src"], I = /* @__PURE__ */ m({
+import { defineComponent as l, openBlock as t, createElementBlock as r, Fragment as m, renderList as u, unref as n, createCommentVNode as i } from "vue";
+import { useNames as p } from "../context.js";
+const _ = ["src", "alt", "title"], N = /* @__PURE__ */ l({
   __name: "ItemIcons",
   props: {
     ids: {}
   },
-  setup(o) {
-    const { itemIcon: s } = l();
-    return (_, d) => (e(!0), t(n, null, u(o.ids, (r, c) => (e(), t(n, { key: c }, [
-      r ? (e(), t("img", {
+  setup(s) {
+    const { itemIcon: c, itemName: o } = p();
+    return (f, d) => (t(!0), r(m, null, u(s.ids, (e, a) => (t(), r(m, { key: a }, [
+      e ? (t(), r("img", {
         key: 0,
-        src: a(s)(r),
-        alt: ""
-      }, null, 8, p)) : i("", !0)
+        src: n(c)(e),
+        alt: n(o)(e),
+        title: n(o)(e)
+      }, null, 8, _)) : i("", !0)
     ], 64))), 128));
   }
 });
 export {
-  I as default
+  N as default
 };

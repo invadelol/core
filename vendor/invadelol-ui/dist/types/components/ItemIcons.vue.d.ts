@@ -1,4 +1,4 @@
-/** Item images in a row; an empty slot (id 0) is skipped. Sized by the parent's CSS. */
+/** Item images in a row, named on hover; an empty slot (id 0) is skipped. Sized by the parent's CSS. */
 type __VLS_Props = {
     ids: number[];
 };
