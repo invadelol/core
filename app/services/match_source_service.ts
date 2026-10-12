@@ -66,6 +66,13 @@ class MatchSourceService {
     return MatchSource.find(matchId)
   }
 
+  /** Which of `matchIds` a writer has claimed (stored, or being stored right now). */
+  async claimed(matchIds: string[]): Promise<Set<string>> {
+    if (!matchIds.length) return new Set()
+    const rows = await db.from('match_source').select('match_id').whereIn('match_id', matchIds)
+    return new Set(rows.map((row: { match_id: string }) => row.match_id))
+  }
+
   async update(
     matchId: string,
     changes: { verification?: Verification; completeness?: Completeness },

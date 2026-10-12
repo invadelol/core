@@ -15,7 +15,7 @@ export function signedHeaders(
   credentials: DeviceCredentials,
   method: string,
   path: string,
-  body = '',
+  body: string | Buffer = '',
   timestamp = Date.now()
 ) {
   const signature = signRequest(credentials.secret, {
@@ -51,4 +51,26 @@ export function desktopClient(http: ApiClient, credentials: DeviceCredentials) {
         .json(body)
     },
   }
+}
+
+/**
+ * A signed POST of an already compressed JSON body (`Content-Encoding`), as
+ * the app sends its queued games: the signature covers the bytes sent.
+ * `signed` overrides what is signed, to prove that anything else is refused.
+ */
+export function compressedPost(
+  http: ApiClient,
+  credentials: DeviceCredentials,
+  path: string,
+  body: Buffer,
+  encoding: 'gzip' | 'deflate',
+  signed: string | Buffer = body
+) {
+  const request = http
+    .post(path)
+    .headers({ ...signedHeaders(credentials, 'POST', path, signed), 'Content-Encoding': encoding })
+    .type('json')
+  // Superagent would serialise a Buffer as JSON: send the bytes as they are.
+  request.request.serialize((bytes: Buffer) => bytes as unknown as string).send(body)
+  return request
 }

@@ -51,6 +51,17 @@ export interface ValidationContext {
   championIds: ReadonlySet<number> | null
 }
 
+/**
+ * A game the uploader did not play (§2.5, contract v1.3): one the app read
+ * from the client's history of another player. It carries no LP change.
+ */
+export function isObserved(upload: MatchUpload) {
+  const uploader = upload.uploader.toLowerCase()
+  return !upload.game.participantIdentities.some(
+    (identity) => identity.player?.puuid?.toLowerCase() === uploader
+  )
+}
+
 function stat(participant: LcuParticipant, key: string): number {
   const value = participant.stats?.[key]
   return typeof value === 'number' ? value : 0
@@ -113,7 +124,6 @@ export function validateStructure(upload: MatchUpload, context: ValidationContex
     raws.add(puuid.toLowerCase())
   }
   if (raws.size !== participants.length) return 'raw PUUIDs are not unique'
-  if (!raws.has(upload.uploader.toLowerCase())) return 'the uploader is not a participant'
 
   for (const participant of participants) {
     const { championId } = participant

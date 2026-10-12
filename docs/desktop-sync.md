@@ -1,11 +1,13 @@
-# Desktop ↔ core: onboarding and match sync (contract v1)
+# Desktop ↔ core: onboarding and match sync (contract v1.3)
 
 The Invade desktop app (`invadelol/app`, Tauri + Rust) reads League data from the League client's
 local API (LCU) on the player's computer. This contract lets it:
 
 1. **Onboard** a player by Riot ID when the League client is closed (core resolves it with the Riot API).
 2. **Upload finished games** the player took part in, with their LP change when it is known, so the
-   website shows them seconds after the game without match-v5 calls.
+   website shows them seconds after the game without match-v5 calls, and, since v1.3, every other
+   finished game the app reads from the client (§2.5 observed games), so what the app shows is on
+   the website too.
 
 Both sides implement exactly this document. Anything not written here is out of scope for v1.
 
@@ -14,9 +16,11 @@ Both sides implement exactly this document. Anything not written here is out of 
 - **Publishing is part of using the app.** Every finished, matchmade game the signed-in account
   played is uploaded; the app says so in Settings → invade.lol (what is sent and when) and
   there is no switch. A device is registered as soon as an account signs in or onboarding ends.
-- **Only finished games the uploader played.** Never champ select, never a game in progress, never
-  data the client hides (enemy names in ranked champ select). Only matchmade games
-  (`gameType == "MATCHED_GAME"`) in the queues of §4.3.
+- **Only finished games.** The games the signed-in account played, and (v1.3) the finished games
+  the app reads from the client anyway: a match it opens, the games of a profile it shows. Never
+  champ select, never a game in progress, never data the client hides (enemy names in ranked champ
+  select). Only matchmade games (`gameType == "MATCHED_GAME"`) in the queues of §4.3. Match-v5
+  serves any of these games to anyone; the app only spares core the call.
 - **Never invent data.** A field the client does not give is absent, not zero. The server records
   what is missing (`completeness`) and the website hides it. An LP change exists only when the
   app holds a ranked snapshot from before the game and one after it, exactly one game apart (§4.4).
@@ -32,6 +36,9 @@ Both sides implement exactly this document. Anything not written here is out of 
 - Base URL: `https://invade.lol` (desktop debug builds: env `INVADE_CORE_URL`, e.g. `http://localhost:3335`).
   Release builds ignore the variable.
 - JSON bodies, UTF-8. Every desktop request sends `User-Agent: Invade/<version> (<os>)`.
+- **Compressed bodies (v1.3).** The POST routes take `Content-Encoding: gzip` or `deflate` (zlib,
+  RFC 1950) when `GET /config` lists it in `encodings`. Size limits apply to the inflated JSON;
+  the signature (§1.1) covers the bytes as sent, compressed.
 - Authenticated routes take `Authorization: Bearer <token>` **and a signature (§1.1)**. Tokens are
   32 random bytes, base64url, prefixed `inv_dev_`. Core stores only their SHA-256, never the token.
 - Errors use core's existing shape: `{ "errors": [{ "message": "...", "code": "E_..." }], "retryAfter"?: s }`
@@ -138,8 +145,14 @@ exceeding one answers 429 with `Retry-After`.
 ### 2.1 `GET /api/desktop/config` (public)
 
 ```json
-{ "uploads": true, "resolve": true, "maxPayloadBytes": 2000000, "minAppVersion": null }
+{ "uploads": true, "resolve": true, "observed": true, "encodings": ["gzip", "deflate"],
+  "maxPayloadBytes": 2000000, "minAppVersion": null }
 ```
+
+`observed` (v1.3, env `DESKTOP_OBSERVED_ENABLED`, default true; false whenever `uploads` is):
+core takes observed games (§2.5) and answers `POST /matches/known` (§2.6); when false both answer
+503 `E_UPLOADS_PAUSED`. `encodings` (v1.3): what §1 compressed bodies may use. A core without
+these fields takes neither: the app sends only its own games, uncompressed.
 
 Kill switches from env (`DESKTOP_UPLOADS_ENABLED`, `DESKTOP_RESOLVE_ENABLED`, default true). The
 desktop reads it at most every 6 h, and before its first upload after a launch. A switched-off feature
@@ -201,13 +214,13 @@ a desktop snapshot younger than 24 h when there is one. `solo`/`flex` also carry
 is `null`** when the newest rank of that queue came from another player's client (§6.4), which
 hides losses.
 
-### 2.5 `POST /api/desktop/matches` (auth, 30 / hour / device, 120 / hour / IP, body ≤ 2 MB)
+### 2.5 `POST /api/desktop/matches` (auth, 30 / hour / device, 120 / hour / IP, body ≤ 2 MB; observed games: 60 / hour / device, 240 / hour / IP)
 
 ```jsonc
 {
   "schema": 1,
   "matchId": "EUW1_7998180573",          // `${game.platformId}_${game.gameId}`
-  "uploader": "5c8a…",                    // raw PUUID of the signed-in account; a participant
+  "uploader": "5c8a…",                    // raw PUUID of the signed-in account (v1.3: a participant, or not: observed)
   "capturedAt": 1791450000000,            // epoch ms the app read the game from the client
   "app": "0.2.7",
   "game": {                               // LCU GET /lol-match-history/v1/games/{gameId}, trimmed:
@@ -257,13 +270,37 @@ Response `200`:
 
 `deferred`: accepted but not published yet (§4.2); the desktop marks the item done, core finishes
 it. Re-sending the same match from the same device is idempotent (`duplicate`, with the `lp` answer
-of the first send).
+of the first send), with one exception (v1.3): when core gave up on a `deferred` game (`expired`),
+or the game is still `deferred` 20 minutes after it was received (a restart lost its retries), the
+new send is processed from scratch.
+
+**Observed games (v1.3).** An `uploader` that is not one of the participants is the account signed
+in to the client that read the game, which it did not play: a match the app opened, a game from
+another player's history. It must be linked to the device by its raw PUUID (a client link, §2.3:
+the game carries no identity to bridge a Riot ID link with; else 403 `E_NOT_LINKED`). It is
+validated and published like any upload (§4), counts toward the device's trust like any upload
+Riot confirms, never carries an LP change (`lp` is `rejected` when one is sent, `none` otherwise)
+and never moves the uploader's `lastDesktopSyncAt`. It has its own rate limits, so it never holds
+back a game the player just played; the bucket is chosen by reading `uploader` and
+`game.participantIdentities` before validation.
 
 Core notes: `deferred` is also the answer when Riot is rate limiting or unavailable during the
 upload, not only when match-v5 has no game yet. 422 `E_INVALID_LP` is reserved for an `lp` that is
 neither an object nor `null`; a malformed or implausible LP object only makes `lp: "rejected"`. An
 `uploader` that is not one of the participants is a 422 `E_INVALID_MATCH` (linking would not fix it);
 403 `E_NOT_LINKED` means a participant uploader that this device has no link for.
+
+### 2.6 `POST /api/desktop/matches/known` (auth, 60 / hour / device; v1.3)
+
+Which of these games core already holds, so the app sends only the others.
+
+```json
+{ "matchIds": ["EUW1_7998180573", "EUW1_7998180574"] }
+```
+
+→ `200 { "known": ["EUW1_7998180573"] }`. 1–100 distinct match ids (`/^[A-Z0-9]+_[0-9]+$/`), else 422
+`E_VALIDATION_ERROR`. Known: a `match_source` row (stored, or being stored) or rows in ClickHouse.
+No Riot call. 503 `E_UPLOADS_PAUSED` while `observed` is off.
 
 ## 3. Identity mapping (core)
 
@@ -292,7 +329,8 @@ the other one becomes `conflict`; a `verified` alias learned from match-v5 overw
   PUUIDs; each has an identity; champion ids known to the bundled champion list; stats numeric
   and within plausible ranges (kills, deaths, assists ≤ 100; CS ≤ 2000; gold ≤ 150000; damage ≤
   500000); team kills consistent with participant kills; exactly one winning team (maps 11/12).
-- `uploader` is a participant and is linked to the device (else 403 `E_NOT_LINKED`).
+- `uploader` is linked to the device (else 403 `E_NOT_LINKED`). Up to v1.2 it also had to be a
+  participant; since v1.3 a non-participant makes the upload an observed game (§2.5).
 - Size ≤ 2 MB.
 
 ### 4.2 Publication policy
@@ -313,8 +351,8 @@ completeness jsonb, first_device_id, created_at, verified_at)` is the single wri
   verified`) with the desktop's timeline (saves the timeline call; Riot's timeline if the upload
   has none), learn every alias, compare with the upload (champions, K/D/A, result, duration) and
   count the device verified or mismatched. Not available yet (404) → `deferred`: retried by core
-  2, 5 and 15 minutes later (in-process timer, best effort); after that the normal web sync picks
-  the match up.
+  1, 3, 6 and 15 minutes later (v1.3; before: 2, 5, 15) (in-process timer, best effort); after
+  that the app's second send (§5.3) or the normal web sync picks the match up.
 - A device with a mismatch is revoked; its unverified matches are marked `conflict` and hidden
   from LP display (they stay in ClickHouse until re-ingested from Riot).
 
@@ -363,24 +401,41 @@ stored one: the web shows the fresh rank without a league-v4 call.
 
 ### 5.1 When a game ends
 
-The poll loop already waits for the new game in the client's history. With publishing on and the
-signed-in account linked: fetch the full game and timeline from the client **once** (raw JSON),
-trim them to §2.5, compute the LP change from the snapshot taken when the game started and the
-one taken when LP settled (up to 150 s after), and store the payload in the local queue. Nothing
-is sent during a game.
+The poll loop already waits for the new game in the client's history (every 5 s for the first
+30 s, then slower, up to 2 min). Then: fetch the full game and timeline from the client **once**
+(raw JSON), trim them to §2.5 and queue them. A ranked game (420, 440) waits for its LP change,
+computed from the snapshot taken when the game started and the first one that moved since (read
+15, 30, 45, 75 and 150 s after the game); any other game is queued at once. Nothing is sent during
+a game.
 
-### 5.2 Local queue
+### 5.2 What else is queued (v1.3)
+
+Every finished game the app reads in full from the client for its own use (a match it opens, the
+games of a profile it scores) is trimmed from that same read and queued, without an extra client
+request: as the signed-in account's own game when it played it (no LP change), otherwise as an
+observed game. A game of its own that ended less than 10 minutes ago is left to §5.1. At sign-in
+and after each game the account's latest 20 games are compared with the queue; an eligible one of
+the last 7 days missing from it (the app was closed when it ended) is read once and queued.
+Only games younger than 7 days (§4.1) are queued.
+
+### 5.3 Local queue and sender
 
 SQLite table `uploads (match_id PK, puuid, payload BLOB deflated, state, attempts, next_at, last_error,
-created_at, sent_at)`. States: `pending`, `sent`, `dropped`. Kept 30 days after sending.
-
-### 5.3 Sender
+created_at, sent_at, kind, game_at, checked)`. `kind`: 0 just played (with its LP change), 1 the
+account's own game read from its history, 2 observed. States: `pending`, `deferred` (core said
+`deferred`: sent once more 20 minutes later, whatever it answers then), `sent`, `known` (core
+already had it), `dropped`. The payload of a row no longer pending is emptied; rows are kept 30
+days.
 
 One task, woken by an enqueue, by app start when `pending` items exist, or by its own timer; it
-never polls an empty queue and never sends while a game is running. Backoff per item:
-1 min, 5 min, 15 min, 1 h, 6 h, 24 h; dropped after 8 attempts. One request at a time.
-A 503 / 429 pauses the whole queue for `Retry-After`. Offline = connect errors: the queue waits for
-the next game end or app start.
+never polls an empty queue and never sends while a game is running. Kinds go in order: 0, then 1,
+then 2. Before sending kinds 1 and 2 (core ≥ v1.3), it asks `POST /matches/known` about up to 100
+of them at once and sends only the unknown ones. Kinds 1 and 2 keep under core's limits on their
+own (15 and 40 per hour). The stored body is sent as it is, `Content-Encoding: deflate`, when core
+lists that encoding. Backoff per item: 1 min, 5 min, 15 min, 1 h, 6 h, 24 h; dropped after 8
+attempts. One request at a time. A 503 / 429 pauses the whole queue for `Retry-After` (kinds 1
+and 2 only, when it answered one of them). Offline = connect errors: the queue waits for the next
+game end or app start.
 
 ### 5.4 Onboarding
 
@@ -394,7 +449,7 @@ Whenever the desktop app reads a player from the League client (a profile it ope
 card, the allies of a champ select, the ten players of a game, the signed-in account), it sends
 core what the client showed: identity, ranks, champion mastery. Core uses it to keep web
 profiles fresh **instead of** league-v4 / champion-mastery-v4 calls. Match histories of other
-players are never read for this and never sent; finished games stay on §2.5.
+players are never read for this; the finished games the app reads anyway go through §2.5.
 
 ### 6.1 `POST /api/desktop/players` (auth; 60 requests and 1500 players / hour / device, 240 requests / hour / IP; body ≤ 256 KB)
 

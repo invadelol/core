@@ -4,7 +4,7 @@ export type AttemptResult = 'done' | 'retry'
 
 /**
  * In-process, best-effort retries for games Riot has not published yet
- * (docs/desktop-sync.md §4.2: "retried by core 2, 5 and 15 minutes later").
+ * (docs/desktop-sync.md §4.2: "retried by core 1, 3, 6 and 15 minutes later").
  *
  * Deliberately not a queue: a restart forgets pending retries, and that is
  * acceptable because the normal web sync picks every game up eventually.
@@ -14,7 +14,7 @@ export class RetryScheduler {
   private pending = new Map<string, NodeJS.Timeout>()
 
   /** Offsets from scheduling, in ms. */
-  constructor(public offsets: number[] = [2, 5, 15].map((minutes) => minutes * 60_000)) {}
+  constructor(public offsets: number[] = [1, 3, 6, 15].map((minutes) => minutes * 60_000)) {}
 
   /**
    * Runs `attempt` at each offset until it reports `done`; `giveUp` runs
