@@ -93,12 +93,12 @@ export const HOME_GAMES: Array<{ game: MatchSummary; lp: number | null }> = [
   { game: game(CHAMPS.sejuani, false, [2, 6, 9], 30.4, 4.9, 7, 96, 440), lp: -14 },
 ]
 
-function rank(tier: string, division: string, lp: number, wins: number, losses: number) {
+function rankOf(tier: string, division: string, lp: number, wins: number, losses: number) {
   return { tier, division, lp, wins, losses, provisional: false, previous: 'PLATINUM' }
 }
 
-export const SOLO = rank('EMERALD', 'II', 64, 61, 52)
-export const FLEX = rank('PLATINUM', 'I', 12, 14, 11)
+export const SOLO = rankOf('EMERALD', 'II', 64, 61, 52)
+export const FLEX = rankOf('PLATINUM', 'I', 12, 14, 11)
 
 /** Continuous ladder value of a rank (Iron IV 0 LP = 0, +100 a division). */
 const TIERS = ['IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'EMERALD', 'DIAMOND']
@@ -152,15 +152,41 @@ export const CARD: PlayerCard = {
     seconds: 20 * 29 * 60,
     results: HOME_GAMES.map((g) => g.game.win),
     streak: 1,
-    lanes: [['JUNGLE', 18], ['TOP', 2]],
+    lanes: [
+      ['JUNGLE', 18],
+      ['TOP', 2],
+    ],
     champions: [
-      { championId: CHAMPS.leeSin, games: 12, wins: 9, kills: 104, deaths: 38, assists: 121, cs: 2210, seconds: 12 * 29 * 60 },
-      { championId: CHAMPS.vi, games: 5, wins: 2, kills: 31, deaths: 27, assists: 49, cs: 890, seconds: 5 * 30 * 60 },
+      {
+        championId: CHAMPS.leeSin,
+        games: 12,
+        wins: 9,
+        kills: 104,
+        deaths: 38,
+        assists: 121,
+        cs: 2210,
+        seconds: 12 * 29 * 60,
+      },
+      {
+        championId: CHAMPS.vi,
+        games: 5,
+        wins: 2,
+        kills: 31,
+        deaths: 27,
+        assists: 49,
+        cs: 890,
+        seconds: 5 * 30 * 60,
+      },
     ],
     ranked: 15,
   },
   mastery: [
-    { championId: CHAMPS.leeSin, championLevel: 38, championPoints: 412_000, lastPlayTime: DEMO.now },
+    {
+      championId: CHAMPS.leeSin,
+      championLevel: 38,
+      championPoints: 412_000,
+      lastPlayTime: DEMO.now,
+    },
     { championId: CHAMPS.vi, championLevel: 21, championPoints: 188_000, lastPlayTime: DEMO.now },
   ],
   offline: false,
@@ -182,11 +208,51 @@ export const PERF = {
   losses: 8,
   against: 'vs Diamond · Jungle',
   metrics: [
-    { label: 'CS/min', value: '6.1', gap: '+0.4', tone: 'up', base: 5.7, span: 2, values: [5.4, 5.9, 6.2, 5.6, 6.4, 6.0, 6.6, 5.8, 6.3, 6.1] },
-    { label: 'KP', value: '71%', gap: '+9', tone: 'up', base: 62, span: 20, values: [64, 72, 68, 75, 61, 70, 78, 66, 73, 71] },
-    { label: 'Vision/min', value: '1.32', gap: '+0.18', tone: 'up', base: 1.14, span: 0.6, values: [1.1, 1.3, 1.2, 1.4, 1.25, 1.36, 1.3, 1.42, 1.28, 1.32] },
-    { label: 'KDA', value: '4.20', gap: '+1.10', tone: 'up', base: 3.1, span: 3, values: [3.1, 5.2, 3.8, 4.4, 2.6, 4.8, 5.5, 3.4, 4.6, 4.2] },
-    { label: 'Gold/min', value: '431', gap: '−11', tone: '', base: 442, span: 60, values: [418, 440, 425, 452, 410, 436, 448, 422, 438, 431] },
+    {
+      label: 'CS/min',
+      value: '6.1',
+      gap: '+0.4',
+      tone: 'up',
+      base: 5.7,
+      span: 2,
+      values: [5.4, 5.9, 6.2, 5.6, 6.4, 6.0, 6.6, 5.8, 6.3, 6.1],
+    },
+    {
+      label: 'KP',
+      value: '71%',
+      gap: '+9',
+      tone: 'up',
+      base: 62,
+      span: 20,
+      values: [64, 72, 68, 75, 61, 70, 78, 66, 73, 71],
+    },
+    {
+      label: 'Vision/min',
+      value: '1.32',
+      gap: '+0.18',
+      tone: 'up',
+      base: 1.14,
+      span: 0.6,
+      values: [1.1, 1.3, 1.2, 1.4, 1.25, 1.36, 1.3, 1.42, 1.28, 1.32],
+    },
+    {
+      label: 'KDA',
+      value: '4.20',
+      gap: '+1.10',
+      tone: 'up',
+      base: 3.1,
+      span: 3,
+      values: [3.1, 5.2, 3.8, 4.4, 2.6, 4.8, 5.5, 3.4, 4.6, 4.2],
+    },
+    {
+      label: 'Gold/min',
+      value: '431',
+      gap: '−11',
+      tone: '',
+      base: 442,
+      span: 60,
+      values: [418, 440, 425, 452, 410, 436, 448, 422, 438, 431],
+    },
   ],
 }
 
@@ -200,8 +266,32 @@ export const CHAMPION_ROWS = [
 
 /** Clips, as Recordings files them: the frames are stills of Riot's own gameplay footage. */
 export const CLIPS = [
-  { title: 'Triple kill', meta: 'at 8:00', length: '0:24', img: '/landing/clip-kill.webp', kind: 'kill' },
-  { title: 'Baron', meta: 'Objective · at 15:00', length: '0:33', img: '/landing/clip-baron.webp', kind: 'objective' },
-  { title: 'Highlight', meta: 'Saved · at 22:00', length: '0:42', img: '/landing/clip-saved.webp', kind: 'saved' },
-  { title: 'Double kill', meta: 'at 26:10', length: '0:24', img: '/landing/clip-death.webp', kind: 'kill' },
+  {
+    title: 'Triple kill',
+    meta: 'at 8:00',
+    length: '0:24',
+    img: '/landing/clip-kill.webp',
+    kind: 'kill',
+  },
+  {
+    title: 'Baron',
+    meta: 'Objective · at 15:00',
+    length: '0:33',
+    img: '/landing/clip-baron.webp',
+    kind: 'objective',
+  },
+  {
+    title: 'Highlight',
+    meta: 'Saved · at 22:00',
+    length: '0:42',
+    img: '/landing/clip-saved.webp',
+    kind: 'saved',
+  },
+  {
+    title: 'Double kill',
+    meta: 'at 26:10',
+    length: '0:24',
+    img: '/landing/clip-death.webp',
+    kind: 'kill',
+  },
 ] as const

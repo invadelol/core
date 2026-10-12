@@ -25,7 +25,9 @@ const signed = (x: number) => `${x < 0 ? '−' : '+'}${(Math.abs(x) * 100).toFix
         <span>
           <b>{{ c.name }}</b>
           <small
-            >{{ c.games }} games<i v-if="c.mine"><Icon name="user" :size="10" />{{ c.mine }}</i></small
+            >{{ c.games }} games<i v-if="c.mine"
+              ><Icon name="user" :size="10" />{{ c.mine }}</i
+            ></small
           >
         </span>
         <em :class="{ ahead: c.edge >= 0.01 }">{{ signed(c.edge) }}</em>

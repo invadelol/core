@@ -43,7 +43,9 @@ const LANGUAGES = [
         <p class="ap-kicker">And the rest</p>
         <h2>Everything around your games</h2>
       </div>
-      <p>Builds for every champion, the lobby read for you, favorites, and the app in your language.</p>
+      <p>
+        Builds for every champion, the lobby read for you, favorites, and the app in your language.
+      </p>
     </header>
 
     <div class="more">
@@ -58,14 +60,30 @@ const LANGUAGES = [
         </div>
         <table class="tl">
           <thead>
-            <tr><th>Champion</th><th>Tier</th><th>Win</th><th>Pick</th><th>Ban</th></tr>
+            <tr>
+              <th>Champion</th>
+              <th>Tier</th>
+              <th>Win</th>
+              <th>Pick</th>
+              <th>Ban</th>
+            </tr>
           </thead>
           <tbody>
             <tr v-for="c in TIERS" :key="c.id">
               <td>
-                <span class="tl-champ"><img :src="assetUrl('champion', c.id)" alt="" width="24" height="24" loading="lazy" />{{ c.name }}</span>
+                <span class="tl-champ"
+                  ><img
+                    :src="assetUrl('champion', c.id)"
+                    alt=""
+                    width="24"
+                    height="24"
+                    loading="lazy"
+                  />{{ c.name }}</span
+                >
               </td>
-              <td><b class="tl-tier" :class="c.tier">{{ c.tier }}</b></td>
+              <td>
+                <b class="tl-tier" :class="c.tier">{{ c.tier }}</b>
+              </td>
               <td>{{ c.win }}</td>
               <td>{{ c.pick }}</td>
               <td>{{ c.ban }}</td>
@@ -77,7 +95,9 @@ const LANGUAGES = [
       <article v-reveal class="card iv-panel">
         <div class="card-copy">
           <h3>Live game</h3>
-          <p>Every player's rank, form and record on their champion, in champ select and in game.</p>
+          <p>
+            Every player's rank, form and record on their champion, in champ select and in game.
+          </p>
         </div>
         <ul class="scout">
           <li v-for="p in SCOUT" :key="p.id">
@@ -94,12 +114,23 @@ const LANGUAGES = [
       <article v-reveal class="card iv-panel">
         <div class="card-copy">
           <h3>Favorites</h3>
-          <p>Star a champion, a build, a rune page, a matchup, a game or a clip, and find it on Home.</p>
+          <p>
+            Star a champion, a build, a rune page, a matchup, a game or a clip, and find it on Home.
+          </p>
         </div>
         <ul class="favs">
-          <li><RoleIcon lane="JUNGLE" :size="16" /><span>Lee Sin · Jungle build</span><Icon name="star" :size="14" /></li>
-          <li><Icon name="swords" :size="16" /><span>Lee Sin into Viego</span><Icon name="star" :size="14" /></li>
-          <li><Icon name="film" :size="16" /><span>Triple kill · 0:24</span><Icon name="star" :size="14" /></li>
+          <li>
+            <RoleIcon lane="JUNGLE" :size="16" /><span>Lee Sin · Jungle build</span
+            ><Icon name="star" :size="14" />
+          </li>
+          <li>
+            <Icon name="swords" :size="16" /><span>Lee Sin into Viego</span
+            ><Icon name="star" :size="14" />
+          </li>
+          <li>
+            <Icon name="film" :size="16" /><span>Triple kill · 0:24</span
+            ><Icon name="star" :size="14" />
+          </li>
         </ul>
       </article>
 
@@ -274,7 +305,7 @@ const LANGUAGES = [
   gap: 10px;
 }
 
-.scout img {
+.scout li > img {
   width: 28px;
   height: 28px;
   border-radius: var(--r-sm);

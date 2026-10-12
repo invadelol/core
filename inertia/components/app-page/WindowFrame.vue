@@ -12,7 +12,9 @@ defineProps<{ title?: string; url?: string; light?: boolean }>()
     <header class="wf-bar">
       <i class="wf-lights" aria-hidden="true"><b /><b /><b /></i>
       <span v-if="url" class="wf-url">
-        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 7V5.5a3.5 3.5 0 0 1 7 0V7M3.5 7h9v6.5h-9z" /></svg>
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M4.5 7V5.5a3.5 3.5 0 0 1 7 0V7M3.5 7h9v6.5h-9z" />
+        </svg>
         {{ url }}
       </span>
       <span v-else-if="title" class="wf-title">{{ title }}</span>
@@ -29,10 +31,7 @@ defineProps<{ title?: string; url?: string; light?: boolean }>()
   position: relative;
   overflow: hidden;
   color: var(--text-1);
-  background:
-    var(--grain),
-    var(--light),
-    var(--ink-1);
+  background: var(--grain), var(--light), var(--ink-1);
   border-radius: 12px;
   font-variant-numeric: tabular-nums;
 }

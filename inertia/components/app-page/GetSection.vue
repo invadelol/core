@@ -73,7 +73,11 @@ const FAQ = [
             </b>
             <small>{{ target.detail }}</small>
           </span>
-          <a :href="`/download/${target.id}`" class="iv-btn" :class="{ primary: mine === target.id }">
+          <a
+            :href="`/download/${target.id}`"
+            class="iv-btn"
+            :class="{ primary: mine === target.id }"
+          >
             <Download :size="14" />
             Download
           </a>

@@ -44,8 +44,8 @@ defineProps<{ version: string | null }>()
           <h1>Every game of League, timed, scored and clipped</h1>
           <p class="hero-lead">
             A free desktop companion for League of Legends. Objective timers and your pace while you
-            play, runes set before you lock in, a score for every game, and your best plays saved
-            as clips.
+            play, runes set before you lock in, a score for every game, and your best plays saved as
+            clips.
           </p>
           <DownloadCta />
           <p class="hero-meta">

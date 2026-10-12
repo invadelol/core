@@ -18,7 +18,13 @@ import { vReveal } from './reveal.js'
     </header>
 
     <div v-reveal class="ap-frame">
-      <Stage :w="1280" :h="720" :narrow-at="0" class="wide-only" label="Champ select with Invade's Runes and build, Draft odds and Counters overlays around the League client">
+      <Stage
+        :w="1280"
+        :h="720"
+        :narrow-at="0"
+        class="wide-only"
+        label="Champ select with Invade's Runes and build, Draft odds and Counters overlays around the League client"
+      >
         <DraftScene />
       </Stage>
       <div class="narrow-only">
@@ -30,8 +36,8 @@ import { vReveal } from './reveal.js'
       <li v-reveal>
         <b>Runes, spells and items</b>
         <p>
-          The page, spells, skill order and core items played most at the rank you pick (Emerald+
-          by default). Imported again on every change of pick, keeping your own pages when it can.
+          The page, spells, skill order and core items played most at the rank you pick (Emerald+ by
+          default). Imported again on every change of pick, keeping your own pages when it can.
         </p>
       </li>
       <li v-reveal>

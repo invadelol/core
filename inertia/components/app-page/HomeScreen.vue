@@ -43,7 +43,10 @@ const FAVORITES = [
               <span class="lbl">Ranked Solo/Duo</span>
               <span class="tierline">
                 <b class="tier">Emerald II</b>
-                <span class="lp"><b class="fig">{{ SOLO.lp }}</b><span class="unit">LP</span></span>
+                <span class="lp"
+                  ><b class="fig">{{ SOLO.lp }}</b
+                  ><span class="unit">LP</span></span
+                >
               </span>
               <small>61W 52L · 54%</small>
             </div>
@@ -52,7 +55,9 @@ const FAVORITES = [
             <TrendLine :values="LP_VALUES.slice(-18)" :height="44" area />
             <small>
               <span><b class="up">+96 LP</b> over 30 days</span>
-              <span class="changes"><em class="up">+22</em><em class="down">−16</em><em class="up">+24</em></span>
+              <span class="changes"
+                ><em class="up">+22</em><em class="down">−16</em><em class="up">+24</em></span
+              >
             </small>
           </div>
           <div class="rank-session">
@@ -95,7 +100,14 @@ const FAVORITES = [
           <div class="cards">
             <figure v-for="clip in CLIPS.slice(0, 2)" :key="clip.title" class="card">
               <span class="thumb">
-                <img :src="clip.img" alt="" width="480" height="270" loading="lazy" decoding="async" />
+                <img
+                  :src="clip.img"
+                  alt=""
+                  width="480"
+                  height="270"
+                  loading="lazy"
+                  decoding="async"
+                />
                 <span class="len">{{ clip.length }}</span>
               </span>
               <b>{{ clip.title }}</b>
@@ -143,7 +155,13 @@ const FAVORITES = [
                 <b>{{ m.value }}</b>
                 <em :class="m.tone">{{ m.gap }}</em>
                 <div class="spark">
-                  <TrendLine :values="m.values" :baseline="m.base" :span="m.span" :height="32" area />
+                  <TrendLine
+                    :values="m.values"
+                    :baseline="m.base"
+                    :span="m.span"
+                    :height="32"
+                    area
+                  />
                 </div>
               </li>
             </ul>
@@ -296,8 +314,7 @@ const FAVORITES = [
       rgb(46 194 126 / 0.03) 55%,
       transparent 80%
     ),
-    var(--sheen),
-    var(--surface-1);
+    var(--sheen), var(--surface-1);
 }
 
 .rank-id {

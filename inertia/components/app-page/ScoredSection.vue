@@ -70,7 +70,9 @@ const FACTORS = [
         <div class="list iv-root">
           <template v-if="mounted">
             <section v-for="(row, i) in rows" :key="row.day" class="day">
-              <h3 class="iv-mr-day">{{ row.day }}<span>{{ row.record }}</span></h3>
+              <h3 class="iv-mr-day">
+                {{ row.day }}<span>{{ row.record }}</span>
+              </h3>
               <MatchRow
                 :game="row.game"
                 :score="row.game.score"
@@ -98,8 +100,8 @@ const FACTORS = [
           <div>
             <h3>The Invade score</h3>
             <p>
-              Each figure of the game is compared with the nine other players, then weighted for
-              the role. MVP and ACE go to the best player of each team.
+              Each figure of the game is compared with the nine other players, then weighted for the
+              role. MVP and ACE go to the best player of each team.
             </p>
           </div>
         </div>

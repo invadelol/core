@@ -40,7 +40,12 @@ const NAV: Array<Array<{ id: string; icon: IconName; label: string; dot?: boolea
       <div class="aw-brand"><Logo :size="20" word /></div>
       <nav class="aw-nav">
         <div v-for="(group, i) in NAV" :key="i" class="aw-group">
-          <span v-for="item in group" :key="item.id" class="aw-link" :class="{ on: item.id === active }">
+          <span
+            v-for="item in group"
+            :key="item.id"
+            class="aw-link"
+            :class="{ on: item.id === active }"
+          >
             <Icon :name="item.icon" :size="17" />
             <span>{{ item.label }}</span>
           </span>
@@ -51,7 +56,9 @@ const NAV: Array<Array<{ id: string; icon: IconName; label: string; dot?: boolea
         <div class="aw-me">
           <img :src="profileIcon(DEMO.icon)" alt="" width="32" height="32" />
           <span class="aw-who">
-            <b>{{ DEMO.name }}<small>#{{ DEMO.tag }}</small></b>
+            <b
+              >{{ DEMO.name }}<small>#{{ DEMO.tag }}</small></b
+            >
             <span class="aw-rank"><RankCrest tier="EMERALD" :size="14" /><em>Emerald II</em></span>
           </span>
           <Icon name="up" :size="15" class="aw-more" />
@@ -214,7 +221,7 @@ const NAV: Array<Array<{ id: string; icon: IconName; label: string; dot?: boolea
   border-top: 1px solid var(--line);
 }
 
-.aw-me img {
+.aw-me > img {
   width: 32px;
   height: 32px;
   border-radius: var(--r-sm);
