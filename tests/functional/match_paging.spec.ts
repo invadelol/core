@@ -81,7 +81,33 @@ test.group('Match history paging', (group) => {
     assert.equal(calls.ids, 0)
   })
 
-  test('a short page is filled from Riot, three right away, then 429 with Retry-After', async ({
+  test('stored pages are never counted: a long stored history still leaves the Riot budget whole', async ({
+    client: http,
+    assert,
+  }) => {
+    const calls = world(150, 100)
+    const puuid = fakePuuid()
+    let oldest = START + 1
+    for (let i = 0; i < 10; i++) {
+      const response = await http.get(page(puuid, `before=${oldest}`))
+      response.assertStatus(200)
+      assert.isUndefined(response.header('retry-after'))
+      const games = response.body() as Array<{ gameStartMs: number }>
+      assert.lengthOf(games, 15, `stored page ${i + 1} is full`)
+      oldest = games[games.length - 1].gameStartMs
+    }
+    assert.equal(calls.ids, 0, 'ten stored pages, no Riot call')
+    for (let i = 0; i < 3; i++) {
+      const response = await http.get(page(puuid, `before=${oldest}`))
+      response.assertStatus(200)
+      const games = response.body() as Array<{ gameStartMs: number }>
+      assert.lengthOf(games, 15, `Riot page ${i + 1} is full`)
+      oldest = games[games.length - 1].gameStartMs
+    }
+    assert.equal(calls.ids, 3, 'all three Riot pages were still there')
+  })
+
+  test('a short page is filled from Riot three times, then ends quietly with Retry-After', async ({
     client: http,
     assert,
   }) => {
@@ -97,10 +123,38 @@ test.group('Match history paging', (group) => {
     }
     assert.equal(calls.ids, 3)
     const held = await http.get(page(puuid, `before=${oldest}`))
-    held.assertStatus(429)
+    held.assertStatus(200)
     held.assertHeader('retry-after', '120')
-    held.assertBodyContains({ retryAfter: 120, errors: [{ code: 'E_RATE_LIMITED' }] })
+    assert.deepEqual(held.body(), [], 'nothing more stored: an empty page, no error')
     assert.equal(calls.ids, 3, 'nothing asked from Riot while held')
+  })
+
+  test('a held page still carries the stored games before it', async ({ client: http, assert }) => {
+    const calls = world(20, 100)
+    const puuid = fakePuuid()
+    // Spend the player's Riot budget on pages older than any game (Riot answers none of them).
+    for (let i = 0; i < 3; i++) {
+      const spent = await http.get(page(puuid, `before=${START - (500 + i) * DAY}`))
+      assert.deepEqual(spent.body(), [])
+      assert.isUndefined(spent.header('retry-after'), 'the end of the history, not a hold')
+    }
+    assert.equal(calls.ids, 3)
+    const response = await http.get(page(puuid, `before=${START - 9 * DAY}`))
+    response.assertStatus(200)
+    assert.lengthOf(response.body(), 10, 'the ten stored games older than day 9')
+    response.assertHeader('retry-after', '120')
+    assert.equal(calls.ids, 3)
+  })
+
+  test("Riot's own rate limit ends the page as quietly", async ({ client: http, assert }) => {
+    world(3, 100)
+    riotApiService.client.matchV5.getIdsByPuuid = (async () => {
+      throw { status: 429, retryAfter: 15_000 }
+    }) as unknown as typeof riotApiService.client.matchV5.getIdsByPuuid
+    const response = await http.get(page(fakePuuid(), `before=${START + 1}`))
+    response.assertStatus(200)
+    response.assertHeader('retry-after', '15')
+    assert.lengthOf(response.body(), 3)
   })
 
   test('filtered and offset pages read the stored games only', async ({ client: http, assert }) => {
