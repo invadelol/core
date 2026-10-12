@@ -1,7 +1,8 @@
+import '../styles/base.css';
 /**
  * Riot's ranked crest for a tier. Small sizes use the flat mini crests bundled with the package
- * (sharp at 12–28px, offline); from 40px up the full emblem from the host (`assetUrl('rank', tier)`,
- * CommunityDragon by default), which falls back to the mini crest if it cannot load.
+ * (sharp at 12–28px, offline); from 40px up the full emblem from the host (`assetUrl('rank', tier)`),
+ * which falls back to the mini crest if it cannot load. A host without one gets the mini crest.
  */
 type __VLS_Props = {
     tier?: string | null;

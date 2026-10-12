@@ -1,4 +1,6 @@
 import type { Badge, MatchSummary, ScoreRow } from '../logic/types';
+import '../styles/base.css';
+import '../styles/primitives.css';
 /**
  * One game in one line. The result is the row's left edge and tint, nothing else; figures stay
  * white. The whole row toggles the detail, which the parent renders right below it. Opponent,

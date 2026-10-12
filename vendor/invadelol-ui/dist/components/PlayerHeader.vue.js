@@ -1,9 +1,15 @@
+import '../styles/base.css';
+import '../styles/primitives.css';
+import '../styles/profile.css';
 import { defineComponent as x, computed as u, openBlock as t, createElementBlock as o, createCommentVNode as c, createElementVNode as l, unref as s, toDisplayString as a, createVNode as h, createTextVNode as p, Fragment as k, renderList as z, normalizeClass as N, normalizeStyle as S } from "vue";
 import { useInvadeUi as C, useFormat as I } from "../context.js";
 import { tierColor as U, rankLabel as y, count as V } from "../logic/labels.js";
 import D from "./Icon.vue.js";
 import F from "./RankCrest.vue.js";
 /* empty css               */
+/* empty css                 */
+/* empty css                       */
+/* empty css                    */
 const P = { class: "iv-pf-head" }, B = ["src"], E = ["src"], M = { class: "iv-pf-who" }, Y = { class: "iv-pf-name" }, $ = {
   key: 0,
   class: "iv-badge brand"
@@ -19,7 +25,7 @@ const P = { class: "iv-pf-head" }, B = ["src"], E = ["src"], M = { class: "iv-pf
 }, A = {
   key: 2,
   class: "iv-pf-lp"
-}, J = { class: "iv-unit" }, ae = /* @__PURE__ */ x({
+}, J = { class: "iv-unit" }, oe = /* @__PURE__ */ x({
   __name: "PlayerHeader",
   props: {
     profile: {},
@@ -106,5 +112,5 @@ const P = { class: "iv-pf-head" }, B = ["src"], E = ["src"], M = { class: "iv-pf
   }
 });
 export {
-  ae as default
+  oe as default
 };

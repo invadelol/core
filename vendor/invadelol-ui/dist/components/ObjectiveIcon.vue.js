@@ -1,5 +1,7 @@
+import '../styles/base.css';
 import { defineComponent as e, openBlock as h, createElementBlock as n } from "vue";
-const d = ["width", "height", "innerHTML"], c = /* @__PURE__ */ e({
+/* empty css                 */
+const d = ["width", "height", "innerHTML"], p = /* @__PURE__ */ e({
   __name: "ObjectiveIcon",
   props: {
     name: {},
@@ -30,5 +32,5 @@ const d = ["width", "height", "innerHTML"], c = /* @__PURE__ */ e({
   }
 });
 export {
-  c as default
+  p as default
 };

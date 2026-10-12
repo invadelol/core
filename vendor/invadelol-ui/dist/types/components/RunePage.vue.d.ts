@@ -1,3 +1,4 @@
+import '../styles/base.css';
 /** A rune page: `p`/`s` start with the tree id followed by the picked runes, `m` = stat shards. */
 type __VLS_Props = {
     page: {

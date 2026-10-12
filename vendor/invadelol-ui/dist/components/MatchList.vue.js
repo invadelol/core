@@ -1,3 +1,6 @@
+import '../styles/base.css';
+import '../styles/primitives.css';
+import '../styles/profile.css';
 import { defineComponent as ie, useSlots as ue, useModel as T, computed as w, shallowRef as V, watch as re, nextTick as ce, openBlock as o, createElementBlock as n, createElementVNode as r, Fragment as k, renderList as q, normalizeClass as N, createTextVNode as v, toDisplayString as i, unref as l, createCommentVNode as h, createVNode as b, withDirectives as x, vModelSelect as D, renderSlot as de, createBlock as me, mergeModels as A } from "vue";
 import { useInvadeUi as ve, useFormat as pe, useNames as he } from "../context.js";
 import { dayKey as fe } from "../logic/format.js";
@@ -8,6 +11,9 @@ import ke from "./MatchRow.vue.js";
 import be from "./MatchRowSkeleton.vue.js";
 /* empty css                      */
 import Ie from "./RoleIcon.vue.js";
+/* empty css                 */
+/* empty css                       */
+/* empty css                    */
 const we = {
   key: 0,
   class: "iv-pf-bar"
@@ -29,7 +35,7 @@ const we = {
 }, Ke = { key: 0 }, Qe = { key: 1 }, We = {
   key: 5,
   class: "iv-pf-state"
-}, Ge = { class: "iv-pf-state-actions" }, He = ["disabled"], Je = { class: "iv-mr-day" }, je = { class: "iv-mr-list" }, Xe = ["data-game"], Ye = ["disabled"], rt = /* @__PURE__ */ ie({
+}, Ge = { class: "iv-pf-state-actions" }, He = ["disabled"], Je = { class: "iv-mr-day" }, je = { class: "iv-mr-list" }, Xe = ["data-game"], Ye = ["disabled"], mt = /* @__PURE__ */ ie({
   __name: "MatchList",
   props: /* @__PURE__ */ A({
     puuid: {},
@@ -326,5 +332,5 @@ const we = {
   }
 });
 export {
-  rt as default
+  mt as default
 };

@@ -1,3 +1,5 @@
+import '../styles/base.css';
+import '../styles/primitives.css';
 /** Match rows while games load: the row's own shapes (portrait, two lines, items, score). */
 type __VLS_Props = {
     count?: number;

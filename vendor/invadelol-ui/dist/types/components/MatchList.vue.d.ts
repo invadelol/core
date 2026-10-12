@@ -1,4 +1,7 @@
 import type { MatchSummary, Position, QueueFilter, ScoreRow } from '../logic/types';
+import '../styles/base.css';
+import '../styles/primitives.css';
+import '../styles/profile.css';
 /**
  * The feed: one filter bar, one summary line of what it shows (record, KDA, form), then the
  * games grouped by day (or by champion). A row opens the host's `detail` slot right below it

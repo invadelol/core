@@ -1,3 +1,5 @@
+import '../styles/base.css';
+import '../styles/primitives.css';
 /** A toggle switch; `label` names it for assistive technology. */
 type __VLS_Props = {
     label?: string;

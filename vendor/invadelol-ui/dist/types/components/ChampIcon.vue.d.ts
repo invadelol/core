@@ -1,3 +1,4 @@
+import '../styles/base.css';
 /**
  * A champion portrait (square art), cropped slightly so Riot's baked border disappears. `level`
  * draws the small level badge bottom-right; `dim` is for bans. An unknown champion renders an

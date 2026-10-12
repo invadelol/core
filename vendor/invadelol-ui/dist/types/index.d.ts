@@ -1,12 +1,10 @@
 /**
- * `@invadelol/ui`: the views shared by the desktop app and invade.lol. Styles ship apart
- * (`@invadelol/ui/tokens.css`, `@invadelol/ui/style.css`); the model and pure logic are also
+ * `@invadelol/ui`: the views shared by the desktop app and invade.lol. Each component imports its
+ * own styles; the tokens ship apart (`@invadelol/ui/tokens.css`, `tokens-light.css`), with
+ * `@invadelol/ui/style.css` as every style in one file. The model and pure logic are also
  * available without Vue from `@invadelol/ui/logic`. Components are named after what they show;
  * where that is a model type's name (`MatchDetail`, `PlayedWith`), the view is a `…Panel`.
  */
-import './styles/base.css';
-import './styles/profile.css';
-import './styles/detail.css';
 export * from './logic';
 export { createInvadeUi, gameFavorite, provideInvadeUi, useFormat, useInvadeUi, useNames } from './context';
 export type { AssetKind, GameFavorite, InvadeUi, InvadeUiOptions, LinkTarget, NameKind } from './context';

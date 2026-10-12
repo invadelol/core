@@ -1,4 +1,7 @@
-import { defineComponent as ts, computed as p, openBlock as o, createElementBlock as n, createElementVNode as e, toDisplayString as i, unref as s, Fragment as u, renderList as h, normalizeClass as v, createCommentVNode as g, createVNode as E, createTextVNode as m, withCtx as es, normalizeStyle as ls } from "vue";
+import '../styles/base.css';
+import '../styles/primitives.css';
+import '../styles/detail.css';
+import { defineComponent as ts, computed as y, openBlock as o, createElementBlock as n, createElementVNode as e, toDisplayString as i, unref as s, Fragment as u, renderList as h, normalizeClass as v, createCommentVNode as g, createVNode as E, createTextVNode as m, withCtx as es, normalizeStyle as ls } from "vue";
 import { useInvadeUi as is, useFormat as os, useNames as ns } from "../context.js";
 import { hideBroken as b } from "../dom.js";
 import { teamsOf as as, riotId as ds, side as z } from "../logic/detail.js";
@@ -7,7 +10,10 @@ import us from "./Link.vue.js";
 import ms from "./ObjectiveIcon.vue.js";
 import _s from "./PerfDial.vue.js";
 /* empty css              */
-const bs = { class: "iv-sb-wrap" }, hs = { class: "iv-table iv-sb" }, vs = { colspan: "2" }, gs = { class: "num" }, ks = { class: "num" }, ys = { class: "num" }, ps = { class: "num" }, fs = { class: "num iv-sb-vis" }, ws = ["title"], Is = { class: "iv-sb-team" }, Ns = { colspan: "9" }, Bs = { class: "iv-sb-team-line" }, Es = {
+/* empty css                 */
+/* empty css                       */
+/* empty css                   */
+const bs = { class: "iv-sb-wrap" }, hs = { class: "iv-table iv-sb" }, vs = { colspan: "2" }, gs = { class: "num" }, ks = { class: "num" }, ps = { class: "num" }, ys = { class: "num" }, fs = { class: "num iv-sb-vis" }, ws = ["title"], Is = { class: "iv-sb-team" }, Ns = { colspan: "9" }, Bs = { class: "iv-sb-team-line" }, Es = {
   key: 0,
   class: "iv-sb-side"
 }, Ss = {
@@ -22,14 +28,14 @@ const bs = { class: "iv-sb-wrap" }, hs = { class: "iv-table iv-sb" }, vs = { col
 }, it = ["title"], ot = ["title"], nt = { key: 2 }, at = {
   key: 1,
   class: "iv-pf-dim"
-}, gt = /* @__PURE__ */ ts({
+}, yt = /* @__PURE__ */ ts({
   __name: "Scoreboard",
   props: {
     detail: {},
     puuid: {}
   },
   setup(f) {
-    const _ = f, S = is(), { t: l } = S, { compact: I, kdaRatio: G, num: V, ordinal: C, pct: N, score100: P, signedGold: R } = os(), { champIcon: D, champName: k, itemIcon: A, runeIcon: K, runeName: M, spellIcon: j, spellName: x, styleIcon: F, styleName: T } = ns(), H = p(() => _.detail.players.find((a) => a.puuid === _.puuid)), O = p(() => as(_.detail, H.value)), U = p(() => Math.max(1, ..._.detail.players.map((a) => a.damage))), W = p(() => _.detail.mapId === 11), Y = p(() => _.detail.players.some((a) => a.placement > 0));
+    const _ = f, S = is(), { t: l } = S, { compact: I, kdaRatio: G, num: V, ordinal: C, pct: N, score100: P, signedGold: R } = os(), { champIcon: D, champName: k, itemIcon: A, runeIcon: K, runeName: M, spellIcon: j, spellName: x, styleIcon: F, styleName: T } = ns(), H = y(() => _.detail.players.find((a) => a.puuid === _.puuid)), O = y(() => as(_.detail, H.value)), U = y(() => Math.max(1, ..._.detail.players.map((a) => a.damage))), W = y(() => _.detail.mapId === 11), Y = y(() => _.detail.players.some((a) => a.placement > 0));
     function q(a) {
       return [
         { id: "tower", label: l("Towers"), n: a.towers },
@@ -59,8 +65,8 @@ const bs = { class: "iv-sb-wrap" }, hs = { class: "iv-table iv-sb" }, vs = { col
             e("th", vs, i(s(l)("Player")), 1),
             e("th", gs, i(s(l)("KDA")), 1),
             e("th", ks, i(s(l)("Damage")), 1),
-            e("th", ys, i(s(l)("Gold")), 1),
-            e("th", ps, i(s(l)("CS")), 1),
+            e("th", ps, i(s(l)("Gold")), 1),
+            e("th", ys, i(s(l)("CS")), 1),
             e("th", fs, i(s(l)("Vision")), 1),
             e("th", null, i(s(l)("Items")), 1),
             e("th", {
@@ -131,8 +137,8 @@ const bs = { class: "iv-sb-wrap" }, hs = { class: "iv-table iv-sb" }, vs = { col
                 e("em", null, i(t.level), 1)
               ], 8, Ls),
               e("span", Ps, [
-                (o(!0), n(u, null, h(t.spells, (c, y) => (o(), n("img", {
-                  key: y,
+                (o(!0), n(u, null, h(t.spells, (c, p) => (o(), n("img", {
+                  key: p,
                   src: s(j)(c),
                   alt: s(x)(c),
                   title: s(x)(c),
@@ -235,17 +241,17 @@ const bs = { class: "iv-sb-wrap" }, hs = { class: "iv-table iv-sb" }, vs = { col
             ], 8, Zs),
             e("td", null, [
               e("span", st, [
-                (o(!0), n(u, null, h(t.items, (c, y) => (o(), n(u, { key: y }, [
+                (o(!0), n(u, null, h(t.items, (c, p) => (o(), n(u, { key: p }, [
                   c ? (o(), n("img", {
                     key: 0,
                     src: s(A)(c),
                     alt: "",
-                    class: v({ trinket: y === 6 }),
+                    class: v({ trinket: p === 6 }),
                     onError: d[3] || (d[3] = //@ts-ignore
                     (...B) => s(b) && s(b)(...B))
                   }, null, 42, tt)) : (o(), n("i", {
                     key: 1,
-                    class: v({ trinket: y === 6 })
+                    class: v({ trinket: p === 6 })
                   }, null, 2))
                 ], 64))), 128))
               ])
@@ -275,5 +281,5 @@ const bs = { class: "iv-sb-wrap" }, hs = { class: "iv-table iv-sb" }, vs = { col
   }
 });
 export {
-  gt as default
+  yt as default
 };

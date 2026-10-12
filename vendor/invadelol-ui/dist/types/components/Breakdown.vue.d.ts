@@ -1,4 +1,6 @@
 import type { MatchDetail, PlayerView } from '../logic/types';
+import '../styles/base.css';
+import '../styles/detail.css';
 /**
  * Every number of the game, compared. Three reads, from quickest to deepest:
  * 1. What stood out for the selected player: the few stats where they ranked best in the lobby

@@ -1,27 +1,31 @@
-import { defineComponent as i, openBlock as t, createElementBlock as a, toDisplayString as o, createCommentVNode as n, renderSlot as l } from "vue";
-const c = { class: "iv-panel" }, d = {
+import '../styles/base.css';
+import '../styles/primitives.css';
+import { defineComponent as i, openBlock as t, createElementBlock as a, toDisplayString as n, createCommentVNode as s, renderSlot as l } from "vue";
+/* empty css                 */
+/* empty css                       */
+const m = { class: "iv-panel" }, c = {
   key: 0,
   class: "iv-panel-head"
-}, m = { key: 0 }, r = {
+}, r = { key: 0 }, d = {
   key: 1,
   class: "meta"
-}, f = /* @__PURE__ */ i({
+}, y = /* @__PURE__ */ i({
   __name: "Panel",
   props: {
     title: {},
     meta: {}
   },
   setup(e) {
-    return (s, h) => (t(), a("section", c, [
-      e.title || e.meta || s.$slots.head ? (t(), a("header", d, [
-        e.title ? (t(), a("h3", m, o(e.title), 1)) : n("", !0),
-        e.meta ? (t(), a("span", r, o(e.meta), 1)) : n("", !0),
-        l(s.$slots, "head")
-      ])) : n("", !0),
-      l(s.$slots, "default")
+    return (o, h) => (t(), a("section", m, [
+      e.title || e.meta || o.$slots.head ? (t(), a("header", c, [
+        e.title ? (t(), a("h3", r, n(e.title), 1)) : s("", !0),
+        e.meta ? (t(), a("span", d, n(e.meta), 1)) : s("", !0),
+        l(o.$slots, "head")
+      ])) : s("", !0),
+      l(o.$slots, "default")
     ]));
   }
 });
 export {
-  f as default
+  y as default
 };
