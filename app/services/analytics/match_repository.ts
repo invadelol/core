@@ -103,6 +103,8 @@ const SUMMARY_PARTICIPANT_COLUMNS = [
   'true_dmg_to_champ',
   // Part of every player's score, which the match list shows on each row.
   'dmg_to_objectives',
+  // The teammates a profile lists ("Played with") are read from its games.
+  'profile_icon_id',
 ] as const
 
 const DETAIL_PARTICIPANT_COLUMNS = [
@@ -153,6 +155,7 @@ const SUMMARY_PARTICIPANT_FIELDS = {
   magicDamageDealtToChampions: 'magic_dmg_to_champ',
   trueDamageDealtToChampions: 'true_dmg_to_champ',
   damageDealtToObjectives: 'dmg_to_objectives',
+  profileIconId: 'profile_icon_id',
 }
 
 const DETAIL_PARTICIPANT_FIELDS = {

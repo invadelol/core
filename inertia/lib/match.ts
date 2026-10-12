@@ -1,54 +1,16 @@
-import type { Match, Participant, RuneSet, TimelineEntry } from './types.js'
-import { POSITION_ORDER } from './assets.js'
+import { fromCoreMatch } from '@invadelol/ui/logic'
+import type { Match, Participant } from './types.js'
+
+/** Riot's lane names (`teamPosition`), in lane order. */
+export const POSITIONS = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
 
 export function matchMinutes(match: Pick<Match, 'duration'>) {
   return Math.max((match.duration || 0) / 60, 1)
 }
 
-export function teamWon(match: Match, teamId: number) {
-  return teamId === 100 ? Boolean(match.t1Win) : Boolean(match.t2Win)
-}
-
-/** Winning side first, so the scoreboard always reads top-down. */
-export function teamOrder(match: Match) {
-  return teamWon(match, 100) ? [100, 200] : [200, 100]
-}
-
-/** Team members sorted by lane, so both sides line up row for row. */
-export function teamMembers(match: Match, teamId: number) {
-  return match.participants
-    .filter((p) => p.teamId === teamId)
-    .sort((a, b) => {
-      const ai = POSITION_ORDER.indexOf(a.position)
-      const bi = POSITION_ORDER.indexOf(b.position)
-      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
-    })
-}
-
-export function objectives(match: Match, teamId: number) {
-  const blue = teamId === 100
-  return {
-    towers: blue ? match.t1Towers : match.t2Towers,
-    inhibs: blue ? match.t1Inhibs : match.t2Inhibs,
-    dragons: blue ? match.t1Dragons : match.t2Dragons,
-    barons: blue ? match.t1Barons : match.t2Barons,
-    heralds: blue ? match.t1Heralds : match.t2Heralds,
-  }
-}
-
-/** Champions each side removed from the draft, in ban order. */
-export function bansOf(match: Match, teamId: number): number[] {
-  const list = teamId === 100 ? match.t1Bans : match.t2Bans
-  return (list ?? []).filter((id) => id > 0)
-}
-
-export function hasDraft(match: Match) {
-  return bansOf(match, 100).length > 0 || bansOf(match, 200).length > 0
-}
-
 /** Modes where Riot records no lane, so role-based UI has to stand down. */
-export function isLanedMode(match: Match) {
-  return match.participants.some((p) => POSITION_ORDER.includes(p.position))
+function isLanedMode(match: Match) {
+  return match.participants.some((p) => POSITIONS.includes(p.position))
 }
 
 export interface TeamTotals {
@@ -132,14 +94,6 @@ export function goldShare(p: Participant, totals: Record<number, TeamTotals>) {
 export const SCORE_CATEGORIES = ['fighting', 'damage', 'farming', 'vision', 'objectives'] as const
 export type ScoreCategory = (typeof SCORE_CATEGORIES)[number]
 
-export const SCORE_CATEGORY_LABEL: Record<ScoreCategory, string> = {
-  fighting: 'Fighting',
-  damage: 'Damage',
-  farming: 'Farming',
-  vision: 'Vision',
-  objectives: 'Objectives',
-}
-
 type ScoreMetric =
   | 'kda'
   | 'kp'
@@ -174,7 +128,7 @@ const ROLE_WEIGHTS: Record<string, Record<ScoreCategory, number>> = {
 const MIN_SCORED_SECONDS = 300
 
 /** A game that ended before five minutes: no result worth reading, no score. */
-export function isRemake(match: Pick<Match, 'duration'>) {
+function isRemake(match: Pick<Match, 'duration'>) {
   return (match.duration || 0) < MIN_SCORED_SECONDS
 }
 
@@ -292,111 +246,48 @@ export function scoreLobby(match: Match): Record<string, PlayerScore> {
 }
 
 /** Every player's overall score in one lobby, 0–100. Empty for a remake. */
-export function lobbyScores(match: Match): Record<string, number> {
+function lobbyScores(match: Match): Record<string, number> {
   const out: Record<string, number> = {}
   for (const [puuid, entry] of Object.entries(scoreLobby(match))) out[puuid] = entry.score
   return out
 }
 
-export interface LobbyRanking {
-  /** 0–100, see scoreLobby. Empty for a remake. */
-  score: Record<string, number>
-  /** 1–10, best first. */
-  rank: Record<string, number>
-  mvpPuuid: string | null
-  acePuuid: string | null
-}
-
-export function rankLobby(match: Match): LobbyRanking {
-  const score = lobbyScores(match)
-  const scored = match.participants.filter((p) => score[p.puuid] !== undefined)
-  const sorted = [...scored].sort((a, b) => score[b.puuid] - score[a.puuid])
-
-  const rank: Record<string, number> = {}
-  sorted.forEach((p, index) => (rank[p.puuid] = index + 1))
-
-  const winningTeam = teamWon(match, 100) ? 100 : 200
-  return {
-    score,
-    rank,
-    mvpPuuid: sorted.find((p) => p.teamId === winningTeam)?.puuid ?? null,
-    acePuuid: sorted.find((p) => p.teamId !== winningTeam)?.puuid ?? null,
-  }
-}
-
 /* ── Earned badges ────────────────────────────────────────────────
 
    What the data says a player did best in one game, as the desktop app
-   names it. Only what the list payload can prove: no first blood or
-   multikills, which need the timeline's events. Rarest first; a row
-   shows two at most. */
-
-export interface Badge {
-  key: string
-  label: string
-  tip: string
-}
+   names it (the shared views label them). Only what the list payload can
+   prove; first blood comes with the timeline's events. */
 
 const BADGES: Array<{
   key: string
-  label: string
-  tip: string
   read: (p: Participant) => number | undefined
   /** Below this the "most" is not worth a badge (an ARAM's vision score). */
   floor?: number
 }> = [
-  {
-    key: 'carry_damage',
-    label: 'Most damage',
-    tip: 'Most damage to champions in the game',
-    read: (p) => p.totalDamageDealtToChampions,
-  },
-  {
-    key: 'objectives',
-    label: 'Objectives',
-    tip: 'Most damage to objectives in the game',
-    read: (p) => p.damageDealtToObjectives,
-  },
-  {
-    key: 'vision',
-    label: 'Best vision',
-    tip: 'Highest vision score in the game',
-    read: (p) => p.visionScore,
-    floor: 10,
-  },
-  {
-    key: 'tank',
-    label: 'Most tanked',
-    tip: 'Most damage taken in the game',
-    read: (p) => p.damageTaken,
-  },
+  { key: 'carry_damage', read: (p) => p.totalDamageDealtToChampions },
+  { key: 'objectives', read: (p) => p.damageDealtToObjectives },
+  { key: 'vision', read: (p) => p.visionScore, floor: 10 },
+  { key: 'tank', read: (p) => p.damageTaken },
 ]
 
-const DEATHLESS: Badge = {
-  key: 'deathless',
-  label: 'Deathless',
-  tip: 'No deaths in a game of 15 minutes or more',
-}
-
-export function earnedBadges(match: Match, p: Participant): Badge[] {
+/** Badge keys a player earned in a game: the most of a stat, or no deaths in 15 minutes or more. */
+function earnedBadges(match: Match, p: Participant): string[] {
   if (isRemake(match)) return []
-  const earned: Badge[] = []
+  const earned: string[] = []
   for (const badge of BADGES) {
     const mine = badge.read(p)
     if (mine !== undefined && mine !== null && mine > (badge.floor ?? 0)) {
       const best = Math.max(...match.participants.map((o) => badge.read(o) ?? 0))
-      if (mine >= best) earned.push({ key: badge.key, label: badge.label, tip: badge.tip })
+      if (mine >= best) earned.push(badge.key)
     }
-    /* Deathless ranks just after the carry badge, before the support ones. */
-    if (badge.key === 'carry_damage' && p.deaths === 0 && (match.duration || 0) >= 900)
-      earned.push(DEATHLESS)
   }
+  if (p.deaths === 0 && (match.duration || 0) >= 900) earned.push('deathless')
   return earned
 }
 
 /** The enemy in the same lane, falling back to the mirrored slot in modes
  *  where Riot records no position at all. */
-export function laneOpponent(match: Match, p: Participant | undefined) {
+function laneOpponent(match: Match, p: Participant | undefined) {
   if (!p) return undefined
   if (p.position) {
     const sameRole = match.participants.find(
@@ -410,156 +301,13 @@ export function laneOpponent(match: Match, p: Participant | undefined) {
   return theirs[index] ?? theirs[0]
 }
 
-/* ── Timeline ──────────────────────────────────────────────────── */
-
-/** Timeline frames grouped by player and ordered in time. */
-export function indexTimeline(match: Match | null | undefined) {
-  const byPuuid: Record<string, TimelineEntry[]> = {}
-  for (const entry of match?.timeline ?? []) {
-    const key = entry.puuid || String(entry.participantId)
-    ;(byPuuid[key] ||= []).push(entry)
-  }
-  for (const frames of Object.values(byPuuid)) frames.sort((a, b) => a.frameMs - b.frameMs)
-  return byPuuid
-}
-
-/** The frame a player was in at (or just before) a point in time. */
-export function frameAt(frames: TimelineEntry[], ms: number) {
-  let found: TimelineEntry | undefined
-  for (const frame of frames) {
-    if (frame.frameMs > ms) break
-    found = frame
-  }
-  return found ?? frames[0]
-}
-
 /**
- * The classic lane read: how far ahead or behind a player was at a given
- * minute. Everything needed for it was already in the timeline and never
- * shown anywhere in the app.
+ * A stored match as the shared views read it (`@invadelol/ui`), with the site's own scores and
+ * badges: the lobby's ranks, MVP and ACE follow from the scores.
  */
-export interface LaneDiff {
-  minute: number
-  gold: number
-  cs: number
-  xp: number
-  complete: boolean
-}
-
-export function laneDiff(
-  mine: TimelineEntry[],
-  theirs: TimelineEntry[],
-  minute: number
-): LaneDiff | null {
-  if (!mine.length || !theirs.length) return null
-  const ms = minute * 60_000
-  const a = frameAt(mine, ms)
-  const b = frameAt(theirs, ms)
-  if (!a || !b) return null
-  const played = Math.max(mine[mine.length - 1]?.frameMs ?? 0, 0)
-  return {
-    minute,
-    gold: (a.goldTotal || 0) - (b.goldTotal || 0),
-    cs: (a.cs || 0) + (a.jungleCs || 0) - ((b.cs || 0) + (b.jungleCs || 0)),
-    xp: (a.xp || 0) - (b.xp || 0),
-    complete: played >= ms,
-  }
-}
-
-/** Total gold per side at each timeline frame, plus the running lead. */
-export function teamGoldSeries(match: Match) {
-  const frames = match.timeline ?? []
-  if (!frames.length) {
-    return {
-      times: [] as number[],
-      blue: [] as number[],
-      red: [] as number[],
-      diff: [] as number[],
-    }
-  }
-
-  const byTime = new Map<number, { blue: number; red: number }>()
-  for (const entry of frames) {
-    const bucket = byTime.get(entry.frameMs) ?? { blue: 0, red: 0 }
-    if (entry.teamId === 100) bucket.blue += entry.goldTotal || 0
-    else bucket.red += entry.goldTotal || 0
-    byTime.set(entry.frameMs, bucket)
-  }
-
-  const times = [...byTime.keys()].sort((a, b) => a - b)
-  const blue = times.map((t) => byTime.get(t)!.blue)
-  const red = times.map((t) => byTime.get(t)!.red)
-  return { times, blue, red, diff: times.map((_, i) => blue[i] - red[i]) }
-}
-
-export function runeSet(frames: TimelineEntry[], p: Participant | undefined): RuneSet {
-  const earliest = frames[0]
-  if (earliest?.perks?.keystone) {
-    return {
-      keystone: earliest.perks.keystone,
-      primaryStyle: earliest.perks.primaryStyle,
-      secondaryStyle: earliest.perks.secondaryStyle,
-      runes: (earliest.perks.runes ?? []).filter((r) => r > 0),
-      statPerks: earliest.perks.statPerks || { offense: 0, flex: 0, defense: 0 },
-    }
-  }
-  return {
-    keystone: p?.perks?.keystone || 0,
-    primaryStyle: p?.perks?.primary || 0,
-    secondaryStyle: p?.perks?.sub || 0,
-    runes: [],
-    statPerks: { offense: 0, flex: 0, defense: 0 },
-  }
-}
-
-export function skillOrderOf(frames: TimelineEntry[]) {
-  return frames.find((f) => Array.isArray(f.skillOrder) && f.skillOrder.length)?.skillOrder ?? []
-}
-
-/** Q/W/E/R × 18 levels, each cell holding the level the point was spent at. */
-export function skillMatrix(skillOrder: number[]) {
-  const keys = ['Q', 'W', 'E', 'R'] as const
-  const matrix: Record<(typeof keys)[number], Array<number | null>> = {
-    Q: Array(18).fill(null),
-    W: Array(18).fill(null),
-    E: Array(18).fill(null),
-    R: Array(18).fill(null),
-  }
-  skillOrder.forEach((slot, index) => {
-    const level = index + 1
-    const key = keys[slot - 1]
-    if (!key || level > 18) return
-    matrix[key][level - 1] = level
+export function detailOf(match: Match) {
+  return fromCoreMatch(match, {
+    scores: lobbyScores(match),
+    badges: Object.fromEntries(match.participants.map((p) => [p.puuid, earnedBadges(match, p)])),
   })
-  return matrix
-}
-
-/** The order the first three points were spent, e.g. "Q → E → W". */
-export function skillPriority(skillOrder: number[]) {
-  const keys = ['Q', 'W', 'E', 'R']
-  const seen: string[] = []
-  for (const slot of skillOrder) {
-    const key = keys[slot - 1]
-    if (key && key !== 'R' && !seen.includes(key)) seen.push(key)
-    if (seen.length === 3) break
-  }
-  return seen
-}
-
-export function totalPings(p: Participant) {
-  return (
-    (p.allInPings || 0) +
-    (p.assistPings || 0) +
-    (p.commandPings || 0) +
-    (p.dangerPings || 0) +
-    (p.enemyMissingPings || 0) +
-    (p.enemyVisionPings || 0) +
-    (p.getBackPings || 0) +
-    (p.needVisionPings || 0) +
-    (p.onMyWayPings || 0) +
-    (p.pushPings || 0) +
-    (p.visionClearedPings || 0) +
-    (p.baitPings || 0) +
-    (p.holdPings || 0)
-  )
 }

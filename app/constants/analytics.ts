@@ -1,7 +1,7 @@
-import { DEFAULT_MATCH_COUNT, STATS_WINDOW } from '#config/constants'
+import { DEFAULT_MATCH_COUNT } from '#config/constants'
 
 /**
- * The six independent requests a profile page makes, defined once.
+ * The independent requests a profile page makes, defined once.
  *
  * The page renders each panel the moment its own request lands, so these stay
  * separate rather than being merged into one response that can only be as fast
@@ -15,11 +15,10 @@ import { DEFAULT_MATCH_COUNT, STATS_WINDOW } from '#config/constants'
  */
 export const ANALYTICS_PANELS = [
   { key: 'matches', path: `matches?count=${DEFAULT_MATCH_COUNT}&view=summary` },
-  { key: 'stats', path: `stats?count=${STATS_WINDOW}` },
   { key: 'ranks', path: 'ranks' },
-  { key: 'champions', path: 'champions?count=100' },
+  // The top ten can come from the Invade app's snapshot instead of Riot.
+  { key: 'mastery', path: 'mastery?count=10' },
   { key: 'activity', path: 'activity' },
-  { key: 'teammates', path: 'friends' },
 ] as const
 
 export type AnalyticsPanel = (typeof ANALYTICS_PANELS)[number]

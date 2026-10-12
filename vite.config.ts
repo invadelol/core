@@ -8,7 +8,9 @@ export default defineConfig({
   plugins: [
     tailwindcss(),
     inertia({ ssr: { enabled: true, entrypoint: 'inertia/app/ssr.ts' } }),
-    vue(),
+    // Template comments are documentation: the server build kept them while the browser build
+    // dropped them, so every page with one failed hydration.
+    vue({ template: { compilerOptions: { comments: false } } }),
     adonisjs({
       /**
        * Entrypoints of your application. Each entrypoint will

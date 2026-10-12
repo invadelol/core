@@ -104,6 +104,7 @@ const participant = {
   wards_killed: 3,
   dmg_to_turrets: 1000,
   dmg_to_objectives: 6000,
+  profile_icon_id: 29,
   physical_dmg_dealt: 100000,
   magic_dmg_dealt: 10000,
   true_dmg_dealt: 2000,
@@ -158,6 +159,7 @@ test('summary matches retain scoreboard data while omitting analysis-only column
       'position',
       'goldEarned',
       'damageDealtToObjectives',
+      'profileIconId',
     ]) {
       assert.deepEqual(player[key], full.participants[0][key], key)
     }

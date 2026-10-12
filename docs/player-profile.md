@@ -7,41 +7,37 @@ See [design.md](design.md) for the palette, themes and primitives.
 | Route                                | Content                                                       |
 | ------------------------------------ | ------------------------------------------------------------- |
 | `/`                                  | Search, plus the profiles this browser has opened             |
-| `/:summoner`                         | Overview: ranked, performance trends, match history, rails    |
+| `/:summoner`                         | Overview: ranks, LP, champions, roles, teammates, games       |
 | `/:summoner/champions`               | Champion pool, win-rate heatmap and lifetime mastery          |
 | `/:summoner/live`                    | Current lineup, spells, runes, tracked champion and rank data |
 | `/:summoner/friends`                 | Lane partnerships and per-teammate synergy                    |
 | `/:summoner/compare?with=Name%23Tag` | Two players on one table, same filters                        |
-| `/:summoner/match/:matchId`          | Scoreboard, analysis and timeline on one page                 |
+| `/:summoner/match/:matchId`          | The game's header and its full detail                         |
 | `/:summoner/lens`                    | Redirects to `/champions`                                     |
 | `/:summoner/history`                 | Redirects to the Overview match feed                          |
 
 ## Overview
 
-The player's avatar, name and region sit over their main champion's artwork
-in one profile banner on every tab. Activity and actions sit directly below. Four stacked sections follow on Overview:
+The desktop app's profile, drawn by the same components (`@invadelol/ui`, see
+[design.md](design.md)). The header band holds the icon, Riot ID, level, last
+game and both ranks with Riot's crest, over the main champion's artwork; the
+sections and the page's actions (Update, Share) sit under it. Then the player's
+tendencies beside their games:
 
-- **Ranked**: every ranked queue with its crest, LP and record, plus the LP
-  climb for whichever queue has the most snapshots. Collapses to one line when
-  the player is unranked.
-- **Performance**: win rate, KDA, kill participation, CS per minute and gold
-  per minute over the last 30 games, each with a sparkline and an arrow against
-  the 30 games before it. The win-rate trend is a rolling average, because a run
-  of ones and zeroes is not a trend. The match-history filters re-cut both
-  windows, so the figures always describe the games listed below them.
-- **Match history**: filters and the feed.
-- **Rails**: champion pool, role split, recurring duos and an activity
-  calendar, each as bars rather than lists of numbers.
+- **LP history**: the stored rank readings of a queue as one line, when there
+  are at least two.
+- **Champions**: the loaded games per champion (record, KDA, CS/min, average
+  score), and lifetime mastery as a second view of the same panel.
+- **Roles** and **Played with** (teammates seen in at least two of the latest
+  40 full games), both read from the loaded games, and the **Activity**
+  calendar.
+- **Match history**: queue, role, champion and order filters over the loaded
+  games, the record and form they describe, and the feed grouped by day. A row
+  opens the game in place (Scoreboard, Breakdown, Gold, Timeline, Build) with a
+  link to its own page; older games load on demand.
 
-Kill participation, damage share and gold share were already computed by the
-API and were only rendered on a page nobody opened. Damage share and gold share
-now live on Compare, where a second player gives them something to mean.
-
-## Filters
-
-Queue segments, Riot's own role glyphs as a segmented control, and a searchable
-champion combobox carrying each champion's icon and sample size. The filtered
-record prints in the section rule.
+A champion or role on the left filters the feed. On a phone the games come
+first and the tendencies follow them.
 
 ## Champions
 
@@ -69,44 +65,14 @@ pools split into what both play and what only one does.
 Metrics are averaged the way `/stats` averages them server side (the mean of
 per-game values), so a figure here matches the same figure on the profile.
 
-## Match feed
-
-One frame, banded by day, rather than fifteen separate cards. A row carries the
-result, queue, duration, champion, spells, runes, champion and role, the score,
-KDA, kill participation, CS and CS/min, gold, vision, a damage bar, items, both
-line-ups and the player's rank in that lobby, plus a link to the match page and
-a copy-link action.
-
-Expanding a row opens three views in place: the full scoreboard, the timeline,
-and build and runes. Opening a player inside that scoreboard fetches the full
-match, because the list payload carries only the summary columns.
-
 ## Match page
 
-One page, no tabs: header, scoreboard, analysis, timeline, with anchors in a
-sticky rule.
-
-**Scoreboard** is a single table for both teams, banded by side with each
-side's kills, gold, objectives and bans on the band. Columns: player (with
-champion, level, spells, runes and role), lobby rating with a bar, KDA, kill
-participation, damage with its physical/magic/true split drawn in the bar,
-damage taken, CS, gold, vision and wards, items.
-
-Selecting any row expands it in place with that player's build, spells, skill
-priority and full skill order, rune pages, every combat/vision/economy figure
-against the lobby best, pings, the lane matchup as diverging bars, and the
-gold, CS and XP difference at 10 and 15 minutes. There is no separate player
-screen to navigate to.
-
-**Analysis** holds the team comparison as one diverging axis, a damage profile
-chart pairing damage dealt with damage taken for all ten players, and a
-team-versus-team curve over time for gold, experience, creep score or kills.
-
-**Timeline** is one scrubber driving a clock, playback, a clickable gold
-advantage curve, the positions of all ten players on Riot's own minimap,
-every player's level, score, gold and CS at that instant, and the focused
-lane's gold, experience and creep score curves plus the running gold
-difference.
+The match header (queue, date, each team's result and kills, the clock and the
+gold race) over the same detail a profile row opens, every tab of it.
+**Scoreboard** bands both teams with their objectives and bans; **Breakdown**
+reads a player against the lobby and their lane opponent; **Gold** and
+**Timeline** need the stored timeline (and its events), so older games show
+the scoreboard, breakdown and build only.
 
 Every player name in the product links to that player's profile.
 
@@ -115,10 +81,9 @@ Every player name in the product links to that player's profile.
 - `participants.keystone` is now selected. It was ingested from the first patch
   but never read, so every rune glyph in a match list rendered empty.
 - `matches.t1_bans` / `t2_bans`, `map_id` and `platform` are now selected.
-- `match_timeline.pos_x` / `pos_y` power the map.
-- Overview performance uses the latest 30 filtered matches and compares them
-  with the previous 30. Compare and champion aggregates use up to 100 tracked
-  matches. Filters apply before the sample limit.
+- The match list also selects each player's `profile_icon_id`, for Played with.
+- Compare and champion aggregates use up to 100 tracked matches. Filters apply
+  before the sample limit.
 - The Support control maps to Riot's stored `UTILITY` role.
 - Mastery uses Riot's PUUID endpoint with a one-hour cache; live state uses
   spectator v5 with a 30-second cache. Only a spectator 404 means "not in a

@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import type { AssetKind, NameKind } from '@invadelol/ui'
 
 /**
  * Every game asset is served by our own /cdn proxy, which resolves the id
@@ -6,176 +7,67 @@ import { reactive } from 'vue'
  * answers with an image. Nothing here talks to Riot directly, and nothing
  * is pinned to a patch number that goes stale.
  */
-const CDN = '/cdn'
-
-/* ── Asset URLs ─────────────────────────────────────────────── */
-export function profileIcon(id: number | null | undefined) {
-  return `${CDN}/profile-icon/${id || 29}.png`
+const PATHS: Record<AssetKind, string> = {
+  champion: 'champion',
+  splash: 'splash',
+  item: 'item',
+  spell: 'spell',
+  rune: 'perk',
+  runeStyle: 'perkstyle',
+  profileIcon: 'profile-icon',
+  rank: 'emblem',
 }
 
-export function championSplash(id: number) {
-  return `${CDN}/splash/${id}.jpg`
+/** The URL of a game asset, for the shared views and the site's own. */
+export function assetUrl(kind: AssetKind, id: number | string) {
+  const key = kind === 'rank' ? String(id).toLowerCase() : kind === 'profileIcon' ? id || 29 : id
+  return `/cdn/${PATHS[kind]}/${key}.${kind === 'splash' ? 'jpg' : 'png'}`
 }
 
-export function champIcon(id: number) {
-  return `${CDN}/champion/${id}.png`
-}
-
-export function spellIcon(id: number) {
-  return `${CDN}/spell/${id}.png`
-}
-
-export function itemIcon(id: number) {
-  return `${CDN}/item/${id}.png`
-}
-
-export function runeIcon(id: number) {
-  return `${CDN}/perk/${id}.png`
-}
-
-export function runeStyleIcon(id: number) {
-  return `${CDN}/perkstyle/${id}.png`
-}
-
-export function rankCrest(tier: string) {
-  return `${CDN}/rank/${tier.toLowerCase()}.png`
-}
-
-const TIERS = [
-  'iron',
-  'bronze',
-  'silver',
-  'gold',
-  'platinum',
-  'emerald',
-  'diamond',
-  'master',
-  'grandmaster',
-  'challenger',
-]
-
-/** A tier's own colour, for its name next to the crest and nowhere else. */
-export function tierColor(tier: string | null | undefined) {
-  const id = (tier ?? '').toLowerCase()
-  return TIERS.includes(id) ? `var(--color-tier-${id})` : 'var(--color-ink-2)'
-}
-
-/** Master and above have no divisions: "Master", not "Master I". */
-export function rankName(tier: string, division?: string | null) {
-  const name = TIER_NAMES[tier?.toUpperCase()] ?? tier
-  return ['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tier?.toUpperCase()) || !division
-    ? name
-    : `${name} ${division}`
-}
+export const profileIcon = (id: number | null | undefined) => assetUrl('profileIcon', id ?? 0)
+export const championSplash = (id: number) => assetUrl('splash', id)
+export const champIcon = (id: number) => assetUrl('champion', id)
 
 /* ── Display names ──────────────────────────────────────────── */
-const champions = reactive<Record<number, string>>({})
-const items = reactive<Record<number, string>>({})
-const runes = reactive<Record<number, string>>({})
-const styles = reactive<Record<number, string>>({})
-let runePromise: Promise<unknown> | null = null
-export function loadRunes() {
-  return (runePromise ||= Promise.all([loadNames('perk', runes), loadNames('perkstyle', styles)]))
-}
 
-/** The five trees, so a rune panel is labelled before the manifest lands. */
-const STYLE_FALLBACK: Record<number, string> = {
-  8000: 'Precision',
-  8100: 'Domination',
-  8200: 'Sorcery',
-  8300: 'Inspiration',
-  8400: 'Resolve',
-}
+/**
+ * Names arrive per kind from /cdn/names, the first time something asks for
+ * one: a page that never shows an item never downloads the item map. The
+ * maps are reactive, so whatever asked re-renders once they land.
+ */
+const names = {
+  champion: reactive<Record<number, string>>({}),
+  item: reactive<Record<number, string>>({}),
+  spell: reactive<Record<number, string>>({}),
+  rune: reactive<Record<number, string>>({}),
+  runeStyle: reactive<Record<number, string>>({}),
+} satisfies Record<NameKind, Record<number, string>>
+const requested = new Set<NameKind>()
 
-export function runeName(id: number) {
-  return runes[id] || styles[id] || STYLE_FALLBACK[id] || ''
-}
-
-let championsPromise: Promise<void> | null = null
-let itemsPromise: Promise<void> | null = null
-
-function loadNames(kind: string, into: Record<number, string>) {
-  return fetch(`${CDN}/names/${kind}`)
+function load(kind: NameKind) {
+  if (requested.has(kind) || typeof window === 'undefined') return
+  requested.add(kind)
+  fetch(`/cdn/names/${PATHS[kind]}`)
     .then((r) => (r.ok ? (r.json() as Promise<Record<string, string>>) : null))
     .then((json) => {
-      if (!json) return
-      for (const [id, name] of Object.entries(json)) into[Number(id)] = name
+      if (json) for (const [id, name] of Object.entries(json)) names[kind][Number(id)] = name
+      else requested.delete(kind)
     })
-    .catch(() => {})
+    .catch(() => requested.delete(kind))
+}
+
+/** A champion, item, spell or rune name; undefined until its map has loaded. */
+export function nameOf(kind: NameKind, id: number): string | undefined {
+  load(kind)
+  return names[kind][id]
 }
 
 /** Numeric champion id to display name, e.g. 266 to "Aatrox". */
-export function loadChampions() {
-  championsPromise ||= loadNames('champion', champions)
-  return championsPromise
-}
-
-/** Numeric item id to display name, used for hover titles. */
-export function loadItems() {
-  itemsPromise ||= loadNames('item', items)
-  return itemsPromise
-}
-
 export function championName(id: number) {
-  return champions[id] || (id ? `Champion ${id}` : '')
-}
-
-export function itemName(id: number) {
-  return items[id] || `Item ${id}`
+  return nameOf('champion', id) || (id ? `Champion ${id}` : '')
 }
 
 /* ── Labels ─────────────────────────────────────────────────── */
-export const QUEUE_NAMES: Record<number, string> = {
-  400: 'Normal Draft',
-  420: 'Ranked Solo',
-  430: 'Normal Blind',
-  440: 'Ranked Flex',
-  450: 'ARAM',
-  490: 'Quickplay',
-  700: 'Clash',
-  720: 'ARAM Clash',
-  830: 'Co-op vs AI',
-  840: 'Co-op vs AI',
-  850: 'Co-op vs AI',
-  900: 'ARURF',
-  1020: 'One for All',
-  1300: 'Nexus Blitz',
-  1400: 'Ultimate Spellbook',
-  1700: 'Arena',
-  1900: 'URF',
-}
-
-export function queueName(id: number) {
-  return QUEUE_NAMES[id] || 'Custom'
-}
-
-/** Whether a queue awards LP, which changes how a result should read. */
-export function isRankedQueue(id: number) {
-  return id === 420 || id === 440
-}
-
-export const POSITION_NAMES: Record<string, string> = {
-  TOP: 'Top',
-  JUNGLE: 'Jungle',
-  MIDDLE: 'Mid',
-  BOTTOM: 'Bot',
-  UTILITY: 'Support',
-}
-
-export const POSITION_ORDER = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
-
-export const TIER_NAMES: Record<string, string> = {
-  IRON: 'Iron',
-  BRONZE: 'Bronze',
-  SILVER: 'Silver',
-  GOLD: 'Gold',
-  PLATINUM: 'Platinum',
-  EMERALD: 'Emerald',
-  DIAMOND: 'Diamond',
-  MASTER: 'Master',
-  GRANDMASTER: 'Grandmaster',
-  CHALLENGER: 'Challenger',
-}
 
 /** Riot's platform ids as players say them: "EUW1" → "EUW". */
 const REGION_LABELS: Record<string, string> = {
@@ -200,9 +92,4 @@ export function regionLabel(platform: string | null | undefined) {
   if (!platform) return ''
   const key = platform.toUpperCase()
   return REGION_LABELS[key] ?? key.replace(/\d+$/, '')
-}
-
-export const QUEUE_LABELS: Record<string, string> = {
-  RANKED_SOLO_5x5: 'Solo/Duo',
-  RANKED_FLEX_SR: 'Flex',
 }

@@ -60,7 +60,7 @@ function order(key: keyof ChampionStats) {
 </script>
 
 <template>
-  <section class="card">
+  <section class="iv-panel">
     <div class="section flex-wrap !items-center">
       <h2>Champion pool</h2>
       <span class="meta num">
@@ -199,7 +199,7 @@ function order(key: keyof ChampionStats) {
 
               <td class="!pr-3 text-right">
                 <button
-                  class="btn btn-sm btn-ghost"
+                  class="iv-btn ghost sm"
                   :title="`Show ${championName(c.championId)} games`"
                   @click="emit('matches', c.championId)"
                 >

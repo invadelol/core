@@ -7,6 +7,7 @@ import { ASSET_PREFIX, DDRAGON, FETCH_TIMEOUT_MS, MANIFESTS, MANIFEST_TTL } from
 import type { AssetKind } from '#constants/assets'
 import {
   gameDataUrl,
+  emblemSources,
   fallbackSources,
   guessContentType,
   parseManifest,
@@ -111,6 +112,7 @@ class RiotAssetsService {
    */
   private async sources(kind: AssetKind, id: string): Promise<string[]> {
     if (kind === 'rank') return rankSources(id)
+    if (kind === 'emblem') return emblemSources(id)
     if (kind === 'map') {
       const version = await this.ddragonVersion()
       return [

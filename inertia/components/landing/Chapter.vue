@@ -122,7 +122,7 @@ const fill = (index: number) =>
         </header>
 
         <figure ref="frameEl" class="player">
-          <div class="player-stage theme-dark" inert>
+          <div class="player-stage iv-dark" inert>
             <slot
               :step="shown"
               :local="mode === 'still' ? 1 : local"
@@ -198,11 +198,11 @@ const fill = (index: number) =>
   width: min(100%, calc((100svh - 56px - 32px - var(--bar)) * 16 / 9));
   margin: 0;
   overflow: hidden;
-  border-radius: var(--radius-lg);
+  border-radius: var(--r-lg);
   background: #0d0e13;
   box-shadow:
-    0 0 0 1px var(--color-line-2),
-    var(--shadow-e2);
+    0 0 0 1px var(--line-2),
+    var(--shadow-3);
 }
 
 .is-still .player {
@@ -211,7 +211,7 @@ const fill = (index: number) =>
 
 .player-stage {
   position: relative;
-  color: var(--color-ink);
+  color: var(--text-1);
   background: #0d0e13;
 }
 
@@ -222,8 +222,8 @@ const fill = (index: number) =>
   gap: 24px;
   min-height: var(--bar);
   padding: 14px 20px;
-  background: var(--color-solid);
-  border-top: 1px solid var(--color-line);
+  background: var(--solid-1);
+  border-top: 1px solid var(--line);
 }
 
 .player-caption {
@@ -246,14 +246,14 @@ const fill = (index: number) =>
   font-size: 15px;
   font-weight: 600;
   line-height: 20px;
-  color: var(--color-ink);
+  color: var(--text-1);
 }
 
 .player-caption span,
 .player-list span {
   font-size: 14px;
   line-height: 20px;
-  color: var(--color-ink-2);
+  color: var(--text-2);
 }
 
 .player-steps {
@@ -284,11 +284,11 @@ const fill = (index: number) =>
 
 .player-steps button::before {
   content: '';
-  background: var(--color-track);
+  background: var(--surface-4);
 }
 
 .player-steps i {
-  background: var(--color-brand);
+  background: var(--brand);
   transform-origin: left;
   transition: transform 160ms linear;
 }

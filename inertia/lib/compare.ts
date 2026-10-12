@@ -1,5 +1,12 @@
-import { POSITION_NAMES, POSITION_ORDER } from './assets.js'
-import { damageShare, goldShare, killParticipation, matchMinutes, teamTotals } from './match.js'
+import { positionName, positionOf } from '@invadelol/ui/logic'
+import {
+  POSITIONS,
+  damageShare,
+  goldShare,
+  killParticipation,
+  matchMinutes,
+  teamTotals,
+} from './match.js'
 import type { ChampionStats, GlobalStats, Match, Participant } from './types.js'
 
 /**
@@ -100,7 +107,7 @@ export function roleRows(sides: Side[]): RoleRow[] {
     const groups = new Map<string, Match[]>()
     for (const match of side.matches) {
       const me = match.participants.find((x) => x.puuid === side.puuid)
-      if (!me?.position || !POSITION_ORDER.includes(me.position)) continue
+      if (!me?.position || !POSITIONS.includes(me.position)) continue
       const bucket = groups.get(me.position) ?? []
       bucket.push(match)
       groups.set(me.position, bucket)
@@ -110,9 +117,9 @@ export function roleRows(sides: Side[]): RoleRow[] {
     return lines
   })
 
-  return POSITION_ORDER.filter((role) => perSide.some((lines) => lines.has(role))).map((role) => ({
+  return POSITIONS.filter((role) => perSide.some((lines) => lines.has(role))).map((role) => ({
     role,
-    label: POSITION_NAMES[role] ?? role,
+    label: positionName(positionOf(role)) || role,
     lines: perSide.map((lines) => lines.get(role) ?? null),
   }))
 }

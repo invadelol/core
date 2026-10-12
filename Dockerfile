@@ -4,12 +4,15 @@ FROM oven/bun:1 AS base
 FROM base AS deps
 WORKDIR /app
 ADD package.json bun.lock ./
+# @invadelol/ui is installed from its vendored build until it is on npm.
+ADD vendor vendor
 RUN bun install --frozen-lockfile
 
 # Production only deps stage
 FROM base AS production-deps
 WORKDIR /app
 ADD package.json bun.lock ./
+ADD vendor vendor
 RUN bun install --frozen-lockfile --production
 
 # Build stage

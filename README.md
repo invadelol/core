@@ -235,11 +235,15 @@ theme follows the operating system by default and can be set explicitly from
 the header; the choice is stored in `localStorage` and replayed before first
 paint, so there is no flash.
 
-Structure comes from rules and spacing rather than nested cards, five hues
-carry all the meaning, and Riot's own role glyphs are used wherever a lane is
-named.
+Matches and profiles are drawn by [`@invadelol/ui`](https://github.com/invadelol/ui), the
+same components as the desktop app. Until it is on npm the site installs a built copy from
+`vendor/invadelol-ui`; after a change in the package, refresh it and commit `vendor/`:
 
-See [docs/design.md](docs/design.md) for the palette and primitives, and
+```bash
+node scripts/sync_ui.mjs ../ui   # path to the ui checkout (default ../ui, or $INVADE_UI)
+```
+
+See [docs/design.md](docs/design.md) for the tokens, themes and primitives, and
 [docs/player-profile.md](docs/player-profile.md) for what each page shows.
 
 ---

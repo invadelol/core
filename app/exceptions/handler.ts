@@ -3,6 +3,7 @@ import { DesktopException } from '#exceptions/desktop_exception'
 import { payloadLimitOf } from '#middleware/body_parser_middleware'
 import app from '@adonisjs/core/services/app'
 import { HttpContext, ExceptionHandler } from '@adonisjs/core/http'
+import type { HttpError, StatusPageRange, StatusPageRenderer } from '@adonisjs/core/types/http'
 
 /**
  * The desktop app reacts to a status and a code, never to prose, so its
@@ -68,6 +69,22 @@ export default class HttpExceptionHandler extends ExceptionHandler {
    * with pretty printed stack traces.
    */
   protected debug = !app.inProduction
+
+  /**
+   * In production a missing or failed page answers with the site's own error page; the API keeps
+   * its JSON errors (every request is made to accept JSON, see force_json_response_middleware).
+   */
+  protected renderStatusPages = app.inProduction
+
+  protected statusPages: Record<StatusPageRange, StatusPageRenderer> = {
+    '404': (error, ctx) => this.page('errors/not_found', error, ctx),
+    '500..599': (error, ctx) => this.page('errors/server_error', error, ctx),
+  }
+
+  private page(component: string, error: HttpError, ctx: HttpContext) {
+    if (ctx.request.url().startsWith('/api/')) return this.renderError(error, ctx)
+    return ctx.inertia.render(component)
+  }
 
   /**
    * The method is used for handling errors and returning

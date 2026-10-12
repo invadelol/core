@@ -88,11 +88,11 @@ const totals = computed(() => {
 
 /* The player's own activity: the brand violet, from empty to full. */
 const SHADES = [
-  'var(--color-control)',
+  'var(--surface-3)',
   'rgb(var(--brand-rgb) / 0.3)',
   'rgb(var(--brand-rgb) / 0.5)',
   'rgb(var(--brand-rgb) / 0.75)',
-  'var(--color-brand)',
+  'var(--brand)',
 ]
 
 function tooltip(cell: Cell) {
@@ -108,16 +108,19 @@ function tooltip(cell: Cell) {
 </script>
 
 <template>
-  <section class="card">
-    <div class="section">
+  <!-- A side panel of the profile, drawn like the shared ones. -->
+  <section class="iv-panel iv-pf-panel">
+    <header class="iv-panel-head">
       <h3>Activity</h3>
-      <span class="meta">Last {{ WEEKS }} weeks</span>
-      <span v-if="activity.length" class="num meta ml-auto">
-        {{ totals.games }} games <span class="text-ink-4">·</span> {{ totals.winrate }}%
+      <span class="meta num">
+        <template v-if="activity.length">
+          {{ totals.games }} games · {{ totals.winrate }}% ·
+        </template>
+        {{ WEEKS }} weeks
       </span>
-    </div>
+    </header>
 
-    <p v-if="!activity.length" class="text-[13px] text-ink-2">No games recorded yet.</p>
+    <p v-if="!activity.length" class="iv-pf-note">No games recorded yet.</p>
 
     <div v-else>
       <div class="scroll-x pb-1">

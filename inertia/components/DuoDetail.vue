@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import RoleIcon from './RoleIcon.vue'
-import { champIcon, championName, queueName } from '../lib/assets.js'
+import { RoleIcon } from '@invadelol/ui'
+import { positionOf, queueName } from '@invadelol/ui/logic'
+import { champIcon, championName } from '../lib/assets.js'
 import { compact, duration, shortDate } from '../lib/format.js'
 import { duoFrom, type DuoSplit } from '../lib/synergy.js'
 import type { Match } from '../lib/types.js'
@@ -93,8 +94,8 @@ const splits = computed(() =>
       <ul v-if="duo.roles.length" class="space-y-2.5">
         <li v-for="row in duo.roles" :key="row.label" class="flex items-center gap-2">
           <span class="flex shrink-0 items-center gap-0.5 text-ink-3">
-            <RoleIcon :role="row.myRole" :size="13" />
-            <RoleIcon :role="row.theirRole" :size="13" />
+            <RoleIcon :lane="positionOf(row.myRole)" :size="13" />
+            <RoleIcon :lane="positionOf(row.theirRole)" :size="13" />
           </span>
           <span class="min-w-0 flex-1 truncate text-ink-2">{{ row.label }}</span>
           <span class="num shrink-0 text-[12px] text-ink-3">
@@ -158,7 +159,7 @@ const splits = computed(() =>
         >
           <i
             class="h-2 w-2 shrink-0 rounded-[2px]"
-            :style="{ background: game.win ? 'var(--color-win)' : 'var(--color-loss)' }"
+            :style="{ background: game.win ? 'var(--win)' : 'var(--loss)' }"
             :title="game.win ? 'Win' : 'Loss'"
           />
 
@@ -169,7 +170,7 @@ const splits = computed(() =>
               loading="lazy"
               class="thumb h-[20px] w-[20px] rounded-sm"
             />
-            <RoleIcon :role="game.myRole" :size="11" class="text-ink-4" />
+            <RoleIcon :lane="positionOf(game.myRole)" :size="11" class="text-ink-4" />
           </span>
 
           <span class="flex shrink-0 items-center gap-1">
@@ -179,7 +180,7 @@ const splits = computed(() =>
               loading="lazy"
               class="thumb h-[20px] w-[20px] rounded-sm"
             />
-            <RoleIcon :role="game.theirRole" :size="11" class="text-ink-4" />
+            <RoleIcon :lane="positionOf(game.theirRole)" :size="11" class="text-ink-4" />
           </span>
 
           <span class="num ml-auto shrink-0 text-[12.5px] font-semibold text-ink">

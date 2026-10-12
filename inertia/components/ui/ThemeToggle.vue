@@ -8,7 +8,7 @@ const { resolved, toggle } = useTheme()
 <template>
   <button
     type="button"
-    class="icon-btn"
+    class="iv-btn ghost icon-only"
     :title="resolved === 'dark' ? 'Switch to light' : 'Switch to dark'"
     :aria-label="resolved === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'"
     @click="toggle"

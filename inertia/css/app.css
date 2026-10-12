@@ -1,303 +1,95 @@
 @import 'tailwindcss';
-@import './fonts.css';
+/* The design tokens and the shared views, the same as the desktop app's (@invadelol/ui). The views'
+   own styles sit in the components layer, under Tailwind's utilities. */
+@import '@invadelol/ui/tokens.css';
+@import '@invadelol/ui/style.css' layer(components);
 @import './components.css';
-@import './match-detail.css';
 
 /* Every class used by the app lives under inertia/. */
 @source '../';
 
 /* ──────────────────────────────────────────────────────────────
-   Tokens (v2), mirrored from the desktop app (src/theme.css) and
-   its design direction (redesign/DIRECTION.md §3).
-
-   Night ink, translucent surfaces lit from above, and colour only
-   where it means something:
-     win    good for you: a win, your team, ahead   (blue)
-     loss   bad for you: a loss, the enemy, behind  (red)
-     brand  Invade itself: the glyph, the active place, focus, the
-            primary action, the viewed player's own row and series
-     gold   gold amounts where gold is the subject, MVP
-     tier   rank names next to their crest
-   Figures stay white.
-
-   The Tailwind names below (panel, raised, sunken, ink…) are the
-   ones the templates use; their values follow the v2 scale:
+   The Tailwind names the templates use, read from the package's
+   tokens, so a theme is defined once (tokens.css) and both the
+   shared views and the site's own pieces follow it:
      chrome  --ink-0      header
      bg      --ink-1      page
-     panel   --surface-1  panels, match rows
+     panel   --surface-1  panels
      raised  --surface-2  hover, open row
-     control --surface-3  buttons, inputs, segmented controls
+     control --surface-3  buttons, inputs
      track   --surface-4  active segment, bar tracks
-     well / sunken        inset areas: item wells, empty slots
-     solid / solid-2      anything that must be opaque
+     well    --well       inset areas
+     solid   --solid-1/2  anything that must be opaque
+   Colour only where it means something: win/blue good for you,
+   loss/red bad for you, brand Invade itself, gold gold and MVP,
+   tier colours for ranks. Figures stay white.
    ────────────────────────────────────────────────────────────── */
-@theme {
-  /* Light (website only): a pale page, white panels lifted by a soft shadow. */
-  --color-chrome: #ffffff;
-  --color-bg: #f7f7fa;
-  --color-panel: #ffffff;
-  --color-raised: #f3f3f8;
-  --color-control: #ededf3;
-  --color-track: #e4e4ec;
-  --color-well: #f0f0f5;
-  --color-sunken: #f0f0f5;
-  --color-solid: #ffffff;
-  --color-solid-2: #f7f7fa;
-  --color-line: #e7e7ee;
-  --color-line-2: #dcdce5;
-  --color-line-3: #c8c8d4;
+@theme inline {
+  --color-chrome: var(--ink-0);
+  --color-bg: var(--ink-1);
+  --color-panel: var(--surface-1);
+  --color-raised: var(--surface-2);
+  --color-control: var(--surface-3);
+  --color-track: var(--surface-4);
+  --color-well: var(--well);
+  --color-solid: var(--solid-1);
+  --color-solid-2: var(--solid-2);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-line-3: var(--line-3);
 
-  --color-ink: #0c0c14;
-  --color-ink-2: #4a4a5c;
-  --color-ink-3: #77778a;
-  --color-ink-4: #a8a8b8;
+  --color-ink: var(--text-1);
+  --color-ink-2: var(--text-2);
+  --color-ink-3: var(--text-3);
+  --color-ink-4: var(--text-4);
 
-  --color-brand: #5a4bf0;
-  --color-brand-hi: #4a3bdf;
-  --color-brand-soft: rgb(90 75 240 / 0.08);
-  --color-accent: #5a4bf0;
-  --color-accent-fg: #ffffff;
+  --color-brand: var(--brand);
+  --color-brand-hi: var(--brand-hi);
+  --color-win: var(--win);
+  --color-loss: var(--loss);
+  --color-blue: var(--blue);
+  --color-red: var(--red);
+  --color-gold: var(--gold-c);
 
-  --color-win: #1f6fe0;
-  --color-win-soft: rgb(31 111 224 / 0.07);
-  --color-loss: #d42f4b;
-  --color-loss-soft: rgb(212 47 75 / 0.07);
-  /* Sides and teams use the same two hues: your team is blue wherever it played. */
-  --color-blue: #1f6fe0;
-  --color-red: #d42f4b;
+  --color-tier-iron: var(--tier-iron);
+  --color-tier-bronze: var(--tier-bronze);
+  --color-tier-silver: var(--tier-silver);
+  --color-tier-gold: var(--tier-gold);
+  --color-tier-platinum: var(--tier-platinum);
+  --color-tier-emerald: var(--tier-emerald);
+  --color-tier-diamond: var(--tier-diamond);
+  --color-tier-master: var(--tier-master);
+  --color-tier-grandmaster: var(--tier-grandmaster);
+  --color-tier-challenger: var(--tier-challenger);
 
-  --color-gold: #9a6d0f;
-  --color-signal: #9a6d0f;
-
-  --color-tier-iron: #6e6460;
-  --color-tier-bronze: #8f5534;
-  --color-tier-silver: #64798a;
-  --color-tier-gold: #9a7414;
-  --color-tier-platinum: #1f8676;
-  --color-tier-emerald: #138a55;
-  --color-tier-diamond: #3d5fe0;
-  --color-tier-master: #8a3fd6;
-  --color-tier-grandmaster: #d03a4c;
-  --color-tier-challenger: #a07a10;
-
-  /* Series that are neither you nor a side: physical / magic / true damage. */
-  --color-s1: #4a4a5c;
-  --color-s2: #8f8fa3;
-  --color-s3: #c4c4d1;
-
-  --shadow-e1: 0 1px 2px rgb(12 12 20 / 0.06);
-  --shadow-e2: 0 16px 40px -12px rgb(12 12 20 / 0.22);
-
-  --radius-xs: 3px;
-  --radius-sm: 5px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 12px;
+  --radius-xs: var(--r-xs);
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --radius-xl: var(--r-xl);
 
   --breakpoint-xs: 26rem;
 
-  --font-sans:
-    'Archivo', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica,
-    Arial, sans-serif;
+  --font-sans: var(--font);
   --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
-}
-
-:root {
-  /* The light that falls on a panel: a shadow on paper, a top highlight at night. */
-  --hi: 0 1px 2px rgb(12 12 20 / 0.05), 0 0 0 1px rgb(12 12 20 / 0.025);
-  --backdrop:
-    radial-gradient(1100px 620px at 82% -14%, rgb(90 75 240 / 0.05), transparent 70%),
-    var(--color-bg);
-  --focus: 0 0 0 2px rgb(90 75 240 / 0.5);
-  --brand-rgb: 90 75 240;
-  --win-rgb: 31 111 224;
-  --loss-rgb: 212 47 75;
-  /* Large figures (20px and up) may tighten slightly; nothing narrower. */
-  --fig: 92%;
-  --t-fast: 120ms;
-  --t-base: 180ms;
-  --t-slow: 240ms;
-  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-
-/* Dark is the product's home, and the same ink as the desktop app. Both blocks below carry
-   the same values: the first follows the system, the second an explicit choice. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --color-chrome: #08090c;
-    --color-bg: #0d0e13;
-    --color-panel: rgb(190 190 255 / 0.04);
-    --color-raised: rgb(190 190 255 / 0.065);
-    --color-control: rgb(190 190 255 / 0.09);
-    --color-track: rgb(190 190 255 / 0.14);
-    --color-well: rgb(0 0 0 / 0.22);
-    --color-sunken: rgb(0 0 0 / 0.22);
-    --color-solid: #14151c;
-    --color-solid-2: #1b1c25;
-    --color-line: rgb(255 255 255 / 0.06);
-    --color-line-2: rgb(255 255 255 / 0.1);
-    --color-line-3: rgb(255 255 255 / 0.16);
-
-    --color-ink: #ececf3;
-    --color-ink-2: #a6a7b8;
-    --color-ink-3: #6f7085;
-    --color-ink-4: #4a4b5c;
-
-    --color-brand: #7b6dff;
-    --color-brand-hi: #a99fff;
-    --color-brand-soft: rgb(123 109 255 / 0.08);
-    --color-accent: #7b6dff;
-    --color-accent-fg: #ffffff;
-
-    --color-win: #4c9bff;
-    --color-win-soft: rgb(76 155 255 / 0.06);
-    --color-loss: #ff5d6e;
-    --color-loss-soft: rgb(255 93 110 / 0.06);
-    --color-blue: #4c9bff;
-    --color-red: #ff5d6e;
-
-    --color-gold: #e2b25a;
-    --color-signal: #e2b25a;
-
-    --color-tier-iron: #8a7f7a;
-    --color-tier-bronze: #b0714d;
-    --color-tier-silver: #9fb1bd;
-    --color-tier-gold: #e1b75a;
-    --color-tier-platinum: #4fb8a8;
-    --color-tier-emerald: #2ec27e;
-    --color-tier-diamond: #6f8cff;
-    --color-tier-master: #b36bff;
-    --color-tier-grandmaster: #ff5d6c;
-    --color-tier-challenger: #f4d27a;
-
-    --color-s1: #d4d4e0;
-    --color-s2: #8b8ca0;
-    --color-s3: #55566a;
-
-    --shadow-e1: 0 1px 2px rgb(0 0 0 / 0.5);
-    --shadow-e2: 0 16px 40px -12px rgb(0 0 0 / 0.7);
-
-    --hi: inset 0 1px 0 rgb(255 255 255 / 0.05);
-    --backdrop:
-      radial-gradient(1100px 620px at 78% -12%, rgb(123 109 255 / 0.07), transparent 70%),
-      radial-gradient(900px 600px at -8% 112%, rgb(76 155 255 / 0.045), transparent 70%),
-      var(--color-bg);
-    --focus: 0 0 0 2px rgb(123 109 255 / 0.55);
-    --brand-rgb: 123 109 255;
-    --win-rgb: 76 155 255;
-    --loss-rgb: 255 93 110;
-
-    color-scheme: dark;
-  }
-}
-
-/* .theme-dark: a piece of the desktop app shown on the page (it only has the dark theme). */
-:root[data-theme='dark'],
-.theme-dark {
-  --color-chrome: #08090c;
-  --color-bg: #0d0e13;
-  --color-panel: rgb(190 190 255 / 0.04);
-  --color-raised: rgb(190 190 255 / 0.065);
-  --color-control: rgb(190 190 255 / 0.09);
-  --color-track: rgb(190 190 255 / 0.14);
-  --color-well: rgb(0 0 0 / 0.22);
-  --color-sunken: rgb(0 0 0 / 0.22);
-  --color-solid: #14151c;
-  --color-solid-2: #1b1c25;
-  --color-line: rgb(255 255 255 / 0.06);
-  --color-line-2: rgb(255 255 255 / 0.1);
-  --color-line-3: rgb(255 255 255 / 0.16);
-
-  --color-ink: #ececf3;
-  --color-ink-2: #a6a7b8;
-  --color-ink-3: #6f7085;
-  --color-ink-4: #4a4b5c;
-
-  --color-brand: #7b6dff;
-  --color-brand-hi: #a99fff;
-  --color-brand-soft: rgb(123 109 255 / 0.08);
-  --color-accent: #7b6dff;
-  --color-accent-fg: #ffffff;
-
-  --color-win: #4c9bff;
-  --color-win-soft: rgb(76 155 255 / 0.06);
-  --color-loss: #ff5d6e;
-  --color-loss-soft: rgb(255 93 110 / 0.06);
-  --color-blue: #4c9bff;
-  --color-red: #ff5d6e;
-
-  --color-gold: #e2b25a;
-  --color-signal: #e2b25a;
-
-  --color-tier-iron: #8a7f7a;
-  --color-tier-bronze: #b0714d;
-  --color-tier-silver: #9fb1bd;
-  --color-tier-gold: #e1b75a;
-  --color-tier-platinum: #4fb8a8;
-  --color-tier-emerald: #2ec27e;
-  --color-tier-diamond: #6f8cff;
-  --color-tier-master: #b36bff;
-  --color-tier-grandmaster: #ff5d6c;
-  --color-tier-challenger: #f4d27a;
-
-  --color-s1: #d4d4e0;
-  --color-s2: #8b8ca0;
-  --color-s3: #55566a;
-
-  --shadow-e1: 0 1px 2px rgb(0 0 0 / 0.5);
-  --shadow-e2: 0 16px 40px -12px rgb(0 0 0 / 0.7);
-
-  --hi: inset 0 1px 0 rgb(255 255 255 / 0.05);
-  --backdrop:
-    radial-gradient(1100px 620px at 78% -12%, rgb(123 109 255 / 0.07), transparent 70%),
-    radial-gradient(900px 600px at -8% 112%, rgb(76 155 255 / 0.045), transparent 70%),
-    var(--color-bg);
-  --focus: 0 0 0 2px rgb(123 109 255 / 0.55);
-  --brand-rgb: 123 109 255;
-  --win-rgb: 76 155 255;
-  --loss-rgb: 255 93 110;
-
-  color-scheme: dark;
-}
-
-:root[data-theme='light'] {
-  color-scheme: light;
-}
-
-/* Rarely needed: almost everything reads a token instead. */
-@custom-variant dark {
-  @media (prefers-color-scheme: dark) {
-    &:where(:root:not([data-theme='light']), :root:not([data-theme='light']) *) {
-      @slot;
-    }
-  }
-  &:where(:root[data-theme='dark'], :root[data-theme='dark'] *) {
-    @slot;
-  }
 }
 
 @layer base {
   * {
-    border-color: var(--color-line);
+    border-color: var(--line);
   }
 
   html {
     height: 100%;
-    background: var(--color-bg);
+    background: var(--ink-1);
   }
 
-  /* The backdrop sits behind the content only, never repeated per panel. */
+  /* The backdrop sits behind the content only, never repeated per panel. The page is set at the
+     shared views' scale (iv-root on <body>). */
   body {
     min-height: 100%;
     background: var(--backdrop);
     background-attachment: fixed;
-    color: var(--color-ink);
-    font-family: var(--font-sans);
-    font-size: 14px;
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    font-variant-numeric: tabular-nums;
   }
 
   /* Every number in the app lines up in a column. */
@@ -332,8 +124,8 @@
   }
 
   ::selection {
-    background: rgb(var(--brand-rgb) / 0.28);
-    color: var(--color-ink);
+    background: var(--brand-a28);
+    color: var(--text-1);
   }
 
   img {

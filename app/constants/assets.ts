@@ -20,6 +20,7 @@ export const ASSET_KINDS = [
   'perkstyle',
   'profile-icon',
   'rank',
+  'emblem',
   'map',
 ] as const
 

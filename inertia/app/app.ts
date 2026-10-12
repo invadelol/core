@@ -8,12 +8,9 @@ import type { DefineComponent } from 'vue'
 import { createInertiaApp } from '@inertiajs/vue3'
 import { resolvePageComponent } from '@adonisjs/inertia/helpers'
 import { installIconFallback } from '../lib/icon_fallback.js'
-import { watchPalette } from '../lib/chart.js'
+import { invadeUi } from './ui.js'
 
 installIconFallback()
-// Charts read their colours from the themed tokens, so they have to be told
-// when the theme changes.
-watchPalette()
 
 const appName = import.meta.env.VITE_APP_NAME || 'invade.lol'
 
@@ -32,6 +29,7 @@ createInertiaApp({
   setup({ el, App, props, plugin }) {
     createSSRApp({ render: () => h(App, props) })
       .use(plugin)
+      .use(invadeUi())
       .mount(el)
   },
 })

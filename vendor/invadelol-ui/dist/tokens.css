@@ -1,0 +1,375 @@
+/*
+ * Invade design tokens, shared by the desktop app and invade.lol (@invadelol/ui/tokens.css).
+ *
+ * Night ink, translucent surfaces lit from above, and colour only where it means something:
+ * blue = good for you (win, ally, ahead), red = bad for you (loss, enemy, behind), violet = Invade
+ * itself (the active place, focus, the primary action, the viewed player), gold = gold and MVP,
+ * tier colours for ranks. Figures stay white.
+ *
+ * Dark is the default (the app only has it). Light: `data-theme="light"` on <html> or `.iv-light` on
+ * any element; `data-theme="system"` follows the system; `.iv-dark` puts a dark piece on a light page.
+ * Tokens that read other tokens are declared again in each theme: a custom property resolves where
+ * it is declared, so a theme that only changed `--brand-rgb` would not change `--focus`.
+ */
+
+/* Archivo: one variable file per script, weight 100-900 and width 62-125%. Everything is set at
+   normal width; large figures may tighten slightly (--fig). Geist stays behind it for Cyrillic,
+   which Archivo does not cover. A face is only fetched for characters of its range. */
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  src: url('./fonts/archivo-latin-wdth.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Archivo';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  font-stretch: 62% 125%;
+  src: url('./fonts/archivo-latin-ext-wdth.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F,
+    U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('./fonts/geist-cyrillic-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+
+/* --- shape, type, motion: the same in every theme ------------------------------------------------- */
+:root {
+  --r-xs: 3px;
+  --r-sm: 5px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 12px;
+
+  --font: 'Archivo', 'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* Large figures (20px and up) may tighten slightly; nothing narrower. */
+  --fig: 92%;
+  /* Legacy width tokens (the app's overlay still condenses with them). */
+  --narrow: 92%;
+  --semi: 100%;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --t-fast: 120ms;
+  --t-base: 180ms;
+  --t-slow: 240ms;
+}
+
+/* --- dark ------------------------------------------------------------------------------------------ */
+:root,
+[data-theme='dark'],
+.iv-dark {
+  color-scheme: dark;
+
+  /* Ink: window chrome -> page backdrop */
+  --ink-0: #08090c;
+  --ink-1: #0d0e13;
+  /* The light: one soft violet light from above the top-right. Sized in % of what it lights, so it
+     stays ambient at any size, never a blob. Bell falloff in many stops, flat at both ends: no
+     hotspot, no rim, and steps small enough for a grain to dither. */
+  --light: radial-gradient(
+    90% 75% at 75% -15%,
+    rgb(var(--brand-rgb) / 0.06),
+    rgb(var(--brand-rgb) / 0.058) 10%,
+    rgb(var(--brand-rgb) / 0.0525) 20%,
+    rgb(var(--brand-rgb) / 0.0443) 30%,
+    rgb(var(--brand-rgb) / 0.0349) 40%,
+    rgb(var(--brand-rgb) / 0.0256) 50%,
+    rgb(var(--brand-rgb) / 0.0172) 60%,
+    rgb(var(--brand-rgb) / 0.0105) 70%,
+    rgb(var(--brand-rgb) / 0.0055) 80%,
+    rgb(var(--brand-rgb) / 0.0021) 90%,
+    rgb(var(--brand-rgb) / 0)
+  );
+  /* The page backdrop: the light over the page ink, behind content only (never per panel). */
+  --backdrop: var(--light), var(--ink-1);
+
+  /* Surfaces: translucent tints over the backdrop. Stacking shows, so nesting is discouraged. */
+  --surface-1: rgb(190 190 255 / 0.04);
+  --surface-2: rgb(190 190 255 / 0.065);
+  --surface-3: rgb(190 190 255 / 0.09);
+  --surface-4: rgb(190 190 255 / 0.14);
+  /* Inset areas: item and loadout wells, chart wells, empty slots. */
+  --well: rgb(0 0 0 / 0.22);
+  /* An empty slot in a well, a faint hover wash. */
+  --glint: rgb(255 255 255 / 0.025);
+  /* Opaque equivalents for what must hide the content behind it (menus, sticky heads, tooltips). */
+  --solid-1: #14151c;
+  --solid-2: #1b1c25;
+  /* Light from above: the top edge of panels and rows. */
+  --hi: inset 0 1px 0 rgb(255 255 255 / 0.05);
+  /* Panels catch it: a faint sheen falling from the top edge, a crisper top line and a near-invisible
+     rim, so a panel reads as an object with a lit face rather than a tinted rectangle. */
+  --sheen: linear-gradient(180deg, rgb(255 255 255 / 0.028), rgb(255 255 255 / 0) 55%);
+  --lit: inset 0 1px 0 rgb(255 255 255 / 0.075), inset 0 0 0 1px rgb(255 255 255 / 0.028);
+  /* A row (match rows): its lit top edge and a short shadow. */
+  --row: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.3);
+  /* Contact shadow: what sits on a surface (buttons, rows, media). Tight, so it costs nothing to paint. */
+  --contact: 0 1px 2px rgb(0 0 0 / 0.45);
+  /* Portraits sit in a lit ring with a contact shadow. */
+  --ring: rgb(255 255 255 / 0.1);
+  --portrait: 0 0 0 1px var(--ring), 0 3px 8px rgb(0 0 0 / 0.55);
+  --portrait-sm: 0 0 0 1px var(--ring), 0 2px 5px rgb(0 0 0 / 0.5);
+  --line: rgb(255 255 255 / 0.06);
+  --line-2: rgb(255 255 255 / 0.1);
+  --line-3: rgb(255 255 255 / 0.16);
+  /* Neutral bars (damage, shares) and the unlit part of a dial. */
+  --bar: rgb(166 167 184 / 0.55);
+  --track: rgb(255 255 255 / 0.07);
+
+  /* Controls: an inset well (segmented controls), the raised key in it, buttons, the switch knob. */
+  --inset: rgb(0 0 0 / 0.24);
+  --inset-shadow: inset 0 1px 2px rgb(0 0 0 / 0.45), 0 1px 0 rgb(255 255 255 / 0.04);
+  --key: linear-gradient(180deg, rgb(255 255 255 / 0.11), rgb(255 255 255 / 0.06)), var(--solid-1);
+  --key-shadow: inset 0 1px 0 rgb(255 255 255 / 0.09), 0 1px 3px rgb(0 0 0 / 0.55);
+  --btn: linear-gradient(180deg, rgb(255 255 255 / 0.055), rgb(255 255 255 / 0.015)), var(--surface-2);
+  --btn-hover: linear-gradient(180deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.03)), var(--surface-3);
+  --btn-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), var(--contact);
+  --primary: linear-gradient(180deg, #8f83ff, #6c5df5);
+  --primary-hover: linear-gradient(180deg, #9b90ff, #7869fa);
+  --primary-shadow: inset 0 1px 0 rgb(255 255 255 / 0.22), 0 1px 2px rgb(0 0 0 / 0.5), 0 6px 16px -6px rgb(var(--brand-rgb) / 0.55);
+  --knob: #b9bacb;
+
+  /* Text */
+  --text-1: #ececf3;
+  --text-2: #a6a7b8;
+  --text-3: #6f7085;
+  --text-4: #4a4b5c;
+
+  /* Brand: the glyph violet. Invade itself, never data. */
+  --brand: #7b6dff;
+  --brand-hi: #a99fff;
+  --brand-rgb: 123 109 255;
+  --brand-a08: rgb(var(--brand-rgb) / 0.08);
+  --brand-a16: rgb(var(--brand-rgb) / 0.16);
+  --brand-a28: rgb(var(--brand-rgb) / 0.28);
+  --on-brand: #ffffff;
+
+  /* Polarity: blue is good for you (win, ally, ahead), red is bad for you (loss, enemy, behind). */
+  --win: #4c9bff;
+  --win-rgb: 76 155 255;
+  --loss: #ff5d6e;
+  --loss-rgb: 255 93 110;
+  --blue: var(--win);
+  --blue-rgb: var(--win-rgb);
+  --red: var(--loss);
+  --red-rgb: var(--loss-rgb);
+  --up: var(--win);
+  --down: var(--loss);
+  /* Gold: gold amounts, MVP, the top tier letter. */
+  --gold-c: #e2b25a;
+  --gold-rgb: 226 178 90;
+  --warn: #ffb547;
+
+  /* Rank tiers: rank names and crests only. */
+  --tier-iron: #8a7f7a;
+  --tier-bronze: #b0714d;
+  --tier-silver: #9fb1bd;
+  --tier-gold: #e1b75a;
+  --tier-platinum: #4fb8a8;
+  --tier-emerald: #2ec27e;
+  --tier-diamond: #6f8cff;
+  --tier-master: #b36bff;
+  --tier-grandmaster: #ff5d6c;
+  --tier-challenger: #f4d27a;
+
+  --shadow-2: 0 10px 28px -10px rgb(0 0 0 / 0.6);
+  --shadow-3: 0 16px 40px -12px rgb(0 0 0 / 0.7);
+  --focus: 0 0 0 2px rgb(var(--brand-rgb) / 0.55);
+}
+
+/* --- light (invade.lol): a pale page, white panels lifted by a soft shadow ------------------------- */
+[data-theme='light'],
+.iv-light {
+  color-scheme: light;
+  --ink-0: #ffffff;
+  --ink-1: #f7f7fa;
+  --light: radial-gradient(
+    90% 75% at 75% -15%,
+    rgb(var(--brand-rgb) / 0.05),
+    rgb(var(--brand-rgb) / 0.048) 10%,
+    rgb(var(--brand-rgb) / 0.0437) 20%,
+    rgb(var(--brand-rgb) / 0.0369) 30%,
+    rgb(var(--brand-rgb) / 0.0291) 40%,
+    rgb(var(--brand-rgb) / 0.0213) 50%,
+    rgb(var(--brand-rgb) / 0.0143) 60%,
+    rgb(var(--brand-rgb) / 0.0088) 70%,
+    rgb(var(--brand-rgb) / 0.0046) 80%,
+    rgb(var(--brand-rgb) / 0.0018) 90%,
+    rgb(var(--brand-rgb) / 0)
+  );
+  --backdrop: var(--light), var(--ink-1);
+  --surface-1: #ffffff;
+  --surface-2: #f3f3f8;
+  --surface-3: #ededf3;
+  --surface-4: #e4e4ec;
+  --well: #f0f0f5;
+  --glint: rgb(12 12 20 / 0.035);
+  --solid-1: #ffffff;
+  --solid-2: #f7f7fa;
+  --hi: 0 1px 2px rgb(12 12 20 / 0.05), 0 0 0 1px rgb(12 12 20 / 0.025);
+  --sheen: linear-gradient(transparent, transparent);
+  --lit: 0 1px 2px rgb(12 12 20 / 0.05), 0 0 0 1px rgb(12 12 20 / 0.04);
+  --row: 0 1px 2px rgb(12 12 20 / 0.05), 0 0 0 1px rgb(12 12 20 / 0.035);
+  --contact: 0 1px 2px rgb(12 12 20 / 0.1);
+  --ring: rgb(12 12 20 / 0.08);
+  --portrait: 0 0 0 1px var(--ring), 0 2px 6px rgb(12 12 20 / 0.12);
+  --portrait-sm: 0 0 0 1px var(--ring), 0 1px 3px rgb(12 12 20 / 0.1);
+  --line: #e7e7ee;
+  --line-2: #dcdce5;
+  --line-3: #c8c8d4;
+  --bar: rgb(74 74 92 / 0.4);
+  --track: rgb(12 12 20 / 0.08);
+  --inset: #ededf3;
+  --inset-shadow: inset 0 1px 2px rgb(12 12 20 / 0.08);
+  --key: #ffffff;
+  --key-shadow: 0 1px 2px rgb(12 12 20 / 0.12), 0 0 0 1px rgb(12 12 20 / 0.04);
+  --btn: #ffffff;
+  --btn-hover: #f3f3f8;
+  --btn-shadow: 0 1px 2px rgb(12 12 20 / 0.08), 0 0 0 1px rgb(12 12 20 / 0.08);
+  --primary: linear-gradient(180deg, #6a5cf5, #5444e6);
+  --primary-hover: linear-gradient(180deg, #7466f7, #5d4ef0);
+  --primary-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 1px 2px rgb(12 12 20 / 0.15), 0 6px 16px -6px rgb(var(--brand-rgb) / 0.45);
+  --knob: #ffffff;
+  --text-1: #0c0c14;
+  --text-2: #4a4a5c;
+  --text-3: #77778a;
+  --text-4: #a8a8b8;
+  --brand: #5a4bf0;
+  --brand-hi: #4a3bdf;
+  --brand-rgb: 90 75 240;
+  --brand-a08: rgb(var(--brand-rgb) / 0.08);
+  --brand-a16: rgb(var(--brand-rgb) / 0.14);
+  --brand-a28: rgb(var(--brand-rgb) / 0.24);
+  --on-brand: #ffffff;
+  --win: #1f6fe0;
+  --win-rgb: 31 111 224;
+  --loss: #d42f4b;
+  --loss-rgb: 212 47 75;
+  --blue: var(--win);
+  --blue-rgb: var(--win-rgb);
+  --red: var(--loss);
+  --red-rgb: var(--loss-rgb);
+  --up: var(--win);
+  --down: var(--loss);
+  --gold-c: #9a6d0f;
+  --gold-rgb: 154 109 15;
+  --warn: #b26b00;
+  --tier-iron: #6e6460;
+  --tier-bronze: #8f5534;
+  --tier-silver: #64798a;
+  --tier-gold: #9a7414;
+  --tier-platinum: #1f8676;
+  --tier-emerald: #138a55;
+  --tier-diamond: #3d5fe0;
+  --tier-master: #8a3fd6;
+  --tier-grandmaster: #d03a4c;
+  --tier-challenger: #a07a10;
+  --shadow-2: 0 10px 28px -10px rgb(12 12 20 / 0.18);
+  --shadow-3: 0 16px 40px -12px rgb(12 12 20 / 0.22);
+  --focus: 0 0 0 2px rgb(var(--brand-rgb) / 0.5);
+}
+
+/* `data-theme="system"`: the light block above, repeated by the build under
+   `@media (prefers-color-scheme: light) { [data-theme='system'] { … } }`. */
+
+@media (prefers-color-scheme: light) {
+  [data-theme='system'] {
+    color-scheme: light;
+    --ink-0: #ffffff;
+    --ink-1: #f7f7fa;
+    --light: radial-gradient(
+      90% 75% at 75% -15%,
+      rgb(var(--brand-rgb) / 0.05),
+      rgb(var(--brand-rgb) / 0.048) 10%,
+      rgb(var(--brand-rgb) / 0.0437) 20%,
+      rgb(var(--brand-rgb) / 0.0369) 30%,
+      rgb(var(--brand-rgb) / 0.0291) 40%,
+      rgb(var(--brand-rgb) / 0.0213) 50%,
+      rgb(var(--brand-rgb) / 0.0143) 60%,
+      rgb(var(--brand-rgb) / 0.0088) 70%,
+      rgb(var(--brand-rgb) / 0.0046) 80%,
+      rgb(var(--brand-rgb) / 0.0018) 90%,
+      rgb(var(--brand-rgb) / 0)
+    );
+    --backdrop: var(--light), var(--ink-1);
+    --surface-1: #ffffff;
+    --surface-2: #f3f3f8;
+    --surface-3: #ededf3;
+    --surface-4: #e4e4ec;
+    --well: #f0f0f5;
+    --glint: rgb(12 12 20 / 0.035);
+    --solid-1: #ffffff;
+    --solid-2: #f7f7fa;
+    --hi: 0 1px 2px rgb(12 12 20 / 0.05), 0 0 0 1px rgb(12 12 20 / 0.025);
+    --sheen: linear-gradient(transparent, transparent);
+    --lit: 0 1px 2px rgb(12 12 20 / 0.05), 0 0 0 1px rgb(12 12 20 / 0.04);
+    --row: 0 1px 2px rgb(12 12 20 / 0.05), 0 0 0 1px rgb(12 12 20 / 0.035);
+    --contact: 0 1px 2px rgb(12 12 20 / 0.1);
+    --ring: rgb(12 12 20 / 0.08);
+    --portrait: 0 0 0 1px var(--ring), 0 2px 6px rgb(12 12 20 / 0.12);
+    --portrait-sm: 0 0 0 1px var(--ring), 0 1px 3px rgb(12 12 20 / 0.1);
+    --line: #e7e7ee;
+    --line-2: #dcdce5;
+    --line-3: #c8c8d4;
+    --bar: rgb(74 74 92 / 0.4);
+    --track: rgb(12 12 20 / 0.08);
+    --inset: #ededf3;
+    --inset-shadow: inset 0 1px 2px rgb(12 12 20 / 0.08);
+    --key: #ffffff;
+    --key-shadow: 0 1px 2px rgb(12 12 20 / 0.12), 0 0 0 1px rgb(12 12 20 / 0.04);
+    --btn: #ffffff;
+    --btn-hover: #f3f3f8;
+    --btn-shadow: 0 1px 2px rgb(12 12 20 / 0.08), 0 0 0 1px rgb(12 12 20 / 0.08);
+    --primary: linear-gradient(180deg, #6a5cf5, #5444e6);
+    --primary-hover: linear-gradient(180deg, #7466f7, #5d4ef0);
+    --primary-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 1px 2px rgb(12 12 20 / 0.15), 0 6px 16px -6px rgb(var(--brand-rgb) / 0.45);
+    --knob: #ffffff;
+    --text-1: #0c0c14;
+    --text-2: #4a4a5c;
+    --text-3: #77778a;
+    --text-4: #a8a8b8;
+    --brand: #5a4bf0;
+    --brand-hi: #4a3bdf;
+    --brand-rgb: 90 75 240;
+    --brand-a08: rgb(var(--brand-rgb) / 0.08);
+    --brand-a16: rgb(var(--brand-rgb) / 0.14);
+    --brand-a28: rgb(var(--brand-rgb) / 0.24);
+    --on-brand: #ffffff;
+    --win: #1f6fe0;
+    --win-rgb: 31 111 224;
+    --loss: #d42f4b;
+    --loss-rgb: 212 47 75;
+    --blue: var(--win);
+    --blue-rgb: var(--win-rgb);
+    --red: var(--loss);
+    --red-rgb: var(--loss-rgb);
+    --up: var(--win);
+    --down: var(--loss);
+    --gold-c: #9a6d0f;
+    --gold-rgb: 154 109 15;
+    --warn: #b26b00;
+    --tier-iron: #6e6460;
+    --tier-bronze: #8f5534;
+    --tier-silver: #64798a;
+    --tier-gold: #9a7414;
+    --tier-platinum: #1f8676;
+    --tier-emerald: #138a55;
+    --tier-diamond: #3d5fe0;
+    --tier-master: #8a3fd6;
+    --tier-grandmaster: #d03a4c;
+    --tier-challenger: #a07a10;
+    --shadow-2: 0 10px 28px -10px rgb(12 12 20 / 0.18);
+    --shadow-3: 0 16px 40px -12px rgb(12 12 20 / 0.22);
+    --focus: 0 0 0 2px rgb(var(--brand-rgb) / 0.5);
+  }
+}

@@ -1,6 +1,7 @@
 import { test } from '@japa/runner'
 
 import {
+  emblemSources,
   fallbackSources,
   gameDataUrl,
   initials,
@@ -125,6 +126,7 @@ test.group('Riot asset paths', () => {
   test('rank crests normalise the tier', ({ assert }) => {
     assert.isTrue(rankSources('EMERALD')[0].endsWith('emerald.svg'))
     assert.isTrue(rankSources(' Emerald ')[0].endsWith('emerald.svg'))
+    assert.deepEqual(emblemSources('EMERALD'), [rankSources('emerald')[1]])
   })
 
   test('an unknown profile icon falls back to the generic portrait', ({ assert }) => {

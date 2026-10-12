@@ -1,0 +1,38 @@
+{
+  "name": "@invadelol/ui",
+  "version": "0.1.0",
+  "description": "Invade's frontend: design tokens, primitives and the match and profile views shared by the desktop app and invade.lol.",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/invadelol/ui.git"
+  },
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./logic": {
+      "types": "./dist/types/logic/index.d.ts",
+      "import": "./dist/logic.js"
+    },
+    "./style.css": "./dist/style.css",
+    "./tokens.css": "./dist/tokens.css",
+    "./keys.json": "./dist/keys.json",
+    "./package.json": "./package.json"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
+  }
+}

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { NextItem } from './types.js'
-import { itemIcon } from '../../../lib/assets.js'
+import { assetUrl } from '../../../lib/assets.js'
 
 /**
  * Next item, as the overlay draws it: the next item of the build with the gold it still takes,
@@ -12,7 +12,7 @@ defineProps<{ build: NextItem }>()
 <template>
   <div class="ov-panel build">
     <div class="build-next" :class="{ ready: build.next.affordable }">
-      <img :src="itemIcon(build.next.id)" :alt="build.next.name" width="36" height="36" />
+      <img :src="assetUrl('item', build.next.id)" :alt="build.next.name" width="36" height="36" />
       <span class="build-next-text">
         <b>{{ build.next.name }}</b>
         <span class="build-cost" :class="{ ready: build.next.affordable }">
@@ -24,7 +24,7 @@ defineProps<{ build: NextItem }>()
       <img
         v-for="(s, i) in build.path"
         :key="i"
-        :src="itemIcon(s.id)"
+        :src="assetUrl('item', s.id)"
         alt=""
         width="24"
         height="24"
@@ -36,7 +36,7 @@ defineProps<{ build: NextItem }>()
       <img
         v-for="id in build.next.options"
         :key="id"
-        :src="itemIcon(id)"
+        :src="assetUrl('item', id)"
         alt=""
         width="20"
         height="20"

@@ -64,6 +64,8 @@ export function fallbackSources(kind: AssetKind, id: string): string[] {
       ]
     case 'rank':
       return rankSources(id)
+    case 'emblem':
+      return emblemSources(id)
     case 'map':
       return mapSources(id)
     default:
@@ -85,13 +87,20 @@ export function mapSources(id: string): string[] {
   ]
 }
 
+const tierOf = (id: string) => id.toLowerCase().replace(/[^a-z]/g, '')
+
 /** Ranked crests live outside the game-data plugin, so they resolve by tier. */
 export function rankSources(id: string): string[] {
-  const tier = id.toLowerCase().replace(/[^a-z]/g, '')
+  const tier = tierOf(id)
   return [
     `${CDRAGON_STATIC_ASSETS}/images/ranked-mini-crests/${tier}.svg`,
     `${CDRAGON_STATIC_ASSETS}/images/ranked-emblem/emblem-${tier}.png`,
   ]
+}
+
+/** A tier's full emblem: a 1280×720 frame with the crest in its middle (large crests). */
+export function emblemSources(id: string): string[] {
+  return [`${CDRAGON_STATIC_ASSETS}/images/ranked-emblem/emblem-${tierOf(id)}.png`]
 }
 
 /** Data Dragon equivalents, tried after Community Dragon's own path. */
