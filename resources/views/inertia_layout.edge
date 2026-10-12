@@ -27,7 +27,11 @@
       (function () {
         try {
           var t = localStorage.getItem('invade-theme')
-          if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t)
+          if (t === 'light' || t === 'dark') {
+            document.documentElement.setAttribute('data-theme', t)
+            var bar = t === 'dark' ? '#08090c' : '#ffffff'
+            document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) { m.content = bar })
+          }
         } catch (e) {}
       })()
     </script>
