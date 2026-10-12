@@ -339,6 +339,22 @@
     border-radius: 999px;
   }
 
+  /* A table wider than a phone scrolls in its panel with its first column held in place, so a
+     row keeps its name however far it is scrolled. */
+  @media (max-width: 47.99rem) {
+    .dt-sticky :is(th, td):first-child {
+      position: sticky;
+      left: 0;
+      z-index: 3;
+      background: var(--solid-1);
+      box-shadow: inset -1px 0 0 var(--line);
+    }
+
+    .dt-sticky.dt-hover tbody tr:hover td:first-child {
+      background: linear-gradient(var(--surface-2), var(--surface-2)), var(--solid-1);
+    }
+  }
+
   /* A strip that scrolls sideways (tabs): an edge fades while there is more past it. */
   .fade-r {
     mask-image: linear-gradient(to left, transparent, #000 28px);

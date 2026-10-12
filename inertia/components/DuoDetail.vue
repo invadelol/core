@@ -60,7 +60,7 @@ const splits = computed(() =>
 
 <template>
   <div
-    class="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.05fr)] gap-x-7 py-5 text-[12px]"
+    class="grid grid-cols-1 gap-x-7 gap-y-5 py-5 text-[12px] @2xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.05fr)] @2xl:gap-y-0"
   >
     <!-- The player's own numbers, beside them and away from them -->
     <section class="min-w-0">
@@ -89,7 +89,7 @@ const splits = computed(() =>
     </section>
 
     <!-- What the pairing was made of -->
-    <section class="min-w-0 border-l border-line pl-7">
+    <section class="min-w-0 border-t border-line pt-5 @2xl:border-t-0 @2xl:border-l @2xl:pl-7 @2xl:pt-0">
       <div v-if="duo.roles.length" class="label mb-3">Lanes</div>
       <ul v-if="duo.roles.length" class="space-y-2.5">
         <li v-for="row in duo.roles" :key="row.label" class="flex items-center gap-2">
@@ -138,7 +138,7 @@ const splits = computed(() =>
     </section>
 
     <!-- The games themselves -->
-    <section class="min-w-0 border-l border-line pl-7">
+    <section class="min-w-0 border-t border-line pt-5 @2xl:border-t-0 @2xl:border-l @2xl:pl-7 @2xl:pt-0">
       <div class="label mb-3 flex items-baseline gap-2">
         <span>Games together</span>
         <span class="num text-ink-4">

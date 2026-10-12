@@ -169,11 +169,11 @@ function rate(wins: number, games: number) {
           <span v-else class="meta num">{{ matches.length }} games</span>
         </div>
 
-        <div class="scroll-x border-t border-line !p-0">
-          <table class="dt dt-hover num min-w-[760px]">
+        <div class="scroll-x border-t border-line !p-0 [container-type:inline-size]">
+          <table class="dt dt-hover dt-sticky num min-w-[760px]">
             <thead>
               <tr>
-                <th class="w-[24%] !pl-4">Player</th>
+                <th class="w-[24%] !pl-4 max-md:w-[150px]">Player</th>
                 <th class="w-[15%]">Lane</th>
                 <th class="text-right">Games</th>
                 <th class="text-right">Record</th>
@@ -263,8 +263,11 @@ function rate(wins: number, games: number) {
 
                 <!-- The duo opens in place, under the row it belongs to. -->
                 <tr v-if="open === mate.puuid">
-                  <td :colspan="7" class="!h-auto !bg-raised !px-4 !py-0">
-                    <DuoDetail :matches="matches" :puuid="puuid" :mate-puuid="mate.puuid" />
+                  <td :colspan="7" class="!static !h-auto !bg-raised !p-0 !shadow-none">
+                    <!-- As wide as the visible strip, however far the table is scrolled. -->
+                    <div class="@container sticky left-0 w-[100cqw] px-4">
+                      <DuoDetail :matches="matches" :puuid="puuid" :mate-puuid="mate.puuid" />
+                    </div>
                   </td>
                 </tr>
               </template>

@@ -67,7 +67,7 @@ function order(key: keyof ChampionStats) {
         {{ champions.length }} champions <span class="text-ink-4">·</span> {{ totals.games }} games
         <span class="text-ink-4">·</span> {{ hours(totals.time) }} played
       </span>
-      <label class="relative ml-auto w-[200px]">
+      <label class="relative ml-auto w-[200px] max-sm:ml-0 max-sm:w-full">
         <Search
           :size="13"
           class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-3"
@@ -115,10 +115,10 @@ function order(key: keyof ChampionStats) {
       </div>
 
       <div class="scroll-x border-t border-line">
-        <table class="dt dt-hover num min-w-[880px]">
+        <table class="dt dt-hover dt-sticky num min-w-[880px]">
           <thead>
             <tr>
-              <th class="w-[22%] !pl-4">Champion</th>
+              <th class="w-[22%] !pl-4 max-md:w-[132px]">Champion</th>
               <th
                 v-for="col in COLUMNS"
                 :key="col.key"
