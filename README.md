@@ -121,10 +121,12 @@ npm test             # test suite
 
 | Method | Endpoint | Description |
 | --- | --- | --- |
-| `GET` | `/` | Hello world |
-| `GET` | `/health` | Health check |
+| `GET` | `/` | The website's home page |
+| `GET` | `/api/health` | Health check |
 | `GET` | `/docs` | Swagger UI |
 | `GET` | `/swagger` | OpenAPI spec |
+
+The JSON routes below are served under `/api` (`/api/summoners/search`, `/api/matches/:id`…).
 
 ### Summoner
 
@@ -154,7 +156,9 @@ All routes require a valid PUUID and are cached.
 The Invade desktop app onboards players, uploads the games they finish, and
 reports the players the League client shows it (ranks, mastery, icon), so the
 website stays fresh with fewer Riot calls. The full contract, shared with the
-app, is [docs/desktop-sync.md](docs/desktop-sync.md).
+app, is [docs/desktop-sync.md](docs/desktop-sync.md). Contract v1.3 (games the app only
+observed, `POST /api/desktop/matches/known`, compressed bodies), which desktop app 0.2.9 uses,
+is in [invadelol/core#20](https://github.com/invadelol/core/pull/20).
 
 | Method | Endpoint | Auth | Description |
 | --- | --- | --- | --- |
@@ -200,44 +204,19 @@ trust and rollback, auth, rate limits) and the routes end to end
 `.env` with Riot stubbed, so point `DB_DATABASE`, `CLICKHOUSE_DB` and
 `REDIS_DB` at throwaway ones.
 
---- | --- | --- | --- |
-| `GET` | `/api/desktop/config` | - | Kill switches and the 2 MB upload limit |
-| `POST` | `/api/desktop/devices` | - | Register a device; returns its `inv_dev_` token once (10/h per IP) |
-| `DELETE` | `/api/desktop/devices/me` | token | Revoke this device |
-| `POST` | `/api/desktop/link` | token | Make an account one of the device's uploaders (20/h) |
-| `DELETE` | `/api/desktop/link/:puuid` | token | Unlink an account |
-| `GET` | `/api/desktop/resolve?gameName=&tagLine=` | optional | Onboard by Riot ID from stored data (30/h per device, 20/h per IP) |
-| `POST` | `/api/desktop/matches` | token | Upload a finished game (30/h per device, 120/h per IP) |
-
-Only the token's SHA-256 is stored. A game already stored costs no Riot call,
-nor does one from a device Riot has confirmed five times; anything else costs
-one `getMatchById`, and a game Riot has not published yet is retried in-process
-2, 5 and 15 minutes later. Desktop games show their provenance on the match
-page, the LP change on the match row, and hide what the League client does not
-report (pings). The code lives in `app/services/desktop/`.
-
-Run `node ace migration:run` to create the tables (`desktop_device`,
-`desktop_device_account`, `riot_puuid_alias`, `desktop_match_upload`,
-`match_source`, `lp_change`, and `riot_rank.source`).
-
-Tests: `node ace test --tags=@desktop` runs the rules (conversion, structural
-checks, LP, identity mapping, publication policy, auth, rate limits) and the
-routes end to end (`tests/functional/desktop_sync.spec.ts`). They use the
-databases and Redis in `.env` with Riot stubbed, so point `DB_DATABASE`,
-`CLICKHOUSE_DB` and `REDIS_DB` at throwaway ones.
-
 ---
 
 ## Interface
 
-The app ships a light and a dark theme, both designed rather than derived. The
+The site has a light and a dark theme, both from the package's tokens. The
 theme follows the operating system by default and can be set explicitly from
 the header; the choice is stored in `localStorage` and replayed before first
 paint, so there is no flash.
 
 Matches and profiles are drawn by [`@invadelol/ui`](https://github.com/invadelol/ui), the
-same components as the desktop app. Until it is on npm the site installs a built copy from
-`vendor/invadelol-ui`; after a change in the package, refresh it and commit `vendor/`:
+same components as the desktop app. The package is on npm; the site installs a built copy from
+`vendor/invadelol-ui` (a `file:` dependency), so a package change can ship here before it is
+released. After a change in the package, refresh it and commit `vendor/`:
 
 ```bash
 node scripts/sync_ui.mjs ../ui   # path to the ui checkout (default ../ui, or $INVADE_UI)

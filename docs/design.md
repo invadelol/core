@@ -9,8 +9,9 @@ page.
 
 ## Using the package
 
-The package is vendored (`vendor/invadelol-ui`, a built copy) until it is on npm, and installed
-as `"@invadelol/ui": "file:vendor/invadelol-ui"`. To pick up a change made in the package:
+The package is on npm, but the site installs a built copy from `vendor/invadelol-ui`
+(`"@invadelol/ui": "file:vendor/invadelol-ui"`), so a package change can ship here before it is
+released. To pick up a change made in the package:
 
 ```bash
 node scripts/sync_ui.mjs ../ui     # builds it into vendor/, reinstalls, clears Vite's cache
