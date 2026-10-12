@@ -1,8 +1,8 @@
 import { inject as c, isRef as l, shallowRef as s } from "vue";
 import { english as u } from "./logic/i18n.js";
 import { signedLp as d, score100 as v, mmss as p, dayLabel as I, ago as f, kdaRatio as h, ordinal as k, signedGold as y, compact as U, pct as w, num as N } from "./logic/format.js";
-const o = /* @__PURE__ */ Symbol("invade-ui");
-function i(e) {
+const i = /* @__PURE__ */ Symbol("invade-ui");
+function o(e) {
   return {
     t: e.t ?? u,
     locale: l(e.locale) ? e.locale : s(e.locale ?? "en"),
@@ -16,11 +16,11 @@ function i(e) {
     favorites: e.favorites
   };
 }
-const b = i({});
+const b = o({});
 function L(e, n) {
-  e.provide(o, i(n));
+  e.provide(i, o(n));
 }
-const g = (e) => ({ install: (n) => L(n, e) }), r = () => c(o, b);
+const g = (e) => ({ install: (n) => L(n, e) }), r = () => c(i, b);
 function F() {
   const { locale: e, t: n } = r();
   return {
@@ -68,7 +68,8 @@ const q = () => {
     runeIcon: (n) => e.assetUrl("rune", n),
     styleIcon: (n) => e.assetUrl("runeStyle", n),
     spellIcon: (n) => e.assetUrl("spell", n),
-    itemIcon: (n) => e.assetUrl("item", n)
+    itemIcon: (n) => e.assetUrl("item", n),
+    itemName: (n) => e.name("item", n)
   };
 };
 export {

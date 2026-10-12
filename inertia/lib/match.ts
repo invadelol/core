@@ -245,13 +245,6 @@ export function scoreLobby(match: Match): Record<string, PlayerScore> {
   return result
 }
 
-/** Every player's overall score in one lobby, 0–100. Empty for a remake. */
-function lobbyScores(match: Match): Record<string, number> {
-  const out: Record<string, number> = {}
-  for (const [puuid, entry] of Object.entries(scoreLobby(match))) out[puuid] = entry.score
-  return out
-}
-
 /* ── Earned badges ────────────────────────────────────────────────
 
    What the data says a player did best in one game, as the desktop app
@@ -302,12 +295,14 @@ function laneOpponent(match: Match, p: Participant | undefined) {
 }
 
 /**
- * A stored match as the shared views read it (`@invadelol/ui`), with the site's own scores and
- * badges: the lobby's ranks, MVP and ACE follow from the scores.
+ * A stored match as the shared views read it (`@invadelol/ui`), with the site's own scores, what
+ * they are made of, and badges: the lobby's ranks, MVP and ACE follow from the scores.
  */
 export function detailOf(match: Match) {
+  const scored = scoreLobby(match)
   return fromCoreMatch(match, {
-    scores: lobbyScores(match),
+    scores: Object.fromEntries(Object.entries(scored).map(([puuid, s]) => [puuid, s.score])),
+    parts: scored,
     badges: Object.fromEntries(match.participants.map((p) => [p.puuid, earnedBadges(match, p)])),
   })
 }

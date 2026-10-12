@@ -12,7 +12,7 @@ type __VLS_Slots = {} & {
     default?: (props: typeof __VLS_1) => any;
 };
 declare const __VLS_base: import("vue").DefineComponent<__VLS_Props, {}, {}, {}, {}, import("vue").ComponentOptionsMixin, import("vue").ComponentOptionsMixin, {}, string, import("vue").PublicProps, Readonly<__VLS_Props> & Readonly<{}>, {
-    variant: "default" | "primary" | "ghost" | "danger";
+    variant: "danger" | "default" | "primary" | "ghost";
     size: "sm" | "md" | "lg";
     iconOnly: boolean;
     type: "button" | "submit";

@@ -1,5 +1,7 @@
-import type { Mastery, MatchDetail, MatchSummary, Objective, PlayedWith, Position, ProfileView, Rank } from './types.js';
-export interface CoreParticipant {
+import type { Mastery, MatchDetail, MatchSummary, Objective, Ping, PlayedWith, Position, ProfileView, Rank, ScoreCategory } from './types.js';
+/** Pings per kind (`allInPings`…), on Riot's games. */
+export type CorePings = Partial<Record<`${Ping}Pings`, number>>;
+export interface CoreParticipant extends CorePings {
     puuid: string;
     gameName: string;
     tagLine: string;
@@ -34,6 +36,8 @@ export interface CoreParticipant {
     goldEarned: number;
     wardsPlaced: number;
     wardsKilled: number;
+    /** Jungle monsters among `cs`. */
+    neutralMinionsKilled: number;
     /** The icon the player had in this game, when stored. */
     profileIconId?: number;
 }
@@ -52,7 +56,15 @@ export interface CoreTimelineEntry {
         secondaryStyle: number;
         keystone: number;
         runes: number[];
+        /** 0 when not recorded (games from the desktop app). */
+        statPerks?: {
+            offense: number;
+            flex: number;
+            defense: number;
+        };
     };
+    /** Skill slots (1 Q … 4 R) in the order they were levelled, repeated on each frame. */
+    skillOrder?: number[];
 }
 export interface CoreEvent {
     /** Seconds into the game. */
@@ -93,6 +105,10 @@ export interface CoreMatch {
     participants: CoreParticipant[];
     timeline?: CoreTimelineEntry[];
     events?: CoreEvent[];
+    /** What a game from the desktop app could not report (`pings: false`: its zeros are not counts). */
+    completeness?: {
+        pings: boolean;
+    } | null;
 }
 export interface CoreRank {
     queueType: string;
@@ -132,6 +148,11 @@ export interface FromCoreOptions {
     scores?: Record<string, number>;
     /** Earned badges per puuid (invade.lol's `earnedBadges` keys); unknown keys are dropped. */
     badges?: Record<string, readonly string[]>;
+    /** What each score is made of (invade.lol's `scoreLobby`): 0‥100 per category, and its weight in %. */
+    parts?: Record<string, {
+        categories: Record<ScoreCategory, number>;
+        weights: Record<ScoreCategory, number>;
+    }>;
 }
 /** Riot's `teamPosition` (`MIDDLE`, `UTILITY`…) as a position; null in modes without lanes. */
 export declare const positionOf: (riot: string | null | undefined) => Position | null;

@@ -1,5 +1,4 @@
-/** Helpers shared by the match detail views. */
-import type { MatchDetail, PlayerView, TeamView } from './types.js';
+import type { MatchDetail, Ping, PlayerView, ScoreCategory, TeamView, TimelineView } from './types.js';
 /**
  * Colours are relative to the viewed player: them in brand, their team in the "good for you"
  * blue, the other team in red. Sides stay names ("Blue side"), never colours.
@@ -20,3 +19,22 @@ export declare function teamsOf(d: MatchDetail, me: PlayerView | undefined): {
 export declare const RUNE_SLOTS: Record<number, number[][]>;
 /** Whether the timeline carries any event to tell (stored games from before events were kept do not). */
 export declare const hasEvents: (d: MatchDetail) => boolean;
+/** The parts of a score, in the order they are read, with their names. */
+export declare const SCORE_PARTS: Record<ScoreCategory, string>;
+export declare const SCORE_CATEGORIES: ScoreCategory[];
+/** Ping kinds with their in-game names. */
+export declare const PINGS: Record<Ping, string>;
+declare const SKILL_KEYS: readonly ["Q", "W", "E", "R"];
+export type SkillKey = (typeof SKILL_KEYS)[number];
+/** Q/W/E/R × 18 levels: each cell holds the level the point was spent at, else null. */
+export declare function skillMatrix(skills: number[]): Record<SkillKey, (number | null)[]>;
+/** The basic skills in the order they were first taken: `['E', 'Q', 'W']`. */
+export declare function skillPriority(skills: number[]): SkillKey[];
+/** Gold, CS and XP leads over a player's lane opponent at a minute, when the game lasted that long. */
+export declare function laneLead(t: TimelineView, i: number, j: number, minute: number): {
+    minute: number;
+    gold: number;
+    cs: number;
+    xp: number;
+} | null;
+export {};

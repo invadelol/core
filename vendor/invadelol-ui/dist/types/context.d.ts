@@ -104,4 +104,5 @@ export declare const useNames: () => {
     styleIcon: (id: number) => string | undefined;
     spellIcon: (id: number) => string | undefined;
     itemIcon: (id: number) => string | undefined;
+    itemName: (id: number) => string;
 };
