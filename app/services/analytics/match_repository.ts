@@ -473,6 +473,43 @@ export class MatchRepository {
   }
 
   /**
+   * The player's own line of their latest games and nothing else: the desktop
+   * app's onboarding needs no scoreboards, and reading them fetched every
+   * other participant of every game by match id, ten rows for each one used.
+   */
+  async getOwnRecent(puuid: string, count: number) {
+    const rows = await rawRows(`
+      WITH mine AS (
+        SELECT match_id, champion_id, win, kills, deaths, assists
+        FROM participants
+        PREWHERE puuid = '${escapeClickhouseString(puuid)}'
+        ORDER BY game_start_ms DESC, match_id DESC
+        LIMIT ${integer(count, DEFAULT_MATCH_COUNT)}
+      )
+      SELECT p.match_id, p.champion_id, p.win, m.queue_id, m.game_start_ms, m.duration_sec,
+             p.kills, p.deaths, p.assists
+      FROM mine p
+      JOIN (
+        SELECT match_id, queue_id, game_start_ms, duration_sec
+        FROM matches
+        WHERE match_id IN (SELECT match_id FROM mine)
+      ) m ON p.match_id = m.match_id
+      ORDER BY m.game_start_ms DESC, p.match_id DESC
+    `)
+    return rows.map((row) => ({
+      matchId: asString(row[0]),
+      championId: Number(row[1]),
+      win: Boolean(Number(row[2])),
+      queueId: Number(row[3]),
+      gameStartMs: Number(row[4]),
+      durationSec: Number(row[5]),
+      kills: Number(row[6]),
+      deaths: Number(row[7]),
+      assists: Number(row[8]),
+    }))
+  }
+
+  /**
    * Load full match details (including timeline) by match id.
    *
    * Four parallel flat reads, no joins and no GROUP BY. The timeline arrives

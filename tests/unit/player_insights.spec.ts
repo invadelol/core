@@ -1,6 +1,7 @@
 import { test } from '@japa/runner'
 import type { HttpContext } from '@adonisjs/core/http'
 import cache from '@adonisjs/cache/services/main'
+import clickhouse from 'adonisjs-clickhouse/services/main'
 import Summoner from '#models/summoner'
 import PlayerInsightsController from '#controllers/player_insights_controller'
 
@@ -99,6 +100,43 @@ test.group('Player insights', () => {
         assert.include(urls[0], `champion-masteries/by-puuid/${puuid}`)
       }
     )
+  })
+
+  test('reads the champion records of a whole lobby in one query', async ({ assert }) => {
+    const [first, second] = ['A', 'B'].map((letter) => letter.repeat(78))
+    const query = clickhouse.query
+    const sql: string[] = []
+    clickhouse.query = (async (options: { query: string }) => {
+      sql.push(options.query)
+      return { json: async () => [[first, '7', 0.5714]] }
+    }) as unknown as typeof clickhouse.query
+    try {
+      await withResponse(
+        200,
+        {
+          gameId: 1,
+          participants: [
+            { puuid: first, championId: 45, teamId: 100 },
+            { puuid: second, championId: 12, teamId: 200 },
+            { championId: 99, teamId: 200 },
+          ],
+        },
+        async (controller) => {
+          const result = (await controller.live(context)) as unknown as {
+            game: Record<string, any>
+          }
+          assert.deepEqual(
+            result.game.participants.map((p: { championStats: unknown }) => p.championStats),
+            [{ games: 7, winrate: 0.5714 }, null, null]
+          )
+        }
+      )
+      assert.lengthOf(sql, 1)
+      assert.include(sql[0], `('${first}', 45)`)
+      assert.include(sql[0], `('${second}', 12)`)
+    } finally {
+      clickhouse.query = query
+    }
   })
 
   test('preserves hidden live identities and excludes observer credentials', async ({ assert }) => {

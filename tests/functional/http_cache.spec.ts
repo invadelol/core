@@ -231,18 +231,18 @@ test.group('HTTP response cache', (group) => {
   })
 
   test('serves the controller response during Redis read or write outages', async ({ assert }) => {
-    const originalRead = redis.getBuffer
+    const originalRead = redis.mgetBuffer
     const originalWrite = redis.eval
     try {
-      redis.getBuffer = (async () => {
+      redis.mgetBuffer = (async () => {
         throw new Error('Redis unavailable')
-      }) as typeof redis.getBuffer
+      }) as typeof redis.mgetBuffer
       const readFailure = await context(urlFor(resource()))
       await new HttpCacheMiddleware().handle(readFailure, async () => {
         readFailure.response.ok({ total: 5 })
       })
       assert.deepEqual(readFailure.response.getBody(), { total: 5 })
-      redis.getBuffer = originalRead
+      redis.mgetBuffer = originalRead
       redis.eval = (async () => {
         throw new Error('Redis unavailable')
       }) as typeof redis.eval
@@ -252,7 +252,7 @@ test.group('HTTP response cache', (group) => {
       })
       assert.deepEqual(writeFailure.response.getBody(), { total: 6 })
     } finally {
-      redis.getBuffer = originalRead
+      redis.mgetBuffer = originalRead
       redis.eval = originalWrite
     }
   })

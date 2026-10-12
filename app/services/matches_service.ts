@@ -114,10 +114,17 @@ class MatchesService {
   }
 
   private async storeMatch(matchId: string, cluster: MatchCluster) {
-    const matchData = await riotApiService.client.matchV5.getMatchById({
+    // Every game this writer stores needs both, so the timeline is asked for
+    // alongside the match rather than a full Riot round trip after it. Only a
+    // game that ends up not stored here (lost to a concurrent desktop upload,
+    // or failed) spends the call for nothing.
+    const matchRequest = riotApiService.client.matchV5.getMatchById({ matchId, cluster })
+    const timelineRequest = riotApiService.client.matchV5.getMatchTimelineById({
       matchId,
       cluster,
     })
+    timelineRequest.catch(() => {})
+    const matchData = await matchRequest
 
     await this.archive(matchId, matchData)
 
@@ -146,11 +153,7 @@ class MatchesService {
       throw error
     }
 
-    const timelineData = await riotApiService.client.matchV5.getMatchTimelineById({
-      matchId,
-      cluster,
-    })
-    await ingestionService.ingestTimeline(matchId, matchData, timelineData, meta)
+    await ingestionService.ingestTimeline(matchId, matchData, await timelineRequest, meta)
     // All participants' cached analytics changed, including players whose own
     // profile wasn't the one that triggered this sync. Invalidate before replying.
     await invalidateResponseCache([

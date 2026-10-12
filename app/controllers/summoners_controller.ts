@@ -69,30 +69,43 @@ export default class SummonersController {
     ])
     const result = await syncGuard.run(key, async () => {
       let resolvedSummoner
-      let newMatches
       try {
         resolvedSummoner = await summonerService.resolveAndUpsert(summoner, platform, {
           refresh: true,
         })
-        newMatches = await matchService.update(
-          resolvedSummoner.puuid,
-          riotApiService.platformToRegion(resolvedSummoner.platform)
-        )
       } catch (error) {
         throw translateRiotError(error)
       }
+      const { puuid } = resolvedSummoner
 
       // Ranks change even when all recent matches were ingested by another player's
       // update; league-v4 is skipped only when Riot or the app said so minutes ago.
+      // It does not depend on the games, so it runs alongside match-v5 rather than
+      // after it.
+      const rankRefresh = (async () => {
+        const fresh = await summonerService
+          .ranksFresh(puuid, SYNC_RANK_FRESHNESS)
+          .catch(() => false)
+        if (!fresh) await summonerService.updateRanks(puuid, resolvedSummoner.platform)
+      })()
+      rankRefresh.catch(() => {})
+
+      let newMatches
+      try {
+        newMatches = await matchService.update(
+          puuid,
+          riotApiService.platformToRegion(resolvedSummoner.platform)
+        )
+      } catch (error) {
+        // Ranks may have been stored meanwhile; they must not hide behind the cache.
+        await rankRefresh.then(() => invalidateResponseCache([`summoner:${puuid}`])).catch(() => {})
+        throw translateRiotError(error)
+      }
+
       let rankRefreshFailed = false
       try {
-        const fresh = await summonerService
-          .ranksFresh(resolvedSummoner.puuid, SYNC_RANK_FRESHNESS)
-          .catch(() => false)
-        if (!fresh) {
-          await summonerService.updateRanks(resolvedSummoner.puuid, resolvedSummoner.platform)
-        }
-        await invalidateResponseCache([`summoner:${resolvedSummoner.puuid}`])
+        await rankRefresh
+        await invalidateResponseCache([`summoner:${puuid}`])
       } catch (error) {
         rankRefreshFailed = true
         logger.warn({ err: error }, 'Match update succeeded but rank refresh failed')
