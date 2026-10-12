@@ -27,7 +27,7 @@ function retry() {
       </p>
       <p
         v-if="error?.message"
-        class="mt-4 rounded-[var(--r-sm)] bg-well px-3 py-2 font-mono text-[12px] text-ink-3"
+        class="mt-4 rounded-[var(--r-sm)] bg-well px-3 py-2 font-mono text-[12px] text-ink-3 [overflow-wrap:anywhere]"
       >
         {{ error.message }}
       </p>

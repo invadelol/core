@@ -147,6 +147,14 @@
     min-height: 100%;
   }
 
+  /* A modal dialog holds the page still under it: a touch screen otherwise scrolls the page behind.
+     (A mouse's scrollbar would jump, so only there.) */
+  @media (pointer: coarse) {
+    html:has(dialog[open]) {
+      overflow: hidden;
+    }
+  }
+
   /* The light and the grain over the page ink, behind the content only (never per panel). */
   body::before {
     content: '';
