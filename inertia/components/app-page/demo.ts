@@ -81,7 +81,7 @@ function game(
 
 /** Home's match history, newest first, with the LP each ranked game moved. */
 export const HOME_GAMES: Array<{ game: MatchSummary; lp: number | null }> = [
-  { game: game(CHAMPS.leeSin, true, [11, 2, 15], 31.2, 8.7, 1, 1, 420, 'mvp'), lp: 24 },
+  { game: game(CHAMPS.leeSin, true, [11, 2, 15], 31.2, 8.1, 1, 0.4, 420, 'mvp'), lp: 24 },
   { game: game(CHAMPS.vi, false, [4, 6, 9], 28.1, 5.1, 4, 2), lp: -16 },
   { game: game(CHAMPS.leeSin, true, [8, 3, 12], 26.4, 7.4, 2, 20, 420), lp: 21 },
   { game: game(CHAMPS.xinZhao, true, [6, 4, 14], 33.9, 6.6, 3, 22, 440), lp: 19 },
