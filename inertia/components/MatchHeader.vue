@@ -85,7 +85,7 @@ async function copyId() {
 
       <button
         type="button"
-        class="num flex shrink-0 items-center gap-1.5 text-[12px] text-ink-4 transition-colors hover:text-ink-2"
+        class="num flex shrink-0 items-center gap-1.5 text-[12px] text-ink-4 transition-colors hover:text-ink-2 pointer-coarse:h-9"
         title="Copy match id"
         @click="copyId"
       >
