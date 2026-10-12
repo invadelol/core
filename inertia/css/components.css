@@ -339,6 +339,25 @@
     border-radius: 999px;
   }
 
+  /* A strip that scrolls sideways (tabs): an edge fades while there is more past it. */
+  .fade-r {
+    mask-image: linear-gradient(to left, transparent, #000 28px);
+  }
+
+  .fade-l {
+    mask-image: linear-gradient(to right, transparent, #000 28px);
+  }
+
+  .fade-x {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 28px,
+      #000 calc(100% - 28px),
+      transparent
+    );
+  }
+
   /* ── Notices: one line, a quiet panel, the problem's colour on its mark only ── */
   .notice {
     display: flex;
