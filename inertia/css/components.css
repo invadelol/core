@@ -129,6 +129,11 @@
     padding: 0 0 4px;
   }
 
+  /* A shared panel (the LP history) sits in the rail the same way. */
+  .rail > .iv-pf-panel {
+    padding: 12px 0 4px;
+  }
+
   /* ── Bars ───────────────────────────────────────────────────── */
   .meter {
     position: relative;

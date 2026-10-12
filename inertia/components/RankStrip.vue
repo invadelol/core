@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { RankCrest, TrendLine } from '@invadelol/ui'
-import { rankFromCore, rankLabel, rankValue, tierColor } from '@invadelol/ui/logic'
+import { LpGraph, RankCrest } from '@invadelol/ui'
+import { rankFromCore, rankLabel, rankValue, tierColor, type LpPoint } from '@invadelol/ui/logic'
 import type { Rank, RanksPayload } from '../lib/types.js'
 
 const props = defineProps<{ ranks: RanksPayload | null }>()
@@ -9,8 +9,6 @@ const props = defineProps<{ ranks: RanksPayload | null }>()
 const QUEUES: Record<string, string> = { RANKED_SOLO_5x5: 'Solo/Duo', RANKED_FLEX_SR: 'Flex' }
 const ORDER = Object.keys(QUEUES)
 const name = (rank: Rank) => rankLabel(rankFromCore(rank), false)
-/** The whole ladder on one axis, so a promotion reads as a climb, not a reset. */
-const ladder = (rank: Rank) => rankValue(rankFromCore(rank)) ?? 0
 const time = (rank: Rank) => new Date(rank.fetchedAt ?? 0).getTime()
 
 /** Solo first, then flex, then anything else that has a tier. */
@@ -19,26 +17,36 @@ const queues = computed(() => {
   return (props.ranks?.current ?? []).filter((r) => r.tier).sort((a, b) => at(a) - at(b))
 })
 
-function historyFor(queueType: string) {
-  return (props.ranks?.history ?? [])
-    .filter((r) => r.queueType === queueType && r.tier)
-    .sort((a, b) => time(a) - time(b))
+const LP_QUEUES: Record<string, LpPoint['queue']> = {
+  RANKED_SOLO_5x5: 'solo',
+  RANKED_FLEX_SR: 'flex',
 }
 
-/** The queue with the most snapshots gets the line. */
-const charted = computed(() => {
-  let best: { queueType: string; history: Rank[] } | null = null
-  for (const queue of queues.value) {
-    const history = historyFor(queue.queueType)
-    if (!best || history.length > best.history.length)
-      best = { queueType: queue.queueType, history }
-  }
-  return best && best.history.length > 2 ? best : null
-})
-
-const peak = computed(() =>
-  charted.value?.history.reduce((best, entry) => (ladder(entry) > ladder(best) ? entry : best))
+/** The stored snapshots as the shared LP graph reads them: the whole ladder on one axis. */
+const points = computed(() =>
+  (props.ranks?.history ?? [])
+    .flatMap((r): LpPoint[] => {
+      const queue = LP_QUEUES[r.queueType]
+      const rank = rankFromCore(r)
+      const value = rankValue(rank)
+      return queue && value !== null && r.fetchedAt
+        ? [{ ...rank, t: time(r), queue, value: Math.round(value * 100) }]
+        : []
+    })
+    .sort((a, b) => a.t - b.t)
 )
+
+/** A line needs a few snapshots of one queue; fewer read as noise. */
+const charted = computed(() =>
+  (['solo', 'flex'] as const).some((q) => points.value.filter((p) => p.queue === q).length > 2)
+)
+const card = computed(() => {
+  const current = (q: LpPoint['queue']) => {
+    const r = queues.value.find((x) => LP_QUEUES[x.queueType] === q)
+    return r ? rankFromCore(r) : null
+  }
+  return { solo: current('solo'), flex: current('flex') }
+})
 
 const knownLosses = (rank: Rank) => rank.losses !== null && rank.losses !== undefined
 
@@ -63,14 +71,10 @@ function record(rank: Rank) {
 </script>
 
 <template>
-  <!-- Ranked, sized for the profile rail: one row per queue, then the climb. -->
+  <!-- Ranked, sized for the profile rail: one row per queue, then the climb, read point by point. -->
   <section class="iv-panel">
     <div class="section">
       <h3>Ranked</h3>
-      <span v-if="peak" class="meta ml-auto">
-        Peak
-        <b class="font-semibold" :style="{ color: tierColor(peak.tier) }">{{ name(peak) }}</b>
-      </span>
     </div>
 
     <div>
@@ -122,19 +126,7 @@ function record(rank: Rank) {
           <div class="text-[16px] font-semibold text-ink-2">Unranked</div>
         </div>
       </div>
-
-      <div v-if="charted" class="mt-5 min-w-0">
-        <div class="mb-2 flex items-baseline justify-between text-[12px] text-ink-3">
-          <span>LP history · {{ QUEUES[charted.queueType] || charted.queueType }}</span>
-          <span class="num">{{ charted.history.length }} snapshots</span>
-        </div>
-        <span
-          role="img"
-          :aria-label="`From ${name(charted.history[0])} to ${name(charted.history[charted.history.length - 1])}`"
-        >
-          <TrendLine :values="charted.history.map(ladder)" :height="72" area />
-        </span>
-      </div>
     </div>
   </section>
+  <LpGraph v-if="charted" :points="points" :card="card" />
 </template>
