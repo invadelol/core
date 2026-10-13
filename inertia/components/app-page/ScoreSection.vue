@@ -75,8 +75,9 @@ const DIALS = [
       <p class="ap-eyebrow ln">After the game</p>
       <h2 class="ap-h2 ln">Every game, scored.</h2>
       <p class="ap-lead ln">
-        Each of the ten players gets an Invade score, weighed for their role: KDA, damage share,
-        lane gold at 15, vision, objectives. <strong>You see where you placed</strong>, and why.
+        Each of the ten players gets an Invade score, measured against the Emerald pace of their
+        role and against the lobby: KDA, kill participation, damage, gold, CS, vision, objectives.
+        <strong>You see where you placed</strong>, and why.
       </p>
     </header>
 
@@ -123,7 +124,7 @@ const DIALS = [
         <p class="ap-copy ln">
           Home averages your last twenty scores and sets them against
           <strong>the rank above yours</strong>. The arc runs from red to blue, so a good week shows
-          at a glance.
+          at a glance, and turns gold from 80: a game you will remember.
         </p>
       </div>
     </article>

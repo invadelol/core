@@ -1,6 +1,7 @@
+import { readFileSync } from 'node:fs'
 import { test } from '@japa/runner'
 import type { Badge } from '@invadelol/ui/logic'
-import { detailOf, scoreLobby, SCORE_CATEGORIES } from '../../inertia/lib/match.js'
+import { detailOf, isAfk, scoreLobby, SCORE_CATEGORIES } from '../../inertia/lib/match.js'
 import type { Match, Participant } from '../../inertia/lib/types.js'
 
 const ROLES = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
@@ -15,6 +16,7 @@ function player(index: number, overrides: Partial<Participant> = {}): Participan
     teamId,
     win: teamId === 100,
     kills: 4,
+    champLevel: 15,
     deaths: 4,
     assists: 6,
     cs: 180,
@@ -79,15 +81,76 @@ test.group('Match score', () => {
     assert.isBelow(stomp.p7.categories.fighting, even.p7.categories.fighting)
   })
 
-  test('winning is worth the same fixed bonus to identical lines', ({ assert }) => {
+  test('winning lifts identical lines without making the game great', ({ assert }) => {
     const scores = scoreLobby(lobby())
-    assert.equal(scores.p0.score - scores.p5.score, 10)
+    assert.isAbove(scores.p0.score, scores.p5.score)
+    assert.isBelow(scores.p0.score - scores.p5.score, 15)
   })
 
   test('a support is weighted on vision, not farm', ({ assert }) => {
     const scores = scoreLobby(lobby())
-    assert.equal(scores.p4.weights.farming, 0)
+    assert.isBelow(scores.p4.weights.farming, scores.p4.weights.vision)
     assert.isAbove(scores.p4.weights.vision, scores.p3.weights.vision)
+  })
+
+  test('the standard is real: a weaker lobby scores lower all round', ({ assert }) => {
+    const even = scoreLobby(lobby())
+    const weaker = scoreLobby(
+      lobby(
+        Object.fromEntries(
+          Array.from({ length: 10 }, (_, i) => [
+            i,
+            { cs: 120, goldEarned: 8500, visionScore: 15, deaths: 6 },
+          ])
+        )
+      )
+    )
+    for (const id of Object.keys(even)) assert.isBelow(weaker[id].score, even[id].score)
+  })
+
+  test('90 is rare and 100 is out of reach', ({ assert }) => {
+    const stomp = scoreLobby(
+      lobby({
+        2: {
+          kills: 18,
+          deaths: 1,
+          assists: 8,
+          cs: 290,
+          goldEarned: 19000,
+          totalDamageDealtToChampions: 52000,
+        },
+      })
+    )
+    assert.isAbove(stomp.p2.score, 80)
+    assert.isBelow(stomp.p2.score, 100)
+  })
+
+  test('an AFK player gets no score and does not count', ({ assert }) => {
+    const base = scoreLobby(lobby())
+    const m = lobby({ 7: { champLevel: 7, goldEarned: 4000, kills: 0, assists: 1, cs: 40 } })
+    assert.isTrue(isAfk(m, m.participants[7]))
+    const scores = scoreLobby(m)
+    assert.notProperty(scores, 'p7')
+    assert.equal(detailOf(m).players.find((p) => p.puuid === 'p7')!.rank, 0)
+    // The enemy mid's lane is not free points: the duel is dropped.
+    assert.isBelow(Math.abs(scores.p2.score - base.p2.score), 6)
+    // A support far behind on levels is not AFK.
+    const sup = lobby({ 4: { champLevel: 12, goldEarned: 7000 } })
+    assert.isFalse(isAfk(sup, sup.participants[4]))
+  })
+
+  test('scores the real games of the fixture as the desktop app does', ({ assert }) => {
+    // The app checks its own scorer (src-tauri/src/profile/score.rs) against this same file.
+    const doc = JSON.parse(
+      readFileSync(new URL('../fixtures/score_lobbies.json', import.meta.url), 'utf8')
+    )
+    for (const l of doc.lobbies) {
+      const scores = scoreLobby(match(l.participants, l.duration))
+      assert.deepEqual(
+        l.participants.map((p: Participant) => scores[p.puuid]?.score ?? null),
+        l.scores
+      )
+    }
   })
 
   test('MVP and ACE go to the best of each team', ({ assert }) => {
@@ -111,9 +174,10 @@ test.group('Match score', () => {
     const withObjectives = scoreLobby(full)
     const without = scoreLobby(summary)
     assert.equal(without.p2.weights.objectives, 0)
-    // Objectives are even across this lobby, so dropping them keeps the order.
-    const ranks = (m: Match) => detailOf(m).players.map((p) => p.rank)
-    assert.deepEqual(ranks(summary), ranks(full))
+    // Dropping a figure moves the scores a little, never who played best.
+    const best = (m: Match) => detailOf(m).players.find((p) => p.rank === 1)?.puuid
+    assert.equal(best(summary), 'p2')
+    assert.equal(best(full), 'p2')
     assert.isAbove(without.p2.score, 0)
     assert.exists(withObjectives.p2)
   })
