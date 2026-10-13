@@ -155,6 +155,7 @@ test.group('Riot asset paths', () => {
     assert.deepEqual(masterySources('0', PATCH_16_20), [`${game}/masterycrest_level0.png`])
     assert.isTrue(masterySources('10')[0].startsWith(`${CDRAGON}/latest/`))
     assert.notInclude(placeholderSvg('mastery', '7'), '<rect')
+    assert.notInclude(placeholderSvg('mastery', '7'), '<text')
   })
 
   test('rank crests and emblems resolve by tier', ({ assert }) => {
