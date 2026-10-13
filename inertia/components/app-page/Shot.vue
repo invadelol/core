@@ -19,9 +19,9 @@ const props = withDefaults(
 
 const info = computed(() => SHOTS[props.name])
 const set = (ext: string) =>
-  info.value.widths.map((w) => `/app/${props.name}-${w}.${ext} ${w}w`).join(', ')
+  info.value.widths.map((w) => `/app-page/${props.name}-${w}.${ext} ${w}w`).join(', ')
 const avif = computed(() => ('avif' in info.value ? info.value.avif : false))
-const fallback = computed(() => `/app/${props.name}-${info.value.widths[0]}.webp`)
+const fallback = computed(() => `/app-page/${props.name}-${info.value.widths[0]}.webp`)
 </script>
 
 <template>
