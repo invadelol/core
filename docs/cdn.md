@@ -11,7 +11,7 @@ id, fetches it once per patch, keeps it, and answers from the copy.
 | --- | --- | --- |
 | `GET /cdn/:patch/:kind/:id` | the asset as of that patch (`16.20`) | `public, max-age=31536000, immutable` |
 | `GET /cdn/:kind/:id` | the asset as of the live patch | `public, max-age=86400, stale-while-revalidate=604800` |
-| any of the above when every upstream source fails | a generated SVG tile with the id's initials | `public, max-age=60` |
+| any of the above when every upstream source fails | a generated SVG tile with the id's initials (a mastery crest: its level alone, on transparency) | `public, max-age=60` |
 | `GET /cdn/names/:kind` | id → display name (kinds with a manifest) | `public, max-age=3600` |
 
 `:id` may end in `.png`, `.jpg`, `.svg` or `.webp` so browsers and CDNs treat
@@ -42,6 +42,7 @@ live cache lifetime, which keeps the mirror bounded to six copies of the art.
 | `rank` | tier (`gold`, `unranked`) | `rcp-fe-lol-static-assets/…/images/ranked-mini-crests/<tier>.svg` | `…/ranked-emblem/emblem-<tier>.png` |
 | `emblem` | tier | `rcp-fe-lol-static-assets/…/images/ranked-emblem/emblem-<tier>.png` (1280×720, crest in the middle) | — |
 | `map` | map id (`11`) | Data Dragon `cdn/<version>/img/map/map<id>.png` first | `v1/map-assets/map<id>/2dlevelminimap.png` |
+| `mastery` | champion mastery level, `0` to `10` (levels past ten wear the tenth crest) | `game/assets/ux/mastery/legendarychampionmastery/masterycrest_level<n>.png` (256×256; 0 and 4 to 10 only) | `rcp-fe-lol-shared-components/global/default/mastery-<n>.png` (800×900, crest in the middle; 1 to 10) |
 
 Ids resolve through Community Dragon's manifests rather than hand-built paths,
 because the shape of the asset paths changes between patches while the
@@ -82,7 +83,7 @@ the mirror. Worth running once per patch.
 ## Limits
 
 - Only the kinds above, and only ids of their exact shape (digits, a tier
-  name, `<id>-<key>`); a patch must be `major.minor`. Anything else is a 404
+  name, `<id>-<key>`, a mastery level up to 10); a patch must be `major.minor`. Anything else is a 404
   without any upstream request. Upstream URLs are built from these parts only,
   so the proxy cannot be pointed anywhere else.
 - Upstream files over 8 MiB are refused; upstream gets 6 seconds per source.
