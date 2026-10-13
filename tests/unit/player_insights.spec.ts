@@ -2,7 +2,9 @@ import { test } from '@japa/runner'
 import type { HttpContext } from '@adonisjs/core/http'
 import cache from '@adonisjs/cache/services/main'
 import clickhouse from 'adonisjs-clickhouse/services/main'
+import { DateTime } from 'luxon'
 import Summoner from '#models/summoner'
+import PlayerMastery from '#models/player_mastery'
 import PlayerInsightsController from '#controllers/player_insights_controller'
 
 let puuid = 'P'.repeat(78)
@@ -100,6 +102,34 @@ test.group('Player insights', () => {
         assert.include(urls[0], `champion-masteries/by-puuid/${puuid}`)
       }
     )
+  })
+
+  test('serves the stored snapshot when Riot cannot answer for mastery', async ({ assert }) => {
+    const find = PlayerMastery.find
+    const observedAt = DateTime.fromMillis(1_790_000_000_000)
+    PlayerMastery.find = (async () => ({
+      source: 'desktop',
+      observedAt,
+      entries: [
+        { championId: 12, championLevel: 6, championPoints: 9800, lastPlayTime: 1 },
+        { championId: 45, championLevel: 31, championPoints: 254000, lastPlayTime: 2 },
+      ],
+    })) as unknown as typeof PlayerMastery.find
+    try {
+      await withResponse(503, {}, async (controller) => {
+        const result = (await controller.mastery(context)) as unknown as Array<
+          Record<string, unknown>
+        >
+        assert.deepEqual(
+          result.map((entry) => entry.championId),
+          [45, 12]
+        )
+        assert.equal(result[0].source, 'desktop')
+        assert.equal(result[0].observedAt, observedAt.toMillis())
+      })
+    } finally {
+      PlayerMastery.find = find
+    }
   })
 
   test('reads the champion records of a whole lobby in one query', async ({ assert }) => {
