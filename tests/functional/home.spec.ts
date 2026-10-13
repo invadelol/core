@@ -28,14 +28,13 @@ test.group('Home page', (group) => {
   }
 
   test('renders the search and every section from storage', async ({ client, assert }) => {
-    for (const path of ['/', '/?v=2']) {
-      const response = await client.get(path)
-      response.assertStatus(200)
-      response.assertTextIncludes('Find a player')
-      const page = response.text()
-      for (const prop of ['today', 'trending', 'best', 'climbs', 'champions']) {
-        assert.include(page, `&quot;${prop}&quot;:`)
-      }
+    const response = await client.get('/')
+    response.assertStatus(200)
+    response.assertTextIncludes('Find a player')
+    response.assertTextIncludes('href="/app"')
+    const page = response.text()
+    for (const prop of ['trending', 'best', 'climbs', 'champions']) {
+      assert.include(page, `&quot;${prop}&quot;:`)
     }
   })
 

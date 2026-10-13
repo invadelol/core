@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
 import { TrendLine } from '@invadelol/ui'
+import { tierRgb } from '@invadelol/ui/logic'
 import HomeRank from './HomeRank.vue'
 import { profilePath } from '../../lib/format.js'
 import { profileIcon } from '../../lib/assets.js'
@@ -19,9 +20,14 @@ const record = (c: Climb) => (c.losses === null ? `${c.wins}W` : `${c.wins}W ${c
       <span class="meta">Solo/Duo · 24 h</span>
     </div>
 
-    <ol class="iv-panel overflow-hidden">
+    <ol class="iv-panel home-sheet overflow-hidden">
       <li v-for="c in climbs" :key="`${c.player.gameName}#${c.player.tagLine}`" class="line">
-        <Link :href="profilePath(c.player.gameName, c.player.tagLine)" class="row">
+        <Link
+          :href="profilePath(c.player.gameName, c.player.tagLine)"
+          class="row"
+          :class="{ plain: !c.player.rank }"
+          :style="c.player.rank ? { '--tint': tierRgb(c.player.rank.tier) } : undefined"
+        >
           <img
             :src="profileIcon(c.player.profileIconId)"
             alt=""
@@ -65,11 +71,27 @@ const record = (c: Climb) => (c.losses === null ? `${c.wins}W` : `${c.wins}W ${c
   gap: 12px;
   min-height: 56px;
   padding: 8px 16px 8px 12px;
-  transition: background-color var(--t-fast) var(--ease);
+}
+
+/* A ranked player's line takes the faint light of their tier, rising from the portrait. */
+.row {
+  --row: transparent;
+  background:
+    linear-gradient(
+      90deg,
+      rgb(var(--tint) / var(--home-tint)),
+      rgb(var(--tint) / var(--home-tint-far)) 34%,
+      rgb(var(--tint) / 0) 66%
+    ),
+    var(--row);
+}
+
+.row.plain {
+  background: var(--row);
 }
 
 .row:hover {
-  background: var(--surface-2);
+  --row: var(--surface-2);
 }
 
 .spark {

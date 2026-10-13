@@ -7,7 +7,6 @@ import {
   championRows,
   climbsFrom,
   comparePatches,
-  hourlySeries,
   pickPatch,
   viewBucketKeys,
   type RankSnapshot,
@@ -69,25 +68,7 @@ function lobby(id: string, start: number, star = -1): Match {
   } as Match
 }
 
-test.group('Home: today and trending', () => {
-  test('buckets games by hour, oldest first, and drops what is outside the day', ({ assert }) => {
-    const series = hourlySeries([
-      [0, 5],
-      [23, 2],
-      [3, 1],
-      [24, 9],
-      [-1, 9],
-    ])
-    assert.lengthOf(series, 24)
-    assert.equal(series[23], 5)
-    assert.equal(series[0], 2)
-    assert.equal(series[20], 1)
-    assert.equal(
-      series.reduce((a, b) => a + b, 0),
-      8
-    )
-  })
-
+test.group('Home: trending', () => {
   test('names one view bucket per UTC day, today first', ({ assert }) => {
     assert.deepEqual(viewBucketKeys(NOW, 3), [
       'home:views:2026-10-13',

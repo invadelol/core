@@ -22,19 +22,6 @@ export interface HomePlayer {
   rank: HomeRank | null
 }
 
-export interface HomeToday {
-  /** Games played in the last 24 hours that are stored. */
-  games: number
-  /** The same games per hour, oldest first: 24 values. */
-  hourly: number[]
-  /** Profiles refreshed from Riot in the last 24 hours. */
-  updated: number
-  /** Every stored profile. */
-  players: number
-  /** Every stored game. */
-  stored: number
-}
-
 export interface TrendingPlayer extends HomePlayer {
   views: number
 }
@@ -88,7 +75,6 @@ export interface HomeChampions {
 }
 
 export interface HomeData {
-  today: HomeToday | null
   trending: HomeTrending | null
   best: BestGame[] | null
   climbs: Climb[] | null

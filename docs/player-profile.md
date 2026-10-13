@@ -6,7 +6,7 @@ See [design.md](design.md) for the palette, themes and primitives.
 
 | Route                                | Content                                                       |
 | ------------------------------------ | ------------------------------------------------------------- |
-| `/`                                  | Search, recent profiles, and the day on invade.lol (below)    |
+| `/`                                  | Search, recent profiles, and what invade.lol stores (below)   |
 | `/:summoner`                         | Overview: ranks, LP, champions, roles, teammates, games       |
 | `/:summoner/champions`               | Champion pool, win-rate heatmap and lifetime mastery          |
 | `/:summoner/live`                    | Current lineup, spells, runes, tracked champion and rank data |
@@ -19,13 +19,12 @@ See [design.md](design.md) for the palette, themes and primitives.
 ## Home
 
 Search first (focused on load), the profiles this browser opened, then what invade.lol stores
-right now, each section left out when it has nothing: games of the last 24 hours by hour with
-the stored totals, the best Invade scores of the day (one line per player, opening the game),
-the profiles most viewed over 7 days, the biggest Solo/Duo climbs of the day from rank
-snapshots, and champions on the newest patch with enough Solo/Duo games (win, pick and ban
-rates, gated at 100 games). `app/services/home_service.ts` reads them from Postgres, ClickHouse
-and Redis, never from Riot, each cached for a few minutes. `/?v=2` lays the same sections out
-as a two-column dashboard.
+right now, each section left out when it has nothing: the best Invade scores of the day (one
+line per player, opening the game), the profiles most viewed over 7 days, the biggest Solo/Duo
+climbs of the day from rank snapshots, and champions on the newest patch with enough Solo/Duo
+games (win, pick and ban rates, gated at 100 games). A card at the end leads to the desktop
+app. `app/services/home_service.ts` reads the sections from Postgres, ClickHouse and Redis,
+never from Riot, each cached for a few minutes.
 
 ## Overview
 

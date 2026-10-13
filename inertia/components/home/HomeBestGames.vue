@@ -24,9 +24,9 @@ const href = (b: BestGame) =>
       <span class="meta">Last 24 h</span>
     </div>
 
-    <ol class="list iv-panel overflow-hidden">
+    <ol class="list iv-panel home-sheet overflow-hidden">
       <li v-for="b in games" :key="b.matchId + b.player.gameName" class="best">
-        <Link :href="href(b)" class="row">
+        <Link :href="href(b)" class="row" :class="b.game.win ? 'win' : 'loss'">
           <span class="dial">
             <PerfDial
               v-if="b.game.score"
@@ -106,11 +106,39 @@ const href = (b: BestGame) =>
   gap: 12px;
   min-height: 68px;
   padding: 10px 14px 10px 12px;
-  transition: background-color var(--t-fast) var(--ease);
+}
+
+/* The result as the app's match rows show it: an edge and a soft tint from the left. */
+.row.win {
+  --tint: var(--win-rgb);
+}
+
+.row.loss {
+  --tint: var(--loss-rgb);
+}
+
+.row {
+  box-shadow: inset 2px 0 0 rgb(var(--tint) / 0.85);
+}
+
+.row {
+  --row: transparent;
+  background:
+    linear-gradient(
+      90deg,
+      rgb(var(--tint) / var(--home-tint)),
+      rgb(var(--tint) / var(--home-tint-far)) 34%,
+      rgb(var(--tint) / 0) 66%
+    ),
+    var(--row);
+}
+
+.row.plain {
+  background: var(--row);
 }
 
 .row:hover {
-  background: var(--surface-2);
+  --row: var(--surface-2);
 }
 
 .dial {
