@@ -11,6 +11,13 @@ import PlayerMastery from '#models/player_mastery'
 import statsRepository from '#services/analytics/stats_repository'
 import { translateRiotError } from '#utils/riot_errors'
 import { SyncGuard } from '#utils/sync_guard'
+import {
+  buildLiveGame,
+  isPuuid,
+  LOBBY_HISTORY_GAMES,
+  type LiveGame,
+  type SpectatorGame,
+} from '#services/live/live_game'
 
 const insightsGuard = new SyncGuard()
 
@@ -83,56 +90,31 @@ class PlayerInsightsService {
             await this.rememberTop(puuid, entries, observedAt)
             return entries
           }
-          // Enrich from already tracked games; avoid 20 additional Riot calls per lobby.
-          const ids = data.participants
-            .map((p: any) => p.puuid)
-            .filter((id: unknown) => typeof id === 'string' && /^[a-zA-Z0-9_-]{78}$/.test(id))
-          const [ranks, records] = await Promise.all([
-            ids.length
-              ? Rank.query()
-                  .whereIn('puuid', ids)
-                  .where('queueType', 'RANKED_SOLO_5x5')
-                  .distinctOn('puuid')
-                  .orderBy('puuid')
-                  .orderBy('fetchedAt', 'desc')
-                  .catch(() => [])
-              : [],
-            statsRepository
-              .getChampionRecords(
-                data.participants.filter((p: any) => ids.includes(p.puuid)),
-                100
-              )
-              .catch(() => new Map<string, { games: number; winrate: number }>()),
-          ])
-          const participants = data.participants.map((p: any) => {
-            const rank = ranks.find((r) => r.puuid === p.puuid)
-            return {
-              puuid: p.puuid,
-              riotId: p.riotId,
-              championId: p.championId,
-              teamId: p.teamId,
-              spell1Id: p.spell1Id,
-              spell2Id: p.spell2Id,
-              perks: p.perks,
-              championStats: records.get(p.puuid) ?? null,
-              rank: rank
-                ? { tier: rank.tier, division: rank.division, leaguePoints: rank.leaguePoints }
-                : null,
-            }
-          })
-          // Do not send spectator observer credentials to the browser.
-          return {
-            game: {
-              gameId: data.gameId,
-              gameStartTime: data.gameStartTime,
-              gameLength: data.gameLength,
-              gameQueueConfigId: data.gameQueueConfigId,
-              bannedChampions: data.bannedChampions,
-              participants,
-            },
-          }
+          return { game: await this.liveGame(data) }
         }),
     })
+  }
+
+  /**
+   * A spectator-v5 game as the profile shows it. Ranks and stored games come from what is already
+   * tracked, in one read each (no extra Riot call per player); the lanes are inferred from them.
+   * Observer credentials never leave the server.
+   */
+  private async liveGame(data: SpectatorGame): Promise<LiveGame> {
+    const ids = [...new Set(data.participants.map((p) => p.puuid).filter(isPuuid))]
+    const [ranks, games] = await Promise.all([
+      ids.length
+        ? Rank.query()
+            .whereIn('puuid', ids)
+            .where('queueType', 'RANKED_SOLO_5x5')
+            .distinctOn('puuid')
+            .orderBy('puuid')
+            .orderBy('fetchedAt', 'desc')
+            .catch(() => [])
+        : [],
+      statsRepository.getRecentGames(ids, LOBBY_HISTORY_GAMES).catch(() => []),
+    ])
+    return buildLiveGame(data, ranks, games)
   }
 
   /** Every champion's mastery, from champion-mastery-v4 (cached 1 h). */
