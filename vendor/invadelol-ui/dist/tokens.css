@@ -168,6 +168,10 @@
   /* Gold: gold amounts, MVP, the top tier letter. */
   --gold-c: #e2b25a;
   --gold-rgb: 226 178 90;
+  /* The Invade score from 80 (gold) and 90 (peak), and how much they glow. */
+  --score-gold-rgb: 236 193 106;
+  --score-peak-rgb: 252 216 136;
+  --score-glow: 0.55;
   --warn: #ffb547;
 
   /* Rank tiers: rank names and crests only. */

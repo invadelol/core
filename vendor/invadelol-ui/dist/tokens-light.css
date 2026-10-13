@@ -79,6 +79,10 @@
   --down: var(--loss);
   --gold-c: #9a6d0f;
   --gold-rgb: 154 109 15;
+  /* The Invade score from 80 (gold) and 90 (peak), and how much they glow. */
+  --score-gold-rgb: 176 124 22;
+  --score-peak-rgb: 196 140 18;
+  --score-glow: 0.35;
   --warn: #b26b00;
   --tier-iron: #6e6460;
   --tier-bronze: #8f5534;
@@ -170,6 +174,10 @@
     --down: var(--loss);
     --gold-c: #9a6d0f;
     --gold-rgb: 154 109 15;
+    /* The Invade score from 80 (gold) and 90 (peak), and how much they glow. */
+    --score-gold-rgb: 176 124 22;
+    --score-peak-rgb: 196 140 18;
+    --score-glow: 0.35;
     --warn: #b26b00;
     --tier-iron: #6e6460;
     --tier-bronze: #8f5534;
