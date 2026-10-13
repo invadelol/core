@@ -29,6 +29,10 @@ export const profileIcon = (id: number | null | undefined) => assetUrl('profileI
 export const championSplash = (id: number) => assetUrl('splash', id)
 export const champIcon = (id: number) => assetUrl('champion', id)
 
+/** A champion mastery crest: levels past ten wear the tenth (docs/cdn.md, `mastery`). */
+export const masteryCrest = (level: number) =>
+  `/cdn/mastery/${Math.min(Math.max(Math.floor(level) || 0, 0), 10)}.png`
+
 /* ── Display names ──────────────────────────────────────────── */
 
 /**

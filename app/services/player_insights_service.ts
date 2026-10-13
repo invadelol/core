@@ -122,9 +122,23 @@ class PlayerInsightsService {
     return buildLiveGame(data, ranks, games)
   }
 
-  /** Every champion's mastery, from champion-mastery-v4 (cached 1 h). */
+  /**
+   * Every champion's mastery, from champion-mastery-v4 (cached 1 h). When Riot
+   * cannot answer, the newest stored snapshot (Riot's or the Invade app's top
+   * ten) stands in with its provenance, rather than nothing.
+   */
   async mastery(puuid: string): Promise<ChampionMastery[]> {
-    const entries = (await this.get(puuid, 'mastery')) as ChampionMastery[]
+    let entries: ChampionMastery[]
+    try {
+      entries = (await this.get(puuid, 'mastery')) as ChampionMastery[]
+    } catch (error) {
+      const snapshot = await PlayerMastery.find(puuid).catch(() => null)
+      if (!snapshot?.entries?.length) throw error
+      const observedAt = snapshot.observedAt.toMillis()
+      return [...snapshot.entries]
+        .sort(byPoints)
+        .map((entry) => ({ ...entry, source: snapshot.source, observedAt }))
+    }
     // Reads cached before provenance existed lack it; they expire within the hour.
     return entries.map((entry) => ({
       ...entry,
