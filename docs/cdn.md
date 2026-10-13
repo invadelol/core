@@ -11,7 +11,7 @@ id, fetches it once per patch, keeps it, and answers from the copy.
 | --- | --- | --- |
 | `GET /cdn/:patch/:kind/:id` | the asset as of that patch (`16.20`) | `public, max-age=31536000, immutable` |
 | `GET /cdn/:kind/:id` | the asset as of the live patch | `public, max-age=86400, stale-while-revalidate=604800` |
-| any of the above when every upstream source fails | a generated SVG tile with the id's initials (a mastery crest: its level alone, on transparency) | `public, max-age=60` |
+| any of the above when every upstream source fails | a generated SVG tile with the id's initials (a mastery crest: an empty, transparent tile) | `public, max-age=60` |
 | `GET /cdn/names/:kind` | id → display name (kinds with a manifest) | `public, max-age=3600` |
 
 `:id` may end in `.png`, `.jpg`, `.svg` or `.webp` so browsers and CDNs treat

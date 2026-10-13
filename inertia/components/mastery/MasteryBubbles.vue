@@ -91,6 +91,11 @@ function onLeave() {
   if (pointer === 'mouse') active.value = null
 }
 
+/** A tap anywhere else puts the tip away. */
+function onOutside(event: PointerEvent) {
+  if (active.value && !root.value?.contains(event.target as Node)) active.value = null
+}
+
 /** A tap shows a circle's figures (small ones are found within a finger's reach). */
 function onTap(event: MouseEvent) {
   if (!layout.value || pointer === 'mouse') return
@@ -117,6 +122,7 @@ onMounted(() => {
     })
   })
   observer.observe(element)
+  document.addEventListener('pointerdown', onOutside)
 
   const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   if (still || !('IntersectionObserver' in window)) return
@@ -133,6 +139,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', onOutside)
   observer?.disconnect()
   viewer?.disconnect()
   cancelAnimationFrame(frame)
@@ -184,6 +191,7 @@ onBeforeUnmount(() => {
               v-if="bubble.r * 2 >= CREST_MIN"
               :level="entries.get(bubble.id)?.championLevel ?? 0"
               :size="Math.round(Math.min(26, bubble.r / 6))"
+              :titled="false"
             />
             {{ compact(bubble.value) }}
           </span>
@@ -192,7 +200,7 @@ onBeforeUnmount(() => {
     </template>
 
     <div v-if="tip" class="ms-tip" :style="tip.style" aria-hidden="true">
-      <MasteryCrest :level="tip.entry.championLevel" :size="40" />
+      <MasteryCrest :level="tip.entry.championLevel" :size="40" :titled="false" />
       <span class="min-w-0">
         <span class="ms-tip-name">{{ championName(tip.entry.championId) }}</span>
         <span class="ms-tip-line num">

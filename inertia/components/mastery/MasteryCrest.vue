@@ -4,9 +4,11 @@ import { masteryCrest } from '../../lib/assets.js'
 
 /**
  * The League client's mastery crest for a level. Levels past ten wear the tenth crest; the level
- * itself is printed next to it by whoever shows one. A crest that cannot load leaves its level.
+ * itself is printed beside it by whoever shows one, so a crest that cannot load simply goes.
  */
-const props = defineProps<{ level: number; size: number }>()
+const props = withDefaults(defineProps<{ level: number; size: number; titled?: boolean }>(), {
+  titled: true,
+})
 
 const failed = ref(false)
 watch(
@@ -18,12 +20,12 @@ const src = computed(() => masteryCrest(props.level))
 
 <template>
   <span
+    v-if="!failed"
     class="ms-crest"
     :style="{ width: `${size}px`, height: `${size}px` }"
-    :title="`Mastery level ${level}`"
+    :title="titled ? `Mastery level ${level}` : undefined"
   >
     <img
-      v-if="!failed"
       :src="src"
       alt=""
       :width="size"
@@ -32,7 +34,6 @@ const src = computed(() => masteryCrest(props.level))
       decoding="async"
       @error="failed = true"
     />
-    <span v-else class="num">{{ level }}</span>
   </span>
 </template>
 
@@ -47,11 +48,5 @@ const src = computed(() => masteryCrest(props.level))
   width: 100%;
   height: 100%;
   object-fit: contain;
-}
-
-.ms-crest > span {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--text-3);
 }
 </style>

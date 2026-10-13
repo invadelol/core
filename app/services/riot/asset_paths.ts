@@ -352,11 +352,9 @@ function escapeXml(value: string) {
  * than broken, and the slot keeps its shape.
  */
 export function placeholderSvg(kind: AssetKind, id: string, label?: string) {
-  // A crest that could not be fetched is its level alone, on nothing: it sits on any surface.
+  // A crest that could not be fetched leaves its slot empty: its level is always printed beside it.
   if (kind === 'mastery') {
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="${escapeXml(id)}">
-  <text x="32" y="33" fill="${PLACEHOLDER_COLORS[1][1]}" font-family="system-ui, -apple-system, sans-serif" font-size="24" font-weight="600" text-anchor="middle" dominant-baseline="middle">${escapeXml(id)}</text>
-</svg>`
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="${escapeXml(id)}"/>`
   }
   const text = initials(label || id)
   const [background, foreground] =
