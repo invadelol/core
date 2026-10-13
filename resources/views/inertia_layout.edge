@@ -21,14 +21,12 @@
       The stored theme has to be on <html> before the first paint, or a
       dark-theme visitor gets a white flash on every navigation. This is
       the one script that must run synchronously, ahead of the stylesheet.
-      Without a choice the page follows the system (`system`), except /app: dark.
+      Without a choice the page follows the system (`system`).
     --}}
     <script>
       (function () {
         try {
           var t = localStorage.getItem('invade-theme')
-          // The desktop app's page is dark unless the visitor chose otherwise, like the app.
-          if (!t && location.pathname === '/app') t = 'dark'
           if (t === 'light' || t === 'dark') {
             document.documentElement.setAttribute('data-theme', t)
             var bar = t === 'dark' ? '#08090c' : '#ffffff'

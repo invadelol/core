@@ -11,11 +11,8 @@ import MoreSection from '../components/app-page/MoreSection.vue'
 import LightSection from '../components/app-page/LightSection.vue'
 import GetSection from '../components/app-page/GetSection.vue'
 import '../components/app-page/app-page.css'
-import { useDarkByDefault } from '../lib/theme.js'
 
 defineProps<{ version: string | null }>()
-
-useDarkByDefault()
 
 /**
  * /app, the desktop app's page, laid out like a product page: one idea per section, each shown
