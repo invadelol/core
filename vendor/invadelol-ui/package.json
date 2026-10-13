@@ -1,6 +1,6 @@
 {
   "name": "@invadelol/ui",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Invade's frontend: design tokens, primitives and the match and profile views shared by the desktop app and invade.lol.",
   "license": "PolyForm-Noncommercial-1.0.0",
   "repository": {
@@ -13,7 +13,8 @@
   ],
   "files": [
     "dist",
-    "LICENSE"
+    "LICENSE",
+    "DESIGN.md"
   ],
   "main": "./dist/index.js",
   "module": "./dist/index.js",
