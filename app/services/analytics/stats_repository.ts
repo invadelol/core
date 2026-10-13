@@ -249,32 +249,27 @@ export class StatsRepository {
   }
 
   /**
-   * Each player's games and winrate on one champion over their last `count`
-   * games: a live lobby's ten players in one read rather than one query each.
+   * The last `count` games of each player, newest first: champion, position and result. A live
+   * lobby's ten players in one read rather than one query each; at most `count` rows per player.
    */
-  async getChampionRecords(
-    players: Array<{ puuid: string; championId: number }>,
+  async getRecentGames(
+    puuids: string[],
     count: number
-  ): Promise<Map<string, { games: number; winrate: number }>> {
-    if (!players.length) return new Map()
-    const quoted = (puuid: string) => `'${escapeClickhouseString(puuid)}'`
+  ): Promise<Array<{ puuid: string; championId: number; position: string; win: boolean }>> {
+    if (!puuids.length) return []
     const result = await rows(`
-      SELECT puuid, count() as games, avg(win) as winrate
-      FROM (
-        SELECT puuid, champion_id, win
-        FROM participants
-        PREWHERE puuid IN (${players.map((p) => quoted(p.puuid)).join(',')})
-        ORDER BY game_start_ms DESC, match_id DESC
-        LIMIT ${integer(count, DEFAULT_STATS_COUNT)} BY puuid
-      )
-      WHERE (puuid, champion_id) IN (${players
-        .map((p) => `(${quoted(p.puuid)}, ${Math.trunc(Number(p.championId)) || 0})`)
-        .join(',')})
-      GROUP BY puuid
+      SELECT puuid, champion_id, team_position, win
+      FROM participants
+      PREWHERE puuid IN (${puuids.map((puuid) => `'${escapeClickhouseString(puuid)}'`).join(',')})
+      ORDER BY game_start_ms DESC, match_id DESC
+      LIMIT ${integer(count, DEFAULT_STATS_COUNT)} BY puuid
     `)
-    return new Map(
-      result.map((row) => [asString(row[0]), { games: number(row[1]), winrate: number(row[2]) }])
-    )
+    return result.map((row) => ({
+      puuid: asString(row[0]),
+      championId: number(row[1]),
+      position: asString(row[2]),
+      win: number(row[3]) === 1,
+    }))
   }
 
   /**

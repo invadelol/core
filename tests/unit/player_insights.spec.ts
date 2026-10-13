@@ -102,13 +102,19 @@ test.group('Player insights', () => {
     )
   })
 
-  test('reads the champion records of a whole lobby in one query', async ({ assert }) => {
+  test('reads the stored games of a whole lobby in one query', async ({ assert }) => {
     const [first, second] = ['A', 'B'].map((letter) => letter.repeat(78))
     const query = clickhouse.query
     const sql: string[] = []
     clickhouse.query = (async (options: { query: string }) => {
       sql.push(options.query)
-      return { json: async () => [[first, '7', 0.5714]] }
+      return {
+        json: async () => [
+          [first, '45', 'MIDDLE', 1],
+          [first, '45', 'MIDDLE', 0],
+          [first, '12', 'UTILITY', 1],
+        ],
+      }
     }) as unknown as typeof clickhouse.query
     try {
       await withResponse(
@@ -127,13 +133,15 @@ test.group('Player insights', () => {
           }
           assert.deepEqual(
             result.game.participants.map((p: { championStats: unknown }) => p.championStats),
-            [{ games: 7, winrate: 0.5714 }, null, null]
+            [{ games: 2, winrate: 0.5 }, null, null]
           )
+          assert.deepEqual(result.game.participants[0].recent, { games: 3, wins: 2 })
         }
       )
       assert.lengthOf(sql, 1)
-      assert.include(sql[0], `('${first}', 45)`)
-      assert.include(sql[0], `('${second}', 12)`)
+      assert.include(sql[0], `'${first}'`)
+      assert.include(sql[0], `'${second}'`)
+      assert.include(sql[0], 'LIMIT 100 BY puuid')
     } finally {
       clickhouse.query = query
     }
