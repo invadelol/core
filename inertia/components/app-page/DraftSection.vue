@@ -93,13 +93,15 @@ useScrollFx(row, (box, vh) => {
 .panels {
   display: grid;
   gap: 20px;
-  max-width: var(--ap-wide);
+  /* One column below 900px: a phone's width, or a tablet's at most. */
+  max-width: 600px;
   margin-top: clamp(56px, 7vw, 96px);
 }
 
 @media (min-width: 900px) {
   .panels {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-width: var(--ap-wide);
   }
 }
 

@@ -198,7 +198,6 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure))
           </div>
         </div>
 
-
         <ol class="steps" aria-hidden="true">
           <li
             v-for="(c, i) in CAPTIONS"
