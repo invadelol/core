@@ -29,6 +29,7 @@ const DownloadsController = () => import('#controllers/downloads_controller')
 const AppPageController = () => import('#controllers/app_page_controller')
 const DesktopController = () => import('#controllers/desktop_controller')
 const HomeController = () => import('#controllers/home_controller')
+const SynergyController = () => import('#controllers/synergy_controller')
 
 // API routes group
 router
@@ -48,6 +49,14 @@ router
 
     router
       .get('/summoners/puuid/:puuid/friends', [SummonersController, 'friends'])
+      .use(middleware.httpCache())
+
+    router
+      .get('/summoners/puuid/:puuid/synergy', [SynergyController, 'report'])
+      .use(middleware.httpCache())
+
+    router
+      .get('/summoners/puuid/:puuid/synergy/:mate', [SynergyController, 'together'])
       .use(middleware.httpCache())
 
     router
