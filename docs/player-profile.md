@@ -13,7 +13,7 @@ See [design.md](design.md) for the palette, themes and primitives.
 | `/:summoner/friends`                 | Lane partnerships and per-teammate synergy                    |
 | `/:summoner/compare?with=Name%23Tag` | Two players on one table, same filters                        |
 | `/:summoner/match/:matchId`          | The game's header, scoreboard, analysis, timeline and build   |
-| `/:summoner/lens`                    | Redirects to `/champions`                                     |
+| `/:summoner/lens`                    | Performance by domain in one role (Lens)                      |
 | `/:summoner/history`                 | Redirects to the Overview match feed                          |
 
 ## Home
@@ -49,6 +49,22 @@ record, and the LP climb of the queue with the most snapshots), **Champions**
 (the top five, each filtering the feed), **Roles**, **Played with** and the
 **Activity** calendar. On narrow screens the sections become tabs and the rail
 follows the games.
+
+## Lens
+
+The player's games in one role (their main role by default), read by domain: laning,
+farming, teamfighting, vision, objectives, survival and consistency. Each domain is
+rated 0–100 on the Invade score's scale, so about 41 is the role's Emerald pace: every
+figure is measured against that pace where a public one exists (CS, gold, kill
+participation, vision, KDA) and against the lane opponent of each game, with the score's
+spreads, clamps and role weights. A window of a few games is pulled towards the pace.
+Laning reads the minute frames of the games that have a timeline (CS at 10, gold at 15,
+deaths and solo kills before 14 minutes); consistency is the spread of the Invade score.
+The overview puts every domain on one track with the pace as a dashed line through them,
+then a card per domain gives its read, its figures and its rating over the games. Filters:
+role, queue and the last 20 or 50 games. The reading is `inertia/lib/lens.ts`, served by
+`GET /api/summoners/puuid/:puuid/lens?role=&type=&count=`. Locally,
+`node scripts/seed_lens_demo.mjs` gives part of the demo profile's games a timeline.
 
 ## Champions
 

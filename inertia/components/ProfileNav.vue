@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
 import { nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
-import { ArrowLeftRight, LayoutGrid, Radio, Swords, Users } from 'lucide-vue-next'
+import { ArrowLeftRight, LayoutGrid, Radio, ScanEye, Swords, Users } from 'lucide-vue-next'
 
 const props = defineProps<{ slug: string; section: string }>()
 
@@ -41,6 +41,7 @@ watch(
 
 const TABS = [
   { key: 'overview', label: 'Overview', icon: LayoutGrid },
+  { key: 'lens', label: 'Lens', icon: ScanEye },
   { key: 'champions', label: 'Champions', icon: Swords },
   { key: 'friends', label: 'Friends', icon: Users },
   { key: 'compare', label: 'Compare', icon: ArrowLeftRight },
