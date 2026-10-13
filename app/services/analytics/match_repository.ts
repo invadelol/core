@@ -434,12 +434,44 @@ export class MatchRepository {
       LIMIT ${count} OFFSET ${offset}
     `
 
+    return this.readWindow(matchWindow, filters.view)
+  }
+
+  /**
+   * The newest stored games of some queues since a moment, whoever played them, as the match
+   * list reads them (the home page's best games). The window is a range read over `matches`,
+   * ordered by start time inside each platform, then the same two reads as a player's list.
+   */
+  async getRecent(filters: { since: number; queueIds: readonly number[]; limit: number }) {
+    const queues = filters.queueIds.map((id) => Math.trunc(Number(id))).filter(Number.isFinite)
+    if (!queues.length) return []
+    const matchWindow = `
+      SELECT match_id
+      FROM matches
+      WHERE game_start_ms >= ${integer(filters.since, 0)}
+        AND queue_id IN (${queues.join(',')})
+      ORDER BY game_start_ms DESC, match_id DESC
+      LIMIT ${integer(filters.limit, DEFAULT_MATCH_COUNT)}
+    `
+    // The same lower bound on both reads lets ClickHouse skip every older monthly partition.
+    return this.readWindow(matchWindow, 'summary', integer(filters.since, 0))
+  }
+
+  /**
+   * The games of a window of match ids (a subquery), with their participants, newest first.
+   * `since` (epoch ms), when the window has one, prunes both reads to the partitions it spans.
+   */
+  private async readWindow(
+    matchWindow: string,
+    view: 'summary' | 'full' | undefined,
+    since?: number
+  ) {
+    const recent = since ? `AND game_start_ms >= ${since}` : ''
     // An `IN` set, never a join: ClickHouse builds the set first and then
     // prunes granules with the primary key and the match_id bloom filter.
     // Joining `participants` against the window instead streams the entire
     // table through the join.
-    const participantPlan =
-      filters.view === 'summary' ? summaryParticipantPlan : fullParticipantPlan
+    const participantPlan = view === 'summary' ? summaryParticipantPlan : fullParticipantPlan
     const matchIdAt = participantPlan.at('match_id')
 
     const [matches, participantRows] = await Promise.all([
@@ -447,14 +479,14 @@ export class MatchRepository {
         `WITH match_window AS (${matchWindow})
          SELECT ${matchPlan.select}
          FROM matches
-         WHERE match_id IN (SELECT match_id FROM match_window)`,
+         WHERE match_id IN (SELECT match_id FROM match_window) ${recent}`,
         matchPlan
       ),
       rawRows(
         `WITH match_window AS (${matchWindow})
          SELECT ${participantPlan.select}
          FROM participants
-         WHERE match_id IN (SELECT match_id FROM match_window)`
+         WHERE match_id IN (SELECT match_id FROM match_window) ${recent}`
       ),
     ])
 

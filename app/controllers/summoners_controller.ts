@@ -21,6 +21,7 @@ import {
   translateRiotError,
 } from '#utils/riot_errors'
 import matchPager from '#services/match_pager'
+import homeService from '#services/home_service'
 import deviceService from '#services/desktop/device_service'
 import playerSnapshotService from '#services/desktop/player_snapshot_service'
 import type Summoner from '#models/summoner'
@@ -273,6 +274,8 @@ export default class SummonersController {
     if (viewCount === null) {
       return response.notFound({ message: 'Summoner not found' })
     }
+    // The home page's Trending reads views by day; counting one must never hold the answer.
+    void homeService.recordView(puuid)
 
     return response.ok({ viewCount: viewCount.toString() })
   }

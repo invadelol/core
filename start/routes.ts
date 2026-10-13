@@ -28,6 +28,7 @@ const AssetsController = () => import('#controllers/assets_controller')
 const DownloadsController = () => import('#controllers/downloads_controller')
 const AppPageController = () => import('#controllers/app_page_controller')
 const DesktopController = () => import('#controllers/desktop_controller')
+const HomeController = () => import('#controllers/home_controller')
 
 // API routes group
 router
@@ -122,7 +123,7 @@ router.get('/og/:summoner', [() => import('#controllers/social_cards_controller'
 
 router.get('/sitemap.xml', [() => import('#controllers/sitemaps_controller'), 'index'])
 
-router.on('/').renderInertia('home')
+router.get('/', [HomeController, 'show'])
 
 router.get('/:summoner/match/:matchId', ({ inertia, params }) => {
   return inertia.render('match', {
