@@ -8,6 +8,8 @@
 export * from './logic';
 export { createInvadeUi, gameFavorite, provideInvadeUi, useFormat, useInvadeUi, useNames } from './context';
 export type { AssetKind, GameFavorite, InvadeUi, InvadeUiOptions, LinkTarget, NameKind } from './context';
+export { QUIET_DELAY, sameKey, useDelayedFlag, useStableData } from './stable';
+export type { StableData, StableOptions } from './stable';
 export { default as Button } from './components/Button.vue';
 export { default as Icon, type IconName } from './components/Icon.vue';
 export { default as Link } from './components/Link.vue';

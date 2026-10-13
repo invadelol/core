@@ -182,3 +182,25 @@ test.group('Match score', () => {
     assert.exists(withObjectives.p2)
   })
 })
+
+test.group('Match detail order', () => {
+  test('each team reads top to support, whatever order the store returns', ({ assert }) => {
+    // ClickHouse returns a game's participants in no fixed order.
+    const shuffled = [7, 3, 9, 0, 5, 1, 8, 4, 2, 6].map((i) => player(i))
+    const players = detailOf(match(shuffled)).players
+    assert.deepEqual(
+      players.map((p) => [p.teamId, p.position]),
+      [100, 200].flatMap((team) =>
+        ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'].map((position) => [team, position])
+      )
+    )
+  })
+
+  test('players without a lane keep their order, after the laned ones', ({ assert }) => {
+    const aram = [4, 1, 3, 0, 2].map((i) => player(i, { position: '' }))
+    assert.deepEqual(
+      detailOf(match(aram)).players.map((p) => p.puuid),
+      ['p4', 'p1', 'p3', 'p0', 'p2']
+    )
+  })
+})

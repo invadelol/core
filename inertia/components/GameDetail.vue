@@ -14,7 +14,8 @@ import { profilePath } from '../lib/format.js'
 import type { Match } from '../lib/types.js'
 
 /**
- * An opened game of a profile's feed, drawn by the shared detail, and the way to its own page.
+ * An opened game of a profile's feed, drawn by the shared detail, with its link and the way to
+ * its own page on the tab line.
  * The list already carries the scoreboard columns, so the game opens on them at once; the stored
  * match with its timeline and events follows.
  */
@@ -68,21 +69,21 @@ async function copyLink() {
     :match-id="match.matchId"
     :loading="loading"
     @retry="load"
-  />
-  <p v-if="detail" class="game-detail-page">
-    <button type="button" class="iv-btn ghost sm" @click="copyLink">
-      <Icon :name="copied ? 'check' : 'copy'" :size="13" />{{ copied ? 'Copied' : 'Copy link' }}
-    </button>
-    <Link :href="href" class="iv-btn ghost sm">Match page<Icon name="arrow" :size="13" /></Link>
-  </p>
+  >
+    <template #actions>
+      <button
+        type="button"
+        class="iv-btn ghost sm"
+        :title="copied ? 'Copied' : 'Copy the link to this game'"
+        @click="copyLink"
+      >
+        <Icon :name="copied ? 'check' : 'copy'" :size="13" /><span>{{
+          copied ? 'Copied' : 'Copy link'
+        }}</span>
+      </button>
+      <Link :href="href" class="iv-btn ghost sm" title="Open this game on its own page">
+        <span>Match page</span><Icon name="arrow" :size="13" />
+      </Link>
+    </template>
+  </MatchDetailPanel>
 </template>
-
-<style scoped>
-/* The game's own page and its link, quietly under the detail. */
-.game-detail-page {
-  display: flex;
-  justify-content: flex-end;
-  gap: 4px;
-  padding: 0 8px 8px;
-}
-</style>

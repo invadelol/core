@@ -6,6 +6,9 @@ import '../styles/base.css';
  * so it gets a box of its own, wider than tall and faded at the edges, never over the text beside
  * it. An image that fails or is not that frame (a proxy placeholder) leaves the mini crest.
  * `size` is the crest's size; a host may override the emblem's with `--iv-crest`.
+ *
+ * A new tier (a queue switch, a filter) keeps the crest on screen until the next one is decoded,
+ * then swaps in one frame: it never blanks or fades on a change. Only the first emblem fades in.
  */
 type __VLS_Props = {
     tier?: string | null;

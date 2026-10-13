@@ -1,65 +1,89 @@
 import '../styles/base.css';
 import './RankCrest.css';
-import d from "../assets/ranks/bronze.svg.js";
-import k from "../assets/ranks/challenger.svg.js";
-import f from "../assets/ranks/diamond.svg.js";
-import p from "../assets/ranks/emerald.svg.js";
-import b from "../assets/ranks/gold.svg.js";
-import h from "../assets/ranks/grandmaster.svg.js";
-import z from "../assets/ranks/iron.svg.js";
-import y from "../assets/ranks/master.svg.js";
-import w from "../assets/ranks/platinum.svg.js";
-import C from "../assets/ranks/silver.svg.js";
-import x from "../assets/ranks/unranked.svg.js";
-import { defineComponent as B, computed as i, shallowRef as I, watch as M, useTemplateRef as R, onMounted as $, openBlock as a, createElementBlock as r, normalizeStyle as E, normalizeClass as L } from "vue";
-import { useInvadeUi as U } from "../context.js";
+import C from "../assets/ranks/bronze.svg.js";
+import B from "../assets/ranks/challenger.svg.js";
+import M from "../assets/ranks/diamond.svg.js";
+import R from "../assets/ranks/emerald.svg.js";
+import W from "../assets/ranks/gold.svg.js";
+import $ from "../assets/ranks/grandmaster.svg.js";
+import E from "../assets/ranks/iron.svg.js";
+import L from "../assets/ranks/master.svg.js";
+import S from "../assets/ranks/platinum.svg.js";
+import U from "../assets/ranks/silver.svg.js";
+import j from "../assets/ranks/unranked.svg.js";
+import { defineComponent as A, computed as v, shallowRef as c, watch as w, useTemplateRef as H, onMounted as N, openBlock as l, createElementBlock as n, normalizeStyle as O, normalizeClass as P } from "vue";
+import { useInvadeUi as T } from "../context.js";
 /* empty css                 */
-const W = ["src"], j = ["src"], H = ["src", "width", "height"], Y = /* @__PURE__ */ B({
+const q = ["src"], D = ["src"], F = ["src", "width", "height"], re = /* @__PURE__ */ A({
   __name: "RankCrest",
   props: {
     tier: { default: null },
     size: { default: 20 },
     emblem: { type: Boolean }
   },
-  setup(s) {
-    const _ = s, c = U(), m = /* @__PURE__ */ Object.assign({ "../assets/ranks/bronze.svg": d, "../assets/ranks/challenger.svg": k, "../assets/ranks/diamond.svg": f, "../assets/ranks/emerald.svg": p, "../assets/ranks/gold.svg": b, "../assets/ranks/grandmaster.svg": h, "../assets/ranks/iron.svg": z, "../assets/ranks/master.svg": y, "../assets/ranks/platinum.svg": w, "../assets/ranks/silver.svg": C, "../assets/ranks/unranked.svg": x }), o = i(() => (_.tier ?? "").toLowerCase().replace(/[^a-z]/g, "") || "unranked"), g = i(() => m[`../assets/ranks/${o.value}.svg`] ?? m["../assets/ranks/unranked.svg"]), l = i(() => _.emblem && o.value !== "unranked" ? c.assetUrl("rank", o.value) : void 0), e = I(null);
-    M(l, () => e.value = null);
-    const n = R("img"), v = () => {
-      const t = n.value;
-      t?.naturalWidth && (e.value = t.naturalWidth >= t.naturalHeight * 1.5);
+  setup(t) {
+    const g = t, I = T(), d = /* @__PURE__ */ Object.assign({ "../assets/ranks/bronze.svg": C, "../assets/ranks/challenger.svg": B, "../assets/ranks/diamond.svg": M, "../assets/ranks/emerald.svg": R, "../assets/ranks/gold.svg": W, "../assets/ranks/grandmaster.svg": $, "../assets/ranks/iron.svg": E, "../assets/ranks/master.svg": L, "../assets/ranks/platinum.svg": S, "../assets/ranks/silver.svg": U, "../assets/ranks/unranked.svg": j }), i = v(() => (g.tier ?? "").toLowerCase().replace(/[^a-z]/g, "") || "unranked"), f = v(() => d[`../assets/ranks/${i.value}.svg`] ?? d["../assets/ranks/unranked.svg"]), m = v(() => g.emblem && i.value !== "unranked" ? I.assetUrl("rank", i.value) : void 0);
+    function k(e) {
+      const s = new Image();
+      return s.src = e, s.decode().then(
+        () => s,
+        () => s
+      );
+    }
+    const p = typeof Image < "u", o = c(f.value);
+    let h = 0;
+    w(f, (e) => {
+      const s = ++h;
+      p ? k(e).then(() => s === h && (o.value = e)) : o.value = e;
+    });
+    const r = c(m.value), a = c(null), b = (e) => e.naturalWidth >= e.naturalHeight * 1.5;
+    let y = 0;
+    w(m, (e) => {
+      const s = ++y;
+      if (!e || !r.value || a.value === null || !p) {
+        r.value = e, a.value = null;
+        return;
+      }
+      k(e).then((u) => {
+        s === y && (r.value = e, a.value = u.naturalWidth > 0 && b(u));
+      });
+    });
+    const _ = H("img"), z = () => {
+      const e = _.value;
+      e?.naturalWidth && (a.value = b(e));
     };
-    return $(() => n.value?.complete && v()), (t, u) => l.value ? (a(), r("span", {
+    return N(() => _.value?.complete && z()), (e, s) => m.value ? (l(), n("span", {
       key: 0,
-      class: L(["iv-crest big", { ok: e.value }]),
-      style: E({ "--iv-size": `${s.size}px` })
+      class: P(["iv-crest big", { ok: a.value }]),
+      style: O({ "--iv-size": `${t.size}px` })
     }, [
-      e.value !== !1 ? (a(), r("img", {
+      a.value !== !1 ? (l(), n("img", {
         key: 0,
         ref_key: "img",
-        ref: n,
-        src: l.value,
+        ref: _,
+        src: r.value,
         alt: "",
         draggable: "false",
-        onLoad: v,
-        onError: u[0] || (u[0] = (N) => e.value = !1)
-      }, null, 40, W)) : (a(), r("img", {
+        onLoad: z,
+        onError: s[0] || (s[0] = (u) => a.value = !1)
+      }, null, 40, q)) : (l(), n("img", {
         key: 1,
         class: "mini",
-        src: g.value,
+        src: o.value,
         alt: "",
         draggable: "false"
-      }, null, 8, j))
-    ], 6)) : (a(), r("img", {
+      }, null, 8, D))
+    ], 6)) : (l(), n("img", {
       key: 1,
       class: "iv-crest",
-      src: g.value,
-      width: s.size,
-      height: Math.round(s.size * 0.76),
+      src: o.value,
+      width: t.size,
+      height: Math.round(t.size * 0.76),
       alt: "",
       draggable: "false"
-    }, null, 8, H));
+    }, null, 8, F));
   }
 });
 export {
-  Y as default
+  re as default
 };
