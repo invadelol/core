@@ -255,6 +255,12 @@ const NEEDS: Record<string, string> = {
   transition: background-color var(--t-base) var(--ease);
 }
 
+@media (pointer: coarse) {
+  .lv-row {
+    height: 40px;
+  }
+}
+
 @media (hover: hover) {
   .lv-row:hover {
     background: linear-gradient(90deg, var(--glint), transparent 92%);
