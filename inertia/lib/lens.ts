@@ -141,6 +141,10 @@ export interface LensDomain {
   need: 'timeline' | 'games' | null
   /** One plain sentence or two: what the rating means for this player. */
   read: string | null
+  /** The read's first sentence alone. */
+  headline: string | null
+  /** The figure whose numbers the read gives, if any. */
+  readFigure: string | null
   figures: LensFigure[]
   /** The domain's rating in each game of `games` (oldest first), null where it was not read. */
   trend: (number | null)[]
@@ -150,9 +154,29 @@ export interface LensGame {
   matchId: string
   at: number
   championId: number
+  /** The lane opponent's champion; null without one. */
+  opponentChampionId: number | null
+  deaths: number
+  /** The lane opponent's deaths; null without one. */
+  opponentDeaths: number | null
   win: boolean
   score: number | null
   timeline: boolean
+}
+
+/** The first minutes of the lane, averaged over the games with a timeline: you and your opponent. */
+export interface LensDuel {
+  games: number
+  /** Minute by minute from 0, as far as the frames go (15 at most). */
+  cs: { you: number[]; opponent: number[] }
+  gold: { you: number[]; opponent: number[] }
+}
+
+/** The epic monsters and towers each side took, per game on average: context, not rated. */
+export interface LensObjectives {
+  games: number
+  you: Record<'dragons' | 'heralds' | 'barons' | 'towers', number>
+  them: Record<'dragons' | 'heralds' | 'barons' | 'towers', number>
 }
 
 export interface Lens {
@@ -162,6 +186,12 @@ export interface Lens {
   timelineGames: number
   /** The average Invade score of those games. */
   score: number | null
+  /** Champions played in those games, most played first. */
+  champions: Array<{ championId: number; games: number }>
+  /** The lane's first fifteen minutes; null without a timeline. */
+  duel: LensDuel | null
+  /** What the two teams took, per game. */
+  objectives: LensObjectives | null
   domains: LensDomain[]
 }
 
@@ -686,11 +716,18 @@ const STANDOUT = 1
  * leads it ("Early deaths cost your lane."), with that figure's numbers; an even domain says so,
  * with its most notable figure when one stands out.
  */
-function readOf(key: LensDomainKey, rating: number, figures: LensFigure[]): string {
+interface Read {
+  headline: string
+  /** The figure the read leads with, and its numbers; none for an even domain with nothing notable. */
+  figure: string | null
+  fact: string | null
+}
+
+function readOf(key: LensDomainKey, rating: number, figures: LensFigure[]): Read {
   const read = figures.filter((f) => f.standing !== null && SPEC_BY_KEY.has(f.key))
-  const sentence = (headline: string, lead: LensFigure | undefined) => {
+  const sentence = (headline: string, lead: LensFigure | undefined): Read => {
     const fact = lead ? factOf(SPEC_BY_KEY.get(lead.key)!, lead) : null
-    return fact ? `${headline} ${fact}` : headline
+    return { headline, figure: fact ? lead!.key : null, fact }
   }
   if (rating >= EDGE || rating <= WEAK) {
     const up = rating >= EDGE
@@ -699,7 +736,7 @@ function readOf(key: LensDomainKey, rating: number, figures: LensFigure[]): stri
     )[0]
     if (lead && (up ? lead.standing! > 0 : lead.standing! < 0))
       return sentence(SPEC_BY_KEY.get(lead.key)!.headline[up ? 0 : 1], lead)
-    return evenOf(key, rating)
+    return sentence(evenOf(key, rating), undefined)
   }
   /* Even overall: a figure far off the rest still leads the read. */
   const lead = read.sort((a, b) => Math.abs(b.standing!) - Math.abs(a.standing!))[0]
@@ -710,6 +747,12 @@ function readOf(key: LensDomainKey, rating: number, figures: LensFigure[]): stri
     lead && Math.abs(lead.standing!) >= NOTABLE ? lead : undefined
   )
 }
+
+const readFields = (read: Read | null) => ({
+  read: read ? (read.fact ? `${read.headline} ${read.fact}` : read.headline) : null,
+  headline: read?.headline ?? null,
+  readFigure: read?.figure ?? null,
+})
 
 /** Between a strength and a weakness: on the pace, or a little to one side of it. */
 function evenOf(key: LensDomainKey, rating: number) {
@@ -726,6 +769,8 @@ function consistencyOf(games: LensGame[]): LensDomain {
     games: scores.length,
     need: scores.length < MIN_SCORED ? 'games' : null,
     read: null,
+    headline: null,
+    readFigure: null,
     figures: [],
     trend: games.map((g) => g.score),
   }
@@ -766,13 +811,78 @@ function consistencyOf(games: LensGame[]): LensDomain {
     figure('ceiling', 'Best quarter', ceiling),
   ]
   const swing = `±${Math.round(sd)} points around your average of ${Math.round(average)}.`
-  const read =
+  const read: Read =
     rating >= EDGE
-      ? `Steady: your games rarely swing far. ${swing}`
+      ? { headline: 'Steady: your games rarely swing far.', figure: 'swing', fact: swing }
       : rating <= WEAK
-        ? `Your games swing a lot. ${rough} of ${n} were rough, under ${ROUGH}. ${swing}`
-        : `${evenOf('consistency', rating)} ${swing}`
-  return { ...base, rating, figures, read }
+        ? {
+            headline: 'Your games swing a lot.',
+            figure: 'swing',
+            fact: `${rough} of ${n} were rough, under ${ROUGH}. ${swing}`,
+          }
+        : { headline: evenOf('consistency', rating), figure: 'swing', fact: swing }
+  return { ...base, rating, figures, ...readFields(read) }
+}
+
+/** The minutes of the lane drawn as a duel. */
+export const DUEL_MINUTES = 15
+
+/** The player's and their lane opponent's CS and gold, minute by minute, averaged over games. */
+function duelOf(games: Game[]): LensDuel | null {
+  const both = games.filter((g) => g.opp && g.frames.has(g.me.puuid) && g.frames.has(g.opp.puuid))
+  if (!both.length) return null
+  const duel: LensDuel = {
+    games: both.length,
+    cs: { you: [], opponent: [] },
+    gold: { you: [], opponent: [] },
+  }
+  for (let minute = 0; minute <= DUEL_MINUTES; minute++) {
+    const pairs = both.flatMap((g) => {
+      const a = g.frames.get(g.me.puuid)!.get(minute)
+      const b = g.frames.get(g.opp!.puuid)!.get(minute)
+      return a && b ? [[a, b] as const] : []
+    })
+    if (!pairs.length) break
+    duel.cs.you.push(mean(pairs.map(([a]) => a.cs))!)
+    duel.cs.opponent.push(mean(pairs.map(([, b]) => b.cs))!)
+    duel.gold.you.push(mean(pairs.map(([a]) => a.gold))!)
+    duel.gold.opponent.push(mean(pairs.map(([, b]) => b.gold))!)
+  }
+  return duel.cs.you.length > 1 ? duel : null
+}
+
+/** The two teams' epic monsters and towers, per game, as the stored games count them. */
+function objectivesOf(games: Game[]): LensObjectives | null {
+  if (!games.length) return null
+  const side = (g: Game, mine: boolean) => {
+    const t1 = (g.me.teamId === 100) === mine
+    const m = g.match
+    return {
+      dragons: (t1 ? m.t1Dragons : m.t2Dragons) || 0,
+      heralds: (t1 ? m.t1Heralds : m.t2Heralds) || 0,
+      barons: (t1 ? m.t1Barons : m.t2Barons) || 0,
+      towers: (t1 ? m.t1Towers : m.t2Towers) || 0,
+    }
+  }
+  const average = (mine: boolean) => {
+    const rows = games.map((g) => side(g, mine))
+    const of = (k: keyof (typeof rows)[number]) => mean(rows.map((r) => r[k]))!
+    return {
+      dragons: of('dragons'),
+      heralds: of('heralds'),
+      barons: of('barons'),
+      towers: of('towers'),
+    }
+  }
+  return { games: games.length, you: average(true), them: average(false) }
+}
+
+function championsOf(games: LensGame[]) {
+  const counts = new Map<number, number>()
+  for (const g of games) counts.set(g.championId, (counts.get(g.championId) ?? 0) + 1)
+  return [...counts]
+    .map(([championId, n]) => ({ championId, games: n }))
+    .sort((a, b) => b.games - a.games || a.championId - b.championId)
 }
 
 /**
@@ -831,6 +941,9 @@ export function readLens(input: {
       matchId: match.matchId,
       at: Number(match.gameStartMs),
       championId: me.championId,
+      opponentChampionId: opp?.championId ?? null,
+      deaths: me.deaths || 0,
+      opponentDeaths: opp ? opp.deaths || 0 : null,
       win: Boolean(me.win),
       score: scoreLobby(match)[puuid]?.score ?? null,
       timeline: frames.has(puuid),
@@ -867,7 +980,7 @@ export function readLens(input: {
       rating,
       games: rated.length,
       need: enough ? null : key === 'laning' ? 'timeline' : 'games',
-      read: rating === null ? null : readOf(key, rating, figures),
+      ...readFields(rating === null ? null : readOf(key, rating, figures)),
       figures,
       trend,
     }
@@ -879,6 +992,9 @@ export function readLens(input: {
     games: rows,
     timelineGames: rows.filter((g) => g.timeline).length,
     score: scores.length ? Math.round(mean(scores)!) : null,
+    champions: championsOf(rows),
+    duel: duelOf(games),
+    objectives: objectivesOf(games),
     domains,
   }
 }
