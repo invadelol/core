@@ -1,28 +1,21 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { Download } from 'lucide-vue-next'
+import { Logo } from '@invadelol/ui'
 import { detectDesktopTarget, type DesktopPlatform } from '../../lib/platform.js'
+import DownloadPill from './DownloadPill.vue'
+import { vReveal } from './motion'
 
-/** The download, every build with its requirements, then the questions people ask first. */
+/** The download for this computer, every build with its requirements, then the questions. */
 defineProps<{ version: string | null }>()
 
-const downloads: Array<{ id: DesktopPlatform; name: string; detail: string }> = [
-  { id: 'windows', name: 'Windows', detail: '64-bit, Windows 10 or later' },
-  { id: 'mac-arm', name: 'macOS, Apple Silicon', detail: 'M1 and later, macOS 13 or later' },
+const BUILDS: Array<{ id: DesktopPlatform; name: string; detail: string }> = [
+  { id: 'windows', name: 'Windows', detail: 'Windows 10 or later, 64-bit' },
+  { id: 'mac-arm', name: 'macOS, Apple silicon', detail: 'macOS 13 or later, M1 and later' },
   { id: 'mac-intel', name: 'macOS, Intel', detail: 'macOS 13 or later' },
 ]
 
-/** The build for this computer, once the browser is inspected. */
 const mine = ref<DesktopPlatform | null>(null)
 onMounted(async () => (mine.value = await detectDesktopTarget()))
-
-/** The light under the pointer, on the sheet of builds. */
-function onPointer(e: PointerEvent) {
-  const el = e.currentTarget as HTMLElement
-  const r = el.getBoundingClientRect()
-  el.style.setProperty('--mx', `${e.clientX - r.left}px`)
-  el.style.setProperty('--my', `${e.clientY - r.top}px`)
-}
 
 const FAQ = [
   {
@@ -35,7 +28,7 @@ const FAQ = [
   },
   {
     q: 'Which computers does it run on?',
-    a: 'Windows 10 or later (64-bit), and macOS 13 or later on Apple Silicon and Intel Macs. Recording needs Windows 10 version 1903 or later, and the Screen Recording permission on macOS.',
+    a: 'Windows 10 or later (64-bit), and macOS 13 or later on Apple silicon and Intel Macs. Recording needs Windows 10 version 1903 or later, and the Screen Recording permission on macOS.',
   },
   {
     q: 'Where are my clips stored?',
@@ -61,266 +54,181 @@ const FAQ = [
 </script>
 
 <template>
-  <section id="download" class="get page">
-    <div class="get-main">
-      <div class="get-copy">
-        <p class="kicker">Download</p>
-        <h2>Get Invade.</h2>
-        <p class="get-lead">
-          Free for Windows and macOS<template v-if="version">, version {{ version }}</template
-          >. No account: it reads your profile from the League client on this computer.
-        </p>
-        <p class="get-also">
-          Also in the app: lobby scouting on the Live tab, a page for every champion with builds and
-          matchups, a tier list, favorites, and 12 languages.
-        </p>
-      </div>
-
-      <div class="get-side">
-        <ul class="get-rows" @pointermove="onPointer">
-          <li v-for="target in downloads" :key="target.id" :class="{ mine: mine === target.id }">
-            <span class="get-name">
-              <b>
-                {{ target.name }}
-                <span v-if="mine === target.id" class="get-this">This computer</span>
-              </b>
-              <small>{{ target.detail }}</small>
-            </span>
-            <a :href="`/download/${target.id}`" class="get-btn">
-              <Download :size="14" :stroke-width="2" />
-              Download
-            </a>
-          </li>
-        </ul>
-
-        <p class="get-note">
-          Builds are not code-signed yet, so your system may ask once. On Windows, choose
-          <em>More info</em>, then <em>Run anyway</em>. On macOS, drag Invade to Applications, then
-          right-click it and choose <em>Open</em>.
-        </p>
-      </div>
+  <section id="download" class="ap-section get">
+    <div v-reveal class="get-head ap-wrap">
+      <Logo :size="56" class="get-glyph ln" />
+      <h2 class="get-title ln">Get Invade.</h2>
+      <p class="ap-lead ln">
+        Free for Windows and macOS<template v-if="version">, version {{ version }}</template
+        >.
+      </p>
+      <DownloadPill class="get-dl ln" big :others="false" />
     </div>
 
-    <div class="faq">
-      <h2>Questions</h2>
+    <ul v-reveal class="builds ap-wrap">
+      <li
+        v-for="(b, i) in BUILDS"
+        :key="b.id"
+        class="ln"
+        :class="{ mine: mine === b.id }"
+        :style="{ '--i': i + 3 }"
+      >
+        <span class="build-name">
+          {{ b.name }}
+          <em v-if="mine === b.id">This computer</em>
+        </span>
+        <span class="build-req">{{ b.detail }}</span>
+        <a :href="`/download/${b.id}`" class="ap-link">
+          Download
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path d="m6 3.5 4.5 4.5L6 12.5" fill="none" stroke="currentColor" stroke-width="1.6" />
+          </svg>
+        </a>
+      </li>
+    </ul>
+
+    <p v-reveal class="unsigned ap-wrap ap-fine">
+      <span class="ln">
+        The builds are not code-signed yet, so your system may ask once. On Windows, choose
+        <em>More info</em>, then <em>Run anyway</em>. On macOS, drag Invade to Applications, then
+        right-click it and choose <em>Open</em>.
+      </span>
+    </p>
+
+    <div class="faq ap-wrap">
+      <h3 v-reveal class="ap-h3 faq-title"><span class="ln">Questions</span></h3>
       <div class="faq-list">
         <details v-for="item in FAQ" :key="item.q">
-          <summary>{{ item.q }}</summary>
+          <summary>
+            {{ item.q }}
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 6 8 10.5 12.5 6" /></svg>
+          </summary>
           <p>{{ item.a }}</p>
         </details>
       </div>
+      <p class="legal ap-fine">
+        Invade isn’t endorsed by Riot Games and doesn’t reflect the views or opinions of Riot Games
+        or anyone officially involved in producing or managing Riot Games properties. Riot Games,
+        League of Legends and all associated properties are trademarks or registered trademarks of
+        Riot Games, Inc.
+      </p>
     </div>
   </section>
 </template>
 
 <style scoped>
-.get {
-  padding-top: clamp(96px, 12vw, 168px);
-  padding-bottom: clamp(48px, 6vw, 96px);
-}
-
-.get-main {
-  display: grid;
-  gap: 40px 64px;
-  align-items: start;
-}
-
-@media (min-width: 1024px) {
-  .get-main {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 560px);
-  }
-}
-
-.kicker {
-  margin-bottom: 22px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--text-3);
-}
-
-.get-copy h2 {
-  font-size: clamp(30px, 2.6vw, 40px);
-  font-weight: 640;
-  line-height: 1.06;
-  letter-spacing: -0.035em;
-  color: var(--text-1);
-}
-
-.get-lead {
-  max-width: 30em;
-  margin-top: 18px;
-  font-size: 15.5px;
-  line-height: 1.6;
-  color: var(--text-2);
-  text-wrap: pretty;
-}
-
-.get-also {
-  max-width: 30em;
-  margin-top: 14px;
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--text-3);
-  text-wrap: pretty;
-}
-
-/* The builds: one sheet, the violet light following the pointer over it. */
-.get-rows {
-  --mx: 80%;
-  --my: 0%;
-  position: relative;
-  overflow: hidden;
-  background:
-    radial-gradient(
-      420px circle at var(--mx) var(--my),
-      rgb(var(--brand-rgb) / 0.07),
-      transparent 70%
-    ),
-    var(--sheen), var(--surface-1);
-  border-radius: var(--r-lg);
-  box-shadow: var(--lit);
-}
-
-.get-rows li {
+.get-head {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 16px;
-  min-height: 72px;
-  padding: 12px 14px 12px 22px;
-  border-bottom: 1px solid var(--line);
+  text-align: center;
 }
 
-.get-rows li:last-child {
-  border-bottom: 0;
-}
-
-.get-name {
-  display: grid;
-  flex: 1;
-  gap: 3px;
-  min-width: 0;
-}
-
-.get-name b {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px 10px;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-1);
-}
-
-.get-this {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--brand-hi);
-}
-
-[data-theme='light'] .get-this {
+.get-glyph {
+  margin-bottom: 24px;
   color: var(--brand);
 }
 
-.get-name small {
-  font-size: 13px;
-  color: var(--text-3);
+.get-title {
+  font-size: clamp(56px, 6.6vw, 96px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.045em;
 }
 
-.get-btn {
-  display: inline-flex;
-  flex: none;
+.get-head .ap-lead {
+  margin-top: 16px;
+}
+
+.get-dl {
+  margin-top: 34px;
+}
+
+.builds {
+  display: grid;
+  max-width: 820px;
+  margin-top: clamp(56px, 7vw, 88px);
+}
+
+.builds li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 7px;
-  height: 36px;
-  padding: 0 14px 0 12px;
-  font-size: 13.5px;
+  gap: 4px 24px;
+  padding: 22px 4px;
+  border-top: 1px solid var(--line-2);
+}
+
+.builds li:last-child {
+  border-bottom: 1px solid var(--line-2);
+}
+
+.build-name {
+  font-size: 19px;
   font-weight: 600;
   color: var(--text-1);
-  background: var(--btn);
-  border-radius: 8px;
-  box-shadow: var(--btn-shadow);
-  transition:
-    background-color 160ms,
-    transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.get-btn:hover {
-  background: var(--btn-hover);
-}
-
-.get-btn:active {
-  transform: scale(0.98);
-}
-
-.mine .get-btn {
-  color: var(--ink-0);
-  background: var(--text-1);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
-}
-
-[data-theme='light'] .mine .get-btn {
-  color: #fff;
-  background: #14151c;
-}
-
-@media (prefers-color-scheme: light) {
-  [data-theme='system'] .mine .get-btn {
-    color: #fff;
-    background: #14151c;
-  }
-
-  [data-theme='system'] .get-this {
-    color: var(--brand);
-  }
-}
-
-.get-note {
-  margin-top: 18px;
+.build-name em {
+  display: inline-block;
+  margin-left: 10px;
+  white-space: nowrap;
   font-size: 13px;
-  line-height: 1.6;
-  color: var(--text-3);
+  font-style: normal;
+  font-weight: 600;
+  color: var(--brand-hi);
 }
 
-.get-note em {
+.build-req {
+  grid-row: 2;
+  font-size: 15px;
+  color: var(--ap-grey);
+}
+
+.builds .ap-link {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+}
+
+.unsigned {
+  max-width: 820px;
+  margin-top: 22px;
+}
+
+.unsigned em {
   font-style: normal;
   color: var(--text-2);
 }
 
 /* ── Questions ── */
+
 .faq {
-  display: grid;
-  gap: 24px 64px;
-  margin-top: clamp(96px, 12vw, 152px);
+  max-width: 820px;
+  margin-top: clamp(110px, 12vw, 170px);
 }
 
-@media (min-width: 1024px) {
-  .faq {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 760px);
-  }
+.faq-title {
+  margin-bottom: 28px;
 }
 
-.faq h2 {
-  font-size: clamp(26px, 2.2vw, 32px);
-  font-weight: 640;
-  letter-spacing: -0.03em;
-  color: var(--text-1);
-}
-
-.faq-list {
+.faq-list details {
   border-top: 1px solid var(--line-2);
 }
 
-details {
+.faq-list details:last-child {
   border-bottom: 1px solid var(--line-2);
 }
 
 summary {
-  position: relative;
-  display: block;
-  padding: 20px 40px 20px 0;
-  font-size: 15.5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-height: 68px;
+  padding: 18px 4px;
+  font-size: 19px;
   font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--text-1);
   cursor: pointer;
   list-style: none;
@@ -330,37 +238,53 @@ summary::-webkit-details-marker {
   display: none;
 }
 
-summary::before,
-summary::after {
-  content: '';
-  position: absolute;
-  right: 6px;
-  top: 50%;
-  width: 12px;
-  height: 1.5px;
-  background: var(--text-3);
-  border-radius: 1px;
-  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
+summary svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: var(--text-3);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 400ms var(--ap-ease);
 }
 
-summary::after {
-  transform: rotate(90deg);
-}
-
-details[open] summary::after {
-  transform: rotate(0deg);
-}
-
-summary:hover::before,
-summary:hover::after {
-  background: var(--text-1);
+details[open] summary svg {
+  transform: rotate(180deg);
 }
 
 details p {
-  max-width: 62ch;
-  padding: 0 40px 22px 0;
-  font-size: 14.5px;
-  line-height: 1.65;
-  color: var(--text-2);
+  max-width: 40em;
+  padding: 0 4px 24px;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.55;
+  color: var(--ap-grey);
+}
+
+/* The answer opens smoothly where the browser can animate to the content's height. */
+@supports (interpolate-size: allow-keywords) {
+  .faq-list {
+    interpolate-size: allow-keywords;
+  }
+
+  details::details-content {
+    height: 0;
+    overflow: clip;
+    transition:
+      height 500ms var(--ap-ease),
+      content-visibility 500ms allow-discrete;
+  }
+
+  details[open]::details-content {
+    height: auto;
+  }
+}
+
+.legal {
+  margin-top: 56px;
+  font-size: 12px;
+  color: var(--text-4);
 }
 </style>

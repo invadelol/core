@@ -1,0 +1,246 @@
+/*
+ * /app, laid out like a product page: one idea per section, a short bold headline, a grey
+ * paragraph with one phrase lit, then one big picture of the real app. Type on the site's
+ * Archivo; the violet only where it means Invade (a word, a button, a line).
+ */
+.ap {
+  --ap-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ap-ease-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ap-shadow:
+    0 2px 6px rgb(0 0 0 / 0.22), 0 30px 60px -14px rgb(0 0 0 / 0.55),
+    0 80px 140px -40px rgb(0 0 0 / 0.65);
+  --ap-card: rgb(255 255 255 / 0.035);
+  --ap-card-edge: rgb(255 255 255 / 0.06);
+  --ap-wide: 1240px;
+  --ap-text: 980px;
+  /* Body grey: between the tokens' second and third text colours (Apple's #86868b on black). */
+  --ap-grey: color-mix(in srgb, var(--text-2) 55%, var(--text-3));
+
+  overflow-x: clip;
+  font-family: var(--font);
+  color: var(--text-1);
+}
+
+[data-theme='light'] .ap {
+  --ap-shadow:
+    0 2px 6px rgb(20 20 40 / 0.1), 0 30px 60px -14px rgb(20 20 40 / 0.22),
+    0 80px 140px -40px rgb(20 20 40 / 0.28);
+  --ap-card: rgb(20 20 60 / 0.035);
+  --ap-card-edge: rgb(20 20 60 / 0.06);
+}
+
+@media (prefers-color-scheme: light) {
+  [data-theme='system'] .ap {
+    --ap-shadow:
+      0 2px 6px rgb(20 20 40 / 0.1), 0 30px 60px -14px rgb(20 20 40 / 0.22),
+      0 80px 140px -40px rgb(20 20 40 / 0.28);
+    --ap-card: rgb(20 20 60 / 0.035);
+    --ap-card-edge: rgb(20 20 60 / 0.06);
+  }
+}
+
+.ap-wrap {
+  width: 100%;
+  max-width: calc(var(--ap-wide) + 48px);
+  margin-inline: auto;
+  padding-inline: 24px;
+}
+
+@media (max-width: 600px) {
+  .ap-wrap {
+    padding-inline: 16px;
+  }
+}
+
+.ap-section {
+  padding-block: clamp(110px, 13vw, 200px) 0;
+}
+
+/* ── Type ────────────────────────────────────────────────────────── */
+
+.ap-head {
+  max-width: var(--ap-text);
+  margin-inline: auto;
+  text-align: center;
+}
+
+.ap-head.start {
+  max-width: calc(var(--ap-wide) + 48px);
+  text-align: left;
+}
+
+.ap-eyebrow {
+  margin-bottom: 14px;
+  font-size: clamp(17px, 1.4vw, 21px);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-3);
+}
+
+.ap-h2 {
+  font-size: clamp(40px, 4.8vw, 68px);
+  font-weight: 700;
+  line-height: 1.04;
+  letter-spacing: -0.038em;
+  color: var(--text-1);
+  text-wrap: balance;
+}
+
+.ap-h3 {
+  font-size: clamp(28px, 2.6vw, 40px);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.032em;
+  color: var(--text-1);
+  text-wrap: balance;
+}
+
+.ap-lead {
+  max-width: 34em;
+  margin: 22px auto 0;
+  font-size: clamp(19px, 1.45vw, 21px);
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: -0.012em;
+  color: var(--ap-grey);
+  text-wrap: pretty;
+}
+
+.ap-head.start .ap-lead {
+  margin-inline: 0;
+}
+
+.ap-lead strong,
+.ap-copy strong {
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.ap-brand {
+  color: var(--brand-hi);
+}
+
+.ap-copy {
+  font-size: clamp(17px, 1.35vw, 19px);
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  color: var(--ap-grey);
+  text-wrap: pretty;
+}
+
+/* ── Reveals: lines rise and fade in, in order ───────────────────── */
+
+.rv .ln,
+.rv.ln-self {
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
+  transition:
+    opacity 900ms var(--ap-ease),
+    transform 1000ms var(--ap-ease);
+  transition-delay: calc(var(--i, 0) * 90ms + var(--d, 0ms));
+}
+
+.rv.in .ln,
+.rv.in.ln-self {
+  opacity: 1;
+  transform: none;
+}
+
+/* Pictures settle in: a little smaller and softer, then sharp. */
+.rv .pic,
+.rv.pic-self {
+  opacity: 0;
+  filter: blur(8px);
+  transform: scale(0.965);
+  transition:
+    opacity 1100ms var(--ap-ease),
+    filter 1100ms var(--ap-ease),
+    transform 1300ms var(--ap-ease);
+  transition-delay: var(--d, 120ms);
+}
+
+.rv.in .pic,
+.rv.in.pic-self {
+  opacity: 1;
+  filter: none;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rv .ln,
+  .rv.ln-self,
+  .rv .pic,
+  .rv.pic-self {
+    opacity: 1;
+    filter: none;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────── */
+
+.ap-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 22px;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #fff;
+  white-space: nowrap;
+  background: var(--brand);
+  border-radius: 980px;
+  transition:
+    background-color 240ms var(--ap-ease),
+    transform 240ms var(--ap-ease);
+}
+
+.ap-pill:hover {
+  background: color-mix(in srgb, var(--brand) 88%, white);
+}
+
+.ap-pill:active {
+  transform: scale(0.98);
+}
+
+.ap-pill.big {
+  min-height: 52px;
+  padding: 0 30px;
+  font-size: 18px;
+}
+
+.ap-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--brand-hi);
+  white-space: nowrap;
+}
+
+.ap-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ap-link svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 240ms var(--ap-ease);
+}
+
+.ap-link:hover svg {
+  transform: translateX(2px);
+}
+
+.ap-fine {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-3);
+}

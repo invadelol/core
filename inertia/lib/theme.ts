@@ -12,14 +12,18 @@ const choice = ref<ThemeChoice>('system')
 const systemDark = ref(false)
 let started = false
 
-function read(): ThemeChoice {
+function stored(): ThemeChoice | null {
   try {
-    const stored = localStorage.getItem(THEME_KEY)
-    if (stored === 'light' || stored === 'dark' || stored === 'system') return stored
+    const value = localStorage.getItem(THEME_KEY)
+    if (value === 'light' || value === 'dark' || value === 'system') return value
   } catch {
     /* private mode, blocked storage: the system preference still works */
   }
-  return 'system'
+  return null
+}
+
+function read(): ThemeChoice {
+  return stored() ?? 'system'
 }
 
 /** The browser's own bars (a phone's status bar, Safari's toolbar) in the header's ink. */
@@ -77,4 +81,22 @@ export function useTheme() {
   }
 
   return { choice, resolved, setTheme, toggle }
+}
+
+/**
+ * A page that is dark unless the visitor chose otherwise (the desktop app's page, like the app).
+ * The layout's first-paint script does the same for a direct visit; leaving the page restores
+ * the system's theme. A choice made on the page is stored as usual.
+ */
+export function useDarkByDefault() {
+  onMounted(() => {
+    if (stored()) return
+    choice.value = 'dark'
+    paint('dark')
+  })
+  onBeforeUnmount(() => {
+    if (stored()) return
+    choice.value = 'system'
+    paint('system')
+  })
 }

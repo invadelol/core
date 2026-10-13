@@ -2,17 +2,26 @@
 import { Head } from '@inertiajs/vue3'
 import AppHeader from '../components/AppHeader.vue'
 import SiteFooter from '../components/SiteFooter.vue'
-import Story from '../components/app-page/story/Story.vue'
+import HeroSection from '../components/app-page/HeroSection.vue'
+import GlanceSection from '../components/app-page/GlanceSection.vue'
+import GameSection from '../components/app-page/GameSection.vue'
+import DraftSection from '../components/app-page/DraftSection.vue'
+import ScoreSection from '../components/app-page/ScoreSection.vue'
+import ClipsSection from '../components/app-page/ClipsSection.vue'
+import MoreSection from '../components/app-page/MoreSection.vue'
 import LightSection from '../components/app-page/LightSection.vue'
 import GetSection from '../components/app-page/GetSection.vue'
+import '../components/app-page/app-page.css'
+import { useDarkByDefault } from '../lib/theme.js'
 
 defineProps<{ version: string | null }>()
 
+useDarkByDefault()
+
 /**
- * /app: the desktop app, told by one game. A pinned stage plays it as the page scrolls (champ
- * select, the game, Tab, a kill and its clip, the score, invade.lol), every screen drawn live by
- * the overlay's own markup and the components the app and the site share (@invadelol/ui), on a
- * made-up player. Then, calmly: what it costs the computer, the download, the questions.
+ * /app, the desktop app's page, laid out like a product page: one idea per section, each shown
+ * by the real app (captures of its windows and overlays, fictional players), moving as the page
+ * scrolls. Then what it costs the computer, the download and the questions.
  */
 </script>
 
@@ -24,8 +33,14 @@ defineProps<{ version: string | null }>()
   <div class="flex min-h-screen flex-col">
     <AppHeader />
 
-    <main class="app-page flex-1">
-      <Story :version="version" />
+    <main class="ap flex-1">
+      <HeroSection :version="version" />
+      <GlanceSection />
+      <GameSection />
+      <DraftSection />
+      <ScoreSection />
+      <ClipsSection />
+      <MoreSection />
       <LightSection />
       <GetSection :version="version" />
     </main>
@@ -33,9 +48,3 @@ defineProps<{ version: string | null }>()
     <SiteFooter />
   </div>
 </template>
-
-<style scoped>
-.app-page {
-  overflow-x: clip;
-}
-</style>
