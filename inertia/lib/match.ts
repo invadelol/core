@@ -166,6 +166,17 @@ const RESULT = 0.2
 
 const curve = (x: number) => 100 / (1 + Math.exp(-(x - CENTRE)))
 
+/** The score's scale, for readings built on it (lib/lens.ts): the same pace, spreads and curve. */
+export const SCORE_SCALE = {
+  roles: SCORE_ROLES,
+  pace: PACE,
+  spread: SPREAD,
+  weights: WEIGHTS,
+  standard: STANDARD,
+  sigma: SIGMA,
+  curve,
+} as const
+
 /** Below this a game is a remake, and a score would only be noise. */
 const MIN_SCORED_SECONDS = 300
 
