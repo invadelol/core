@@ -24,7 +24,7 @@ const href = (b: BestGame) =>
       <span class="meta">Last 24 h</span>
     </div>
 
-    <ol class="list iv-panel home-sheet overflow-hidden">
+    <ol class="list">
       <li v-for="b in games" :key="b.matchId + b.player.gameName" class="best">
         <Link :href="href(b)" class="row" :class="b.game.win ? 'win' : 'loss'">
           <span class="dial">
@@ -92,10 +92,8 @@ const href = (b: BestGame) =>
 /* The list is its own size container: it shows what fits its width, on the page or in a column. */
 .list {
   container-type: inline-size;
-}
-
-.best + .best {
-  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 4px;
 }
 
 .row {
@@ -105,56 +103,58 @@ const href = (b: BestGame) =>
   align-items: center;
   gap: 12px;
   min-height: 68px;
-  padding: 10px 14px 10px 16px;
+  padding: 10px 14px 10px 15px;
 }
 
-/* The result as the app's match rows show it: an edge and a soft tint from the left. */
+/* Each game is a card like the app's match rows: a result edge and a soft tint from the left. */
+.row {
+  --edge: transparent;
+  --tint: transparent;
+  --tint-end: transparent;
+  position: relative;
+  isolation: isolate;
+  border-radius: var(--r-sm);
+  background: linear-gradient(90deg, var(--tint), var(--tint-end) 45%), var(--surface-1);
+  box-shadow: var(--row);
+}
+
 .row.win {
-  --tint: var(--win-rgb);
+  --edge: var(--win);
+  --tint: rgb(var(--win-rgb) / 0.15);
+  --tint-end: rgb(var(--win-rgb) / 0);
 }
 
 .row.loss {
-  --tint: var(--loss-rgb);
-}
-
-/* An inset pill, so the edge never bends around the panel's rounded corners. */
-.row {
-  position: relative;
+  --edge: var(--loss);
+  --tint: rgb(var(--loss-rgb) / 0.15);
+  --tint-end: rgb(var(--loss-rgb) / 0);
 }
 
 .row::before {
   content: '';
   position: absolute;
-  left: 5px;
-  top: 14px;
-  bottom: 14px;
+  left: 0;
+  top: 0;
+  bottom: 0;
   width: 3px;
-  border-radius: 3px;
-  background: rgb(var(--tint) / 0.85);
+  background: var(--edge);
+  border-radius: var(--r-sm) 0 0 var(--r-sm);
 }
 
-.row.plain::before {
-  content: none;
+.row::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--glint);
+  opacity: 0;
+  transition: opacity 0.18s ease-out;
+  pointer-events: none;
 }
 
-.row {
-  --row: transparent;
-  background:
-    linear-gradient(
-      90deg,
-      rgb(var(--tint) / var(--home-tint)),
-      rgb(var(--tint) / var(--home-tint-far)) 34%,
-      rgb(var(--tint) / 0) 66%
-    ),
-    var(--row);
-}
-
-.row.plain {
-  background: var(--row);
-}
-
-.row:hover {
-  --row: var(--surface-2);
+.row:hover::after {
+  opacity: 1;
 }
 
 .dial {
