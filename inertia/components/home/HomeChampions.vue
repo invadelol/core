@@ -58,7 +58,7 @@ const full = (n: number) => n.toLocaleString('en-US')
       </div>
     </div>
 
-    <div class="iv-panel home-sheet overflow-hidden">
+    <div class="iv-panel lit-sheet overflow-hidden">
       <table class="dt dt-hover champs">
         <thead>
           <tr>
@@ -141,7 +141,7 @@ const full = (n: number) => n.toLocaleString('en-US')
 
 /* The column the table is sorted by carries a faint wash of the light, like a selected key. */
 .champs .on {
-  background: rgb(var(--brand-rgb) / var(--home-light));
+  background: rgb(var(--brand-rgb) / var(--sheet-light));
 }
 
 .champs .r {

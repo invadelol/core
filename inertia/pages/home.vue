@@ -54,38 +54,24 @@ defineProps<HomeData>()
 
 <style>
 /*
- * The home's sheets, lit as the desktop app's tiles are: the package's sheen and lit edge, and
- * the window's one violet light reaching each sheet from the top right. Rows carry what they
- * are about as a soft tint from their leading side (a result, a tier). Only the strengths change
- * with the theme; the colours are the package's tokens.
+ * Rows on the home carry what they are about as a soft tint from their leading side (a result, a
+ * tier). The sheets themselves are the site's lit sheets (.lit-sheet, css/components.css), as the
+ * desktop app's tiles are. Only the strengths change with the theme.
  */
 .home {
-  --home-light: 0.07;
   --home-tint: 0.13;
   --home-tint-far: 0.035;
 }
 
 [data-theme='light'] .home {
-  --home-light: 0.055;
   --home-tint: 0.1;
   --home-tint-far: 0.025;
 }
 
 @media (prefers-color-scheme: light) {
   [data-theme='system'] .home {
-    --home-light: 0.055;
     --home-tint: 0.1;
     --home-tint-far: 0.025;
   }
-}
-
-.home .home-sheet {
-  background:
-    radial-gradient(
-      120% 140% at 100% 0%,
-      rgb(var(--brand-rgb) / var(--home-light)),
-      rgb(var(--brand-rgb) / 0) 62%
-    ),
-    var(--sheen), var(--surface-1);
 }
 </style>
