@@ -18,13 +18,10 @@ See [design.md](design.md) for the palette, themes and primitives.
 
 ## Home
 
-Search first (focused on load), the profiles this browser opened, then what invade.lol stores
-right now, each section left out when it has nothing: the best Invade scores of the day (one
-line per player, opening the game), the profiles most viewed over 7 days, the biggest Solo/Duo
-climbs of the day from rank snapshots, and champions on the newest patch with enough Solo/Duo
-games (win, pick and ban rates, gated at 100 games). A card at the end leads to the desktop
-app. `app/services/home_service.ts` reads the sections from Postgres, ClickHouse and Redis,
-never from Riot, each cached for a few minutes.
+Three things: the search (focused on load), the profiles this browser opened last as a simple
+list (portrait, Riot ID, rank crest; kept in this browser only, with a Clear), and the card
+that leads to the desktop app. The server reads nothing for it. Profile views are still counted
+by day in Redis (`app/services/home_service.ts`), whose overview sections are no longer shown.
 
 ## Overview
 
