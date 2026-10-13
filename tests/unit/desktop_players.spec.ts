@@ -509,6 +509,36 @@ test.group('Desktop player snapshots', (group) => {
     assert.isNull(confirmation.device_id)
   })
 
+  test('only Solo/Duo and Flex ranks are stored and shown', async ({ assert }) => {
+    const player = await seed.player()
+    const entry = (queueType: string) => ({
+      queueType,
+      tier: 'GOLD',
+      rank: 'IV',
+      leaguePoints: 93,
+      wins: 6,
+      losses: 11,
+    })
+    await summonerService.storeRanks(player.puuid, [
+      entry('RANKED_SOLO_5x5'),
+      entry('RANKED_FLEX_SR'),
+      entry('JADE_RANKED_SOLO_5x5'),
+      entry('CHERRY'),
+    ])
+    const stored = await ranksOf(player.puuid)
+    assert.sameMembers(
+      stored.map((r) => r.queue_type),
+      ['RANKED_SOLO_5x5', 'RANKED_FLEX_SR']
+    )
+
+    // A row of another queue stored before the filter stays hidden.
+    await rank(player.puuid, 1, { queue_type: 'JADE_RANKED_SOLO_5x5', tier: 'WOOD' })
+    const { current, history } = await summonerService.getRanks(player.puuid)
+    const queues = (rows: Array<Record<string, unknown>>) => rows.map((r) => r.queueType)
+    assert.sameMembers(queues(current), ['RANKED_SOLO_5x5', 'RANKED_FLEX_SR'])
+    assert.notInclude(queues(history), 'JADE_RANKED_SOLO_5x5')
+  })
+
   test('a sampled snapshot Riot contradicts revokes the device and undoes its data', async ({
     assert,
   }) => {
