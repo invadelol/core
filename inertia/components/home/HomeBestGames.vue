@@ -105,7 +105,7 @@ const href = (b: BestGame) =>
   align-items: center;
   gap: 12px;
   min-height: 68px;
-  padding: 10px 14px 10px 12px;
+  padding: 10px 14px 10px 16px;
 }
 
 /* The result as the app's match rows show it: an edge and a soft tint from the left. */
@@ -117,8 +117,24 @@ const href = (b: BestGame) =>
   --tint: var(--loss-rgb);
 }
 
+/* An inset pill, so the edge never bends around the panel's rounded corners. */
 .row {
-  box-shadow: inset 2px 0 0 rgb(var(--tint) / 0.85);
+  position: relative;
+}
+
+.row::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 14px;
+  bottom: 14px;
+  width: 3px;
+  border-radius: 3px;
+  background: rgb(var(--tint) / 0.85);
+}
+
+.row.plain::before {
+  content: none;
 }
 
 .row {
