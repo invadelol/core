@@ -11,6 +11,7 @@ import {
   FETCH_TIMEOUT_MS,
   MANIFESTS,
   MANIFEST_TTL,
+  MASTERY_CREST_MAX,
   MAX_ASSET_BYTES,
   TIERS,
   VERSIONS_TTL_MS,
@@ -109,6 +110,7 @@ export class RiotAssetsService {
   /** Every id of a kind on the live patch, used by the warming command. */
   async ids(kind: AssetKind): Promise<string[]> {
     if (kind === 'rank' || kind === 'emblem') return [...TIERS]
+    if (kind === 'mastery') return Array.from({ length: MASTERY_CREST_MAX + 1 }, (_, n) => `${n}`)
     const release = await this.live()
     if (kind !== 'splash' && kind !== 'centered' && kind !== 'loading' && kind !== 'ability') {
       return Object.keys(await this.manifest(kind, release))
@@ -187,7 +189,7 @@ export class RiotAssetsService {
    * brand new asset exists on one CDN but not yet the other.
    */
   private async sources(kind: AssetKind, id: string, release: Release): Promise<string[]> {
-    if (kind === 'rank' || kind === 'emblem' || kind === 'map') {
+    if (kind === 'rank' || kind === 'emblem' || kind === 'map' || kind === 'mastery') {
       return fallbackSources(kind, id, release)
     }
     if (kind === 'splash' || kind === 'centered' || kind === 'loading' || kind === 'ability') {

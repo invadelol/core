@@ -7,6 +7,7 @@ import {
   DDRAGON,
   LATEST_CACHE_SECONDS,
   LATEST_STALE_SECONDS,
+  MASTERY_CREST_MAX,
   PATCH,
   PINNED_CACHE_SECONDS,
   PINNED_PATCHES,
@@ -167,6 +168,8 @@ export function fallbackSources(kind: AssetKind, id: string, release: Release = 
       return emblemSources(id, release)
     case 'map':
       return mapSources(id, release)
+    case 'mastery':
+      return masterySources(id, release)
     default:
       return []
   }
@@ -194,6 +197,21 @@ export function rankSources(tier: string, release: Release = LATEST): string[] {
 /** A tier's full emblem: a 1280×720 frame with the crest in its middle (large crests). */
 export function emblemSources(tier: string, release: Release = LATEST): string[] {
   return [`${staticAssets(release)}/images/ranked-emblem/emblem-${tier}.png`]
+}
+
+/**
+ * A champion mastery crest by level (`0` to `10`; every level past ten wears the tenth). The
+ * game's own crests (256×256) exist for 0 and 4 to 10; the client's shared copies (800×900, the
+ * crest in the middle) cover 1 to 10 and stand behind them.
+ */
+export function masterySources(level: string, release: Release = LATEST): string[] {
+  const n = Math.min(Number(level), MASTERY_CREST_MAX)
+  const game = `${CDRAGON}/${release.cdragon}/game/assets/ux/mastery/legendarychampionmastery`
+  const shared = `${CDRAGON}/${release.cdragon}/plugins/rcp-fe-lol-shared-components/global/default`
+  return [
+    ...(n === 0 || n >= 4 ? [`${game}/masterycrest_level${n}.png`] : []),
+    ...(n >= 1 ? [`${shared}/mastery-${n}.png`] : []),
+  ]
 }
 
 /** What one champion's own file (`v1/champions/<id>.json`) says about its art. */
@@ -334,6 +352,10 @@ function escapeXml(value: string) {
  * than broken, and the slot keeps its shape.
  */
 export function placeholderSvg(kind: AssetKind, id: string, label?: string) {
+  // A crest that could not be fetched leaves its slot empty: its level is always printed beside it.
+  if (kind === 'mastery') {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="${escapeXml(id)}"/>`
+  }
   const text = initials(label || id)
   const [background, foreground] =
     PLACEHOLDER_COLORS[hash(`${kind}${id}`) % PLACEHOLDER_COLORS.length]

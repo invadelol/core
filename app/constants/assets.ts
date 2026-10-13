@@ -28,6 +28,7 @@ export const ASSET_KINDS = [
   'rank',
   'emblem',
   'map',
+  'mastery',
 ] as const
 
 export type AssetKind = (typeof ASSET_KINDS)[number]
@@ -44,6 +45,12 @@ export const TIERS = [
   'grandmaster',
   'challenger',
 ] as const
+
+/**
+ * Champion mastery levels with their own crest. Levels go on past ten; every
+ * level from ten up wears the level-ten crest, so a URL names at most this.
+ */
+export const MASTERY_CREST_MAX = 10
 
 /** Ability slots, `p` being the passive. */
 export const ABILITY_KEYS = ['p', 'q', 'w', 'e', 'r'] as const
@@ -70,6 +77,7 @@ export const ASSET_IDS: Record<AssetKind, RegExp> = {
   'rank': TIER,
   'emblem': TIER,
   'map': NUMERIC,
+  'mastery': /^(?:\d|10)$/,
 }
 
 /** A patch in a URL: `16.20`, Community Dragon's granularity. */

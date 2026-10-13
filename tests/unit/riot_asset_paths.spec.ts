@@ -10,6 +10,7 @@ import {
   gameData,
   gameDataUrl,
   initials,
+  masterySources,
   parseAssetRequest,
   parseChampion,
   parseManifest,
@@ -143,6 +144,20 @@ test.group('Riot asset paths', () => {
     }
   })
 
+  test('mastery crests resolve by level, the game crest first where it has one', ({ assert }) => {
+    const game = `${CDRAGON}/16.20/game/assets/ux/mastery/legendarychampionmastery`
+    const shared = `${CDRAGON}/16.20/plugins/rcp-fe-lol-shared-components/global/default`
+    assert.deepEqual(masterySources('7', PATCH_16_20), [
+      `${game}/masterycrest_level7.png`,
+      `${shared}/mastery-7.png`,
+    ])
+    assert.deepEqual(masterySources('2', PATCH_16_20), [`${shared}/mastery-2.png`])
+    assert.deepEqual(masterySources('0', PATCH_16_20), [`${game}/masterycrest_level0.png`])
+    assert.isTrue(masterySources('10')[0].startsWith(`${CDRAGON}/latest/`))
+    assert.notInclude(placeholderSvg('mastery', '7'), '<rect')
+    assert.notInclude(placeholderSvg('mastery', '7'), '<text')
+  })
+
   test('rank crests and emblems resolve by tier', ({ assert }) => {
     assert.isTrue(rankSources('emerald')[0].endsWith('/ranked-mini-crests/emerald.svg'))
     assert.deepEqual(emblemSources('emerald'), [rankSources('emerald')[1]])
@@ -272,6 +287,7 @@ test.group('Riot asset requests', () => {
     })
     assert.deepEqual(parseAssetRequest('emblem', 'GOLD.png'), { kind: 'emblem', id: 'gold' })
     assert.deepEqual(parseAssetRequest('ability', '266-Q.png'), { kind: 'ability', id: '266-q' })
+    assert.deepEqual(parseAssetRequest('mastery', '10.png'), { kind: 'mastery', id: '10' })
 
     const refused: [unknown, unknown, unknown?][] = [
       ['unknown', '1'],
@@ -285,6 +301,9 @@ test.group('Riot asset requests', () => {
       ['rank', 'wood'],
       ['ability', '266-x'],
       ['ability', '266'],
+      ['mastery', '11'],
+      ['mastery', '07'],
+      ['mastery', '-1'],
       ['champion', '266', '16.20.1'],
       ['champion', '266', 'latest'],
       ['champion', '266', '../16'],
