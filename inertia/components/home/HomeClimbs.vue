@@ -20,7 +20,7 @@ const record = (c: Climb) => (c.losses === null ? `${c.wins}W` : `${c.wins}W ${c
       <span class="meta">Solo/Duo · 24 h</span>
     </div>
 
-    <ol class="iv-panel home-sheet overflow-hidden">
+    <ol class="iv-panel lit-sheet overflow-hidden">
       <li v-for="c in climbs" :key="`${c.player.gameName}#${c.player.tagLine}`" class="line">
         <Link
           :href="profilePath(c.player.gameName, c.player.tagLine)"

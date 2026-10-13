@@ -41,6 +41,70 @@
     background: var(--edge);
   }
 
+  /* ── A featured sheet (on .iv-panel): the window's one violet light reaching it from the
+     top right, as the desktop app's tiles catch it. Only its strength changes with the theme. ── */
+  .lit-sheet {
+    background:
+      radial-gradient(
+        120% 140% at 100% 0%,
+        rgb(var(--brand-rgb) / var(--sheet-light)),
+        rgb(var(--brand-rgb) / 0) 62%
+      ),
+      var(--sheen), var(--surface-1);
+  }
+
+  /* ── A capture of the desktop app, in its window: the app's dark ink in every theme (put
+     .iv-dark on it), its corners, a lit top edge and faint rim over the picture, and the page's
+     shadow under it. `.lights` are macOS's three buttons where the app leaves room for them. ── */
+  .app-window {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    border-radius: var(--r-lg);
+    background: var(--ink-1);
+    box-shadow: var(--window-depth);
+  }
+
+  .app-window::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    border-radius: inherit;
+    box-shadow:
+      var(--lit),
+      inset 0 0 0 1px var(--line);
+    pointer-events: none;
+  }
+
+  .app-window > .lights {
+    position: absolute;
+    z-index: 2;
+    top: 1.45%;
+    left: 1.2%;
+    display: flex;
+    justify-content: space-between;
+    width: 3.6%;
+    pointer-events: none;
+  }
+
+  .app-window > .lights i {
+    width: 23%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    /* macOS's own colours: the window's buttons, not the site's. */
+    background: #ff5f57;
+    box-shadow: inset 0 0 0 0.5px rgb(0 0 0 / 0.2);
+  }
+
+  .app-window > .lights i:nth-child(2) {
+    background: #febc2e;
+  }
+
+  .app-window > .lights i:nth-child(3) {
+    background: #28c840;
+  }
+
   /* ── Type ───────────────────────────────────────────────────── */
 
   /* A large figure (20px and up): heavier than its label, slightly tightened. */

@@ -21,7 +21,7 @@ import Shot from '../app-page/Shot.vue'
       </div>
 
       <div class="art" aria-hidden="true">
-        <div class="window">
+        <div class="window app-window iv-dark">
           <Shot name="home" alt="" sizes="(min-width: 768px) 760px, 600px" />
           <span class="lights"><i /><i /><i /></span>
         </div>
@@ -36,7 +36,7 @@ import Shot from '../app-page/Shot.vue'
 <style scoped>
 /* Lit as the app's window is: its violet light from the top right, a fainter one at the foot. */
 .dl {
-  --dl-light: calc(var(--home-light, 0.07) * 3);
+  --dl-light: calc(var(--sheet-light) * 3);
   overflow: hidden;
   container-type: inline-size;
   background:
@@ -93,44 +93,14 @@ import Shot from '../app-page/Shot.vue'
   height: 210px;
 }
 
-/* A slice of the app's Home, straight, its top-left corner in the card and the rest past the edge. */
+/* A slice of the app's Home in its window (.app-window), straight, its top-left corner in the card
+   and the rest past the edge. */
 .window {
   position: absolute;
   top: 4px;
   left: 20px;
   width: 600px;
-  overflow: hidden;
-  border-radius: 10px;
-  background: #0d0e13;
-  box-shadow:
-    0 0 0 1px rgb(255 255 255 / 0.09),
-    0 24px 48px -16px rgb(10 8 40 / 0.5),
-    0 6px 16px -6px rgb(10 8 40 / 0.35);
   mask-image: linear-gradient(180deg, #000 60%, rgb(0 0 0 / 0.35) 100%);
-}
-
-.lights {
-  position: absolute;
-  top: 1.45%;
-  left: 1.2%;
-  display: flex;
-  justify-content: space-between;
-  width: 3.6%;
-}
-
-.lights i {
-  width: 23%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: #ff5f57;
-}
-
-.lights i:nth-child(2) {
-  background: #febc2e;
-}
-
-.lights i:nth-child(3) {
-  background: #28c840;
 }
 
 /* One in-game overlay, over the window's corner, as it sits over the game. */

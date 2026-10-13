@@ -153,8 +153,10 @@ const cells = computed(() => {
       No games in this window.
     </p>
 
-    <div v-else class="iv-panel">
-      <div class="grid gap-x-10 gap-y-6 p-5 sm:grid-cols-[auto_auto] xl:grid-cols-[auto_auto_minmax(0,1fr)]">
+    <div v-else class="iv-panel lit-sheet">
+      <div
+        class="grid gap-x-10 gap-y-6 p-5 sm:grid-cols-[auto_auto] xl:grid-cols-[auto_auto_minmax(0,1fr)]"
+      >
         <!-- Record -->
         <div>
           <div class="label">Win rate</div>

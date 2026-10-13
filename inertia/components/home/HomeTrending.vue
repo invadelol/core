@@ -19,7 +19,7 @@ defineProps<{ trending: HomeTrending }>()
       }}</span>
     </div>
 
-    <ol class="iv-panel home-sheet overflow-hidden">
+    <ol class="iv-panel lit-sheet overflow-hidden">
       <li
         v-for="(player, i) in trending.players"
         :key="`${player.gameName}#${player.tagLine}`"
