@@ -173,7 +173,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure))
 
     <div ref="section" class="run" :class="{ reduced }">
       <div class="pin">
-        <div ref="frame" class="frame">
+        <div ref="frame" class="frame app-window iv-dark">
           <div ref="world" class="world">
             <Shot
               name="game"
@@ -217,7 +217,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure))
             :class="{ on: step === i + 1 }"
           >
             <p>
-              <kbd v-if="i === 3" class="key" :class="{ down: tab }">Tab</kbd>
+              <kbd v-if="i === 3" class="key ap-key" :class="{ down: tab }">Tab</kbd>
               <strong>{{ c.title }}</strong> {{ c.text }}
             </p>
           </div>
@@ -255,16 +255,8 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure))
 }
 
 .frame {
-  position: relative;
-  overflow: hidden;
   width: min(var(--ap-wide), calc(100vw - 48px), calc((100svh - 280px) * 16 / 9));
   aspect-ratio: 16 / 9;
-  border-radius: 20px;
-  background: #0b0c10;
-  box-shadow:
-    0 0 0 1px rgb(255 255 255 / 0.08),
-    var(--ap-shadow);
-  isolation: isolate;
 }
 
 .world {
@@ -281,17 +273,18 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure))
   height: 100%;
 }
 
+/* The game recedes under the app's ink (the frame is .iv-dark: dark in every theme). */
 .shade,
 .tab-shade {
   position: absolute;
   inset: 0;
-  background: #05060a;
+  background: var(--ink-0);
   opacity: 0;
   pointer-events: none;
 }
 
 .tab-shade {
-  transition: opacity 700ms var(--ap-ease);
+  transition: opacity 700ms var(--ease-glide);
 }
 
 .tab-shade.on {
@@ -304,8 +297,8 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure))
   transform: translate3d(0, 10px, 0) scale(0.97);
   transform-origin: 50% 50%;
   transition:
-    opacity 700ms var(--ap-ease),
-    transform 800ms var(--ap-ease);
+    opacity 700ms var(--ease-glide),
+    transform 800ms var(--ease-glide);
 }
 
 .ov.on {
@@ -318,8 +311,8 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure))
   transform: none;
   clip-path: inset(0 0 100% 0);
   transition:
-    opacity 300ms var(--ap-ease),
-    clip-path 1100ms var(--ap-ease-out) 150ms;
+    opacity 300ms var(--ease-glide),
+    clip-path 1100ms var(--ease-settle) 150ms;
 }
 
 .ov.plates.on {
@@ -341,8 +334,8 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure))
   opacity: 0;
   transform: translate3d(0, 12px, 0);
   transition:
-    opacity 500ms var(--ap-ease),
-    transform 700ms var(--ap-ease);
+    opacity 500ms var(--ease-glide),
+    transform 700ms var(--ease-glide);
   pointer-events: none;
 }
 
@@ -354,11 +347,9 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure))
 
 .cap p,
 .cap.intro {
-  font-size: clamp(17px, 1.4vw, 21px);
-  font-weight: 500;
-  line-height: 1.45;
-  letter-spacing: -0.012em;
-  color: var(--ap-grey);
+  font-size: var(--ap-lead);
+  line-height: 1.55;
+  color: var(--text-2);
   text-wrap: balance;
 }
 
@@ -375,25 +366,23 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure))
 }
 
 .steps li {
-  width: 7px;
-  height: 7px;
-  background: var(--text-4);
-  border-radius: 4px;
-  opacity: 0.6;
+  width: 6px;
+  height: 6px;
+  background: var(--surface-4);
+  border-radius: var(--r-xs);
   transition:
-    width 500ms var(--ap-ease),
-    background-color 500ms var(--ap-ease),
-    opacity 500ms var(--ap-ease);
+    width 500ms var(--ease-glide),
+    background-color 500ms var(--ease-glide);
 }
 
 .steps li.done {
-  opacity: 1;
+  background: var(--text-4);
 }
 
+/* The current step: the app's violet, as its active place. */
 .steps li.on {
-  width: 28px;
-  background: var(--text-1);
-  opacity: 1;
+  width: 24px;
+  background: var(--brand);
 }
 
 .run.reduced .steps {
@@ -401,30 +390,17 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure))
 }
 
 .key {
-  display: inline-grid;
-  place-items: center;
   min-width: 46px;
   height: 28px;
   margin-right: 8px;
   padding: 0 10px;
-  font: 600 13px/1 var(--font);
-  color: var(--text-1);
   vertical-align: 2px;
-  background: var(--surface-3);
-  border-radius: 7px;
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.08),
-    0 3px 0 rgb(0 0 0 / 0.45);
-  transition:
-    transform 160ms var(--ap-ease),
-    box-shadow 160ms var(--ap-ease);
 }
 
+/* Held: pressed into its well. */
 .key.down {
-  transform: translateY(2px);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.08),
-    0 1px 0 rgb(0 0 0 / 0.45);
+  transform: translateY(1px);
+  box-shadow: var(--inset-shadow);
 }
 
 @media (max-width: 700px) {
@@ -441,7 +417,6 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure))
     width: calc(100vw - 32px);
     aspect-ratio: 4 / 5;
     max-height: calc(100svh - 240px);
-    border-radius: 16px;
   }
 
   .captions {
@@ -473,9 +448,9 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure))
   gap: 14px;
   max-width: 760px;
   margin-top: 32px;
-  font-size: 19px;
-  line-height: 1.45;
-  color: var(--ap-grey);
+  font-size: var(--ap-lead);
+  line-height: 1.55;
+  color: var(--text-2);
 }
 
 .cap-list strong {

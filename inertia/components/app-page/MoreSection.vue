@@ -65,7 +65,7 @@ function go(dir: 1 | -1) {
   const el = rail.value
   if (!el) return
   const card = el.querySelector<HTMLElement>('.card')
-  const step = card ? card.offsetWidth + 20 : el.clientWidth * 0.8
+  const step = card ? card.offsetWidth + 16 : el.clientWidth * 0.8
   el.scrollBy({ left: dir * step, behavior: 'smooth' })
 }
 
@@ -84,8 +84,13 @@ onBeforeUnmount(() => rail.value?.removeEventListener('scroll', update))
 
     <div v-reveal class="rail-wrap">
       <ul ref="rail" class="rail" aria-label="More of the app">
-        <li v-for="(c, i) in CARDS" :key="c.name" class="card ln" :style="{ '--i': i }">
-          <div class="card-pic">
+        <li
+          v-for="(c, i) in CARDS"
+          :key="c.name"
+          class="card iv-panel lit-sheet ap-sheet ln"
+          :style="{ '--i': i }"
+        >
+          <div class="card-pic app-window iv-dark">
             <Shot :name="c.name" :alt="c.alt" sizes="(min-width: 900px) 560px, 82vw" />
           </div>
           <p class="card-text">
@@ -96,10 +101,22 @@ onBeforeUnmount(() => rail.value?.removeEventListener('scroll', update))
     </div>
 
     <div class="arrows ap-wrap">
-      <button type="button" :disabled="atStart" aria-label="Previous" @click="go(-1)">
+      <button
+        type="button"
+        class="iv-btn icon-only"
+        :disabled="atStart"
+        aria-label="Previous"
+        @click="go(-1)"
+      >
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5" /></svg>
       </button>
-      <button type="button" :disabled="atEnd" aria-label="Next" @click="go(1)">
+      <button
+        type="button"
+        class="iv-btn icon-only"
+        :disabled="atEnd"
+        aria-label="Next"
+        @click="go(1)"
+      >
         <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 3.5 4.5 4.5L6 12.5" /></svg>
       </button>
     </div>
@@ -116,12 +133,12 @@ onBeforeUnmount(() => rail.value?.removeEventListener('scroll', update))
   --inset: max(24px, calc((100vw - var(--ap-wide)) / 2));
 
   display: flex;
-  gap: 20px;
+  gap: 16px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scroll-snap-type: x mandatory;
   scroll-padding-inline: var(--inset);
-  padding: 8px var(--inset) 40px;
+  padding: 8px var(--inset) 32px;
   scrollbar-width: none;
 }
 
@@ -129,27 +146,23 @@ onBeforeUnmount(() => rail.value?.removeEventListener('scroll', update))
   display: none;
 }
 
+/* Each card a sheet, the capture inset in it in the app's window. */
 .card {
   flex: none;
   display: flex;
   flex-direction: column;
   width: min(560px, 82vw);
-  overflow: hidden;
   scroll-snap-align: start;
-  background: var(--ap-card);
-  border-radius: 28px;
-  box-shadow: inset 0 0 0 1px var(--ap-card-edge);
 }
 
 .card-pic {
-  overflow: hidden;
-  margin: 12px 12px 0;
-  border-radius: 18px;
-  background: #0d0e13;
+  margin: 8px 8px 0;
+  border-radius: var(--r-md);
+  box-shadow: var(--contact);
 }
 
 .card-pic :deep(img) {
-  transition: transform 900ms var(--ap-ease);
+  transition: transform 900ms var(--ease-glide);
 }
 
 .card:hover .card-pic :deep(img) {
@@ -157,11 +170,10 @@ onBeforeUnmount(() => rail.value?.removeEventListener('scroll', update))
 }
 
 .card-text {
-  padding: 24px 28px 30px;
-  font-size: 17px;
-  font-weight: 500;
-  line-height: 1.45;
-  color: var(--ap-grey);
+  padding: 18px 20px 22px;
+  font-size: var(--ap-body);
+  line-height: 1.55;
+  color: var(--text-2);
 }
 
 .card-text strong {
@@ -172,34 +184,13 @@ onBeforeUnmount(() => rail.value?.removeEventListener('scroll', update))
 .arrows {
   display: flex;
   justify-content: flex-end;
-  gap: 14px;
+  gap: 8px;
   max-width: calc(var(--ap-wide) + 48px);
 }
 
-.arrows button {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  color: var(--text-1);
-  background: var(--surface-3);
-  border-radius: 50%;
-  transition:
-    opacity 300ms var(--ap-ease),
-    background-color 300ms var(--ap-ease);
-}
-
-.arrows button:hover:not(:disabled) {
-  background: var(--surface-4);
-}
-
-.arrows button:disabled {
-  opacity: 0.35;
-}
-
 .arrows svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;

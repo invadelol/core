@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { Logo } from '@invadelol/ui'
 import AppWindow from './AppWindow.vue'
-import DownloadPill from './DownloadPill.vue'
+import DownloadButtons from './DownloadButtons.vue'
 import { ease, prefersReduced, useScrollFx, vReveal } from './motion'
 
 /**
@@ -22,13 +22,13 @@ useScrollFx(stage, (box, vh) => {
 </script>
 
 <template>
-  <section class="hero">
+  <section class="hero ap-lit">
     <div v-reveal class="hero-copy ap-wrap">
       <Logo :size="36" class="hero-glyph ln" />
-      <h1 class="ln">Invade</h1>
+      <h1 class="ap-display ln">Invade</h1>
       <p class="hero-line ln">The desktop companion for League of Legends.</p>
-      <DownloadPill class="hero-dl ln" />
-      <p class="hero-meta ln">
+      <DownloadButtons class="hero-dl ln" />
+      <p class="hero-meta label ln">
         Free<template v-if="version"> · Version {{ version }}</template> · Windows and macOS
       </p>
     </div>
@@ -48,7 +48,7 @@ useScrollFx(stage, (box, vh) => {
 
 <style scoped>
 .hero {
-  padding-top: clamp(40px, 4.6vw, 64px);
+  padding-top: clamp(48px, 5.6vw, 80px);
 }
 
 .hero-copy {
@@ -63,20 +63,14 @@ useScrollFx(stage, (box, vh) => {
   color: var(--brand);
 }
 
-h1 {
-  font-size: clamp(64px, 6.6vw, 96px);
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.045em;
-}
-
 .hero-line {
+  max-width: 24em;
   margin-top: 14px;
-  font-size: clamp(21px, 2vw, 28px);
-  font-weight: 600;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-  color: var(--ap-grey);
+  font-size: var(--ap-h3);
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: -0.012em;
+  color: var(--text-2);
   text-wrap: balance;
 }
 
@@ -85,13 +79,11 @@ h1 {
 }
 
 .hero-meta {
-  margin-top: 16px;
-  font-size: 14px;
-  color: var(--text-3);
+  margin-top: 14px;
 }
 
 .hero-stage {
-  margin-top: clamp(36px, 3.6vw, 52px);
+  margin-top: clamp(40px, 4.4vw, 64px);
 }
 
 .hero-frame {
@@ -105,8 +97,8 @@ h1 {
 .rv .hero-frame.pic {
   transform: none;
   transition:
-    opacity 1400ms var(--ap-ease),
-    filter 1400ms var(--ap-ease);
+    opacity 1400ms var(--ease-glide),
+    filter 1400ms var(--ease-glide);
   transition-delay: 380ms;
 }
 

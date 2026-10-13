@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { Logo } from '@invadelol/ui'
+import { ChevronDown, Download } from 'lucide-vue-next'
 import { detectDesktopTarget, type DesktopPlatform } from '../../lib/platform.js'
-import DownloadPill from './DownloadPill.vue'
+import DownloadButtons from './DownloadButtons.vue'
 import { vReveal } from './motion'
 
 /** The download for this computer, every build with its requirements, then the questions. */
@@ -54,38 +55,38 @@ const FAQ = [
 </script>
 
 <template>
-  <section id="download" class="ap-section get">
+  <section id="download" class="ap-section get ap-lit rise">
     <div v-reveal class="get-head ap-wrap">
       <Logo :size="56" class="get-glyph ln" />
-      <h2 class="get-title ln">Get Invade.</h2>
+      <h2 class="ap-display ln">Get Invade.</h2>
       <p class="ap-lead ln">
         Free for Windows and macOS<template v-if="version">, version {{ version }}</template
         >.
       </p>
-      <DownloadPill class="get-dl ln" big :others="false" />
+      <DownloadButtons class="get-dl ln" :others="false" />
     </div>
 
-    <ul v-reveal class="builds ap-wrap">
-      <li
-        v-for="(b, i) in BUILDS"
-        :key="b.id"
-        class="ln"
-        :class="{ mine: mine === b.id }"
-        :style="{ '--i': i + 3 }"
-      >
-        <span class="build-name">
-          {{ b.name }}
-          <em v-if="mine === b.id">This computer</em>
-        </span>
-        <span class="build-req">{{ b.detail }}</span>
-        <a :href="`/download/${b.id}`" class="ap-link">
-          Download
-          <svg viewBox="0 0 16 16" aria-hidden="true">
-            <path d="m6 3.5 4.5 4.5L6 12.5" fill="none" stroke="currentColor" stroke-width="1.6" />
-          </svg>
-        </a>
-      </li>
-    </ul>
+    <div class="ap-wrap">
+      <ul v-reveal class="builds iv-panel lit-sheet ap-sheet">
+        <li
+          v-for="(b, i) in BUILDS"
+          :key="b.id"
+          class="ln"
+          :class="{ mine: mine === b.id }"
+          :style="{ '--i': i + 3 }"
+        >
+          <span class="build-name">
+            {{ b.name }}
+            <span v-if="mine === b.id" class="iv-badge brand">This computer</span>
+          </span>
+          <span class="build-req">{{ b.detail }}</span>
+          <a :href="`/download/${b.id}`" class="iv-btn">
+            <Download :size="13" aria-hidden="true" />
+            Download
+          </a>
+        </li>
+      </ul>
+    </div>
 
     <p v-reveal class="unsigned ap-wrap ap-fine">
       <span class="ln">
@@ -97,11 +98,11 @@ const FAQ = [
 
     <div class="faq ap-wrap">
       <h3 v-reveal class="ap-h3 faq-title"><span class="ln">Questions</span></h3>
-      <div class="faq-list">
+      <div class="faq-list iv-panel lit-sheet ap-sheet">
         <details v-for="item in FAQ" :key="item.q">
           <summary>
             {{ item.q }}
-            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 6 8 10.5 12.5 6" /></svg>
+            <ChevronDown :size="16" aria-hidden="true" />
           </summary>
           <p>{{ item.a }}</p>
         </details>
@@ -125,74 +126,62 @@ const FAQ = [
 }
 
 .get-glyph {
-  margin-bottom: 24px;
+  margin-bottom: 22px;
   color: var(--brand);
 }
 
-.get-title {
-  font-size: clamp(56px, 6.6vw, 96px);
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.045em;
-}
-
 .get-head .ap-lead {
-  margin-top: 16px;
+  margin-top: 14px;
 }
 
 .get-dl {
-  margin-top: 34px;
+  margin-top: 28px;
 }
 
+/* Every build, as rows in one sheet. */
 .builds {
   display: grid;
   max-width: 820px;
-  margin-top: clamp(56px, 7vw, 88px);
+  margin: clamp(48px, 6vw, 80px) auto 0;
 }
 
 .builds li {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 4px 24px;
-  padding: 22px 4px;
-  border-top: 1px solid var(--line-2);
+  gap: 2px 20px;
+  padding: 16px 20px;
 }
 
-.builds li:last-child {
-  border-bottom: 1px solid var(--line-2);
+.builds li + li {
+  border-top: 1px solid var(--line);
 }
 
 .build-name {
-  font-size: 19px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  font-size: 15px;
   font-weight: 600;
+  line-height: 20px;
   color: var(--text-1);
-}
-
-.build-name em {
-  display: inline-block;
-  margin-left: 10px;
-  white-space: nowrap;
-  font-size: 13px;
-  font-style: normal;
-  font-weight: 600;
-  color: var(--brand-hi);
 }
 
 .build-req {
   grid-row: 2;
-  font-size: 15px;
-  color: var(--ap-grey);
+  font-size: 13px;
+  color: var(--text-3);
 }
 
-.builds .ap-link {
+.builds .iv-btn {
   grid-row: 1 / span 2;
   grid-column: 2;
 }
 
 .unsigned {
   max-width: 820px;
-  margin-top: 22px;
+  margin-top: 16px;
 }
 
 .unsigned em {
@@ -200,23 +189,19 @@ const FAQ = [
   color: var(--text-2);
 }
 
-/* ── Questions ── */
+/* ── Questions: rows in one sheet ── */
 
 .faq {
-  max-width: 820px;
-  margin-top: clamp(110px, 12vw, 170px);
+  max-width: 868px;
+  margin-top: clamp(96px, 11vw, 150px);
 }
 
 .faq-title {
-  margin-bottom: 28px;
+  margin-bottom: 20px;
 }
 
-.faq-list details {
-  border-top: 1px solid var(--line-2);
-}
-
-.faq-list details:last-child {
-  border-bottom: 1px solid var(--line-2);
+.faq-list details + details {
+  border-top: 1px solid var(--line);
 }
 
 summary {
@@ -224,14 +209,19 @@ summary {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  min-height: 68px;
-  padding: 18px 4px;
-  font-size: 19px;
+  min-height: 56px;
+  padding: 14px 20px;
+  font-size: 15px;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  line-height: 20px;
   color: var(--text-1);
   cursor: pointer;
   list-style: none;
+  transition: background-color var(--t-fast);
+}
+
+summary:hover {
+  background: var(--glint);
 }
 
 summary::-webkit-details-marker {
@@ -240,14 +230,8 @@ summary::-webkit-details-marker {
 
 summary svg {
   flex: none;
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: var(--text-3);
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  transition: transform 400ms var(--ap-ease);
+  color: var(--text-3);
+  transition: transform 400ms var(--ease-glide);
 }
 
 details[open] summary svg {
@@ -255,12 +239,11 @@ details[open] summary svg {
 }
 
 details p {
-  max-width: 40em;
-  padding: 0 4px 24px;
-  font-size: 17px;
-  font-weight: 500;
-  line-height: 1.55;
-  color: var(--ap-grey);
+  max-width: 44em;
+  padding: 0 20px 20px;
+  font-size: var(--ap-body);
+  line-height: 1.6;
+  color: var(--text-2);
 }
 
 /* The answer opens smoothly where the browser can animate to the content's height. */
@@ -273,7 +256,7 @@ details p {
     height: 0;
     overflow: clip;
     transition:
-      height 500ms var(--ap-ease),
+      height 500ms var(--ease-glide),
       content-visibility 500ms allow-discrete;
   }
 
@@ -283,7 +266,7 @@ details p {
 }
 
 .legal {
-  margin-top: 56px;
+  margin-top: 40px;
   font-size: 12px;
   color: var(--text-4);
 }

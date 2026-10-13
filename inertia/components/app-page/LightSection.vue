@@ -63,8 +63,13 @@ onEnter(
     </header>
 
     <ul ref="list" v-reveal class="figures ap-wrap">
-      <li v-for="(f, i) in FIGURES" :key="f.text" class="ln" :style="{ '--i': i }">
-        <b class="figure">
+      <li
+        v-for="(f, i) in FIGURES"
+        :key="f.text"
+        class="iv-panel lit-sheet ap-sheet ln"
+        :style="{ '--i': i }"
+      >
+        <b class="figure iv-fig">
           <span class="num">{{ format(shown[i], f.decimals) }}</span>
           <small v-if="f.unit">{{ f.unit }}</small>
         </b>
@@ -81,12 +86,13 @@ onEnter(
 </template>
 
 <style scoped>
+/* Four tiles, as the app's Home shows its figures: a sheet each, the figure large and engraved. */
 .figures {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 48px 24px;
+  gap: 16px;
   max-width: 1080px;
-  margin-top: clamp(64px, 8vw, 110px);
+  margin-top: clamp(56px, 7vw, 96px);
 }
 
 @media (min-width: 1100px) {
@@ -98,43 +104,45 @@ onEnter(
 .figures li {
   display: grid;
   align-content: start;
-  gap: 12px;
-  padding-top: 22px;
-  border-top: 1px solid var(--line-2);
+  gap: 14px;
+  padding: 24px 22px 24px;
 }
 
 .figure {
   display: flex;
   align-items: baseline;
-  gap: 6px;
-  font-size: clamp(46px, 5.6vw, 80px);
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.045em;
+  font-size: clamp(40px, 4.4vw, 60px);
   color: var(--text-1);
 }
 
-.figure .num {
-  font-variant-numeric: tabular-nums;
-}
-
 .figure small {
-  font-size: 0.42em;
-  font-weight: 650;
-  letter-spacing: -0.02em;
-  color: var(--brand-hi);
+  margin-left: 4px;
+  font-size: 0.4em;
+  font-weight: 600;
+  font-stretch: 100%;
+  letter-spacing: 0;
+  color: var(--text-3);
 }
 
 .what {
-  max-width: 15em;
-  font-size: clamp(15px, 1.3vw, 17px);
-  font-weight: 500;
-  line-height: 1.45;
-  color: var(--ap-grey);
+  max-width: 16em;
+  font-size: var(--ap-body);
+  line-height: 1.5;
+  color: var(--text-2);
+}
+
+@media (max-width: 600px) {
+  .figures {
+    gap: 10px;
+  }
+
+  .figures li {
+    padding: 18px 16px;
+  }
 }
 
 .note {
   max-width: 1080px;
-  margin-top: 48px;
+  margin-top: 24px;
 }
 </style>

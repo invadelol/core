@@ -4,8 +4,9 @@ import Shot from './Shot.vue'
 import type { ShotName } from './shots'
 
 /**
- * The desktop app's window around a capture: its rounded corners, a hairline edge, macOS's three
- * buttons in the space the app leaves for them, and a deep, soft shadow under it.
+ * The desktop app's window around a capture (.app-window, css/components.css): the app's ink and
+ * corners, a lit top edge, macOS's three buttons in the space the app leaves for them, and the
+ * page's shadow under it. It stays dark in the light theme, as the app is.
  * `crop` (x, y, width, height as fractions of the window): on a phone only that part is shown,
  * larger, so the window reads at that width. Slotted layers (other views) are cropped the same.
  */
@@ -37,7 +38,7 @@ const shotSizes = computed(() =>
 </script>
 
 <template>
-  <div class="win" :class="{ cropped: crop }" :style="cropStyle">
+  <div class="win app-window iv-dark" :class="{ cropped: crop }" :style="cropStyle">
     <Shot :name="name" :alt="alt" :sizes="shotSizes" :eager="eager" />
     <slot />
     <span class="lights" aria-hidden="true"><i /><i /><i /></span>
@@ -45,49 +46,10 @@ const shotSizes = computed(() =>
 </template>
 
 <style scoped>
-.win {
-  position: relative;
-  overflow: hidden;
-  /* 12px at 1440 wide, as the window's own corners. */
-  border-radius: clamp(8px, 0.9vw, 12px);
-  background: #0d0e13;
-  box-shadow:
-    0 0 0 1px rgb(255 255 255 / 0.09),
-    var(--ap-shadow);
-}
-
-/* The buttons sit where the app keeps room for them (its sidebar's top-left corner). */
-.lights {
-  position: absolute;
-  top: 1.45%;
-  left: 1.2%;
-  display: flex;
-  justify-content: space-between;
-  width: 3.6%;
-  pointer-events: none;
-}
-
-.lights i {
-  width: 23%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: #ff5f57;
-  box-shadow: inset 0 0 0 0.5px rgb(0 0 0 / 0.2);
-}
-
-.lights i:nth-child(2) {
-  background: #febc2e;
-}
-
-.lights i:nth-child(3) {
-  background: #28c840;
-}
-
 /* A phone: the chosen part of the window, at a size that reads. */
 @media (max-width: 700px) {
   .win.cropped {
     aspect-ratio: var(--crop-ratio);
-    border-radius: 14px;
   }
 
   .win.cropped :deep(picture) {
