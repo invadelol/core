@@ -59,9 +59,11 @@ const lead = computed(() => {
   }
 })
 
+/** Only when fewer games than the window say this; the window itself is in the page header. */
 const meta = computed(() => {
   const n = props.domain.games
-  return `${n} ${n === 1 ? 'game' : 'games'}`
+  const all = props.lens.games.length
+  return n < all ? `${n} of ${all} games` : ''
 })
 
 const pace = computed(() =>

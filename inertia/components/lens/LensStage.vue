@@ -21,17 +21,19 @@ const props = defineProps<{
 
 const emit = defineEmits<{ open: [key: string] }>()
 
-const SHORT: Record<string, string> = { fighting: 'Fighting' }
-
 const rated = computed(() =>
   props.domains.filter((d): d is LensDomain & { rating: number } => d.rating !== null)
 )
+/** A domain only stands out when it is clearly off the pace; a few points either way is noise. */
+const STANDS_OUT = 5
 const calls = computed(() => {
   if (rated.value.length < 2) return []
   const sorted = [...rated.value].sort((a, b) => b.rating - a.rating)
+  const best = sorted[0]
+  const worst = sorted[sorted.length - 1]
   return [
-    { title: 'Strongest', domain: sorted[0] },
-    { title: 'Weakest', domain: sorted[sorted.length - 1] },
+    ...(best.rating >= PACE_RATING + STANDS_OUT ? [{ title: 'Strongest', domain: best }] : []),
+    ...(worst.rating <= PACE_RATING - STANDS_OUT ? [{ title: 'Weakest', domain: worst }] : []),
   ]
 })
 
@@ -60,7 +62,7 @@ const petals = computed(() => {
     const [lx, ly] = polar(R + 30, mid)
     return {
       key: d.key,
-      label: SHORT[d.key] ?? d.label,
+      label: d.label,
       rating: d.rating,
       shape: d.rating === null ? null : sector(HOLE, reach(d.rating), a0, a1),
       slot: sector(HOLE, R, a0, a1),
@@ -135,9 +137,7 @@ const splash = computed(() => (props.champion ? championSplash(props.champion) :
         <span class="iv-fig" :aria-label="`Invade score ${score ?? 'not rated'}`">{{
           score === null ? '–' : counted
         }}</span>
-        <span class="lv-stage-score-label num">
-          Invade score<br />{{ games }} games · {{ timelineGames }} with a timeline
-        </span>
+        <span class="lv-stage-score-label num"> Invade score<br />{{ games }} games </span>
       </div>
       <dl v-if="calls.length" class="lv-stage-calls">
         <div v-for="call in calls" :key="call.title">
@@ -153,6 +153,9 @@ const splash = computed(() => (props.champion ? championSplash(props.champion) :
           <dd>{{ call.domain.headline }}</dd>
         </div>
       </dl>
+      <p v-else-if="rated.length >= 2" class="lv-stage-even">
+        Every area sits close to the Emerald pace for {{ roleName }}.
+      </p>
     </div>
 
     <div class="lv-aperture-wrap">
@@ -317,6 +320,14 @@ const splash = computed(() => (props.champion ? championSplash(props.champion) :
   font-size: 12px;
   line-height: 17px;
   color: var(--text-3);
+}
+
+.lv-stage-even {
+  max-width: 320px;
+  margin-top: 22px;
+  font-size: 15px;
+  line-height: 22px;
+  color: var(--text-2);
 }
 
 .lv-stage-calls {
