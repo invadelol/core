@@ -13,11 +13,11 @@ import MasteryCrest from './MasteryCrest.vue'
  */
 const props = defineProps<{ mastery: ChampionMastery[] }>()
 
-/** Circles at least this wide carry their name; wider still, the splash instead of the icon. */
-const LABEL_MIN = 92
+/**
+ * Circles at least this wide carry their name (a little smaller on a phone); wider, the splash
+ * instead of the icon; wider again, their mastery crest beside the points.
+ */
 const ART_MIN = 124
-/** And wider again, their mastery crest beside the points. */
-const CREST_MIN = 150
 
 const root = ref<HTMLElement>()
 const width = ref(0)
@@ -27,6 +27,10 @@ const stage = ref<'still' | 'wait' | 'play'>('still')
 
 const entries = computed(() => new Map(props.mastery.map((m) => [m.championId, m])))
 const total = computed(() => props.mastery.reduce((sum, m) => sum + m.championPoints, 0))
+
+const sizes = computed(() =>
+  width.value < 480 ? { label: 74, crest: 120 } : { label: 92, crest: 150 }
+)
 
 const layout = computed(() => {
   const w = width.value
@@ -181,14 +185,14 @@ onBeforeUnmount(() => {
           :loading="index < 24 ? 'eager' : 'lazy'"
         />
         <span
-          v-if="bubble.r * 2 >= LABEL_MIN"
+          v-if="bubble.r * 2 >= sizes.label"
           class="ms-label iv-dark"
-          :style="{ fontSize: `${Math.min(13, 10 + bubble.r / 40)}px` }"
+          :style="{ fontSize: `${Math.min(13, 11 + bubble.r / 60)}px` }"
         >
           <span class="ms-label-name">{{ championName(bubble.id) }}</span>
           <span class="ms-label-points num">
             <MasteryCrest
-              v-if="bubble.r * 2 >= CREST_MIN"
+              v-if="bubble.r * 2 >= sizes.crest"
               :level="entries.get(bubble.id)?.championLevel ?? 0"
               :size="Math.round(Math.min(26, bubble.r / 6))"
               :titled="false"
@@ -266,14 +270,15 @@ onBeforeUnmount(() => {
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  padding: 0 14% 15%;
+  padding: 0 10% 15%;
   line-height: 1.2;
   text-align: center;
   color: var(--text-1);
   background: linear-gradient(
     0deg,
-    color-mix(in srgb, var(--ink-0) 82%, transparent),
-    color-mix(in srgb, var(--ink-0) 0%, transparent) 52%
+    color-mix(in srgb, var(--ink-0) 88%, transparent),
+    color-mix(in srgb, var(--ink-0) 62%, transparent) 30%,
+    color-mix(in srgb, var(--ink-0) 0%, transparent) 60%
   );
   pointer-events: none;
 }
@@ -290,7 +295,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  font-size: 0.86em;
+  font-size: max(11px, 0.86em);
   font-weight: 500;
   color: var(--text-2);
 }
