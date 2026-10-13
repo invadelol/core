@@ -18,7 +18,7 @@ const props = withDefaults(
     height?: number
     label: string
   }>(),
-  { height: 132 }
+  { height: 150 }
 )
 
 const box = useTemplateRef<HTMLElement>('box')
@@ -32,7 +32,8 @@ onMounted(() => {
 })
 onBeforeUnmount(() => observer?.disconnect())
 
-const PAD = { top: 10, right: 10, bottom: 22, left: 34 }
+/** The top band holds the tooltip, so it never covers the line or the text above the chart. */
+const PAD = { top: 30, right: 10, bottom: 22, left: 34 }
 
 /** Monotone cubic through points sorted by x: smooth, never past a value that was not reached. */
 function monotone(points: Array<[number, number]>) {
@@ -115,6 +116,11 @@ function point(event: PointerEvent) {
   hover.value = Math.max(0, Math.min(props.values.length - 1, i))
 }
 
+/** A mouse leaving hides the tip; a finger lifting keeps it, as a tap shows it. */
+function leave(event: PointerEvent) {
+  if (event.pointerType === 'mouse') hover.value = null
+}
+
 const tip = computed(() => {
   const c = chart.value
   const i = hover.value
@@ -143,7 +149,7 @@ const id = `fr-fade-${Math.random().toString(36).slice(2, 8)}`
     :aria-label="label"
     @pointermove="point"
     @pointerdown="point"
-    @pointerleave="hover = null"
+    @pointerleave="leave"
   >
     <svg v-if="chart" :width="chart.w" :height="chart.h" aria-hidden="true">
       <defs>
@@ -182,7 +188,7 @@ const id = `fr-fade-${Math.random().toString(36).slice(2, 8)}`
       </g>
 
       <template v-if="tip">
-        <line class="fr-trend-cursor" :x1="tip.x" :x2="tip.x" :y1="10" :y2="chart.floor" />
+        <line class="fr-trend-cursor" :x1="tip.x" :x2="tip.x" :y1="28" :y2="chart.floor" />
         <circle class="fr-trend-dot" :cx="tip.x" :cy="tip.y" r="3.5" />
       </template>
       <circle
@@ -255,8 +261,8 @@ const id = `fr-fade-${Math.random().toString(36).slice(2, 8)}`
 
 .fr-trend-tip {
   position: absolute;
-  top: -6px;
-  transform: translate(-50%, -100%);
+  top: 0;
+  transform: translateX(-50%);
   display: flex;
   align-items: baseline;
   gap: 8px;

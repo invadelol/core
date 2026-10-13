@@ -419,8 +419,8 @@ const more = computed(() => games.value.length > 0 && !exhausted.value)
 
 @media (min-width: 48rem) {
   .fr-works {
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 28px;
+    grid-template-columns: repeat(auto-fit, minmax(196px, 1fr));
+    gap: 24px;
     padding: 16px 20px 18px;
   }
 }

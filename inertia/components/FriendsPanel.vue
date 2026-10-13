@@ -416,8 +416,7 @@ function seats(partner: Partner) {
   border-radius: var(--r-sm);
 }
 
-/* People and groups beside each other where there is room; the duo below, full width. On a
-   narrower screen the groups follow the duo, so the duo stays right under the list. */
+/* People and groups beside each other where there is room, the duo below at full width. */
 .fr-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -429,23 +428,12 @@ function seats(partner: Partner) {
   margin-top: 8px;
 }
 
-.fr-groups {
-  order: 3;
-}
-
 @media (min-width: 80rem) {
   .fr-grid {
     grid-template-columns: minmax(0, 1fr) 320px;
   }
 
-  .fr-groups {
-    order: 0;
-  }
-
-  .fr-duo-slot {
-    grid-column: 1 / -1;
-  }
-
+  .fr-duo-slot,
   .fr-people.wide {
     grid-column: 1 / -1;
   }
