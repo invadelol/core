@@ -63,21 +63,31 @@ export class IngestionService {
     const gameStartMs =
       meta?.gameStartMs ?? toInt(info.gameStartTimestamp ?? info.gameCreation ?? 0, 0)
 
-    const timelineRows = buildTimelineRows(matchId, platform, gameStartMs, info, timelineData)
-
-    if (timelineRows.length) {
-      await clickhouse.insert({
-        table: 'match_timeline',
-        values: timelineRows,
-        format: 'JSONEachRow',
-      })
-    }
+    await this.ingestFrames(matchId, platform, gameStartMs, info, timelineData)
 
     const participants: any[] = Array.isArray(info?.participants) ? info.participants : []
     const teamOf = new Map(
       participants.map((p: any) => [toInt(p.participantId ?? 0, 0), toInt(p.teamId ?? 0, 0)])
     )
     await this.ingestEvents(matchId, platform, gameStartMs, timelineData, teamOf)
+  }
+
+  /**
+   * Per-minute participant frames of a timeline (`match_timeline`). Also used on its own to
+   * backfill a match whose frames were not stored with it.
+   */
+  async ingestFrames(
+    matchId: string,
+    platform: string,
+    gameStartMs: number,
+    info: RiotAPITypes.MatchV5.MatchInfoDTO,
+    timelineData: RiotAPITypes.MatchV5.MatchTimelineDTO
+  ) {
+    const rows = buildTimelineRows(matchId, platform, gameStartMs, info, timelineData)
+    if (rows.length) {
+      await clickhouse.insert({ table: 'match_timeline', values: rows, format: 'JSONEachRow' })
+    }
+    return rows.length
   }
 
   /**

@@ -88,48 +88,80 @@ class MatchesService {
   }
 
   /**
-   * Kill and objective events of a match stored before they were kept: one timeline request,
-   * once. A failed attempt is not retried for a while, so a page opened repeatedly never turns
-   * into a stream of Riot calls. Returns whether events were stored.
+   * What a stored match lacks of its timeline, fetched once now that someone looks: the kills
+   * and objectives of a match stored before they were kept, or the whole timeline of one whose
+   * timeline could not be stored with it. A failed attempt is not retried for a while, so a page
+   * opened repeatedly never turns into a stream of Riot calls. Returns whether anything was stored.
    */
-  async backfillEvents(match: {
-    matchId: string
-    platform: string
-    gameStartMs: number
-    participants: Array<{ puuid: string; teamId: number }>
-  }) {
+  async backfillTimeline(
+    match: {
+      matchId: string
+      platform: string
+      gameStartMs: number
+      participants: Array<{ puuid: string; teamId: number }>
+    },
+    missing: { frames: boolean; events: boolean }
+  ) {
     const last = this.backfillFailures.get(match.matchId)
     if (last && Date.now() - last < BACKFILL_RETRY_MS) return false
     if (this.backfillFailures.size > 5000) this.backfillFailures.clear()
     const run = async () => {
       try {
+        const cluster = riotApiService.platformToRegion(match.platform) as MatchCluster
         const timeline = await riotApiService.client.matchV5.getMatchTimelineById({
           matchId: match.matchId,
-          cluster: riotApiService.platformToRegion(match.platform) as MatchCluster,
+          cluster,
         })
-        const teamByPuuid = new Map(match.participants.map((p) => [p.puuid, p.teamId]))
-        const teamOf = new Map<number, number>()
-        for (const p of timeline.info?.participants ?? []) {
-          const team = teamByPuuid.get(p.puuid)
-          if (team) teamOf.set(p.participantId, team)
+        let stored = 0
+        if (missing.frames) {
+          // Frames carry each player's spells and runes: read from the archived game, so only
+          // a game stored before the archive costs a second Riot call.
+          const matchData =
+            (await this.archived(match.matchId)) ??
+            (await riotApiService.client.matchV5.getMatchById({ matchId: match.matchId, cluster }))
+          const frames = await ingestionService.ingestFrames(
+            match.matchId,
+            match.platform,
+            match.gameStartMs,
+            matchData.info,
+            timeline
+          )
+          if (frames) {
+            await matchSourceService
+              .update(match.matchId, { completeness: riotCompleteness(true) })
+              .catch(() => {})
+          }
+          stored += frames
         }
-        const stored = await ingestionService.ingestEvents(
-          match.matchId,
-          match.platform,
-          match.gameStartMs,
-          timeline,
-          teamOf
-        )
-        if (!stored) return false
+        if (missing.events) {
+          const teamByPuuid = new Map(match.participants.map((p) => [p.puuid, p.teamId]))
+          const teamOf = new Map<number, number>()
+          for (const p of timeline.info?.participants ?? []) {
+            const team = teamByPuuid.get(p.puuid)
+            if (team) teamOf.set(p.participantId, team)
+          }
+          stored += await ingestionService.ingestEvents(
+            match.matchId,
+            match.platform,
+            match.gameStartMs,
+            timeline,
+            teamOf
+          )
+        }
+        if (!stored) {
+          // Riot has nothing more for it either: not asked again before the retry window.
+          this.backfillFailures.set(match.matchId, Date.now())
+          return false
+        }
         await invalidateResponseCache([`match:${match.matchId}`]).catch(() => {})
         return true
       } catch (error) {
         this.backfillFailures.set(match.matchId, Date.now())
-        logger.warn({ err: error, matchId: match.matchId }, 'match events backfill failed')
+        logger.warn({ err: error, matchId: match.matchId }, 'match timeline backfill failed')
         return false
       }
     }
-    // The guard itself throws while Riot rate-limits us: the page opens without events.
+    // The guard itself throws while Riot rate-limits us: the page opens without a timeline.
     return this.backfills.run(match.matchId, run).catch(() => false)
   }
 
@@ -177,7 +209,17 @@ class MatchesService {
       throw error
     }
 
-    await ingestionService.ingestTimeline(matchId, matchData, await timelineRequest, meta)
+    // The game is stored by now, so the next sync skips it: throwing would cost it its
+    // timeline for good and fail the whole sync over one game. It is kept without one
+    // instead, and the match page fetches the timeline again when someone opens it.
+    try {
+      await ingestionService.ingestTimeline(matchId, matchData, await timelineRequest, meta)
+    } catch (error) {
+      logger.warn({ err: error, matchId }, 'match stored without a timeline')
+      await matchSourceService
+        .update(matchId, { completeness: riotCompleteness(false) })
+        .catch(() => {})
+    }
     // All participants' cached analytics changed, including players whose own
     // profile wasn't the one that triggered this sync. Invalidate before replying.
     await invalidateResponseCache([
@@ -188,6 +230,19 @@ class MatchesService {
     return {
       matchId,
       ...meta,
+    }
+  }
+
+  /** The archived Riot JSON of a match; null when it was never archived or cannot be read. */
+  private async archived(matchId: string) {
+    try {
+      const r2 = drive.use('r2')
+      const filePath = `matches/${matchId}.json`
+      if (!(await r2.exists(filePath))) return null
+      return await compressionService.decompress(await r2.get(filePath))
+    } catch (error) {
+      logger.warn({ err: error, matchId }, 'archived match unreadable')
+      return null
     }
   }
 
