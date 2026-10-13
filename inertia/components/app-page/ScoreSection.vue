@@ -217,6 +217,9 @@ const DIALS = [
 }
 
 .dial-pic {
+  width: 100%;
+  max-width: 620px;
+  margin-inline: auto;
   overflow: hidden;
   background: #121318;
   border-radius: 24px;

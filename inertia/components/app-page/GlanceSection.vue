@@ -137,6 +137,9 @@ useScrollFx(strip, (box, vh) => {
 }
 
 .card {
+  width: 100%;
+  max-width: 504px;
+  margin-inline: auto;
   overflow: hidden;
   border-radius: 18px;
   box-shadow:
