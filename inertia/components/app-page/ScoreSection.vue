@@ -55,7 +55,7 @@ const zoomImg = ref<HTMLElement>()
 useScrollFx(zoom, (box, vh) => {
   if (!zoomImg.value) return
   const p = prefersReduced() ? 0 : ease(entering(box, vh, 0.15))
-  zoomImg.value.style.transform = `scale(${1 + 0.9 * p})`
+  zoomImg.value.style.transform = `scale(${1 + 0.5 * p})`
 })
 
 // Three real dials, drawn by the app's own component when they come into view.
@@ -180,7 +180,8 @@ const DIALS = [
 
 .views-win {
   width: 100%;
-  max-width: var(--ap-wide);
+  /* The tabs and the window fit on one screen together. */
+  max-width: min(var(--ap-wide), calc((100svh - 150px) * 1.6));
 }
 
 /* The other views lie over the scoreboard and cross-fade in, a touch larger first. */
@@ -224,9 +225,9 @@ const DIALS = [
     var(--ap-shadow);
 }
 
-/* The move ends on the dial: it sits at 13.6% across and 56% down the capture. */
+/* The move ends on the dial (13.6% across, 56% down the capture), kept whole in the card. */
 .dial-move {
-  transform-origin: 13.6% 56%;
+  transform-origin: 4% 64%;
   will-change: transform;
 }
 

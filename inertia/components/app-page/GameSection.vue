@@ -190,13 +190,22 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure))
               :class="{ on: shown(name) }"
               :style="place(b)"
             >
-              <Shot :name="OV_SHOT[name]" alt="" sizes="30vw" />
+              <Shot :name="OV_SHOT[name]" alt="" sizes="1000px" />
             </div>
             <div class="ov plates" :class="{ on: tab }" :style="place(PLATES)">
-              <Shot name="ov-tabgold" alt="" sizes="10vw" />
+              <Shot name="ov-tabgold" alt="" sizes="1000px" />
             </div>
           </div>
         </div>
+
+
+        <ol class="steps" aria-hidden="true">
+          <li
+            v-for="(c, i) in CAPTIONS"
+            :key="c.title"
+            :class="{ on: step === i + 1, done: step > i + 1 }"
+          />
+        </ol>
 
         <div class="captions" aria-live="polite">
           <p class="cap intro" :class="{ on: step === 0 }">
@@ -249,7 +258,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure))
 .frame {
   position: relative;
   overflow: hidden;
-  width: min(var(--ap-wide), calc(100vw - 48px), calc((100svh - 250px) * 16 / 9));
+  width: min(var(--ap-wide), calc(100vw - 48px), calc((100svh - 280px) * 16 / 9));
   aspect-ratio: 16 / 9;
   border-radius: 20px;
   background: #0b0c10;
@@ -357,6 +366,39 @@ onBeforeUnmount(() => window.removeEventListener('resize', measure))
 .cap strong {
   font-weight: 600;
   color: var(--text-1);
+}
+
+/* Where the game is: four dots, the current one drawn out into a short bar. */
+.steps {
+  display: flex;
+  gap: 8px;
+  margin-top: -4px;
+}
+
+.steps li {
+  width: 7px;
+  height: 7px;
+  background: var(--text-4);
+  border-radius: 4px;
+  opacity: 0.6;
+  transition:
+    width 500ms var(--ap-ease),
+    background-color 500ms var(--ap-ease),
+    opacity 500ms var(--ap-ease);
+}
+
+.steps li.done {
+  opacity: 1;
+}
+
+.steps li.on {
+  width: 28px;
+  background: var(--text-1);
+  opacity: 1;
+}
+
+.run.reduced .steps {
+  display: none;
 }
 
 .key {
