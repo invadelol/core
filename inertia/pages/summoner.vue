@@ -34,6 +34,7 @@ import SiteFooter from '../components/SiteFooter.vue'
 import { decodeSlug, parseSlug } from '../lib/format.js'
 import { isRemake } from '../lib/match.js'
 import { rememberPlayer, updateRecent } from '../lib/recent.js'
+import type { SynergyReport } from '../lib/synergy.js'
 import type {
   ActivityDay,
   GlobalStats,
@@ -156,28 +157,26 @@ async function loadStats() {
   }
 }
 
-const friendMatches = shallowRef<Match[]>([])
+const friendsReport = shallowRef<SynergyReport | null>(null)
 const friendsLoading = ref(false)
+const friendsError = ref(false)
 let friendsController: AbortController | undefined
 
-/** Synergy needs roles, which only the match rows carry, so it reads a
- *  wider sample of the player's own games rather than the friends endpoint. */
-async function loadFriendMatches() {
-  if (!profile.value || friendMatches.value.length) return
+/** Who the player queues with, read by the server from their latest stored games. */
+async function loadFriends(again = false) {
+  if (!profile.value || (friendsReport.value && !again)) return
   friendsController?.abort()
   friendsController = new AbortController()
   const signal = friendsController.signal
   friendsLoading.value = true
+  friendsError.value = false
   try {
-    const res = await fetch(
-      `/api/summoners/puuid/${profile.value.puuid}/matches?count=100&view=summary`,
-      { signal }
-    )
+    const res = await fetch(`/api/summoners/puuid/${profile.value.puuid}/synergy`, { signal })
     if (!res.ok) throw new Error()
-    const data = await res.json()
-    if (!signal.aborted) friendMatches.value = data
+    const data = (await res.json()) as SynergyReport
+    if (!signal.aborted) friendsReport.value = data
   } catch {
-    if (!signal.aborted) friendMatches.value = []
+    if (!signal.aborted) friendsError.value = true
   } finally {
     if (!signal.aborted) friendsLoading.value = false
   }
@@ -309,7 +308,7 @@ watch(
 
 watch(section, () => {
   if (section.value === 'champions' && !masteryComplete.value) void loadMastery(true)
-  if (section.value === 'friends') void loadFriendMatches()
+  if (section.value === 'friends') void loadFriends()
   if (['overview', 'champions'].includes(section.value)) void applyFilters()
 })
 
@@ -460,7 +459,8 @@ async function load() {
   filteredChampions.value = null
   mastery.value = []
   masteryComplete.value = false
-  friendMatches.value = []
+  friendsReport.value = null
+  friendsError.value = false
   profile.value = props.initialProfile ?? null
   isLoading.value = !profile.value
   error.value = null
@@ -509,7 +509,7 @@ async function load() {
     }, 3000)
     void loadMastery()
     void loadStats()
-    if (section.value === 'friends') void loadFriendMatches()
+    if (section.value === 'friends') void loadFriends()
     await loadAnalytics(result.puuid, signal)
     if (!signal.aborted && ranks.value) updateRecent(result, { rank: soloRank(ranks.value) })
     if (
@@ -589,6 +589,8 @@ async function sync() {
       await loadAnalytics(profile.value!.puuid, signal)
       await applyFilters()
       void loadMastery()
+      if (section.value === 'friends') void loadFriends(true)
+      else friendsReport.value = null
     } else {
       const failure = await res.json().catch(() => null)
       if (signal.aborted) return
@@ -821,9 +823,11 @@ async function sync() {
           <!-- ── Friends ──────────────────────────────────────────── -->
           <FriendsPanel
             v-else-if="section === 'friends'"
-            :matches="friendMatches"
-            :puuid="profile.puuid"
+            :report="friendsReport"
+            :profile="profile"
             :loading="friendsLoading"
+            :error="friendsError"
+            @retry="loadFriends(true)"
           />
 
           <!-- ── Live ─────────────────────────────────────────────── -->

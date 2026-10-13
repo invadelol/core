@@ -438,6 +438,33 @@ export class MatchRepository {
   }
 
   /**
+   * The games two players played on the same side, newest first, as the match list reads them
+   * (the friends page's games together). Custom games are left out, as in the friends report.
+   */
+  async getTogether(
+    puuid: string,
+    matePuuid: string,
+    filters: { count?: number; offset?: number } = {}
+  ) {
+    const count = integer(filters.count, DEFAULT_MATCH_COUNT)
+    const offset = integer(filters.offset, DEFAULT_OFFSET)
+    const matchWindow = `
+      SELECT match_id
+      FROM participants
+      PREWHERE puuid = '${escapeClickhouseString(puuid)}'
+      WHERE queue_id != 0
+        AND (match_id, team_id) IN (
+          SELECT match_id, team_id
+          FROM participants
+          PREWHERE puuid = '${escapeClickhouseString(matePuuid)}'
+        )
+      ORDER BY game_start_ms DESC, match_id DESC
+      LIMIT ${count} OFFSET ${offset}
+    `
+    return this.readWindow(matchWindow, 'summary')
+  }
+
+  /**
    * The newest stored games of some queues since a moment, whoever played them, as the match
    * list reads them (the home page's best games). The window is a range read over `matches`,
    * ordered by start time inside each platform, then the same two reads as a player's list.
