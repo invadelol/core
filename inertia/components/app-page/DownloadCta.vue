@@ -103,17 +103,17 @@ const others = computed(() => DESKTOP_TARGETS.filter((t) => t.id !== target.valu
   stroke-linejoin: round;
 }
 
-:global([data-theme='light']) .cta-main {
+[data-theme='light'] .cta-main {
   color: #fff;
   background: #14151c;
 }
 
-:global([data-theme='light']) .cta-main:hover {
+[data-theme='light'] .cta-main:hover {
   background: #000;
 }
 
 @media (prefers-color-scheme: light) {
-  :global([data-theme='system']) .cta-main {
+  [data-theme='system'] .cta-main {
     color: #fff;
     background: #14151c;
   }

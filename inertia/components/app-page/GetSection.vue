@@ -218,7 +218,7 @@ const FAQ = [
   color: var(--brand-hi);
 }
 
-:global([data-theme='light']) .get-this {
+[data-theme='light'] .get-this {
   color: var(--brand);
 }
 
@@ -259,9 +259,20 @@ const FAQ = [
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
 }
 
-:global([data-theme='light']) .mine .get-btn {
+[data-theme='light'] .mine .get-btn {
   color: #fff;
   background: #14151c;
+}
+
+@media (prefers-color-scheme: light) {
+  [data-theme='system'] .mine .get-btn {
+    color: #fff;
+    background: #14151c;
+  }
+
+  [data-theme='system'] .get-this {
+    color: var(--brand);
+  }
 }
 
 .get-note {

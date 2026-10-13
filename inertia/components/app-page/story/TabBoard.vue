@@ -306,8 +306,8 @@ const shown = computed(() => props.p > 0 && props.p < 0.96)
 /* The key being held: a real keycap, pressed. */
 .tb-key {
   position: absolute;
-  left: 24px;
-  bottom: 24px;
+  left: 176px;
+  bottom: 104px;
   display: grid;
   place-items: center;
   width: 74px;

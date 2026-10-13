@@ -27,12 +27,12 @@ const t = computed(() => START + 58 * props.p + 6 * props.tab + 14 * props.k)
 const taken = computed(() => props.p >= TAKEN)
 
 /** The fight: two enemies go down, one after the other. */
-const kill1 = computed(() => seg(props.k, 0.12, 0.22))
-const kill2 = computed(() => seg(props.k, 0.24, 0.34))
+const kill1 = computed(() => seg(props.k, 0.18, 0.36))
+const kill2 = computed(() => seg(props.k, 0.4, 0.58))
 const kills = computed(() => 6 + (kill1.value >= 1 ? 1 : 0) + (kill2.value >= 1 ? 1 : 0))
 const assists = computed(() => 9 + (props.p >= 0.6 ? 1 : 0))
 const teamKills = computed(() => 21 + (props.p >= 0.6 ? 1 : 0) + kills.value - 6)
-const banner = computed(() => Math.min(seg(props.k, 0.34, 0.4), 1 - seg(props.k, 0.5, 0.56)))
+const banner = computed(() => Math.min(seg(props.k, 0.58, 0.64), 1 - seg(props.k, 0.86, 0.94)))
 
 const timers = computed<ObjTimer[]>(() => [
   { key: 'dragon', label: 'Dragon', at: taken.value ? START + 58 * TAKEN + 300 : SPAWN },
@@ -108,17 +108,33 @@ const panelIn = computed(() => ease(props.p, 0, 0.08))
 
 const ABILITIES = ['q', 'w', 'e', 'r'].map((k) => `/cdn/ability/64-${k}.png`)
 
+/** The gold for each kill, floating up where the enemy fell, as the game shows it. */
+const gold = computed(() =>
+  [
+    { at: 0.36, n: 300, x: 700, y: 300 },
+    { at: 0.58, n: 274, x: 762, y: 376 },
+  ].map((g) => {
+    const k = seg(props.k, g.at, g.at + 0.14)
+    return {
+      n: g.n,
+      x: g.x + 30,
+      y: g.y - 6 - k * 26,
+      o: Math.min(1, k * 5) * (1 - seg(k, 0.6, 1)),
+    }
+  })
+)
+
 /** Champions on the field: only their health bars, as the game floats them. */
 const units = computed(() => {
   const k = props.k
-  const close = ease(k, 0, 0.12)
+  const close = ease(k, 0, 0.16)
   return [
     {
       cls: 'me',
       lvl: kills.value > 6 ? 13 : 12,
       x: lerp(560, 650, close),
       y: lerp(352, 344, close),
-      hp: 0.78 - 0.22 * seg(k, 0.06, 0.3),
+      hp: 0.78 - 0.24 * seg(k, 0.1, 0.55),
       out: 0,
     },
     { cls: 'ally', lvl: 11, x: 452, y: 300, hp: 0.54, out: 0 },
@@ -128,7 +144,7 @@ const units = computed(() => {
       x: lerp(742, 700, close),
       y: 316,
       hp: 0.31 * (1 - kill1.value),
-      out: seg(k, 0.22, 0.28),
+      out: seg(k, 0.36, 0.42),
     },
     {
       cls: 'enemy',
@@ -136,7 +152,7 @@ const units = computed(() => {
       x: lerp(812, 760, close),
       y: 392,
       hp: 0.66 * (1 - kill2.value),
-      out: seg(k, 0.34, 0.4),
+      out: seg(k, 0.58, 0.64),
     },
   ]
 })
@@ -191,6 +207,15 @@ const units = computed(() => {
         ><b><em :style="{ transform: `scaleX(${u.hp})` }" /></b
       ></span>
     </div>
+
+    <span
+      v-for="(g, i) in gold"
+      :key="`g${i}`"
+      class="gs-gold"
+      aria-hidden="true"
+      :style="{ opacity: g.o, transform: `translate3d(${g.x}px, ${g.y}px, 0)` }"
+      >+{{ g.n }}</span
+    >
 
     <div
       class="gs-banner"
@@ -347,7 +372,7 @@ const units = computed(() => {
 .gs-banner {
   position: absolute;
   left: 50%;
-  top: 150px;
+  top: 196px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -369,6 +394,17 @@ const units = computed(() => {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: #e9d7a8;
+}
+
+.gs-gold {
+  position: absolute;
+  top: 0;
+  left: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #e2b25a;
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.8);
+  font-variant-numeric: tabular-nums;
 }
 
 .gs-stats {
