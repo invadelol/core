@@ -180,7 +180,7 @@ const places = computed(() =>
   padding-top: 9px;
   background: var(--sheen), var(--surface-2);
   border-radius: var(--r-md) var(--r-md) 0 0;
-  box-shadow: var(--hi);
+  box-shadow: var(--lit);
 }
 
 .ms-step > .iv-fig {
