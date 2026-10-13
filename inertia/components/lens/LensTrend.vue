@@ -69,6 +69,11 @@ function point(event: PointerEvent) {
   active.value = Math.round(((event.clientX - box.left) / box.width) * (n - 1))
 }
 
+/* A mouse leaving clears the hover; a tap's game stays shown until the next tap. */
+function leave(event: PointerEvent) {
+  if (event.pointerType === 'mouse') active.value = null
+}
+
 const shown = computed(() => {
   const i = active.value ?? series.value.length - 1
   const p = series.value[i]
@@ -87,7 +92,7 @@ const shown = computed(() => {
     :style="{ height: `${height}px` }"
     @pointermove="point"
     @pointerdown="point"
-    @pointerleave="active = null"
+    @pointerleave="leave"
   >
     <svg :viewBox="`0 0 100 ${height}`" preserveAspectRatio="none" aria-hidden="true">
       <defs>
