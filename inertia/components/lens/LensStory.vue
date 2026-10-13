@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
 import { ChevronDown } from 'lucide-vue-next'
-import { PerfDial } from '@invadelol/ui'
 import LensTrend from './LensTrend.vue'
-import { dot } from './tone.js'
+import { dot, tone } from './tone.js'
 import {
   figureText,
   MIN_GAMES,
@@ -20,8 +19,8 @@ import {
  */
 const props = defineProps<{
   domain: LensDomain
-  /** Under the name: how many games say this. */
-  meta: string
+  /** Under the name: how many games say this, when it is not the whole window. */
+  meta?: string
   /** What each game of the window is, for the trend's hover. */
   labels: string[]
   wide?: boolean
@@ -92,11 +91,17 @@ function lean(figure: LensFigure) {
     :class="{ 'lv-story-wide': wide, 'unrated': domain.rating === null, seen }"
   >
     <header class="lv-story-head">
-      <PerfDial :score="domain.rating" size="sm" />
       <div class="min-w-0">
         <h3>{{ domain.label }}</h3>
-        <p class="num">{{ meta }}</p>
+        <p v-if="meta" class="num">{{ meta }}</p>
       </div>
+      <span
+        v-if="domain.rating !== null"
+        class="lv-story-rating num"
+        :style="{ color: tone(domain.rating) }"
+        :aria-label="`Rated ${domain.rating}`"
+        >{{ domain.rating }}</span
+      >
     </header>
 
     <template v-if="domain.rating !== null">
@@ -183,8 +188,16 @@ function lean(figure: LensFigure) {
 
 .lv-story-head {
   display: flex;
-  align-items: center;
+  align-items: baseline;
+  justify-content: space-between;
   gap: 12px;
+}
+
+.lv-story-rating {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 20px;
+  letter-spacing: -0.01em;
 }
 
 .lv-story-head h3 {
