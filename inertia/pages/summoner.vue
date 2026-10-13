@@ -28,6 +28,7 @@ import MasteryPanel from '../components/MasteryPanel.vue'
 import FriendsPanel from '../components/FriendsPanel.vue'
 import LiveMatch from '../components/LiveMatch.vue'
 import PlayerCompare from '../components/PlayerCompare.vue'
+import LensSection from '../components/lens/LensSection.vue'
 import ShareProfile from '../components/ShareProfile.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import { decodeSlug, parseSlug } from '../lib/format.js'
@@ -761,6 +762,9 @@ async function sync() {
               />
             </section>
           </template>
+
+          <!-- ── Lens ─────────────────────────────────────────────── -->
+          <LensSection v-else-if="section === 'lens'" :puuid="profile.puuid" />
 
           <!-- ── Champions ────────────────────────────────────────── -->
           <div v-else-if="section === 'champions'">
