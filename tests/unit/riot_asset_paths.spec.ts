@@ -144,9 +144,7 @@ test.group('Riot asset paths', () => {
     }
   })
 
-  test('mastery crests resolve by level, the game crest first where it has one', ({
-    assert,
-  }) => {
+  test('mastery crests resolve by level, the game crest first where it has one', ({ assert }) => {
     const game = `${CDRAGON}/16.20/game/assets/ux/mastery/legendarychampionmastery`
     const shared = `${CDRAGON}/16.20/plugins/rcp-fe-lol-shared-components/global/default`
     assert.deepEqual(masterySources('7', PATCH_16_20), [
