@@ -139,7 +139,7 @@ router.get('/:summoner/:section?', async ({ inertia, params, response }) => {
   const section = params.section ?? 'overview'
   if (section === 'history')
     return response.redirect(`/${encodeURIComponent(params.summoner)}#matches`)
-  if (!['overview', 'lens', 'champions', 'friends', 'compare', 'live'].includes(section))
+  if (!['overview', 'lens', 'champions', 'mastery', 'friends', 'compare', 'live'].includes(section))
     return response.notFound()
   const { default: summonerService } = await import('#services/summoner_service')
   // A stored profile can render in the HTML and removes the client lookup waterfall.
