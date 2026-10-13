@@ -76,4 +76,7 @@ export default await Env.create(new URL('../', import.meta.url), {
   DESKTOP_OBSERVED_ENABLED: Env.schema.boolean.optional(),
   /** Oldest app version allowed to upload, e.g. "0.2.7". Unset means any. */
   DESKTOP_MIN_APP_VERSION: Env.schema.string.optional(),
+
+  /** Local only: a made-up live game for the fictional demo accounts. Ignored in production. */
+  DEMO_LIVE: Env.schema.boolean.optional(),
 })

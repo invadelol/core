@@ -11,6 +11,7 @@ import PlayerMastery from '#models/player_mastery'
 import statsRepository from '#services/analytics/stats_repository'
 import { translateRiotError } from '#utils/riot_errors'
 import { SyncGuard } from '#utils/sync_guard'
+import { demoLiveEnabled, demoLiveGame } from '#services/live/demo_live_game'
 import {
   buildLiveGame,
   isPuuid,
@@ -52,6 +53,10 @@ class PlayerInsightsService {
   async get(puuid: string, kind: 'mastery' | 'live') {
     const player = await Summoner.findBy('puuid', puuid)
     if (!player) throw new Exception('Player not found', { status: 404 })
+    if (kind === 'live' && demoLiveEnabled(puuid)) {
+      const demo = await demoLiveGame(player)
+      if (demo) return { game: await this.liveGame(demo) }
+    }
     const platform = normalizePlatform(player.platform).toLowerCase()
     const key = `player-insights:${platform}:${puuid}:${kind}`
     return cache.getOrSet({
