@@ -11,6 +11,15 @@ export function toInt(value: unknown, fallback = 0): number {
   return Math.trunc(n)
 }
 
+/**
+ * `toInt` held inside an unsigned column's range. Riot's frames now and then
+ * report a value just below zero (current gold around a purchase), and
+ * ClickHouse rejects the whole insert over a single such row.
+ */
+export function toUInt(value: unknown, max = 0xffffffff): number {
+  return Math.min(max, Math.max(0, toInt(value, 0)))
+}
+
 export function toBool01(value: unknown): 0 | 1 {
   if (value === true) return 1
   if (value === false) return 0
@@ -284,7 +293,7 @@ export function buildTimelineRows(
         match_id: matchId,
         platform,
         game_start_ms: gameStartMs,
-        frame_ms: toInt(frame?.timestamp ?? 0, 0),
+        frame_ms: toUInt(frame?.timestamp),
 
         participant_id: participantId,
         puuid: asString(base.puuid),
@@ -309,23 +318,23 @@ export function buildTimelineRows(
 
         skill_order: skillOrders.get(participantId) ?? [],
 
-        level: toInt((participantFrame as any)?.level ?? 0, 0),
-        xp: toInt((participantFrame as any)?.xp ?? 0, 0),
-        gold_current: toInt((participantFrame as any)?.currentGold ?? 0, 0),
-        gold_total: toInt((participantFrame as any)?.totalGold ?? 0, 0),
+        level: toUInt((participantFrame as any)?.level, 0xff),
+        xp: toUInt((participantFrame as any)?.xp),
+        gold_current: toUInt((participantFrame as any)?.currentGold),
+        gold_total: toUInt((participantFrame as any)?.totalGold),
         gold_per_sec: Number((participantFrame as any)?.goldPerSecond ?? 0) || 0,
 
-        cs: toInt((participantFrame as any)?.minionsKilled ?? 0, 0),
-        jungle_cs: toInt((participantFrame as any)?.jungleMinionsKilled ?? 0, 0),
+        cs: toUInt((participantFrame as any)?.minionsKilled, 0xffff),
+        jungle_cs: toUInt((participantFrame as any)?.jungleMinionsKilled, 0xffff),
 
         kills: toInt(kills.get(participantId) ?? 0, 0),
         deaths: toInt(deaths.get(participantId) ?? 0, 0),
         assists: toInt(assists.get(participantId) ?? 0, 0),
 
-        pos_x: toInt(position?.x ?? 0, 0),
-        pos_y: toInt(position?.y ?? 0, 0),
+        pos_x: toUInt(position?.x, 0xffff),
+        pos_y: toUInt(position?.y, 0xffff),
 
-        time_cc: toInt((participantFrame as any)?.timeEnemySpentControlled ?? 0, 0),
+        time_cc: toUInt((participantFrame as any)?.timeEnemySpentControlled),
       })
     }
   }
