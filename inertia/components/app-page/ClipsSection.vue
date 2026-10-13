@@ -65,10 +65,10 @@ onEnter(keys, () => setTimeout(() => (pressed.value = true), 400), 0.6)
 
     <div ref="reel" class="reel" aria-hidden="true">
       <div ref="track" class="track">
-        <figure v-for="c in REEL" :key="c.title" class="clip">
+        <figure v-for="c in REEL" :key="c.title" class="clip iv-panel lit-sheet">
           <span class="thumb">
             <img :src="c.img" alt="" width="480" height="270" loading="lazy" decoding="async" />
-            <span class="len">{{ c.len }}</span>
+            <span class="len iv-dark">{{ c.len }}</span>
           </span>
           <figcaption>
             <b>{{ c.title }}</b>
@@ -80,8 +80,14 @@ onEnter(keys, () => setTimeout(() => (pressed.value = true), 400), 0.6)
 
     <div class="pairs ap-wrap">
       <article v-reveal class="pair">
-        <div ref="keys" class="keys ln" :class="{ pressed }" aria-hidden="true">
-          <kbd>Ctrl</kbd><span>+</span><kbd>Shift</kbd><span>+</span><kbd>H</kbd>
+        <div
+          ref="keys"
+          class="keys iv-panel lit-sheet ap-sheet ln"
+          :class="{ pressed }"
+          aria-hidden="true"
+        >
+          <kbd class="ap-key">Ctrl</kbd><span>+</span><kbd class="ap-key">Shift</kbd><span>+</span
+          ><kbd class="ap-key">H</kbd>
         </div>
         <div class="pair-copy">
           <h3 class="ap-h3 ln">Missed the moment? Press a key.</h3>
@@ -100,7 +106,7 @@ onEnter(keys, () => setTimeout(() => (pressed.value = true), 400), 0.6)
             <strong>with a volume of its own</strong>. It stays off until you turn it on.
           </p>
         </div>
-        <div class="audio pic">
+        <div class="audio app-window iv-dark pic">
           <Shot
             name="c-audio"
             alt="Settings, Audio: game audio at 100%, Record all PC sound on at 70%, microphone off"
@@ -126,8 +132,8 @@ onEnter(keys, () => setTimeout(() => (pressed.value = true), 400), 0.6)
 
 .rv .clips-scale.pic {
   transition:
-    opacity 1100ms var(--ap-ease),
-    filter 1100ms var(--ap-ease);
+    opacity 1100ms var(--ease-glide),
+    filter 1100ms var(--ease-glide);
 }
 
 /* ── The reel ── */
@@ -139,14 +145,16 @@ onEnter(keys, () => setTimeout(() => (pressed.value = true), 400), 0.6)
 
 .track {
   display: flex;
-  gap: 20px;
+  gap: 16px;
   width: max-content;
   padding-inline: 24px;
   will-change: transform;
 }
 
+/* Each clip as the app's clip card: a sheet, the still inset in it, its length on a badge. */
 .clip {
-  width: clamp(240px, 24vw, 340px);
+  width: clamp(240px, 24vw, 320px);
+  padding: 6px;
 }
 
 .thumb {
@@ -154,10 +162,8 @@ onEnter(keys, () => setTimeout(() => (pressed.value = true), 400), 0.6)
   display: block;
   overflow: hidden;
   aspect-ratio: 16 / 9;
-  border-radius: 14px;
-  box-shadow:
-    0 0 0 1px rgb(255 255 255 / 0.07),
-    0 20px 40px -18px rgb(0 0 0 / 0.6);
+  border-radius: var(--r-md);
+  box-shadow: var(--contact);
 }
 
 .thumb img {
@@ -168,21 +174,24 @@ onEnter(keys, () => setTimeout(() => (pressed.value = true), 400), 0.6)
 
 .len {
   position: absolute;
-  right: 10px;
-  bottom: 10px;
-  padding: 3px 7px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #fff;
-  background: rgb(8 9 12 / 0.82);
-  border-radius: 6px;
+  right: 8px;
+  bottom: 8px;
+  padding: 3px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-1);
+  background: var(--solid-1);
+  border-radius: var(--r-xs);
 }
 
 .clip figcaption {
   display: grid;
   gap: 2px;
-  padding: 12px 2px 0;
-  font-size: 15px;
+  padding: 10px 6px 6px;
+  font-size: 13px;
+  line-height: 18px;
 }
 
 .clip figcaption b {
@@ -191,6 +200,7 @@ onEnter(keys, () => setTimeout(() => (pressed.value = true), 400), 0.6)
 }
 
 .clip figcaption span {
+  font-size: 12px;
   color: var(--text-3);
 }
 
@@ -227,39 +237,27 @@ onEnter(keys, () => setTimeout(() => (pressed.value = true), 400), 0.6)
   justify-content: center;
   gap: 14px;
   min-height: 260px;
-  background: var(--ap-card);
-  border-radius: 28px;
-  box-shadow: inset 0 0 0 1px var(--ap-card-edge);
 }
 
 .keys span {
-  font-size: 22px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 500;
   color: var(--text-4);
 }
 
+/* The app's raised keys, at the size of a keyboard's. */
 .keys kbd {
-  display: grid;
-  place-items: center;
   min-width: 72px;
   height: 72px;
   padding: 0 18px;
-  font: 600 20px/1 var(--font);
-  color: var(--text-1);
-  background: linear-gradient(var(--surface-3), var(--surface-2));
-  border-radius: 14px;
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.1),
-    0 5px 0 rgb(0 0 0 / 0.5),
-    0 14px 24px -10px rgb(0 0 0 / 0.6);
-  transition:
-    transform 180ms var(--ap-ease),
-    box-shadow 180ms var(--ap-ease);
+  font-size: 18px;
+  border-radius: var(--r-lg);
+  box-shadow: var(--key-shadow), var(--shadow-2);
 }
 
 /* The keys go down in turn and come back up, once. */
 .keys.pressed kbd {
-  animation: press 900ms var(--ap-ease) both;
+  animation: press 900ms var(--ease-glide) both;
 }
 
 .keys.pressed kbd:nth-of-type(2) {
@@ -278,11 +276,8 @@ onEnter(keys, () => setTimeout(() => (pressed.value = true), 400), 0.6)
 
   25%,
   70% {
-    transform: translateY(4px);
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.1),
-      0 1px 0 rgb(0 0 0 / 0.5),
-      0 6px 12px -8px rgb(0 0 0 / 0.6);
+    transform: translateY(3px);
+    box-shadow: var(--key-shadow);
   }
 }
 
@@ -290,14 +285,6 @@ onEnter(keys, () => setTimeout(() => (pressed.value = true), 400), 0.6)
   .keys.pressed kbd {
     animation: none;
   }
-}
-
-.audio {
-  overflow: hidden;
-  border-radius: 20px;
-  box-shadow:
-    0 0 0 1px rgb(255 255 255 / 0.06),
-    var(--ap-shadow);
 }
 
 @media (max-width: 600px) {
@@ -310,7 +297,7 @@ onEnter(keys, () => setTimeout(() => (pressed.value = true), 400), 0.6)
     min-width: 56px;
     height: 56px;
     padding: 0 12px;
-    font-size: 17px;
+    font-size: 16px;
   }
 }
 </style>

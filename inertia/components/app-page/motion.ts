@@ -8,8 +8,6 @@ import { onBeforeUnmount, onMounted, type Directive, type Ref } from 'vue'
  * With reduced motion, reveals are shown at once and effects are asked for their final state.
  */
 
-export const EASE = 'cubic-bezier(0.25, 0.1, 0.25, 1)'
-
 export const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v))
 export const lerp = (a: number, b: number, t: number) => a + (b - a) * t
 /** A symmetric ease-in-out (smootherstep), for values scrubbed by the scroll. */

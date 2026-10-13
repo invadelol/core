@@ -55,10 +55,10 @@ useScrollFx(row, (box, vh) => {
         v-for="(p, i) in PANELS"
         :key="p.name"
         ref="cards"
-        class="panel ln"
+        class="panel iv-panel lit-sheet ap-sheet ln"
         :style="{ '--d': `${i * 120}ms` }"
       >
-        <div class="panel-stage">
+        <div class="panel-stage iv-dark">
           <Shot :name="p.name" :alt="p.alt" sizes="360px" class="panel-shot" />
         </div>
         <figcaption>
@@ -92,7 +92,7 @@ useScrollFx(row, (box, vh) => {
 <style scoped>
 .panels {
   display: grid;
-  gap: 20px;
+  gap: 16px;
   /* One column below 900px: a phone's width, or a tablet's at most. */
   max-width: 600px;
   margin-top: clamp(56px, 7vw, 96px);
@@ -108,21 +108,21 @@ useScrollFx(row, (box, vh) => {
 .panel {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  background: var(--ap-card);
-  border-radius: 28px;
-  box-shadow: inset 0 0 0 1px var(--ap-card-edge);
   will-change: transform;
 }
 
-/* The panel on a dark stage, as over the League client: it is drawn for one. */
+/* The panel on the app's own ground, as over the League client: it is drawn for a dark one. Dark
+   in every theme (.iv-dark), the window's violet light and grain over its ink, inset in the sheet. */
 .panel-stage {
   display: grid;
   place-items: center;
-  min-height: 380px;
-  padding: 40px 24px 24px;
-  background:
-    radial-gradient(120% 90% at 50% 0%, rgb(var(--brand-rgb) / 0.1), transparent 60%), #0c0d12;
+  min-height: 360px;
+  margin: 8px 8px 0;
+  padding: 36px 20px 24px;
+  /* The light twice: a stage is a small window, so it holds more of it. */
+  background: var(--grain), var(--light), var(--light), var(--ink-1);
+  border-radius: var(--r-md);
+  box-shadow: var(--lit);
 }
 
 .panel-shot {
@@ -132,29 +132,29 @@ useScrollFx(row, (box, vh) => {
 @media (max-width: 700px) {
   .panel-stage {
     min-height: 0;
-    padding: 36px 20px 20px;
+    padding: 32px 16px 20px;
   }
 }
 
 figcaption {
-  padding: 22px 28px 28px;
-  font-size: 17px;
-  font-weight: 500;
-  line-height: 1.45;
-  color: var(--ap-grey);
+  padding: 18px 20px 22px;
+  font-size: var(--ap-body);
+  line-height: 1.55;
+  color: var(--text-2);
 }
 
 figcaption strong {
   display: block;
   margin-bottom: 4px;
-  font-size: 19px;
+  font-size: 16px;
   font-weight: 600;
+  line-height: 20px;
   color: var(--text-1);
 }
 
 /* The stages fade in with the reveal; their rise is the scroll's, so it is never delayed. */
 .rv .panel.ln {
-  transition: opacity 900ms var(--ap-ease) calc(var(--i, 0) * 120ms);
+  transition: opacity 900ms var(--ease-glide) calc(var(--i, 0) * 120ms);
 }
 
 .live {

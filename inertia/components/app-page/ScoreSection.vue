@@ -81,7 +81,7 @@ const DIALS = [
     </header>
 
     <div ref="win" v-reveal class="views ap-wrap">
-      <div class="seg ln" role="tablist" aria-label="Views of the game">
+      <div class="seg iv-seg ln" role="tablist" aria-label="Views of the game">
         <button
           v-for="(v, i) in VIEWS"
           :key="v.id"
@@ -109,7 +109,7 @@ const DIALS = [
     </div>
 
     <article class="dial ap-wrap">
-      <div ref="zoom" v-reveal class="dial-pic pic-self">
+      <div ref="zoom" v-reveal class="dial-pic app-window iv-dark pic-self">
         <div ref="zoomImg" class="dial-move">
           <Shot
             name="c-dial"
@@ -148,34 +148,24 @@ const DIALS = [
   margin-top: clamp(48px, 6vw, 80px);
 }
 
-.seg {
-  display: inline-flex;
-  gap: 2px;
-  padding: 4px;
-  background: var(--ap-card);
-  border-radius: 980px;
-  box-shadow: inset 0 0 0 1px var(--ap-card-edge);
+/* The package's segmented control, a size up: an inset well, the chosen view a raised key. */
+.seg.iv-seg {
+  flex-wrap: nowrap;
+  padding: 3px;
+  border-radius: var(--r-md);
 }
 
-.seg button {
-  min-height: 36px;
-  padding: 0 18px;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--ap-grey);
-  border-radius: 980px;
-  transition:
-    color 300ms var(--ap-ease),
-    background-color 300ms var(--ap-ease);
+.seg.iv-seg > button {
+  height: 32px;
+  padding: 0 14px;
+  font-size: 13.5px;
 }
 
-.seg button:hover {
-  color: var(--text-1);
-}
-
-.seg button.on {
-  color: var(--text-1);
-  background: var(--surface-3);
+@media (pointer: coarse) {
+  .seg.iv-seg > button {
+    height: 38px;
+    padding: 0 12px;
+  }
 }
 
 .views-win {
@@ -191,8 +181,8 @@ const DIALS = [
   opacity: 0;
   transform: scale(1.012);
   transition:
-    opacity 700ms var(--ap-ease),
-    transform 900ms var(--ap-ease);
+    opacity 700ms var(--ease-glide),
+    transform 900ms var(--ease-glide);
 }
 
 .layer.on {
@@ -220,12 +210,6 @@ const DIALS = [
   width: 100%;
   max-width: 620px;
   margin-inline: auto;
-  overflow: hidden;
-  background: #121318;
-  border-radius: 24px;
-  box-shadow:
-    0 0 0 1px rgb(255 255 255 / 0.06),
-    var(--ap-shadow);
 }
 
 /* The move ends on the dial (13.6% across, 56% down the capture), kept whole in the card. */
@@ -272,9 +256,8 @@ const DIALS = [
 .dials p {
   max-width: 15em;
   margin: 18px auto 0;
-  font-size: clamp(14px, 1.3vw, 17px);
-  font-weight: 500;
-  line-height: 1.45;
-  color: var(--ap-grey);
+  font-size: var(--ap-body);
+  line-height: 1.55;
+  color: var(--text-2);
 }
 </style>

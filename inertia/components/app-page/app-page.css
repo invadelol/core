@@ -1,42 +1,49 @@
 /*
- * /app, laid out like a product page: one idea per section, a short bold headline, a grey
- * paragraph with one phrase lit, then one big picture of the real app. Type on the site's
- * Archivo; the violet only where it means Invade (a word, a button, a line).
+ * /app, laid out like a product page (one idea per section, a headline, a paragraph with one
+ * phrase lit, then one big picture of the real app), in the app's own materials: the window's
+ * violet light on the page, lit sheets (.iv-panel + .lit-sheet), captures in the app's window
+ * (.app-window), the package's buttons, radii, shadows and text colours. Only the type is set a
+ * size up for a landing, once, here.
  */
 .ap {
-  --ap-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
-  --ap-ease-out: cubic-bezier(0.4, 0, 0.2, 1);
-  --ap-shadow:
-    0 2px 6px rgb(0 0 0 / 0.22), 0 30px 60px -14px rgb(0 0 0 / 0.55),
-    0 80px 140px -40px rgb(0 0 0 / 0.65);
-  --ap-card: rgb(255 255 255 / 0.035);
-  --ap-card-edge: rgb(255 255 255 / 0.06);
+  /* Layout: the widest picture and the widest text. */
   --ap-wide: 1240px;
-  --ap-text: 980px;
-  /* Body grey: between the tokens' second and third text colours (Apple's #86868b on black). */
-  --ap-grey: color-mix(in srgb, var(--text-2) 55%, var(--text-3));
+  --ap-text: 860px;
 
+  /* The landing's type scale, on the site's font, weights and tracking. */
+  --ap-display: clamp(44px, 4.8vw, 64px);
+  --ap-h2: clamp(30px, 3vw, 40px);
+  --ap-h3: clamp(22px, 1.9vw, 26px);
+  --ap-lead: clamp(15px, 1.2vw, 17px);
+  --ap-body: clamp(14px, 1.05vw, 15px);
+
+  position: relative;
   overflow-x: clip;
   font-family: var(--font);
   color: var(--text-1);
 }
 
-[data-theme='light'] .ap {
-  --ap-shadow:
-    0 2px 6px rgb(20 20 40 / 0.1), 0 30px 60px -14px rgb(20 20 40 / 0.22),
-    0 80px 140px -40px rgb(20 20 40 / 0.28);
-  --ap-card: rgb(20 20 60 / 0.035);
-  --ap-card-edge: rgb(20 20 60 / 0.06);
+/* The window's light, once more over the top of the page (the hero) and over the download: the
+   same soft violet from above the top right, sized to the screen. Over the download it rises from
+   nothing, so the section has no edge. */
+.ap-lit {
+  position: relative;
+  isolation: isolate;
 }
 
-@media (prefers-color-scheme: light) {
-  [data-theme='system'] .ap {
-    --ap-shadow:
-      0 2px 6px rgb(20 20 40 / 0.1), 0 30px 60px -14px rgb(20 20 40 / 0.22),
-      0 80px 140px -40px rgb(20 20 40 / 0.28);
-    --ap-card: rgb(20 20 60 / 0.035);
-    --ap-card-edge: rgb(20 20 60 / 0.06);
-  }
+.ap-lit::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: -1;
+  height: min(1100px, 120vh);
+  background: var(--light);
+  pointer-events: none;
+}
+
+.ap-lit.rise::before {
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 45%);
+  mask-image: linear-gradient(180deg, transparent, #000 45%);
 }
 
 .ap-wrap {
@@ -53,7 +60,7 @@
 }
 
 .ap-section {
-  padding-block: clamp(110px, 13vw, 200px) 0;
+  padding-block: clamp(96px, 11vw, 168px) 0;
 }
 
 /* ── Type ────────────────────────────────────────────────────────── */
@@ -69,40 +76,51 @@
   text-align: left;
 }
 
+/* The section's place, as the site labels things: small, quiet, sentence case. */
 .ap-eyebrow {
-  margin-bottom: 14px;
-  font-size: clamp(17px, 1.4vw, 21px);
+  margin-bottom: 12px;
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  line-height: 16px;
   color: var(--text-3);
 }
 
+/* The largest titles (the name, the download): the app's engraved finish, as on its page titles. */
+.ap-display {
+  font-size: var(--ap-display);
+  font-weight: 650;
+  line-height: 1.02;
+  letter-spacing: -0.022em;
+  color: var(--text-1);
+  -webkit-mask-image: linear-gradient(180deg, #000 35%, rgb(0 0 0 / 0.74));
+  mask-image: linear-gradient(180deg, #000 35%, rgb(0 0 0 / 0.74));
+}
+
 .ap-h2 {
-  font-size: clamp(40px, 4.8vw, 68px);
-  font-weight: 700;
-  line-height: 1.04;
-  letter-spacing: -0.038em;
+  font-size: var(--ap-h2);
+  font-weight: 650;
+  line-height: 1.08;
+  letter-spacing: -0.018em;
   color: var(--text-1);
   text-wrap: balance;
 }
 
 .ap-h3 {
-  font-size: clamp(28px, 2.6vw, 40px);
-  font-weight: 700;
-  line-height: 1.08;
-  letter-spacing: -0.032em;
+  font-size: var(--ap-h3);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.014em;
   color: var(--text-1);
   text-wrap: balance;
 }
 
 .ap-lead {
-  max-width: 34em;
-  margin: 22px auto 0;
-  font-size: clamp(19px, 1.45vw, 21px);
-  font-weight: 500;
-  line-height: 1.45;
-  letter-spacing: -0.012em;
-  color: var(--ap-grey);
+  max-width: 38em;
+  margin: 18px auto 0;
+  font-size: var(--ap-lead);
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--text-2);
   text-wrap: pretty;
 }
 
@@ -116,17 +134,40 @@
   color: var(--text-1);
 }
 
-.ap-brand {
-  color: var(--brand-hi);
+.ap-copy {
+  font-size: var(--ap-body);
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--text-2);
+  text-wrap: pretty;
 }
 
-.ap-copy {
-  font-size: clamp(17px, 1.35vw, 19px);
-  font-weight: 500;
-  line-height: 1.5;
-  letter-spacing: -0.01em;
-  color: var(--ap-grey);
-  text-wrap: pretty;
+.ap-fine {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-3);
+}
+
+/* ── Sheets and windows, a size up ──────────────────────────────── */
+
+/* A sheet on this page (.iv-panel .lit-sheet) is a large one: the window's radius. */
+.ap .ap-sheet {
+  overflow: hidden;
+  border-radius: var(--r-lg);
+}
+
+/* A key, as the app draws the raised key of a segmented control. */
+.ap-key {
+  display: inline-grid;
+  place-items: center;
+  font: 600 13px/1 var(--font);
+  color: var(--text-1);
+  background: var(--key);
+  border-radius: var(--r-md);
+  box-shadow: var(--key-shadow);
+  transition:
+    transform var(--t-fast) var(--ease),
+    box-shadow var(--t-fast) var(--ease);
 }
 
 /* ── Reveals: lines rise and fade in, in order ───────────────────── */
@@ -134,10 +175,10 @@
 .rv .ln,
 .rv.ln-self {
   opacity: 0;
-  transform: translate3d(0, 18px, 0);
+  transform: translate3d(0, 16px, 0);
   transition:
-    opacity 900ms var(--ap-ease),
-    transform 1000ms var(--ap-ease);
+    opacity 900ms var(--ease-glide),
+    transform 1000ms var(--ease-glide);
   transition-delay: calc(var(--i, 0) * 90ms + var(--d, 0ms));
 }
 
@@ -154,9 +195,9 @@
   filter: blur(8px);
   transform: scale(0.965);
   transition:
-    opacity 1100ms var(--ap-ease),
-    filter 1100ms var(--ap-ease),
-    transform 1300ms var(--ap-ease);
+    opacity 1100ms var(--ease-glide),
+    filter 1100ms var(--ease-glide),
+    transform 1300ms var(--ease-glide);
   transition-delay: var(--d, 120ms);
 }
 
@@ -177,70 +218,4 @@
     transform: none;
     transition: none;
   }
-}
-
-/* ── Buttons ─────────────────────────────────────────────────────── */
-
-.ap-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 0 22px;
-  font-size: 17px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: #fff;
-  white-space: nowrap;
-  background: var(--brand);
-  border-radius: 980px;
-  transition:
-    background-color 240ms var(--ap-ease),
-    transform 240ms var(--ap-ease);
-}
-
-.ap-pill:hover {
-  background: color-mix(in srgb, var(--brand) 88%, white);
-}
-
-.ap-pill:active {
-  transform: scale(0.98);
-}
-
-.ap-pill.big {
-  min-height: 52px;
-  padding: 0 30px;
-  font-size: 18px;
-}
-
-.ap-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  font-size: 17px;
-  font-weight: 500;
-  color: var(--brand-hi);
-  white-space: nowrap;
-}
-
-.ap-link:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.ap-link svg {
-  width: 14px;
-  height: 14px;
-  transition: transform 240ms var(--ap-ease);
-}
-
-.ap-link:hover svg {
-  transform: translateX(2px);
-}
-
-.ap-fine {
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--text-3);
 }
