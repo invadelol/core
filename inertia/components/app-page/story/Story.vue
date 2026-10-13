@@ -45,7 +45,7 @@ const pWeb = computed(() => local(6))
 
 /* Which scene is on: draft → game (the game window comes up) → desk (the app, after the game). */
 const toGame = computed(() => ease(s.value, STARTS[2] - 0.14, STARTS[2] + 0.06))
-const toDesk = computed(() => ease(pPlay.value, 0.4, 0.52))
+const toDesk = computed(() => ease(pPlay.value, 0.56, 0.68))
 const scene = (show: number, enterK: number, leaveK: number) => ({
   opacity: show.toFixed(3),
   transform: `scale(${(lerp(1.03, 1, enterK) * lerp(1, 0.985, leaveK)).toFixed(4)})`,
@@ -227,7 +227,7 @@ const chapters = CHAPTERS.slice(1)
         <p class="cap-body">{{ c.body }}</p>
         <p class="cap-fact">{{ c.fact }}</p>
       </div>
-      <div class="still-stage">
+      <div class="still-stage iv-dark">
         <Stage :w="1280" :h="720" :label="c.title">
           <SceneDraft v-if="i === 0" :p="1" :idle="0" />
           <SceneGame v-else-if="i === 1" :p="1" :tab="0" :k="0" />
@@ -301,17 +301,17 @@ const chapters = CHAPTERS.slice(1)
         <div class="frame" @pointermove="onPointer">
           <div
             ref="stage"
-            class="stage"
+            class="stage iv-dark"
             role="img"
             aria-label="Invade's overlay and app, playing through one game"
           >
             <div v-if="ready" class="world" :class="{ zooming }" :style="camera" aria-hidden="true">
               <div class="scene" :style="draftStyle"><SceneDraft :p="pDraft" :idle="idle" /></div>
               <div class="scene" :style="gameStyle">
-                <SceneGame :p="pGame" :tab="pTab" :k="seg(pPlay, 0, 0.45)" />
+                <SceneGame :p="pGame" :tab="pTab" :k="seg(pPlay, 0, 0.6)" />
               </div>
               <div class="scene" :style="deskStyle">
-                <SceneDesk :rec="seg(pPlay, 0.45, 1)" :after="pAfter" :web="pWeb" />
+                <SceneDesk :rec="seg(pPlay, 0.62, 1)" :after="pAfter" :web="pWeb" />
               </div>
             </div>
           </div>
@@ -512,6 +512,7 @@ h2 {
 
 .stage {
   position: relative;
+  color: var(--text-1);
   aspect-ratio: 16 / 9;
   overflow: hidden;
   background: #08090c;
@@ -532,13 +533,56 @@ h2 {
   will-change: transform;
 }
 
+/* The UI on the stage answers the pointer like the real thing: rows light, tips explain. */
+.stage :deep(.perf-row) {
+  margin: 0 -4px;
+  padding: 0 4px;
+  border-radius: 4px;
+  transition: background-color 160ms;
+}
+
+.stage :deep(.perf-row:hover),
+.stage :deep(.odds-lanes li:hover) {
+  background: rgb(255 255 255 / 0.06);
+}
+
+.stage :deep([data-tip]:hover::after) {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  z-index: 5;
+  padding: 6px 9px;
+  font: 500 11.5px/1.3 var(--font);
+  letter-spacing: 0;
+  white-space: nowrap;
+  color: #ececf3;
+  background: #1b1c25;
+  border-radius: 6px;
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.08),
+    0 6px 16px rgb(0 0 0 / 0.5);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
 .scene {
   position: absolute;
   inset: 0;
   transform-origin: 50% 50%;
 }
 
-:global([data-theme='light']) .frame {
+@media (prefers-color-scheme: light) {
+  [data-theme='system'] .frame {
+    box-shadow:
+      0 0 0 1px rgb(12 12 20 / 0.12),
+      0 2px 4px rgb(12 12 20 / 0.08),
+      0 30px 60px -20px rgb(12 12 20 / 0.25),
+      0 80px 140px -50px rgb(12 12 20 / 0.3);
+  }
+}
+
+[data-theme='light'] .frame {
   box-shadow:
     0 0 0 1px rgb(12 12 20 / 0.12),
     0 2px 4px rgb(12 12 20 / 0.08),
