@@ -29,6 +29,7 @@ const DownloadsController = () => import('#controllers/downloads_controller')
 const AppPageController = () => import('#controllers/app_page_controller')
 const DesktopController = () => import('#controllers/desktop_controller')
 const HomeController = () => import('#controllers/home_controller')
+const LensController = () => import('#controllers/lens_controller')
 
 // API routes group
 router
@@ -65,6 +66,8 @@ router
     router
       .get('/summoners/puuid/:puuid/matches', [SummonersController, 'matches'])
       .use(middleware.httpCache())
+
+    router.get('/summoners/puuid/:puuid/lens', [LensController, 'show']).use(middleware.httpCache())
 
     router.get('/matches/:id', [MatchesController, 'show']).use(middleware.httpCache())
 
@@ -136,11 +139,7 @@ router.get('/:summoner/:section?', async ({ inertia, params, response }) => {
   const section = params.section ?? 'overview'
   if (section === 'history')
     return response.redirect(`/${encodeURIComponent(params.summoner)}#matches`)
-  // "Lens" showed champion mastery next to a second copy of the performance
-  // panel. Mastery now lives inside Champions, where a champion pool belongs.
-  if (section === 'lens')
-    return response.redirect(`/${encodeURIComponent(params.summoner)}/champions`)
-  if (!['overview', 'champions', 'friends', 'compare', 'live'].includes(section))
+  if (!['overview', 'lens', 'champions', 'friends', 'compare', 'live'].includes(section))
     return response.notFound()
   const { default: summonerService } = await import('#services/summoner_service')
   // A stored profile can render in the HTML and removes the client lookup waterfall.
