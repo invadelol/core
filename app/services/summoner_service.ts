@@ -12,6 +12,7 @@ import statsRepository from '#services/analytics/stats_repository'
 import matchRepository from '#services/analytics/match_repository'
 import matchSourceService from '#services/match_source_service'
 import * as snapshotHooks from '#services/desktop/snapshot_hooks'
+import { RANKED_QUEUE_TYPES } from '#services/desktop/player_rules'
 import Summoner from '#models/summoner'
 import SummonerHistory from '#models/summoner_history'
 import Rank from '#models/rank'
@@ -247,10 +248,15 @@ class SummonerService {
    * or `desktop` for the Invade app), `observedAt` when it was last known
    * true — for a current rank, the later of its row and its confirmation.
    * `losses` is null on rows from another player's client snapshot.
+   * Solo/Duo and Flex only: rows of other queues stored before they were
+   * dropped at the door stay hidden.
    */
   async getRanks(puuid: string) {
     const [history, confirmations] = await Promise.all([
-      Rank.query().where('puuid', puuid).orderBy('fetchedAt', 'desc'),
+      Rank.query()
+        .where('puuid', puuid)
+        .whereIn('queueType', [...RANKED_QUEUE_TYPES])
+        .orderBy('fetchedAt', 'desc'),
       db.from('riot_rank_confirmed').select('queue_type', 'confirmed_at').where('puuid', puuid),
     ])
     const confirmed = new Map<string, DateTime>(
@@ -437,10 +443,12 @@ class SummonerService {
    * its newest row did not come from Riot: Riot's own read always supersedes
    * the desktop app's (docs/desktop-sync.md §6.4). An unchanged queue is only
    * confirmed, so its freshness moves without a duplicate history row.
+   * Only Solo/Duo and Flex are kept; league-v4 also answers for other
+   * queues (Arena, new modes) that Invade does not show.
    */
   async storeRanks(
     puuid: string,
-    entries: Array<{
+    all: Array<{
       queueType: string
       tier: string
       rank: string
@@ -449,6 +457,9 @@ class SummonerService {
       losses: number
     }>
   ) {
+    const entries = all.filter((entry) =>
+      (RANKED_QUEUE_TYPES as readonly string[]).includes(entry.queueType)
+    )
     if (!entries.length) return
 
     // One `DISTINCT ON` read for the newest row per queue, rather than a

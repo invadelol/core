@@ -11,11 +11,12 @@ const ORDER = Object.keys(QUEUES)
 const name = (rank: Rank) => rankLabel(rankFromCore(rank), false)
 const time = (rank: Rank) => new Date(rank.fetchedAt ?? 0).getTime()
 
-/** Solo first, then flex, then anything else that has a tier. */
-const queues = computed(() => {
-  const at = (r: Rank) => (ORDER.includes(r.queueType) ? ORDER.indexOf(r.queueType) : 9)
-  return (props.ranks?.current ?? []).filter((r) => r.tier).sort((a, b) => at(a) - at(b))
-})
+/** Solo first, then flex; no other queue is shown. */
+const queues = computed(() =>
+  (props.ranks?.current ?? [])
+    .filter((r) => r.tier && ORDER.includes(r.queueType))
+    .sort((a, b) => ORDER.indexOf(a.queueType) - ORDER.indexOf(b.queueType))
+)
 
 const LP_QUEUES: Record<string, LpPoint['queue']> = {
   RANKED_SOLO_5x5: 'solo',
@@ -85,7 +86,7 @@ function record(rank: Rank) {
           </span>
           <div class="min-w-0 flex-1">
             <div class="flex items-baseline justify-between gap-2 text-[12px] text-ink-3">
-              <span>Ranked {{ QUEUES[rank.queueType] || rank.queueType }}</span>
+              <span>Ranked {{ QUEUES[rank.queueType] }}</span>
               <span
                 v-if="rank.source === 'desktop'"
                 title="Read from the League client by the Invade app"
