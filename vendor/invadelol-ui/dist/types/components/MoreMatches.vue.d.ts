@@ -8,7 +8,8 @@ import '../styles/profile.css';
  * when the source held older games back (invade.lol's Riot budget): the list then ends quietly,
  * with no countdown, and a later reach of the end after that window asks once more. It throws on
  * failure (Try again). `more`: older games may exist. Key it by player. `auto` false: one page per
- * tap instead.
+ * tap instead. Stored pages land before anything shows: skeleton rows appear only when a page is
+ * slow, so a filter that brings the end into view does not flash them.
  */
 type __VLS_Props = {
     more: boolean;

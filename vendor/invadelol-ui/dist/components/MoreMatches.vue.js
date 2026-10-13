@@ -1,114 +1,115 @@
 import '../styles/base.css';
 import '../styles/primitives.css';
 import '../styles/profile.css';
-import { defineComponent as x, shallowRef as h, onMounted as B, watch as M, onBeforeUnmount as T, openBlock as s, createElementBlock as d, createBlock as C, createVNode as y, createTextVNode as b, toDisplayString as m, unref as f, createElementVNode as k, createCommentVNode as N, nextTick as V } from "vue";
-import { useInvadeUi as z } from "../context.js";
-import { endOfList as I } from "../logic/pager.js";
-import _ from "./Icon.vue.js";
-import O from "./MatchRowSkeleton.vue.js";
+import { defineComponent as B, shallowRef as h, onMounted as M, watch as T, onBeforeUnmount as C, openBlock as i, createElementBlock as s, unref as u, createBlock as N, Fragment as V, createVNode as y, createTextVNode as b, toDisplayString as v, createElementVNode as k, createCommentVNode as z, nextTick as I } from "vue";
+import { useInvadeUi as O } from "../context.js";
+import { endOfList as A } from "../logic/pager.js";
+import { useDelayedFlag as D } from "../stable.js";
+import g from "./Icon.vue.js";
+import E from "./MatchRowSkeleton.vue.js";
 /* empty css                      */
 /* empty css                 */
 /* empty css                       */
 /* empty css                    */
-const A = ["aria-busy"], E = {
-  key: 1,
+const F = ["aria-busy"], S = {
+  key: 2,
   class: "iv-error",
   role: "alert"
-}, S = {
-  key: 2,
-  class: "iv-more-line iv-more-end",
-  role: "status"
 }, U = {
   key: 3,
+  class: "iv-more-line iv-more-end",
+  role: "status"
+}, $ = {
+  key: 4,
   class: "iv-more-line"
-}, J = /* @__PURE__ */ x({
+}, W = /* @__PURE__ */ B({
   __name: "MoreMatches",
   props: {
     more: { type: Boolean },
     load: {},
     auto: { type: Boolean, default: !0 }
   },
-  setup(v) {
-    const o = v, { t: l } = z(), i = I(), e = h("idle"), t = h(null);
-    let r = !1, n;
-    async function u(a = !1) {
-      if (!o.more || e.value === "loading" || !r || i.held() && !(a && i.ask())) return;
-      const c = t.value?.offsetTop;
+  setup(c) {
+    const t = c, { t: d } = O(), l = A(), e = h("idle"), _ = D(() => e.value === "loading"), o = h(null);
+    let r = !1, a;
+    async function m(n = !1) {
+      if (!t.more || e.value === "loading" || !r || l.held() && !(n && l.ask())) return;
+      const f = o.value?.offsetTop;
       e.value = "loading";
       try {
-        const p = await o.load();
+        const p = await t.load();
         if (e.value = "idle", p && typeof p.retryAfterMs == "number") {
-          i.hold(p.retryAfterMs);
+          l.hold(p.retryAfterMs);
           return;
         }
-        i.clear();
+        l.clear();
       } catch {
         e.value = "error";
         return;
       }
-      o.auto && (await V(), t.value && n && t.value.offsetTop !== c && (n.unobserve(t.value), n.observe(t.value)));
-    }
-    function g() {
-      e.value = "idle", r = !0, u(!0);
+      t.auto && (await I(), o.value && a && o.value.offsetTop !== f && (a.unobserve(o.value), a.observe(o.value)));
     }
     function w() {
-      r = !0, u(!0);
+      e.value = "idle", r = !0, m(!0);
     }
-    return B(() => {
-      n = new IntersectionObserver(
-        ([a]) => {
-          const c = r;
-          r = a.isIntersecting, r && o.auto && u(!c);
+    function x() {
+      r = !0, m(!0);
+    }
+    return M(() => {
+      a = new IntersectionObserver(
+        ([n]) => {
+          const f = r;
+          r = n.isIntersecting, r && t.auto && m(!f);
         },
         { rootMargin: "240px 0px" }
-      ), t.value && n.observe(t.value);
-    }), M(
-      () => o.more,
-      (a) => {
-        a && i.clear(), o.auto && u();
+      ), o.value && a.observe(o.value);
+    }), T(
+      () => t.more,
+      (n) => {
+        n && l.clear(), t.auto && m();
       }
-    ), T(() => n?.disconnect()), (a, c) => (s(), d("div", {
+    ), C(() => a?.disconnect()), (n, f) => (i(), s("div", {
       ref_key: "el",
-      ref: t,
+      ref: o,
       class: "iv-more",
       "aria-busy": e.value === "loading"
     }, [
-      e.value === "loading" ? (s(), C(O, {
+      e.value === "loading" && (u(_) || !c.auto) ? (i(), N(E, {
         key: 0,
         count: 3
-      })) : e.value === "error" ? (s(), d("p", E, [
-        y(_, {
+      })) : e.value === "loading" ? (i(), s(V, { key: 1 }, [], 64)) : e.value === "error" ? (i(), s("p", S, [
+        y(g, {
           name: "x",
           size: 15
         }),
-        b(m(f(l)("Older games could not be loaded.")) + " ", 1),
+        b(v(u(d)("Older games could not be loaded.")) + " ", 1),
         k("button", {
           type: "button",
           class: "iv-btn sm",
-          onClick: g
+          onClick: w
         }, [
-          y(_, {
+          y(g, {
             name: "refresh",
             size: 13
           }),
-          b(m(f(l)("Try again")), 1)
+          b(v(u(d)("Try again")), 1)
         ])
-      ])) : v.more ? v.auto ? N("", !0) : (s(), d("p", U, [
+      ])) : c.more ? c.auto ? z("", !0) : (i(), s("p", $, [
         k("button", {
           type: "button",
           class: "iv-btn iv-more-btn",
-          onClick: w
+          onClick: x
         }, [
-          y(_, {
+          y(g, {
             name: "down",
             size: 14
           }),
-          b(m(f(l)("Show older games")), 1)
+          b(v(u(d)("Show older games")), 1)
         ])
-      ])) : (s(), d("p", S, m(f(l)("That's every tracked game")), 1))
-    ], 8, A));
+      ])) : (i(), s("p", U, v(u(d)("That's every tracked game")), 1))
+    ], 8, F));
   }
 });
 export {
-  J as default
+  W as default
 };
