@@ -3,7 +3,6 @@ import { Head } from '@inertiajs/vue3'
 import AppHeader from '../components/AppHeader.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import HeroSection from '../components/app-page/HeroSection.vue'
-import GlanceSection from '../components/app-page/GlanceSection.vue'
 import GameSection from '../components/app-page/GameSection.vue'
 import DraftSection from '../components/app-page/DraftSection.vue'
 import ScoreSection from '../components/app-page/ScoreSection.vue'
@@ -35,7 +34,6 @@ useDarkByDefault()
 
     <main class="ap flex-1">
       <HeroSection :version="version" />
-      <GlanceSection />
       <GameSection />
       <DraftSection />
       <ScoreSection />

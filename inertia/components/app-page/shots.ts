@@ -8,8 +8,6 @@ export interface ShotInfo {
 export const SHOTS = {
   'c-audio': { w: 2340, h: 528, widths: [800, 1600] },
   'c-dial': { w: 1468, h: 560, widths: [735, 1468] },
-  'c-lp': { w: 1008, h: 882, widths: [504, 1008] },
-  'c-perf': { w: 2490, h: 480, widths: [1000, 2000] },
   'g-champions': { w: 1920, h: 1200, widths: [640, 1280] },
   'g-favorites': { w: 1920, h: 1200, widths: [640, 1280] },
   'g-languages': { w: 1920, h: 1200, widths: [640, 1280] },
@@ -31,7 +29,6 @@ export const SHOTS = {
   'ov-perf': { w: 496, h: 458, widths: [248, 496], avif: true },
   'ov-runes': { w: 576, h: 546, widths: [288, 576], avif: true },
   'ov-tabgold': { w: 224, h: 1024, widths: [112, 224], avif: true },
-  'profile': { w: 2880, h: 1800, widths: [1280, 2560] },
   'recordings': { w: 2880, h: 1800, widths: [1280, 2560] },
 } satisfies Record<string, ShotInfo>
 
