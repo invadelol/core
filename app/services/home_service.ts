@@ -17,7 +17,6 @@ import type {
   HomeData,
   HomePlayer,
   HomeRank,
-  HomeToday,
   HomeTrending,
 } from '../../inertia/lib/home.js'
 
@@ -57,7 +56,6 @@ const PATCH_LOOKBACK = 60 * DAY
 
 const SECTION_CACHE = { grace: '12h', timeout: '1.5s' } as const
 const TTL = {
-  today: '2m',
   trending: '5m',
   best: '5m',
   climbs: '5m',
@@ -72,15 +70,6 @@ export function viewBucketKeys(now: number, days = TRENDING_DAYS) {
     const day = new Date(now - i * DAY).toISOString().slice(0, 10)
     return `home:views:${day}`
   })
-}
-
-/** Games per hour over the 24 hours before `now`, oldest first, from (hours ago, games) rows. */
-export function hourlySeries(rows: Array<[hoursAgo: number, games: number]>) {
-  const series = new Array<number>(24).fill(0)
-  for (const [hoursAgo, games] of rows) {
-    if (hoursAgo >= 0 && hoursAgo < 24) series[23 - hoursAgo] += games
-  }
-  return series
 }
 
 export interface RankSnapshot {
@@ -266,14 +255,13 @@ function rankOf(row: {
 export class HomeService {
   /** Everything the page shows; a section that cannot be read is null. */
   async overview(): Promise<HomeData> {
-    const [today, trending, best, climbs, champions] = await Promise.all([
-      this.section('today', TTL.today, () => this.today()),
+    const [trending, best, climbs, champions] = await Promise.all([
       this.section('trending', TTL.trending, () => this.trending()),
       this.section('best', TTL.best, () => this.bestGames()),
       this.section('climbs', TTL.climbs, () => this.climbs()),
       this.section('champions', TTL.champions, () => this.champions()),
     ])
-    return { today, trending, best, climbs, champions }
+    return { trending, best, climbs, champions }
   }
 
   private async section<T>(
@@ -332,38 +320,6 @@ export class HomeService {
       })
     }
     return players
-  }
-
-  /**
-   * Stored games of the last day by hour, every stored game, every stored profile and those
-   * refreshed in the last day. Two range reads in ClickHouse (by start time, the tables' sort
-   * key after the platform) and two counts in Postgres, one of them on its partial index.
-   */
-  async today(now = Date.now()): Promise<HomeToday> {
-    const since = now - DAY
-    const [hours, stored, players, updated] = await Promise.all([
-      chRows(`
-        SELECT intDiv(${now} - game_start_ms, ${HOUR}) AS ago, count()
-        FROM matches
-        WHERE game_start_ms >= ${since} AND game_start_ms < ${now}
-        GROUP BY ago
-      `),
-      chRows(`SELECT count() FROM matches`),
-      db.from('riot_player').count('* as total').first(),
-      db
-        .from('riot_player')
-        .where('last_refresh_at', '>=', new Date(since))
-        .count('* as total')
-        .first(),
-    ])
-    const hourly = hourlySeries(hours.map((r) => [n(r[0]), n(r[1])]))
-    return {
-      games: hourly.reduce((a, b) => a + b, 0),
-      hourly,
-      updated: n(updated?.total),
-      players: n(players?.total),
-      stored: n(stored[0]?.[0]),
-    }
   }
 
   /**

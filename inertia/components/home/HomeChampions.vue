@@ -58,7 +58,7 @@ const full = (n: number) => n.toLocaleString('en-US')
       </div>
     </div>
 
-    <div class="iv-panel overflow-hidden">
+    <div class="iv-panel home-sheet overflow-hidden">
       <table class="dt dt-hover champs">
         <thead>
           <tr>
@@ -95,12 +95,18 @@ const full = (n: number) => n.toLocaleString('en-US')
                 </span>
               </span>
             </td>
-            <td class="r num font-semibold text-ink">{{ rate(row.winRate) }}</td>
+            <td class="r num font-semibold text-ink" :class="{ on: sort === 'winRate' }">
+              {{ rate(row.winRate) }}
+            </td>
             <td v-if="champions.previousPatch" class="r delta num text-ink-3">
               {{ change(row) }}
             </td>
-            <td class="r num text-ink-2">{{ rate(row.pickRate) }}</td>
-            <td class="r num text-ink-2">{{ rate(row.banRate) }}</td>
+            <td class="r num text-ink-2" :class="{ on: sort === 'pickRate' }">
+              {{ rate(row.pickRate) }}
+            </td>
+            <td class="r num text-ink-2" :class="{ on: sort === 'banRate' }">
+              {{ rate(row.banRate) }}
+            </td>
             <td class="r games num text-ink-3">{{ full(row.games) }}</td>
           </tr>
         </tbody>
@@ -131,6 +137,11 @@ const full = (n: number) => n.toLocaleString('en-US')
 
 .champs th.on {
   color: var(--text-1);
+}
+
+/* The column the table is sorted by carries a faint wash of the light, like a selected key. */
+.champs .on {
+  background: rgb(var(--brand-rgb) / var(--home-light));
 }
 
 .champs .r {

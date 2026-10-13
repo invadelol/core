@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
+import { tierRgb } from '@invadelol/ui/logic'
 import HomeRank from './HomeRank.vue'
 import { compact, profilePath } from '../../lib/format.js'
 import { profileIcon, regionLabel } from '../../lib/assets.js'
@@ -18,13 +19,18 @@ defineProps<{ trending: HomeTrending }>()
       }}</span>
     </div>
 
-    <ol class="iv-panel overflow-hidden">
+    <ol class="iv-panel home-sheet overflow-hidden">
       <li
         v-for="(player, i) in trending.players"
         :key="`${player.gameName}#${player.tagLine}`"
         class="line"
       >
-        <Link :href="profilePath(player.gameName, player.tagLine)" class="row">
+        <Link
+          :href="profilePath(player.gameName, player.tagLine)"
+          class="row"
+          :class="{ plain: !player.rank }"
+          :style="player.rank ? { '--tint': tierRgb(player.rank.tier) } : undefined"
+        >
           <span class="num w-4 shrink-0 text-right text-[12px] text-ink-4">{{ i + 1 }}</span>
           <img
             :src="profileIcon(player.profileIconId)"
@@ -68,10 +74,26 @@ defineProps<{ trending: HomeTrending }>()
   gap: 12px;
   min-height: 56px;
   padding: 8px 16px 8px 10px;
-  transition: background-color var(--t-fast) var(--ease);
+}
+
+/* A ranked player's line takes the faint light of their tier, rising from the portrait. */
+.row {
+  --row: transparent;
+  background:
+    linear-gradient(
+      90deg,
+      rgb(var(--tint) / var(--home-tint)),
+      rgb(var(--tint) / var(--home-tint-far)) 34%,
+      rgb(var(--tint) / 0) 66%
+    ),
+    var(--row);
+}
+
+.row.plain {
+  background: var(--row);
 }
 
 .row:hover {
-  background: var(--surface-2);
+  --row: var(--surface-2);
 }
 </style>
