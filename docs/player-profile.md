@@ -60,9 +60,15 @@ participation, vision, KDA) and against the lane opponent of each game, with the
 spreads, clamps and role weights. A window of a few games is pulled towards the pace.
 Laning reads the minute frames of the games that have a timeline (CS at 10, gold at 15,
 deaths and solo kills before 14 minutes); consistency is the spread of the Invade score.
-The overview puts every domain on one track with the pace as a dashed line through them,
-then a card per domain gives its read, its figures and its rating over the games. Filters:
-role, queue and the last 20 or 50 games. The reading is `inertia/lib/lens.ts`, served by
+The page opens on a stage set on the main champion's art: the average score, the strongest and
+weakest domain in words, and an aperture with one petal per domain, each reaching as far as its
+rating, the Emerald pace a dashed ring through them. Each domain then tells its story with one
+big figure and one picture: laning as a duel over the first fifteen minutes (your champion
+against the ones you met, CS or gold), farming as a pace, fighting as your share of the team's
+kills and damage, vision in wards, objectives as a tug between the two teams, deaths game by
+game, and consistency as every game's champion placed on the score line. The figures and the
+rating over the games stay behind a "Figures" fold. Filters: role, queue and the last 20 or
+50 games. The reading is `inertia/lib/lens.ts`, served by
 `GET /api/summoners/puuid/:puuid/lens?role=&type=&count=`. Locally,
 `node scripts/seed_lens_demo.mjs` gives part of the demo profile's games a timeline.
 

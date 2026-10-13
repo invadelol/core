@@ -2,8 +2,9 @@
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { RoleIcon } from '@invadelol/ui'
 import { positionOf } from '@invadelol/ui/logic'
-import LensProfile from './LensProfile.vue'
-import LensDomainCard from './LensDomainCard.vue'
+import LensStage from './LensStage.vue'
+import LensLaning from './LensLaning.vue'
+import LensDomainStory from './LensDomainStory.vue'
 import { championName } from '../../lib/assets.js'
 import { LENS_ROLES, type LensPayload, type LensRole } from '../../lib/lens.js'
 
@@ -82,6 +83,9 @@ const roleName = computed(() => (shownRole.value ? ROLE_NAMES[shownRole.value] :
 const labels = computed(() =>
   (lens.value?.games ?? []).map((g) => `${championName(g.championId)} · ${g.win ? 'Win' : 'Loss'}`)
 )
+
+/** The champion played most in the window: the stage's art and the face of the cards. */
+const champion = computed(() => lens.value?.champions[0]?.championId ?? null)
 
 const summary = computed(() => {
   const l = lens.value
@@ -175,26 +179,37 @@ function open(key: string) {
     </div>
 
     <div v-else-if="lens" class="lv-body" :class="{ busy: loading }">
-      <LensProfile
+      <LensStage
         class="mt-5"
         :domains="lens.domains"
         :score="lens.score"
         :games="lens.games.length"
-        :role-name="roleName"
         :timeline-games="lens.timelineGames"
+        :role-name="roleName"
+        :champion="champion"
         @open="open"
       />
 
       <div class="mt-3 grid gap-3 lg:grid-cols-2">
-        <LensDomainCard
-          v-for="domain in lens.domains"
-          :key="domain.key"
-          :domain="domain"
-          :labels="labels"
-          :window="lens.games.length"
-          :timeline-games="lens.timelineGames"
-          :wide="domain.key === 'consistency'"
-        />
+        <template v-for="domain in lens.domains" :key="domain.key">
+          <LensLaning
+            v-if="domain.key === 'laning'"
+            class="lg:col-span-2"
+            :domain="domain"
+            :duel="lens.duel"
+            :games="lens.games"
+            :champion="champion"
+            :timeline-games="lens.timelineGames"
+            :labels="labels"
+          />
+          <LensDomainStory
+            v-else
+            :domain="domain"
+            :lens="lens"
+            :champion="champion"
+            :labels="labels"
+          />
+        </template>
       </div>
 
       <p class="lv-note">
