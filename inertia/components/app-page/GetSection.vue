@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { Download } from 'lucide-vue-next'
-import { Logo } from '@invadelol/ui'
 import { detectDesktopTarget, type DesktopPlatform } from '../../lib/platform.js'
-import { vReveal } from './reveal.js'
 
 /** The download, every build with its requirements, then the questions people ask first. */
 defineProps<{ version: string | null }>()
@@ -17,6 +15,14 @@ const downloads: Array<{ id: DesktopPlatform; name: string; detail: string }> = 
 /** The build for this computer, once the browser is inspected. */
 const mine = ref<DesktopPlatform | null>(null)
 onMounted(async () => (mine.value = await detectDesktopTarget()))
+
+/** The light under the pointer, on the sheet of builds. */
+function onPointer(e: PointerEvent) {
+  const el = e.currentTarget as HTMLElement
+  const r = el.getBoundingClientRect()
+  el.style.setProperty('--mx', `${e.clientX - r.left}px`)
+  el.style.setProperty('--my', `${e.clientY - r.top}px`)
+}
 
 const FAQ = [
   {
@@ -55,46 +61,50 @@ const FAQ = [
 </script>
 
 <template>
-  <section id="download" class="ap-section page get">
-    <div v-reveal class="get-card">
-      <Logo :size="40" class="get-logo" />
-      <h2>Get Invade</h2>
-      <p class="get-lead">
-        Free, for Windows and macOS<template v-if="version">. Version {{ version }}</template
-        >.
-      </p>
+  <section id="download" class="get page">
+    <div class="get-main">
+      <div class="get-copy">
+        <p class="kicker">Download</p>
+        <h2>Get Invade.</h2>
+        <p class="get-lead">
+          Free for Windows and macOS<template v-if="version">, version {{ version }}</template
+          >. No account: it reads your profile from the League client on this computer.
+        </p>
+        <p class="get-also">
+          Also in the app: lobby scouting on the Live tab, a page for every champion with builds and
+          matchups, a tier list, favorites, and 12 languages.
+        </p>
+      </div>
 
-      <ul class="get-rows">
-        <li v-for="target in downloads" :key="target.id">
-          <span class="get-name">
-            <b>
-              {{ target.name }}
-              <span v-if="mine === target.id" class="iv-badge brand">This computer</span>
-            </b>
-            <small>{{ target.detail }}</small>
-          </span>
-          <a
-            :href="`/download/${target.id}`"
-            class="iv-btn"
-            :class="{ primary: mine === target.id }"
-          >
-            <Download :size="14" />
-            Download
-          </a>
-        </li>
-      </ul>
+      <div class="get-side">
+        <ul class="get-rows" @pointermove="onPointer">
+          <li v-for="target in downloads" :key="target.id" :class="{ mine: mine === target.id }">
+            <span class="get-name">
+              <b>
+                {{ target.name }}
+                <span v-if="mine === target.id" class="get-this">This computer</span>
+              </b>
+              <small>{{ target.detail }}</small>
+            </span>
+            <a :href="`/download/${target.id}`" class="get-btn">
+              <Download :size="14" :stroke-width="2" />
+              Download
+            </a>
+          </li>
+        </ul>
 
-      <p class="get-note">
-        Builds are not code-signed yet, so your system may ask once. On Windows, choose
-        <em>More info</em>, then <em>Run anyway</em>. On macOS, drag Invade to Applications, then
-        right-click it and choose <em>Open</em>.
-      </p>
+        <p class="get-note">
+          Builds are not code-signed yet, so your system may ask once. On Windows, choose
+          <em>More info</em>, then <em>Run anyway</em>. On macOS, drag Invade to Applications, then
+          right-click it and choose <em>Open</em>.
+        </p>
+      </div>
     </div>
 
     <div class="faq">
-      <h2 v-reveal>Questions</h2>
+      <h2>Questions</h2>
       <div class="faq-list">
-        <details v-for="item in FAQ" :key="item.q" v-reveal>
+        <details v-for="item in FAQ" :key="item.q">
           <summary>{{ item.q }}</summary>
           <p>{{ item.a }}</p>
         </details>
@@ -104,40 +114,69 @@ const FAQ = [
 </template>
 
 <style scoped>
-/* ── The download card ── */
-.get-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  max-width: 720px;
-  margin-inline: auto;
-  text-align: center;
+.get {
+  padding-top: clamp(96px, 12vw, 168px);
+  padding-bottom: clamp(48px, 6vw, 96px);
 }
 
-.get-logo {
-  margin-bottom: 24px;
+.get-main {
+  display: grid;
+  gap: 40px 64px;
+  align-items: start;
 }
 
-.get-card h2 {
-  font-size: clamp(32px, 4.4vw, 52px);
-  font-weight: 650;
-  line-height: 1.05;
-  letter-spacing: -0.03em;
+@media (min-width: 1024px) {
+  .get-main {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 560px);
+  }
+}
+
+.kicker {
+  margin-bottom: 22px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.get-copy h2 {
+  font-size: clamp(30px, 2.6vw, 40px);
+  font-weight: 640;
+  line-height: 1.06;
+  letter-spacing: -0.035em;
   color: var(--text-1);
 }
 
 .get-lead {
-  margin-top: 12px;
-  font-size: 17px;
+  max-width: 30em;
+  margin-top: 18px;
+  font-size: 15.5px;
+  line-height: 1.6;
   color: var(--text-2);
+  text-wrap: pretty;
 }
 
+.get-also {
+  max-width: 30em;
+  margin-top: 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-3);
+  text-wrap: pretty;
+}
+
+/* The builds: one sheet, the violet light following the pointer over it. */
 .get-rows {
-  width: 100%;
-  margin-top: 36px;
+  --mx: 80%;
+  --my: 0%;
+  position: relative;
   overflow: hidden;
-  text-align: left;
-  background: var(--sheen), var(--surface-1);
+  background:
+    radial-gradient(
+      420px circle at var(--mx) var(--my),
+      rgb(var(--brand-rgb) / 0.07),
+      transparent 70%
+    ),
+    var(--sheen), var(--surface-1);
   border-radius: var(--r-lg);
   box-shadow: var(--lit);
 }
@@ -146,8 +185,8 @@ const FAQ = [
   display: flex;
   align-items: center;
   gap: 16px;
-  min-height: 68px;
-  padding: 12px 16px 12px 22px;
+  min-height: 72px;
+  padding: 12px 14px 12px 22px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -158,7 +197,7 @@ const FAQ = [
 .get-name {
   display: grid;
   flex: 1;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
 }
 
@@ -166,10 +205,21 @@ const FAQ = [
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 8px;
-  font-size: 14.5px;
+  gap: 4px 10px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--text-1);
+}
+
+.get-this {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--brand-hi);
+}
+
+:global([data-theme='light']) .get-this {
+  color: var(--brand);
 }
 
 .get-name small {
@@ -177,9 +227,45 @@ const FAQ = [
   color: var(--text-3);
 }
 
+.get-btn {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 14px 0 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-1);
+  background: var(--btn);
+  border-radius: 8px;
+  box-shadow: var(--btn-shadow);
+  transition:
+    background-color 160ms,
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.get-btn:hover {
+  background: var(--btn-hover);
+}
+
+.get-btn:active {
+  transform: scale(0.98);
+}
+
+.mine .get-btn {
+  color: var(--ink-0);
+  background: var(--text-1);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+}
+
+:global([data-theme='light']) .mine .get-btn {
+  color: #fff;
+  background: #14151c;
+}
+
 .get-note {
-  max-width: 62ch;
-  margin-top: 20px;
+  margin-top: 18px;
   font-size: 13px;
   line-height: 1.6;
   color: var(--text-3);
@@ -194,20 +280,19 @@ const FAQ = [
 .faq {
   display: grid;
   gap: 24px 64px;
-  max-width: 1080px;
-  margin: clamp(96px, 12vw, 152px) auto 0;
+  margin-top: clamp(96px, 12vw, 152px);
 }
 
-@media (min-width: 900px) {
+@media (min-width: 1024px) {
   .faq {
-    grid-template-columns: 240px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 760px);
   }
 }
 
 .faq h2 {
-  font-size: clamp(26px, 3vw, 34px);
-  font-weight: 650;
-  letter-spacing: -0.025em;
+  font-size: clamp(26px, 2.2vw, 32px);
+  font-weight: 640;
+  letter-spacing: -0.03em;
   color: var(--text-1);
 }
 
@@ -234,7 +319,6 @@ summary::-webkit-details-marker {
   display: none;
 }
 
-/* A plus that turns into a minus. */
 summary::before,
 summary::after {
   content: '';
@@ -245,7 +329,7 @@ summary::after {
   height: 1.5px;
   background: var(--text-3);
   border-radius: 1px;
-  transition: transform var(--t-base) var(--ease);
+  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 summary::after {

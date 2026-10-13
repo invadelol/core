@@ -26,9 +26,9 @@ export const DRAFT = {
     enemy: { id: 234, name: 'Viego' },
     lane: 'JUNGLE' as const,
     picks: [
-      { id: 254, name: 'Vi', games: '4.2k', edge: 0.031, mine: 12 },
-      { id: 5, name: 'Xin Zhao', games: '3.8k', edge: 0.026 },
-      { id: 113, name: 'Sejuani', games: '2.9k', edge: 0.022 },
+      { id: 64, name: 'Lee Sin', games: '4.2k', edge: 0.031, mine: 12 },
+      { id: 254, name: 'Vi', games: '3.8k', edge: 0.026 },
+      { id: 5, name: 'Xin Zhao', games: '2.9k', edge: 0.022 },
     ],
   },
 }

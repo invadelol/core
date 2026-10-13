@@ -300,7 +300,6 @@ function participant(line: Line): Participant {
 }
 
 export const DEMO_PUUID = 'demo-you'
-const DAY = 86_400_000
 
 export const DEMO_MATCH: Match = {
   matchId: 'DEMO_1',
@@ -327,53 +326,3 @@ export const DEMO_MATCH: Match = {
   t2Bans: [84, 91, 360],
   participants: LINES.map(participant),
 }
-
-/** Two earlier games for the rows under it: the same player, other days of the week. */
-export const DEMO_EARLIER: Match[] = [
-  {
-    ...DEMO_MATCH,
-    matchId: 'DEMO_2',
-    gameStartMs: DEMO_MATCH.gameStartMs - DAY,
-    duration: 27 * 60 + 41,
-    t1Win: 0,
-    t2Win: 1,
-    participants: DEMO_MATCH.participants.map((p) => ({
-      ...p,
-      win: p.teamId !== 100,
-      ...(p.puuid === DEMO_PUUID
-        ? {
-            kills: 4,
-            deaths: 6,
-            assists: 5,
-            cs: 198,
-            totalDamageDealtToChampions: 21800,
-            goldEarned: 10400,
-            champLevel: 15,
-            items: [6692, 3047, 3071, 0, 0, 0, 3364],
-          }
-        : {}),
-    })),
-  },
-  {
-    ...DEMO_MATCH,
-    matchId: 'DEMO_3',
-    gameStartMs: DEMO_MATCH.gameStartMs - 3 * DAY,
-    duration: 34 * 60 + 2,
-    participants: DEMO_MATCH.participants.map((p) =>
-      p.puuid === DEMO_PUUID
-        ? {
-            ...p,
-            championId: 254,
-            kills: 7,
-            deaths: 4,
-            assists: 10,
-            cs: 188,
-            totalDamageDealtToChampions: 27200,
-            physicalDamageDealtToChampions: 24800,
-            goldEarned: 13600,
-            items: [6692, 3047, 3071, 6333, 0, 0, 3364],
-          }
-        : p
-    ),
-  },
-]

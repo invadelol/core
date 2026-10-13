@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { vReveal } from './reveal.js'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 
 /**
  * What Invade costs the computer, from the app's performance audit (docs/performance-audit.md
  * in the app's repository, 0.2.9 pass of 12 October 2026). Measured numbers only. The chart is
  * the second five-minute idle run of the release build, League closed: CPU per 10 s interval,
- * in percent of one core.
+ * in percent of one core. It draws itself once, when it comes into view.
  */
 const IDLE = [
   0.035, 0.011, 0.032, 0.014, 0.013, 0.033, 0.019, 0.027, 0.013, 0.015, 0.027, 0.012, 0.023, 0.011,
@@ -13,14 +13,14 @@ const IDLE = [
   0.015, 0.026,
 ]
 
-const W = 600
-const H = 180
+const W = 1000
+const H = 200
 /** The chart's top: 0.2 % of one core. */
 const MAX = 0.2
 
 const pts = IDLE.map((v, i) => [(i / (IDLE.length - 1)) * W, H - (v / MAX) * H] as const)
 
-/** A smooth line through the points (Catmull-Rom as cubic Béziers, tension 0.5). */
+/** A smooth line through the points (Catmull-Rom as cubic Béziers). */
 const line = pts
   .map(([x, y], i) => {
     if (!i) return `M${x.toFixed(1)} ${y.toFixed(1)}`
@@ -34,130 +34,135 @@ const line = pts
   .join('')
 const area = `${line}L${W} ${H}L0 ${H}Z`
 
-const STATS = [
+const FACTS = [
   {
     value: '0',
-    unit: '',
-    text: 'overlay windows between games: the overlay opens with champ select and closes after the game',
+    text: 'overlay windows between games. It opens with champ select and closes after the game.',
   },
-  { value: '20', unit: 'kB', text: 'per game sent to invade.lol, compressed' },
-  {
-    value: 'GPU',
-    unit: '',
-    text: "recording runs on your graphics card's encoder, never on the CPU",
-  },
-  { value: '8.8', unit: 'MB', text: "the app's executable, its game data included" },
+  { value: '20 kB', text: 'per game sent to invade.lol, compressed.' },
+  { value: 'GPU', text: "Recording runs on your graphics card's encoder, never on the CPU." },
+  { value: '8.8 MB', text: "The app's executable, its game data included." },
 ]
+
+const fig = ref<HTMLElement>()
+const drawn = ref(false)
+let io: IntersectionObserver | undefined
+onMounted(() => {
+  if (!fig.value || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    drawn.value = true
+    return
+  }
+  io = new IntersectionObserver(
+    ([e]) => {
+      if (!e.isIntersecting) return
+      drawn.value = true
+      io?.disconnect()
+    },
+    { rootMargin: '0px 0px -20% 0px' }
+  )
+  io.observe(fig.value)
+})
+onBeforeUnmount(() => io?.disconnect())
 </script>
 
 <template>
-  <section id="performance" class="ap-section page">
-    <header v-reveal class="ap-head">
-      <div>
-        <p class="ap-kicker">Light on your PC</p>
-        <h2>Built to stay out of your game's way</h2>
-      </div>
-      <p>
-        The work is done in Rust, the overlay only exists while you are in champ select or in game,
-        and recording runs on your graphics card. Here is what that costs, measured.
+  <section id="performance" class="light page">
+    <div class="light-head">
+      <p class="kicker">Light on your PC</p>
+      <h2>At rest, Invade uses 0.021% of one core.</h2>
+      <p class="light-lead">
+        The work is done in Rust. The overlay only exists while you are in champ select or in game,
+        and recording runs on your graphics card. Measured, not estimated.
       </p>
-    </header>
-
-    <div class="light">
-      <figure v-reveal class="chart iv-panel">
-        <figcaption>
-          <span>CPU at rest, over five minutes</span>
-          <b>0.021<small>% of one core on average</small></b>
-        </figcaption>
-        <div class="plot">
-          <span class="guide" style="top: 0"><i>0.2 %</i></span>
-          <span class="guide" style="top: 50%"><i>0.1 %</i></span>
-          <span class="guide base" style="top: 100%"><i>0</i></span>
-          <svg :viewBox="`0 0 ${W} ${H}`" preserveAspectRatio="none" aria-hidden="true">
-            <defs>
-              <linearGradient id="ap-idle-fade" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0" stop-color="var(--brand)" stop-opacity="0.28" />
-                <stop offset="1" stop-color="var(--brand)" stop-opacity="0" />
-              </linearGradient>
-            </defs>
-            <path :d="area" fill="url(#ap-idle-fade)" />
-            <path :d="line" class="line" />
-          </svg>
-        </div>
-        <p class="axis"><span>0:00</span><span>2:30</span><span>5:00</span></p>
-      </figure>
-
-      <ul class="stats">
-        <li v-for="s in STATS" :key="s.text" v-reveal class="iv-panel">
-          <b
-            >{{ s.value }}<small v-if="s.unit">{{ s.unit }}</small></b
-          >
-          <span>{{ s.text }}</span>
-        </li>
-      </ul>
     </div>
 
-    <p class="ap-caption">
-      Measured on an M3 MacBook Pro with the 0.2.9 release build, League closed (the app's
-      performance audit). The CPU line is the app with its window open behind others; in the tray it
-      does the same work.
+    <figure ref="fig" class="chart" :class="{ drawn }">
+      <div class="plot">
+        <span class="guide" style="top: 0"><i>0.2%</i></span>
+        <span class="guide" style="top: 50%"><i>0.1%</i></span>
+        <span class="guide base" style="top: 100%"><i>0</i></span>
+        <svg :viewBox="`0 0 ${W} ${H}`" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="ap-idle-fade" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stop-color="var(--brand)" stop-opacity="0.22" />
+              <stop offset="1" stop-color="var(--brand)" stop-opacity="0" />
+            </linearGradient>
+          </defs>
+          <path :d="area" class="area" fill="url(#ap-idle-fade)" />
+          <path :d="line" class="line" pathLength="1" />
+        </svg>
+      </div>
+      <figcaption>
+        <span>CPU over five minutes, window behind others, League closed</span>
+        <span class="axis"><span>0:00</span><span>2:30</span><span>5:00</span></span>
+      </figcaption>
+    </figure>
+
+    <ul class="facts">
+      <li v-for="f in FACTS" :key="f.value">
+        <b>{{ f.value }}</b>
+        <span>{{ f.text }}</span>
+      </li>
+    </ul>
+
+    <p class="note">
+      Measured on an M3 MacBook Pro with the 0.2.9 release build (the app's performance audit). In
+      the tray the app does the same work as with its window behind others.
     </p>
   </section>
 </template>
 
 <style scoped>
 .light {
+  padding-top: clamp(96px, 12vw, 168px);
+}
+
+.light-head {
   display: grid;
-  gap: 16px;
+  gap: 18px 64px;
+  align-items: end;
 }
 
 @media (min-width: 1024px) {
-  .light {
-    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  .light-head {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 30em);
+  }
+
+  .light-head .kicker {
+    grid-column: 1 / -1;
   }
 }
 
-.chart {
-  display: grid;
-  gap: 18px;
-  padding: 22px 24px 18px;
-}
-
-figcaption {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 6px 20px;
-}
-
-figcaption span {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-1);
-}
-
-figcaption b {
-  font-size: 28px;
-  font-stretch: var(--fig);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--text-1);
-  font-variant-numeric: tabular-nums;
-}
-
-figcaption small {
-  margin-left: 8px;
-  font-size: 12.5px;
-  font-weight: 500;
-  font-stretch: 100%;
-  letter-spacing: 0;
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 12px;
   color: var(--text-3);
+}
+
+h2 {
+  max-width: 14em;
+  font-size: clamp(30px, 2.6vw, 40px);
+  font-weight: 640;
+  line-height: 1.06;
+  letter-spacing: -0.035em;
+  color: var(--text-1);
+  text-wrap: balance;
+}
+
+.light-lead {
+  font-size: 15.5px;
+  line-height: 1.6;
+  color: var(--text-2);
+  text-wrap: pretty;
+}
+
+.chart {
+  margin-top: clamp(40px, 5vw, 64px);
 }
 
 .plot {
   position: relative;
-  height: 200px;
+  height: clamp(160px, 18vw, 240px);
   margin-right: 52px;
 }
 
@@ -175,7 +180,22 @@ figcaption small {
   stroke-width: 2;
   stroke-linejoin: round;
   stroke-linecap: round;
-  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 1800ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.area {
+  opacity: 0;
+  transition: opacity 900ms 900ms ease;
+}
+
+.drawn .line {
+  stroke-dashoffset: 0;
+}
+
+.drawn .area {
+  opacity: 1;
 }
 
 .guide {
@@ -194,69 +214,84 @@ figcaption small {
   position: absolute;
   right: 0;
   top: -8px;
-  font-size: 11.5px;
+  padding-left: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
   font-style: normal;
   line-height: 16px;
   color: var(--text-3);
-  background: var(--solid-1);
-  padding-left: 6px;
+  background: var(--ink-1);
+}
+
+figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 24px;
+  margin-top: 12px;
+  margin-right: 52px;
+  font-size: 12.5px;
+  color: var(--text-3);
 }
 
 .axis {
   display: flex;
   justify-content: space-between;
-  margin-right: 52px;
-  font-size: 11.5px;
-  color: var(--text-3);
-  font-variant-numeric: tabular-nums;
+  min-width: min(100%, 420px);
+  font-family: var(--font-mono);
+  font-size: 11px;
 }
 
-.seen .plot svg {
-  animation: ap-wipe 1600ms 200ms var(--ease) both;
-}
-
-.stats {
+.facts {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 28px 32px;
+  margin-top: clamp(48px, 6vw, 80px);
 }
 
-.stats li {
+@media (min-width: 720px) {
+  .facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1100px) {
+  .facts {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.facts li {
   display: grid;
-  align-content: space-between;
-  gap: 18px;
-  min-height: 150px;
-  padding: 20px;
+  align-content: start;
+  gap: 10px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line-2);
 }
 
-.stats b {
-  font-size: clamp(32px, 3.4vw, 44px);
-  font-stretch: var(--fig);
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.03em;
+.facts b {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
   color: var(--text-1);
-  font-variant-numeric: tabular-nums;
 }
 
-.stats b small {
-  margin-left: 3px;
-  font-size: 0.5em;
-  font-weight: 600;
-  letter-spacing: 0;
-  color: var(--text-3);
-}
-
-.stats span {
-  font-size: 13.5px;
-  line-height: 1.45;
+.facts span {
+  font-size: 14px;
+  line-height: 1.55;
   color: var(--text-2);
 }
 
-@media (max-width: 400px) {
-  .stats li {
-    min-height: 0;
-    padding: 16px;
+.note {
+  margin-top: 32px;
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .line,
+  .area {
+    transition: none;
   }
 }
 </style>
