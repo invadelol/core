@@ -123,6 +123,7 @@ const splash = computed(() => (props.champion ? championSplash(props.champion) :
       alt=""
       aria-hidden="true"
       decoding="async"
+      @error="($event.target as HTMLImageElement).style.display = 'none'"
     />
     <div class="lv-stage-light" aria-hidden="true" />
 
