@@ -6,7 +6,11 @@ import { profileIcon } from '../../lib/assets.js'
 import { profilePath } from '../../lib/format.js'
 import { forgetRecent, recentPlayers, type RecentPlayer } from '../../lib/recent.js'
 
-/** The profiles this browser opened last, as one quiet row under the search. */
+/**
+ * The profiles this browser opened last, newest first: a portrait, the Riot ID and the rank's
+ * crest, nothing else. The list lives on this device only (lib/recent.ts), so it is read after
+ * hydration and the server never renders it.
+ */
 const recent = ref<RecentPlayer[]>([])
 onMounted(() => (recent.value = recentPlayers()))
 
@@ -17,65 +21,103 @@ function forget() {
 </script>
 
 <template>
-  <nav v-if="recent.length" class="recent" aria-label="Recently viewed">
-    <ul class="scroll-x fade-r flex items-center gap-1.5 pr-6">
-      <li v-for="player in recent" :key="`${player.gameName}#${player.tagLine}`" class="shrink-0">
-        <Link :href="profilePath(player.gameName, player.tagLine)" class="chip">
+  <section v-if="recent.length" class="recent" aria-labelledby="recent-title">
+    <div class="section">
+      <h2 id="recent-title">Recently viewed</h2>
+      <button type="button" class="iv-btn ghost sm clear" @click="forget">Clear</button>
+    </div>
+
+    <ul class="list iv-panel">
+      <li v-for="player in recent" :key="`${player.gameName}#${player.tagLine}`">
+        <Link :href="profilePath(player.gameName, player.tagLine)" class="row">
           <img
             :src="profileIcon(player.profileIconId)"
             alt=""
-            width="20"
-            height="20"
+            width="28"
+            height="28"
             loading="lazy"
-            class="thumb h-5 w-5 rounded-[4px]"
+            class="thumb icon"
           />
-          <span class="max-w-[16ch] truncate">
-            <span class="font-medium text-ink">{{ player.gameName }}</span>
-            <span class="text-ink-3">#{{ player.tagLine }}</span>
+          <span class="name">
+            <span class="game-name">{{ player.gameName }}</span>
+            <span class="tag">#{{ player.tagLine }}</span>
           </span>
-          <RankCrest v-if="player.rank?.tier" :tier="player.rank.tier" :size="14" />
+          <RankCrest v-if="player.rank?.tier" :tier="player.rank.tier" :size="16" />
         </Link>
       </li>
     </ul>
-    <button type="button" class="iv-btn ghost sm shrink-0" @click="forget">Clear</button>
-  </nav>
+  </section>
 </template>
 
 <style scoped>
+/* It arrives after the page has painted, so it fades in rather than appearing at once. */
 .recent {
+  animation: recent-in 320ms var(--ease-settle) backwards;
+}
+
+.section {
+  align-items: center;
+}
+
+.clear {
+  margin-left: auto;
+  margin-right: -8px;
+}
+
+/* One sheet, one profile per row, no rules between them. */
+.list {
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+}
+
+.row {
   display: flex;
   align-items: center;
-  gap: 4px;
-  min-width: 0;
+  gap: 12px;
+  height: 44px;
+  padding: 0 12px 0 8px;
+  border-radius: var(--r-sm);
+  transition: background-color var(--t-base) var(--ease);
 }
 
-.recent > ul {
-  min-width: 0;
+.row:hover {
+  background: var(--glint);
+}
+
+.row:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+.icon {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-sm);
+}
+
+.name {
   flex: 1;
-  padding-block: 2px;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13.5px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 30px;
-  padding: 0 10px 0 5px;
-  font-size: 12.5px;
-  color: var(--text-2);
-  background: var(--surface-1);
-  border-radius: 999px;
-  box-shadow: var(--lit);
-  transition: background-color var(--t-fast) var(--ease);
+.game-name {
+  font-weight: 600;
+  color: var(--text-1);
 }
 
-.chip:hover {
-  background: var(--surface-2);
+.tag {
+  color: var(--text-3);
 }
 
-@media (pointer: coarse) {
-  .chip {
-    height: 36px;
+@keyframes recent-in {
+  from {
+    opacity: 0;
   }
 }
 </style>

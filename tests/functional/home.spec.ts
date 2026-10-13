@@ -27,14 +27,17 @@ test.group('Home page', (group) => {
     })
   }
 
-  test('renders the search and every section from storage', async ({ client, assert }) => {
+  test('renders the search and the desktop app, and reads nothing for it', async ({
+    client,
+    assert,
+  }) => {
     const response = await client.get('/')
     response.assertStatus(200)
     response.assertTextIncludes('Find a player')
     response.assertTextIncludes('href="/app"')
     const page = response.text()
     for (const prop of ['trending', 'best', 'climbs', 'champions']) {
-      assert.include(page, `&quot;${prop}&quot;:`)
+      assert.notInclude(page, `&quot;${prop}&quot;:`)
     }
   })
 
