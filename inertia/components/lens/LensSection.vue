@@ -211,11 +211,6 @@ function open(key: string) {
           />
         </template>
       </div>
-
-      <p class="lv-note">
-        Figures are compared with the Emerald pace of the role where a public one exists, and with
-        the lane opponents you met. Laning reads the minute-by-minute timeline of a game.
-      </p>
     </div>
   </section>
 </template>
@@ -262,13 +257,5 @@ function open(key: string) {
   .lv-seg-text {
     display: none;
   }
-}
-
-.lv-note {
-  max-width: 680px;
-  margin-top: 16px;
-  font-size: 12px;
-  line-height: 18px;
-  color: var(--text-4);
 }
 </style>

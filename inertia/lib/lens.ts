@@ -51,7 +51,7 @@ export type LensDomainKey = (typeof LENS_DOMAINS)[number]
 export const LENS_LABELS: Record<LensDomainKey, string> = {
   laning: 'Laning',
   farming: 'Farming',
-  fighting: 'Teamfighting',
+  fighting: 'Fighting',
   vision: 'Vision',
   objectives: 'Objectives',
   survival: 'Survival',
@@ -553,39 +553,39 @@ const SPECS: Spec[] = [
 /** An even domain's read: a little ahead, on the pace, a little behind. */
 const EVEN: Record<LensDomainKey, [string, string, string]> = {
   laning: [
-    'You edge your lanes.',
-    'Your lanes end about even.',
-    'You give a little ground in lane.',
+    'You leave lane slightly ahead.',
+    'Your lanes end close to even.',
+    'You leave lane slightly behind.',
   ],
   farming: [
-    'Your farming is a little ahead of the Emerald pace.',
-    'Your farming is on the Emerald pace.',
-    'Your farming is a little behind the Emerald pace.',
+    'You farm a touch above Emerald.',
+    'You farm like an Emerald player.',
+    'You farm a touch under Emerald.',
   ],
   fighting: [
-    'You fight a little above the Emerald pace.',
-    'Your fighting is on the Emerald pace.',
-    'You fight a little below the Emerald pace.',
+    'You fight a bit above Emerald.',
+    'You fight at an Emerald level.',
+    'You fight a bit under Emerald.',
   ],
   vision: [
-    'Your vision is a little ahead of the Emerald pace.',
-    'Your vision is on the Emerald pace.',
-    'Your vision is a little behind the Emerald pace.',
+    'Your vision is a bit above Emerald.',
+    'Your vision matches Emerald.',
+    'Your vision is a bit under Emerald.',
   ],
   objectives: [
-    'You hit objectives a little more than your opponents.',
-    'You hit objectives about as much as your opponents.',
-    'You hit objectives a little less than your opponents.',
+    'You hit objectives a bit more than your opponents.',
+    'You hit objectives as much as your opponents.',
+    'You hit objectives a bit less than your opponents.',
   ],
   survival: [
-    'You survive a little better than your opponents.',
-    'You survive about as well as your opponents.',
-    'You die a little more than your opponents.',
+    'You die a bit less than your opponents.',
+    'You die about as often as your opponents.',
+    'You die a bit more than your opponents.',
   ],
   consistency: [
-    'Your games swing a little less than most.',
-    'Your games swing about as much as most.',
-    'Your games swing a little more than most.',
+    'Your games are steadier than most.',
+    'Your games swing like most players’.',
+    'Your games swing more than most.',
   ],
 }
 /** Rating points from the pace that read as "a little" to one side. */

@@ -50,7 +50,7 @@ const big = computed(() => {
   <LensStory
     :domain="domain"
     wide
-    :meta="`${timelineGames} of ${games.length} games have a timeline`"
+    :meta="timelineGames < games.length ? `${timelineGames} of ${games.length} games` : ''"
     :labels="labels"
     :shown="['cs10', 'gold15']"
   >
