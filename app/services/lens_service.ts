@@ -61,6 +61,9 @@ class LensService {
         games: [],
         timelineGames: 0,
         score: null,
+        champions: [],
+        duel: null,
+        objectives: null,
         domains: [],
       }
     }

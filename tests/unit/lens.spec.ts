@@ -262,6 +262,56 @@ test.group('Lens', () => {
     assert.equal(a.trend.length, 12)
   })
 
+  test('the duel averages both players minute by minute over the timeline games', ({ assert }) => {
+    const matches = games(2)
+    const minutes = (m: Match, index: number, perMinute: number): LensFrame[] =>
+      Array.from({ length: 16 }, (_, minute) => ({
+        matchId: m.matchId,
+        puuid: `p${index}`,
+        participantId: index + 1,
+        minute,
+        cs: minute * perMinute,
+        gold: 500 + minute * 300,
+        xp: 0,
+        deaths: 0,
+      }))
+    const timeline = matches.flatMap((m, i) => [...minutes(m, 0, 8 + i * 2), ...minutes(m, 5, 7)])
+    const lens = read(matches, { frames: timeline })
+    assert.isNotNull(lens.duel)
+    assert.equal(lens.duel!.games, 2)
+    assert.lengthOf(lens.duel!.cs.you, 16)
+    assert.equal(lens.duel!.cs.you[10], 90)
+    assert.equal(lens.duel!.cs.opponent[10], 70)
+    assert.isNull(read(games(3)).duel)
+  })
+
+  test('team objectives are read from the side the player was on', ({ assert }) => {
+    const m = game()
+    Object.assign(m, { t1Dragons: 3, t2Dragons: 1, t1Towers: 8, t2Towers: 2 })
+    const blue = read([m]).objectives!
+    assert.equal(blue.you.dragons, 3)
+    assert.equal(blue.them.towers, 2)
+    const red = readLens({ puuid: 'p5', role: 'TOP', matches: [m] }).objectives!
+    assert.equal(red.you.dragons, 1)
+    assert.equal(red.them.towers, 8)
+  })
+
+  test('a read names the figure it gives numbers for, and keeps its headline apart', ({
+    assert,
+  }) => {
+    const matches = games(6)
+    const laning = domain(
+      read(matches, {
+        frames: matches.flatMap((m) => frames(m, { deaths14: 3 }, { deaths14: 0 })),
+      }),
+      'laning'
+    )
+    assert.equal(laning.headline, 'Early deaths cost your lane.')
+    assert.equal(laning.readFigure, 'deaths14')
+    assert.isTrue(laning.read!.startsWith(laning.headline!))
+    assert.isAbove(laning.read!.length, laning.headline!.length)
+  })
+
   test('the main role is the one played most, lane order breaking a tie', ({ assert }) => {
     assert.equal(
       mainRole([
