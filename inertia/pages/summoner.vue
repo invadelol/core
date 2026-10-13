@@ -59,7 +59,8 @@ const props = defineProps<{
   panels?: ReadonlyArray<{ key: PanelKey; path: string }>
 }>()
 
-const section = computed(() => props.section ?? 'overview')
+/** `mastery` is the Champions section's lifetime view, with an address of its own. */
+const section = computed(() => (props.section === 'mastery' ? 'champions' : (props.section ?? 'overview')))
 
 /** The profile's headline window, and the one it is compared with. */
 const STATS_WINDOW = 30
@@ -77,8 +78,8 @@ const masteryComplete = ref(false)
 const masteryLoading = ref(false)
 const masteryError = ref(false)
 
-/** Champions has two readings of the same pool: recent form, and lifetime. */
-const championsView = ref<'stats' | 'mastery'>('stats')
+/** Champions has two readings of the same pool: recent form, and lifetime (`/<player>/mastery`). */
+const championsView = computed(() => (props.section === 'mastery' ? 'mastery' : 'stats'))
 const CHAMPION_VIEWS = [
   { value: 'stats' as const, label: 'Recent form' },
   { value: 'mastery' as const, label: 'Mastery' },
@@ -310,6 +311,15 @@ watch(section, () => {
   if (section.value === 'friends') void loadFriendMatches()
   if (['overview', 'champions'].includes(section.value)) void applyFilters()
 })
+
+/** The two Champions views are two addresses; switching keeps the page as it is. */
+function showChampionsView(view: 'stats' | 'mastery') {
+  if (view === championsView.value) return
+  router.visit(`/${encodeURIComponent(slug.value)}/${view === 'mastery' ? 'mastery' : 'champions'}`, {
+    preserveState: true,
+    preserveScroll: true,
+  })
+}
 
 /** Picking a champion anywhere sends you to that champion's games. */
 function championMatches(id: number) {
@@ -771,7 +781,7 @@ async function sync() {
                   :key="option.value"
                   type="button"
                   :class="{ on: championsView === option.value }"
-                  @click="championsView = option.value"
+                  @click="showChampionsView(option.value)"
                 >
                   {{ option.label }}
                 </button>
