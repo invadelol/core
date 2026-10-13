@@ -1,3 +1,5 @@
+import type { Position } from '@invadelol/ui/logic'
+
 export interface Summoner {
   puuid: string
   gameName: string
@@ -239,19 +241,35 @@ export interface ChampionMastery {
 
 export interface LiveGame {
   gameId: number
+  /** Epoch ms; 0 while the players are still loading in. */
   gameStartTime: number
   gameLength: number
   gameQueueConfigId: number
+  mapId?: number | null
+  gameMode?: string | null
   bannedChampions: Array<{ championId: number; teamId: number }>
+  /** Team by team; a laned team comes seated Top, Jungle, Mid, Bot, Support. */
   participants: Array<{
-    puuid?: string
+    puuid?: string | null
     riotId?: string
     championId: number
     teamId: number
+    bot?: boolean
     championStats?: { games: number; winrate: number } | null
-    rank?: { tier: string; division: string; leaguePoints: number } | null
+    /** The player's newest stored games. */
+    recent?: { games: number; wins: number } | null
+    rank?: {
+      tier: string
+      division: string
+      leaguePoints: number
+      wins?: number | null
+      losses?: number | null
+    } | null
     spell1Id: number
     spell2Id: number
     perks?: { perkIds: number[]; perkStyle: number; perkSubStyle: number }
+    /** Inferred by the server; null where the mode has no lanes. */
+    position?: Position | null
+    positionConfidence?: number | null
   }>
 }
