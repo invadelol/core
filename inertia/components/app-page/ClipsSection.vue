@@ -10,11 +10,11 @@ import { ease, entering, onEnter, prefersReduced, useScrollFx, vReveal } from '.
  */
 const REEL = [
   { img: '/landing/clip-kill.webp', title: 'Triple kill', meta: 'at 8:02', len: '0:24' },
-  { img: '/app/still-2.webp', title: 'Assist', meta: 'at 12:40', len: '0:28' },
+  { img: '/app-page/still-2.webp', title: 'Assist', meta: 'at 12:40', len: '0:28' },
   { img: '/landing/clip-baron.webp', title: 'Baron', meta: 'Objective · at 22:10', len: '0:33' },
-  { img: '/app/still-1.webp', title: 'Double kill', meta: 'at 15:18', len: '0:26' },
+  { img: '/app-page/still-1.webp', title: 'Double kill', meta: 'at 15:18', len: '0:26' },
   { img: '/landing/clip-death.webp', title: 'Death', meta: 'at 17:51', len: '0:21' },
-  { img: '/app/still-3.webp', title: 'Kill', meta: 'at 24:05', len: '0:19' },
+  { img: '/app-page/still-3.webp', title: 'Kill', meta: 'at 24:05', len: '0:19' },
   { img: '/landing/clip-saved.webp', title: 'Highlight', meta: 'Saved · at 27:40', len: '0:30' },
 ]
 
