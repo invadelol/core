@@ -14,8 +14,8 @@ const number = (value: unknown) => {
   return Number.isFinite(n) ? n : 0
 }
 
-/** The minutes of a timeline the Lens reads: CS at 10, deaths before 14, gold at 15. */
-export const LENS_MINUTES = [10, 14, 15] as const
+/** The minutes of a timeline the Lens reads: the lane's first fifteen, CS at 10 and gold at 15 among them. */
+export const LENS_LAST_MINUTE = 15
 /** Games the main role is read from. */
 const ROLE_SAMPLE = 100
 
@@ -66,14 +66,14 @@ export class LensRepository {
     return result.map((row) => ({ role: asString(row[0]), games: number(row[1]) }))
   }
 
-  /** Every player's frame at the Lens's minutes, in the window's games that have a timeline. */
+  /** Every player's frames of the first fifteen minutes, in the window's games with a timeline. */
   async frames(window: LensWindow): Promise<LensFrame[]> {
     const result = await rows(`
       SELECT match_id, puuid, participant_id, intDiv(frame_ms, 60000) AS minute,
              cs + jungle_cs, gold_total, xp, deaths
       FROM match_timeline
       WHERE match_id IN (${this.window(window)})
-        AND intDiv(frame_ms, 60000) IN (${LENS_MINUTES.join(',')})
+        AND intDiv(frame_ms, 60000) <= ${LENS_LAST_MINUTE}
       LIMIT 1 BY match_id, participant_id, minute
     `)
     return result.map((row) => ({
