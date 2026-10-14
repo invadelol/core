@@ -83,5 +83,8 @@ test.group('Privacy policy and legal notice', (group) => {
     const x = await client.get('/x').redirects(0)
     x.assertStatus(302)
     x.assertHeader('location', 'https://x.com/invadedotlol')
+    const bugs = await client.get('/bugs').redirects(0)
+    bugs.assertStatus(302)
+    bugs.assertHeader('location', 'https://discord.gg/JC2QTNmDyu')
   })
 })
