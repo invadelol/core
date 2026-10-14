@@ -46,6 +46,8 @@ test.group('Champion explorer filters', () => {
       )
       assert.notInclude(sql, 'queue_id IN')
       assert.notInclude(sql, 'team_position =')
+      // Brawl and League Classic never count, whatever the filters.
+      assert.include(sql, 'queue_id NOT IN (2300)')
     } finally {
       clickhouse.query = original
     }

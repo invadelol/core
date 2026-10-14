@@ -1,6 +1,7 @@
 import clickhouse from 'adonisjs-clickhouse/services/main'
 import logger from '@adonisjs/core/services/logger'
 import { asString, escapeClickhouseString } from '#utils/clickhouse'
+import { VISIBLE_QUEUES_SQL } from '#constants/riot'
 import type { LensEvent, LensFrame, LensRole } from '../../../inertia/lib/lens.js'
 
 /** One positional result set (see `columns.ts`). */
@@ -41,7 +42,7 @@ export class LensRepository {
       SELECT match_id
       FROM participants
       PREWHERE puuid = '${escapeClickhouseString(puuid)}'
-      WHERE team_position = '${escapeClickhouseString(role)}' ${queues}
+      WHERE team_position = '${escapeClickhouseString(role)}' AND ${VISIBLE_QUEUES_SQL} ${queues}
       ORDER BY game_start_ms DESC, match_id DESC
       LIMIT ${Math.max(1, Math.trunc(count) || 1)}
     `
@@ -56,7 +57,7 @@ export class LensRepository {
         SELECT team_position
         FROM participants
         PREWHERE puuid = '${escapeClickhouseString(puuid)}'
-        WHERE 1=1 ${queues}
+        WHERE ${VISIBLE_QUEUES_SQL} ${queues}
         ORDER BY game_start_ms DESC, match_id DESC
         LIMIT ${ROLE_SAMPLE}
       )

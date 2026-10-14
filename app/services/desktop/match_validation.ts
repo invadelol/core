@@ -1,4 +1,5 @@
 import { normalizePlatform } from '#services/riot/routing'
+import { isExcludedQueue } from '#constants/riot'
 import type { LcuParticipant, MatchUpload } from '#types/desktop'
 
 /**
@@ -10,10 +11,15 @@ import type { LcuParticipant, MatchUpload } from '#types/desktop'
  * they guarantee the row builders never see a shape they were not written for.
  */
 
-/** Matchmade queues the website shows (§4.3). Nexus Blitz (1300) is played on map 21: excluded. */
-export const DESKTOP_QUEUES = new Set([
-  400, 420, 430, 440, 450, 480, 490, 700, 720, 900, 1020, 1700, 1710, 1900, 2300, 2400,
-])
+/**
+ * Matchmade queues the website shows (§4.3). Nexus Blitz (1300) is played on map 21: excluded.
+ * Brawl (2300) and League Classic are never accepted (EXCLUDED_QUEUE_IDS, Riot's policies).
+ */
+export const DESKTOP_QUEUES = new Set(
+  [400, 420, 430, 440, 450, 480, 490, 700, 720, 900, 1020, 1700, 1710, 1900, 2400].filter(
+    (queue) => !isExcludedQueue(queue)
+  )
+)
 
 /** Summoner's Rift, Howling Abyss, Rings of Wrath (Arena). */
 export const DESKTOP_MAPS = new Set([11, 12, 30])

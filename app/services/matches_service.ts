@@ -13,11 +13,15 @@ import { SyncGuard } from '#utils/sync_guard'
 import { platformFromMatchId, toInt } from '#utils/clickhouse'
 import matchSourceService from '#services/match_source_service'
 import { riotCompleteness } from '#services/desktop/conversion'
+import { isExcludedQueue } from '#constants/riot'
 
 type MatchCluster = Exclude<RiotAPITypes.Cluster, PlatformId.ESPORTS>
 
 /** A match whose events could not be fetched is not asked for again before this. */
 const BACKFILL_RETRY_MS = 10 * 60 * 1000
+
+/** How many skipped match ids (Brawl, League Classic) are remembered, so they are not fetched again. */
+const EXCLUDED_MEMORY = 5000
 
 class MatchesService {
   private updates = new SyncGuard()
@@ -25,6 +29,14 @@ class MatchesService {
   private matches = new SyncGuard()
   private backfills = new SyncGuard()
   private backfillFailures = new Map<string, number>()
+  /** Games of an excluded queue seen on match-v5: never stored, and not asked for again. */
+  private excluded = new Set<string>()
+
+  /** The ids worth fetching: neither stored nor known to be of an excluded queue. */
+  private async unseen(matchIds: string[]) {
+    const existing = await matchRepository.getExistingIds(matchIds)
+    return matchIds.filter((id) => !existing.has(id) && !this.excluded.has(id))
+  }
 
   async update(puuid: string, cluster: MatchCluster) {
     return this.updates.run(`${cluster}:${puuid}`, () => this.updatePlayer(puuid, cluster))
@@ -43,16 +55,16 @@ class MatchesService {
       return []
     }
 
-    const existingIds = await matchRepository.getExistingIds(matchIds)
-    const newIds = matchIds.filter((id) => !existingIds.has(id))
+    const newIds = await this.unseen(matchIds)
 
     if (!newIds.length) {
       return []
     }
 
-    const results = await Promise.all(
+    const fetched = await Promise.all(
       newIds.map((matchId) => this.fetchAndStoreMatch(matchId, cluster))
     )
+    const results = fetched.filter((result) => result !== null)
 
     const summoner = await Summoner.find(puuid)
     if (summoner) {
@@ -80,10 +92,11 @@ class MatchesService {
         params: { count, endTime: Math.ceil(before / 1000) },
       })
       if (!matchIds.length) return 0
-      const existing = await matchRepository.getExistingIds(matchIds)
-      const newIds = matchIds.filter((id) => !existing.has(id))
-      await Promise.all(newIds.map((matchId) => this.fetchAndStoreMatch(matchId, cluster)))
-      return newIds.length
+      const newIds = await this.unseen(matchIds)
+      const stored = await Promise.all(
+        newIds.map((matchId) => this.fetchAndStoreMatch(matchId, cluster))
+      )
+      return stored.filter((result) => result !== null).length
     })
   }
 
@@ -181,6 +194,13 @@ class MatchesService {
     })
     timelineRequest.catch(() => {})
     const matchData = await matchRequest
+
+    // Brawl and League Classic are never stored, not even archived (EXCLUDED_QUEUE_IDS).
+    if (isExcludedQueue(matchData.info?.queueId)) {
+      if (this.excluded.size >= EXCLUDED_MEMORY) this.excluded.clear()
+      this.excluded.add(matchId)
+      return null
+    }
 
     await this.archive(matchId, matchData)
 

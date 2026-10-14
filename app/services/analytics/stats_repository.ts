@@ -7,6 +7,7 @@ import type {
   SummonerChampionStats,
 } from '#types/summoner'
 import { DEFAULT_STATS_COUNT, DEFAULT_FRIENDS_LIMIT, TOP_CHAMPIONS_COUNT } from '#config/constants'
+import { VISIBLE_QUEUES_SQL } from '#constants/riot'
 
 /** Positional rows: see `columns.ts` for why these queries avoid key names. */
 async function rows(query: string): Promise<unknown[][]> {
@@ -51,6 +52,7 @@ export class StatsRepository {
         sum(win) as wins
       FROM participants
       PREWHERE puuid = '${escapeClickhouseString(puuid)}'
+      WHERE ${VISIBLE_QUEUES_SQL}
       GROUP BY day
       ORDER BY day ASC
     `)
@@ -75,6 +77,7 @@ export class StatsRepository {
         SELECT match_id, team_id
         FROM participants
         PREWHERE puuid = '${escapedPuuid}'
+        WHERE ${VISIBLE_QUEUES_SQL}
       )
       SELECT
         puuid,
@@ -124,7 +127,8 @@ export class StatsRepository {
     const count = integer(filters.count, DEFAULT_STATS_COUNT)
     const offset = Math.max(0, Math.trunc(Number(filters.offset)) || 0)
 
-    const whereClauses: string[] = []
+    // Brawl and League Classic never count (EXCLUDED_QUEUE_IDS).
+    const whereClauses: string[] = [VISIBLE_QUEUES_SQL]
     if (filters.queueIds?.length) {
       whereClauses.push(`queue_id IN (${filters.queueIds.map(Number).join(',')})`)
     }
@@ -261,6 +265,7 @@ export class StatsRepository {
       SELECT puuid, champion_id, team_position, win
       FROM participants
       PREWHERE puuid IN (${puuids.map((puuid) => `'${escapeClickhouseString(puuid)}'`).join(',')})
+      WHERE ${VISIBLE_QUEUES_SQL}
       ORDER BY game_start_ms DESC, match_id DESC
       LIMIT ${integer(count, DEFAULT_STATS_COUNT)} BY puuid
     `)
@@ -281,7 +286,7 @@ export class StatsRepository {
     filters: { queueIds?: readonly number[]; role?: string } = {}
   ): Promise<SummonerChampionStats[]> {
     const escapedPuuid = escapeClickhouseString(puuid)
-    const conditions = []
+    const conditions = [VISIBLE_QUEUES_SQL]
     if (filters.queueIds?.length)
       conditions.push(`queue_id IN (${filters.queueIds.map(Number).join(',')})`)
     if (filters.role && filters.role !== 'all')
@@ -294,7 +299,7 @@ export class StatsRepository {
                total_cs, gold_earned, dmg_to_champ
         FROM participants
         PREWHERE puuid = '${escapedPuuid}'
-        ${conditions.length ? 'WHERE ' + conditions.join(' AND ') : ''}
+        WHERE ${conditions.join(' AND ')}
         ORDER BY game_start_ms DESC, match_id DESC
         LIMIT ${integer(count, DEFAULT_STATS_COUNT)}
       ),

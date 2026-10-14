@@ -142,4 +142,37 @@ test.group('Match sync lifecycle', (group) => {
       },
     ])
   })
+
+  test('Brawl games from match-v5 are never stored, and not fetched again', async ({ assert }) => {
+    let fetched = 0
+    riotApiService.client = {
+      matchV5: {
+        getIdsByPuuid: async () => ['EUW1_3'],
+        getMatchById: async () => {
+          fetched++
+          return { info: { platformId: 'EUW1', queueId: 2300, participants: [{ puuid: 'p1' }] } }
+        },
+        getMatchTimelineById: async () => ({ info: { frames: [] } }),
+      },
+    } as unknown as typeof client
+    matchRepository.getExistingIds = async () => new Set()
+    Summoner.find = (async () => null) as unknown as typeof find
+    const touched: string[] = []
+    matchService.archive = async () => {
+      touched.push('archive')
+    }
+    matchSourceService.claim = async () => {
+      touched.push('claim')
+      return true
+    }
+    ingestionService.ingestMatch = async () => {
+      touched.push('ingest')
+      return { platform: 'EUW1', gameStartMs: 1 }
+    }
+
+    assert.deepEqual(await matchService.update('brawl-player', PlatformId.EUROPE), [])
+    assert.deepEqual(await matchService.update('brawl-player', PlatformId.EUROPE), [])
+    assert.deepEqual(touched, [])
+    assert.equal(fetched, 1)
+  })
 })
