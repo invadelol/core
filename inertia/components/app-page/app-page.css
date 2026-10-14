@@ -170,6 +170,23 @@
     box-shadow var(--t-fast) var(--ease);
 }
 
+/* ── Phones: nothing to install here ───────────────────────────── */
+
+/* A touch screen without hover is taken for a phone or a tablet, which the app does not run on:
+   `.on-phone` replaces `.on-pc` there, unless the page found a computer it runs on (`.ap.pc`). */
+@media not all and (hover: none) and (pointer: coarse) {
+  .ap .on-phone {
+    display: none !important;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .ap:not(.pc) .on-pc,
+  .ap.pc .on-phone {
+    display: none !important;
+  }
+}
+
 /* ── Reveals: lines rise and fade in, in order ───────────────────── */
 
 .rv .ln,

@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { Logo } from '@invadelol/ui'
 import AppWindow from './AppWindow.vue'
 import DownloadButtons from './DownloadButtons.vue'
+import PhoneActions from './PhoneActions.vue'
 import { ease, prefersReduced, useScrollFx, vReveal } from './motion'
 
 /**
@@ -27,10 +28,12 @@ useScrollFx(stage, (box, vh) => {
       <Logo :size="36" class="hero-glyph ln" />
       <h1 class="ap-display ln">Invade</h1>
       <p class="hero-line ln">The desktop companion for League of Legends.</p>
-      <DownloadButtons class="hero-dl ln" />
-      <p class="hero-meta label ln">
+      <DownloadButtons class="hero-dl ln on-pc" />
+      <PhoneActions class="hero-dl ln on-phone" />
+      <p class="hero-meta label ln on-pc">
         Free<template v-if="version"> · Version {{ version }}</template> · Windows and macOS
       </p>
+      <p class="hero-meta label ln on-phone">Invade runs on Windows and macOS.</p>
     </div>
 
     <div ref="stage" v-reveal class="hero-stage ap-wrap">
