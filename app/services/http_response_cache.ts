@@ -20,6 +20,35 @@ export function responseCacheKey(url: string) {
   return `http_cache:v2:${parsed.pathname}${parsed.search}`
 }
 
+/**
+ * Server-rendered pages that are the same for every visitor, so one render can
+ * answer everyone for a minute. Nothing in them depends on who is asking: no
+ * cookies, no session, and the home page's recent list lives in the browser.
+ */
+export const PAGE_CACHE_RESOURCE = 'pages'
+export const PAGE_CACHE_TTL_SECONDS = 60
+const CACHED_PAGES = new Set(['/', '/app'])
+/**
+ * Only a bare URL or a single attribution `ref` gets its own entry; any other
+ * query renders normally, so arbitrary query strings can't fill Redis.
+ */
+const CACHED_PAGE_QUERY = /^(?:ref=[\w-]{1,32})?$/
+
+/**
+ * The key for a cacheable page, or null when this URL must render normally.
+ *
+ * Keyed on the URL exactly as Inertia writes it into the page object, so a hit
+ * carries the visitor's own `ref`, and on the asset version, so a deploy never
+ * serves HTML that points at the previous build's hashed files.
+ */
+export function pageCacheKey(url: string, assetVersion: string) {
+  const index = url.indexOf('?')
+  const path = index === -1 ? url : url.slice(0, index)
+  const query = index === -1 ? '' : url.slice(index + 1)
+  if (!CACHED_PAGES.has(path) || !CACHED_PAGE_QUERY.test(query)) return null
+  return `http_cache:v2:page:${assetVersion}:${url}`
+}
+
 export function responseCacheResource(url: string) {
   const puuid = url.match(/^\/api\/summoners\/puuid\/([a-zA-Z0-9_-]+)\//)?.[1]
   if (puuid) return `summoner:${puuid}`
@@ -75,7 +104,8 @@ export async function saveResponseCache(
   key: string,
   resource: string,
   generation: string,
-  body: Buffer
+  body: Buffer,
+  ttlSeconds = CACHE_TTL_SECONDS
 ) {
   return redis.eval(
     SAVE_RESPONSE_SCRIPT,
@@ -84,7 +114,7 @@ export async function saveResponseCache(
     `${resource}:cache_generation`,
     `${resource}:cache_keys`,
     generation,
-    CACHE_TTL_SECONDS,
+    ttlSeconds,
     body
   )
 }
