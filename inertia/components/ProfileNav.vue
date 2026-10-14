@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
-import { nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { ArrowLeftRight, LayoutGrid, Radio, ScanEye, Swords, Users } from 'lucide-vue-next'
 
 const props = defineProps<{ slug: string; section: string }>()
@@ -41,12 +41,18 @@ watch(
 
 const TABS = [
   { key: 'overview', label: 'Overview', icon: LayoutGrid },
-  { key: 'lens', label: 'Lens', icon: ScanEye },
+  // Hidden from the list for the launch (Oct 2026): /<player>/lens still opens, and the tab
+  // shows only while it is the open section. Remove `hidden` to list it again.
+  { key: 'lens', label: 'Lens', icon: ScanEye, hidden: true },
   { key: 'champions', label: 'Champions', icon: Swords },
   { key: 'friends', label: 'Friends', icon: Users },
   { key: 'compare', label: 'Compare', icon: ArrowLeftRight },
   { key: 'live', label: 'Live', icon: Radio },
 ] as const
+
+const tabs = computed(() =>
+  TABS.filter((item) => !('hidden' in item && item.hidden) || props.section === item.key)
+)
 </script>
 
 <template>
@@ -60,7 +66,7 @@ const TABS = [
     @scroll.passive="measure"
   >
     <Link
-      v-for="item in TABS"
+      v-for="item in tabs"
       :key="item.key"
       :href="`/${encodeURIComponent(slug)}${item.key === 'overview' ? '' : '/' + item.key}`"
       :class="{ on: section === item.key }"
