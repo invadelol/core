@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
 import { Logo } from '@invadelol/ui'
-import { DISCORD_URL, REPO_URL } from '../lib/links.js'
+import { DISCORD_URL, REPO_URL, X_URL } from '../lib/links.js'
 
 /** The same quiet line at the bottom of every page: the source, the community, the policies, and Riot's notice. */
 </script>
@@ -31,6 +31,14 @@ import { DISCORD_URL, REPO_URL } from '../lib/links.js'
         class="transition-colors hover:text-ink pointer-coarse:py-3.5"
       >
         Discord
+      </a>
+      <a
+        :href="X_URL"
+        target="_blank"
+        rel="noreferrer"
+        class="transition-colors hover:text-ink pointer-coarse:py-3.5"
+      >
+        X
       </a>
       <Link href="/privacy" class="transition-colors hover:text-ink pointer-coarse:py-3.5">Privacy</Link>
       <Link href="/legal" class="transition-colors hover:text-ink pointer-coarse:py-3.5">Legal notice</Link>

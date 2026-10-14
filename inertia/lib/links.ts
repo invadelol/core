@@ -6,3 +6,6 @@ export const DISCORD_URL = 'https://discord.gg/JC2QTNmDyu'
 
 /** The public contract between the desktop app and invade.lol: what the app sends, field by field. */
 export const SYNC_CONTRACT_URL = `${REPO_URL}/blob/main/docs/desktop-sync.md`
+
+/** The X account. Linked from the footer; `/x` redirects here. */
+export const X_URL = 'https://x.com/invadedotlol'

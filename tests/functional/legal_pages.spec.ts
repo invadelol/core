@@ -73,12 +73,15 @@ test.group('Privacy policy and legal notice', (group) => {
     assert.notInclude(legal.text(), '6-III-2')
   })
 
-  test('/terms, /discord redirect', async ({ client }) => {
+  test('/terms, /discord, /x redirect', async ({ client }) => {
     const terms = await client.get('/terms').redirects(0)
     terms.assertStatus(302)
     terms.assertHeader('location', '/legal#terms')
     const discord = await client.get('/discord').redirects(0)
     discord.assertStatus(302)
     discord.assertHeader('location', 'https://discord.gg/JC2QTNmDyu')
+    const x = await client.get('/x').redirects(0)
+    x.assertStatus(302)
+    x.assertHeader('location', 'https://x.com/invadedotlol')
   })
 })
