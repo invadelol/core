@@ -12,6 +12,8 @@ const DEFAULTS = {
   name: 'Louis Leschevin',
   email: 'louis.leschevin@gmail.com',
   address: '1005 Haute Folie, 14200 Hérouville-Saint-Clair, France',
+  /** OVHcloud's head office; the servers run in its Gravelines data centre. */
+  host: 'OVH SAS, 2 rue Kellermann, 59100 Roubaix, France, +33 9 72 10 10 07',
 }
 
 /**
@@ -19,7 +21,7 @@ const DEFAULTS = {
  * field is optional: the pages leave out a line whose value is not set.
  */
 export function legalPublisher(): LegalPublisher {
-  const host = value('LEGAL_HOST')
+  const host = value('LEGAL_HOST') ?? DEFAULTS.host
   return {
     name: value('LEGAL_PUBLISHER_NAME') ?? DEFAULTS.name,
     email: value('LEGAL_CONTACT_EMAIL') ?? DEFAULTS.email,
