@@ -46,7 +46,7 @@ const FAQ = [
   },
   {
     q: 'Why does my computer warn me when I open it?',
-    a: 'The builds are not code-signed yet, so your system may ask once. On Windows, choose More info, then Run anyway. On macOS, drag Invade to Applications, then right-click it and choose Open.',
+    a: 'The builds are not code-signed yet, so your system asks once. On Windows, your browser may say the file isn’t commonly downloaded: choose Keep. If Windows then says it protected your PC, choose More info, then Run anyway. On macOS, drag Invade to Applications and open it. When macOS stops it, open System Settings, Privacy & Security, and choose Open Anyway.',
   },
   {
     q: 'How does it update?',
@@ -92,9 +92,9 @@ const FAQ = [
 
     <p v-reveal class="unsigned ap-wrap ap-fine">
       <span class="ln">
-        The builds are not code-signed yet, so your system may ask once. On Windows, choose
-        <em>More info</em>, then <em>Run anyway</em>. On macOS, drag Invade to Applications, then
-        right-click it and choose <em>Open</em>.
+        The builds are not code-signed yet, so your system asks once. On Windows, keep the file if
+        your browser asks, then choose <em>More info</em> and <em>Run anyway</em>. On macOS, open
+        Invade once, then choose <em>Open Anyway</em> in System Settings, Privacy &amp; Security.
       </span>
     </p>
 
