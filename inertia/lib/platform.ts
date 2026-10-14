@@ -39,7 +39,15 @@ function gpuIsIntel(): boolean {
  * (phones, tablets, Linux). Browsers only reveal a Mac's chip in some cases, so a Mac is
  * treated as Apple Silicon unless something says Intel: every Mac sold since late 2020 is.
  */
-export async function detectDesktopTarget(): Promise<DesktopPlatform | null> {
+export function detectDesktopTarget(): Promise<DesktopPlatform | null> {
+  // Asked by several parts of a page; the answer does not change, so it is worked out once.
+  detected ??= detect()
+  return detected
+}
+
+let detected: Promise<DesktopPlatform | null> | undefined
+
+async function detect(): Promise<DesktopPlatform | null> {
   const nav = navigator as NavigatorWithHints
   const hinted = nav.userAgentData?.platform
   const ua = navigator.userAgent

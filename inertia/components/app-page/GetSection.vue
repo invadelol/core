@@ -4,6 +4,7 @@ import { Logo } from '@invadelol/ui'
 import { ChevronDown, Download } from 'lucide-vue-next'
 import { detectDesktopTarget, type DesktopPlatform } from '../../lib/platform.js'
 import DownloadButtons from './DownloadButtons.vue'
+import PhoneActions from './PhoneActions.vue'
 import { vReveal } from './motion'
 
 /** The download for this computer, every build with its requirements, then the questions. */
@@ -63,7 +64,8 @@ const FAQ = [
         Free for Windows and macOS<template v-if="version">, version {{ version }}</template
         >.
       </p>
-      <DownloadButtons class="get-dl ln" :others="false" />
+      <DownloadButtons class="get-dl ln on-pc" :others="false" />
+      <PhoneActions class="get-dl ln on-phone" />
     </div>
 
     <div class="ap-wrap">

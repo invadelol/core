@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import { Head } from '@inertiajs/vue3'
+import { detectDesktopTarget } from '../lib/platform.js'
 import AppHeader from '../components/AppHeader.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import HeroSection from '../components/app-page/HeroSection.vue'
@@ -13,6 +15,14 @@ import GetSection from '../components/app-page/GetSection.vue'
 import '../components/app-page/app-page.css'
 
 defineProps<{ version: string | null }>()
+
+/**
+ * A touch screen without hover gets the phone's actions in place of the download (app-page.css,
+ * `.on-phone`), decided by CSS so the server's page is already right. A computer the app runs on
+ * (a Windows tablet, say) is confirmed here once the page is running, and keeps the download.
+ */
+const pc = ref(false)
+onMounted(async () => (pc.value = (await detectDesktopTarget()) !== null))
 
 /**
  * /app, the desktop app's page, laid out like a product page: one idea per section, each shown
@@ -29,7 +39,7 @@ defineProps<{ version: string | null }>()
   <div class="flex min-h-screen flex-col">
     <AppHeader />
 
-    <main class="ap flex-1">
+    <main class="ap flex-1" :class="{ pc }">
       <HeroSection :version="version" />
       <GameSection />
       <DraftSection />
