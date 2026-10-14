@@ -375,11 +375,11 @@ has no stat shards) so readers can hide them. Riot games store `{ …: true, "po
 400, 420, 430, 440, 450, 480, 490, 700, 720, 900, 1020, 1700, 1710, 1900, 2400.
 (Nexus Blitz, 1300, is played on map 21, which §4.1 does not accept.)
 
-Brawl (2300) and League Classic are never accepted, stored nor shown, from the app or from
-match-v5: Riot has not approved Brawl data, and League Classic data must not be shown in any form.
-Both answer 422 `E_INVALID_MATCH` (`queue 2300 is not accepted`). The list lives in
-`EXCLUDED_QUEUE_IDS` (`app/constants/riot.ts`); League Classic joins it once Riot publishes its
-queue id.
+Brawl (2300–2305) and League Classic (the client's "Jade" queues: 4300–4311, 4320–4321 and
+customs 3260–3262) are never accepted, stored nor shown, from the app or from match-v5: Riot has
+not approved Brawl data, and League Classic data must not be shown in any form. Both answer 422
+`E_INVALID_MATCH` (`queue 2300 is not accepted`). The list lives in `EXCLUDED_QUEUE_IDS`
+(`app/constants/riot.ts`), with the same ranges as the app's `lcu::RESTRICTED_QUEUES`.
 
 ### 4.4 LP changes (→ `lp: "rejected"` with the reason logged; the match itself is still accepted)
 

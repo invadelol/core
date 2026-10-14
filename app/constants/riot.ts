@@ -16,10 +16,17 @@ export type RiotQueueType = keyof typeof QUEUE_IDS | 'all'
  * desktop app). Riot's developer policies: Brawl (2300) data is not approved for third-party
  * products, and League Classic data must not be shown in any form (since 2026-07-28).
  *
- * League Classic has no queue id in Riot's queues.json yet (checked 2026-10-14): add it here
- * as soon as Riot publishes it. Every read and write below goes through this list.
+ * Riot's queues.json does not list League Classic yet (checked 2026-10-14). The ids below come
+ * from the client's own queue list (patch 16.20), where League Classic is the "Jade" group:
+ * PvP 4300–4311, co-op vs AI 4320–4321, customs 3260–3262. Brawl is 2300–2305. The desktop app
+ * keeps the same ranges (`lcu::RESTRICTED_QUEUES`). Every read and write below goes through this list.
  */
-export const EXCLUDED_QUEUE_IDS: readonly number[] = [2300]
+const range = (lo: number, hi: number) => Array.from({ length: hi - lo + 1 }, (_, i) => lo + i)
+export const EXCLUDED_QUEUE_IDS: readonly number[] = [
+  ...range(2300, 2305),
+  ...range(3260, 3262),
+  ...range(4300, 4321),
+]
 
 /** Whether a game of this queue must never be stored nor shown. */
 export function isExcludedQueue(queueId: unknown) {
