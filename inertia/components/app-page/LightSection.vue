@@ -3,23 +3,18 @@ import { ref } from 'vue'
 import { onEnter, prefersReduced, vReveal } from './motion'
 
 /**
- * What Invade costs the computer, in figures measured for the 0.2.9 release (the app's
- * performance audit, 12 October 2026). Each figure counts up once, when it comes into view.
+ * What Invade costs the computer, in figures from the app's performance audit (the memory
+ * figure is the mean of the 90 s steady recording sample, 1 October 2026). Each figure counts
+ * up once, when it comes into view.
  */
 const FIGURES = [
   { to: 0.02, decimals: 2, unit: '%', text: 'CPU with League closed and Invade in the tray.' },
   { to: 20, decimals: 0, unit: 'kB', text: 'Sent to invade.lol for a finished game, compressed.' },
   {
-    to: 0,
+    to: 38,
     decimals: 0,
-    unit: '',
-    text: 'Overlay windows between games. It opens for champ select.',
-  },
-  {
-    to: 1,
-    decimals: 0,
-    unit: 's',
-    text: 'Roughly how long the champ select panels take to appear.',
+    unit: 'MB',
+    text: 'Average memory the native core uses while it records a game.',
   },
 ]
 
@@ -79,25 +74,26 @@ onEnter(
 
     <p v-reveal class="note ap-wrap ap-fine">
       <span class="ln">
-        Measured with the 0.2.9 release build on macOS, League closed for the first figure.
+        Measured on macOS: League closed for the first figure, a two-minute recording for the memory
+        figure.
       </span>
     </p>
   </section>
 </template>
 
 <style scoped>
-/* Four tiles, as the app's Home shows its figures: a sheet each, the figure large and engraved. */
+/* Three tiles, as the app's Home shows its figures: a sheet each, the figure large and engraved. */
 .figures {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   max-width: 1080px;
   margin-top: clamp(56px, 7vw, 96px);
 }
 
-@media (min-width: 1100px) {
+@media (min-width: 760px) {
   .figures {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
