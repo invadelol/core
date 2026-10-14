@@ -2,7 +2,8 @@ import { onBeforeUnmount, onMounted, type Directive, type Ref } from 'vue'
 
 /**
  * The page's motion, kept to two tools:
- * - `v-reveal`: a block enters once, its `.ln` children rising and fading in turn (IntersectionObserver).
+ * - `v-reveal`: a block below the fold enters once, its `.ln` children rising and fading in turn
+ *   (IntersectionObserver).
  * - `useScrollFx`: one requestAnimationFrame loop for the whole page, calling each registered effect
  *   with its element's box while that element is near the viewport. Effects write transforms only.
  * With reduced motion, reveals are shown at once and effects are asked for their final state.
@@ -32,9 +33,15 @@ function reveal(el: Element) {
   revealer?.unobserve(el)
 }
 
-/** `v-reveal`: the element (and its `.ln` children, staggered by `--i`) enters once. */
+/**
+ * `v-reveal`: the element (and its `.ln` children, staggered by `--i`) enters once. The server's
+ * page shows everything, so a block already on screen when the page starts running is left as it
+ * is: hiding it then would blank what the reader is looking at until the observer brings it back.
+ */
 export const vReveal: Directive<HTMLElement> = {
   mounted(el) {
+    const box = el.getBoundingClientRect()
+    if (box.top < window.innerHeight && box.bottom > 0) return
     el.classList.add('rv')
     el.querySelectorAll<HTMLElement>('.ln').forEach((child, i) => {
       if (!child.style.getPropertyValue('--i')) child.style.setProperty('--i', String(i))
@@ -42,7 +49,7 @@ export const vReveal: Directive<HTMLElement> = {
     if (prefersReduced() || !('IntersectionObserver' in window)) return reveal(el)
     revealer ??= new IntersectionObserver(
       (entries) => entries.forEach((e) => e.isIntersecting && reveal(e.target)),
-      { rootMargin: '0px 0px -12% 0px', threshold: 0.12 }
+      { rootMargin: '0px 0px -8% 0px', threshold: 0 }
     )
     revealer.observe(el)
   },
