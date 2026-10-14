@@ -123,7 +123,7 @@ router
 router.get('/download/:platform', [DownloadsController, 'show'])
 
 /** The desktop app's landing page, before the summoner catch-all below. */
-router.get('/app', [AppPageController, 'show'])
+router.get('/app', [AppPageController, 'show']).use(middleware.httpCache({ page: true }))
 
 /** The privacy policy, the legal notice and its terms, before the summoner catch-all below. */
 router.get('/privacy', [LegalController, 'privacy'])
@@ -148,7 +148,7 @@ router.get('/og/:summoner', [() => import('#controllers/social_cards_controller'
 
 router.get('/sitemap.xml', [() => import('#controllers/sitemaps_controller'), 'index'])
 
-router.get('/', [HomeController, 'show'])
+router.get('/', [HomeController, 'show']).use(middleware.httpCache({ page: true }))
 
 router.get('/:summoner/match/:matchId', ({ inertia, params }) => {
   return inertia.render('match', {
