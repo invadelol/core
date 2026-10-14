@@ -1,5 +1,6 @@
 import { defineConfig } from '@adonisjs/inertia'
 import type { InferSharedProps } from '@adonisjs/inertia/types'
+import { webAnalytics } from '#services/openpanel'
 
 const inertiaConfig = defineConfig({
   /**
@@ -12,6 +13,8 @@ const inertiaConfig = defineConfig({
    */
   sharedData: {
     // user: (ctx) => ctx.inertia.always(() => ctx.auth.user),
+    /** OpenPanel's web script, written by the layout (resources/views/inertia_layout.edge). */
+    analytics: () => webAnalytics(),
   },
 
   /**

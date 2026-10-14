@@ -34,6 +34,9 @@ test.group('Privacy policy and legal notice', (group) => {
     privacy.assertTextIncludes('14 October 2026')
     privacy.assertTextIncludes('Example Host SAS')
     privacy.assertTextIncludes('docs/desktop-sync.md')
+    // The OpenPanel web script is in every page's head.
+    privacy.assertTextIncludes('https://op.lschvn.foo/op1.js')
+    privacy.assertTextIncludes('9a2c508e-3e56-415e-bf7f-bf76fd0741e2')
 
     const legal = await client.get('/legal')
     legal.assertStatus(200)
