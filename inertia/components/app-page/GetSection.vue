@@ -41,7 +41,7 @@ const FAQ = [
   },
   {
     q: 'What does Invade send, and where?',
-    a: 'Your finished games go to invade.lol, so your profile there is up to date; Settings shows what was sent. Besides that, one anonymous ping when the app starts and one per update, which you can switch off in Settings.',
+    a: 'Your finished games go to invade.lol, so your profile there is up to date, along with the rank, level and mastery of the players the League client shows you, so their profiles stay current too. Settings shows what was sent, and invade.lol/privacy lists all of it. Besides that, one anonymous ping when the app starts and one per update, which you can switch off in Settings.',
   },
   {
     q: 'Why does my computer warn me when I open it?',
