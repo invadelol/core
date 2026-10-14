@@ -20,6 +20,7 @@ import {
   uploadValidator,
 } from '#validators/desktop'
 import type DesktopDevice from '#models/desktop_device'
+import { track } from '#services/openpanel'
 import type { MatchUpload, PlayerBatch } from '#types/desktop'
 
 type Limit = (typeof DESKTOP_LIMITS)[keyof typeof DESKTOP_LIMITS]
@@ -86,7 +87,9 @@ export default class DesktopController {
   async register({ request, response }: HttpContext) {
     await limit(DESKTOP_LIMITS.register, request.ip())
     const { app, os } = await request.validateUsing(registerDeviceValidator)
-    return response.created(await deviceService.register(app, os))
+    const registered = await deviceService.register(app, os)
+    track('app_device_registered', { app, os }, { profileId: registered.deviceId })
+    return response.created(registered)
   }
 
   /**
@@ -168,6 +171,13 @@ export default class DesktopController {
     }
     const payload = (await ctx.request.validateUsing(uploadValidator)) as unknown as MatchUpload
     const result = await publicationService.upload(payload, { device: current, ip })
+    if (!observed) {
+      track(
+        'app_game_uploaded',
+        { queue: payload.game?.queueId ?? null, app: current.app, os: current.os },
+        { profileId: current.id }
+      )
+    }
     return ctx.response.ok(result)
   }
 

@@ -56,8 +56,11 @@ defineProps<{ publisher: LegalPublisher }>()
       them to you. Switch them off in Settings, Data.
     </p>
     <p>
-      <strong>Website visits.</strong> Our servers keep technical logs (IP address, browser, page)
-      for 14 days for security. invade.lol sets no cookies.
+      <strong>Website visits.</strong> We count page views, downloads and clicks on outside links
+      with OpenPanel, which we run on our own server. It sets no cookies and doesn’t keep your IP
+      address. The app’s device registrations and uploaded games are counted there too, under the
+      device’s random id. Our servers keep technical logs (IP address, browser, page) for 14 days
+      for security. invade.lol sets no cookies.
     </p>
     <p>
       <strong>What never leaves your computer.</strong> The app’s database (your accounts, games,

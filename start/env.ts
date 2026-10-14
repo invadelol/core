@@ -96,4 +96,15 @@ export default await Env.create(new URL('../', import.meta.url), {
 
   /** Local only: a made-up live game for the fictional demo accounts. Ignored in production. */
   DEMO_LIVE: Env.schema.boolean.optional(),
+
+  /*
+  |----------------------------------------------------------
+  | OpenPanel analytics (app/services/openpanel.ts)
+  |----------------------------------------------------------
+  | The URL and client id default to the invade.lol project; server events need the secret.
+  */
+  OPENPANEL_API_URL: Env.schema.string.optional(),
+  OPENPANEL_CLIENT_ID: Env.schema.string.optional(),
+  OPENPANEL_CLIENT_SECRET: Env.schema.string.optional(),
+  OPENPANEL_SCRIPT_URL: Env.schema.string.optional(),
 })
