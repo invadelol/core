@@ -62,6 +62,10 @@ test.group('Desktop upload structural checks (§4.1)', (group) => {
       'queue 1300 is not accepted'
     )
     assert.equal(
+      check((u) => (u.game.queueId = 2300)),
+      'queue 2300 is not accepted'
+    )
+    assert.equal(
       check((u) => (u.game.mapId = 21)),
       'map 21 is not accepted'
     )

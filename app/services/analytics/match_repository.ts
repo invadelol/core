@@ -3,6 +3,7 @@ import logger from '@adonisjs/core/services/logger'
 import { asString, escapeClickhouseString } from '#utils/clickhouse'
 import { plan, type ColumnPlan } from '#services/analytics/columns'
 import { DEFAULT_MATCH_COUNT, DEFAULT_OFFSET } from '#config/constants'
+import { VISIBLE_QUEUES_SQL, isExcludedQueue } from '#constants/riot'
 
 /* ── Column plans ───────────────────────────────────────────────
    The SELECT clause and the row reader come from one list, so a column can
@@ -408,7 +409,8 @@ export class MatchRepository {
     const offset = integer(filters.offset, DEFAULT_OFFSET)
     const escapedPuuid = escapeClickhouseString(puuid)
 
-    const whereClauses: string[] = []
+    // Brawl and League Classic are never listed (EXCLUDED_QUEUE_IDS).
+    const whereClauses: string[] = [VISIBLE_QUEUES_SQL]
     if (filters.queueIds?.length) {
       whereClauses.push(`queue_id IN (${filters.queueIds.map(Number).join(',')})`)
     }
@@ -452,7 +454,7 @@ export class MatchRepository {
       SELECT match_id
       FROM participants
       PREWHERE puuid = '${escapeClickhouseString(puuid)}'
-      WHERE queue_id != 0
+      WHERE queue_id != 0 AND ${VISIBLE_QUEUES_SQL}
         AND (match_id, team_id) IN (
           SELECT match_id, team_id
           FROM participants
@@ -477,6 +479,7 @@ export class MatchRepository {
       FROM matches
       WHERE game_start_ms >= ${integer(filters.since, 0)}
         AND queue_id IN (${queues.join(',')})
+        AND ${VISIBLE_QUEUES_SQL}
       ORDER BY game_start_ms DESC, match_id DESC
       LIMIT ${integer(filters.limit, DEFAULT_MATCH_COUNT)}
     `
@@ -549,6 +552,7 @@ export class MatchRepository {
         SELECT match_id, champion_id, win, kills, deaths, assists
         FROM participants
         PREWHERE puuid = '${escapeClickhouseString(puuid)}'
+        WHERE ${VISIBLE_QUEUES_SQL}
         ORDER BY game_start_ms DESC, match_id DESC
         LIMIT ${integer(count, DEFAULT_MATCH_COUNT)}
       )
@@ -620,6 +624,8 @@ export class MatchRepository {
 
     const base = matches[0]
     if (!base?.matchId) return null
+    // A Brawl or League Classic game stored before they were excluded is never shown.
+    if (isExcludedQueue(base.queueId)) return null
 
     return { ...base, participants, timeline, events }
   }
