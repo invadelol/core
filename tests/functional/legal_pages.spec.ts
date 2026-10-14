@@ -19,9 +19,7 @@ test.group('Privacy policy and legal notice', (group) => {
     for (const key of KEYS) env.set(key, saved[key] ?? '')
   })
 
-  test('the publisher comes from the environment, and unset lines are left out', async ({
-    client,
-  }) => {
+  test('the publisher comes from the environment', async ({ client }) => {
     set({
       LEGAL_PUBLISHER_NAME: 'Test Publisher',
       LEGAL_CONTACT_EMAIL: 'contact@example.test',
@@ -41,20 +39,25 @@ test.group('Privacy policy and legal notice', (group) => {
     legal.assertStatus(200)
     legal.assertTextIncludes('Legal notice')
     legal.assertTextIncludes('Test Publisher')
-    legal.assertTextIncludes('6-III-2')
     legal.assertTextIncludes('Example Host SAS, 1 rue')
   })
 
-  test('nothing set shows no placeholder', async ({ client, assert }) => {
+  test('nothing set falls back to the default publisher, with no placeholder', async ({
+    client,
+    assert,
+  }) => {
     set({})
     const legal = await client.get('/legal')
     legal.assertStatus(200)
-    legal.assertTextIncludes('6-III-2')
-    assert.notInclude(legal.text(), 'Publication director')
+    legal.assertTextIncludes('Louis Leschevin')
+    legal.assertTextIncludes('louis.leschevin@gmail.com')
+    legal.assertTextIncludes('Hérouville-Saint-Clair')
+    assert.notInclude(legal.text(), '6-III-2')
     assert.notInclude(legal.text(), '[publisher')
     const privacy = await client.get('/privacy')
     privacy.assertStatus(200)
     privacy.assertTextIncludes('our hosting provider')
+    privacy.assertTextIncludes('louis.leschevin@gmail.com')
     assert.notInclude(privacy.text(), '[contact email]')
     assert.notInclude(privacy.text(), 'Last updated')
   })
