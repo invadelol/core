@@ -77,6 +77,23 @@ export default await Env.create(new URL('../', import.meta.url), {
   /** Oldest app version allowed to upload, e.g. "0.2.7". Unset means any. */
   DESKTOP_MIN_APP_VERSION: Env.schema.string.optional(),
 
+  /*
+  |----------------------------------------------------------
+  | The publisher on /privacy and /legal
+  |----------------------------------------------------------
+  | Kept out of the public repository. Every one is optional:
+  | the pages leave out a line whose value is not set.
+  */
+  LEGAL_PUBLISHER_NAME: Env.schema.string.optional(),
+  LEGAL_CONTACT_EMAIL: Env.schema.string.optional(),
+  /** Unset: the publisher is a private individual whose identity the host holds (LCEN 6-III-2). */
+  LEGAL_ADDRESS: Env.schema.string.optional(),
+  LEGAL_PHONE: Env.schema.string.optional(),
+  /** The host in one line: company, address, phone. The company is the text before the first comma. */
+  LEGAL_HOST: Env.schema.string.optional(),
+  /** When the privacy policy last changed, as it should read, e.g. "14 October 2026". */
+  LEGAL_UPDATED: Env.schema.string.optional(),
+
   /** Local only: a made-up live game for the fictional demo accounts. Ignored in production. */
   DEMO_LIVE: Env.schema.boolean.optional(),
 })

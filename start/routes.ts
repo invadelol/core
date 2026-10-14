@@ -19,6 +19,7 @@ const AutoSwagger = ((AutoSwaggerModule as unknown as { default?: unknown }).def
 import swagger from '#config/swagger'
 import { middleware } from '#start/middleware'
 import { ANALYTICS_PANELS, analyticsUrls } from '#constants/analytics'
+import { DISCORD_URL } from '../inertia/lib/links.js'
 
 const SummonersController = () => import('#controllers/summoners_controller')
 const HealthChecksController = () => import('#controllers/health_checks_controller')
@@ -31,6 +32,7 @@ const DesktopController = () => import('#controllers/desktop_controller')
 const HomeController = () => import('#controllers/home_controller')
 const LensController = () => import('#controllers/lens_controller')
 const SynergyController = () => import('#controllers/synergy_controller')
+const LegalController = () => import('#controllers/legal_controller')
 
 // API routes group
 router
@@ -122,6 +124,14 @@ router.get('/download/:platform', [DownloadsController, 'show'])
 
 /** The desktop app's landing page, before the summoner catch-all below. */
 router.get('/app', [AppPageController, 'show'])
+
+/** The privacy policy, the legal notice and its terms, before the summoner catch-all below. */
+router.get('/privacy', [LegalController, 'privacy'])
+router.get('/legal', [LegalController, 'legal'])
+router.get('/terms', ({ response }) => response.redirect('/legal#terms', false, 302))
+
+/** The community server, before the summoner catch-all below. */
+router.get('/discord', ({ response }) => response.redirect(DISCORD_URL, false, 302))
 
 router.get('/swagger', async () => {
   return AutoSwagger.docs(router.toJSON(), swagger)
