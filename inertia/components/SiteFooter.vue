@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
 import { Logo } from '@invadelol/ui'
-import { REPO_URL } from '../lib/links.js'
+import { DISCORD_URL, REPO_URL } from '../lib/links.js'
 
-/** The same quiet line at the bottom of every page: where the source lives, and Riot's notice. */
+/** The same quiet line at the bottom of every page: the source, the community, the policies, and Riot's notice. */
 </script>
 
 <template>
@@ -24,6 +24,16 @@ import { REPO_URL } from '../lib/links.js'
       >
         Source on GitHub
       </a>
+      <a
+        :href="DISCORD_URL"
+        target="_blank"
+        rel="noreferrer"
+        class="transition-colors hover:text-ink pointer-coarse:py-3.5"
+      >
+        Discord
+      </a>
+      <Link href="/privacy" class="transition-colors hover:text-ink pointer-coarse:py-3.5">Privacy</Link>
+      <Link href="/legal" class="transition-colors hover:text-ink pointer-coarse:py-3.5">Legal notice</Link>
       <span class="w-full text-ink-4 sm:ml-auto sm:w-auto pointer-coarse:pb-3">
         Not endorsed by Riot Games. League of Legends is a trademark of Riot Games, Inc.
       </span>
