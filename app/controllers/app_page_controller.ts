@@ -22,8 +22,8 @@ export default class AppPageController {
         title: 'Invade for desktop · invade.lol',
         description: DESCRIPTION,
         url: 'https://invade.lol/app',
-        image: 'https://invade.lol/landing/app-og.png',
-        alt: 'Every game of League, timed, scored and clipped: the Invade desktop app’s Home, with rank and LP, scored games, clips and performance',
+        image: 'https://invade.lol/landing/app-og-v2.png',
+        alt: 'The Invade desktop app’s Home, with rank and LP, scored games, clips and performance, under the lines “A native app for League of Legends. Free for everyone.”',
       },
     })
   }

@@ -15,7 +15,7 @@ test.group('Desktop app page', (group) => {
     response.assertTextIncludes('0.2.2')
     response.assertTextIncludes('property="og:type" content="website"')
     response.assertTextIncludes('name="twitter:site" content="@invadedotlol"')
-    response.assertTextIncludes('https://invade.lol/landing/app-og.png')
+    response.assertTextIncludes('https://invade.lol/landing/app-og-v2.png')
   })
 
   test('still renders when the release cannot be read', async ({ client }) => {
