@@ -19,7 +19,7 @@ const AutoSwagger = ((AutoSwaggerModule as unknown as { default?: unknown }).def
 import swagger from '#config/swagger'
 import { middleware } from '#start/middleware'
 import { ANALYTICS_PANELS, analyticsUrls } from '#constants/analytics'
-import { DISCORD_URL, X_URL } from '../inertia/lib/links.js'
+import { BUGS_URL, DISCORD_URL, X_URL } from '../inertia/lib/links.js'
 
 const SummonersController = () => import('#controllers/summoners_controller')
 const HealthChecksController = () => import('#controllers/health_checks_controller')
@@ -135,6 +135,9 @@ router.get('/discord', ({ response }) => response.redirect(DISCORD_URL, false, 3
 
 /** The X account, before the summoner catch-all below. */
 router.get('/x', ({ response }) => response.redirect(X_URL, false, 302))
+
+/** The desktop app's "Report a bug" button, so its target can change without an app release. */
+router.get('/bugs', ({ response }) => response.redirect(BUGS_URL, false, 302))
 
 router.get('/swagger', async () => {
   return AutoSwagger.docs(router.toJSON(), swagger)
