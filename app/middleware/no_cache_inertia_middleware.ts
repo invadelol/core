@@ -14,7 +14,8 @@ import { HttpContext } from '@adonisjs/core/http'
  * instant-Back behaviour is worth a great deal more.
  *
  * API endpoints are excluded as they have their own caching strategy, and so
- * is the asset proxy, whose whole purpose is long-lived browser caching.
+ * are the asset proxy and the generated pictures (social cards, the desktop
+ * app's Discord presence), whose whole purpose is long-lived caching.
  */
 export default class NoCacheInertiaMiddleware {
   async handle({ request, response }: HttpContext, next: () => Promise<void>) {
@@ -25,6 +26,7 @@ export default class NoCacheInertiaMiddleware {
       !url.startsWith('/api/') &&
       !url.startsWith('/cdn/') &&
       !url.startsWith('/og/') &&
+      !url.startsWith('/presence/') &&
       url !== '/sitemap.xml' &&
       url !== '/robots.txt'
     ) {
