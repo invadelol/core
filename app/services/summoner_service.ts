@@ -396,7 +396,7 @@ class SummonerService {
     if (!sanitized) return []
 
     // to_tsquery requires terms to be joined with operators, so a multi-word
-    // search like "MRS Paulux" must become "MRS:* & Paulux:*"
+    // search like "Sable Fox" must become "Sable:* & Fox:*"
     const tsquery = sanitized
       .split(/\s+/)
       .filter(Boolean)

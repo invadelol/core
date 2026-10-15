@@ -8,8 +8,8 @@ test.group('Summoner Normalization', () => {
   })
 
   test('normalizes name with spaces (encoded)', ({ assert }) => {
-    const result = summonerService.normalize('MRS%20PauluX-KCWIN')
-    assert.deepEqual(result, { gameName: 'MRS PauluX', tagLine: 'KCWIN' })
+    const result = summonerService.normalize('Sable%20Fox-SLY')
+    assert.deepEqual(result, { gameName: 'Sable Fox', tagLine: 'SLY' })
   })
 
   test('normalizes name with hyphens (encoded)', ({ assert }) => {
@@ -26,15 +26,15 @@ test.group('Summoner Normalization', () => {
 
   test('normalizes name with fully encoded separator', ({ assert }) => {
     // This previously failed
-    const result = summonerService.normalize('MRS%20PauluX%2DKCWIN')
-    assert.deepEqual(result, { gameName: 'MRS PauluX', tagLine: 'KCWIN' })
+    const result = summonerService.normalize('Sable%20Fox%2DSLY')
+    assert.deepEqual(result, { gameName: 'Sable Fox', tagLine: 'SLY' })
   })
 
   test('normalizes name with plus sign', ({ assert }) => {
     // decodeURIComponent does NOT handle +, but let's see current behavior
-    // Input: MRS+PauluX-KCWIN. decodeURIComponent("MRS+PauluX") -> "MRS+PauluX".
-    const result = summonerService.normalize('MRS+PauluX-KCWIN')
-    assert.deepEqual(result, { gameName: 'MRS+PauluX', tagLine: 'KCWIN' })
+    // Input: Sable+Fox-SLY. decodeURIComponent("Sable+Fox") -> "Sable+Fox".
+    const result = summonerService.normalize('Sable+Fox-SLY')
+    assert.deepEqual(result, { gameName: 'Sable+Fox', tagLine: 'SLY' })
   })
 
   test('returns null for invalid format', ({ assert }) => {

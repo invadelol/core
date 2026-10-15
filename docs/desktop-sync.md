@@ -90,7 +90,7 @@ be replayed or modified.
   `createHmac('sha256', secret)` with the hex string), not the 32 bytes they encode.
 
 Core notes: `path_with_query` is the request target exactly as it appears in the request line
-(`/api/desktop/resolve?gameName=Louhi&tagLine=727`, encoded as sent). The body hash covers the bytes
+(`/api/desktop/resolve?gameName=Mirelight&tagLine=727`, encoded as sent). The body hash covers the bytes
 as they arrived, hashed while the body parser reads them. Checks run in this order: token
 (`E_DEVICE_UNAUTHORIZED`), secret present (`E_DEVICE_UNAUTHORIZED`), both headers present and well
 formed — a timestamp of digits, a signature of exactly 64 lowercase hex characters
@@ -169,12 +169,12 @@ The token and the secret are shown once (§1.1). `DELETE /api/desktop/devices/me
 Makes an account one of this device's uploaders.
 
 ```json
-{ "gameName": "Louhi", "tagLine": "727", "platform": "EUW1", "rawPuuid": "5c8a…" | null, "source": "lcu" | "riot_id" }
+{ "gameName": "Mirelight", "tagLine": "727", "platform": "EUW1", "rawPuuid": "5c8a…" | null, "source": "lcu" | "riot_id" }
 ```
 
 Core resolves the Riot ID to the API PUUID (stored `riot_player` first, else account-v1 + the
 existing multi-platform discovery), stores the link and, when `rawPuuid` is given, the alias
-`rawPuuid → API puuid` (§3). → `200 { "puuid": "<api puuid>", "profileUrl": "https://invade.lol/Louhi-727" }`.
+`rawPuuid → API puuid` (§3). → `200 { "puuid": "<api puuid>", "profileUrl": "https://invade.lol/Mirelight-727" }`.
 Unknown Riot ID: 404. `DELETE /api/desktop/link/:puuid` (auth) unlinks → `204`.
 A `rawPuuid` that match-v5 already tied to another account answers 422 `E_RIOT_ID_MISMATCH`; an
 unsupported platform answers 422 `E_VALIDATION_ERROR`. A later `riot_id` link keeps the raw PUUID an
@@ -190,13 +190,13 @@ match-v5 call during onboarding).
 
 ```json
 {
-  "puuid": "<api puuid>", "gameName": "Louhi", "tagLine": "727", "platform": "EUW1",
+  "puuid": "<api puuid>", "gameName": "Mirelight", "tagLine": "727", "platform": "EUW1",
   "profileIconId": 6634, "summonerLevel": 412,
   "solo": { "tier": "EMERALD", "division": "II", "lp": 64, "wins": 61, "losses": 52 } | null,
   "flex": null,
   "mastery": [{ "championId": 45, "championLevel": 38, "championPoints": 402115, "lastPlayTime": 1791400000000 }],
   "recent": [{ "matchId": "EUW1_…", "championId": 45, "win": true, "queueId": 420, "gameStartMs": 1791400000000, "durationSec": 1810, "kills": 7, "deaths": 2, "assists": 9 }],
-  "profileUrl": "https://invade.lol/Louhi-727",
+  "profileUrl": "https://invade.lol/Mirelight-727",
   "fetchedAt": 1791450000000, "stale": false
 }
 ```
@@ -227,7 +227,7 @@ hides losses.
     "gameId": 7998180573, "platformId": "EUW1", "gameCreation": 1791448000000, "gameDuration": 1810,
     "queueId": 420, "mapId": 11, "gameMode": "CLASSIC", "gameType": "MATCHED_GAME", "gameVersion": "16.20.721.4471",
     "participantIdentities": [
-      { "participantId": 1, "player": { "puuid": "<raw>", "gameName": "Louhi", "tagLine": "727", "profileIcon": 6634 } }
+      { "participantId": 1, "player": { "puuid": "<raw>", "gameName": "Mirelight", "tagLine": "727", "profileIcon": 6634 } }
     ],
     "participants": [
       { "participantId": 1, "teamId": 100, "championId": 45, "spell1Id": 4, "spell2Id": 14,
@@ -265,7 +265,7 @@ Response `200`:
 
 ```json
 { "matchId": "EUW1_7998180573", "status": "stored" | "duplicate" | "verified" | "deferred",
-  "lp": "stored" | "rejected" | "none", "url": "https://invade.lol/Louhi-727/match/EUW1_7998180573" }
+  "lp": "stored" | "rejected" | "none", "url": "https://invade.lol/Mirelight-727/match/EUW1_7998180573" }
 ```
 
 `deferred`: accepted but not published yet (§4.2); the desktop marks the item done, core finishes
