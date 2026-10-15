@@ -56,6 +56,12 @@ defineProps<{ publisher: LegalPublisher }>()
       them to you. Switch them off in Settings, Data.
     </p>
     <p>
+      <strong>Anonymous crash reports.</strong> When the app crashes, it sends us the app version,
+      your operating system and its version, which part crashed, and the first line of the error
+      with its place in the code, with user names, Riot IDs and identifiers removed. They are kept
+      90 days and never linked to your device or accounts. Switch them off in Settings, Data.
+    </p>
+    <p>
       <strong>Website visits.</strong> We count page views, downloads and clicks on outside links
       with OpenPanel, which we run on our own server. It sets no cookies and doesn’t keep your IP
       address. The app’s device registrations and uploaded games are counted there too, under the

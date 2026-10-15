@@ -194,7 +194,8 @@ deletes what it wrote. Desktop data shows its provenance (`source`,
 Run `node ace migration:run` to create the tables (`desktop_device`,
 `desktop_device_account`, `riot_puuid_alias`, `desktop_match_upload`,
 `match_source`, `lp_change`, `player_observation`, `player_mastery`,
-`riot_rank_confirmed`, and `riot_rank.source` / `riot_rank.device_id`). No new
+`riot_rank_confirmed`, `desktop_crash_report`, and `riot_rank.source` /
+`riot_rank.device_id`). No new
 environment variables: `DESKTOP_UPLOADS_ENABLED` also pauses player reports.
 
 Tests: `node ace test --tags=@desktop` runs the rules (conversion, structural

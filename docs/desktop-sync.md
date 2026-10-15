@@ -1,4 +1,4 @@
-# Desktop ↔ core: onboarding and match sync (contract v1.3)
+# Desktop ↔ core: onboarding and match sync (contract v1.4)
 
 The Invade desktop app (`invadelol/app`, Tauri + Rust) reads League data from the League client's
 local API (LCU) on the player's computer. This contract lets it:
@@ -15,7 +15,8 @@ Both sides implement exactly this document. Anything not written here is out of 
 
 - **Publishing is part of using the app.** Every finished, matchmade game the signed-in account
   played is uploaded; the app says so in Settings → invade.lol (what is sent and when) and
-  there is no switch. A device is registered as soon as an account signs in or onboarding ends.
+  there is no switch. A device is registered as soon as an account signs in or onboarding ends
+  (or, v1.4, when the app first sends a crash report, §7).
 - **Only finished games.** The games the signed-in account played, and (v1.3) the finished games
   the app reads from the client anyway: a match it opens, the games of a profile it shows. Never
   champ select, never a game in progress, never data the client hides (enemy names in ranked champ
@@ -638,3 +639,53 @@ v1.1); `freshness.lastObservedAt` is the newest applied or unchanged report (ISO
   5 attempts or 24 h. 429 / 503 pause the whole queue.
 - **Fallback:** with the client closed, a profile the app does not hold is resolved through
   `GET /api/desktop/resolve` (as onboarding does) and shown as a saved profile.
+
+## 7. Crash reports (contract v1.4)
+
+When the app crashes, it tells core which version crashed where, and nothing about who it happened
+to. Desktop side: `src-tauri/src/crash.rs` in the app.
+
+### 7.1 `POST /api/desktop/crashes` (auth; 20 / hour / device, 60 / hour / IP; body ≤ 64 KB)
+
+```json
+{ "reports": [{ "kind": "panic", "process": "core", "app": "0.3.2", "os": "windows",
+  "osVersion": "10.0.22631.4317", "message": "called `Option::unwrap()` on a `None` value",
+  "location": "src/lcu.rs:120:9", "at": 1792000000000 }] }
+```
+
+→ `202 { "stored": 1 }`. 1–10 reports, else 422 `E_VALIDATION_ERROR`:
+
+| field | value |
+| --- | --- |
+| `kind` | `panic` (a Rust panic), `exit` (the last run ended without quitting: a crash that is no panic), `error` / `rejection` (a window's uncaught error or promise rejection) |
+| `process` | `core` (Rust), `main` (the main window), `overlay` |
+| `app`, `os` | as in §2.2 |
+| `osVersion` | digits and dots, ≤ 32 (`15.3.1`, `10.0.22631.4317`); optional, may be empty |
+| `message` | the error's first line, 1–300 characters |
+| `location` | `file:line[:column]`, ≤ 160; optional, may be empty |
+| `at` | epoch ms of the crash on the computer |
+
+Core notes: rows go to `desktop_crash_report` without the device, the account or the address
+(the device only counts against the rate limit); `at` is clamped to the last 90 days and never
+after the receipt; reports older than 90 days are deleted as new ones arrive.
+
+### 7.2 Desktop behaviour
+
+- **Capture.** A panic hook writes the report to disk before the abort (release builds use
+  `panic = "abort"`); a marker file present at launch means the last run ended without quitting
+  (Quit and update installs remove it), unless a panic of that run already tells it; both windows
+  report `window.onerror`, unhandled rejections and Vue errors, each one once per launch and five
+  per window at most. Every crash also lands in `invade.log`.
+- **Scrubbing**, when written and again when sent: the first line only; the home folder and any
+  folder after `Users` / `home` (`<user>`); Riot IDs (`<riot-id>`); the game names of the
+  computer's own accounts (`<name>`); UUIDs and runs of 32+ id characters (PUUIDs, tokens,
+  secrets: `<id>`); the text Rust quotes from a value it failed to slice. Dependency paths keep
+  only the crate and its file; script URLs only their path.
+- **Sending.** Signed like every desktop request (§1.1), registering the device first if there is
+  none. Up to 10 pending reports, 20 s after launch and then at most once a minute when a window
+  reported one. 2xx and permanent 4xx settle them; anything else, a 404 included (a core
+  without the route), waits for the next launch.
+  Reports older than 30 days are dropped unsent.
+- **Switch.** Settings → Data, "Send anonymous crash reports"; until it is touched it follows the
+  usage-statistics switch. Off, nothing is sent and pending reports are deleted. Debug builds send
+  only to a local core (`INVADE_CORE_URL`).
