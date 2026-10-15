@@ -5,12 +5,14 @@ import deviceService from '#services/desktop/device_service'
 import publicationService from '#services/desktop/publication_service'
 import resolveService from '#services/desktop/resolve_service'
 import playerSnapshotService from '#services/desktop/player_snapshot_service'
+import crashReportService from '#services/desktop/crash_report_service'
 import rateLimiter, { DESKTOP_LIMITS } from '#services/desktop/rate_limiter'
 import { DESKTOP_MAX_PAYLOAD_BYTES } from '#middleware/body_parser_middleware'
 import matchSourceService from '#services/match_source_service'
 import matchRepository from '#services/analytics/match_repository'
 import { DesktopException } from '#exceptions/desktop_exception'
 import {
+  crashesValidator,
   knownValidator,
   linkValidator,
   playersValidator,
@@ -21,7 +23,7 @@ import {
 } from '#validators/desktop'
 import type DesktopDevice from '#models/desktop_device'
 import { track } from '#services/openpanel'
-import type { MatchUpload, PlayerBatch } from '#types/desktop'
+import type { CrashReport, MatchUpload, PlayerBatch } from '#types/desktop'
 
 type Limit = (typeof DESKTOP_LIMITS)[keyof typeof DESKTOP_LIMITS]
 
@@ -228,5 +230,21 @@ export default class DesktopController {
     }
     await limit(DESKTOP_LIMITS.playersDevicePlayers, current.id, batch.players.length)
     return ctx.response.ok(await playerSnapshotService.ingest(batch, { device: current, ip }))
+  }
+
+  /**
+   * Anonymous crash reports; stored without the device, account or address
+   * @tag Desktop
+   * @requestBody {"reports": [{"kind": "panic", "process": "core", "app": "0.3.2", "os": "windows", "osVersion": "10.0.22631", "message": "called `Option::unwrap()` on a `None` value", "location": "src/lcu.rs:120:9", "at": 1792000000000}]}
+   * @responseBody 202 - {"stored": 1}
+   * @responseBody 422 - Not 1-10 reports of the documented shape
+   */
+  async crashes(ctx: HttpContext) {
+    const current = device(ctx)
+    await limit(DESKTOP_LIMITS.crashesDevice, current.id)
+    await limit(DESKTOP_LIMITS.crashesIp, ctx.request.ip())
+    const { reports } = await ctx.request.validateUsing(crashesValidator)
+    const stored = await crashReportService.store(reports as CrashReport[])
+    return ctx.response.accepted({ stored })
   }
 }
