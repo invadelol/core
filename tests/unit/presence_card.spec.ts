@@ -7,13 +7,15 @@ test('presence queries take numbers and known roles only', ({ assert }) => {
     kills: 7,
     deaths: 2,
     assists: 9,
-    caption: 'MID',
+    role: 'mid',
     respawn: undefined,
   })
   assert.equal(parsePresenceQuery({ k: '7', d: '3', a: '9', t: '23' })?.respawn, 23)
-  assert.equal(parsePresenceQuery({ k: '9', d: '2', a: '12', m: '31' })?.caption, '31 MIN')
+  // The game's length of the first design is still accepted, and not drawn.
+  assert.equal(parsePresenceQuery({ k: '9', d: '2', a: '12', m: '31', r: 'top' })?.role, 'top')
   // The app's design version and anything else unknown is ignored.
-  assert.equal(parsePresenceQuery({ k: '7', d: '2', a: '9', r: 'mid', v: '2' })?.caption, 'MID')
+  assert.equal(parsePresenceQuery({ k: '7', d: '2', a: '9', r: 'mid', v: '3' })?.role, 'mid')
+  assert.isNull(parsePresenceQuery({ k: '7', d: '2', a: '9', r: 'toString' }))
   for (const bad of [
     { k: '7', d: '2' },
     { k: '7', d: '2', a: '9', r: '<svg onload=x>' },
@@ -32,8 +34,8 @@ test('presence card renders a square PNG, with and without art', async ({ assert
     .jpeg()
     .toBuffer()
   for (const image of [
-    await renderPresenceCard({ kills: 12, deaths: 10, assists: 15, caption: 'JGL' }, art),
-    await renderPresenceCard({ kills: 0, deaths: 1, assists: 4, caption: '', respawn: 23 }),
+    await renderPresenceCard({ kills: 12, deaths: 10, assists: 15, role: 'jungle' }, art),
+    await renderPresenceCard({ kills: 0, deaths: 1, assists: 4, respawn: 23 }),
   ]) {
     // Type is drawn as outlines (bundled Archivo): no server font is ever used.
     assert.notInclude(image.toString('latin1'), 'DejaVu')
