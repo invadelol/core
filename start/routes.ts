@@ -149,6 +149,9 @@ router.get('/docs', async () => {
 
 router.get('/og/:summoner', [() => import('#controllers/social_cards_controller'), 'show'])
 
+/** The desktop app's Discord presence picture; its badge is the static `/presence/invade.png`. */
+router.get('/presence/:file', [() => import('#controllers/presence_cards_controller'), 'show'])
+
 router.get('/sitemap.xml', [() => import('#controllers/sitemaps_controller'), 'index'])
 
 router.get('/', [HomeController, 'show']).use(middleware.httpCache({ page: true }))
