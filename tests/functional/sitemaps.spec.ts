@@ -12,16 +12,16 @@ test.group('Player sitemap', (group) => {
   test('lists canonical player URLs with encoded names and XML-safe text', async ({ client }) => {
     sitemapPlayers.count = async () => 3
     sitemapPlayers.page = async () => [
-      { game_name: 'Louhi', tag_line: '727' },
-      { game_name: 'MRS PauluX', tag_line: 'KCWIN' },
+      { game_name: 'Mirelight', tag_line: '727' },
+      { game_name: 'Sable Fox', tag_line: 'SLY' },
       { game_name: "A&B's 玩家", tag_line: 'EUW' },
     ]
     const response = await client.get('/sitemap.xml')
     response.assertStatus(200)
     response.assertHeader('content-type', 'application/xml; charset=utf-8')
     response.assertHeader('cache-control', 'public, max-age=300')
-    response.assertTextIncludes('<loc>https://invade.lol/Louhi-727</loc>')
-    response.assertTextIncludes('<loc>https://invade.lol/MRS%20PauluX-KCWIN</loc>')
+    response.assertTextIncludes('<loc>https://invade.lol/Mirelight-727</loc>')
+    response.assertTextIncludes('<loc>https://invade.lol/Sable%20Fox-SLY</loc>')
     response.assertTextIncludes('A%26B&apos;s%20%E7%8E%A9%E5%AE%B6-EUW')
   })
 

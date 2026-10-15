@@ -106,8 +106,8 @@ export default class DesktopController {
   /**
    * Make an account one of this device's uploaders
    * @tag Desktop
-   * @requestBody {"gameName": "Louhi", "tagLine": "727", "platform": "EUW1", "rawPuuid": null, "source": "riot_id"}
-   * @responseBody 200 - {"puuid": "...", "profileUrl": "https://invade.lol/Louhi-727"}
+   * @requestBody {"gameName": "Mirelight", "tagLine": "727", "platform": "EUW1", "rawPuuid": null, "source": "riot_id"}
+   * @responseBody 200 - {"puuid": "...", "profileUrl": "https://invade.lol/Mirelight-727"}
    * @responseBody 404 - Unknown Riot ID
    */
   async link(ctx: HttpContext) {
@@ -152,7 +152,7 @@ export default class DesktopController {
   /**
    * Upload a finished game the uploader played, or one the app read (observed)
    * @tag Desktop
-   * @responseBody 200 - {"matchId": "EUW1_1", "status": "stored", "lp": "none", "url": "https://invade.lol/Louhi-727/match/EUW1_1"}
+   * @responseBody 200 - {"matchId": "EUW1_1", "status": "stored", "lp": "none", "url": "https://invade.lol/Mirelight-727/match/EUW1_1"}
    * @responseBody 403 - The uploader is not linked to this device
    * @responseBody 413 - Larger than 2 MB
    * @responseBody 422 - Not a plausible game

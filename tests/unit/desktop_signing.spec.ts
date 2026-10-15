@@ -53,12 +53,12 @@ test.group('Desktop request signing (§1.1)', (group) => {
     const parts = {
       timestamp: '1791450000000',
       method: 'get',
-      path: '/api/desktop/resolve?gameName=Louhi&tagLine=727',
+      path: '/api/desktop/resolve?gameName=Mirelight&tagLine=727',
       bodyHash: EMPTY_BODY_SHA256,
     }
     assert.equal(
       canonicalRequest(parts),
-      'v1\n1791450000000\nGET\n/api/desktop/resolve?gameName=Louhi&tagLine=727\n' +
+      'v1\n1791450000000\nGET\n/api/desktop/resolve?gameName=Mirelight&tagLine=727\n' +
         'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
     )
     // A fixed vector: the 64 hex characters are the key, as ASCII bytes.
@@ -69,7 +69,7 @@ test.group('Desktop request signing (§1.1)', (group) => {
     )
     assert.equal(
       signRequest(secret, parts),
-      'a06a11671cd0e978b43430c9ad4a6d9eef9faa93d1e2a4cf78446006f204f770'
+      '484007e486649fdfce8b3a9295ce302996405aeb0cfed16bb96972b9f5e3dd20'
     )
     assert.notEqual(
       signRequest(secret, parts),

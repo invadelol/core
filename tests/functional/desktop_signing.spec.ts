@@ -58,7 +58,7 @@ test.group('Desktop request signing', (group) => {
 
     // Signed for one body, sent with another.
     const signedFor = JSON.stringify({
-      gameName: 'Louhi',
+      gameName: 'Mirelight',
       tagLine: '727',
       platform: 'EUW1',
       source: 'riot_id',
@@ -66,7 +66,7 @@ test.group('Desktop request signing', (group) => {
     const tampered = await http
       .post('/api/desktop/link')
       .headers(signedHeaders({ token, secret }, 'POST', '/api/desktop/link', signedFor))
-      .json(signedFor.replace('Louhi', 'Other'))
+      .json(signedFor.replace('Mirelight', 'Other'))
     codes.push(tampered.body().errors[0].code)
 
     // Signed for one path (or query), sent to another.
