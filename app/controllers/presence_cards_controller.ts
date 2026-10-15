@@ -15,7 +15,7 @@ export default class PresenceCardsController {
     const champion = /^(\d{1,4})\.png$/.exec(String(params.file))?.[1]
     const card = champion ? parsePresenceQuery(request.qs()) : null
     if (!champion || !card) return response.notFound()
-    const key = `${champion}:${card.kills}/${card.deaths}/${card.assists}:${card.caption}:${card.respawn ?? ''}`
+    const key = `${champion}:${card.kills}/${card.deaths}/${card.assists}:${card.role ?? ''}:${card.respawn ?? ''}`
     let body = cards.get(key)
     if (!body) {
       const art = await riotAssets.get('centered', champion)

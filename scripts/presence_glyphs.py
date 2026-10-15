@@ -1,5 +1,5 @@
 """Writes app/services/presence_glyphs.ts: the few Archivo glyphs the Discord presence picture
-draws (digits, "/", ":", the role and length captions), as SVG outlines. The server then needs
+draws (digits, "/" and ":"), as SVG outlines. The server then needs
 no font, and the picture looks the same everywhere.
 
     python3 -m pip install fonttools brotli
@@ -16,10 +16,11 @@ ROOT = Path(__file__).resolve().parent.parent
 FONT = ROOT / 'vendor/invadelol-ui/dist/fonts/archivo-latin-wdth.woff2'
 OUT = ROOT / 'app/services/presence_glyphs.ts'
 
-# The app's figures (`.iv-dial b`: weight 750, width 92 %) and its small caps labels.
+# Figures only: the picture holds no word, so it reads in every language. The score as the app's
+# dial sets it (`.iv-dial b`: weight 750, width 92 %), the respawn countdown lighter.
 FACES = {
-    'score': ({'wght': 760, 'wdth': 92}, '0123456789/: '),
-    'caption': ({'wght': 640, 'wdth': 100}, '0123456789: ABDGIJLMNOPSTU'),
+    'score': ({'wght': 760, 'wdth': 92}, '0123456789/'),
+    'caption': ({'wght': 640, 'wdth': 100}, '0123456789:'),
 }
 
 
