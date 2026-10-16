@@ -149,6 +149,12 @@ router.get('/docs', async () => {
 
 router.get('/og/:summoner', [() => import('#controllers/social_cards_controller'), 'show'])
 
+/** The match page's og:image, one player's game: `/og/match/:matchId/Name-Tag.jpg`. */
+router.get('/og/match/:matchId/:file', [
+  () => import('#controllers/match_cards_controller'),
+  'show',
+])
+
 /** The desktop app's Discord presence picture; its badge is the static `/presence/invade.png`. */
 router.get('/presence/:file', [() => import('#controllers/presence_cards_controller'), 'show'])
 
@@ -156,10 +162,16 @@ router.get('/sitemap.xml', [() => import('#controllers/sitemaps_controller'), 'i
 
 router.get('/', [HomeController, 'show']).use(middleware.httpCache({ page: true }))
 
-router.get('/:summoner/match/:matchId', ({ inertia, params }) => {
+router.get('/:summoner/match/:matchId', async ({ inertia, params }) => {
+  const { default: matchShareService } = await import('#services/match_share_service')
+  // Link previews read the meta tags without running the page: the game's result, its share
+  // card and its canonical address, for a stored game the player was in. Otherwise the page
+  // keeps no social tags, as before.
+  const share = await matchShareService.find(params.matchId, params.summoner).catch(() => null)
   return inertia.render('match', {
     summoner: params.summoner,
     matchId: params.matchId,
+    social: share?.social ?? null,
   })
 })
 

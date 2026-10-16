@@ -631,6 +631,33 @@ export class MatchRepository {
   }
 
   /**
+   * One match as the match list reads it (the scoreboard's columns, no timeline nor events):
+   * enough to score the lobby, for the match page's share card and its meta tags. Two flat reads
+   * by match id. Null for an unknown match or an excluded queue, as `getById`.
+   */
+  async getSummaryById(matchId: string) {
+    const escapedMatchId = escapeClickhouseString(matchId)
+    const [matches, participants] = await Promise.all([
+      readRows<any>(
+        `SELECT ${matchPlan.select}
+         FROM matches
+         PREWHERE match_id = '${escapedMatchId}'
+         LIMIT 1`,
+        matchPlan
+      ),
+      readRows<any>(
+        `SELECT ${summaryParticipantPlan.select}
+         FROM participants
+         PREWHERE match_id = '${escapedMatchId}'`,
+        summaryParticipantPlan
+      ),
+    ])
+    const base = matches[0]
+    if (!base?.matchId || isExcludedQueue(base.queueId)) return null
+    return { ...base, participants }
+  }
+
+  /**
    * The few facts two descriptions of a game must agree on (champions,
    * K/D/A, results, duration), for checking an upload against a stored game
    * without asking Riot. Two flat reads by match id, nothing else.

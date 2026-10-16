@@ -136,6 +136,31 @@ so an upstream outage does not persist in the application cache. Unknown
 profiles return 404 from the image endpoint until the profile has been tracked.
 Social platforms may retain their own cached previews longer.
 
+A match page (`/:summoner/match/:matchId`) carries the same tags for a stored
+game the player was in: `Name#Tag · Victory on Champion`, the K/D/A, the
+Invade score with MVP or ACE, the role, queue and length, a canonical URL, and
+`/og/match/:matchId/Name-Tag.jpg?v=…` as its image. The card
+(`app/services/match_card.ts`) is the champion's centred splash as a dimmed
+game stage under one match row: result edge and tint, the result, queue and
+length, the K/D/A, the PerfDial and the Invade mark. 1200×630 JPEG (mozjpeg
+q90, about 75 KB, 60 to 90 ms to draw). The score and MVP / ACE come from
+`scoreLobby` and `detailOf`, as on the page. `v` hashes everything drawn and
+the renderer version (`RENDERER`): the linked URL is immutable for a year, any
+other `v` gets the current card for five minutes. The page and the image share
+one light read of the game (no timeline), kept ten minutes per match; cards
+are kept in memory for an hour, concurrent requests share one render and at
+most two render at once. No card (404, the page keeps no social tags) for an
+unknown game, Brawl or League Classic, a remake, Arena (its placement is not
+stored), a player without a score (AFK) or a Riot ID not in the game; the
+Riot ID is compared exactly as the page finds its player. Without champion art
+the card is drawn on the ink and not cached.
+
+Type is Archivo as SVG outlines, so the server needs no font:
+`app/services/match_card_glyphs.ts` is generated, with the site's grain, by
+`scripts/match_card_glyphs.py` (fontTools; see its header). Regenerate it when
+the vendored fonts change or the card draws a letter it lacks, then bump
+`RENDERER`.
+
 ## Sitemap
 
 `/sitemap.xml` lists the homepage and every distinct named player stored in

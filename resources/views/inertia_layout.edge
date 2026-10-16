@@ -47,6 +47,10 @@
       <link rel="preload" href="{{ url }}" as="fetch" crossorigin />
     @endeach
 
+    @if(page.props.social && page.props.social.canonical)
+      <link rel="canonical" href="{{ page.props.social.canonical }}" />
+    @endif
+
     @if(page.props.social)
       <meta property="og:type" content="{{ page.props.social.type || 'profile' }}" />
       <meta property="og:site_name" content="invade.lol" />
@@ -54,7 +58,7 @@
       <meta property="og:description" content="{{ page.props.social.description }}" />
       <meta property="og:url" content="{{ page.props.social.url }}" />
       <meta property="og:image" content="{{ page.props.social.image }}" />
-      <meta property="og:image:type" content="image/png" />
+      <meta property="og:image:type" content="{{ page.props.social.imageType || 'image/png' }}" />
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
       <meta property="og:image:alt" content="{{ page.props.social.alt || (page.props.social.title + ' champion artwork and recent stats') }}" />
