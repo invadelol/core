@@ -14,6 +14,8 @@
 
 - **Move a panel by its header.** Grab the whole top of a panel, Invade logo included, and it follows from the first click. A cursor just passing over a panel still leaves your clicks to the game.
 - **The overlay follows the game mode.** Outside Summoner's Rift (ARAM, ARAM: Mayhem, Arena and other modes), it no longer shows Rift objectives, lane gold, rank targets or builds, and champ select no longer imports a Rift rune page. Both ARAM modes keep the team gold lead on the scoreboard. The Live tab no longer suggests Rift builds, lane picks or draft odds in those champ selects either.
+- **Patches go by their 2026 names.** Builds, tiers and matchups say Patch 26.19, as in the game client and Riot's patch notes.
+- **Build rows only say how many games they rest on.** The win rate, pick rate and confidence next to spells, skill order, starting items and the other rows are gone.
 
 ### Fixed
 
@@ -21,6 +23,7 @@
 - **Overlays you switch off stay off after a restart.** Invade now saves your overlay choices, panel positions and the tray's Show / hide the moment you change them, so a shutdown, a crash or an update can no longer turn every overlay back on. <!-- highlight -->
 - **Runes you change yourself in champ select stay yours.** Invade no longer writes its page over yours, even when you open or click the app. Its import button still puts its page in when you ask.
 - **Deleting a whole game works on Windows again.** It failed with "Could not move to the Recycle Bin, Code 124". If the Recycle Bin or Trash can't take a recording, Invade says why and what to do, and never deletes it for good. A game still recording or saving can't be deleted.
+- **Home: the rank tile no longer writes over today's games** in a small window, in any language.
 - **Mac: the overlay shows over League in Borderless.** Clips record the game's window there instead of the whole screen, and moving a panel no longer takes the focus away from the game.
 
 ## 0.3.1 - 2026-10-15
