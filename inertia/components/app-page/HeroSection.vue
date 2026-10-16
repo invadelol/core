@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { Link } from '@inertiajs/vue3'
 import { Logo } from '@invadelol/ui'
 import AppWindow from './AppWindow.vue'
 import DownloadButtons from './DownloadButtons.vue'
@@ -43,7 +44,10 @@ useScrollFx(stage, (box, vh) => {
       <DownloadButtons class="hero-dl on-pc" />
       <PhoneActions class="hero-dl on-phone" />
       <p class="hero-meta label on-pc">
-        Free<template v-if="version"> · Version {{ version }}</template> · Windows and macOS
+        Free<template v-if="version">
+          · <Link href="/app/changelog" class="hero-version">Version {{ version }}</Link></template
+        >
+        · Windows and macOS
       </p>
       <p class="hero-meta label on-phone">Invade runs on Windows and macOS.</p>
     </div>
@@ -95,6 +99,15 @@ useScrollFx(stage, (box, vh) => {
 
 .hero-meta {
   margin-top: 14px;
+}
+
+.hero-version {
+  color: inherit;
+  transition: color var(--t-fast) var(--ease);
+}
+
+.hero-version:hover {
+  color: var(--text-1);
 }
 
 .hero-stage {
