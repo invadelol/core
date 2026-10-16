@@ -86,6 +86,9 @@ export const DESKTOP_LIMITS = {
   /** Players, not requests: a batch counts as many as it carries. */
   playersDevicePlayers: { bucket: 'players:device:players', limit: 1500 },
   playersIp: { bucket: 'players:ip', limit: 240 },
+  /** Crash reports (§7): a crash loop sends one batch a minute at most. */
+  crashesDevice: { bucket: 'crashes:device', limit: 20 },
+  crashesIp: { bucket: 'crashes:ip', limit: 60 },
 } as const
 
 export default new FixedWindowLimiter()
