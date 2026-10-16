@@ -108,6 +108,11 @@ export default defineConfig({
       pattern: 'resources/views/**/*.edge',
       reloadServer: false,
     },
+    {
+      // The desktop app's release notes (scripts/sync_changelog.mjs), read at run time.
+      pattern: 'resources/changelog/**',
+      reloadServer: false,
+    },
   ],
   hooks: {
     onBuildStarting: [() => import('@adonisjs/vite/build_hook')],
