@@ -30,6 +30,7 @@ const JSON_LIMITS = new Map([
   ['/api/desktop/matches', DESKTOP_MAX_PAYLOAD_BYTES],
   ['/api/desktop/matches/known', 1024 * 1024],
   ['/api/desktop/players', DESKTOP_MAX_PLAYERS_BYTES],
+  ['/api/desktop/crashes', 64 * 1024],
 ])
 
 /** The limit a 413 on this URL refers to, when the route has one of its own. */

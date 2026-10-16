@@ -86,7 +86,7 @@ router
 
     router.get('/health', [HealthChecksController, 'handle'])
 
-    /** The desktop app's onboarding, match uploads and player snapshots (docs/desktop-sync.md). */
+    /** The desktop app's onboarding, match uploads, player snapshots and crash reports (docs/desktop-sync.md). */
     router
       .group(() => {
         router.get('/config', [DesktopController, 'config'])
@@ -100,6 +100,7 @@ router
         router.post('/matches', [DesktopController, 'upload']).use(middleware.desktopAuth())
         router.post('/matches/known', [DesktopController, 'known']).use(middleware.desktopAuth())
         router.post('/players', [DesktopController, 'players']).use(middleware.desktopAuth())
+        router.post('/crashes', [DesktopController, 'crashes']).use(middleware.desktopAuth())
       })
       .prefix('/desktop')
   })

@@ -185,3 +185,35 @@ export const knownValidator = vine.compile(
       .distinct(),
   })
 )
+
+/** Reports one request may carry (§7). */
+export const MAX_CRASH_REPORTS = 10
+
+export const crashesValidator = vine.compile(
+  vine.object({
+    reports: vine
+      .array(
+        vine.object({
+          kind: vine.enum(['panic', 'exit', 'error', 'rejection']),
+          process: vine.enum(['core', 'main', 'overlay']),
+          app: vine
+            .string()
+            .trim()
+            .maxLength(32)
+            .regex(/^[0-9A-Za-z.+-]+$/),
+          os: vine.enum(['macos', 'windows']),
+          osVersion: vine
+            .string()
+            .trim()
+            .maxLength(32)
+            .regex(/^[0-9.]*$/)
+            .optional(),
+          message: vine.string().trim().minLength(1).maxLength(300),
+          location: vine.string().trim().maxLength(160).optional(),
+          at: strictNumber().positive().withoutDecimals(),
+        })
+      )
+      .minLength(1)
+      .maxLength(MAX_CRASH_REPORTS),
+  })
+)

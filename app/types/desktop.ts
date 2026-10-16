@@ -176,3 +176,16 @@ export interface PlayerBatch {
   app: string
   players: Array<Record<string, unknown> & { rawPuuid: string }>
 }
+
+/** One anonymous crash report (§7). */
+export interface CrashReport {
+  kind: 'panic' | 'exit' | 'error' | 'rejection'
+  process: 'core' | 'main' | 'overlay'
+  app: string
+  os: 'macos' | 'windows'
+  osVersion?: string
+  message: string
+  location?: string
+  /** Epoch ms of the crash on the reporting computer. */
+  at: number
+}
