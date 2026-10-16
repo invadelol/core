@@ -33,6 +33,7 @@ const HomeController = () => import('#controllers/home_controller')
 const LensController = () => import('#controllers/lens_controller')
 const SynergyController = () => import('#controllers/synergy_controller')
 const LegalController = () => import('#controllers/legal_controller')
+const ChangelogController = () => import('#controllers/changelog_controller')
 
 // API routes group
 router
@@ -126,6 +127,10 @@ router.get('/download/:platform', [DownloadsController, 'show'])
 /** The desktop app's landing page, before the summoner catch-all below. */
 router.get('/app', [AppPageController, 'show']).use(middleware.httpCache({ page: true }))
 
+/** The desktop app's release notes, all of them or opened at one version (`v0.3.2` leads to `0.3.2`). */
+router.get('/app/changelog', [ChangelogController, 'index'])
+router.get('/app/changelog/:version', [ChangelogController, 'show'])
+
 /** The privacy policy, the legal notice and its terms, before the summoner catch-all below. */
 router.get('/privacy', [LegalController, 'privacy'])
 router.get('/legal', [LegalController, 'legal'])
@@ -153,6 +158,12 @@ router.get('/og/:summoner', [() => import('#controllers/social_cards_controller'
 /** The match page's og:image, one player's game: `/og/match/:matchId/Name-Tag.jpg`. */
 router.get('/og/match/:matchId/:file', [
   () => import('#controllers/match_cards_controller'),
+  'show',
+])
+
+/** The link preview of one version of the desktop app: `/og/app/changelog/0.3.2.jpg`. */
+router.get('/og/app/changelog/:file', [
+  () => import('#controllers/changelog_cards_controller'),
   'show',
 ])
 
