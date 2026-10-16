@@ -14,7 +14,7 @@
 
 - **Move a panel by its header.** Grab the whole top of a panel, Invade logo included, and it follows from the first click. A cursor just passing over a panel still leaves your clicks to the game.
 - **The overlay follows the game mode.** Outside Summoner's Rift (ARAM, ARAM: Mayhem, Arena and other modes), it no longer shows Rift objectives, lane gold, rank targets or builds, and champ select no longer imports a Rift rune page. Both ARAM modes keep the team gold lead on the scoreboard. The Live tab no longer suggests Rift builds, lane picks or draft odds in those champ selects either.
-- **Patches go by their 2026 names.** Builds, tiers and matchups say Patch 26.19, as in the game client and Riot's patch notes.
+- **Builds, tiers and matchups are on patch 26.20,** and patches go by their 2026 names, as in the game client and Riot's patch notes.
 - **Build rows only say how many games they rest on.** The win rate, pick rate and confidence next to spells, skill order, starting items and the other rows are gone.
 
 ### Fixed
