@@ -10,6 +10,7 @@ import MatchHeader from '../components/MatchHeader.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import { decodeSlug, parseSlug, profilePath } from '../lib/format.js'
 import { detailOf } from '../lib/match.js'
+import { patchName } from '../lib/patch.js'
 import type { Match } from '../lib/types.js'
 
 const props = defineProps<{ summoner: string; matchId: string }>()
@@ -112,7 +113,7 @@ onMounted(async () => {
         <section id="scoreboard" class="scroll-mt-28 pt-6">
           <div class="section">
             <h2>Scoreboard</h2>
-            <span class="meta">Patch {{ detail.version.split('.').slice(0, 2).join('.') }}</span>
+            <span class="meta">Patch {{ patchName(detail.version) }}</span>
           </div>
           <div class="iv-panel iv-md match-part">
             <Scoreboard :detail="detail" :puuid="ownerPuuid" />
