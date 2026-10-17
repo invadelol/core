@@ -91,7 +91,7 @@ export class IngestionService {
   }
 
   /**
-   * Kill and objective events of a timeline (`match_events`). Also used on its own to backfill
+   * Kill, objective and shop events of a timeline (`match_events`). Also used on its own to backfill
    * the events of a match stored before they were kept.
    */
   async ingestEvents(

@@ -8,6 +8,7 @@ export * from './i18n.js';
 export * from './format.js';
 export * from './labels.js';
 export * from './detail.js';
+export * from './shop.js';
 export * from './story.js';
 export * from './lp.js';
 export * from './pager.js';

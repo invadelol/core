@@ -39,8 +39,9 @@ test.group('match events', () => {
       ]),
       teamOf
     )
-    assert.lengthOf(rows, 2)
-    assert.deepInclude(rows[0], {
+    const kills = rows.filter((row) => row.kind === 'kill')
+    assert.lengthOf(kills, 2)
+    assert.deepInclude(kills[0], {
       match_id: 'EUW1_1',
       t_ms: 185000,
       kind: 'kill',
@@ -51,7 +52,7 @@ test.group('match events', () => {
       pos_x: 2000,
       pos_y: 12000,
     })
-    assert.deepInclude(rows[1], { kind: 'kill', team_id: 200, killer: 0, victim: 4 })
+    assert.deepInclude(kills[1], { kind: 'kill', team_id: 200, killer: 0, victim: 4 })
   })
 
   test('reads objectives as taken by a team', ({ assert }) => {
@@ -96,6 +97,34 @@ test.group('match events', () => {
         ['dragon', 'FIRE_DRAGON', '', 200, 6],
         ['tower', 'OUTER_TURRET', 'MID_LANE', 100, 3],
         ['inhibitor', '', 'BOT_LANE', 200, 0],
+      ]
+    )
+  })
+
+  test('keeps purchases and sales, takes undos back, numbers twin purchases', ({ assert }) => {
+    const rows = buildEventRows(
+      'EUW1_1',
+      'EUW1',
+      1000,
+      timeline([
+        { type: 'ITEM_PURCHASED', timestamp: 1000, participantId: 3, itemId: 2003 },
+        { type: 'ITEM_PURCHASED', timestamp: 1000, participantId: 3, itemId: 2003 },
+        { type: 'ITEM_PURCHASED', timestamp: 1500, participantId: 3, itemId: 1055 },
+        { type: 'ITEM_PURCHASED', timestamp: 2000, participantId: 3, itemId: 1056 },
+        { type: 'ITEM_UNDO', timestamp: 2100, participantId: 3, beforeId: 1056, afterId: 0 },
+        { type: 'ITEM_SOLD', timestamp: 900000, participantId: 3, itemId: 1055 },
+        { type: 'ITEM_SOLD', timestamp: 900500, participantId: 8, itemId: 3340 },
+        { type: 'ITEM_UNDO', timestamp: 900600, participantId: 8, beforeId: 0, afterId: 3340 },
+      ]),
+      teamOf
+    )
+    assert.deepEqual(
+      rows.map((row) => [row.t_ms, row.kind, row.killer, row.sub, row.victim, row.team_id]),
+      [
+        [1000, 'buy', 3, '2003', 0, 100],
+        [1000, 'buy', 3, '2003', 1, 100],
+        [1500, 'buy', 3, '1055', 0, 100],
+        [900000, 'sell', 3, '1055', 0, 100],
       ]
     )
   })

@@ -350,7 +350,10 @@ const MONSTERS: Record<string, string> = {
 }
 
 /**
- * Kill and objective events of a match-v5 timeline, as `match_events` rows. `teamOf` maps a
+ * Kill, objective and shop events of a match-v5 timeline, as `match_events` rows. Shop rows
+ * (`buy` / `sell`) carry the player in `killer` and the item id in `sub`; undos are taken back
+ * here, and `victim` numbers the same item bought twice in one millisecond so the table's key
+ * keeps both. `teamOf` maps a
  * participant id to its team (100 / 200): from the match's participants when a match is
  * ingested, from the stored participants when its events are backfilled.
  */
@@ -369,6 +372,18 @@ export function buildEventRows(
     pos_y: Math.max(0, Math.min(65535, toInt(event?.position?.y ?? 0, 0))),
   })
 
+  const shop: { t: number; player: number; item: number; sold: boolean }[] = []
+  /** Takes back the player's last `sold` action on `item`. */
+  const undo = (player: number, item: number, sold: boolean) => {
+    for (let k = shop.length - 1; k >= 0; k--) {
+      const a = shop[k]
+      if (a.player === player && a.item === item && a.sold === sold) {
+        shop.splice(k, 1)
+        return
+      }
+    }
+  }
+
   for (const frame of frames) {
     const events: any[] = Array.isArray(frame?.events) ? frame.events : []
     for (const event of events) {
@@ -376,7 +391,20 @@ export function buildEventRows(
       const t = Math.max(0, toInt(event?.timestamp ?? 0, 0))
       const killer = Math.max(0, toInt(event?.killerId ?? 0, 0))
 
-      if (type === 'CHAMPION_KILL') {
+      if (type === 'ITEM_PURCHASED' || type === 'ITEM_SOLD' || type === 'ITEM_UNDO') {
+        const player = toInt(event?.participantId ?? 0, 0)
+        if (player < 1 || player > 255) continue
+        if (type === 'ITEM_UNDO') {
+          // `beforeId`: the item a purchase gave; `afterId`: the item a sale took (it comes back).
+          const bought = toInt(event?.beforeId ?? 0, 0)
+          const sold = toInt(event?.afterId ?? 0, 0)
+          if (bought > 0) undo(player, bought, false)
+          if (sold > 0) undo(player, sold, true)
+          continue
+        }
+        const item = toInt(event?.itemId ?? 0, 0)
+        if (item > 0) shop.push({ t, player, item, sold: type === 'ITEM_SOLD' })
+      } else if (type === 'CHAMPION_KILL') {
         const victim = Math.max(0, toInt(event?.victimId ?? 0, 0))
         // Executed (tower, minions): the kill counts for the victim's enemies.
         const victimTeam = teamOf.get(victim) ?? 0
@@ -434,6 +462,28 @@ export function buildEventRows(
         })
       }
     }
+  }
+
+  const seen = new Map<string, number>()
+  for (const a of shop) {
+    const kind = a.sold ? 'sell' : 'buy'
+    const key = `${a.t}:${kind}:${a.player}`
+    const n = seen.get(key) ?? 0
+    seen.set(key, n + 1)
+    if (n > 255) continue
+    rows.push({
+      ...base,
+      t_ms: a.t,
+      kind,
+      sub: String(a.item),
+      lane: '',
+      team_id: teamOf.get(a.player) ?? 0,
+      killer: a.player,
+      victim: n,
+      assists: [],
+      pos_x: 0,
+      pos_y: 0,
+    })
   }
   return rows
 }

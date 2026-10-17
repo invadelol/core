@@ -627,7 +627,12 @@ export class MatchRepository {
     // A Brawl or League Classic game stored before they were excluded is never shown.
     if (isExcludedQueue(base.queueId)) return null
 
-    return { ...base, participants, timeline, events }
+    // Shop actions travel apart: hosts that predate them read every event as a kill or an objective.
+    const isShop = (e: any) => e.kind === 'buy' || e.kind === 'sell'
+    const shop = events
+      .filter(isShop)
+      .map((e) => ({ t: e.t, player: e.killer, item: Number(e.sub), sold: e.kind === 'sell' }))
+    return { ...base, participants, timeline, events: events.filter((e) => !isShop(e)), shop }
   }
 
   /**
