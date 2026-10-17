@@ -61,7 +61,7 @@ onBeforeUnmount(() => clearTimeout(copiedTimer))
       </Link>
 
       <h1
-        class="mt-4 text-[22px] font-semibold leading-[28px] tracking-[-0.012em] text-ink [overflow-wrap:anywhere]"
+        class="mt-4 flex flex-wrap items-center gap-x-1 text-[22px] font-semibold leading-[28px] tracking-[-0.012em] text-ink [overflow-wrap:anywhere]"
         :title="`${summoner.gameName}#${summoner.tagLine}`"
       >
         <Link :href="path" class="name" preserve-state preserve-scroll
@@ -71,7 +71,7 @@ onBeforeUnmount(() => clearTimeout(copiedTimer))
           ></Link
         ><button
           type="button"
-          class="iv-btn ghost sm icon-only ml-1 align-[-5px]"
+          class="iv-btn ghost sm icon-only"
           :title="copied ? 'Copied' : 'Copy Riot ID'"
           :aria-label="copied ? 'Copied' : 'Copy Riot ID'"
           @click="copyRiotId"
@@ -81,7 +81,7 @@ onBeforeUnmount(() => clearTimeout(copiedTimer))
         </button>
         <span
           v-if="copied"
-          class="ml-1 text-[12px] font-medium tracking-normal text-ink-3"
+          class="text-[12px] font-medium tracking-normal text-ink-3"
           role="status"
           >Copied</span
         >
