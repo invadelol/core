@@ -4,6 +4,7 @@ import { ArrowRight, ChevronDown, ChevronUp, Search } from 'lucide-vue-next'
 import { champIcon, championName } from '../lib/assets.js'
 import { compact, hours } from '../lib/format.js'
 import type { ChampionStats } from '../lib/types.js'
+import ShowMore from './ShowMore.vue'
 
 const props = defineProps<{ champions: ChampionStats[]; busy?: boolean }>()
 const emit = defineEmits<{ matches: [championId: number] }>()
@@ -17,13 +18,18 @@ const totals = computed(() => ({
   time: props.champions.reduce((n, c) => n + c.duration, 0),
 }))
 
+/** Bars shown before "Show all": the table below always lists every champion. */
+const CHART = 10
+const chartOpen = ref(false)
+
 /**
  * Volume and outcome in one mark: the bar is games, the split is the record.
  * Below a real spread of games every bar is full width and the chart says
  * nothing, so it only appears once there is something to compare.
  */
 const chart = computed(() => {
-  const list = [...props.champions].sort((a, b) => b.games - a.games).slice(0, 10)
+  const sorted = [...props.champions].sort((a, b) => b.games - a.games)
+  const list = chartOpen.value ? sorted : sorted.slice(0, CHART)
   const most = Math.max(...list.map((c) => c.games), 1)
   if (most < 3) return []
   return list.map((c) => ({
@@ -112,6 +118,12 @@ function order(key: keyof ChampionStats) {
             {{ c.wins }}W {{ c.games - c.wins }}L
           </span>
         </button>
+        <ShowMore
+          v-model="chartOpen"
+          class="md:col-span-2"
+          :total="champions.length"
+          :limit="CHART"
+        />
       </div>
 
       <div class="scroll-x border-t border-line">

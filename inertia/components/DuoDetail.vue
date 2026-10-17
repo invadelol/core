@@ -5,6 +5,7 @@ import { MatchRowSkeleton, RoleIcon } from '@invadelol/ui'
 import { positionOf } from '@invadelol/ui/logic'
 import DuoTrend from './DuoTrend.vue'
 import MatchList from './MatchList.vue'
+import ShowMore from './ShowMore.vue'
 import { champIcon, championName, profileIcon } from '../lib/assets.js'
 import { profilePath, shortDate } from '../lib/format.js'
 import { roleLabel, rollingForm, type Partner } from '../lib/synergy.js'
@@ -105,8 +106,16 @@ const splits = computed(() => {
   )
 })
 
-const seats = computed(() => props.partner.roles.slice(0, 4))
-const picks = computed(() => props.partner.champions.slice(0, 4))
+/** Seats and picks shown before "Show all". */
+const WORKS = 4
+const seatsOpen = ref(false)
+const picksOpen = ref(false)
+const seats = computed(() =>
+  seatsOpen.value ? props.partner.roles : props.partner.roles.slice(0, WORKS)
+)
+const picks = computed(() =>
+  picksOpen.value ? props.partner.champions : props.partner.champions.slice(0, WORKS)
+)
 
 /* ── The games together, a page at a time ─────────────────────── */
 const games = shallowRef<Match[]>([])
@@ -147,6 +156,8 @@ watch(
   () => {
     games.value = []
     exhausted.value = false
+    seatsOpen.value = false
+    picksOpen.value = false
     void load()
   },
   { immediate: true }
@@ -290,6 +301,7 @@ const more = computed(() => games.value.length > 0 && !exhausted.value)
               </span>
             </li>
           </ul>
+          <ShowMore v-model="seatsOpen" class="mt-1" :total="partner.roles.length" :limit="WORKS" />
         </section>
 
         <section v-if="seats.length || picks.length">
@@ -320,6 +332,13 @@ const more = computed(() => games.value.length > 0 && !exhausted.value)
               </span>
             </li>
           </ul>
+          <ShowMore
+            v-if="picks.length"
+            v-model="picksOpen"
+            class="mt-1"
+            :total="partner.champions.length"
+            :limit="WORKS"
+          />
           <p v-else class="fr-line text-ink-3">No pair of picks played three times yet.</p>
         </section>
 

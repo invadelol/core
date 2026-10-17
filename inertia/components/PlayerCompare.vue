@@ -6,6 +6,7 @@ import { positionOf, queueName } from '@invadelol/ui/logic'
 import MatchFilters, { type Filters } from './MatchFilters.vue'
 import PlayerLink from './PlayerLink.vue'
 import PlayerSearchField from './PlayerSearchField.vue'
+import ShowMore from './ShowMore.vue'
 import Sparkline from './ui/Sparkline.vue'
 import { champIcon, championName, profileIcon, regionLabel } from '../lib/assets.js'
 import { compact, duration, timeAgo } from '../lib/format.js'
@@ -350,11 +351,30 @@ function roleInk(lines: Array<Line | null>, key: MetricKey, index: number) {
 /* ── Champion pools ────────────────────────────────────────────── */
 const pools = computed(() =>
   ready.value
-    ? championSplit([datasets.value[0]?.champions ?? [], datasets.value[1]?.champions ?? []])
+    ? championSplit(
+        [datasets.value[0]?.champions ?? [], datasets.value[1]?.champions ?? []],
+        Number.POSITIVE_INFINITY
+      )
     : { both: [], only: [[], []] }
 )
 
-const overlap = computed(() => pools.value.both.slice(0, 8))
+/** Rows per group before "Show all": the most played first. */
+const BOTH_ROWS = 8
+const ONLY_ROWS = 5
+const poolsOpen = ref(false)
+const overlap = computed(() =>
+  poolsOpen.value ? pools.value.both : pools.value.both.slice(0, BOTH_ROWS)
+)
+const only = computed(() =>
+  pools.value.only.map((list) => (poolsOpen.value ? list : list.slice(0, ONLY_ROWS)))
+)
+const poolRows = computed(() => ({
+  total: pools.value.both.length + pools.value.only[0].length + pools.value.only[1].length,
+  limit:
+    Math.min(pools.value.both.length, BOTH_ROWS) +
+    Math.min(pools.value.only[0].length, ONLY_ROWS) +
+    Math.min(pools.value.only[1].length, ONLY_ROWS),
+}))
 
 /** Same emphasis rule as the role table, on the pick they share. */
 function poolInk(stats: Array<ChampionStats | null>, index: number) {
@@ -840,7 +860,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
               </tr>
             </tbody>
 
-            <tbody v-for="(list, side) in pools.only" :key="side">
+            <tbody v-for="(list, side) in only" :key="side">
               <template v-if="list.length">
                 <tr class="band">
                   <td class="!pl-4" colspan="3">
@@ -880,6 +900,9 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
               </template>
             </tbody>
           </table>
+          <div v-if="poolRows.total > poolRows.limit" class="border-t border-line p-1.5">
+            <ShowMore v-model="poolsOpen" :total="poolRows.total" :limit="poolRows.limit" />
+          </div>
         </div>
       </template>
     </template>

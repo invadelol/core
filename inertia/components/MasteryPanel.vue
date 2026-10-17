@@ -182,12 +182,13 @@ const visible = computed(() =>
           </p>
 
           <button
-            v-if="!expanded && !query.trim() && rest.length > LIST_SIZE"
+            v-if="!query.trim() && rest.length > LIST_SIZE"
             type="button"
             class="iv-btn sm mt-4"
-            @click="expanded = true"
+            :aria-expanded="expanded"
+            @click="expanded = !expanded"
           >
-            Show all {{ rest.length }}
+            {{ expanded ? 'Show fewer' : `Show all ${rest.length}` }}
           </button>
         </div>
       </section>
