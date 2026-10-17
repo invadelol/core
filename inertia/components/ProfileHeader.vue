@@ -34,21 +34,26 @@ const path = computed(() => profilePath(props.summoner.gameName, props.summoner.
     />
 
     <div class="p-5">
-      <img
-        :src="profileIcon(summoner.profileIconId)"
-        :alt="summoner.gameName"
-        width="72"
-        height="72"
-        class="thumb h-[72px] w-[72px] rounded-[8px]"
-      />
+      <!-- The avatar and the name lead back to Overview from any section, like the side menu. -->
+      <Link :href="path" class="block w-fit" preserve-state preserve-scroll>
+        <img
+          :src="profileIcon(summoner.profileIconId)"
+          :alt="summoner.gameName"
+          width="72"
+          height="72"
+          class="thumb h-[72px] w-[72px] rounded-[8px]"
+        />
+      </Link>
 
       <h1
         class="mt-4 text-[22px] font-semibold leading-[28px] tracking-[-0.012em] text-ink [overflow-wrap:anywhere]"
         :title="`${summoner.gameName}#${summoner.tagLine}`"
       >
-        {{ summoner.gameName
-        }}<span class="ml-1 text-[16px] font-medium tracking-normal text-ink-3"
-          >#{{ summoner.tagLine }}</span
+        <Link :href="path" class="name" preserve-state preserve-scroll
+          >{{ summoner.gameName
+          }}<span class="ml-1 text-[16px] font-medium tracking-normal text-ink-3"
+            >#{{ summoner.tagLine }}</span
+          ></Link
         >
       </h1>
 
@@ -92,6 +97,17 @@ const path = computed(() => profilePath(props.summoner.gameName, props.summoner.
 </template>
 
 <style scoped>
+.name {
+  color: inherit;
+  text-decoration: none;
+}
+
+.name:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--line-3);
+  text-underline-offset: 4px;
+}
+
 /* ~24% opacity, slightly desaturated, faded out with straight masks to the left and below. */
 .splash {
   opacity: 0.24;
