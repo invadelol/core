@@ -64,6 +64,8 @@ export type ClickhouseParticipantRow = {
   item4: number
   item5: number
   item6: number
+  /** The role-quest slot (`roleBoundItem`), 0 when the mode has none. */
+  role_item: number
 
   spell1: number
   spell2: number

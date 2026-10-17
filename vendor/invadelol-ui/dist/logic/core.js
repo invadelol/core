@@ -1,10 +1,10 @@
-import { SCORE_CATEGORIES as as, PINGS as os } from "./detail.js";
-import { rankValue as ls } from "./labels.js";
-const rs = Object.keys(os), q = { TOP: "TOP", JUNGLE: "JUNGLE", MIDDLE: "MID", BOTTOM: "ADC", UTILITY: "SUPPORT" }, ds = /* @__PURE__ */ new Set(["carry_damage", "tank", "vision", "cc", "objectives", "first_blood", "triple", "quadra", "penta", "deathless", "lane_won"]), X = 300, cs = 900 * 1e3, ks = (e) => q[e ?? ""] ?? null, us = (e) => Number(e.slice(e.lastIndexOf("_") + 1)) || 0, Q = (e) => {
+import { roleSlot as as, SCORE_CATEGORIES as os, PINGS as ls } from "./detail.js";
+import { rankValue as rs } from "./labels.js";
+const ds = Object.keys(ls), q = { TOP: "TOP", JUNGLE: "JUNGLE", MIDDLE: "MID", BOTTOM: "ADC", UTILITY: "SUPPORT" }, cs = /* @__PURE__ */ new Set(["carry_damage", "tank", "vision", "cc", "objectives", "first_blood", "triple", "quadra", "penta", "deathless", "lane_won"]), X = 300, us = 900 * 1e3, Is = (e) => q[e ?? ""] ?? null, ms = (e) => Number(e.slice(e.lastIndexOf("_") + 1)) || 0, Q = (e) => {
   const m = Object.keys(q).indexOf(e.position);
   return m < 0 ? 5 : m;
 };
-function ms(e, m) {
+function ps(e, m) {
   if (m.position) {
     const f = e.find((o) => o.teamId !== m.teamId && o.position === m.position);
     if (f) return f;
@@ -12,7 +12,7 @@ function ms(e, m) {
   const c = e.filter((f) => f.teamId === m.teamId), n = e.filter((f) => f.teamId !== m.teamId);
   return n[c.indexOf(m)] ?? n[0];
 }
-function Is(e, m = {}) {
+function hs(e, m = {}) {
   const c = [...e.participants].sort((s, i) => s.teamId - i.teamId || Q(s) - Q(i)), n = e.timeline ?? [], f = e.events ?? [], o = f.length > 0, I = Math.max(e.duration / 60, 1), g = c.some((s) => s.position in q), v = e.completeness?.pings !== !1 && c.some((s) => s.allInPings !== void 0), T = /* @__PURE__ */ new Map();
   for (const s of n) s.puuid && !T.has(s.puuid) && T.set(s.puuid, s.participantId);
   const h = (s) => T.get(s.puuid) ?? c.indexOf(s) + 1, w = [...new Set(n.map((s) => s.frameMs))].sort((s, i) => s - i), x = new Map(w.map((s, i) => [s, i])), b = (s, i) => {
@@ -20,16 +20,16 @@ function Is(e, m = {}) {
     for (const p of n) p.puuid === s && (r[x.get(p.frameMs)] = i(p));
     for (let p = 1; p < r.length; p++) !r[p] && r[p - 1] && (r[p] = r[p - 1]);
     return r;
-  }, O = c.map((s) => b(s.puuid, (i) => i.goldTotal)), t = c.map((s) => b(s.puuid, (i) => i.xp)), a = c.map((s) => b(s.puuid, (i) => i.cs + i.jungleCs)), l = c.map((s) => b(s.puuid, (i) => i.level)), y = x.get(cs), D = f.filter((s) => s.kind === "kill").map((s) => ({ t: s.t, killer: s.killer, victim: s.victim, assists: s.assists ?? [], x: s.x, y: s.y })).sort((s, i) => s.t - i.t), j = f.filter((s) => s.kind !== "kill").map((s) => ({ t: s.t, kind: s.kind, sub: s.sub, team: s.team, lane: s.lane, killer: s.killer })).sort((s, i) => s.t - i.t), G = D[0]?.killer ?? 0, S = /* @__PURE__ */ new Map();
+  }, O = c.map((s) => b(s.puuid, (i) => i.goldTotal)), t = c.map((s) => b(s.puuid, (i) => i.xp)), a = c.map((s) => b(s.puuid, (i) => i.cs + i.jungleCs)), l = c.map((s) => b(s.puuid, (i) => i.level)), y = x.get(us), D = f.filter((s) => s.kind === "kill").map((s) => ({ t: s.t, killer: s.killer, victim: s.victim, assists: s.assists ?? [], x: s.x, y: s.y })).sort((s, i) => s.t - i.t), j = f.filter((s) => s.kind !== "kill").map((s) => ({ t: s.t, kind: s.kind, sub: s.sub, team: s.team, lane: s.lane, killer: s.killer })).sort((s, i) => s.t - i.t), G = D[0]?.killer ?? 0, S = /* @__PURE__ */ new Map();
   for (const s of e.shop ?? [])
     s.item && (S.has(s.player) || S.set(s.player, []), S.get(s.player).push({ t: s.t, item: s.item, sold: s.sold }));
   const K = /* @__PURE__ */ new Map(), U = /* @__PURE__ */ new Map(), F = /* @__PURE__ */ new Map(), H = (s, i, r) => s.set(i, (s.get(i) ?? 0) + (r || 0));
   for (const s of c)
     H(K, s.teamId, s.kills), H(U, s.teamId, s.goldEarned), H(F, s.teamId, s.totalDamageDealtToChampions);
   const N = m.scores ?? {}, W = c.filter((s) => N[s.puuid] !== void 0).sort((s, i) => N[i.puuid] - N[s.puuid]), P = e.duration < X, $ = P ? void 0 : W.find((s) => s.win), Z = P ? void 0 : W.find((s) => !s.win), Y = c.map((s, i) => {
-    const r = g ? ms(c, s) : void 0, p = r ? c.indexOf(r) : -1, d = (u) => y !== void 0 && p >= 0 ? u[i][y] - u[p][y] : null, k = n.find((u) => u.puuid === s.puuid && u.perks?.keystone)?.perks, L = k?.statPerks ? [k.statPerks.offense, k.statPerks.flex, k.statPerks.defense] : [], _ = k ? k.runes.filter((u) => u > 0) : [], A = k?.keystone || s.perks.keystone, is = _.length ? (_[0] === A ? _ : [A, ..._]).slice(0, 6) : A ? [A] : [], M = [];
+    const r = g ? ps(c, s) : void 0, p = r ? c.indexOf(r) : -1, d = (u) => y !== void 0 && p >= 0 ? u[i][y] - u[p][y] : null, k = n.find((u) => u.puuid === s.puuid && u.perks?.keystone)?.perks, L = k?.statPerks ? [k.statPerks.offense, k.statPerks.flex, k.statPerks.defense] : [], _ = k ? k.runes.filter((u) => u > 0) : [], A = k?.keystone || s.perks.keystone, is = _.length ? (_[0] === A ? _ : [A, ..._]).slice(0, 6) : A ? [A] : [], M = [];
     s === $ ? M.push("mvp") : s === Z && M.push("ace");
-    for (const u of m.badges?.[s.puuid] ?? []) ds.has(u) && !M.includes(u) && M.push(u);
+    for (const u of m.badges?.[s.puuid] ?? []) cs.has(u) && !M.includes(u) && M.push(u);
     o && G === h(s) && !M.includes("first_blood") && M.push("first_blood");
     const B = P ? void 0 : N[s.puuid], R = B === void 0 ? void 0 : m.parts?.[s.puuid];
     return {
@@ -82,7 +82,7 @@ function Is(e, m = {}) {
       xp15: d(t),
       cs15: d(a),
       score: B === void 0 ? null : B / 10,
-      parts: R ? as.filter((u) => R.weights[u] > 0).map((u) => ({ key: u, value: R.categories[u], weight: R.weights[u] })) : [],
+      parts: R ? os.filter((u) => R.weights[u] > 0).map((u) => ({ key: u, value: R.categories[u], weight: R.weights[u] })) : [],
       rank: B === void 0 ? 0 : W.indexOf(s) + 1,
       badges: M,
       skills: n.find((u) => u.puuid === s.puuid && u.skillOrder?.length)?.skillOrder ?? [],
@@ -90,7 +90,8 @@ function Is(e, m = {}) {
       placement: 0,
       ...L.every(Boolean) ? { shards: L } : {},
       ...S.size ? { purchases: S.get(h(s)) ?? [] } : {},
-      ...v ? { pings: Object.fromEntries(rs.map((u) => [u, s[`${u}Pings`] ?? 0])) } : {}
+      ...as(s.roleItem) ? { roleItem: s.roleItem } : {},
+      ...v ? { pings: Object.fromEntries(ds.map((u) => [u, s[`${u}Pings`] ?? 0])) } : {}
     };
   }), ss = new Map(Y.map((s) => [s.participantId, s])), es = (s) => s === 100, E = (s, i, r) => s === 100 ? i : s === 200 ? r : 0, C = (s, i) => {
     if (!o) return null;
@@ -122,7 +123,7 @@ function Is(e, m = {}) {
     };
   }), z = (s) => w.map((i, r) => s.reduce((p, d, k) => p + (c[k].teamId === 100 ? 1 : c[k].teamId === 200 ? -1 : 0) * d[r], 0)), ns = w.length > 1 ? { t: w.map((s) => Math.round(s / 1e3)), gold: O, xp: t, cs: a, level: l, goldDiff: z(O), xpDiff: z(t), kills: D, objectives: j } : null;
   return {
-    gameId: us(e.matchId),
+    gameId: ms(e.matchId),
     creation: Number(e.gameStartMs),
     duration: e.duration,
     queueId: e.queueId,
@@ -135,7 +136,7 @@ function Is(e, m = {}) {
     fromCore: !0
   };
 }
-function hs(e, m, c = null) {
+function vs(e, m, c = null) {
   const n = e.players.find((o) => o.puuid === m);
   if (!n) return null;
   const f = e.players.find((o) => o.participantId === n.opponent);
@@ -185,7 +186,7 @@ const V = (e) => ({
   provisional: !1,
   previous: ""
 }), J = { solo: "RANKED_SOLO_5x5", flex: "RANKED_FLEX_SR" };
-function vs({ summoner: e, ranks: m, mastery: c, games: n }) {
+function ws({ summoner: e, ranks: m, mastery: c, games: n }) {
   const f = (t) => {
     const a = m?.current.find((l) => l.queueType === J[t] && l.tier);
     return a ? V(a) : null;
@@ -198,7 +199,7 @@ function vs({ summoner: e, ranks: m, mastery: c, games: n }) {
     const a = (l) => t.reduce((y, D) => y + l(D), 0);
     return { games: a((l) => l.games), wins: a((l) => l.wins), kills: a((l) => l.kills), deaths: a((l) => l.deaths), assists: a((l) => l.assists), cs: a((l) => l.cs), seconds: a((l) => l.seconds) };
   }, h = o.map((t) => t.win), w = h.findIndex((t) => t !== h[0]), x = h.length ? (w < 0 ? h.length : w) * (h[0] ? 1 : -1) : 0, b = [...g].sort((t, a) => a[1] - t[1]), O = (m?.history ?? []).flatMap((t) => {
-    const a = t.queueType === J.solo ? "solo" : t.queueType === J.flex ? "flex" : null, l = V(t), y = ls(l), D = Date.parse(t.fetchedAt);
+    const a = t.queueType === J.solo ? "solo" : t.queueType === J.flex ? "flex" : null, l = V(t), y = rs(l), D = Date.parse(t.fetchedAt);
     return a && y !== null && D ? [{ t: D, queue: a, tier: l.tier, division: l.division, lp: l.lp, wins: l.wins, losses: l.losses, value: Math.round(y * 100) }] : [];
   }).sort((t, a) => t.t - a.t);
   return {
@@ -229,7 +230,7 @@ function vs({ summoner: e, ranks: m, mastery: c, games: n }) {
     lp: O
   };
 }
-function ws(e, m) {
+function ys(e, m) {
   const c = /* @__PURE__ */ new Map(), f = [...e.filter((o) => o.duration >= X && o.participants.some((I) => I.puuid === m))].sort((o, I) => Number(I.gameStartMs) - Number(o.gameStartMs)).slice(0, 40);
   for (const o of f) {
     const I = o.participants.find((g) => g.puuid === m).teamId;
@@ -245,11 +246,11 @@ function ws(e, m) {
   };
 }
 export {
-  Is as fromCoreMatch,
-  us as gameIdOf,
-  ws as playedWithFromCore,
-  ks as positionOf,
-  vs as profileFromCore,
+  hs as fromCoreMatch,
+  ms as gameIdOf,
+  ys as playedWithFromCore,
+  Is as positionOf,
+  ws as profileFromCore,
   V as rankFromCore,
-  hs as summaryOf
+  vs as summaryOf
 };

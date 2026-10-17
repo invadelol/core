@@ -86,6 +86,7 @@ const participant = {
   item4: 0,
   item5: 0,
   item6: 0,
+  role_item: 0,
   spell1: 4,
   spell2: 14,
   primary_style: 8000,

@@ -2,6 +2,8 @@ import type { Mastery, MatchDetail, MatchSummary, Objective, Ping, PlayedWith, P
 /** Pings per kind (`allInPings`…), on Riot's games. */
 export type CorePings = Partial<Record<`${Ping}Pings`, number>>;
 export interface CoreParticipant extends CorePings {
+    /** The role-quest slot (`roleBoundItem`): a 12xx token while the quest runs, then its reward. */
+    roleItem?: number;
     puuid: string;
     gameName: string;
     tagLine: string;
