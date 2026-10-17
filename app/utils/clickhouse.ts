@@ -152,6 +152,7 @@ export function buildParticipantRows(
         item4: toInt(p.item4 ?? 0, 0),
         item5: toInt(p.item5 ?? 0, 0),
         item6: toInt(p.item6 ?? 0, 0),
+        role_item: toUInt((p as any).roleBoundItem, 0xffff),
 
         spell1: toInt(p.summoner1Id ?? 0, 0),
         spell2: toInt(p.summoner2Id ?? 0, 0),
