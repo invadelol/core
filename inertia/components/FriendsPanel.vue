@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { Users } from 'lucide-vue-next'
+import { ChevronDown, Users } from 'lucide-vue-next'
 import DuoDetail from './DuoDetail.vue'
+import PlayerLink from './PlayerLink.vue'
 import { profileIcon } from '../lib/assets.js'
 import { shortDate, timeAgo } from '../lib/format.js'
 import { roleLabel, type Partner, type SynergyReport } from '../lib/synergy.js'
@@ -41,6 +42,11 @@ const listed = computed(() => (showAll.value ? friends.value : friends.value.sli
 const CHIPS = 8
 const allChips = ref(false)
 const chips = computed(() => (allChips.value ? occasional.value : occasional.value.slice(0, CHIPS)))
+
+/** The group opened to list its members, by their puuids. */
+const groupKey = (group: { members: Array<{ puuid: string }> }) =>
+  group.members.map((m) => m.puuid).join()
+const openGroup = ref<string | null>(null)
 
 const summary = computed(() => {
   const r = props.report
@@ -195,7 +201,7 @@ function seats(partner: Partner) {
                     {{ main.gameName }}
                   </span>
                   <span class="num block text-[12px] leading-4 text-ink-3">
-                    {{ main.games }} games · {{ signed(main.synergy) }}
+                    {{ main.games }} games · {{ rate(main.wins, main.games) }}% won
                   </span>
                 </span>
               </button>
@@ -215,6 +221,9 @@ function seats(partner: Partner) {
             <h3>Played with</h3>
             <span class="meta max-sm:hidden">Pick someone to see the duo</span>
           </div>
+          <p v-if="friends.length" class="fr-lead">
+            Synergy is your win rate with them minus your win rate without them.
+          </p>
 
           <div v-if="friends.length" class="!px-2 !pb-2 sm:!px-3">
             <ul>
@@ -241,21 +250,20 @@ function seats(partner: Partner) {
                     </span>
                     <span class="fr-sub num">
                       <span v-if="partner.tier === 'duo'" class="text-ink-2">Duo</span>
-                      <span>{{ partner.games }} games</span>
-                      <span>{{ rate(partner.wins, partner.games) }}% won</span>
+                      <span
+                        :class="{ 'text-ink-2': clear(partner) }"
+                        :title="`${rate(partner.wins, partner.games)}% together, ${Math.round(partner.baseline * 100)}% without`"
+                        >{{ signed(partner.synergy) }} synergy</span
+                      >
                       <span v-if="partner.theirRole" class="max-xs:hidden">{{
                         seats(partner)
                       }}</span>
                       <span class="max-sm:hidden">{{ timeAgo(partner.lastMs) }}</span>
                     </span>
                   </span>
-                  <span
-                    class="fr-syn"
-                    :class="{ quiet: !clear(partner) }"
-                    :title="`${rate(partner.wins, partner.games)}% together, ${Math.round(partner.baseline * 100)}% without`"
-                  >
-                    <b class="num">{{ signed(partner.synergy) }}</b>
-                    <small>synergy</small>
+                  <span class="fr-fig" :class="{ quiet: partner.confidence === 'low' }">
+                    <b class="num">{{ rate(partner.wins, partner.games) }}%</b>
+                    <small class="num">{{ partner.games }} games</small>
                   </span>
                 </button>
               </li>
@@ -301,11 +309,6 @@ function seats(partner: Partner) {
               </li>
             </ul>
           </div>
-
-          <p class="fr-note">
-            Synergy: the win rate together against the win rate without them, pulled toward the
-            usual one when there are few games.
-          </p>
         </section>
 
         <!-- Premade groups -->
@@ -314,38 +317,66 @@ function seats(partner: Partner) {
             <h3>Groups</h3>
             <span class="meta">Three or more of you</span>
           </div>
-          <ul class="!px-4 !pb-3 !pt-1">
-            <li v-for="group in report.groups" :key="group.members.map((m) => m.puuid).join()">
-              <span class="fr-stack" aria-hidden="true">
-                <img
-                  v-for="member in group.members.slice(0, 4)"
-                  :key="member.puuid"
-                  :src="profileIcon(member.profileIconId)"
-                  alt=""
-                  width="24"
-                  height="24"
-                  loading="lazy"
-                  class="thumb"
-                />
-              </span>
-              <span class="min-w-0 flex-1">
-                <span class="block truncate text-[13px] font-semibold leading-[17px] text-ink">
-                  {{ group.members.map((m) => m.gameName).join(', ') }}
-                </span>
-                <span class="fr-sub num">
-                  <span>{{ group.games }} games</span>
-                  <span>{{ rate(group.wins, group.games) }}% won</span>
-                  <span>{{ shortDate(group.lastMs) }}</span>
-                </span>
-              </span>
-              <span
-                class="fr-syn"
-                :class="{ quiet: !clear(group) }"
-                :title="`${rate(group.wins, group.games)}% together, ${Math.round((report.wins / report.games) * 100)}% overall`"
+          <ul class="!px-2 !pb-2 !pt-1 sm:!px-3">
+            <li v-for="group in report.groups" :key="groupKey(group)">
+              <button
+                type="button"
+                class="fr-row fr-group"
+                :class="{ open: openGroup === groupKey(group) }"
+                :aria-expanded="openGroup === groupKey(group)"
+                @click="openGroup = openGroup === groupKey(group) ? null : groupKey(group)"
               >
-                <b class="num">{{ signed(group.synergy) }}</b>
-                <small>synergy</small>
-              </span>
+                <span class="fr-stack" aria-hidden="true">
+                  <img
+                    v-for="member in group.members.slice(0, 4)"
+                    :key="member.puuid"
+                    :src="profileIcon(member.profileIconId)"
+                    alt=""
+                    width="24"
+                    height="24"
+                    loading="lazy"
+                    class="thumb"
+                  />
+                </span>
+                <span class="min-w-0 flex-1 text-left">
+                  <span class="block truncate text-[13px] font-semibold leading-[17px] text-ink">
+                    {{ group.members.map((m) => m.gameName).join(', ') }}
+                  </span>
+                  <span class="fr-sub num">
+                    <span
+                      :class="{ 'text-ink-2': clear(group) }"
+                      :title="`${rate(group.wins, group.games)}% together, ${Math.round((report.wins / report.games) * 100)}% overall`"
+                      >{{ signed(group.synergy) }} synergy</span
+                    >
+                    <span>{{ shortDate(group.lastMs) }}</span>
+                  </span>
+                </span>
+                <span class="fr-fig" :class="{ quiet: group.confidence === 'low' }">
+                  <b class="num">{{ rate(group.wins, group.games) }}%</b>
+                  <small class="num">{{ group.games }} games</small>
+                </span>
+                <ChevronDown :size="14" class="fr-chevron" />
+              </button>
+
+              <!-- Everyone in it, each to their profile -->
+              <ul v-if="openGroup === groupKey(group)" class="fr-members">
+                <li v-for="member in group.members" :key="member.puuid">
+                  <img
+                    :src="profileIcon(member.profileIconId)"
+                    alt=""
+                    width="24"
+                    height="24"
+                    loading="lazy"
+                    class="thumb"
+                  />
+                  <PlayerLink
+                    :game-name="member.gameName"
+                    :tag-line="member.tagLine"
+                    show-tag
+                    class="text-[13px]"
+                  />
+                </li>
+              </ul>
             </li>
           </ul>
         </section>
@@ -486,8 +517,8 @@ button.fr-row.on {
   color: var(--text-4);
 }
 
-/* The row's one figure: synergy, signed, in ink when it can be read, muted when it cannot. */
-.fr-syn {
+/* The row's figure: the win rate together over the games together, muted on a handful. */
+.fr-fig {
   display: grid;
   justify-items: end;
   flex: none;
@@ -495,7 +526,7 @@ button.fr-row.on {
   text-align: right;
 }
 
-.fr-syn b {
+.fr-fig b {
   font-size: 17px;
   font-weight: 650;
   font-stretch: var(--fig);
@@ -504,14 +535,14 @@ button.fr-row.on {
   color: var(--text-1);
 }
 
-.fr-syn small {
+.fr-fig small {
   font-size: 11px;
   font-weight: 500;
   line-height: 14px;
   color: var(--text-4);
 }
 
-.fr-syn.quiet b {
+.fr-fig.quiet b {
   font-weight: 500;
   color: var(--text-3);
 }
@@ -570,23 +601,49 @@ button.fr-row.on {
   }
 }
 
-.fr-note {
-  margin: 12px 16px 14px;
+.fr-lead {
+  margin: -6px 16px 6px;
   font-size: 12px;
   line-height: 16px;
-  color: var(--text-4);
+  color: var(--text-3);
 }
 
 /* ── Groups ─────────────────────────────────────────────────── */
-.fr-groups li {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+.fr-groups > ul > li + li {
+  border-top: 1px solid var(--line);
+}
+
+.fr-group {
   min-height: 56px;
 }
 
-.fr-groups li + li {
-  border-top: 1px solid var(--line);
+.fr-chevron {
+  flex: none;
+  color: var(--text-4);
+  transition: transform var(--t-base) var(--ease);
+}
+
+.fr-group.open .fr-chevron {
+  transform: rotate(180deg);
+}
+
+.fr-members {
+  display: grid;
+  gap: 2px;
+  padding: 0 10px 10px;
+}
+
+.fr-members li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 32px;
+}
+
+.fr-members img {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-sm);
 }
 
 .fr-stack {
