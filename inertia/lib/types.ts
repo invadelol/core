@@ -265,6 +265,7 @@ export interface LiveGame {
       wins?: number | null
       losses?: number | null
     } | null
+    rankStatus?: 'ranked' | 'unranked' | 'unavailable'
     spell1Id: number
     spell2Id: number
     perks?: { perkIds: number[]; perkStyle: number; perkSubStyle: number }

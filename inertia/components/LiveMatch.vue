@@ -22,7 +22,7 @@ let controller: AbortController | undefined
 let clock: ReturnType<typeof setInterval> | undefined
 let poll: ReturnType<typeof setTimeout> | undefined
 
-async function refresh(background = false) {
+async function refresh(background = false, force = false) {
   clearTimeout(poll)
   controller?.abort()
   controller = new AbortController()
@@ -32,10 +32,13 @@ async function refresh(background = false) {
     error.value = ''
   }
   try {
-    const response = await fetch(`/api/summoners/puuid/${props.puuid}/live`, {
-      signal,
-      cache: 'no-store',
-    })
+    const response = await fetch(
+      `/api/summoners/puuid/${props.puuid}/live${force ? '?refresh=1' : ''}`,
+      {
+        signal,
+        cache: 'no-store',
+      }
+    )
     if (!response.ok)
       throw new Error(response.status === 503 || response.status === 429 ? 'riot' : 'check')
     const data = await response.json()
@@ -180,7 +183,7 @@ const roleTitle = (lane: { position: Player['position']; likely: boolean }) =>
       <span class="lv-idle-mark"><CloudOff :size="18" /></span>
       <h2>{{ error === 'riot' ? 'Riot is not answering' : 'Could not check this live game' }}</h2>
       <p>Live games come from Riot. Try again in a moment.</p>
-      <button type="button" class="iv-btn sm" :disabled="loading" @click="refresh()">
+      <button type="button" class="iv-btn sm" :disabled="loading" @click="refresh(false, true)">
         <RefreshCw :size="12" :class="{ 'animate-spin': loading }" />
         Retry
       </button>
@@ -195,7 +198,7 @@ const roleTitle = (lane: { position: Player['position']; likely: boolean }) =>
       <span class="lv-idle-mark"><Radio :size="18" /></span>
       <h2>{{ name }} is not in a game</h2>
       <p>The game shows here as soon as it starts.</p>
-      <button type="button" class="iv-btn sm" :disabled="loading" @click="refresh()">
+      <button type="button" class="iv-btn sm" :disabled="loading" @click="refresh(false, true)">
         <RefreshCw :size="12" :class="{ 'animate-spin': loading }" />
         Check now
       </button>
@@ -211,7 +214,7 @@ const roleTitle = (lane: { position: Player['position']; likely: boolean }) =>
         <span class="lv-checked meta">
           {{ stale ? 'Could not refresh' : checkedAt ? `Updated ${checkedAt}` : '' }}
         </span>
-        <button type="button" class="iv-btn sm" :disabled="loading" @click="refresh()">
+        <button type="button" class="iv-btn sm" :disabled="loading" @click="refresh(false, true)">
           <RefreshCw :size="12" :class="{ 'animate-spin': loading }" />
           Refresh
         </button>

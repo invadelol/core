@@ -103,7 +103,16 @@ const spell = (id: number) => nameOf('spell', id) ?? 'Summoner spell'
       </template>
     </span>
 
-    <span class="lv-rank" :title="ranked ? `Solo/Duo: ${ranked}` : 'No Solo/Duo rank on record'">
+    <span
+      class="lv-rank"
+      :title="
+        p.rankStatus === 'unavailable'
+          ? 'Rank could not be refreshed; any rank shown is the last known Solo/Duo rank'
+          : ranked
+            ? `Solo/Duo: ${ranked}`
+            : 'No Solo/Duo rank'
+      "
+    >
       <template v-if="p.rank">
         <RankCrest :tier="p.rank.tier" :size="24" />
         <span class="lv-rank-text">
@@ -113,7 +122,9 @@ const spell = (id: number) => nameOf('spell', id) ?? 'Summoner spell'
           <small class="num">{{ p.rank.leaguePoints }} LP</small>
         </span>
       </template>
-      <span v-else-if="p.puuid && !p.bot" class="lv-unranked">Unranked</span>
+      <span v-else-if="p.puuid && !p.bot" class="lv-unranked">{{
+        p.rankStatus === 'unranked' ? 'Unranked' : 'Rank unavailable'
+      }}</span>
     </span>
   </div>
 </template>

@@ -123,6 +123,12 @@ Every player name in the product links to that player's profile.
 - Mastery uses Riot's PUUID endpoint with a one-hour cache; live state uses
   spectator v5 with a 30-second cache. Only a spectator 404 means "not in a
   game". Observer credentials are never sent to the browser.
+- Live fetches Solo/Duo ranks for every human participant through the shared,
+  rate-limited Riot client, even when their profiles have never been opened.
+  Successful rank reads (including unranked answers) are shared for one minute.
+  The existing Refresh button bypasses both caches (`?refresh=1`). Failed reads
+  keep a last-known rank where available and are never labeled Unranked.
+  Champion records and recent form still come from stored games.
 
 ## Link previews
 

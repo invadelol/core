@@ -1,5 +1,6 @@
 import { positionOf, type Position } from '@invadelol/ui/logic'
 import { assignPositions, POSITION_ORDER } from '#services/live/positions'
+import type { RankStatus } from '#services/live/ranks'
 
 /** Stored games read per player: the champion record and the lanes come from these. */
 export const LOBBY_HISTORY_GAMES = 100
@@ -67,6 +68,7 @@ export interface LiveParticipant {
     wins: number | null
     losses: number | null
   } | null
+  rankStatus: RankStatus
   /** The inferred lane; null in a mode without lanes. */
   position: Position | null
   /** How sure that lane is, 0 to 1. */
@@ -133,7 +135,8 @@ function playerContext(games: LobbyGame[], championId: number) {
 export function buildLiveGame(
   data: SpectatorGame,
   ranks: readonly LobbyRank[],
-  games: readonly LobbyGame[]
+  games: readonly LobbyGame[],
+  rankStatuses: ReadonlyMap<string, RankStatus> = new Map()
 ): LiveGame {
   const byPlayer = new Map<string, LobbyGame[]>()
   for (const game of games) {
@@ -165,6 +168,8 @@ export function buildLiveGame(
         perks: p.perks,
         championStats: context.championStats,
         recent: context.recent,
+        rankStatus:
+          (tracked && rankStatuses.get(p.puuid!)) || (rank?.tier ? 'ranked' : 'unavailable'),
         rank:
           rank?.tier && rank.division
             ? {
