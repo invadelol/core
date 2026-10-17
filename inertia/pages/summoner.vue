@@ -64,6 +64,13 @@ const props = defineProps<{
 /** `mastery` is the Champions section's lifetime view, with an address of its own. */
 const section = computed(() => (props.section === 'mastery' ? 'champions' : (props.section ?? 'overview')))
 
+/**
+ * Whether the viewer is this player. The site has no accounts yet, so it cannot know: this stays
+ * false until signing in exists and proves the profile is theirs. It gates the self-deprecating
+ * tags on bad games (lib/self_tags.ts), which must never show on someone else's profile.
+ */
+const viewerOwnsProfile = false
+
 /** The profile's headline window, and the one it is compared with. */
 const STATS_WINDOW = 30
 const shareOpen = ref(false)
@@ -760,6 +767,7 @@ async function sync() {
                   :puuid="profile.puuid"
                   :game-name="profile.gameName"
                   :tag-line="profile.tagLine"
+                  :own-profile="viewerOwnsProfile"
                   @clear="filters = { type: 'all', champion: 0, role: 'all' }"
                 />
               </div>
