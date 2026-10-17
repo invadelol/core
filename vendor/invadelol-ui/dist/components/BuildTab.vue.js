@@ -1,25 +1,46 @@
 import '../styles/base.css';
 import '../styles/primitives.css';
 import '../styles/detail.css';
-import { defineComponent as W, computed as y, openBlock as o, createElementBlock as n, createVNode as z, createElementVNode as i, toDisplayString as v, unref as e, Fragment as m, renderList as p, normalizeClass as _, createTextVNode as T, createCommentVNode as L } from "vue";
-import { useInvadeUi as G, useFormat as K, useNames as Q } from "../context.js";
-import { hideBroken as c } from "../dom.js";
-import { RUNE_SLOTS as B } from "../logic/detail.js";
-import { tk as f } from "../logic/i18n.js";
-import X from "./PlayerPicker.vue.js";
+import { defineComponent as X, computed as B, ref as q, watch as A, openBlock as l, createElementBlock as s, createVNode as H, createElementVNode as r, toDisplayString as u, unref as t, Fragment as p, renderList as b, normalizeClass as y, createCommentVNode as _, createTextVNode as f } from "vue";
+import { useInvadeUi as J, useFormat as Y, useNames as Z } from "../context.js";
+import { hideBroken as v } from "../dom.js";
+import { RUNE_SLOTS as j } from "../logic/detail.js";
+import { shopVisits as x } from "../logic/shop.js";
+import { tk as w } from "../logic/i18n.js";
+import ee from "./PlayerPicker.vue.js";
 /* empty css                 */
 /* empty css                       */
 /* empty css                   */
-const q = { class: "iv-bd" }, A = { class: "iv-bd-grid" }, H = {
+const te = { class: "iv-bd" }, le = {
+  key: 0,
+  class: "iv-bd-path"
+}, se = { class: "iv-label" }, oe = { class: "iv-bd-visit" }, ne = ["aria-label", "onClick", "onMouseenter", "onMouseleave", "onBlur"], ae = ["src"], re = {
+  key: 0,
+  class: "iv-bd-count tabular"
+}, ie = {
+  key: 1,
+  class: "iv-bd-tip",
+  role: "tooltip"
+}, ue = { class: "tabular" }, ce = {
+  key: 0,
+  class: "iv-bd-sold"
+}, de = ["aria-label", "onClick", "onMouseenter", "onMouseleave", "onBlur"], ve = ["src"], me = {
+  key: 0,
+  class: "iv-bd-count tabular"
+}, pe = {
+  key: 1,
+  class: "iv-bd-tip",
+  role: "tooltip"
+}, ke = { class: "tabular" }, be = { class: "tabular" }, _e = { class: "iv-bd-grid" }, ye = {
   key: 0,
   class: "iv-bd-runes"
-}, J = { class: "iv-label" }, Y = { class: "iv-bd-tree-name" }, Z = ["src"], ee = ["src", "alt", "title"], le = {
+}, he = { class: "iv-label" }, ge = { class: "iv-bd-tree-name" }, fe = ["src"], $e = ["src", "alt", "title"], Se = {
   key: 1,
   class: "iv-bd-slot"
-}, te = ["src", "alt", "title"], se = {
+}, Be = ["src", "alt", "title"], Me = {
   key: 0,
   class: "iv-bd-tree second"
-}, oe = { class: "iv-bd-slot iv-bd-shards" }, ne = ["src", "alt", "title"], re = { class: "iv-bd-kit" }, ie = { class: "iv-label" }, ae = { class: "iv-bd-items" }, ce = ["src", "alt", "title"], ue = { class: "iv-label" }, de = { class: "iv-bd-spells" }, me = ["src"], ve = { class: "iv-bd-facts" }, pe = { class: "iv-label" }, Se = /* @__PURE__ */ W({
+}, we = { class: "iv-bd-slot iv-bd-shards" }, Ee = ["src", "alt", "title"], Ne = { class: "iv-bd-kit" }, Ce = { class: "iv-label" }, Ie = { class: "iv-bd-items" }, Te = ["src", "alt", "title"], Le = { class: "iv-label" }, De = { class: "iv-bd-spells" }, Ve = ["src"], je = { class: "iv-bd-facts" }, Pe = { class: "iv-label" }, qe = /* @__PURE__ */ X({
   __name: "BuildTab",
   props: {
     detail: {},
@@ -27,126 +48,200 @@ const q = { class: "iv-bd" }, A = { class: "iv-bd-grid" }, H = {
     me: {}
   },
   emits: ["select"],
-  setup(g, { emit: C }) {
-    const N = g, D = C, { t: r } = G(), { compact: S, signedGold: E } = K(), { itemIcon: M, itemName: x, runeIcon: w, runeName: k, spellIcon: V, spellName: j, styleIcon: P, styleName: U } = Q(), u = y(() => N.detail.players[N.selected]), $ = y(() => new Set(u.value.perks)), I = y(() => {
-      const [t, s] = u.value.styles;
+  setup(M, { emit: P }) {
+    const E = M, U = P, { t: i } = J(), { compact: I, signedGold: T, mmss: $ } = Y(), { itemIcon: N, itemName: h, runeIcon: C, runeName: g, spellIcon: F, spellName: O, styleIcon: R, styleName: W } = Z(), k = B(() => E.detail.players[E.selected]), L = B(
+      () => (k.value.purchases?.length ? x(k.value.purchases) : []).map((n, a) => ({
+        ...n,
+        items: n.items.map((o, m) => ({ ...o, key: `${a}:${m}` }))
+      }))
+    ), c = q("");
+    A(() => E.selected, () => c.value = "");
+    const D = (n) => c.value = c.value === n ? "" : n, z = B(() => new Set(k.value.perks)), V = B(() => {
+      const [n, a] = k.value.styles;
       return [
-        { id: t, rows: B[t] ?? null, fallback: u.value.perks.slice(0, 4) },
-        { id: s, rows: B[s]?.slice(1) ?? null, fallback: u.value.perks.slice(4, 6) }
-      ].filter((l) => l.id > 0);
-    }), F = ["", "", f("Double kill"), f("Triple kill"), f("Quadra kill"), f("Penta kill")], O = y(() => {
-      const t = u.value, s = [
-        { label: r("Wards"), value: r("{placed} placed · {killed} destroyed · {control} control", { placed: t.wardsPlaced, killed: t.wardsKilled, control: t.controlWards }) }
+        { id: n, rows: j[n] ?? null, fallback: k.value.perks.slice(0, 4) },
+        { id: a, rows: j[a]?.slice(1) ?? null, fallback: k.value.perks.slice(4, 6) }
+      ].filter((o) => o.id > 0);
+    }), G = ["", "", w("Double kill"), w("Triple kill"), w("Quadra kill"), w("Penta kill")], K = B(() => {
+      const n = k.value, a = [
+        { label: i("Wards"), value: i("{placed} placed · {killed} destroyed · {control} control", { placed: n.wardsPlaced, killed: n.wardsKilled, control: n.controlWards }) }
       ];
-      if (t.ccTime !== null && s.push({ label: r("Crowd control"), value: r("{n} s", { n: t.ccTime }) }), s.push({ label: r("Objective damage"), value: r("{n} · {towers} to towers", { n: S(t.objectiveDamage), towers: S(t.turretDamage) }) }), t.largestSpree !== null && s.push({ label: r("Largest killing spree"), value: String(t.largestSpree) }), t.largestMulti !== null && t.largestMulti > 1 && s.push({ label: r("Largest multikill"), value: r(F[Math.min(5, t.largestMulti)]) }), t.gold15 !== null || t.xp15 !== null || t.cs15 !== null) {
-        const l = [
-          t.gold15 !== null ? r("{n} gold", { n: E(t.gold15) }) : "",
-          t.xp15 !== null ? r("{n} XP", { n: E(t.xp15) }) : "",
-          t.cs15 !== null ? r("{n} CS", { n: `${t.cs15 > 0 ? "+" : ""}${t.cs15}` }) : ""
+      if (n.ccTime !== null && a.push({ label: i("Crowd control"), value: i("{n} s", { n: n.ccTime }) }), a.push({ label: i("Objective damage"), value: i("{n} · {towers} to towers", { n: I(n.objectiveDamage), towers: I(n.turretDamage) }) }), n.largestSpree !== null && a.push({ label: i("Largest killing spree"), value: String(n.largestSpree) }), n.largestMulti !== null && n.largestMulti > 1 && a.push({ label: i("Largest multikill"), value: i(G[Math.min(5, n.largestMulti)]) }), n.gold15 !== null || n.xp15 !== null || n.cs15 !== null) {
+        const o = [
+          n.gold15 !== null ? i("{n} gold", { n: T(n.gold15) }) : "",
+          n.xp15 !== null ? i("{n} XP", { n: T(n.xp15) }) : "",
+          n.cs15 !== null ? i("{n} CS", { n: `${n.cs15 > 0 ? "+" : ""}${n.cs15}` }) : ""
         ].filter(Boolean);
-        s.push({ label: r("Lead at 15 min"), value: l.join(" · ") });
+        a.push({ label: i("Lead at 15 min"), value: o.join(" · ") });
       }
-      return s;
+      return a;
     });
-    return (t, s) => (o(), n("div", q, [
-      z(X, {
-        detail: g.detail,
-        selected: g.selected,
-        me: g.me,
-        onSelect: s[0] || (s[0] = (l) => D("select", l))
+    return (n, a) => (l(), s("div", te, [
+      H(ee, {
+        detail: M.detail,
+        selected: M.selected,
+        me: M.me,
+        onSelect: a[0] || (a[0] = (o) => U("select", o))
       }, null, 8, ["detail", "selected", "me"]),
-      i("div", A, [
-        I.value.length && u.value.perks[0] ? (o(), n("section", H, [
-          i("h4", J, v(e(r)("Runes")), 1),
-          (o(!0), n(m, null, p(I.value, (l, d) => (o(), n("div", {
-            key: l.id,
-            class: _(["iv-bd-tree", { second: d }])
-          }, [
-            i("p", Y, [
-              i("img", {
-                src: e(P)(l.id),
-                alt: "",
-                onError: s[1] || (s[1] = //@ts-ignore
-                (...a) => e(c) && e(c)(...a))
-              }, null, 40, Z),
-              T(v(e(U)(l.id)), 1)
+      L.value.length ? (l(), s("section", le, [
+        r("h4", se, u(t(i)("Build path")), 1),
+        r("ol", null, [
+          (l(!0), s(p, null, b(L.value, (o, m) => (l(), s("li", { key: m }, [
+            r("div", oe, [
+              (l(!0), s(p, null, b(o.items.filter((e) => !e.sold), (e) => (l(), s("button", {
+                key: e.key,
+                type: "button",
+                class: y(["iv-bd-buy", { sold: e.sold, open: c.value === e.key }]),
+                "aria-label": `${t(h)(e.item)}, ${t(i)(e.sold ? "Sold at {t}" : "Bought at {t}", { t: t($)(e.t) })}`,
+                onClick: (d) => D(e.key),
+                onMouseenter: (d) => c.value = e.key,
+                onMouseleave: (d) => c.value === e.key && (c.value = ""),
+                onBlur: (d) => c.value === e.key && (c.value = "")
+              }, [
+                r("img", {
+                  src: t(N)(e.item),
+                  alt: "",
+                  onError: a[1] || (a[1] = //@ts-ignore
+                  (...d) => t(v) && t(v)(...d))
+                }, null, 40, ae),
+                e.count > 1 ? (l(), s("span", re, u(e.count), 1)) : _("", !0),
+                c.value === e.key ? (l(), s("span", ie, [
+                  r("strong", null, u(t(h)(e.item)), 1),
+                  r("span", ue, [
+                    f(u(t(i)(e.sold ? "Sold at {t}" : "Bought at {t}", { t: t($)(e.t) })), 1),
+                    e.count > 1 ? (l(), s(p, { key: 0 }, [
+                      f(" · ×" + u(e.count), 1)
+                    ], 64)) : _("", !0)
+                  ])
+                ])) : _("", !0)
+              ], 42, ne))), 128)),
+              o.items.some((e) => e.sold) ? (l(), s("div", ce, [
+                r("span", null, u(t(i)("Sold")), 1),
+                (l(!0), s(p, null, b(o.items.filter((e) => e.sold), (e) => (l(), s("button", {
+                  key: e.key,
+                  type: "button",
+                  class: y(["iv-bd-buy", { sold: e.sold, open: c.value === e.key }]),
+                  "aria-label": `${t(h)(e.item)}, ${t(i)(e.sold ? "Sold at {t}" : "Bought at {t}", { t: t($)(e.t) })}`,
+                  onClick: (d) => D(e.key),
+                  onMouseenter: (d) => c.value = e.key,
+                  onMouseleave: (d) => c.value === e.key && (c.value = ""),
+                  onBlur: (d) => c.value === e.key && (c.value = "")
+                }, [
+                  r("img", {
+                    src: t(N)(e.item),
+                    alt: "",
+                    onError: a[2] || (a[2] = //@ts-ignore
+                    (...d) => t(v) && t(v)(...d))
+                  }, null, 40, ve),
+                  e.count > 1 ? (l(), s("span", me, u(e.count), 1)) : _("", !0),
+                  c.value === e.key ? (l(), s("span", pe, [
+                    r("strong", null, u(t(h)(e.item)), 1),
+                    r("span", ke, [
+                      f(u(t(i)(e.sold ? "Sold at {t}" : "Bought at {t}", { t: t($)(e.t) })), 1),
+                      e.count > 1 ? (l(), s(p, { key: 0 }, [
+                        f(" · ×" + u(e.count), 1)
+                      ], 64)) : _("", !0)
+                    ])
+                  ])) : _("", !0)
+                ], 42, de))), 128))
+              ])) : _("", !0)
             ]),
-            l.rows ? (o(!0), n(m, { key: 0 }, p(l.rows, (a, h) => (o(), n("div", {
-              key: h,
-              class: _(["iv-bd-slot", { keys: !d && !h }])
+            r("time", be, u(t($)(o.t)), 1)
+          ]))), 128))
+        ])
+      ])) : _("", !0),
+      r("div", _e, [
+        V.value.length && k.value.perks[0] ? (l(), s("section", ye, [
+          r("h4", he, u(t(i)("Runes")), 1),
+          (l(!0), s(p, null, b(V.value, (o, m) => (l(), s("div", {
+            key: o.id,
+            class: y(["iv-bd-tree", { second: m }])
+          }, [
+            r("p", ge, [
+              r("img", {
+                src: t(R)(o.id),
+                alt: "",
+                onError: a[3] || (a[3] = //@ts-ignore
+                (...e) => t(v) && t(v)(...e))
+              }, null, 40, fe),
+              f(u(t(W)(o.id)), 1)
+            ]),
+            o.rows ? (l(!0), s(p, { key: 0 }, b(o.rows, (e, d) => (l(), s("div", {
+              key: d,
+              class: y(["iv-bd-slot", { keys: !m && !d }])
             }, [
-              (o(!0), n(m, null, p(a, (b) => (o(), n("img", {
-                key: b,
-                src: e(w)(b),
-                alt: e(k)(b),
-                title: e(k)(b),
-                class: _({ off: !$.value.has(b) }),
-                onError: s[2] || (s[2] = //@ts-ignore
-                (...R) => e(c) && e(c)(...R))
-              }, null, 42, ee))), 128))
-            ], 2))), 128)) : (o(), n("div", le, [
-              (o(!0), n(m, null, p(l.fallback, (a) => (o(), n("img", {
-                key: a,
-                src: e(w)(a),
-                alt: e(k)(a),
-                title: e(k)(a),
-                onError: s[3] || (s[3] = //@ts-ignore
-                (...h) => e(c) && e(c)(...h))
-              }, null, 40, te))), 128))
+              (l(!0), s(p, null, b(e, (S) => (l(), s("img", {
+                key: S,
+                src: t(C)(S),
+                alt: t(g)(S),
+                title: t(g)(S),
+                class: y({ off: !z.value.has(S) }),
+                onError: a[4] || (a[4] = //@ts-ignore
+                (...Q) => t(v) && t(v)(...Q))
+              }, null, 42, $e))), 128))
+            ], 2))), 128)) : (l(), s("div", Se, [
+              (l(!0), s(p, null, b(o.fallback, (e) => (l(), s("img", {
+                key: e,
+                src: t(C)(e),
+                alt: t(g)(e),
+                title: t(g)(e),
+                onError: a[5] || (a[5] = //@ts-ignore
+                (...d) => t(v) && t(v)(...d))
+              }, null, 40, Be))), 128))
             ]))
           ], 2))), 128)),
-          u.value.shards ? (o(), n("div", se, [
-            i("div", oe, [
-              (o(!0), n(m, null, p(u.value.shards, (l, d) => (o(), n("img", {
-                key: d,
-                src: e(w)(l),
-                alt: e(k)(l),
-                title: e(k)(l),
-                onError: s[4] || (s[4] = //@ts-ignore
-                (...a) => e(c) && e(c)(...a))
-              }, null, 40, ne))), 128))
+          k.value.shards ? (l(), s("div", Me, [
+            r("div", we, [
+              (l(!0), s(p, null, b(k.value.shards, (o, m) => (l(), s("img", {
+                key: m,
+                src: t(C)(o),
+                alt: t(g)(o),
+                title: t(g)(o),
+                onError: a[6] || (a[6] = //@ts-ignore
+                (...e) => t(v) && t(v)(...e))
+              }, null, 40, Ee))), 128))
             ])
-          ])) : L("", !0)
-        ])) : L("", !0),
-        i("section", re, [
-          i("h4", ie, v(e(r)("Items")), 1),
-          i("div", ae, [
-            (o(!0), n(m, null, p(u.value.items, (l, d) => (o(), n(m, { key: d }, [
-              l ? (o(), n("img", {
+          ])) : _("", !0)
+        ])) : _("", !0),
+        r("section", Ne, [
+          r("h4", Ce, u(t(i)("Items")), 1),
+          r("div", Ie, [
+            (l(!0), s(p, null, b(k.value.items, (o, m) => (l(), s(p, { key: m }, [
+              o ? (l(), s("img", {
                 key: 0,
-                src: e(M)(l),
-                alt: e(x)(l),
-                title: e(x)(l),
-                class: _({ trinket: d === 6 }),
-                onError: s[5] || (s[5] = //@ts-ignore
-                (...a) => e(c) && e(c)(...a))
-              }, null, 42, ce)) : (o(), n("i", {
+                src: t(N)(o),
+                alt: t(h)(o),
+                title: t(h)(o),
+                class: y({ trinket: m === 6 }),
+                onError: a[7] || (a[7] = //@ts-ignore
+                (...e) => t(v) && t(v)(...e))
+              }, null, 42, Te)) : (l(), s("i", {
                 key: 1,
-                class: _({ trinket: d === 6 })
+                class: y({ trinket: m === 6 })
               }, null, 2))
             ], 64))), 128))
           ]),
-          i("h4", ue, v(e(r)("Summoner spells")), 1),
-          i("div", de, [
-            (o(!0), n(m, null, p(u.value.spells, (l, d) => (o(), n("span", { key: d }, [
-              i("img", {
-                src: e(V)(l),
+          r("h4", Le, u(t(i)("Summoner spells")), 1),
+          r("div", De, [
+            (l(!0), s(p, null, b(k.value.spells, (o, m) => (l(), s("span", { key: m }, [
+              r("img", {
+                src: t(F)(o),
                 alt: "",
-                onError: s[6] || (s[6] = //@ts-ignore
-                (...a) => e(c) && e(c)(...a))
-              }, null, 40, me),
-              T(v(e(j)(l)), 1)
+                onError: a[8] || (a[8] = //@ts-ignore
+                (...e) => t(v) && t(v)(...e))
+              }, null, 40, Ve),
+              f(u(t(O)(o)), 1)
             ]))), 128))
           ])
         ]),
-        i("section", ve, [
-          i("h4", pe, v(e(r)("Details")), 1),
-          i("dl", null, [
-            (o(!0), n(m, null, p(O.value, (l) => (o(), n("div", {
-              key: l.label
+        r("section", je, [
+          r("h4", Pe, u(t(i)("Details")), 1),
+          r("dl", null, [
+            (l(!0), s(p, null, b(K.value, (o) => (l(), s("div", {
+              key: o.label
             }, [
-              i("dt", null, v(l.label), 1),
-              i("dd", null, v(l.value), 1)
+              r("dt", null, u(o.label), 1),
+              r("dd", null, u(o.value), 1)
             ]))), 128))
           ])
         ])
@@ -155,5 +250,5 @@ const q = { class: "iv-bd" }, A = { class: "iv-bd-grid" }, H = {
   }
 });
 export {
-  Se as default
+  qe as default
 };
