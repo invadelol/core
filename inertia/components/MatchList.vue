@@ -4,6 +4,7 @@ import { MatchRow, useFormat } from '@invadelol/ui'
 import { summaryOf, type MatchSummary } from '@invadelol/ui/logic'
 import GameDetail from './GameDetail.vue'
 import { detailOf } from '../lib/match.js'
+import { selfTag, type SelfTag } from '../lib/self_tags.js'
 import type { Match } from '../lib/types.js'
 
 const props = defineProps<{
@@ -11,6 +12,11 @@ const props = defineProps<{
   puuid: string
   gameName: string
   tagLine: string
+  /**
+   * Whether the viewer is this player: only then do clearly bad games get a self-deprecating tag.
+   * Never on anyone else's profile.
+   */
+  ownProfile?: boolean
 }>()
 
 defineEmits<{ clear: [] }>()
@@ -33,7 +39,7 @@ const days = computed(() => {
     losses: number
     /** Net LP over the day's games whose change is known; null when none is. */
     lp: number | null
-    rows: Array<{ match: Match; game: MatchSummary }>
+    rows: Array<{ match: Match; game: MatchSummary; tag: SelfTag | null }>
   }> = []
   for (const match of props.matches) {
     const game = summary(match)
@@ -44,7 +50,7 @@ const days = computed(() => {
       group = { label, wins: 0, losses: 0, lp: null, rows: [] }
       groups.push(group)
     }
-    group.rows.push({ match, game })
+    group.rows.push({ match, game, tag: props.ownProfile ? selfTag(match, props.puuid) : null })
     if (typeof match.lpChange === 'number') group.lp = (group.lp ?? 0) + match.lpChange
     if (!game.remake) game.win ? group.wins++ : group.losses++
   }
@@ -73,7 +79,7 @@ const toggle = (id: string) => (open.value = open.value === id ? null : id)
 
       <ul class="iv-mr-list">
         <li
-          v-for="{ match, game } in day.rows"
+          v-for="{ match, game, tag } in day.rows"
           :key="match.matchId"
           class="iv-pf-match"
           :class="{ open: open === match.matchId }"
@@ -86,6 +92,9 @@ const toggle = (id: string) => (open.value = open.value === id ? null : id)
             :puuid="puuid"
             @toggle="toggle(match.matchId)"
           />
+          <p v-if="tag" class="self-tag">
+            <span :title="tag.tip">{{ tag.label }}</span>
+          </p>
           <GameDetail
             v-if="open === match.matchId"
             :match="match"
@@ -98,3 +107,20 @@ const toggle = (id: string) => (open.value = open.value === id ? null : id)
     </section>
   </div>
 </template>
+
+<style scoped>
+/* The tag under the row it belongs to: quiet, like the row's own badges. */
+.self-tag {
+  padding: 4px 0 6px 14px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+.self-tag span {
+  display: inline-block;
+  padding: 1px 7px;
+  background: var(--surface-1);
+  border-radius: var(--r-xs);
+}
+</style>
