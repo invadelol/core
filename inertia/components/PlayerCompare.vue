@@ -1,3 +1,9 @@
+<script lang="ts">
+/** Players this browser updated lately, by lowercase `Name-TAG`: picked again, they are not. */
+const updatedAt = new Map<string, number>()
+const UPDATE_AGAIN_MS = 5 * 60_000
+</script>
+
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { X } from 'lucide-vue-next'
@@ -30,6 +36,10 @@ const props = defineProps<{
 const other = ref<Summoner | null>(null)
 const busy = ref(false)
 const error = ref('')
+/** Whose latest games are being fetched, while they are. */
+const fetching = ref('')
+/** Said when the update failed and the comparison uses the games already stored. */
+const note = ref('')
 const filters = ref<Filters>({ type: 'all', champion: 0, role: 'all' })
 
 interface Dataset {
@@ -45,37 +55,71 @@ let analytics: AbortController | undefined
 const players = computed(() => (other.value ? [props.profile, other.value] : [props.profile]))
 const ready = computed(() => Boolean(other.value) && datasets.value.length === 2)
 
+/**
+ * Picking a player first fetches their latest games (the profile's Update: the last 15 from
+ * Riot), so a profile nobody opened before still has games to compare. The server coalesces
+ * updates and holds a player back after a Riot rate limit; this browser also skips players it
+ * updated in the last few minutes.
+ */
 async function pick(entry: { gameName: string; tagLine: string }) {
   lookup?.abort()
   lookup = new AbortController()
   const signal = lookup.signal
   busy.value = true
   error.value = ''
+  note.value = ''
+  const slug = `${entry.gameName}-${entry.tagLine}`
+  const key = slug.toLowerCase()
   try {
-    const slug = `${entry.gameName}-${entry.tagLine}`
-    const res = await fetch(`/api/summoners/${encodeURIComponent(slug)}`, { signal })
-    if (!res.ok)
-      throw new Error(
-        res.status === 404
-          ? 'Player not found. Check their Riot ID.'
-          : 'Riot could not load this player.'
-      )
-    const data = await res.json()
-    if (signal.aborted) return
-    if (data.summoner.puuid === props.profile.puuid) throw new Error('Choose a different player.')
-    other.value = data.summoner
+    if (key === `${props.profile.gameName}-${props.profile.tagLine}`.toLowerCase())
+      throw new Error('Choose a different player.')
+    let summoner: Summoner | null = null
+    if (Date.now() - (updatedAt.get(key) ?? 0) > UPDATE_AGAIN_MS) {
+      fetching.value = entry.gameName
+      const res = await fetch('/api/summoners/sync', {
+        method: 'POST',
+        signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ summoner: slug }),
+      })
+      if (signal.aborted) return
+      if (res.ok) {
+        summoner = (await res.json()).summoner
+        updatedAt.set(key, Date.now())
+      } else note.value = 'Their latest games could not be fetched. Comparing the stored ones.'
+    }
+    if (!summoner) {
+      const res = await fetch(`/api/summoners/${encodeURIComponent(slug)}`, { signal })
+      if (!res.ok)
+        throw new Error(
+          res.status === 404
+            ? 'Player not found. Check their Riot ID.'
+            : 'Riot could not load this player.'
+        )
+      summoner = (await res.json()).summoner
+    }
+    if (signal.aborted || !summoner) return
+    if (summoner.puuid === props.profile.puuid) throw new Error('Choose a different player.')
+    other.value = summoner
     const url = new URL(location.href)
     url.searchParams.set('with', `${entry.gameName}#${entry.tagLine}`)
     history.replaceState(history.state, '', url)
   } catch (e) {
-    if (!signal.aborted) error.value = (e as Error).message
+    if (!signal.aborted) {
+      error.value = (e as Error).message
+      note.value = ''
+    }
   } finally {
-    if (!signal.aborted) busy.value = false
+    if (!signal.aborted) {
+      busy.value = false
+      fetching.value = ''
+    }
   }
 }
 
 function clear() {
   other.value = null
+  note.value = ''
   datasets.value = []
   const url = new URL(location.href)
   url.searchParams.delete('with')
@@ -406,10 +450,21 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
     </div>
 
     <p v-if="error" class="notice mb-5" role="alert">{{ error }}</p>
+    <p v-else-if="note && other" class="mb-5 text-[12.5px] text-ink-3" role="status">{{ note }}</p>
 
     <MatchFilters v-model="filters" :champions="champions" class="mb-6" />
 
-    <p v-if="!other" class="py-2 text-[13px] text-ink-2">
+    <div v-if="fetching" class="grid gap-2" aria-busy="true">
+      <p class="py-2 text-[13px] text-ink-2" role="status">
+        Fetching {{ fetching }}’s latest games…
+      </p>
+      <div class="grid grid-cols-2 gap-2">
+        <div class="iv-skel h-[168px]" />
+        <div class="iv-skel h-[168px]" />
+      </div>
+    </div>
+
+    <p v-else-if="!other" class="py-2 text-[13px] text-ink-2">
       Search a player above to put their last games next to these.
     </p>
 
