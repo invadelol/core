@@ -47,6 +47,23 @@ test.group('Response memory cache', () => {
     assert.isNotNull(cache.get('other'), 'dropped an unrelated player')
   })
 
+  test('replacing a key moves it to the new resource', ({ assert }) => {
+    const cache = new ResponseMemoryCache()
+    const body = Buffer.from('replacement')
+    cache.set('key', 'summoner:abc', Buffer.from('original'))
+    cache.set('sibling', 'summoner:abc', Buffer.from('sibling'))
+
+    cache.set('key', 'summoner:zzz', body)
+    assert.equal(cache.get('key')?.body, body)
+
+    cache.dropResource('summoner:abc')
+    assert.isNull(cache.get('sibling'))
+    assert.equal(cache.get('key')?.body, body)
+
+    cache.dropResource('summoner:zzz')
+    assert.isNull(cache.get('key'))
+  })
+
   test('stays bounded, evicting whatever was used longest ago', ({ assert }) => {
     const cache = new ResponseMemoryCache(15_000, 3)
     for (const key of ['a', 'b', 'c']) cache.set(key, 'summoner:abc', Buffer.from(key))
