@@ -131,6 +131,13 @@ router.get('/app', [AppPageController, 'show']).use(middleware.httpCache({ page:
 router.get('/app/changelog', [ChangelogController, 'index'])
 router.get('/app/changelog/:version', [ChangelogController, 'show'])
 
+/** What comes next for the app and the site, before the summoner catch-all below. */
+router.get('/roadmap', ({ inertia }) =>
+  inertia.render('roadmap', {
+    description: 'What is coming next to Invade for desktop and invade.lol: now, next and later.',
+  })
+)
+
 /** The privacy policy, the legal notice and its terms, before the summoner catch-all below. */
 router.get('/privacy', [LegalController, 'privacy'])
 router.get('/legal', [LegalController, 'legal'])
