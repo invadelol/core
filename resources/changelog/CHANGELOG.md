@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.3.3 - 2026-10-17
+
+### New
+
+- **Choose what Tab does to the overlays.** Holding Tab can hide them as before, keep them on screen, or show them only while you hold it. Overlays → All overlays. <!-- highlight -->
+- **Turn off the automatic rune import.** A new switch in Settings → Champ select: off, Invade puts nothing in the client by itself, and the Import button on the Live tab still does it when you ask.
+- **Bigger overlays.** Each panel goes up to 250% for 4K and ultrawide screens, and always stays on screen.
+
+### Changed
+
+- **Runes and build follow your role from champ select.** Smite counts as jungle when the game gives no role, and a role swap brings the right page. If your champion is almost never played in that role, Invade shows no build rather than another role's. <!-- highlight -->
+- **ARAM: Mayhem augments, one rarity at a time.** Tabs switch between silver, gold and prismatic, with up to 12 augments each and how often players pick them.
+- **A dot on the (i) after an update,** until you open the release notes.
+
+### Fixed
+
+- **Mac: the overlay now shows over League in Borderless.** Invade looked for the game window under the wrong name, so the overlay stayed hidden behind the game; it now sits on top and you can move its panels. <!-- highlight -->
+- **Mac: the Tab permission button works.** When macOS won't show its prompt, it opens Input Monitoring in System Settings.
+- **Mac: screen recording no longer says the permission is missing** once you've allowed it. If macOS needs Invade restarted for it, a Restart Invade button does it.
+- **The window opens on one screen.** With two or three monitors, Invade opens centred on one screen and fully inside it, and the video player fits a small window.
+- **Recordings stop before your disk is full.** Invade keeps space free for League and your system, and saves the recording it stops.
+
 ## 0.3.2 - 2026-10-16
 
 ### New
