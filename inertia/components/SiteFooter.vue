@@ -23,6 +23,9 @@ import { DISCORD_URL, REPO_URL, X_URL } from '../lib/links.js'
       <Link href="/app/changelog" class="transition-colors hover:text-ink pointer-coarse:py-3.5">
         Changelog
       </Link>
+      <Link href="/roadmap" class="transition-colors hover:text-ink pointer-coarse:py-3.5">
+        Roadmap
+      </Link>
       <a
         :href="REPO_URL"
         target="_blank"
