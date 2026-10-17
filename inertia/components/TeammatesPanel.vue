@@ -1,14 +1,18 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { profileIcon } from '../lib/assets.js'
 import { profilePath } from '../lib/format.js'
 import type { Teammate } from '../lib/types.js'
+import ShowMore from './ShowMore.vue'
 
 const props = defineProps<{ teammates: Teammate[] }>()
 
+/** Rows shown before "Show all". */
+const LIST = 5
+const open = ref(false)
 const rows = computed(() =>
-  props.teammates.slice(0, 5).map((mate) => ({
+  (open.value ? props.teammates : props.teammates.slice(0, LIST)).map((mate) => ({
     ...mate,
     winrate: mate.games ? Math.round((mate.wins / mate.games) * 100) : 0,
   }))
@@ -55,5 +59,6 @@ const rows = computed(() =>
         </Link>
       </li>
     </ul>
+    <ShowMore v-model="open" class="mt-1" :total="teammates.length" :limit="LIST" />
   </section>
 </template>

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { ChampIcon } from '@invadelol/ui'
 import { championName } from '../lib/assets.js'
+import ShowMore from './ShowMore.vue'
 import type { ChampionStats } from '../lib/types.js'
 
 const props = defineProps<{
@@ -18,8 +19,12 @@ const emit = defineEmits<{ pick: [championId: number] }>()
 /** Below this many games a win rate is an anecdote: it is shown, but quietly. */
 const SAMPLE = 3
 
+const open = ref(false)
 const rows = computed(() =>
-  props.champions.slice(0, props.limit ?? 5).map((c) => ({ ...c, thin: c.games < SAMPLE }))
+  (open.value ? props.champions : props.champions.slice(0, props.limit ?? 5)).map((c) => ({
+    ...c,
+    thin: c.games < SAMPLE,
+  }))
 )
 </script>
 
@@ -69,5 +74,6 @@ const rows = computed(() =>
         </button>
       </li>
     </ul>
+    <ShowMore v-model="open" class="mt-1" :total="champions.length" :limit="limit ?? 5" />
   </section>
 </template>
