@@ -8,7 +8,9 @@ import env from '#start/env'
 import Summoner from '#models/summoner'
 import Rank from '#models/rank'
 import PlayerMastery from '#models/player_mastery'
+import riotApiService from '#services/riot/api'
 import statsRepository from '#services/analytics/stats_repository'
+import { LiveRanks } from '#services/live/ranks'
 import { translateRiotError } from '#utils/riot_errors'
 import { SyncGuard } from '#utils/sync_guard'
 import { demoLiveEnabled, demoLiveGame } from '#services/live/demo_live_game'
@@ -21,6 +23,9 @@ import {
 } from '#services/live/live_game'
 
 const insightsGuard = new SyncGuard()
+const liveRanks = new LiveRanks((puuid, platform) =>
+  riotApiService.client.league.getEntriesByPUUID({ puuid, region: platform as any })
+)
 
 export interface ChampionMastery {
   championId: number
@@ -50,7 +55,7 @@ const byPoints = (a: { championPoints: number }, b: { championPoints: number }) 
  * profile and the desktop app's onboarding, so both hit the same cache.
  */
 class PlayerInsightsService {
-  async get(puuid: string, kind: 'mastery' | 'live') {
+  async get(puuid: string, kind: 'mastery' | 'live', refresh = false) {
     const player = await Summoner.findBy('puuid', puuid)
     if (!player) throw new Exception('Player not found', { status: 404 })
     if (kind === 'live' && demoLiveEnabled(puuid)) {
@@ -62,6 +67,7 @@ class PlayerInsightsService {
     return cache.getOrSet({
       key,
       ttl: kind === 'live' ? '30s' : '1h',
+      forceFresh: refresh,
       factory: () =>
         insightsGuard.run(key, async () => {
           const path =
@@ -95,19 +101,30 @@ class PlayerInsightsService {
             await this.rememberTop(puuid, entries, observedAt)
             return entries
           }
-          return { game: await this.liveGame(data) }
+          return { game: await this.liveGame(data, platform, refresh) }
         }),
     })
   }
 
   /**
-   * A spectator-v5 game as the profile shows it. Ranks and stored games come from what is already
-   * tracked, in one read each (no extra Riot call per player); the lanes are inferred from them.
-   * Observer credentials never leave the server.
+   * Fetch every human participant's rank, even for profiles never opened on Invade. Stored
+   * ranks are a fallback on upstream failure; champion/form context still uses stored games.
+   * Demo lobbies never call Riot. Observer credentials never leave the server.
    */
-  private async liveGame(data: SpectatorGame): Promise<LiveGame> {
-    const ids = [...new Set(data.participants.map((p) => p.puuid).filter(isPuuid))]
-    const [ranks, games] = await Promise.all([
+  private async liveGame(
+    data: SpectatorGame,
+    platform?: string,
+    refresh = false
+  ): Promise<LiveGame> {
+    const ids = [
+      ...new Set(
+        data.participants
+          .filter((p) => !p.bot)
+          .map((p) => p.puuid)
+          .filter(isPuuid)
+      ),
+    ]
+    const [ranks, games, fetched] = await Promise.all([
       ids.length
         ? Rank.query()
             .whereIn('puuid', ids)
@@ -118,8 +135,20 @@ class PlayerInsightsService {
             .catch(() => [])
         : [],
       statsRepository.getRecentGames(ids, LOBBY_HISTORY_GAMES).catch(() => []),
+      platform
+        ? Promise.all(
+            ids.map(async (id) => [id, await liveRanks.get(id, platform, refresh)] as const)
+          )
+        : [],
     ])
-    return buildLiveGame(data, ranks, games)
+    const statuses = new Map(fetched.map(([id, result]) => [id, result.status]))
+    const resolved = platform
+      ? fetched.flatMap(([id, result]) => {
+          const rank = result.rank === undefined ? ranks.find((r) => r.puuid === id) : result.rank
+          return rank ? [rank] : []
+        })
+      : ranks
+    return buildLiveGame(data, resolved, games, statuses)
   }
 
   /**
