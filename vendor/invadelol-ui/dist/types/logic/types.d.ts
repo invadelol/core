@@ -266,6 +266,15 @@ export interface PlayerView {
     shards?: number[];
     /** Pings by kind. Only invade.lol's Riot games carry them: the League client does not report pings. */
     pings?: Record<Ping, number>;
+    /** Every item bought and sold, in order, undos already taken back. Absent when the source does not keep them. */
+    purchases?: Purchase[];
+}
+/** One shop action of a player. */
+export interface Purchase {
+    /** Seconds into the game. */
+    t: number;
+    item: number;
+    sold: boolean;
 }
 export type ScoreCategory = 'fighting' | 'damage' | 'farming' | 'vision' | 'objectives';
 /** One part of a player's score: how they did at it, and how much it counts for their role. */

@@ -27,11 +27,13 @@ export default class MatchesController {
       return response.notFound({ message: 'Match not found' })
     }
 
-    // A Riot game without its frames (the timeline failed to store) or without its kills and
-    // objectives (stored before they were kept): fetch what is missing once, now that someone
-    // looks. A desktop upload's timeline is the client's own, never patched with Riot's.
-    const frames = !match.timeline.length && provenance.source === 'riot'
-    const events = !match.events.length && (frames || match.timeline.length > 0)
+    // A Riot game without its frames (the timeline failed to store) or without its kills,
+    // objectives or shop actions (stored before they were kept): fetch what is missing once, now
+    // that someone looks. A desktop upload's timeline is the client's own, never patched with Riot's.
+    const riot = provenance.source === 'riot'
+    const frames = !match.timeline.length && riot
+    const events =
+      (!match.events.length || (riot && !match.shop.length)) && (frames || match.timeline.length > 0)
     if ((frames || events) && match.duration >= 300) {
       if (await matchesService.backfillTimeline(match, { frames, events })) {
         match = (await matchRepository.getById(params.id)) ?? match

@@ -79,6 +79,14 @@ export interface CoreEvent {
     x: number;
     y: number;
 }
+export interface CoreShopEvent {
+    /** Seconds into the game. */
+    t: number;
+    /** Participant id, as in the events. */
+    player: number;
+    item: number;
+    sold: boolean;
+}
 export interface CoreMatch {
     matchId: string;
     /** Epoch ms; ClickHouse's UInt64 arrives as a string. */
@@ -105,6 +113,8 @@ export interface CoreMatch {
     participants: CoreParticipant[];
     timeline?: CoreTimelineEntry[];
     events?: CoreEvent[];
+    /** Every item bought and sold (undos taken back), absent on games stored before they were kept. */
+    shop?: CoreShopEvent[];
     /** What a game from the desktop app could not report (`pings: false`: its zeros are not counts). */
     completeness?: {
         pings: boolean;

@@ -128,6 +128,8 @@ export interface Match {
   lpChange?: number | null
   /** Kills and objectives, loaded with the timeline (empty for matches stored before them). */
   events?: MatchEvent[]
+  /** Every item bought and sold, loaded with the events (empty for matches stored before them). */
+  shop?: { t: number; player: number; item: number; sold: boolean }[]
 }
 
 /** A kill or an objective. Participant ids match `TimelineEntry.participantId`. */
