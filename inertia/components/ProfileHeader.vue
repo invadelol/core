@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { ArrowLeftRight, RefreshCw, Share2 } from 'lucide-vue-next'
+import { computed, onBeforeUnmount, ref } from 'vue'
+import { ArrowLeftRight, Check, Copy, RefreshCw, Share2 } from 'lucide-vue-next'
 import { Link } from '@inertiajs/vue3'
 import { useFormat } from '@invadelol/ui'
 import { championName, championSplash, profileIcon, regionLabel } from '../lib/assets.js'
@@ -20,6 +20,21 @@ defineEmits<{ sync: []; share: [] }>()
 
 const { ago } = useFormat()
 const path = computed(() => profilePath(props.summoner.gameName, props.summoner.tagLine))
+
+/** The Riot ID as the client's friend search takes it. */
+const copied = ref(false)
+let copiedTimer: ReturnType<typeof setTimeout> | undefined
+async function copyRiotId() {
+  try {
+    await navigator.clipboard.writeText(`${props.summoner.gameName}#${props.summoner.tagLine}`)
+    copied.value = true
+    clearTimeout(copiedTimer)
+    copiedTimer = setTimeout(() => (copied.value = false), 1600)
+  } catch {
+    /* No clipboard (insecure context, denied): the name stays selectable. */
+  }
+}
+onBeforeUnmount(() => clearTimeout(copiedTimer))
 </script>
 
 <template>
@@ -54,6 +69,21 @@ const path = computed(() => profilePath(props.summoner.gameName, props.summoner.
           }}<span class="ml-1 text-[16px] font-medium tracking-normal text-ink-3"
             >#{{ summoner.tagLine }}</span
           ></Link
+        ><button
+          type="button"
+          class="iv-btn ghost sm icon-only ml-1 align-[-5px]"
+          :title="copied ? 'Copied' : 'Copy Riot ID'"
+          :aria-label="copied ? 'Copied' : 'Copy Riot ID'"
+          @click="copyRiotId"
+        >
+          <Check v-if="copied" :size="13" />
+          <Copy v-else :size="13" />
+        </button>
+        <span
+          v-if="copied"
+          class="ml-1 text-[12px] font-medium tracking-normal text-ink-3"
+          role="status"
+          >Copied</span
         >
       </h1>
 
