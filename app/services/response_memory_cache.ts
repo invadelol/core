@@ -30,6 +30,7 @@ interface Entry {
   /** Content hash of `body`; the caller turns it into an ETag. */
   hash: string
   expires: number
+  resource: string
 }
 
 export class ResponseMemoryCache {
@@ -67,7 +68,7 @@ export class ResponseMemoryCache {
     const entry = this.#entries.get(key)
     if (!entry) return null
     if (entry.expires <= this.now()) {
-      this.#entries.delete(key)
+      this.#delete(key)
       return null
     }
     // Re-insert to keep Map iteration order as recency order.
@@ -77,9 +78,14 @@ export class ResponseMemoryCache {
   }
 
   set(key: string, resource: string, body: Buffer): Entry {
-    const entry: Entry = { body, hash: contentHash(body), expires: this.now() + this.ttlMs }
+    const entry: Entry = {
+      body,
+      hash: contentHash(body),
+      expires: this.now() + this.ttlMs,
+      resource,
+    }
 
-    this.#entries.delete(key)
+    this.#delete(key)
     this.#entries.set(key, entry)
 
     let keys = this.#byResource.get(resource)
@@ -89,10 +95,22 @@ export class ResponseMemoryCache {
     while (this.#entries.size > this.maxEntries) {
       const oldest = this.#entries.keys().next().value
       if (oldest === undefined) break
-      this.#entries.delete(oldest)
+      this.#delete(oldest)
     }
 
     return entry
+  }
+
+  /** Removes an entry from both the cache and its resource index. */
+  #delete(key: string) {
+    const entry = this.#entries.get(key)
+    if (!entry) return
+    this.#entries.delete(key)
+
+    const keys = this.#byResource.get(entry.resource)
+    if (!keys) return
+    keys.delete(key)
+    if (!keys.size) this.#byResource.delete(entry.resource)
   }
 
   dropResource(resource: string) {
