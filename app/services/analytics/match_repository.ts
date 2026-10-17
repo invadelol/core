@@ -116,6 +116,7 @@ const SUMMARY_PARTICIPANT_COLUMNS = [
 
 const DETAIL_PARTICIPANT_COLUMNS = [
   'lane',
+  'role_item',
   'physical_dmg_dealt',
   'magic_dmg_dealt',
   'true_dmg_dealt',
@@ -167,6 +168,7 @@ const SUMMARY_PARTICIPANT_FIELDS = {
 
 const DETAIL_PARTICIPANT_FIELDS = {
   lane: 'lane',
+  roleItem: 'role_item',
   physicalDamageDealt: 'physical_dmg_dealt',
   magicDamageDealt: 'magic_dmg_dealt',
   trueDamageDealt: 'true_dmg_dealt',

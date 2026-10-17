@@ -41,29 +41,30 @@ const p = {
   visionCleared: i("Vision cleared"),
   bait: i("Bait"),
   hold: i("Hold")
-}, o = ["Q", "W", "E", "R"];
+}, l = ["Q", "W", "E", "R"];
 function E(e) {
-  const n = Object.fromEntries(o.map((l) => [l, new Array(18).fill(null)]));
-  return e.slice(0, 18).forEach((l, t) => {
-    const s = o[l - 1];
+  const n = Object.fromEntries(l.map((o) => [o, new Array(18).fill(null)]));
+  return e.slice(0, 18).forEach((o, t) => {
+    const s = l[o - 1];
     s && (n[s][t] = t + 1);
   }), n;
 }
 function v(e) {
   const n = [];
-  for (const l of e) {
-    const t = o[l - 1];
+  for (const o of e) {
+    const t = l[o - 1];
     t && t !== "R" && !n.includes(t) && n.push(t);
   }
   return n;
 }
-function k(e, n, l, t) {
+function k(e, n, o, t) {
   const s = t * 60;
   if (!e.t.length || e.t[e.t.length - 1] < s) return null;
   let a = 0;
   for (; a + 1 < e.t.length && e.t[a + 1] <= s; ) a++;
-  return { minute: t, gold: e.gold[n][a] - e.gold[l][a], cs: e.cs[n][a] - e.cs[l][a], xp: e.xp[n][a] - e.xp[l][a] };
+  return { minute: t, gold: e.gold[n][a] - e.gold[o][a], cs: e.cs[n][a] - e.cs[o][a], xp: e.xp[n][a] - e.xp[o][a] };
 }
+const S = (e) => !!e && !(e >= 1200 && e < 1300) && e !== 2055;
 export {
   h as PINGS,
   p as RUNE_SLOTS,
@@ -74,6 +75,7 @@ export {
   m as lineColor,
   d as relation,
   f as riotId,
+  S as roleSlot,
   g as side,
   E as skillMatrix,
   v as skillPriority,

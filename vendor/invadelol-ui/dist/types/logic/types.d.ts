@@ -266,6 +266,8 @@ export interface PlayerView {
     shards?: number[];
     /** Pings by kind. Only invade.lol's Riot games carry them: the League client does not report pings. */
     pings?: Record<Ping, number>;
+    /** A real item in the role-quest slot (a bot laner's boots once the quest is done, which frees a seventh slot). */
+    roleItem?: number;
     /** Every item bought and sold, in order, undos already taken back. Absent when the source does not keep them. */
     purchases?: Purchase[];
 }
