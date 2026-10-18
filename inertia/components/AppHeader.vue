@@ -1,14 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { Link, usePage } from '@inertiajs/vue3'
+import { Link } from '@inertiajs/vue3'
 import { ChevronRight } from 'lucide-vue-next'
 import { Logo } from '@invadelol/ui'
 import SearchBar from './SearchBar.vue'
 import ThemeToggle from './ui/ThemeToggle.vue'
-import AccountMenu from './account/AccountMenu.vue'
-
-const page = usePage()
-const onApp = computed(() => page.url.split('?')[0] === '/app')
+import HeaderCta from './HeaderCta.vue'
 
 withDefaults(
   defineProps<{
@@ -55,16 +51,8 @@ withDefaults(
       </div>
 
       <div class="flex shrink-0 items-center gap-1" :class="search ? '' : 'ml-auto'">
-        <Link
-          href="/app"
-          class="iv-btn ghost hidden sm:inline-flex"
-          :class="onApp ? '!text-ink' : ''"
-          :aria-current="onApp ? 'page' : undefined"
-        >
-          App
-        </Link>
         <ThemeToggle />
-        <AccountMenu />
+        <HeaderCta />
       </div>
     </div>
   </header>
