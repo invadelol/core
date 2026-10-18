@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
-import { ChevronRight } from 'lucide-vue-next'
+import { ChevronRight, Search } from 'lucide-vue-next'
 import { Logo } from '@invadelol/ui'
 import SearchBar from './SearchBar.vue'
 import ThemeToggle from './ui/ThemeToggle.vue'
@@ -46,7 +46,17 @@ withDefaults(
         </template>
       </nav>
 
-      <div v-if="search" class="ml-auto w-full max-w-[340px]">
+      <!-- Phones: the field would be too narrow to use; the icon opens the home page's search. -->
+      <Link
+        v-if="search"
+        href="/"
+        class="iv-btn ghost icon-only ml-auto sm:hidden"
+        aria-label="Search a player"
+        title="Search a player"
+      >
+        <Search :size="17" />
+      </Link>
+      <div v-if="search" class="ml-auto hidden w-full max-w-[340px] sm:block">
         <SearchBar />
       </div>
 
