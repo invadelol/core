@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3'
-import { Logo, Icon } from '@invadelol/ui'
+import { Logo } from '@invadelol/ui'
 import AppHeader from '../components/AppHeader.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 defineProps<{
@@ -14,11 +14,11 @@ defineProps<{
   <div class="signin-page">
     <AppHeader :search="false" />
     <main class="signin-main">
-      <section class="iv-panel lit-sheet signin-panel">
-        <span class="signin-mark"><Logo :size="28" /></span>
+      <section class="iv-panel signin-panel">
+        <Logo :size="32" />
         <h1>Sign in to Invade</h1>
         <p class="signin-lead">
-          Your League accounts and favorite players in one place, on invade.lol and in the app.
+          Your League accounts and favorite players, on the site and in the app.
         </p>
         <div class="signin-providers">
           <a :href="`/auth/discord?next=${encodeURIComponent(next)}`" class="iv-btn primary lg"
@@ -63,16 +63,9 @@ defineProps<{
                 : 'Sign-in didn’t go through. Please try again.'
           }}
         </p>
-        <div class="signin-assurance">
-          <Icon name="shield" :size="15" />
-          <p>
-            Invade never asks for your Riot password. The desktop app shows which League accounts
-            are yours.
-          </p>
-        </div>
         <p class="signin-legal">
-          By continuing, you agree to the <a href="/terms">Terms</a> and the
-          <a href="/privacy">Privacy policy</a>.
+          Invade never asks for your Riot password. By continuing, you agree to the
+          <a href="/terms">Terms</a> and the <a href="/privacy">Privacy policy</a>.
         </p>
       </section>
     </main>
@@ -92,67 +85,32 @@ defineProps<{
   padding: 72px 20px 112px;
 }
 .signin-panel {
-  width: min(100%, 400px);
-  padding: 32px;
-  text-align: center;
-}
-.signin-mark {
-  display: inline-grid;
-  place-items: center;
-  width: 56px;
-  height: 56px;
-  background: var(--key);
-  border-radius: var(--r-lg);
-  box-shadow:
-    var(--key-shadow),
-    0 10px 30px -12px rgb(var(--brand-rgb) / 0.7);
+  width: min(100%, 380px);
+  padding: 28px;
 }
 .signin-panel h1 {
-  margin: 20px 0 8px;
-  font-size: 26px;
+  margin: 20px 0 6px;
+  font-size: 28px;
   font-weight: 650;
+  line-height: 1.15;
   letter-spacing: -0.02em;
   color: var(--text-1);
 }
 .signin-lead {
-  margin: 0 auto;
-  max-width: 300px;
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.55;
   color: var(--text-2);
 }
 .signin-providers {
   display: grid;
   gap: 8px;
-  margin: 28px 0 24px;
+  margin: 24px 0 20px;
 }
 .signin-providers a {
-  height: 44px;
   gap: 10px;
-  font-size: 13.5px;
-}
-.signin-assurance {
-  display: flex;
-  gap: 10px;
-  padding: 12px 14px;
-  text-align: left;
-  color: var(--text-3);
-  background: var(--well);
-  border-radius: var(--r-sm);
-  box-shadow: var(--inset-shadow);
-}
-.signin-assurance > svg {
-  flex: none;
-  margin-top: 2px;
-  color: var(--brand-hi);
-}
-.signin-assurance p {
-  font-size: 12.5px;
-  line-height: 1.55;
 }
 .signin-legal {
-  margin-top: 20px;
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.6;
   color: var(--text-3);
 }
@@ -160,7 +118,7 @@ defineProps<{
   color: var(--text-2);
 }
 .signin-error {
-  margin: -8px 0 20px;
+  margin: -8px 0 16px;
   font-size: 12.5px;
   color: var(--warn);
 }
@@ -169,7 +127,7 @@ defineProps<{
     padding: 32px 16px 64px;
   }
   .signin-panel {
-    padding: 28px 20px;
+    padding: 24px 20px;
   }
 }
 </style>

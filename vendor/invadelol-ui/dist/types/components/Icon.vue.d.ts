@@ -24,8 +24,6 @@ declare const P: {
     readonly refresh: "<path d=\"M21 12a9 9 0 1 1-9-9c2.5 0 4.9 1 6.7 2.7L21 8\"/><path d=\"M21 3v5h-5\"/>";
     readonly reset: "<path d=\"M3 12a9 9 0 1 0 9-9 9.8 9.8 0 0 0-6.7 2.7L3 8\"/><path d=\"M3 3v5h5\"/>";
     readonly minus: "<path d=\"M5 12h14\"/>";
-    readonly more: "<circle cx=\"5\" cy=\"12\" r=\"1.2\"/><circle cx=\"12\" cy=\"12\" r=\"1.2\"/><circle cx=\"19\" cy=\"12\" r=\"1.2\"/>";
-    readonly pencil: "<path d=\"M21.2 6.8a2.8 2.8 0 0 0-4-4L3.8 16.2a2 2 0 0 0-.5.8l-1.3 4.4a.5.5 0 0 0 .6.6l4.4-1.3a2 2 0 0 0 .8-.5z\"/>";
     readonly link: "<path d=\"M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7\"/><path d=\"M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7\"/>";
     readonly square: "<rect width=\"13\" height=\"13\" x=\"5.5\" y=\"5.5\" rx=\"1.5\"/>";
     readonly x: "<path d=\"M18 6 6 18\"/><path d=\"m6 6 12 12\"/>";
