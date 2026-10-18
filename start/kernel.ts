@@ -50,4 +50,5 @@ server.use([
 router.use([
   // The framework's parser, with a 2 MB JSON limit for desktop game uploads only.
   () => import('#middleware/body_parser_middleware'),
+  () => import('#middleware/account_middleware'),
 ])

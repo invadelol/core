@@ -2,7 +2,9 @@
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { ArrowLeftRight, Check, Copy, RefreshCw, Share2 } from 'lucide-vue-next'
 import { Link } from '@inertiajs/vue3'
-import { useFormat } from '@invadelol/ui'
+import { useFormat, StarButton, Icon } from '@invadelol/ui'
+import { useAccount } from '../lib/account.js'
+import ProfileSwitcher from './account/ProfileSwitcher.vue'
 import { championName, championSplash, profileIcon, regionLabel } from '../lib/assets.js'
 import { profilePath } from '../lib/format.js'
 import type { Summoner } from '../lib/types.js'
@@ -14,11 +16,19 @@ const props = defineProps<{
   syncMessage: string | null
   lastGameMs: number | null
   mainChampion?: number
+  accountMode?: boolean
 }>()
 
-defineEmits<{ sync: []; share: [] }>()
+defineEmits<{ sync: []; share: []; view: [] }>()
 
 const { ago } = useFormat()
+const { state: accountState, viewer, favorite } = useAccount()
+const saved = computed(() =>
+  accountState.value.favorites.some((f) => f.puuid === props.summoner.puuid)
+)
+const owned = computed(() =>
+  accountState.value.accounts.some((a) => a.puuid === props.summoner.puuid)
+)
 const path = computed(() => profilePath(props.summoner.gameName, props.summoner.tagLine))
 
 /** The Riot ID as the client's friend search takes it. */
@@ -39,7 +49,7 @@ onBeforeUnmount(() => clearTimeout(copiedTimer))
 
 <template>
   <!-- The identity panel at the top of the profile rail: who this is, and what you can do. -->
-  <header class="iv-panel identity relative isolate overflow-hidden">
+  <header class="iv-panel identity relative isolate">
     <!-- The main champion, faded in from the right: the player's own material, not wallpaper. -->
     <img
       v-if="mainChampion"
@@ -50,15 +60,24 @@ onBeforeUnmount(() => clearTimeout(copiedTimer))
 
     <div class="p-5">
       <!-- The avatar and the name lead back to Overview from any section, like the side menu. -->
-      <Link :href="path" class="block w-fit" preserve-state preserve-scroll>
-        <img
-          :src="profileIcon(summoner.profileIconId)"
-          :alt="summoner.gameName"
-          width="72"
-          height="72"
-          class="thumb h-[72px] w-[72px] rounded-[8px]"
-        />
-      </Link>
+      <div class="identity-top">
+        <Link :href="path" class="block w-fit" preserve-state preserve-scroll>
+          <img
+            :src="profileIcon(summoner.profileIconId)"
+            :alt="summoner.gameName"
+            width="72"
+            height="72"
+            class="thumb h-[72px] w-[72px] rounded-[8px]"
+          />
+        </Link>
+        <div v-if="viewer" class="identity-account">
+          <ProfileSwitcher :active="summoner.puuid" /><span v-if="owned" class="identity-proof"
+            ><Icon name="shield" :size="11" />{{
+              accountState.mainPuuid === summoner.puuid ? 'Main account' : 'Verified account'
+            }}</span
+          >
+        </div>
+      </div>
 
       <h1
         class="mt-4 flex flex-wrap items-center gap-x-1 text-[22px] font-semibold leading-[28px] tracking-[-0.012em] text-ink [overflow-wrap:anywhere]"
@@ -79,10 +98,7 @@ onBeforeUnmount(() => clearTimeout(copiedTimer))
           <Check v-if="copied" :size="13" />
           <Copy v-else :size="13" />
         </button>
-        <span
-          v-if="copied"
-          class="text-[12px] font-medium tracking-normal text-ink-3"
-          role="status"
+        <span v-if="copied" class="text-[12px] font-medium tracking-normal text-ink-3" role="status"
           >Copied</span
         >
       </h1>
@@ -105,19 +121,34 @@ onBeforeUnmount(() => clearTimeout(copiedTimer))
           type="button"
           class="iv-btn primary flex-1"
           :disabled="isSyncing"
-          @click="$emit('sync')"
+          @click="accountMode ? $emit('view') : $emit('sync')"
         >
-          <RefreshCw :size="13" :class="{ 'animate-spin': isSyncing }" />
-          {{ isSyncing ? 'Updating' : 'Update' }}
+          <Icon v-if="accountMode" name="next" :size="13" /><RefreshCw
+            v-else
+            :size="13"
+            :class="{ 'animate-spin': isSyncing }"
+          />
+          {{ accountMode ? 'View profile' : isSyncing ? 'Updating' : 'Update' }}
         </button>
-        <button type="button" class="iv-btn" @click="$emit('share')">
+        <button v-if="!accountMode" type="button" class="iv-btn" @click="$emit('share')">
           <Share2 :size="13" />
           Share
         </button>
-        <Link :href="`${path}/compare`" class="iv-btn icon-only" title="Compare">
+        <Link
+          v-if="!accountMode"
+          :href="`${path}/compare`"
+          class="iv-btn icon-only"
+          title="Compare"
+        >
           <ArrowLeftRight :size="14" />
           <span class="sr-only">Compare</span>
         </Link>
+        <StarButton
+          v-if="!accountMode"
+          :saved="saved"
+          :label="summoner.gameName"
+          @toggle="favorite(summoner)"
+        />
       </div>
       <p v-if="syncMessage" class="mt-2.5 text-[12px] text-ink-2" role="status">
         {{ syncMessage }}
@@ -127,6 +158,30 @@ onBeforeUnmount(() => clearTimeout(copiedTimer))
 </template>
 
 <style scoped>
+.identity {
+  z-index: 10;
+}
+.identity-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.identity-account {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  padding-top: 2px;
+}
+.identity-proof {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
 .name {
   color: inherit;
   text-decoration: none;

@@ -31,6 +31,7 @@ import PlayerCompare from '../components/PlayerCompare.vue'
 import LensSection from '../components/lens/LensSection.vue'
 import ShareProfile from '../components/ShareProfile.vue'
 import SiteFooter from '../components/SiteFooter.vue'
+import PinnedProfiles from '../components/account/PinnedProfiles.vue'
 import { decodeSlug, parseSlug } from '../lib/format.js'
 import { isRemake } from '../lib/match.js'
 import { rememberPlayer, updateRecent } from '../lib/recent.js'
@@ -741,6 +742,8 @@ async function sync() {
               :puuid="profile.puuid"
               :window="STATS_WINDOW"
             />
+
+            <PinnedProfiles />
 
             <section id="matches" class="min-w-0 scroll-mt-20 pt-8">
               <div class="section flex-wrap">

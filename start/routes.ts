@@ -35,6 +35,25 @@ const SynergyController = () => import('#controllers/synergy_controller')
 const LegalController = () => import('#controllers/legal_controller')
 const ChangelogController = () => import('#controllers/changelog_controller')
 
+const AccountController = () => import('#controllers/account_controller')
+const AccountAuthController = () => import('#controllers/account_auth_controller')
+router.get('/signin', [AccountAuthController, 'page'])
+router.get('/auth/:provider/callback', [AccountAuthController, 'callback'])
+router.get('/auth/:provider', [AccountAuthController, 'redirect'])
+router.post('/signout', [AccountController, 'signout'])
+router.get('/account', [AccountController, 'page'])
+router.get('/account/link/:code', [AccountController, 'page'])
+router.get('/api/account', [AccountController, 'show'])
+router.post('/api/account/changes', [AccountController, 'mutate'])
+router.post('/api/account/approve', [AccountController, 'approve'])
+router.group(() => {
+  router.post('/pair', [AccountController, 'pair'])
+  router.get('/account', [AccountController, 'desktop'])
+  router.post('/account/changes', [AccountController, 'desktopChange'])
+  router.post('/account/verify', [AccountController, 'verify'])
+  router.delete('/account', [AccountController, 'disconnect'])
+}).prefix('/api/desktop').use(middleware.desktopAuth())
+
 // API routes group
 router
   .group(() => {

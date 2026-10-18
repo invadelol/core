@@ -689,3 +689,39 @@ after the receipt; reports older than 90 days are deleted as new ones arrive.
 - **Switch.** Settings → Data, "Send anonymous crash reports"; until it is touched it follows the
   usage-statistics switch. Off, nothing is sent and pending reports are deleted. Debug builds send
   only to a local core (`INVADE_CORE_URL`).
+
+## 8. Invade accounts and profile favorites (proposed v1.5)
+
+An Invade user identity (Google or Discord) is separate from a desktop device and from a League
+profile. Browser OAuth tokens never enter the WebView. Existing match publication and the
+v1.4 device signature continue unchanged.
+
+- `POST /api/desktop/pair` (signed): a random, single-use browser approval URL, valid for ten
+  minutes. The site signs the user in, then requires an explicit **Connect app** action. A device
+  linked to a different user cannot be reassigned. Revoked devices cannot be approved.
+- `GET /api/desktop/account` (signed): `{ user, mainPuuid, accounts, folders, favorites, devices }`.
+  An unpaired device receives `user: null` and empty lists. Only verified profiles appear in
+  `accounts`; favorite profiles never count as ownership.
+- `POST /api/desktop/account/changes` (signed): one `type` of `main`, `favorite`,
+  `removeFavorite`, `moveFavorite`, `createFolder`, `renameFolder`, `deleteFolder` or
+  `unlinkDevice`. Main selection requires verified ownership; every folder and favorite is
+  scoped to the authenticated user. A folder deletion keeps its profiles unfiled. Creating a
+  folder takes a client-generated UUID. The response is the new account snapshot.
+- `POST /api/desktop/account/verify` (signed): `{ rawPuuid }`, read by Rust directly from
+  `lcu::current_summoner`, after the existing LCU link succeeds. The server requires the same
+  device's `desktop_device_account` record with `source: lcu`; a Riot ID claim cannot verify an
+  account. The first verified account becomes the main. Changing the main never signs into a
+  different League account.
+- `DELETE /api/desktop/account` (signed): disconnect this device's user identity. Device signing,
+  game publication and local saved data are independent and are preserved.
+
+The website uses the equivalent `/api/account` snapshot and `/api/account/changes` mutations
+behind a host-only, HttpOnly signed session cookie. Browser mutations require a matching Origin;
+account responses are private and never enter the shared page cache. Login uses only the provider
+subject as identity, never an email-based account merge. Provider credentials are server settings
+in `.env.example`; no Riot Sign-On or payment flow is introduced.
+
+Profile collections are shared in Postgres. The app caches the last successful snapshot for
+reading offline and refreshes on its Accounts and Favorites screens. A failed write is shown as
+an error; offline writes are not silently claimed as synced. Existing champion, build, game and
+clip favorites remain the desktop's local collection.

@@ -46,3 +46,6 @@ export { default as ChampionTable } from './components/ChampionTable.vue';
 export { default as RolesPanel } from './components/RolesPanel.vue';
 export { default as LpGraph } from './components/LpGraph.vue';
 export { default as PlayedWithPanel } from './components/PlayedWithPanel.vue';
+export { default as AccountRoster } from './components/AccountRoster.vue';
+export { default as ProfileFavorites } from './components/ProfileFavorites.vue';
+export type { AccountProfile, FavoriteFolder, FavoriteProfile, InvadeAccountData } from './logic/accounts';
