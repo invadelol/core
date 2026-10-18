@@ -31,12 +31,20 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', outside))
     <button
       type="button"
       class="profile-switch-trigger"
-      aria-label="Switch your League account"
+      aria-label="Your League accounts"
+      title="Your League accounts"
       :aria-expanded="open"
       @click="open = !open"
     >
-      <Icon name="users" :size="13" />Your accounts<span>{{ state.accounts.length }}</span
-      ><Icon name="down" :size="11" />
+      <span class="profile-switch-faces"
+        ><img
+          v-for="p in state.accounts.slice(0, 3)"
+          :key="p.puuid"
+          :src="`/cdn/profile-icon/${p.profileIconId ?? 1}.png`"
+          width="22"
+          height="22"
+          alt="" /></span
+      ><Icon name="down" :size="12" />
     </button>
     <div v-if="open" class="profile-switch-menu">
       <span class="profile-switch-label">Your League accounts</span>
@@ -70,20 +78,35 @@ onBeforeUnmount(() => window.removeEventListener('pointerdown', outside))
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 0 4px 8px;
-  background: none;
+  height: 30px;
+  padding: 0 6px 0 4px;
+  background: var(--btn);
   border: 0;
   border-radius: var(--r-sm);
-  font: 500 12px var(--font);
-  color: var(--text-2);
-  cursor: pointer;
-}
-.profile-switch-trigger > span {
+  box-shadow: var(--btn-shadow);
   color: var(--text-3);
-  font-size: 11px;
+  cursor: pointer;
+  transition:
+    background-color var(--t-fast),
+    color var(--t-fast);
 }
-.profile-switch-trigger:hover {
+.profile-switch-trigger:hover,
+.profile-switch-trigger[aria-expanded='true'] {
+  background: var(--btn-hover);
   color: var(--text-1);
+}
+.profile-switch-faces {
+  display: flex;
+}
+.profile-switch-faces img {
+  width: 22px;
+  height: 22px;
+  object-fit: cover;
+  border-radius: var(--r-xs);
+  box-shadow: 0 0 0 2px var(--solid-1);
+}
+.profile-switch-faces img + img {
+  margin-left: -6px;
 }
 .profile-switch-menu {
   position: absolute;
