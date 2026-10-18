@@ -110,10 +110,8 @@ onBeforeUnmount(() => clearTimeout(copiedTimer))
           {{ viewCount === 1 ? 'view' : 'views' }}
         </span>
       </p>
-      <p v-if="owned" class="identity-owned">
-        <Icon :name="isMain ? 'crown' : 'shield'" :size="12" />{{
-          isMain ? 'Your main account' : 'One of your accounts'
-        }}
+      <p v-if="owned" class="mt-2.5">
+        <span class="iv-badge brand">{{ isMain ? 'Your main account' : 'Your account' }}</span>
       </p>
 
       <div class="mt-4 flex items-center gap-2">
@@ -158,20 +156,6 @@ onBeforeUnmount(() => clearTimeout(copiedTimer))
   text-decoration: underline;
   text-decoration-color: var(--line-3);
   text-underline-offset: 4px;
-}
-
-/* Shown on the visitor's own accounts (Invade account). */
-.identity-owned {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 10px;
-  padding: 3px 8px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--brand-hi);
-  background: var(--brand-a08);
-  border-radius: var(--r-sm);
 }
 
 /* ~24% opacity, slightly desaturated, faded out with straight masks to the left and below. */

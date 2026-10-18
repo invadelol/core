@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { router } from '@inertiajs/vue3'
 import { ProfileFavorites } from '@invadelol/ui'
 import { useAccount, openAccountProfile } from '../../lib/account.js'
 
@@ -23,7 +24,6 @@ const search = () => document.querySelector<HTMLInputElement>('header input')?.f
       :folders="state.folders"
       :profiles="state.favorites"
       :busy="busy"
-      :status="layout === 'list' ? (busy ? 'Saving…' : 'Synced') : ''"
       @open="openAccountProfile"
       @create="(name) => change({ type: 'createFolder', id: newId(), name })"
       @rename="(id, name) => change({ type: 'renameFolder', id, name })"
@@ -31,6 +31,7 @@ const search = () => document.querySelector<HTMLInputElement>('header input')?.f
       @move="(puuid, folderId) => change({ type: 'moveFavorite', puuid, folderId })"
       @remove="(puuid) => change({ type: 'removeFavorite', puuid })"
       @search="search"
+      @manage="router.visit('/account#favorites')"
     />
     <p v-if="error" class="account-error" role="alert">{{ error }}</p>
   </div>
@@ -38,7 +39,7 @@ const search = () => document.querySelector<HTMLInputElement>('header input')?.f
 
 <style>
 .pinned-strip {
-  margin-top: 32px;
+  margin-top: 24px;
 }
 .account-error {
   margin-top: 12px;

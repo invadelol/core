@@ -73,11 +73,10 @@ function pick(p: AccountProfile) {
   width: 26px;
   height: 26px;
   border-radius: var(--r-sm);
-  background: var(--primary);
-  box-shadow: var(--primary-shadow);
-  color: var(--on-brand);
+  background: var(--brand-a16);
+  color: var(--brand-hi);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
 }
 .account-monogram.lg {
   width: 34px;
