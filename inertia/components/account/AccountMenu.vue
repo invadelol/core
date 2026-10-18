@@ -1,10 +1,16 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import { Icon, type AccountProfile } from '@invadelol/ui'
 import { useAccount, openAccountProfile } from '../../lib/account.js'
 const { viewer, state } = useAccount()
 const open = ref(false)
+/** The account's picture: its main League account's icon (else the first one). */
+const face = computed(() => {
+  const a =
+    state.value.accounts.find((p) => p.puuid === state.value.mainPuuid) ?? state.value.accounts[0]
+  return a ? `/cdn/profile-icon/${a.profileIconId ?? 1}.png` : null
+})
 function leave(e: FocusEvent) {
   if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) open.value = false
 }
@@ -22,12 +28,15 @@ function pick(p: AccountProfile) {
       aria-label="Your Invade account"
       @click="open = !open"
     >
-      <span class="account-monogram">{{ viewer.name.slice(0, 1).toUpperCase() }}</span
-      ><Icon name="down" :size="12" />
+      <img v-if="face" :src="face" alt="" class="account-face" /><Icon
+        v-else
+        name="user"
+        :size="15"
+      /><Icon name="down" :size="12" />
     </button>
     <div v-if="open" class="account-menu-popover">
       <div class="account-menu-who">
-        <span class="account-monogram lg">{{ viewer.name.slice(0, 1).toUpperCase() }}</span>
+        <img v-if="face" :src="face" alt="" class="account-face lg" />
         <span
           ><b>{{ viewer.name }}</b
           ><small
@@ -66,22 +75,16 @@ function pick(p: AccountProfile) {
   gap: 5px;
   padding: 0 4px;
 }
-.account-monogram {
-  display: grid;
-  place-items: center;
-  flex: none;
+.account-face {
+  display: block;
   width: 26px;
   height: 26px;
+  object-fit: cover;
   border-radius: var(--r-sm);
-  background: var(--brand-a16);
-  color: var(--brand-hi);
-  font-size: 12px;
-  font-weight: 600;
 }
-.account-monogram.lg {
+.account-face.lg {
   width: 34px;
   height: 34px;
-  font-size: 15px;
 }
 .account-menu-popover {
   position: absolute;

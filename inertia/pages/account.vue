@@ -19,6 +19,13 @@ const { ago } = useFormat()
 const current = computed(() => (state.value.user ? state.value : props.account))
 const user = computed(() => current.value.user ?? viewer.value)
 const provider = computed(() => (user.value?.provider === 'google' ? 'Google' : 'Discord'))
+/** The account's picture: its main League account's icon (else the first one). */
+const face = computed(() => {
+  const a =
+    current.value.accounts.find((p) => p.puuid === current.value.mainPuuid) ??
+    current.value.accounts[0]
+  return a ? `/cdn/profile-icon/${a.profileIconId ?? 1}.png` : null
+})
 const osName = (os: string) =>
   os.toLowerCase() === 'macos' ? 'macOS' : os.toLowerCase() === 'windows' ? 'Windows' : os
 
@@ -56,9 +63,8 @@ watch(info, (value) => (value ? help.value?.showModal() : help.value?.close()))
     <main class="page account-main">
       <div class="account-grid">
         <aside class="iv-panel account-id">
-          <span class="account-mono" aria-hidden="true">{{
-            (user?.name || 'A').slice(0, 1).toUpperCase()
-          }}</span>
+          <img v-if="face" :src="face" alt="" class="account-face" width="72" height="72" />
+          <span v-else class="account-face empty"><Icon name="user" :size="28" /></span>
           <h1>{{ user?.name }}</h1>
           <p>Signed in with {{ provider }}</p>
           <button type="button" class="iv-btn sm" @click="router.post('/signout')">Sign out</button>
@@ -176,16 +182,17 @@ watch(info, (value) => (value ? help.value?.showModal() : help.value?.close()))
 .account-id {
   padding: 20px;
 }
-.account-mono {
+.account-face {
   display: grid;
   place-items: center;
   width: 72px;
   height: 72px;
-  font-size: 28px;
-  font-weight: 600;
-  color: var(--brand-hi);
-  background: var(--brand-a16);
+  object-fit: cover;
   border-radius: var(--r-md);
+}
+.account-face.empty {
+  color: var(--text-3);
+  background: var(--surface-2);
 }
 .account-id h1 {
   margin-top: 16px;
@@ -315,7 +322,7 @@ watch(info, (value) => (value ? help.value?.showModal() : help.value?.close()))
     column-gap: 14px;
     padding: 16px;
   }
-  .account-mono {
+  .account-face {
     grid-row: span 2;
     width: 48px;
     height: 48px;
