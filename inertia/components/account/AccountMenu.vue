@@ -65,13 +65,6 @@ function pick(p: AccountProfile) {
       </button>
     </div>
   </div>
-  <!-- Signed out: the sign-in page's wall in miniature, three champions that part on hover. -->
-  <Link v-else href="/signin" class="iv-btn account-signin">
-    <span class="account-signin-faces" aria-hidden="true"
-      ><img v-for="c in [103, 222, 157]" :key="c" :src="`/cdn/champion/${c}.png`" alt=""
-    /></span>
-    Sign in
-  </Link>
 </template>
 <style>
 .account-menu {
@@ -80,43 +73,6 @@ function pick(p: AccountProfile) {
 .account-menu-trigger {
   gap: 5px;
   padding: 0 4px;
-}
-.account-signin {
-  gap: 9px;
-  padding: 0 12px 0 6px;
-}
-.account-signin-faces {
-  display: flex;
-}
-.account-signin-faces img {
-  width: 20px;
-  height: 20px;
-  object-fit: cover;
-  border-radius: var(--r-xs);
-  box-shadow: 0 0 0 2px var(--solid-2);
-  transition: transform var(--t-slow) var(--ease);
-}
-.account-signin-faces img + img {
-  margin-left: -7px;
-}
-.account-signin:hover .account-signin-faces img:nth-child(1) {
-  transform: translateX(-3px);
-}
-.account-signin:hover .account-signin-faces img:nth-child(3) {
-  transform: translateX(3px);
-}
-@media (max-width: 420px) {
-  .account-signin {
-    padding: 0 12px;
-  }
-  .account-signin-faces {
-    display: none;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .account-signin-faces img {
-    transition: none;
-  }
 }
 .account-face {
   display: block;
