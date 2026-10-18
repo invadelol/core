@@ -4,6 +4,16 @@ import type {
   ClickhouseParticipantRow,
   ClickhouseTimelineRow,
 } from '#types/clickhouse'
+import { UNKNOWN_QUEUE } from '@invadelol/ui/logic'
+
+/** An absent or invalid queue is unknown; only an explicit zero means Custom. */
+function matchQueueId(value: unknown): number {
+  if (typeof value !== 'number' && (typeof value !== 'string' || !value.trim())) {
+    return UNKNOWN_QUEUE
+  }
+  const id = Number(value)
+  return Number.isInteger(id) && id >= 0 && id < UNKNOWN_QUEUE ? id : UNKNOWN_QUEUE
+}
 
 export function toInt(value: unknown, fallback = 0): number {
   const n = typeof value === 'number' ? value : Number(value)
@@ -72,7 +82,7 @@ export function buildMatchRow(
   return {
     match_id: matchId,
     platform,
-    queue_id: toInt(info.queueId ?? 0, 0),
+    queue_id: matchQueueId(info.queueId),
     patch: patchFromGameVersion(info.gameVersion),
     game_start_ms: gameStartMs,
     duration_sec: toInt(info.gameDuration ?? 0, 0),
@@ -104,7 +114,7 @@ export function buildParticipantRows(
   info: any
 ): ClickhouseParticipantRow[] {
   const participants: any[] = Array.isArray(info.participants) ? info.participants : []
-  const queueId = toInt(info.queueId ?? 0, 0)
+  const queueId = matchQueueId(info.queueId)
 
   return participants
     .map((p) => {

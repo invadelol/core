@@ -11,26 +11,26 @@ const i = ["IRON", "BRONZE", "SILVER", "GOLD", "PLATINUM", "EMERALD", "DIAMOND",
   GRANDMASTER: e("Grandmaster"),
   CHALLENGER: e("Challenger")
 };
-function I(t, n = !0, a = l) {
-  if (!t) return a("Unranked");
-  const o = `${a(s[t.tier] ?? t.tier)}${t.division ? ` ${t.division}` : ""}`;
-  return n ? `${o} · ${t.lp} ${a("LP")}` : o;
+function I(n, a = !0, t = l) {
+  if (!n) return t("Unranked");
+  const o = `${t(s[n.tier] ?? n.tier)}${n.division ? ` ${n.division}` : ""}`;
+  return a ? `${o} · ${n.lp} ${t("LP")}` : o;
 }
-function M(t) {
-  if (!t) return "–";
-  const n = t.tier === "GRANDMASTER" ? "GM" : t.tier === "CHALLENGER" ? "C" : t.tier[0], a = { I: "1", II: "2", III: "3", IV: "4" }[t.division] ?? "";
-  return n + a;
+function M(n) {
+  if (!n) return "–";
+  const a = n.tier === "GRANDMASTER" ? "GM" : n.tier === "CHALLENGER" ? "C" : n.tier[0], t = { I: "1", II: "2", III: "3", IV: "4" }[n.division] ?? "";
+  return a + t;
 }
-function N(t) {
-  if (!t) return null;
-  const n = i.indexOf(t.tier);
-  if (n < 0) return null;
-  if (n >= 7) return 28 + t.lp / 100;
-  const a = { IV: 0, III: 1, II: 2, I: 3 }[t.division] ?? 0;
-  return n * 4 + a + t.lp / 100;
+function N(n) {
+  if (!n) return null;
+  const a = i.indexOf(n.tier);
+  if (a < 0) return null;
+  if (a >= 7) return 28 + n.lp / 100;
+  const t = { IV: 0, III: 1, II: 2, I: 3 }[n.division] ?? 0;
+  return a * 4 + t + n.lp / 100;
 }
-function b(t) {
-  return t && i.includes(t) ? `var(--tier-${t.toLowerCase()})` : "var(--text-2)";
+function b(n) {
+  return n && i.includes(n) ? `var(--tier-${n.toLowerCase()})` : "var(--text-2)";
 }
 const r = {
   IRON: "138 127 122",
@@ -43,9 +43,13 @@ const r = {
   MASTER: "179 107 255",
   GRANDMASTER: "255 93 108",
   CHALLENGER: "244 210 122"
-}, g = (t) => r[t ?? ""] ?? null, h = (t) => t.games ? t.wins / t.games : 0, S = (t) => (t.kills + t.assists) / Math.max(1, t.deaths), u = {
+}, g = (n) => r[n ?? ""] ?? null, h = (n) => n.games ? n.wins / n.games : 0, k = (n) => (n.kills + n.assists) / Math.max(1, n.deaths), S = 65535, u = {
   0: e("Custom"),
+  4: e("Ranked Solo/Duo"),
+  6: e("Ranked Premade"),
+  42: e("Ranked Team"),
   400: e("Normal Draft"),
+  410: e("Ranked Dynamic"),
   420: e("Ranked Solo/Duo"),
   430: e("Normal Blind"),
   440: e("Ranked Flex"),
@@ -69,26 +73,27 @@ const r = {
   1810: e("Swarm"),
   1900: e("URF"),
   2300: e("Brawl"),
-  2400: e("ARAM: Mayhem")
-}, d = (t, n = l) => n(u[t] ?? e("Custom")), c = [
+  2400: e("ARAM: Mayhem"),
+  3140: e("Practice Tool")
+}, d = (n, a = l) => a(u[n] ?? e("Unknown queue")), c = [
   { id: e("all"), label: e("All queues"), queues: null },
   { id: e("solo"), label: e("Ranked Solo/Duo"), queues: [420] },
   { id: e("flex"), label: e("Ranked Flex"), queues: [440] },
   { id: e("normal"), label: e("Normal"), queues: [400, 430, 480, 490] },
   { id: e("aram"), label: e("ARAM"), queues: [450, 720, 2400] },
   { id: e("arena"), label: e("Arena"), queues: [1700, 1710, 1750] }
-], A = { all: e("All"), solo: e("Solo/Duo"), flex: e("Flex") };
-function v(t, n = l) {
-  const a = c.find((o) => o.queues?.includes(t));
-  return a ? n(A[a.id] ?? a.label) : d(t, n);
+], R = { all: e("All"), solo: e("Solo/Duo"), flex: e("Flex") };
+function D(n, a = l) {
+  const t = c.find((o) => o.queues?.includes(n));
+  return t ? a(R[t.id] ?? t.label) : d(n, a);
 }
-const R = {
+const A = {
   TOP: e("Top"),
   JUNGLE: e("Jungle"),
   MID: e("Mid"),
   ADC: e("Bot"),
   SUPPORT: e("Support")
-}, D = (t, n = l) => t ? n(R[t]) : "", f = {
+}, v = (n, a = l) => n ? a(A[n]) : "", f = {
   mvp: { label: e("MVP"), tip: e("Best player of the winning team") },
   ace: { label: e("ACE"), tip: e("Best player of the losing team") },
   carry_damage: { label: e("Most damage"), tip: e("Most damage to champions in the game") },
@@ -102,25 +107,26 @@ const R = {
   penta: { label: e("Penta kill"), tip: e("Penta kill") },
   deathless: { label: e("Deathless"), tip: e("No deaths in a game of 15 minutes or more") },
   lane_won: { label: e("Lane won"), tip: e("1000+ gold ahead of the lane opponent at 15 minutes") }
-}, m = ["penta", "quadra", "triple", "lane_won", "carry_damage", "deathless", "first_blood", "objectives", "vision", "tank", "cc"], L = (t, n = 2) => m.filter((a) => t?.includes(a)).slice(0, n), E = {
+}, m = ["penta", "quadra", "triple", "lane_won", "carry_damage", "deathless", "first_blood", "objectives", "vision", "tank", "cc"], L = (n, a = 2) => m.filter((t) => n?.includes(t)).slice(0, a), E = {
   games: [e("{n} game"), e("{n} games")],
   wins: [e("{n} win"), e("{n} wins")],
   kills: [e("{n} kill"), e("{n} kills")],
   deaths: [e("{n} death"), e("{n} deaths")],
   events: [e("{n} event"), e("{n} events")],
   changes: [e("{n} change"), e("{n} changes")]
-}, k = (t, n, a = l) => a(E[n][t === 1 ? 0 : 1], { n: t });
+}, T = (n, a, t = l) => t(E[a][n === 1 ? 0 : 1], { n });
 export {
   f as BADGES,
-  R as POSITIONS,
+  A as POSITIONS,
   c as QUEUE_FILTERS,
-  A as QUEUE_SHORT,
+  R as QUEUE_SHORT,
   i as TIERS,
-  k as count,
-  S as kda,
-  D as positionName,
+  S as UNKNOWN_QUEUE,
+  T as count,
+  k as kda,
+  v as positionName,
   d as queueName,
-  v as queueShort,
+  D as queueShort,
   I as rankLabel,
   M as rankShort,
   N as rankValue,

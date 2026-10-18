@@ -13,6 +13,8 @@ export declare function tierColor(tier: string | null | undefined): string;
 export declare const tierRgb: (tier: string | null | undefined) => string | null;
 export declare const winRate: (x: Pick<Totals, "games" | "wins">) => number;
 export declare const kda: (x: Pick<Totals, "kills" | "deaths" | "assists">) => number;
+/** Missing queue metadata; fits the hosts' UInt16 storage without claiming queue 0 (Custom). */
+export declare const UNKNOWN_QUEUE = 65535;
 /** Queue id → display name ("Ranked Solo/Duo"). */
 export declare const queueName: (id: number, t?: Translate) => string;
 /** Queue filters of match lists: queue ids per filter (`null`: every queue). */
