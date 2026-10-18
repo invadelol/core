@@ -18,6 +18,7 @@ const aliases: Record<string, RiotPlatform> = {
   TR: 'TR1',
   ME: 'ME1',
   SG: 'SG2',
+  SEA: 'SG2',
   PH: 'SG2',
   PH2: 'SG2',
   TH: 'SG2',

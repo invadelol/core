@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
-import { CornerDownLeft, Search } from 'lucide-vue-next'
+import { CornerDownLeft, Search, Users } from 'lucide-vue-next'
 import { profileIcon, regionLabel } from '../lib/assets.js'
+import { multisearchPath, parseRiotIds, type RiotIdentity } from '../lib/multisearch.js'
 
 const props = withDefaults(
   defineProps<{
@@ -28,6 +29,8 @@ interface Entry {
   icon?: number | null
   region?: string
   level?: number | null
+  /** Several Riot IDs pasted at once: the entry opens them side by side. */
+  multi?: RiotIdentity[]
 }
 
 const query = ref('')
@@ -67,9 +70,18 @@ const typedTarget = computed(() => {
   return gameName && tagLine ? { gameName, tagLine } : null
 })
 
+/** A pasted lobby or list ("A#EUW, B#EUW"): more than one player is a multi search. */
+const pastedPlayers = computed(() => {
+  const players = parseRiotIds(query.value)
+  return players.length > 1 ? players : null
+})
+
 /** Flat list of everything selectable, so arrow keys have one index space. */
 const entries = computed(() => {
   const list: Entry[] = []
+  if (pastedPlayers.value) {
+    return [{ gameName: '', tagLine: '', direct: true, multi: pastedPlayers.value }]
+  }
   if (typedTarget.value) list.push({ ...typedTarget.value, direct: true })
   for (const r of results.value) {
     if (typedTarget.value && r.gameName === typedTarget.value.gameName) continue
@@ -94,6 +106,11 @@ watch(query, (value) => {
   activeIndex.value = 0
 
   const trimmed = value.trim()
+  if (pastedPlayers.value) {
+    results.value = []
+    isOpen.value = true
+    return
+  }
   if (trimmed.length < 2) {
     results.value = []
     isOpen.value = Boolean(typedTarget.value)
@@ -144,7 +161,8 @@ function remember(q: string, data: Result[]) {
  * By the time the click lands, the server render and its analytics preloads
  * have usually already happened, so the profile appears immediately.
  */
-function warm(entry: { gameName: string; tagLine: string }) {
+function warm(entry: Entry | { gameName: string; tagLine: string }) {
+  if ('multi' in entry && entry.multi) return
   try {
     router.prefetch(href(entry), { method: 'get' }, { cacheFor: '30s' })
   } catch {
@@ -178,15 +196,15 @@ onBeforeUnmount(() => {
   searchController?.abort()
 })
 
-function go(entry: { gameName: string; tagLine: string }) {
+function go(entry: Entry) {
   isOpen.value = false
   query.value = ''
   results.value = []
   input.value?.blur()
-  router.visit(href(entry))
+  router.visit(entry.multi ? multisearchPath(entry.multi) : href(entry))
 }
 
-function highlight(index: number, entry: { gameName: string; tagLine: string }) {
+function highlight(index: number, entry: Entry) {
   activeIndex.value = index
   warm(entry)
 }
@@ -276,8 +294,11 @@ function submit() {
         @mouseenter="highlight(index, entry)"
         @mousedown.prevent="go(entry)"
       >
+        <span v-if="entry.multi" class="grid h-7 w-7 shrink-0 place-items-center text-ink-3">
+          <Users :size="15" />
+        </span>
         <img
-          v-if="!entry.direct"
+          v-else-if="!entry.direct"
           :src="profileIcon(entry.icon)"
           alt=""
           width="28"
@@ -290,7 +311,10 @@ function submit() {
           <CornerDownLeft :size="15" />
         </span>
 
-        <span class="min-w-0 flex-1 truncate">
+        <span v-if="entry.multi" class="min-w-0 flex-1 truncate">
+          <span class="font-medium text-ink">Search {{ entry.multi.length }} players together</span>
+        </span>
+        <span v-else class="min-w-0 flex-1 truncate">
           <span v-if="entry.direct" class="text-ink-3">Go to </span>
           <span class="font-medium text-ink">{{ entry.gameName }}</span>
           <span class="text-ink-3">#{{ entry.tagLine }}</span>

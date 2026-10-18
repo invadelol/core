@@ -278,6 +278,64 @@ export class StatsRepository {
   }
 
   /**
+   * A player's season in two sums over the same games: per champion (kills, deaths, assists and
+   * wins) and per position. What a multi search shows of each player, in one read.
+   */
+  async getSeasonPool(
+    puuid: string,
+    filters: { sinceMs: number; queueIds: readonly number[] }
+  ): Promise<{
+    champions: Array<{
+      championId: number
+      games: number
+      wins: number
+      kills: number
+      deaths: number
+      assists: number
+    }>
+    roles: Array<{ role: string; games: number; wins: number }>
+  }> {
+    const mine = `
+      SELECT champion_id, team_position, win, kills, deaths, assists
+      FROM participants
+      PREWHERE puuid = '${escapeClickhouseString(puuid)}'
+      WHERE ${VISIBLE_QUEUES_SQL}
+        AND game_start_ms >= ${Math.trunc(filters.sinceMs)}
+        AND queue_id IN (${filters.queueIds.map(Number).join(',')})
+    `
+    const [champions, roles] = await Promise.all([
+      rows(`
+        SELECT champion_id, count(), sum(win), sum(kills), sum(deaths), sum(assists)
+        FROM (${mine})
+        GROUP BY champion_id
+        ORDER BY count() DESC, sum(win) DESC
+      `),
+      rows(`
+        SELECT team_position, count(), sum(win)
+        FROM (${mine})
+        WHERE team_position != ''
+        GROUP BY team_position
+        ORDER BY count() DESC
+      `),
+    ])
+    return {
+      champions: champions.map((row) => ({
+        championId: number(row[0]),
+        games: number(row[1]),
+        wins: number(row[2]),
+        kills: number(row[3]),
+        deaths: number(row[4]),
+        assists: number(row[5]),
+      })),
+      roles: roles.map((row) => ({
+        role: asString(row[0]),
+        games: number(row[1]),
+        wins: number(row[2]),
+      })),
+    }
+  }
+
+  /**
    * Get per-champion statistics
    */
   async getSummonerChampionStats(
