@@ -45,3 +45,34 @@ test('presence card renders a square PNG, with and without art', async ({ assert
     assert.equal(meta.height, PRESENCE_SIZE)
   }
 })
+
+test('idle and draft validate their own wordless card fields', ({ assert }) => {
+  assert.equal(parsePresenceQuery({ p: 'idle', tier: 'emerald' })?.phase, 'idle')
+  assert.equal(parsePresenceQuery({ p: 'draft', s: 'locked', r: 'mid' })?.stage, 'locked')
+  for (const bad of [
+    { p: 'unknown' },
+    { p: 'idle', tier: '<script>' },
+    { p: 'idle', t: '23' },
+    { p: 'draft', s: 'hovering' },
+    { p: 'draft', s: 'picking', r: 'mid' },
+    { p: 'draft', s: 'locked', r: 'toString' },
+    { p: 'idle', k: '0' },
+  ])
+    assert.isNull(parsePresenceQuery(bad), JSON.stringify(bad))
+})
+
+test('every non-game view renders without a score or countdown', async ({ assert }) => {
+  const cards = [
+    { p: 'idle', tier: 'emerald' },
+    ...['planning', 'banning', 'picking', 'locked', 'loading'].map((s) => ({ p: 'draft', s })),
+  ]
+  const images = []
+  for (const query of cards) {
+    const image = await renderPresenceCard(parsePresenceQuery(query)!)
+    const meta = await sharp(image).metadata()
+    assert.equal(meta.width, PRESENCE_SIZE)
+    assert.equal(meta.height, PRESENCE_SIZE)
+    images.push(image.toString('base64'))
+  }
+  assert.equal(new Set(images).size, cards.length)
+})

@@ -1,5 +1,6 @@
 import sharp from 'sharp'
 import { GLYPHS } from '#services/presence_glyphs'
+import { INVADE_MARK } from '#services/presence_brand'
 
 /**
  * The picture of the desktop app's Discord presence: the champion's art, the score at the bottom
@@ -13,6 +14,9 @@ export const PRESENCE_SIZE = 256
 export type PresenceRole = 'top' | 'jungle' | 'mid' | 'bot' | 'support'
 
 export interface PresenceCard {
+  phase?: 'idle' | 'draft'
+  stage?: 'planning' | 'banning' | 'picking' | 'locked' | 'loading'
+  tier?: string
   kills: number
   deaths: number
   assists: number
@@ -49,8 +53,55 @@ const ROLE_ICONS: Record<PresenceRole, [string, number][]> = {
   ],
 }
 
+export const PRESENCE_TIERS = [
+  'iron',
+  'bronze',
+  'silver',
+  'gold',
+  'platinum',
+  'emerald',
+  'diamond',
+  'master',
+  'grandmaster',
+  'challenger',
+] as const
+const STAGES = ['planning', 'banning', 'picking', 'locked', 'loading'] as const
+
 /** The card a query asks for, or `null` when anything in it is not a plain number or role. */
 export function parsePresenceQuery(query: Record<string, unknown>): PresenceCard | null {
+  if (query.p !== undefined) {
+    if (query.p !== 'idle' && query.p !== 'draft') return null
+    if (
+      query.k !== undefined ||
+      query.d !== undefined ||
+      query.a !== undefined ||
+      query.t !== undefined
+    )
+      return null
+    const role =
+      typeof query.r === 'string' && Object.hasOwn(ROLE_ICONS, query.r)
+        ? (query.r as PresenceRole)
+        : undefined
+    if (query.r !== undefined && !role) return null
+    if (query.p === 'idle') {
+      if (query.s !== undefined || role) return null
+      const tier =
+        typeof query.tier === 'string' && PRESENCE_TIERS.some((t) => t === query.tier)
+          ? query.tier
+          : undefined
+      if (query.tier !== undefined && !tier) return null
+      return { phase: 'idle', tier, kills: 0, deaths: 0, assists: 0 }
+    }
+    if (
+      typeof query.s !== 'string' ||
+      !STAGES.some((s) => s === query.s) ||
+      query.tier !== undefined
+    )
+      return null
+    const stage = query.s as (typeof STAGES)[number]
+    if (role && stage !== 'locked' && stage !== 'loading') return null
+    return { phase: 'draft', stage, role, kills: 0, deaths: 0, assists: 0 }
+  }
   const int = (value: unknown, max: number) => {
     if (typeof value !== 'string' || !/^\d{1,3}$/.test(value)) return null
     const n = Number(value)
@@ -120,7 +171,44 @@ function scoreRuns(card: PresenceCard): Run[] {
   return [figure(card.kills), slash, figure(card.deaths), slash, figure(card.assists)]
 }
 
+/** Symbols at the same lower-left anchor as the live score. No words or game-like clock. */
+function phaseSymbol(card: PresenceCard) {
+  const paths: Record<string, string> = {
+    planning:
+      '<path d="m8 14 10-10 10 10-10 10Z"/><path d="m30 14 10-10 10 10-10 10Z" opacity=".35"/>',
+    banning: '<rect x="5" y="3" width="31" height="31" rx="5"/><path d="m8 31 30-25"/>',
+    picking:
+      '<path d="M15 3H3v12m28-12h12v12M3 31v12h12m28-12v12H31"/><path d="m18 23 5-5 5 5-5 5Z"/>',
+    locked: '<path d="m7 22 11 11L40 9"/>',
+    loading: '<path d="M7 14a18 18 0 1 1-1 20M7 3v13h13"/>',
+    idle: '<path d="m5 25 13 13 25-25"/>',
+  }
+  const symbol =
+    card.stage === 'locked' && card.role
+      ? ROLE_ICONS[card.role]
+          .map(([d, opacity]) => `<path d="${d}" opacity="${opacity}"/>`)
+          .join('')
+      : paths[card.stage ?? 'idle']
+  const role = card.stage === 'locked' && card.role
+  return `<g transform="translate(20 192) scale(${role ? 1.3 : 1})" ${role ? 'fill="#d3d4e0"' : 'fill="none" stroke="#d3d4e0" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"'}>${symbol}</g>`
+}
+
+/** Idle is Invade's large mark. League is the separate small Discord badge; player
+ * details stay outside the image. No champion, rank, figures or words in this view. */
+async function renderIdleCard() {
+  const image = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256">
+    <defs><radialGradient id="light" cx="1" cy="0" r="1.25">
+      <stop stop-color="#7b6dff" stop-opacity=".12"/><stop offset="1" stop-color="#7b6dff" stop-opacity="0"/>
+    </radialGradient></defs>
+    <rect width="256" height="256" fill="#101016"/>
+    <rect width="256" height="256" fill="url(#light)"/>
+    <g transform="translate(128 128) scale(1.12) translate(-131.5 -107)" fill="#7b6dff">${INVADE_MARK}</g>
+  </svg>`)
+  return sharp(image).png({ compressionLevel: 9 }).toBuffer()
+}
+
 export async function renderPresenceCard(card: PresenceCard, artwork?: Uint8Array) {
+  if (card.phase === 'idle') return renderIdleCard()
   const size = PRESENCE_SIZE
   const dead = card.respawn !== undefined
   let art = artwork
@@ -160,8 +248,15 @@ export async function renderPresenceCard(card: PresenceCard, artwork?: Uint8Arra
       <stop offset="1" stop-color="#08090c" stop-opacity=".95"/>
     </linearGradient></defs>
     <rect width="${size}" height="${size}" fill="url(#shade)"/>
-    ${score.svg}
-    ${label}
+    ${
+      !artwork && card.phase
+        ? `<defs><radialGradient id="light" cx=".85" cy="0" r="1"><stop stop-color="#7b6dff" stop-opacity=".18"/><stop offset="1" stop-color="#7b6dff" stop-opacity="0"/></radialGradient></defs>
+      <rect width="256" height="256" fill="url(#light)"/>
+      <g fill="none" stroke="#7b6dff" stroke-width="2" opacity=".38"><path d="m128 47 57 57-57 57-57-57Z"/><path d="m128 66 38 38-38 38-38-38Z" opacity=".35"/></g>`
+        : ''
+    }
+    ${card.phase ? phaseSymbol(card) : score.svg}
+    ${card.phase ? '' : label}
   </svg>`)
   return sharp(background)
     .composite([{ input: overlay }])

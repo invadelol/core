@@ -39,8 +39,8 @@ test.group('Presence cards', (group) => {
       '/presence/x.png?k=1&d=1&a=1',
       '/presence/9999.png?k=1&d=1&a=1',
     ]) {
-      const response = await client.get(path)
-      response.assertStatus(404)
+      const rejected = await client.get(path)
+      rejected.assertStatus(404)
     }
   })
 
@@ -49,4 +49,35 @@ test.group('Presence cards', (group) => {
     response.assertStatus(200)
     response.assertHeader('content-type', 'image/png')
   })
+})
+
+test('anonymous views avoid champion lookups and unlocked draft art is rejected', async ({
+  client,
+}) => {
+  const get = riotAssets.get
+  riotAssets.get = (async () => {
+    throw new Error('anonymous draft must not fetch a champion')
+  }) as typeof get
+  try {
+    const response = await client.get('/presence/0.png?p=draft&s=planning&v=4')
+    response.assertStatus(200)
+    response.assertHeader('content-type', 'image/png')
+    const idle = await client.get('/presence/0.png?p=idle&v=6')
+    idle.assertStatus(200)
+    idle.assertHeader('content-type', 'image/png')
+    const league = await client.get('/presence/league.png')
+    league.assertStatus(200)
+    league.assertHeader('content-type', 'image/png')
+    for (const path of [
+      '/presence/103.png?p=draft&s=picking',
+      '/presence/0.png?p=draft&s=locked',
+      '/presence/103.png?p=idle&t=23',
+      '/presence/103.png?p=draft&s=locked&r=toString',
+    ]) {
+      const rejected = await client.get(path)
+      rejected.assertStatus(404)
+    }
+  } finally {
+    riotAssets.get = get
+  }
 })
