@@ -15,3 +15,14 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" vi
   </g>
 </svg>`
 await sharp(Buffer.from(svg)).png({ compressionLevel: 9 }).toFile('public/presence/invade.png')
+
+// League's official website mark, used only as the small idle badge (source beside the SVG).
+const league = await sharp('public/presence/league.svg', { density: 384 })
+  .trim()
+  .resize(184, 184, { fit: 'contain', background: '#00000000' })
+  .png()
+  .toBuffer()
+await sharp({ create: { width: 256, height: 256, channels: 4, background: '#101016' } })
+  .composite([{ input: league, left: 36, top: 36 }])
+  .png({ compressionLevel: 9 })
+  .toFile('public/presence/league.png')

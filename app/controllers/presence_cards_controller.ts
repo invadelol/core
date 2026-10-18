@@ -15,16 +15,32 @@ export default class PresenceCardsController {
     const champion = /^(\d{1,4})\.png$/.exec(String(params.file))?.[1]
     const card = champion ? parsePresenceQuery(request.qs()) : null
     if (!champion || !card) return response.notFound()
-    const key = `${champion}:${card.kills}/${card.deaths}/${card.assists}:${card.role ?? ''}:${card.respawn ?? ''}`
+    // Champion 0 is the anonymous, wordless draft/idle sheet, never a Riot lookup.
+    if (champion === '0' && !card.phase) return response.notFound()
+    if (
+      card.phase === 'draft' &&
+      !['locked', 'loading'].includes(card.stage ?? '') &&
+      champion !== '0'
+    )
+      return response.notFound()
+    if (card.phase === 'draft' && card.stage === 'locked' && champion === '0')
+      return response.notFound()
+    const key =
+      card.phase === 'idle'
+        ? 'idle:6'
+        : `${card.phase ?? 'game'}:${card.stage ?? ''}:${card.tier ?? ''}:${champion}:${card.kills}/${card.deaths}/${card.assists}:${card.role ?? ''}:${card.respawn ?? ''}`
     let body = cards.get(key)
     if (!body) {
-      const art = await riotAssets.get('centered', champion)
+      const art =
+        champion === '0' || card.phase === 'idle'
+          ? undefined
+          : await riotAssets.get('centered', champion)
       // An unknown champion, or the art unavailable for now: nothing worth keeping.
-      if (art.placeholder) {
+      if (art?.placeholder) {
         response.header('Cache-Control', 'no-store')
         return response.notFound()
       }
-      body = await renderPresenceCard(card, art.body)
+      body = await renderPresenceCard(card, art?.body)
       cards.set(key, body, body.byteLength, 3_600_000)
     }
     response.header('Content-Type', 'image/png')
