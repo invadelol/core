@@ -1,20 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
-import { Icon, Logo } from '@invadelol/ui'
+import { Icon } from '@invadelol/ui'
 import AccountMenu from './account/AccountMenu.vue'
 
 /**
- * The header's two ways in: the desktop app, and signing in (the account menu once signed in).
- * Three candidate designs, picked with `?hv=1|2|3` while we choose (default 1).
+ * The header's two ways in: download the desktop app (with the visitor's OS mark), and sign in
+ * (carrying the Discord and Google marks it offers). Signed in, the account menu takes its place.
  */
 const page = usePage()
 const onApp = computed(() => page.url.split('?')[0] === '/app')
 const signedIn = computed(() => !!page.props.viewer)
-const variant = computed(() => {
-  const v = new URLSearchParams(page.url.split('?')[1] ?? '').get('hv')
-  return v === '2' || v === '3' ? Number(v) : 1
-})
 const signin = computed(() =>
   page.url.startsWith('/signin') ? '/signin' : `/signin?next=${encodeURIComponent(page.url)}`
 )
@@ -24,57 +20,14 @@ onMounted(() => {
   const ua = navigator.userAgent
   os.value = /Mac/.test(ua) ? 'mac' : /Win/.test(ua) ? 'win' : ''
 })
-const osName = computed(() =>
-  os.value === 'mac' ? 'macOS' : os.value === 'win' ? 'Windows' : 'desktop'
-)
 </script>
 
 <template>
-  <!-- 1 · Store badges: two lines, a tile on the left. -->
-  <div v-if="variant === 1" class="hc hc1">
+  <!-- Your OS on the app, the providers on sign in. -->
+  <div class="hc">
     <Link
       href="/app"
-      class="hc1-badge"
-      :class="{ on: onApp }"
-      :aria-current="onApp ? 'page' : undefined"
-    >
-      <span class="hc1-tile"><Logo :size="15" /></span>
-      <span class="hc1-text"
-        ><small>Free for {{ osName }}</small
-        ><b>Desktop app</b></span
-      >
-    </Link>
-    <Link v-if="!signedIn" :href="signin" class="hc1-badge lit">
-      <span class="hc1-tile"><img :src="'/cdn/champion/103.png'" alt="" /></span>
-      <span class="hc1-text"><small>Your accounts</small><b>Sign in</b></span>
-    </Link>
-    <AccountMenu v-else />
-  </div>
-
-  <!-- 2 · Slots: a tile and a word, like an inventory. -->
-  <div v-else-if="variant === 2" class="hc hc2">
-    <Link
-      href="/app"
-      class="hc2-item"
-      :class="{ on: onApp }"
-      :aria-current="onApp ? 'page' : undefined"
-    >
-      <span class="hc2-key"><Logo :size="15" /></span><span class="hc-label">App</span>
-    </Link>
-    <Link v-if="!signedIn" :href="signin" class="hc2-item signin">
-      <span class="hc2-slot"
-        ><Icon name="user" :size="15" /><img :src="'/cdn/champion/103.png'" alt=""
-      /></span>
-      Sign in
-    </Link>
-    <AccountMenu v-else />
-  </div>
-
-  <!-- 3 · Brand marks: your OS on the app, the providers on sign in. -->
-  <div v-else class="hc hc3">
-    <Link
-      href="/app"
-      class="hc3-btn"
+      class="hc-btn"
       :class="{ on: onApp }"
       :aria-current="onApp ? 'page' : undefined"
     >
@@ -105,9 +58,9 @@ const osName = computed(() =>
       <Icon v-else name="download" :size="14" />
       <span class="hc-label">Download</span>
     </Link>
-    <Link v-if="!signedIn" :href="signin" class="hc3-btn lit">
+    <Link v-if="!signedIn" :href="signin" class="hc-btn lit">
       Sign in
-      <span class="hc3-marks" aria-hidden="true">
+      <span class="hc-marks" aria-hidden="true">
         <i
           ><svg width="11" height="9" viewBox="0 0 127 96" fill="#5865f2">
             <path
@@ -148,124 +101,7 @@ const osName = computed(() =>
   text-decoration: none;
 }
 
-/* ── 1 · Store badges ───────────────────────────────────────── */
-.hc1-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  height: 40px;
-  padding: 0 14px 0 5px;
-  color: var(--text-1);
-  background: var(--btn);
-  border-radius: var(--r-md);
-  box-shadow: var(--btn-shadow);
-  transition: background-color var(--t-fast);
-}
-.hc1-badge:hover {
-  background: var(--btn-hover);
-}
-.hc1-badge.lit {
-  color: var(--on-brand);
-  background: var(--primary);
-  box-shadow: var(--primary-shadow);
-}
-.hc1-badge.lit:hover {
-  background: var(--primary-hover);
-}
-.hc1-tile {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  overflow: hidden;
-  background: var(--ink-0);
-  border-radius: var(--r-sm);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08);
-}
-.hc1-tile img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.hc1-text {
-  display: grid;
-  line-height: 1.1;
-}
-.hc1-text small {
-  font-size: 10.5px;
-  font-weight: 500;
-  opacity: 0.7;
-}
-.hc1-text b {
-  font-size: 13.5px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
-}
-
-/* ── 2 · Slots ──────────────────────────────────────────────── */
-.hc2 {
-  gap: 4px;
-}
-.hc2-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  height: 40px;
-  padding: 0 12px 0 5px;
-  font: 600 13px var(--font);
-  color: var(--text-1);
-  border-radius: var(--r-md);
-  transition: background-color var(--t-fast);
-}
-.hc2-item:hover,
-.hc2-item.on {
-  background: var(--surface-2);
-}
-.hc2-key,
-.hc2-slot {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: var(--r-sm);
-}
-.hc2-key {
-  background: var(--key);
-  box-shadow: var(--key-shadow);
-}
-/* An empty profile slot, lit violet from inside; a champion takes it on hover. */
-.hc2-slot {
-  overflow: hidden;
-  color: var(--brand-hi);
-  background: var(--well);
-  box-shadow:
-    var(--inset-shadow),
-    inset 0 0 0 1px var(--brand-a28),
-    inset 0 -8px 14px -6px rgb(var(--brand-rgb) / 0.45);
-}
-.hc2-slot img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  opacity: 0;
-  transform: scale(1.15);
-  transition:
-    opacity var(--t-slow) var(--ease),
-    transform var(--t-slow) var(--ease);
-}
-.hc2-item.signin:hover .hc2-slot img {
-  opacity: 1;
-  transform: none;
-}
-.hc2-item.signin {
-  color: var(--brand-hi);
-}
-
-/* ── 3 · Brand marks ────────────────────────────────────────── */
-.hc3-btn {
+.hc-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -278,23 +114,23 @@ const osName = computed(() =>
   box-shadow: var(--btn-shadow);
   transition: background-color var(--t-fast);
 }
-.hc3-btn:hover {
+.hc-btn:hover {
   background: var(--btn-hover);
 }
-.hc3-btn.lit {
+.hc-btn.lit {
   gap: 10px;
   padding: 0 7px 0 14px;
   color: var(--on-brand);
   background: var(--primary);
   box-shadow: var(--primary-shadow);
 }
-.hc3-btn.lit:hover {
+.hc-btn.lit:hover {
   background: var(--primary-hover);
 }
-.hc3-marks {
+.hc-marks {
   display: flex;
 }
-.hc3-marks i {
+.hc-marks i {
   display: grid;
   place-items: center;
   width: 20px;
@@ -303,7 +139,7 @@ const osName = computed(() =>
   border-radius: 50%;
   box-shadow: 0 0 0 2px var(--brand);
 }
-.hc3-marks i + i {
+.hc-marks i + i {
   margin-left: -5px;
 }
 
@@ -313,20 +149,10 @@ const osName = computed(() =>
   }
 }
 @media (max-width: 640px) {
-  .hc-label,
-  .hc1-text small {
+  .hc-label {
     display: none;
   }
-  .hc1-badge:not(.lit) .hc1-text {
-    display: none;
-  }
-  .hc1-badge:not(.lit) {
-    padding: 0 5px;
-  }
-  .hc2-item:not(.signin) {
-    padding: 0 5px;
-  }
-  .hc3-btn:not(.lit) {
+  .hc-btn:not(.lit) {
     padding: 0 10px;
   }
 }
