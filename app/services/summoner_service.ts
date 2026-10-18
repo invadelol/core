@@ -25,7 +25,11 @@ import {
   DEFAULT_SEARCH_LIMIT,
   MAX_SEARCH_LIMIT,
   DEFAULT_OFFSET,
+  SEASON_START_MS,
 } from '#config/constants'
+
+/** Fewer Solo/Duo games than this and the season is read over the whole Rift. */
+const SEASON_SOLO_ENOUGH = 10
 
 /**
  * The model's own columns, named explicitly.
@@ -335,6 +339,26 @@ class SummonerService {
       queueIds: filters.type && filters.type !== 'all' ? QUEUE_IDS[filters.type] : undefined,
       role: filters.role,
     })
+  }
+
+  /**
+   * The player's season as a multi search reads it: Solo/Duo when they played enough of it, all
+   * ranked and normal Rift games otherwise (`queue` says which). Stored games only.
+   */
+  async getSeasonPool(puuid: string) {
+    const solo = await statsRepository.getSeasonPool(puuid, {
+      sinceMs: SEASON_START_MS,
+      queueIds: QUEUE_IDS.ranked,
+    })
+    const total = (pool: typeof solo) => pool.champions.reduce((n, c) => n + c.games, 0)
+    if (total(solo) >= SEASON_SOLO_ENOUGH) return { queue: 'solo' as const, ...solo }
+    const rift = await statsRepository.getSeasonPool(puuid, {
+      sinceMs: SEASON_START_MS,
+      queueIds: [...QUEUE_IDS.ranked, ...QUEUE_IDS.flex, ...QUEUE_IDS.normal],
+    })
+    return total(rift) > total(solo)
+      ? { queue: 'rift' as const, ...rift }
+      : { queue: 'solo' as const, ...solo }
   }
 
   async getMatches(

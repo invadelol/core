@@ -34,6 +34,7 @@ const LensController = () => import('#controllers/lens_controller')
 const SynergyController = () => import('#controllers/synergy_controller')
 const LegalController = () => import('#controllers/legal_controller')
 const ChangelogController = () => import('#controllers/changelog_controller')
+const MultisearchController = () => import('#controllers/multisearch_controller')
 
 // API routes group
 router
@@ -73,6 +74,10 @@ router
 
     router
       .get('/summoners/puuid/:puuid/champions', [SummonersController, 'champions'])
+      .use(middleware.httpCache())
+
+    router
+      .get('/summoners/puuid/:puuid/season', [SummonersController, 'season'])
       .use(middleware.httpCache())
 
     router
@@ -130,6 +135,9 @@ router.get('/app', [AppPageController, 'show']).use(middleware.httpCache({ page:
 /** The desktop app's release notes, all of them or opened at one version (`v0.3.2` leads to `0.3.2`). */
 router.get('/app/changelog', [ChangelogController, 'index'])
 router.get('/app/changelog/:version', [ChangelogController, 'show'])
+
+/** Several players scouted side by side (a lobby), before the summoner catch-all below. */
+router.get('/multisearch/:region?', [MultisearchController, 'show'])
 
 /** The privacy policy, the legal notice and its terms, before the summoner catch-all below. */
 router.get('/privacy', [LegalController, 'privacy'])

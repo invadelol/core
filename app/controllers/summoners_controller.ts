@@ -203,6 +203,17 @@ export default class SummonersController {
   }
 
   /**
+   * The player's season for a multi search: games, wins, kills, deaths and assists per champion,
+   * and games and wins per position (`queue`: `solo` for Solo/Duo, `rift` when there were too few).
+   * @paramPath puuid - Summoner PUUID
+   * @responseBody 200 - { queue, champions: [], roles: [] }
+   */
+  async season({ request, params, response }: HttpContext) {
+    await request.validateUsing(puuidParamsValidator, { data: params })
+    return response.ok(await summonerService.getSeasonPool(params.puuid))
+  }
+
+  /**
    * Get champion stats
    * @paramPath puuid - Summoner PUUID
    * @requestBody <getChampionStatsValidator>

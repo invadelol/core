@@ -49,3 +49,9 @@ export const SEARCH_CACHE_TTL = '60s'
  * paint, so it is worth keeping out of Postgres.
  */
 export const STORED_PROFILE_CACHE_TTL = '60s'
+
+/**
+ * The ranked season the multi search reads a player's pool from. Riot opens it in the first days
+ * of January; the year's first game is close enough, and a pre-season week adds little.
+ */
+export const SEASON_START_MS = Date.UTC(2026, 0, 1)
