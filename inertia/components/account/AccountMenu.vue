@@ -6,20 +6,15 @@ import { useAccount, openAccountProfile } from '../../lib/account.js'
 const { viewer, state } = useAccount()
 const open = ref(false)
 function leave(e: FocusEvent) {
-  if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) open.value=false
+  if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) open.value = false
 }
 function pick(p: AccountProfile) {
-  open.value=false
+  open.value = false
   openAccountProfile(p)
 }
 </script>
 <template>
-  <div
-    v-if="viewer"
-    class="account-menu"
-    @keydown.esc="open = false"
-    @focusout="leave"
-  >
+  <div v-if="viewer" class="account-menu" @keydown.esc="open = false" @focusout="leave">
     <button
       type="button"
       class="iv-btn ghost account-menu-trigger"
@@ -32,17 +27,17 @@ function pick(p: AccountProfile) {
     </button>
     <div v-if="open" class="account-menu-popover">
       <div class="account-menu-who">
-        <b>{{ viewer.name }}</b
-        ><small>Invade account · {{ viewer.provider === 'google' ? 'Google' : 'Discord' }}</small>
+        <span class="account-monogram lg">{{ viewer.name.slice(0, 1).toUpperCase() }}</span>
+        <span
+          ><b>{{ viewer.name }}</b
+          ><small
+            >Invade account · {{ viewer.provider === 'google' ? 'Google' : 'Discord' }}</small
+          ></span
+        >
       </div>
       <template v-if="state.accounts.length"
         ><span class="account-menu-label">Your League accounts</span
-        ><button
-          v-for="p in state.accounts"
-          :key="p.puuid"
-          type="button"
-          @click="pick(p)"
-        >
+        ><button v-for="p in state.accounts" :key="p.puuid" type="button" @click="pick(p)">
           <img
             :src="`/cdn/profile-icon/${p.profileIconId ?? 1}.png`"
             alt=""
@@ -53,7 +48,9 @@ function pick(p: AccountProfile) {
           ><span v-if="state.mainPuuid === p.puuid" class="iv-badge brand">Main</span>
         </button></template
       ><Link href="/account" @click="open = false"
-        ><Icon name="users" :size="14" />Manage account</Link
+        ><Icon name="users" :size="14" />Your account</Link
+      ><Link href="/account#favorites" @click="open = false"
+        ><Icon name="star" :size="14" />Favorites</Link
       ><button type="button" @click="router.post('/signout')">
         <Icon name="external" :size="14" />Sign out
       </button>
@@ -72,13 +69,20 @@ function pick(p: AccountProfile) {
 .account-monogram {
   display: grid;
   place-items: center;
+  flex: none;
   width: 26px;
   height: 26px;
   border-radius: var(--r-sm);
-  background: var(--brand-a16);
-  color: var(--brand-hi);
+  background: var(--primary);
+  box-shadow: var(--primary-shadow);
+  color: var(--on-brand);
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 650;
+}
+.account-monogram.lg {
+  width: 34px;
+  height: 34px;
+  font-size: 15px;
 }
 .account-menu-popover {
   position: absolute;
@@ -92,6 +96,9 @@ function pick(p: AccountProfile) {
   box-shadow: var(--shadow-2);
 }
 .account-menu-who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 8px 8px 12px;
   border-bottom: 1px solid var(--line);
 }
@@ -125,6 +132,15 @@ function pick(p: AccountProfile) {
   color: var(--text-2);
   text-decoration: none;
   text-align: left;
+}
+.account-menu-popover > a:last-of-type {
+  margin-bottom: 4px;
+}
+.account-menu-popover > button:last-child {
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 var(--r-sm) var(--r-sm);
+  padding-top: 12px;
 }
 .account-menu-popover > button:hover,
 .account-menu-popover > a:hover {

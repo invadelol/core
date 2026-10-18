@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { ArrowLeftRight, Check, Copy, RefreshCw, Share2 } from 'lucide-vue-next'
 import { Link } from '@inertiajs/vue3'
-import { useFormat, StarButton, Icon } from '@invadelol/ui'
+import { Icon, StarButton, useFormat } from '@invadelol/ui'
 import { useAccount } from '../lib/account.js'
 import ProfileSwitcher from './account/ProfileSwitcher.vue'
 import { championName, championSplash, profileIcon, regionLabel } from '../lib/assets.js'
@@ -16,12 +16,12 @@ const props = defineProps<{
   syncMessage: string | null
   lastGameMs: number | null
   mainChampion?: number
-  accountMode?: boolean
 }>()
 
-defineEmits<{ sync: []; share: []; view: [] }>()
+defineEmits<{ sync: []; share: [] }>()
 
 const { ago } = useFormat()
+/* Signed in: favorite this player, or see that it is one of your own accounts. */
 const { state: accountState, viewer, favorite } = useAccount()
 const saved = computed(() =>
   accountState.value.favorites.some((f) => f.puuid === props.summoner.puuid)
@@ -29,6 +29,7 @@ const saved = computed(() =>
 const owned = computed(() =>
   accountState.value.accounts.some((a) => a.puuid === props.summoner.puuid)
 )
+const isMain = computed(() => accountState.value.mainPuuid === props.summoner.puuid)
 const path = computed(() => profilePath(props.summoner.gameName, props.summoner.tagLine))
 
 /** The Riot ID as the client's friend search takes it. */
@@ -60,7 +61,7 @@ onBeforeUnmount(() => clearTimeout(copiedTimer))
 
     <div class="p-5">
       <!-- The avatar and the name lead back to Overview from any section, like the side menu. -->
-      <div class="identity-top">
+      <div class="flex items-start justify-between gap-3">
         <Link :href="path" class="block w-fit" preserve-state preserve-scroll>
           <img
             :src="profileIcon(summoner.profileIconId)"
@@ -70,13 +71,7 @@ onBeforeUnmount(() => clearTimeout(copiedTimer))
             class="thumb h-[72px] w-[72px] rounded-[8px]"
           />
         </Link>
-        <div v-if="viewer" class="identity-account">
-          <ProfileSwitcher :active="summoner.puuid" /><span v-if="owned" class="identity-proof"
-            ><Icon name="shield" :size="11" />{{
-              accountState.mainPuuid === summoner.puuid ? 'Main account' : 'Verified account'
-            }}</span
-          >
-        </div>
+        <ProfileSwitcher v-if="viewer" :active="summoner.puuid" />
       </div>
 
       <h1
@@ -115,36 +110,32 @@ onBeforeUnmount(() => clearTimeout(copiedTimer))
           {{ viewCount === 1 ? 'view' : 'views' }}
         </span>
       </p>
+      <p v-if="owned" class="identity-owned">
+        <Icon :name="isMain ? 'crown' : 'shield'" :size="12" />{{
+          isMain ? 'Your main account' : 'One of your accounts'
+        }}
+      </p>
 
       <div class="mt-4 flex items-center gap-2">
         <button
           type="button"
           class="iv-btn primary flex-1"
           :disabled="isSyncing"
-          @click="accountMode ? $emit('view') : $emit('sync')"
+          @click="$emit('sync')"
         >
-          <Icon v-if="accountMode" name="next" :size="13" /><RefreshCw
-            v-else
-            :size="13"
-            :class="{ 'animate-spin': isSyncing }"
-          />
-          {{ accountMode ? 'View profile' : isSyncing ? 'Updating' : 'Update' }}
+          <RefreshCw :size="13" :class="{ 'animate-spin': isSyncing }" />
+          {{ isSyncing ? 'Updating' : 'Update' }}
         </button>
-        <button v-if="!accountMode" type="button" class="iv-btn" @click="$emit('share')">
+        <button type="button" class="iv-btn" @click="$emit('share')">
           <Share2 :size="13" />
           Share
         </button>
-        <Link
-          v-if="!accountMode"
-          :href="`${path}/compare`"
-          class="iv-btn icon-only"
-          title="Compare"
-        >
+        <Link :href="`${path}/compare`" class="iv-btn icon-only" title="Compare">
           <ArrowLeftRight :size="14" />
           <span class="sr-only">Compare</span>
         </Link>
         <StarButton
-          v-if="!accountMode"
+          v-if="!owned"
           :saved="saved"
           :label="summoner.gameName"
           @toggle="favorite(summoner)"
@@ -158,30 +149,6 @@ onBeforeUnmount(() => clearTimeout(copiedTimer))
 </template>
 
 <style scoped>
-.identity {
-  z-index: 10;
-}
-.identity-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-.identity-account {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 5px;
-  padding-top: 2px;
-}
-.identity-proof {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: var(--text-3);
-}
-
 .name {
   color: inherit;
   text-decoration: none;
@@ -193,8 +160,23 @@ onBeforeUnmount(() => clearTimeout(copiedTimer))
   text-underline-offset: 4px;
 }
 
+/* Shown on the visitor's own accounts (Invade account). */
+.identity-owned {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--brand-hi);
+  background: var(--brand-a08);
+  border-radius: var(--r-sm);
+}
+
 /* ~24% opacity, slightly desaturated, faded out with straight masks to the left and below. */
 .splash {
+  border-top-right-radius: var(--r-md);
   opacity: 0.24;
   filter: saturate(0.75);
   mask-image:
