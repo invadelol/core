@@ -12,7 +12,7 @@ const inertiaConfig = defineConfig({
    * Data that should be shared with all rendered pages
    */
   sharedData: {
-    // user: (ctx) => ctx.inertia.always(() => ctx.auth.user),
+    viewer: (ctx) => ctx.inertia.always(() => ctx.invadeUser ?? null),
     /** OpenPanel's web script, written by the layout (resources/views/inertia_layout.edge). */
     analytics: () => webAnalytics(),
   },

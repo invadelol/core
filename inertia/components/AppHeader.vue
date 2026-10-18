@@ -5,6 +5,7 @@ import { ChevronRight } from 'lucide-vue-next'
 import { Logo } from '@invadelol/ui'
 import SearchBar from './SearchBar.vue'
 import ThemeToggle from './ui/ThemeToggle.vue'
+import AccountMenu from './account/AccountMenu.vue'
 
 const page = usePage()
 const onApp = computed(() => page.url.split('?')[0] === '/app')
@@ -63,6 +64,7 @@ withDefaults(
           App
         </Link>
         <ThemeToggle />
+        <AccountMenu />
       </div>
     </div>
   </header>

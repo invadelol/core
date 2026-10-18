@@ -12,6 +12,11 @@
 import { Env } from '@adonisjs/core/env'
 
 export default await Env.create(new URL('../', import.meta.url), {
+  ACCOUNT_ORIGIN: Env.schema.string.optional(),
+  GOOGLE_CLIENT_ID: Env.schema.string.optional(),
+  GOOGLE_CLIENT_SECRET: Env.schema.string.optional(),
+  DISCORD_CLIENT_ID: Env.schema.string.optional(),
+  DISCORD_CLIENT_SECRET: Env.schema.string.optional(),
   NODE_ENV: Env.schema.enum(['development', 'production', 'test'] as const),
   PORT: Env.schema.number(),
   APP_KEY: Env.schema.string(),

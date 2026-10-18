@@ -3,7 +3,7 @@ import { Link } from '@inertiajs/vue3'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { ArrowLeftRight, LayoutGrid, Radio, ScanEye, Swords, Users } from 'lucide-vue-next'
 
-const props = defineProps<{ slug: string; section: string }>()
+const props = defineProps<{ slug: string; section: string; manage?: boolean }>()
 
 const nav = useTemplateRef<HTMLElement>('nav')
 
@@ -77,6 +77,9 @@ const tabs = computed(() =>
       <component :is="item.icon" :size="16" />
       {{ item.label }}
     </Link>
+    <Link v-if="manage" href="/account" class="on" aria-current="page"
+      ><Users :size="16" />Your accounts</Link
+    >
   </nav>
 </template>
 
