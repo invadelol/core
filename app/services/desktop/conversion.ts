@@ -215,6 +215,9 @@ function eventOf(event: LcuEvent) {
   return out
 }
 
+/** The client's timeline frames are a minute apart; it does not say so itself. */
+const CLIENT_FRAME_INTERVAL = 60_000
+
 /**
  * The client's timeline in match-v5's envelope. Participant ids are the
  * game's own (1–10 in team order on both sides), so frames keep their keys
@@ -234,7 +237,7 @@ export function toTimelineDto(
     },
     info: {
       gameId,
-      frameInterval: number(timeline.frameInterval),
+      frameInterval: number(timeline.frameInterval ?? CLIENT_FRAME_INTERVAL),
       participants,
       frames: (timeline.frames ?? []).map((frame) => ({
         timestamp: number(frame.timestamp),

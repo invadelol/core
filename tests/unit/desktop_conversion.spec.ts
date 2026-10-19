@@ -131,6 +131,13 @@ test.group('Desktop LCU → match-v5 conversion', (group) => {
       participants
     )
     assert.equal(timeline.info.frameInterval, 60000)
+    // The client's own timeline has no frameInterval: its frames are a minute apart.
+    const bare = { ...upload.timeline! }
+    delete bare.frameInterval
+    assert.equal(
+      toTimelineDto(bare, upload.matchId, upload.game.gameId, participants).info.frameInterval,
+      60000
+    )
 
     const rows = buildTimelineRows(upload.matchId, 'EUW1', 0, match.info, timeline)
     assert.lengthOf(rows, upload.timeline!.frames.length * 10)
