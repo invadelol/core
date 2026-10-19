@@ -1,6 +1,6 @@
 import { test } from '@japa/runner'
 import { PlatformId } from '@fightmegg/riot-api'
-import { CoalescingRiotAPI } from '#services/riot/client'
+import { CoalescingRiotAPI, MAX_PENDING_PER_METHOD } from '#services/riot/client'
 import { RiotUpstreamException } from '#utils/riot_errors'
 
 test.group('Concurrent Riot requests', () => {
@@ -77,5 +77,42 @@ test.group('Concurrent Riot requests', () => {
       }
     }
     assert.equal(calls, 1)
+  })
+
+  test('refuses new requests of a method once its backlog is full, and takes them again as it drains', async ({
+    assert,
+  }) => {
+    const client = new CoalescingRiotAPI('test-key')
+    const release: Array<() => void> = []
+    let calls = 0
+    client.riotRateLimiter.execute = () => {
+      calls++
+      return new Promise((resolve) => release.push(() => resolve({})))
+    }
+    const match = (n: number) =>
+      client.matchV5.getMatchById({ matchId: `EUW1_${n}`, cluster: PlatformId.EUROPE })
+    const waiting = Array.from({ length: MAX_PENDING_PER_METHOD }, (_, n) => match(n))
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    assert.equal(
+      client.waiting(PlatformId.EUROPE, 'MATCH_V5.GET_MATCH_BY_ID'),
+      MAX_PENDING_PER_METHOD
+    )
+
+    const [refused] = await Promise.allSettled([match(MAX_PENDING_PER_METHOD)])
+    assert.equal(refused.status, 'rejected')
+    if (refused.status === 'rejected') {
+      assert.instanceOf(refused.reason, RiotUpstreamException)
+      assert.equal(refused.reason.upstreamStatus, 429)
+    }
+    assert.equal(calls, MAX_PENDING_PER_METHOD)
+
+    // Another method keeps its own backlog.
+    client.riotRateLimiter.execute = async () => ({})
+    await client.matchV5.getMatchTimelineById({ matchId: 'EUW1_0', cluster: PlatformId.EUROPE })
+
+    release.forEach((resolve) => resolve())
+    await Promise.all(waiting)
+    assert.equal(client.waiting(PlatformId.EUROPE, 'MATCH_V5.GET_MATCH_BY_ID'), 0)
+    assert.deepEqual(await match(MAX_PENDING_PER_METHOD + 1), {})
   })
 })

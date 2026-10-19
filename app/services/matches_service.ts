@@ -183,17 +183,10 @@ class MatchesService {
   }
 
   private async storeMatch(matchId: string, cluster: MatchCluster) {
-    // Every game this writer stores needs both, so the timeline is asked for
-    // alongside the match rather than a full Riot round trip after it. Only a
-    // game that ends up not stored here (lost to a concurrent desktop upload,
-    // or failed) spends the call for nothing.
-    const matchRequest = riotApiService.client.matchV5.getMatchById({ matchId, cluster })
-    const timelineRequest = riotApiService.client.matchV5.getMatchTimelineById({
-      matchId,
-      cluster,
-    })
-    timelineRequest.catch(() => {})
-    const matchData = await matchRequest
+    // The timeline is asked for only once the match is in. Asked for alongside it, a timeline
+    // (megabytes once parsed) that comes back first sits in memory until its match does, and
+    // while the Riot key is spent those two queues drift apart by minutes and hundreds of games.
+    const matchData = await riotApiService.client.matchV5.getMatchById({ matchId, cluster })
 
     // Brawl and League Classic are never stored, not even archived (EXCLUDED_QUEUE_IDS).
     if (isExcludedQueue(matchData.info?.queueId)) {
@@ -233,7 +226,11 @@ class MatchesService {
     // timeline for good and fail the whole sync over one game. It is kept without one
     // instead, and the match page fetches the timeline again when someone opens it.
     try {
-      await ingestionService.ingestTimeline(matchId, matchData, await timelineRequest, meta)
+      const timeline = await riotApiService.client.matchV5.getMatchTimelineById({
+        matchId,
+        cluster,
+      })
+      await ingestionService.ingestTimeline(matchId, matchData, timeline, meta)
     } catch (error) {
       logger.warn({ err: error, matchId }, 'match stored without a timeline')
       await matchSourceService
