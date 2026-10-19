@@ -127,7 +127,8 @@ export const uploadValidator = vine.compile(
     }),
     timeline: vine
       .object({
-        frameInterval: strictNumber(),
+        // The client's timeline has none: its frames are a minute apart (conversion.ts).
+        frameInterval: strictNumber().optional(),
         frames: vine
           .array(
             vine.object({

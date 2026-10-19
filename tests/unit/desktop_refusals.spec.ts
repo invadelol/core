@@ -4,6 +4,7 @@ import HttpExceptionHandler, { desktopRefusal } from '#exceptions/handler'
 import { DesktopException } from '#exceptions/desktop_exception'
 import { uploadValidator } from '#validators/desktop'
 import { trustedProxy } from '#utils/trusted_proxy'
+import { makeUpload } from '#tests/fixtures/desktop'
 
 function context(url: string, warnings: unknown[][]) {
   return {
@@ -45,6 +46,19 @@ test.group('Trusted proxy', () => {
     ]) {
       assert.isFalse(trustedProxy(address), address)
     }
+  })
+})
+
+test.group('Upload shape', () => {
+  test('a timeline without frameInterval passes, as the client sends it', async ({ assert }) => {
+    const upload = makeUpload()
+    const timeline = { ...upload.timeline! }
+    delete timeline.frameInterval
+    const valid = await uploadValidator.validate(
+      JSON.parse(JSON.stringify({ ...upload, timeline }))
+    )
+    assert.isUndefined(valid.timeline?.frameInterval)
+    assert.lengthOf(valid.timeline!.frames, timeline.frames.length)
   })
 })
 

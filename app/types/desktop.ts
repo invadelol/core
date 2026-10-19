@@ -92,7 +92,8 @@ export interface LcuFrame {
 }
 
 export interface LcuTimeline {
-  frameInterval: number
+  /** Absent from the client's own timeline. */
+  frameInterval?: number
   frames: LcuFrame[]
 }
 

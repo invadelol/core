@@ -243,7 +243,7 @@ hides losses.
     ]
   },
   "timeline": null | {                    // LCU GET /lol-match-history/v1/game-timelines/{gameId}, trimmed:
-    "frameInterval": 60000,
+    "frameInterval": 60000,               // optional: the client sends none (frames are 60 s apart)
     "frames": [{
       "timestamp": 60000,
       "participantFrames": { "1": { "participantId": 1, "totalGold": 500, "currentGold": 500, "xp": 280, "level": 1,
