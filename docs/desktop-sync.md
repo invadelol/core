@@ -1,4 +1,4 @@
-# Desktop ↔ core: onboarding and match sync (contract v1.4)
+# Desktop ↔ core: onboarding and match sync (contract v1.5)
 
 The Invade desktop app (`invadelol/app`, Tauri + Rust) reads League data from the League client's
 local API (LCU) on the player's computer. This contract lets it:
@@ -718,3 +718,74 @@ after the receipt; reports older than 90 days are deleted as new ones arrive.
 - **Switch.** Settings → Data, "Send anonymous crash reports"; until it is touched it follows the
   usage-statistics switch. Off, nothing is sent and pending reports are deleted. Debug builds send
   only to a local core (`INVADE_CORE_URL`).
+
+## 8. Beta builds (contract v1.5)
+
+Beta builds of the app go to a few testers before a release. Who is a tester, which builds exist
+and their notes are written in the admin dashboard (`invadelol/admin`, its `admin` schema); core
+only reads them. A device is a tester while one of its linked accounts (§2.3) holds a live `beta`
+grant (`admin.active_entitlement`). Installers are releases of a **private** GitHub repo
+(`BETA_GITHUB_REPO`, default `invadelol/beta`, tag `v<version>`); core streams them, so nobody
+else can download a beta.
+
+Versions are semver with a prerelease, e.g. `0.3.5-beta.1`, ordered like semver: a beta comes
+before its release, so a tester moves to the stable `0.3.5` once it is out.
+
+### 8.1 `GET /api/desktop/beta` (auth, 120 / hour / device with the feed)
+
+```json
+{ "tester": true, "label": "Name#TAG",
+  "builds": [{ "version": "0.3.5-beta.1", "title": "...", "publishedAt": "2026-10-20T10:00:00.000Z",
+               "changes": [{ "text": "..." }], "tests": [{ "id": "k3f9", "title": "...", "detail": "..." }],
+               "known": [{ "text": "..." }], "platforms": ["windows-x86_64", "darwin-aarch64"] }],
+  "answers": [{ "version": "0.3.5-beta.1", "test": "k3f9", "verdict": "broken", "note": "..." }] }
+```
+
+Not a tester: `{ "tester": false, "label": null, "builds": [], "answers": [] }`. `builds` are the
+five newest live builds, newest first. `answers` are this device's own verdicts. Core records the
+version the app runs (from its `User-Agent`) for the admin's Beta page.
+
+### 8.2 `GET /api/desktop/beta/feed/:target` (auth)
+
+`target` is `windows-x86_64`, `darwin-aarch64` or `darwin-x86_64`. Answers the Tauri updater's
+dynamic format for the newest live build with an installer for that target, or 204 when there is
+none. 403 `E_NOT_BETA` when the device is not a tester.
+
+```json
+{ "version": "0.3.5-beta.1", "notes": "title", "pub_date": "...",
+  "url": "https://invade.lol/api/desktop/beta/download/<link>", "signature": "<minisign of the package>" }
+```
+
+The package is signed with the same updater key as stable releases. The app checks this feed next
+to the stable one and offers whichever is newer.
+
+### 8.3 `GET /api/desktop/beta/download/:link` (no device auth, 20 / hour / device)
+
+The link is made by core (HMAC with the app key over version, target, device and expiry), valid
+30 minutes. Core checks again that the device is not revoked and still a tester, then streams the
+installer. 401 for a bad or expired link, 403 `E_NOT_BETA`, 404 `E_NO_BETA_BUILD`, 503
+`E_BETA_UNAVAILABLE` when `BETA_GITHUB_TOKEN` is not set or GitHub fails.
+
+### 8.4 `POST /api/desktop/beta/feedback` (auth, 60 / hour / device)
+
+```json
+{ "version": "0.3.5-beta.1",
+  "results": [{ "test": "k3f9", "verdict": "works|broken|skipped", "note": "≤ 1000 chars" }],
+  "note": "≤ 4000 chars, anything else" }
+```
+
+Both parts are optional. A verdict replaces this device's earlier one on the same test; unknown
+test ids are ignored. Answers `{ "results": 1, "note": true }`; 404 `E_NO_BETA_BUILD` for a version
+that is not live.
+
+### 8.5 Database grants (core's role)
+
+```sql
+GRANT USAGE ON SCHEMA admin TO <core role>;
+GRANT SELECT ON admin.active_entitlement, admin.live_beta_build TO <core role>;
+GRANT SELECT, INSERT, UPDATE ON admin.beta_device, admin.beta_result TO <core role>;
+GRANT SELECT, INSERT ON admin.beta_note TO <core role>;
+GRANT USAGE ON SEQUENCE admin.beta_note_id_seq TO <core role>;
+```
+
+Without them (or without the admin schema), every device is answered as not a tester.
