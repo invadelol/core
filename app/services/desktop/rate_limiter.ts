@@ -89,6 +89,10 @@ export const DESKTOP_LIMITS = {
   /** Crash reports (§7): a crash loop sends one batch a minute at most. */
   crashesDevice: { bucket: 'crashes:device', limit: 20 },
   crashesIp: { bucket: 'crashes:ip', limit: 60 },
+  /** Beta (§8): the panel and the update check, downloads, and what testers send back. */
+  betaDevice: { bucket: 'beta:device', limit: 120 },
+  betaDownload: { bucket: 'beta:download', limit: 20 },
+  betaFeedback: { bucket: 'beta:feedback', limit: 60 },
 } as const
 
 export default new FixedWindowLimiter()

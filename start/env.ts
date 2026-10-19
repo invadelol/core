@@ -83,6 +83,10 @@ export default await Env.create(new URL('../', import.meta.url), {
   DESKTOP_RIOT_BUDGET: Env.schema.number.optional(),
   /** Oldest app version allowed to upload, e.g. "0.2.7". Unset means any. */
   DESKTOP_MIN_APP_VERSION: Env.schema.string.optional(),
+  /** Beta builds (docs/desktop-sync.md §8): read token of the private repo holding the installers. */
+  BETA_GITHUB_TOKEN: Env.schema.string.optional(),
+  /** That repo, `owner/name`; default invadelol/beta. */
+  BETA_GITHUB_REPO: Env.schema.string.optional(),
 
   /*
   |----------------------------------------------------------
