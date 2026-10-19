@@ -175,4 +175,56 @@ test.group('Match sync lifecycle', (group) => {
     assert.deepEqual(touched, [])
     assert.equal(fetched, 1)
   })
+
+  test('asks for the timeline only once the match is in and claimed', async ({ assert }) => {
+    const calls: string[] = []
+    riotApiService.client = {
+      matchV5: {
+        getMatchById: async () => {
+          calls.push('match')
+          await new Promise<void>((resolve) => setImmediate(resolve))
+          return { info: { platformId: 'EUW1', gameStartTimestamp: 1, participants: [] } }
+        },
+        getMatchTimelineById: async () => {
+          calls.push('timeline')
+          return { info: { frames: [] } }
+        },
+      },
+    } as unknown as typeof client
+    matchService.archive = async () => {}
+    matchSourceService.claim = async () => {
+      calls.push('claim')
+      return true
+    }
+    ingestionService.ingestMatch = async () => ({ platform: 'EUW1', gameStartMs: 1 })
+    ingestionService.ingestTimeline = async () => {}
+    redis.pipeline = (() => ({
+      eval() {},
+      publish() {},
+      exec: async () => [],
+    })) as unknown as typeof pipeline
+
+    await matchService.fetchAndStoreMatch('EUW1_4', PlatformId.EUROPE)
+    assert.deepEqual(calls, ['match', 'claim', 'timeline'])
+  })
+
+  test('a game another writer claimed costs no timeline call', async ({ assert }) => {
+    let timelines = 0
+    riotApiService.client = {
+      matchV5: {
+        getMatchById: async () => ({
+          info: { platformId: 'EUW1', gameStartTimestamp: 1, participants: [] },
+        }),
+        getMatchTimelineById: async () => {
+          timelines++
+          return { info: { frames: [] } }
+        },
+      },
+    } as unknown as typeof client
+    matchService.archive = async () => {}
+    matchSourceService.claim = async () => false
+
+    await matchService.fetchAndStoreMatch('EUW1_5', PlatformId.EUROPE)
+    assert.equal(timelines, 0)
+  })
 })
