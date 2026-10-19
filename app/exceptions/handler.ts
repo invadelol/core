@@ -64,6 +64,31 @@ function desktopError(
 }
 
 /**
+ * What a refused desktop request is logged with: the code the app received
+ * and, for a shape error, which fields failed which rule. Never the values:
+ * an upload is full of Riot IDs and PUUIDs. Null for what is not a refusal
+ * worth a line: 429 and 503 are the expected pauses, 5xx is reported anyway.
+ */
+export function desktopRefusal(
+  error: any,
+  url: string
+): { status: number; code: string; reason?: string; fields?: string[] } | null {
+  const reply = desktopError(error, url)
+  if (!reply || reply.status < 400 || reply.status >= 500 || reply.status === 429) return null
+  const errors = reply.body.errors as { code: string; field?: unknown; rule?: unknown }[]
+  const code = errors[0]?.code ?? 'E_UNKNOWN'
+  if (code === 'E_VALIDATION_ERROR' && Array.isArray(error?.messages)) {
+    const fields = errors.map(
+      (entry) => `${String(entry.field ?? '?')}: ${String(entry.rule ?? '?')}`
+    )
+    return { status: reply.status, code, fields: [...new Set(fields)].slice(0, 20) }
+  }
+  // Desktop exceptions are written by core and name no player (match_validation.ts).
+  const reason = error instanceof DesktopException ? error.message : undefined
+  return { status: reply.status, code, ...(reason ? { reason } : {}) }
+}
+
+/**
  * What an error page may say about the error: its status, and its message only when the app or
  * the framework wrote it for people (an `E_*` exception). Anything else (a driver, a TypeError)
  * can carry internals, so it stays in the log; stacks never leave the server.
@@ -129,7 +154,25 @@ export default class HttpExceptionHandler extends ExceptionHandler {
    */
   async report(error: unknown, ctx: HttpContext) {
     error = unwrapCacheFactoryError(error)
-    // Expected outcomes the app acts on (bad token, not linked, paused), not faults.
+    // A refused desktop request is an outcome the app acts on, not a fault, but
+    // without this line a broken app release fails silently (2026-10-19: almost
+    // every upload was refused and nothing said why).
+    if (ctx.request.url().startsWith('/api/desktop/')) {
+      const refusal = desktopRefusal(error, ctx.request.url())
+      if (refusal) {
+        ctx.logger.warn(
+          {
+            ...refusal,
+            route: `${ctx.request.method()} ${ctx.request.url()}`,
+            device: ctx.desktopDevice?.id,
+            app: ctx.desktopDevice?.app,
+          },
+          `desktop request refused: ${refusal.code}`
+        )
+        return
+      }
+    }
+    // Expected outcomes the app acts on (rate limited, paused), not faults.
     if (error instanceof DesktopException) return
     // The default report writes only the message, which in production reads
     // as a bare "Internal server error" with nothing to act on. Anything that

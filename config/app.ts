@@ -2,6 +2,7 @@ import env from '#start/env'
 import app from '@adonisjs/core/services/app'
 import { Secret } from '@adonisjs/core/helpers'
 import { defineConfig } from '@adonisjs/core/http'
+import { trustedProxy } from '#utils/trusted_proxy'
 
 /**
  * The app key is used for encrypting cookies, generating signed URLs,
@@ -24,6 +25,12 @@ export const http = defineConfig({
    * from anywhere inside your application.
    */
   useAsyncLocalStorage: false,
+
+  /**
+   * Behind Traefik: the client address is read from `X-Forwarded-For`
+   * through private hops only (see `trustedProxy`).
+   */
+  trustProxy: trustedProxy,
 
   /**
    * Manage cookies configuration. The settings for the session id cookie are
