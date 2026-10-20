@@ -107,6 +107,26 @@ export class RiotAssetsService {
     return names
   }
 
+  /**
+   * Data Dragon's champion names in lower case (`monkeyking`) to champion ids, on the live
+   * patch: how a shared build link names its champion. Empty while game data is unreachable.
+   */
+  async championKeys(): Promise<Record<string, string>> {
+    const release = await this.live()
+    const keys = await this.cached(`riot:champion-keys:${release.cdragon}`, async () => {
+      const raw = await this.downloadJson(`${gameData(release)}/${MANIFESTS.champion}`)
+      const out: Record<string, string> = {}
+      for (const row of Array.isArray(raw) ? raw : []) {
+        const id = Number(row?.id)
+        if (Number.isInteger(id) && id > 0 && typeof row.alias === 'string' && row.alias) {
+          out[row.alias.toLowerCase()] = String(id)
+        }
+      }
+      return Object.keys(out).length ? out : null
+    })
+    return keys ?? {}
+  }
+
   /** Every id of a kind on the live patch, used by the warming command. */
   async ids(kind: AssetKind): Promise<string[]> {
     if (kind === 'rank' || kind === 'emblem') return [...TIERS]
