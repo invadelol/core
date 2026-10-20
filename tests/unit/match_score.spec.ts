@@ -137,6 +137,13 @@ test.group('Match score', () => {
     // A support far behind on levels is not AFK.
     const sup = lobby({ 4: { champLevel: 12, goldEarned: 7000 } })
     assert.isFalse(isAfk(sup, sup.participants[4]))
+    // Nor is one six levels and 35 % gold behind who was in the fights (a roaming Rell, 1/8/12)…
+    const roam = { champLevel: 9, goldEarned: 7000, kills: 1, deaths: 8, assists: 12 }
+    const rell = lobby({ 9: roam })
+    assert.isFalse(isAfk(rell, rell.participants[9]))
+    // …but the same figures out of the fights are.
+    const away = lobby({ 9: { ...roam, kills: 0, assists: 2 } })
+    assert.isTrue(isAfk(away, away.participants[9]))
   })
 
   test('scores the real games of the fixture as the desktop app does', ({ assert }) => {

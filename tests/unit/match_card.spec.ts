@@ -72,7 +72,9 @@ test.group('Match share', () => {
     assert.isNull(shareOf(anonymous, '-'))
     assert.isNull(shareOf(shareMatch({}, { duration: 200 }), 'Moonfern-EUW'))
     assert.isNull(shareOf(shareMatch({}, { queueId: 1700, mapId: 30 }), 'Moonfern-EUW'))
-    const afk = shareMatch({ [SHARE_PLAYER]: { champLevel: 6, goldEarned: 3000 } })
+    const afk = shareMatch({
+      [SHARE_PLAYER]: { champLevel: 6, goldEarned: 3000, kills: 0, assists: 1 },
+    })
     assert.isNull(shareOf(afk, 'Moonfern-EUW'))
   })
 
