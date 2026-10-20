@@ -36,7 +36,8 @@ export async function resolveBuild(link: BuildLink | null): Promise<SharedBuild 
   return {
     ...link,
     championId: Number(championId),
-    championName: champions[championId] ?? link.champion,
+    championName:
+      champions[championId] ?? link.champion.charAt(0).toUpperCase() + link.champion.slice(1),
     itemNames,
   }
 }
