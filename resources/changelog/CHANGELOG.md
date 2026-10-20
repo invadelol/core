@@ -1,5 +1,48 @@
 # Changelog
 
+## 0.3.4 - 2026-10-20
+
+### New
+
+- **Your own builds.** On a champion's My builds tab, start from Invade's build, swap the items, give it any name (a new one is named after its first two core items) and keep as many as you like per role, each on one row of the table with its whole route. Champ select and the in-game Build path follow the one you choose, and a short invade.lol link shares it, with the build shown on the page and in the Discord preview, or imports a friend's. <!-- highlight --> <!-- image builds.webp -->
+- **Choose when each overlay shows.** Always, only while Tab is held, or only while a key or combination you pick is held in game. No key is set for you. Overlays → an overlay → When it shows. <!-- highlight --> <!-- image visibility.webp -->
+- **Next skill.** When a skill point is waiting, one arrow points down at the ability your build levels next, right on League's own ability bar, at any resolution and HUD size. It goes away once the point is spent. A suggestion: level what you like. <!-- image skills.webp -->
+- **Previous patch.** The tier list, champion pages and Matchups can switch to last patch's data (26.19) from the patch label. A champion's build on 26.19 is the one most played on that patch. Champ select, ARAM and My builds stay on the current patch. <!-- image patch.webp -->
+- **The whole build path in game.** The Build path overlay (was Next item) starts with your starting items, then shows the next item with its components: what you own, what your gold buys now, then the rest, and the route to your sixth item. Components and boots come in the order players really buy them in ranked. <!-- image buildpath.webp -->
+- **Fold an overlay to its title.** The minus on a panel's title folds it to a slim bar; click the bar to open it again. It stays folded for your next games.
+- **Your build path in the match detail.** Every purchase with its time, with sold items apart, and the role quest reward (where a bot laner's boots end up) as a seventh item.
+- **Discord, from the lobby to the result.** In the client, friends see your main champion and rank; in champ select, the phase and, once you lock in, your own pick and role. Nothing about the other players.
+- **Clips carry a small Invade mark** in the corner.
+
+### Changed
+
+- **Objectives with the game's own icons.** The next dragon shows its element once the Rift has changed (the plain dragon head before), Void Grubs, Herald, Baron and Atakhan wait in grey until they matter, and the soul race shows the dragons each team took. <!-- image objectives.webp -->
+- **Scoreboard gold follows the scoreboard.** Drag the Tab scoreboard or swap its rows, and the gold plates move with it.
+- **Lane gold compares what each player holds.** Every figure is the shop value of both players' items, the same as the Live tab's.
+- **Invade speaks your computer's language,** not League's: if you play League in another language for its voices, Invade stays in yours. Settings → Language.
+- **The window opens on every launch,** at login and during a game too, and opening Invade again brings it forward.
+- **Settings, one page per category.** Click Settings in the sidebar and its categories open under it: General, Recording, Video and audio, In game, invade.lol and Data. The search bar finds any setting. <!-- image settings.webp -->
+- **Calmer empty pages.** Live game with no game, and Recordings with none yet, now show one line and at most one button.
+- **Updates show as one slim line** in the sidebar, its bottom edge filling while it downloads.
+- **A lighter start of champ select, on Mac above all.** The overlay gets ready while you queue instead of the moment champ select opens, your runes and spells go into League before Invade looks up the other players, and those lookups go a few at a time so League stays smooth. <!-- highlight -->
+
+### Fixed
+
+- **Match history no longer gets stuck on two games.** Invade now asks League for a full page instead of a two-game preview that the client could keep serving from its cache. Previously archived games stay available when League returns a shorter list. <!-- highlight -->
+- **Stronger protection for saved history.** Incomplete client responses keep each saved game's owner, and database recovery preserves earlier backups and the write journals. Copy diagnostics now includes the database's availability and game counts.
+- **Champ select is read to the end.** A session with odd values could go unread from the bans until the game started. Invade now keeps reading it, waits up to 5 seconds on a slow PC, never takes another player's pick for yours, and no longer needs a restart when it lost track of the last game.
+- **Recording shortcuts can be changed on a Mac.** The shortcut field now takes the keys you press, shortcuts show as ⌃⌥⇧⌘, and the overlay says why a shortcut pressed in game did nothing: game recording is off, or the game is already being recorded.
+- **The overlay no longer acts like a web page over the game.** A right click on it opens no menu, and Ctrl+P no longer opens the print dialog over the game.
+- **Overlays come back after Alt+Tab.** When you return to the game, Invade puts them back on top, and hiding them from the tray during a game no longer loses them.
+- **Your name on the welcome screen** no longer goes blank when League answers before it knows it.
+- **The LP of the game you just played** is never put on the previous one.
+- **Ranked games are never shown as custom games** when League leaves out the queue.
+- **Invade no longer freezes** when the tray is clicked as a game starts or ends.
+- **Discord no longer says you're in the client** while League is closed.
+- **A recording keeps going** if the clip mark can't be drawn, without the mark.
+- **A player hidden in champ select stays hidden,** even when the client sends an odd value.
+- **Crashes fixed:** the Abilities tab of a champion without tips, and deleting a recording on Windows.
+
 ## 0.3.3 - 2026-10-17
 
 ### New
