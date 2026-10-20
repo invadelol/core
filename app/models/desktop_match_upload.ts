@@ -3,8 +3,8 @@ import { BaseModel, column } from '@adonisjs/lucid/orm'
 
 /**
  * `processing` while a request owns the row, then what the desktop was told
- * (`stored`, `verified`, `deferred`, `duplicate`), or `expired` once core
- * gave up retrying a deferred game and left it to the web sync.
+ * (`stored`, `verified`, `deferred`, `duplicate`, `skipped`), or `expired`
+ * once core gave up retrying a deferred game and left it to the web sync.
  */
 export type UploadStatus =
   | 'processing'
@@ -13,6 +13,7 @@ export type UploadStatus =
   | 'deferred'
   | 'duplicate'
   | 'expired'
+  | 'skipped'
 
 export type LpStatus = 'stored' | 'rejected' | 'none'
 

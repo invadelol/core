@@ -16,3 +16,10 @@ export const PLAYER_AUDIT_ONE_IN = 20
 export function oneIn(n: number, random: (max: number) => number = randomInt): boolean {
   return random(n) === 0
 }
+
+/**
+ * One observed game in this many (§2.5) is checked against match-v5 when core cannot publish it for
+ * free; the others are answered `skipped`. The app reads up to 20 games of every player of every
+ * game, far more than the Riot key can check, and the website needs that key first.
+ */
+export const OBSERVED_CHECK_ONE_IN = 10

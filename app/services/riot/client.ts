@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { randomUUID } from 'node:crypto'
 import { RiotAPI } from '@fightmegg/riot-api'
 import { SyncGuard } from '#utils/sync_guard'
@@ -10,6 +11,26 @@ import { RiotUpstreamException, translateRiotError } from '#utils/riot_errors'
  * request, and everything waiting on its answer, stays in memory until the process runs out.
  */
 export const MAX_PENDING_PER_METHOD = 100
+
+/**
+ * Background requests (the desktop app's verifications) one method may have waiting. The SDK runs
+ * 10 requests of a method at once, and one waiting out a 429 keeps its slot: with at most 4 of
+ * them, 6 slots are always left for visitors, who also go first in the queue.
+ */
+export const MAX_BACKGROUND_PENDING_PER_METHOD = 4
+
+/** Bottleneck runs the lowest number first (default 5): background work waits for visitors. */
+const BACKGROUND_PRIORITY = 9
+
+const background = new AsyncLocalStorage<true>()
+
+/**
+ * Runs `task` with its Riot requests behind every website request: someone clicking Update must
+ * never wait for a queue of the desktop app's verifications.
+ */
+export function inBackground<T>(task: () => Promise<T>): Promise<T> {
+  return background.run(true, task)
+}
 
 /** What a refused request tells its caller to wait, in seconds: about one window of the key. */
 const BACKLOG_RETRY_AFTER = 60
@@ -73,6 +94,7 @@ export function saneRateLimits<T extends RiotRateLimits>(rateLimits: T): T {
 export class CoalescingRiotAPI extends RiotAPI {
   private requests = new SyncGuard()
   private pending = new Map<string, number>()
+  private pendingBackground = new Map<string, number>()
 
   constructor(...args: ConstructorParameters<typeof RiotAPI>) {
     super(...args)
@@ -98,9 +120,14 @@ export class CoalescingRiotAPI extends RiotAPI {
   override request<T>(...args: Parameters<RiotAPI['request']>): Promise<T> {
     const [platform, method, path, options] = args
     const slot = `${platform}:${method}`
+    const low = background.getStore() === true
     const request = () => {
       const waiting = this.pending.get(slot) ?? 0
-      if (waiting >= MAX_PENDING_PER_METHOD) {
+      const waitingLow = this.pendingBackground.get(slot) ?? 0
+      if (
+        waiting >= MAX_PENDING_PER_METHOD ||
+        (low && waitingLow >= MAX_BACKGROUND_PENDING_PER_METHOD)
+      ) {
         return Promise.reject(
           new RiotUpstreamException(
             'Riot is rate limiting requests, try again in a moment',
@@ -111,21 +138,26 @@ export class CoalescingRiotAPI extends RiotAPI {
         )
       }
       this.pending.set(slot, waiting + 1)
+      if (low) this.pendingBackground.set(slot, waitingLow + 1)
       return super
-        .request<T>(platform, method, path, { ...options, id: randomUUID() })
+        .request<T>(platform, method, path, {
+          ...options,
+          id: randomUUID(),
+          ...(low ? { priority: BACKGROUND_PRIORITY } : {}),
+        })
         .catch((error) => {
           throw translateRiotError(error)
         })
         .finally(() => {
-          const left = (this.pending.get(slot) ?? 1) - 1
-          if (left > 0) this.pending.set(slot, left)
-          else this.pending.delete(slot)
+          release(this.pending, slot)
+          if (low) release(this.pendingBackground, slot)
         })
     }
 
     // Never merge writes. The SDK's fixed job IDs also omit query parameters,
     // so distinct requests need unique IDs even when they target the same player.
     if (options?.method && options.method !== 'GET') return request()
+    // A visitor's read never joins a background one: it would wait at its priority.
     const key = JSON.stringify([
       platform,
       method,
@@ -133,7 +165,14 @@ export class CoalescingRiotAPI extends RiotAPI {
       options?.params,
       options?.headers,
       options?.body,
+      low,
     ])
     return this.requests.run(key, request)
   }
+}
+
+function release(counts: Map<string, number>, slot: string) {
+  const left = (counts.get(slot) ?? 1) - 1
+  if (left > 0) counts.set(slot, left)
+  else counts.delete(slot)
 }

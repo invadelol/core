@@ -1,6 +1,12 @@
 import { test } from '@japa/runner'
 import { PlatformId } from '@fightmegg/riot-api'
-import { CoalescingRiotAPI, MAX_PENDING_PER_METHOD, saneRateLimits } from '#services/riot/client'
+import {
+  CoalescingRiotAPI,
+  inBackground,
+  MAX_BACKGROUND_PENDING_PER_METHOD,
+  MAX_PENDING_PER_METHOD,
+  saneRateLimits,
+} from '#services/riot/client'
 import { RiotUpstreamException } from '#utils/riot_errors'
 
 test.group('Concurrent Riot requests', () => {
@@ -169,5 +175,67 @@ test.group('Concurrent Riot requests', () => {
       saneRateLimits({ appLimits: '', appCounts: '', methodLimits: '50:10', methodCounts: '' }),
       { appLimits: '10:10,500:600', methodLimits: '50:10', methodCounts: '0:10' }
     )
+  })
+
+  test('background requests wait behind visitors in the SDK queue', async ({ assert }) => {
+    const client = new CoalescingRiotAPI('test-key')
+    const limiter = client.riotRateLimiter as any
+    // One slot (the SDK has 10): every job past the first waits in the queue.
+    limiter.configuration.concurrency = 1
+    limiter.setupRateLimiters('europe', 'MATCH_V5.GET_MATCH_BY_ID', {
+      appLimits: '20:1,100:120',
+      appCounts: '0:1,0:120',
+      methodLimits: '2000:10',
+      methodCounts: '0:10',
+    })
+    const order: string[] = []
+    limiter.executeRequest = async ({ req }: { req: { url: string } }) => {
+      order.push(req.url.split('/').pop()!)
+      // About what a Riot call takes: the jobs behind it are queued by then.
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      return {}
+    }
+    const match = (id: string) =>
+      client.matchV5.getMatchById({ matchId: id, cluster: PlatformId.EUROPE })
+
+    const queued = inBackground(() =>
+      Promise.all(['EUW1_1', 'EUW1_2', 'EUW1_3', 'EUW1_4'].map(match))
+    )
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    const visitor = match('EUW1_9')
+    await Promise.all([queued, visitor])
+    // The first background job was already running; the visitor's goes right after it.
+    assert.deepEqual(order, ['EUW1_1', 'EUW1_9', 'EUW1_2', 'EUW1_3', 'EUW1_4'])
+  })
+
+  test('a visitor never joins a background read, and background has a small backlog', async ({
+    assert,
+  }) => {
+    const client = new CoalescingRiotAPI('test-key')
+    const release: Array<() => void> = []
+    const priorities: Array<number | null | undefined> = []
+    client.riotRateLimiter.execute = (_request, options) => {
+      priorities.push(options?.priority)
+      return new Promise((resolve) => release.push(() => resolve({})))
+    }
+    const match = (n: number) =>
+      client.matchV5.getMatchById({ matchId: `EUW1_${n}`, cluster: PlatformId.EUROPE })
+
+    const background = Array.from({ length: MAX_BACKGROUND_PENDING_PER_METHOD }, (_, n) =>
+      inBackground(() => match(n))
+    )
+    const [refused] = await Promise.allSettled([inBackground(() => match(99))])
+    assert.equal(refused.status, 'rejected')
+    // Same game as a background read in flight: a request of its own, at the visitor's priority.
+    const visitor = match(0)
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    assert.lengthOf(priorities, MAX_BACKGROUND_PENDING_PER_METHOD + 1)
+    assert.isTrue(priorities.slice(0, -1).every((priority) => priority === 9))
+    assert.isUndefined(priorities.at(-1))
+
+    release.forEach((resolve) => resolve())
+    await Promise.all([...background, visitor])
+    client.riotRateLimiter.execute = async () => ({})
+    assert.deepEqual(await inBackground(() => match(100)), {}, 'drained: taken again')
   })
 })
