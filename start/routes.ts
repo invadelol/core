@@ -31,6 +31,7 @@ const AppPageController = () => import('#controllers/app_page_controller')
 const DesktopController = () => import('#controllers/desktop_controller')
 const HomeController = () => import('#controllers/home_controller')
 const LensController = () => import('#controllers/lens_controller')
+const RuneStatsController = () => import('#controllers/rune_stats_controller')
 const SynergyController = () => import('#controllers/synergy_controller')
 const LegalController = () => import('#controllers/legal_controller')
 const ChangelogController = () => import('#controllers/changelog_controller')
@@ -87,6 +88,9 @@ router
     router.get('/summoners/puuid/:puuid/lens', [LensController, 'show']).use(middleware.httpCache())
 
     router.get('/matches/:id', [MatchesController, 'show']).use(middleware.httpCache())
+
+    /** Rune pages from our own ranked games, for any champion in any role. */
+    router.get('/runes/:champion/:role', [RuneStatsController, 'show'])
 
     router.put('/summoners/puuid/:puuid/increment', [SummonersController, 'incrementViews'])
 
