@@ -88,9 +88,11 @@ export function goldShare(p: Participant, totals: Record<number, TeamTotals>) {
    every figure maxed: a game of the year.
 
    An AFK player (six levels and 35 % gold behind the lobby's median
-   after ten minutes) is not a way of playing: no score, and the lobby
-   is read without them. Games under five minutes are remakes and are
-   not scored. */
+   after ten minutes, and out of the fights) is not a way of playing:
+   no score, and the lobby is read without them. A player in at least
+   three of their team's kills and a quarter of them is never AFK: a
+   roaming support can be that far behind and still play the whole
+   game. Games under five minutes are remakes and are not scored. */
 
 export const SCORE_CATEGORIES = ['fighting', 'damage', 'farming', 'vision', 'objectives'] as const
 export type ScoreCategory = (typeof SCORE_CATEGORIES)[number]
@@ -208,6 +210,11 @@ export function isAfk(match: Pick<Match, 'duration' | 'participants'>, p: Partic
   const others = match.participants.filter((o) => o !== p)
   if ((match.duration || 0) < 600 || !others.length) return false
   if (!has(p.champLevel) || !has(p.goldEarned)) return false
+  const takedowns = (p.kills || 0) + (p.assists || 0)
+  const teamKills = match.participants
+    .filter((o) => o.teamId === p.teamId)
+    .reduce((n, o) => n + (o.kills || 0), 0)
+  if (takedowns >= 3 && takedowns >= 0.25 * teamKills) return false
   const level = median(others.map((o) => o.champLevel || 0))
   const gold = median(others.map((o) => o.goldEarned || 0))
   return p.champLevel <= level - 6 && p.goldEarned <= 0.65 * gold

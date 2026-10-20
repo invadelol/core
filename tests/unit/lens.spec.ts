@@ -105,7 +105,7 @@ test.group('Lens', () => {
       ...games(4),
       game({ 0: { position: 'MIDDLE' }, 2: { position: 'TOP' } }),
       game({}, { duration: 200 }),
-      game({ 0: { champLevel: 6, goldEarned: 2000 } }),
+      game({ 0: { champLevel: 6, goldEarned: 2000, kills: 0, assists: 1 } }),
     ]
     const lens = read(matches)
     assert.equal(lens.games.length, 4)
