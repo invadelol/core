@@ -22,7 +22,7 @@ export interface PresenceCard {
 }
 
 /** The role icons of @invadelol/ui (`RoleIcon`, 34 by 34): [path, opacity]. */
-const ROLE_ICONS: Record<PresenceRole, [string, number][]> = {
+export const ROLE_ICONS: Record<PresenceRole, [string, number][]> = {
   top: [
     ['M21 14h-7v7h7v-7Zm5-3v15H11.014l-4 4H30V7.016Z', 0.5],
     ['m4 4 .003 24.045 4.997-5V9h14l5.045-4.997Z', 1],

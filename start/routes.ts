@@ -175,6 +175,16 @@ router.get('/og/app/changelog/:file', [
   'show',
 ])
 
+/** A build shared from the desktop app, and its link preview (`build_link`). */
+router.get('/desktop/build/:version/:champion/:role/:groups', [
+  () => import('#controllers/shared_builds_controller'),
+  'show',
+])
+router.get('/og/build/:version/:champion/:role/:file', [
+  () => import('#controllers/shared_builds_controller'),
+  'image',
+])
+
 /** The desktop app's Discord presence picture; its badge is the static `/presence/invade.png`. */
 router.get('/presence/:file', [() => import('#controllers/presence_cards_controller'), 'show'])
 
