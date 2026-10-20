@@ -1,7 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import riotAssets from '#services/riot/assets'
 import { renderBuildCard } from '#services/build_card'
-import { parseBuildLink } from '#services/build_link'
+import { parseBuildLink, routeOf } from '#services/build_link'
 import { buildSocial, resolveBuild, type SharedBuild } from '#services/build_share'
 import { ByteCache } from '#utils/byte_cache'
 
@@ -25,12 +25,14 @@ async function limited<T>(work: () => Promise<T>): Promise<T> {
 }
 
 async function draw(build: SharedBuild) {
+  // The card draws the route: the first starting set and boots, the core, the later slots.
+  const route = routeOf(build.items)
   const ids = [
     ...new Set([
-      ...build.items.start,
-      ...(build.items.boots === null ? [] : [build.items.boots]),
-      ...build.items.core,
-      ...build.items.later.flat(),
+      ...route.start,
+      ...(route.boots === null ? [] : [route.boots]),
+      ...route.core,
+      ...route.later.flat(),
     ]),
   ]
   const [art, ...pictures] = await Promise.all([
@@ -44,7 +46,7 @@ async function draw(build: SharedBuild) {
       championName: build.championName,
       lane: build.lane,
       name: build.name,
-      items: build.items,
+      items: route,
     },
     art.placeholder ? undefined : art.body,
     icons
@@ -53,8 +55,9 @@ async function draw(build: SharedBuild) {
 }
 
 /**
- * A build shared from the desktop app: `/desktop/build/1/ahri/mid/1056,2003-3020-…?n=…`, its
- * page, and `/og/build/1/ahri/mid/1056,2003-3020-….jpg?n=…`, its link preview (`build_card`).
+ * A build shared from the desktop app: `/desktop/build/1/ahri/mid/1056,2003-3020-…?n=…` (or a
+ * version 2 link, every row of the build), its page, and `/og/build/1/ahri/mid/1056,2003-3020-….jpg?n=…`,
+ * its link preview (`build_card`).
  * Anything the app would not have written, or that names an unknown champion or item, is a 404.
  */
 export default class SharedBuildsController {
