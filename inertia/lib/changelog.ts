@@ -11,23 +11,21 @@ export interface Run {
   c?: true
 }
 
-/** A marked line: its headline, its first sentence, the rest that "More" opens, its picture. */
+/** A marked line: its headline, its text, its picture. */
 export interface ChangelogFeature {
   key: string
   title: string | null
-  first: Run[]
-  more: Run[]
+  runs: Run[]
   /** `/changelog/<name>.webp?v=…`, with its size in pixels. */
   src?: string
   w?: number
   h?: number
 }
 
-/** A list line: its first sentence, and the rest that opening it adds. */
+/** A list line. */
 export interface ChangelogItem {
   key: string
-  first: Run[]
-  more: Run[]
+  runs: Run[]
 }
 
 export interface ChangelogGroup {

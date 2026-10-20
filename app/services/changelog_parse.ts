@@ -100,17 +100,6 @@ export function sliceRuns(line: Run[], from: number, to = Infinity): Run[] {
   return out
 }
 
-/**
- * Runs as their first sentence and the rest, for the page's "More": the first keeps its stop, the
- * rest starts with its space. No sentence break: everything is first.
- */
-export function splitSentence(line: Run[]): { first: Run[]; more: Run[] } {
-  const text = plain(line)
-  const end = sentenceEnd(text)
-  if (end < 0 || !text.slice(end).trim()) return { first: line, more: [] }
-  return { first: sliceRuns(line, 0, end), more: sliceRuns(line, end) }
-}
-
 /** The line's first sentence, as plain text. */
 export function firstSentence(line: Run[]): string {
   const text = plain(line)

@@ -159,66 +159,6 @@
   text-wrap: balance;
 }
 
-/* "More": a quiet word after the text that opens the rest in place, and "Less" closes it. */
-.rn .rn-more {
-  display: inline;
-  margin: 0 0 0 2px;
-  padding: 0 2px;
-  font: inherit;
-  font-weight: 500;
-  color: var(--text-3);
-  background: none;
-  border: 0;
-  border-radius: var(--r-xs);
-  cursor: pointer;
-  transition: color var(--t-fast);
-}
-.rn .rn-more:hover {
-  color: var(--text-1);
-  background: none;
-}
-.rn .rn-more:focus-visible {
-  outline: none;
-  color: var(--text-1);
-  box-shadow: var(--focus);
-}
-@media (prefers-reduced-motion: no-preference) {
-  .rn-rest {
-    animation: rn-fade var(--t-slow) var(--ease) both;
-  }
-}
-@keyframes rn-fade {
-  from {
-    opacity: 0;
-  }
-}
-
-/* A list line with more to say is itself the button: its first sentence, a little brighter under
-   the pointer; the rest opens in place. */
-.rn .rn-line {
-  display: block;
-  width: calc(100% + 8px);
-  margin: -1px -4px;
-  padding: 1px 4px;
-  font: inherit;
-  line-height: inherit;
-  text-align: left;
-  color: inherit;
-  background: none;
-  border: 0;
-  border-radius: var(--r-xs);
-  cursor: pointer;
-  transition: color var(--t-fast);
-}
-.rn .rn-line:hover {
-  color: var(--text-1);
-  background: none;
-}
-.rn .rn-line:focus-visible {
-  outline: none;
-  box-shadow: var(--focus);
-}
-
 /* Everything else, as short lists. */
 .rn-group {
   margin-top: 40px;
@@ -309,7 +249,4 @@
     opacity: 0;
     transform: translateY(10px);
   }
-}
-.rn .rn-group.quiet .rn-line:hover {
-  color: var(--text-2);
 }

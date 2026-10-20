@@ -16,7 +16,7 @@
 
 ### Changed
 
-- **Objectives with the game's own icons.** The next dragon shows its element once the Rift has changed (the plain dragon head before), Void Grubs, Herald, Baron and Atakhan wait in grey until they matter, and the soul race shows the dragons each team took. <!-- image objectives.webp -->
+- **Objectives with the game's own icons.** The next dragon shows its element once the Rift has changed (the plain dragon head before), Void Grubs, Herald and Baron wait in grey until they matter, and the soul race shows the dragons each team took. <!-- image objectives.webp -->
 - **Scoreboard gold follows the scoreboard.** Drag the Tab scoreboard or swap its rows, and the gold plates move with it.
 - **Lane gold compares what each player holds.** Every figure is the shop value of both players' items, the same as the Live tab's.
 - **Invade speaks your computer's language,** not League's: if you play League in another language for its voices, Invade stays in yours. Settings → Language.

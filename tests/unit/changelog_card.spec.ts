@@ -89,8 +89,7 @@ test.group('Changelog page data', () => {
     const [r, older] = releases
     assert.equal(r.day, 'October 15, 2026')
     assert.equal(r.hero?.title, 'A picture')
-    assert.deepEqual(r.hero?.first, [{ s: 'With its words.' }])
-    assert.deepEqual(r.hero?.more, [{ s: ' And more.' }])
+    assert.deepEqual(r.hero?.runs, [{ s: 'With its words. And more.' }])
     assert.match(r.hero?.src ?? '', /^\/changelog\/home\.webp\?v=[\w-]{8}$/)
     assert.isAbove(r.hero?.w ?? 0, 0)
     assert.deepEqual(
@@ -104,7 +103,7 @@ test.group('Changelog page data', () => {
         ['Fixed', true, 1],
       ]
     )
-    assert.deepEqual(r.groups[0].items[0].more, [{ s: ' With a second sentence.' }])
+    assert.match(r.groups[0].items[0].runs.map((x) => x.s).join(''), / With a second sentence\.$/)
     // A picture that is not there: the line stays, without it.
     assert.isNull(older.hero)
     assert.equal(older.features[0].title, 'Missing picture')
