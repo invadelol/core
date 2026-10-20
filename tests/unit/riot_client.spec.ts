@@ -1,6 +1,6 @@
 import { test } from '@japa/runner'
 import { PlatformId } from '@fightmegg/riot-api'
-import { CoalescingRiotAPI, MAX_PENDING_PER_METHOD } from '#services/riot/client'
+import { CoalescingRiotAPI, MAX_PENDING_PER_METHOD, saneRateLimits } from '#services/riot/client'
 import { RiotUpstreamException } from '#utils/riot_errors'
 
 test.group('Concurrent Riot requests', () => {
@@ -114,5 +114,60 @@ test.group('Concurrent Riot requests', () => {
     await Promise.all(waiting)
     assert.equal(client.waiting(PlatformId.EUROPE, 'MATCH_V5.GET_MATCH_BY_ID'), 0)
     assert.deepEqual(await match(MAX_PENDING_PER_METHOD + 1), {})
+  })
+
+  test('a 429 without method rate limit headers does not throw out of the limiter', ({
+    assert,
+  }) => {
+    const limiter = new CoalescingRiotAPI('test-key').riotRateLimiter as any
+    limiter.setupRateLimiters('europe', 'MATCH_V5.GET_MATCH_BY_ID', {
+      appLimits: '20:1,100:120',
+      appCounts: '1:1,1:120',
+      methodLimits: '2000:10',
+      methodCounts: '1:10',
+    })
+    // What a service 429 carries: no X-Method-Rate-Limit, so the SDK reads ''.
+    assert.doesNotThrow(() =>
+      limiter.updateRateLimiters('europe', 'MATCH_V5.GET_MATCH_BY_ID', {
+        appLimits: '20:1,100:120',
+        appCounts: '20:1,40:120',
+        methodLimits: '',
+        methodCounts: '',
+      })
+    )
+  })
+
+  test('a first 429 without method headers still sets up the limiter the retry needs', ({
+    assert,
+  }) => {
+    const limiter = new CoalescingRiotAPI('test-key').riotRateLimiter as any
+    limiter.setupRateLimiters('europe', 'MATCH_V5.GET_MATCH_BY_ID', {
+      appLimits: '10:10,500:600',
+      appCounts: '1:10,1:600',
+      methodLimits: '',
+      methodCounts: '',
+    })
+    // The SDK schedules its retry on this limiter from a timer; without it the process dies.
+    assert.isDefined(limiter.rateLimiters.europe['MATCH_V5.GET_MATCH_BY_ID']?.main)
+  })
+
+  test('fills rate limits Riot left out from the app limits', ({ assert }) => {
+    assert.deepInclude(
+      saneRateLimits({
+        appLimits: '20:1,100:120',
+        appCounts: '3:1',
+        methodLimits: '',
+        methodCounts: '',
+      }),
+      {
+        appCounts: '3:1,0:120',
+        methodLimits: '20:1,100:120',
+        methodCounts: '3:1,0:120',
+      }
+    )
+    assert.deepInclude(
+      saneRateLimits({ appLimits: '', appCounts: '', methodLimits: '50:10', methodCounts: '' }),
+      { appLimits: '10:10,500:600', methodLimits: '50:10', methodCounts: '0:10' }
+    )
   })
 })
