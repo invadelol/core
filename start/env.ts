@@ -74,6 +74,8 @@ export default await Env.create(new URL('../', import.meta.url), {
   DESKTOP_RESOLVE_ENABLED: Env.schema.boolean.optional(),
   /** Games the app read without the uploader playing them (v1.3); off answers them with a 503. */
   DESKTOP_OBSERVED_ENABLED: Env.schema.boolean.optional(),
+  /** Riot calls per routing cluster per 2 minutes the desktop pipeline may spend (default 30). */
+  DESKTOP_RIOT_BUDGET: Env.schema.number.optional(),
   /** Oldest app version allowed to upload, e.g. "0.2.7". Unset means any. */
   DESKTOP_MIN_APP_VERSION: Env.schema.string.optional(),
 

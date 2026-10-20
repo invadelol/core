@@ -29,6 +29,7 @@ test.group('Desktop sync API', (group) => {
   const service = {
     championIds: publicationService.championIds,
     archive: publicationService.archive,
+    checkObserved: publicationService.checkObserved,
     retries: publicationService.retries,
   }
   const prefix = rateLimiter.prefix
@@ -40,6 +41,8 @@ test.group('Desktop sync API', (group) => {
     rateLimiter.prefix = `desktop:rl:test:${randomUUID()}:`
     publicationService.championIds = async () => null
     publicationService.archive = async () => {}
+    // The observed game sampled for a Riot check (one in ten in production).
+    publicationService.checkObserved = () => true
     publicationService.retries = new RetryScheduler([60_000])
   })
 

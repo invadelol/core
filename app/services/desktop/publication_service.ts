@@ -3,6 +3,7 @@ import db from '@adonisjs/lucid/services/db'
 import env from '#start/env'
 import { appKey } from '#config/app'
 import riotApiService, { type RiotAPITypes } from '#services/riot/api'
+import { inBackground } from '#services/riot/client'
 import riotAssets from '#services/riot/assets'
 import ingestionService from '#services/analytics/ingestion_service'
 import matchRepository from '#services/analytics/match_repository'
@@ -17,7 +18,8 @@ import identityService, {
 import deviceService, { isTrusted, profileUrl } from '#services/desktop/device_service'
 import lpService from '#services/desktop/lp_service'
 import { RetryScheduler } from '#services/desktop/retry_scheduler'
-import { MATCH_AUDIT_ONE_IN, oneIn } from '#services/desktop/sampling'
+import { MATCH_AUDIT_ONE_IN, OBSERVED_CHECK_ONE_IN, oneIn } from '#services/desktop/sampling'
+import { DEFAULT_DESKTOP_RIOT_BUDGET, RiotBudget } from '#services/desktop/riot_budget'
 import { isObserved, validateStructure } from '#services/desktop/match_validation'
 import { hashAddress } from '#services/desktop/tokens'
 import * as snapshotHooks from '#services/desktop/snapshot_hooks'
@@ -44,7 +46,7 @@ import type { MatchUpload } from '#types/desktop'
 
 type MatchDTO = RiotAPITypes.MatchV5.MatchDTO
 
-export type PublicStatus = 'stored' | 'duplicate' | 'verified' | 'deferred'
+export type PublicStatus = 'stored' | 'duplicate' | 'verified' | 'deferred' | 'skipped'
 
 export interface UploadResult {
   matchId: string
@@ -59,6 +61,7 @@ interface Upload {
   link: DesktopDeviceAccount
   platform: string
   record: Pick<DesktopMatchUpload, 'payloadHash' | 'ipHash'>
+  observed: boolean
 }
 
 /**
@@ -110,13 +113,18 @@ export function isRetriable(error: unknown) {
  * costs nothing; anything else costs exactly one `getMatchById`, whose
  * answer is then used for everything at once — publishing the game, judging
  * the device, and learning every participant's identity. A game Riot has not
- * published yet waits in-process and costs at most three more.
+ * published yet waits in-process and costs at most three more. Only a sample
+ * of observed games is checked at all, and every call comes out of a budget
+ * that leaves most of the key to the website, ahead of which it never runs.
  */
 export class PublicationService {
   retries = new RetryScheduler()
 
   /** One upload in ten from a trusted device is still checked against match-v5. */
   sample = () => oneIn(MATCH_AUDIT_ONE_IN)
+  /** One observed game in ten that core cannot publish for free is checked against match-v5. */
+  checkObserved = () => oneIn(OBSERVED_CHECK_ONE_IN)
+  budget = new RiotBudget(env.get('DESKTOP_RIOT_BUDGET') ?? DEFAULT_DESKTOP_RIOT_BUDGET)
   now = () => Date.now()
 
   /** Concurrent uploads of one game run one after the other in this process. */
@@ -239,7 +247,14 @@ export class PublicationService {
     }
 
     try {
-      const upload: Upload = { payload, device, link, platform: context.platform, record }
+      const upload: Upload = {
+        payload,
+        device,
+        link,
+        platform: context.platform,
+        record,
+        observed,
+      }
       const outcome = await this.decide(upload)
       // An observed game is not the uploader's: it has no LP change of theirs.
       const lp: LpStatus =
@@ -286,6 +301,8 @@ export class PublicationService {
       return this.duplicate(upload, await matchSourceService.find(matchId))
     }
 
+    // Someone else's game: worth a Riot call only now and then (§2.5).
+    if (upload.observed && !this.checkObserved()) return { status: 'skipped', lp: false }
     return this.fromRiot(upload, { defer: true })
   }
 
@@ -298,16 +315,39 @@ export class PublicationService {
     return riotApiService.platformToRegion(platform)
   }
 
+  /**
+   * A Riot call of this pipeline: out of its budget (refused like a 429 when spent, without
+   * reaching Riot) and behind every website request.
+   */
+  private riot<T>(
+    platform: string,
+    call: (cluster: ReturnType<PublicationService['cluster']>) => Promise<T>
+  ) {
+    const cluster = this.cluster(platform)
+    if (!this.budget.take(cluster)) {
+      return Promise.reject(
+        new RiotUpstreamException(
+          'The desktop share of the Riot key is spent',
+          'E_RIOT_RATE_LIMITED',
+          429,
+          60
+        )
+      )
+    }
+    return inBackground(() => call(cluster))
+  }
+
   /** The one match-v5 call of the Riot path. */
   private async fromRiot(upload: Upload, options: { defer: boolean }): Promise<Outcome> {
     let match: MatchDTO
     try {
-      match = await riotApiService.client.matchV5.getMatchById({
-        matchId: upload.payload.matchId,
-        cluster: this.cluster(upload.platform),
-      })
+      match = await this.riot(upload.platform, (cluster) =>
+        riotApiService.client.matchV5.getMatchById({ matchId: upload.payload.matchId, cluster })
+      )
     } catch (error) {
       if (!isRetriable(error)) throw error
+      // An observed game is not worth retries: another device may send it, or the web sync.
+      if (upload.observed) return { status: 'skipped', lp: false }
       if (options.defer) this.defer(upload)
       return { status: 'deferred', lp: true }
     }
@@ -377,10 +417,9 @@ export class PublicationService {
             payload.game.gameId,
             match.info.participants.map((p) => ({ participantId: p.participantId, puuid: p.puuid }))
           )
-        : await riotApiService.client.matchV5.getMatchTimelineById({
-            matchId,
-            cluster: this.cluster(upload.platform),
-          })
+        : await this.riot(upload.platform, (cluster) =>
+            riotApiService.client.matchV5.getMatchTimelineById({ matchId, cluster })
+          )
       await ingestionService.ingestTimeline(matchId, match, timeline, meta)
     } catch (error) {
       logger.warn({ err: error, matchId }, 'desktop upload stored without a timeline')
@@ -547,10 +586,9 @@ export class PublicationService {
     this.retries.schedule(`audit:${matchId}`, async () => {
       let match: MatchDTO
       try {
-        match = await riotApiService.client.matchV5.getMatchById({
-          matchId,
-          cluster: this.cluster(platform),
-        })
+        match = await this.riot(platform, (cluster) =>
+          riotApiService.client.matchV5.getMatchById({ matchId, cluster })
+        )
       } catch (error) {
         if (isRetriable(error)) return 'retry'
         throw error

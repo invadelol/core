@@ -265,12 +265,13 @@ hides losses.
 Response `200`:
 
 ```json
-{ "matchId": "EUW1_7998180573", "status": "stored" | "duplicate" | "verified" | "deferred",
+{ "matchId": "EUW1_7998180573", "status": "stored" | "duplicate" | "verified" | "deferred" | "skipped",
   "lp": "stored" | "rejected" | "none", "url": "https://invade.lol/Mirelight-727/match/EUW1_7998180573" }
 ```
 
 `deferred`: accepted but not published yet (§4.2); the desktop marks the item done, core finishes
-it. Re-sending the same match from the same device is idempotent (`duplicate`, with the `lp` answer
+it. `skipped` (observed games only): not published, and never will be from this send; done for the
+app like the others (any status but `deferred` is). Re-sending the same match from the same device is idempotent (`duplicate`, with the `lp` answer
 of the first send), with one exception (v1.3): when core gave up on a `deferred` game (`expired`),
 or the game is still `deferred` 20 minutes after it was received (a restart lost its retries), the
 new send is processed from scratch.
@@ -281,7 +282,9 @@ another player's history. It must be linked to the device by its raw PUUID (a cl
 the game carries no identity to bridge a Riot ID link with; else 403 `E_NOT_LINKED`). It is
 validated and published like any upload (§4), counts toward the device's trust like any upload
 Riot confirms, never carries an LP change (`lp` is `rejected` when one is sent, `none` otherwise)
-and never moves the uploader's `lastDesktopSyncAt`. It has its own rate limits, so it never holds
+and never moves the uploader's `lastDesktopSyncAt`. Unless core can publish it for free (stored
+already, or a trusted device with every player mapped), only one observed game in ten is checked
+against match-v5; the others, and a checked one Riot does not answer, are `skipped` (no retries). It has its own rate limits, so it never holds
 back a game the player just played; the bucket is chosen by reading `uploader` and
 `game.participantIdentities` before validation.
 
@@ -354,6 +357,11 @@ completeness jsonb, first_device_id, created_at, verified_at)` is the single wri
   count the device verified or mismatched. Not available yet (404) → `deferred`: retried by core
   1, 3, 6 and 15 minutes later (v1.3; before: 2, 5, 15) (in-process timer, best effort); after
   that the app's second send (§5.3) or the normal web sync picks the match up.
+- **Riot budget.** Every match-v5 call of this pipeline (checks, timelines, audits, retries) comes
+  out of a budget of `DESKTOP_RIOT_BUDGET` calls (default 30) per routing cluster per 2 minutes,
+  the window of the key's app limit, and runs at the lowest priority of the Riot queue, so the
+  website's own requests (a visitor's Update) always go first. A spent budget answers like a 429
+  without reaching Riot: `deferred` for the player's own game, `skipped` for an observed one.
 - A device with a mismatch is revoked; its unverified matches are marked `conflict` and hidden
   from LP display (they stay in ClickHouse until re-ingested from Riot).
 

@@ -8,6 +8,7 @@ import matchRepository from '#services/analytics/match_repository'
 import summonerService from '#services/summoner_service'
 import publicationService, { RESEND_AFTER_MS } from '#services/desktop/publication_service'
 import { RetryScheduler } from '#services/desktop/retry_scheduler'
+import { RiotBudget } from '#services/desktop/riot_budget'
 import { uploadFacts } from '#services/desktop/conversion'
 import DesktopDevice from '#models/desktop_device'
 import MatchSource from '#models/match_source'
@@ -32,6 +33,8 @@ test.group('Desktop publication policy', (group) => {
     championIds: publicationService.championIds,
     archive: publicationService.archive,
     sample: publicationService.sample,
+    checkObserved: publicationService.checkObserved,
+    budget: publicationService.budget,
     retries: publicationService.retries,
   }
 
@@ -56,6 +59,8 @@ test.group('Desktop publication policy', (group) => {
     publicationService.championIds = async () => null
     publicationService.archive = async () => {}
     publicationService.sample = () => false
+    publicationService.checkObserved = () => true
+    publicationService.budget = new RiotBudget(1000)
     publicationService.retries = new RetryScheduler([10, 20, 30])
   })
 
@@ -251,6 +256,64 @@ test.group('Desktop publication policy', (group) => {
     assert.equal(await verifiedUploads(device.id), 1, 'Riot confirmed it: it counts toward trust')
     const row = await db.from('desktop_match_upload').where('match_id', upload.matchId).first()
     assert.isTrue(row.observed)
+  })
+
+  /** The scenario's game, sent as an observed game by another account linked to the device. */
+  async function observedScenario() {
+    const found = await scenario()
+    const viewer = randomUUID()
+    seed.raws.push(viewer)
+    const account = await seed.player()
+    await seed.link(found.device.id, account.puuid, viewer)
+    found.upload.uploader = viewer
+    return found
+  }
+
+  test('only a sample of observed games costs a Riot call, the rest are skipped', async ({
+    assert,
+  }) => {
+    const { upload, puuids, device } = await observedScenario()
+    riot(riotMatch(upload, puuids))
+    publicationService.checkObserved = () => false
+
+    assert.equal(await statusOf(upload, device), 'skipped')
+    assert.deepEqual(calls, { match: [], timeline: [] })
+    assert.lengthOf(ingested.matches, 0)
+    assert.isFalse(publicationService.retries.has(`publish:${upload.matchId}:${device.id}`))
+    const row = await db.from('desktop_match_upload').where('match_id', upload.matchId).first()
+    assert.equal(row.status, 'skipped')
+    // The app's resend of it changes nothing.
+    assert.equal(await statusOf(upload, device), 'duplicate')
+  })
+
+  test('a sampled observed game Riot does not answer is skipped, never retried', async ({
+    assert,
+  }) => {
+    const { upload, device } = await observedScenario()
+    riot(notFound())
+    assert.equal(await statusOf(upload, device), 'skipped')
+    assert.lengthOf(calls.match, 1)
+    assert.isFalse(publicationService.retries.has(`publish:${upload.matchId}:${device.id}`))
+  })
+
+  test('a spent Riot budget reaches no Riot: own games wait, observed ones are skipped', async ({
+    assert,
+  }) => {
+    publicationService.budget = new RiotBudget(0)
+    const own = await scenario()
+    riot(riotMatch(own.upload, own.puuids))
+    assert.equal(await statusOf(own.upload, own.device), 'deferred')
+    assert.isTrue(publicationService.retries.has(`publish:${own.upload.matchId}:${own.device.id}`))
+
+    const seen = await observedScenario()
+    assert.equal(await statusOf(seen.upload, seen.device), 'skipped')
+    assert.deepEqual(calls.match, [])
+
+    // The budget is back: the own game's retry goes through.
+    publicationService.budget = new RiotBudget(1000)
+    await new Promise((resolve) => setTimeout(resolve, 40))
+    assert.deepEqual(calls.match, [own.upload.matchId])
+    assert.lengthOf(ingested.matches, 1)
   })
 
   test('a game Riot has not published yet is deferred, then retried', async ({ assert }) => {
