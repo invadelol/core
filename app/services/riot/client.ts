@@ -14,10 +14,81 @@ export const MAX_PENDING_PER_METHOD = 100
 /** What a refused request tells its caller to wait, in seconds: about one window of the key. */
 const BACKLOG_RETRY_AFTER = 60
 
+/** What the SDK assumes when Riot sends no X-App-Rate-Limit header. */
+const FALLBACK_APP_LIMITS = '10:10,500:600'
+
+type RiotRateLimits = {
+  appLimits: string
+  appCounts: string
+  methodLimits: string
+  methodCounts: string
+}
+
+/** `20:1,100:120`: every bucket a positive `requests:seconds` pair. */
+function validLimits(limits: unknown): limits is string {
+  return (
+    typeof limits === 'string' &&
+    limits.split(',').every((bucket) => {
+      const [requests, seconds, extra] = bucket.split(':').map(Number)
+      return extra === undefined && requests > 0 && seconds > 0
+    })
+  )
+}
+
+/** One `count:seconds` per bucket of `limits`, keeping Riot's counts where they line up. */
+function alignCounts(limits: string, counts: unknown) {
+  const reported = typeof counts === 'string' ? counts.split(',') : []
+  return limits
+    .split(',')
+    .map((bucket, index) => {
+      const seconds = bucket.split(':')[1]
+      const count = Number(reported[index]?.split(':')[0])
+      return `${Number.isFinite(count) && count >= 0 ? count : 0}:${seconds}`
+    })
+    .join(',')
+}
+
+/**
+ * Riot leaves rate limit headers out of some responses, most often a service 429, which has no
+ * X-Method-Rate-Limit. The SDK parses them inside promise and timer callbacks nobody awaits, so
+ * a missing header throws `invalid rate limits` (or a TypeError) out of the process and takes the
+ * whole server down. Fall back to the app limits, which bound every method anyway.
+ */
+export function saneRateLimits<T extends RiotRateLimits>(rateLimits: T): T {
+  const appLimits = validLimits(rateLimits.appLimits) ? rateLimits.appLimits : FALLBACK_APP_LIMITS
+  const appCounts = alignCounts(appLimits, rateLimits.appCounts)
+  const methodValid = validLimits(rateLimits.methodLimits)
+  return {
+    ...rateLimits,
+    appLimits,
+    appCounts,
+    methodLimits: methodValid ? rateLimits.methodLimits : appLimits,
+    methodCounts: methodValid
+      ? alignCounts(rateLimits.methodLimits, rateLimits.methodCounts)
+      : appCounts,
+  }
+}
+
 /** Share identical reads before they enter the SDK's Bottleneck queues, and bound those queues. */
 export class CoalescingRiotAPI extends RiotAPI {
   private requests = new SyncGuard()
   private pending = new Map<string, number>()
+
+  constructor(...args: ConstructorParameters<typeof RiotAPI>) {
+    super(...args)
+    const limiter = this.riotRateLimiter as any
+    for (const name of ['setupRateLimiters', 'updateRateLimiters', 'syncRateLimiters']) {
+      const original = limiter[name].bind(limiter)
+      limiter[name] = (region: string, method: string, rateLimits: RiotRateLimits) => {
+        try {
+          return original(region, method, saneRateLimits(rateLimits))
+        } catch {
+          // Riot changed how many buckets a key has: keep the limiters we have. The request
+          // still settles, as a 429 the caller reports, rather than as an uncaught throw.
+        }
+      }
+    }
+  }
 
   /** Requests of one method (`europe:MATCH_V5.GET_MATCH_BY_ID`) waiting on Riot right now. */
   waiting(platform: string, method: string) {
