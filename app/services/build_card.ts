@@ -2,7 +2,7 @@ import sharp from 'sharp'
 import { GLYPHS } from '#services/build_card_glyphs'
 import { GRAIN_PNG } from '#services/match_card_glyphs'
 import { ROLE_ICONS } from '#services/presence_card'
-import type { BuildItems, BuildLane } from '#services/build_link'
+import type { BuildLane, BuildRoute } from '#services/build_link'
 
 /**
  * The link preview of a build shared from the desktop app (`/og/build/…`), drawn as the app's
@@ -33,7 +33,7 @@ export interface BuildCard {
   lane: BuildLane
   /** Empty when the build has none. */
   name: string
-  items: BuildItems
+  items: BuildRoute
 }
 
 const W = CARD_WIDTH
@@ -158,13 +158,16 @@ const BIG = 156
 const BIG_GAP = 40
 const SMALL = 64
 const SMALL_GAP = 10
+/** Route items by place, as the editor names them. */
+const ORDINALS = ['1st', '2nd', '3rd', '4th', '5th', '6th']
 const ALT = 52
 const ALT_GAP = 8
 
 /** Where every item of the card goes, and the labels over the rows. */
-export function buildCardLayout(items: BuildItems) {
+export function buildCardLayout(items: BuildRoute) {
   const route = [...items.core, ...items.later.map((o) => o[0])]
-  const alts = items.later.map((o) => o.slice(1))
+  // Two alternatives under a slot at most: the card is a preview, the page lists them all.
+  const alts = items.later.map((o) => o.slice(1, 3))
   const hasAlts = alts.some((a) => a.length)
   // The route fills the width, up to BIG a item.
   const big = Math.min(
@@ -182,8 +185,7 @@ export function buildCardLayout(items: BuildItems) {
     slots.push({ id, x, y: routeY, size: big })
     if (i) chevrons.push({ x: x - BIG_GAP / 2, y: routeY + big / 2 })
     if (i === 0) labels.push({ text: 'Core', x })
-    if (i >= items.core.length)
-      labels.push({ text: ['4th', '5th', '6th'][i - items.core.length], x })
+    if (i >= items.core.length) labels.push({ text: ORDINALS[i], x })
     const options = i >= items.core.length ? alts[i - items.core.length] : []
     const width = options.length * ALT + (options.length - 1) * ALT_GAP
     options.forEach((alt, o) => {
@@ -215,7 +217,7 @@ export function buildCardLayout(items: BuildItems) {
     slots,
     chevrons,
     ors,
-    routeLabels: labels.filter((l) => ['Core', '4th', '5th', '6th'].includes(l.text)),
+    routeLabels: labels.filter((l) => l.text === 'Core' || ORDINALS.includes(l.text)),
     smallLabels: labels.filter((l) => l.text === 'Start' || l.text === 'Boots'),
     routeLabelLine,
     smallLabelLine,
