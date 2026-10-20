@@ -221,18 +221,18 @@ onMounted(async () => (target.value = await detectDesktopTarget()))
   gap: 8px;
 }
 .sb-item {
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   border-radius: 6px;
   box-shadow: var(--row);
 }
 .sb-item.sm {
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
 }
 .sb-item.alt {
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   opacity: 0.85;
 }
 .sb-link {
