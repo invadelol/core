@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive } from 'vue'
+import { computed, onMounted } from 'vue'
 import { Head, Link } from '@inertiajs/vue3'
 import AppHeader from '../../components/AppHeader.vue'
 import SiteFooter from '../../components/SiteFooter.vue'
@@ -10,9 +10,8 @@ import '../../components/changelog/release-notes.css'
 /**
  * /app/changelog: the desktop app's "What's new" page on the site, every version newest first,
  * drawn as the app draws it (release-notes.css). Each version leads with its screenshot and
- * headline, then its other marked lines, then quiet lists under New, Changed, Fixed. Each line
- * shows its first sentence; the rest opens in place ("More" after a headline, the line itself in
- * a list). /app/changelog/0.3.2 is the same page, opened at that version.
+ * headline, then its other marked lines, then quiet lists under New, Changed, Fixed, every line
+ * shown whole. /app/changelog/0.3.2 is the same page, opened at that version.
  */
 const props = defineProps<{ releases: ChangelogRelease[]; version: string | null }>()
 
@@ -23,10 +22,6 @@ const start = computed(() =>
     0
   )
 )
-
-/** What has been opened, until the page closes. */
-const open = reactive(new Set<string>())
-const toggle = (key: string) => (open.has(key) ? open.delete(key) : open.add(key))
 
 onMounted(() => {
   if (!props.version || start.value === 0) return
@@ -82,20 +77,7 @@ onMounted(() => {
                 />
               </div>
               <h3 v-if="r.hero.title">{{ r.hero.title }}</h3>
-              <p>
-                <RunText :runs="r.hero.first" /><span v-if="open.has(r.hero.key)" class="rn-rest"
-                  ><RunText :runs="r.hero.more"
-                /></span>
-                <button
-                  v-if="r.hero.more.length"
-                  type="button"
-                  class="rn-more"
-                  :aria-expanded="open.has(r.hero.key)"
-                  @click="toggle(r.hero.key)"
-                >
-                  {{ open.has(r.hero.key) ? 'Less' : 'More' }}
-                </button>
-              </p>
+              <p><RunText :runs="r.hero.runs" /></p>
             </section>
 
             <section
@@ -106,20 +88,7 @@ onMounted(() => {
             >
               <div class="rn-words">
                 <h3 v-if="f.title">{{ f.title }}</h3>
-                <p>
-                  <RunText :runs="f.first" /><span v-if="open.has(f.key)" class="rn-rest"
-                    ><RunText :runs="f.more"
-                  /></span>
-                  <button
-                    v-if="f.more.length"
-                    type="button"
-                    class="rn-more"
-                    :aria-expanded="open.has(f.key)"
-                    @click="toggle(f.key)"
-                  >
-                    {{ open.has(f.key) ? 'Less' : 'More' }}
-                  </button>
-                </p>
+                <p><RunText :runs="f.runs" /></p>
               </div>
               <div v-if="f.src" class="rn-stage">
                 <img
@@ -143,18 +112,7 @@ onMounted(() => {
               <h4>{{ g.title }}</h4>
               <ul>
                 <li v-for="item in g.items" :key="item.key">
-                  <button
-                    v-if="item.more.length"
-                    type="button"
-                    class="rn-line"
-                    :aria-expanded="open.has(item.key)"
-                    @click="toggle(item.key)"
-                  >
-                    <RunText :runs="item.first" /><span v-if="open.has(item.key)" class="rn-rest"
-                      ><RunText :runs="item.more"
-                    /></span>
-                  </button>
-                  <RunText v-else :runs="item.first" />
+                  <RunText :runs="item.runs" />
                 </li>
               </ul>
             </section>

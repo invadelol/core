@@ -4,13 +4,7 @@ import { join } from 'node:path'
 import app from '@adonisjs/core/services/app'
 import sharp from 'sharp'
 import { changelogCardVersion } from '#services/changelog_card'
-import {
-  headline,
-  parseChangelog,
-  splitSentence,
-  type Line,
-  type Release,
-} from '#services/changelog_parse'
+import { headline, parseChangelog, type Line, type Release } from '#services/changelog_parse'
 import type {
   ChangelogFeature,
   ChangelogItem,
@@ -83,9 +77,13 @@ export async function buildChangelog(md: string): Promise<Changelog> {
 
   const feature = (line: Line, key: string): ChangelogFeature => {
     const split = headline(line.runs)
-    const { first, more } = splitSentence(split ? split.rest : line.runs)
     const picture = line.image ? shots.get(line.image) : null
-    return { key, title: split?.title ?? null, first, more, ...(picture ?? {}) }
+    return {
+      key,
+      title: split?.title ?? null,
+      runs: split ? split.rest : line.runs,
+      ...(picture ?? {}),
+    }
   }
 
   const releases = parsed.map((r): ChangelogRelease => {
@@ -106,9 +104,7 @@ export async function buildChangelog(md: string): Promise<Changelog> {
           title: s.title,
           quiet: QUIET.has(s.title),
           items: s.lines.flatMap((l, j): ChangelogItem[] =>
-            l.highlight || l.image
-              ? []
-              : [{ key: `${r.version}:${i}.${j}`, ...splitSentence(l.runs) }]
+            l.highlight || l.image ? [] : [{ key: `${r.version}:${i}.${j}`, runs: l.runs }]
           ),
         }))
         .filter((g) => g.items.length),

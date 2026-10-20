@@ -8,7 +8,6 @@ import {
   parseChangelog,
   runs,
   sentenceEnd,
-  splitSentence,
 } from '#services/changelog_parse'
 
 test.group('Changelog parser', () => {
@@ -172,32 +171,6 @@ test.group('Changelog parser', () => {
     )
     assert.equal(end('It says "done." Then more.'), 'It says "done."')
     assert.isNull(end('Gold went 4.5k → 6.2k'))
-  })
-
-  test('splitSentence: the first sentence, and the rest for "More"', ({ assert }) => {
-    const { first, more } = splitSentence(
-      runs(
-        'While you play, friends see `0.3.1` on invade.lol. A button opens it. **Settings** turns it off.'
-      )
-    )
-    assert.deepEqual(first, [
-      { s: 'While you play, friends see ' },
-      { s: '0.3.1', c: true },
-      { s: ' on invade.lol.' },
-    ])
-    assert.deepEqual(more, [
-      { s: ' A button opens it. ' },
-      { s: 'Settings', b: true },
-      { s: ' turns it off.' },
-    ])
-    assert.deepEqual(splitSentence(runs('One sentence only.')), {
-      first: [{ s: 'One sentence only.' }],
-      more: [],
-    })
-    assert.deepEqual(splitSentence(runs('No stop at all')), {
-      first: [{ s: 'No stop at all' }],
-      more: [],
-    })
   })
 
   test('Windows line endings and markers in any case read the same', ({ assert }) => {
