@@ -32,6 +32,8 @@ const DesktopController = () => import('#controllers/desktop_controller')
 const HomeController = () => import('#controllers/home_controller')
 const LensController = () => import('#controllers/lens_controller')
 const RuneStatsController = () => import('#controllers/rune_stats_controller')
+const BuildStatsController = () => import('#controllers/build_stats_controller')
+const SpellStatsController = () => import('#controllers/spell_stats_controller')
 const SynergyController = () => import('#controllers/synergy_controller')
 const LegalController = () => import('#controllers/legal_controller')
 const ChangelogController = () => import('#controllers/changelog_controller')
@@ -42,6 +44,14 @@ router
   .group(() => {
     router.get('/summoners/search', [SummonersController, 'search'])
     router.post('/summoners/sync', [SummonersController, 'sync'])
+    /**
+     * Summoner spells from our own ranked games, for any champion in any role. Before the
+     * player routes: a numeric champion and a role never name a platform and a player.
+     */
+    router
+      .get('/summoners/:champion/:role', [SpellStatsController, 'show'])
+      .where('champion', /^\d+$/)
+      .where('role', /^(top|jungle|mid|middle|adc|bottom|support|utility)$/i)
     router.get('/summoners/:summoner', [SummonersController, 'show'])
     router.get('/summoners/:platform/:summoner', [SummonersController, 'show'])
 
@@ -91,6 +101,9 @@ router
 
     /** Rune pages from our own ranked games, for any champion in any role. */
     router.get('/runes/:champion/:role', [RuneStatsController, 'show'])
+
+    /** Item builds from our own ranked games, for any champion in any role. */
+    router.get('/builds/:champion/:role', [BuildStatsController, 'show'])
 
     router.put('/summoners/puuid/:puuid/increment', [SummonersController, 'incrementViews'])
 

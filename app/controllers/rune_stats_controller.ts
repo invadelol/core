@@ -10,7 +10,7 @@ export default class RuneStatsController {
    * uncommon ones included (Seraphine mid, Cho'Gath support).
    * @paramPath champion - Numeric champion id
    * @paramPath role - top, jungle, mid, adc or support
-   * @paramQuery bracket - all (default), emerald_plus, diamond_plus or master_plus
+   * @paramQuery bracket - all (default), iron, bronze, silver, gold, platinum, emerald, diamond, emerald_plus, diamond_plus or master_plus
    * @paramQuery patch - Patch such as 16.20 (default: the newest with enough games)
    * @responseBody 200 - <RuneStats>
    */
