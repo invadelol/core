@@ -10,6 +10,7 @@ import TeamLogo from '../../components/champions/TeamLogo.vue'
 import GameRow from '../../components/champions/GameRow.vue'
 import { championName, nameOf, regionLabel } from '../../lib/assets.js'
 import {
+  byRank,
   champIconUrl,
   championSlug,
   itemUrl,
@@ -18,6 +19,7 @@ import {
   rankLabel,
   roleOf,
   splashUrl,
+  thousands,
   type GamesSummary,
   type ProTag,
 } from '../../lib/champions.js'
@@ -61,7 +63,7 @@ const main = computed(
   () => props.pro.champions[0]?.champion ?? ROLE_ART[props.pro.role ?? ''] ?? 103
 )
 const lane = computed(() => laneOf(props.pro.role ?? ''))
-const best = computed(() => props.pro.accounts.find((a) => a.tier) ?? null)
+const best = computed(() => props.pro.accounts.filter((a) => a.tier).sort(byRank)[0] ?? null)
 const record = computed(() => props.pro.record)
 const roleLabel = computed(() =>
   props.pro.role ? props.pro.role.charAt(0) + props.pro.role.slice(1).toLowerCase() : 'Player'
@@ -70,7 +72,7 @@ const figures = computed(() => [
   {
     label: 'Best rank',
     value: best.value ? rankLabel(best.value.tier).split(' ·')[0] : 'Unranked',
-    sub: best.value?.lp !== null && best.value ? `${best.value.lp} LP` : undefined,
+    sub: best.value?.lp !== null && best.value ? `${thousands(best.value.lp ?? 0)} LP` : undefined,
   },
   {
     label: 'Accounts',
