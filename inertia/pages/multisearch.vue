@@ -15,6 +15,9 @@ const props = defineProps<{ players: RiotIdentity[]; region: string | null }>()
 /** Enough stored games for a form line, the champions and the last few games. */
 const MATCH_COUNT = 30
 
+/** Fewer stored games than this and Riot is asked first: one update, then older games. */
+const MIN_GAMES = 20
+
 /** A region from the address (`/multisearch/euw`, as op.gg links have it); otherwise found per player. */
 const region = props.region ?? 'auto'
 const entries = ref<ScoutEntry[]>([])
@@ -54,7 +57,9 @@ async function analytics(entry: ScoutEntry, signal: AbortSignal) {
   const puuid = entry.summoner!.puuid
   const base = `/api/summoners/puuid/${puuid}`
   const [ranks, season, matches] = await Promise.all([
-    fetch(`${base}/ranks`, { signal }).then((r) => (r.ok ? (r.json() as Promise<RanksPayload>) : null)),
+    fetch(`${base}/ranks`, { signal }).then((r) =>
+      r.ok ? (r.json() as Promise<RanksPayload>) : null
+    ),
     fetch(`${base}/season`, { signal }).then((r) => (r.ok ? (r.json() as Promise<Season>) : null)),
     fetch(`${base}/matches?count=${MATCH_COUNT}&view=summary`, { signal }).then((r) =>
       r.ok ? (r.json() as Promise<Match[]>) : null
@@ -95,8 +100,9 @@ async function load(identity: RiotIdentity, signal: AbortSignal) {
       platform: summoner.platform,
       level: summoner.summonerLevel,
     })
-    // A player nobody looked up before has no stored games yet: ask Riot once, in turn.
-    if (matches && matches.length === 0) queueSync(key)
+    // Too few stored games to read a player by (none at all for one nobody looked up): ask Riot
+    // once, in turn.
+    if (matches && matches.length < MIN_GAMES) queueSync(key)
   } catch {
     if (signal.aborted) return
     const entry = find(key)
@@ -153,7 +159,8 @@ async function sync(entry: ScoutEntry, signal: AbortSignal) {
     if (res.ok) {
       const result = await res.json()
       if (result.summoner) target.summoner = result.summoner
-      await analytics(target, signal)
+      const matches = await analytics(target, signal)
+      if (matches?.length && matches.length < MIN_GAMES) await older(target, matches, signal)
     } else {
       const failure = await res.json().catch(() => null)
       const code = failure?.errors?.[0]?.code
@@ -171,6 +178,23 @@ async function sync(entry: ScoutEntry, signal: AbortSignal) {
     const target = find(entry.key)
     if (target && !signal.aborted) target.syncing = false
   }
+}
+
+/**
+ * An update only brings the latest games: the rest up to `MIN_GAMES` come from before the oldest
+ * one, as the profile's list pages back. The server paces it; a held page just ends here.
+ */
+async function older(entry: ScoutEntry, matches: Match[], signal: AbortSignal) {
+  const base = `/api/summoners/puuid/${entry.summoner!.puuid}`
+  const before = Number(matches[matches.length - 1].gameStartMs)
+  const count = MIN_GAMES - matches.length
+  const res = await fetch(`${base}/matches?count=${count}&before=${before}&view=summary`, {
+    signal,
+  })
+  if (signal.aborted || !res.ok) return
+  const page = (await res.json()) as Match[]
+  const target = find(entry.key)
+  if (page.length && target) await analytics(target, signal)
 }
 
 /** Draws the cards for `players`, keeping the ones already loaded. */
@@ -200,7 +224,6 @@ function remove(entry: ScoutEntry) {
   writeAddress(entries.value.map((e) => e.identity))
 }
 
-
 function refresh(entry: ScoutEntry) {
   if (!controller || entry.syncing) return
   queueSync(entry.key)
@@ -219,9 +242,13 @@ const mates = computed(() => {
       if (a === b) continue
       let games = 0
       for (const id of a.scout!.matchIds) if (b.scout!.matchIds.has(id)) games++
-      if (games >= 2) list.push({ gameName: b.summoner!.gameName, tagLine: b.summoner!.tagLine, games })
+      if (games >= 2)
+        list.push({ gameName: b.summoner!.gameName, tagLine: b.summoner!.tagLine, games })
     }
-    out.set(a.key, list.sort((x, y) => y.games - x.games))
+    out.set(
+      a.key,
+      list.sort((x, y) => y.games - x.games)
+    )
   }
   return out
 })
