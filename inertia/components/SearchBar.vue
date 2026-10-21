@@ -2,7 +2,9 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { CornerDownLeft, Plus, Search, Users, X } from 'lucide-vue-next'
-import { profileIcon, regionLabel } from '../lib/assets.js'
+import { champIcon, profileIcon, regionLabel } from '../lib/assets.js'
+import { championSlug } from '../lib/champions.js'
+import TeamLogo from './champions/TeamLogo.vue'
 import {
   MAX_PLAYERS,
   multisearchPath,
@@ -27,10 +29,40 @@ interface Result {
   summonerLevel?: number | null
 }
 
+/** A professional player or a team the search found (`/api/pros/search`). */
+interface ProResult {
+  slug: string
+  name: string
+  role: string | null
+  staff: boolean
+  team: { id: string; slug: string; name: string; shortName: string | null } | null
+}
+interface TeamResult {
+  id: string
+  slug: string
+  name: string
+  shortName: string | null
+  region: string | null
+  members: number
+}
+
+interface Answer {
+  players: Result[]
+  pros: ProResult[]
+  teams: TeamResult[]
+}
+
 interface Entry {
   gameName: string
   tagLine: string
   direct: boolean
+  /** A pro, a team or a champion: the entry opens this page instead of a profile. */
+  kind?: 'pro' | 'team' | 'champion'
+  href?: string
+  title?: string
+  detail?: string
+  team?: { id: string; name: string; shortName?: string | null } | null
+  champion?: number
   icon?: number | null
   region?: string
   level?: number | null
@@ -49,6 +81,35 @@ const chips = ref<HTMLElement>()
 const chipsWidth = ref(0)
 const chipsOverflow = ref(false)
 const results = ref<Result[]>([])
+const pros = ref<ProResult[]>([])
+const teams = ref<TeamResult[]>([])
+
+/** Champion names, fetched once the first time someone types. */
+const championNames = ref<{ id: number; name: string }[]>([])
+let championsAsked = false
+function loadChampions() {
+  if (championsAsked || typeof window === 'undefined') return
+  championsAsked = true
+  fetch('/cdn/names/champion')
+    .then((r) => (r.ok ? (r.json() as Promise<Record<string, string>>) : null))
+    .then((json) => {
+      if (json)
+        championNames.value = Object.entries(json).map(([id, name]) => ({ id: Number(id), name }))
+      else championsAsked = false
+    })
+    .catch(() => (championsAsked = false))
+}
+const champions = computed(() => {
+  const q = typing.value.trim().toLowerCase()
+  if (q.length < 2 || q.includes('#')) return []
+  return championNames.value
+    .filter(
+      (c) =>
+        c.name.toLowerCase().startsWith(q) ||
+        championSlug(c.name).startsWith(q.replace(/\s+/g, '-'))
+    )
+    .slice(0, 3)
+})
 const isLoading = ref(false)
 const isOpen = ref(false)
 const activeIndex = ref(0)
@@ -66,7 +127,7 @@ let searchController: AbortController | undefined
  * it also lets a pending request paint its previous answer rather than
  * clearing the list to nothing.
  */
-const answered = new Map<string, Result[]>()
+const answered = new Map<string, Answer>()
 
 /** Kept small: a session's worth of prefixes, not an unbounded log. */
 const MAX_REMEMBERED = 50
@@ -124,6 +185,50 @@ const entries = computed(() => {
     if (typingDone.value) return list
   }
   if (typedTarget.value) list.push({ ...typedTarget.value, direct: true })
+  if (!pastedPlayers.value) {
+    for (const c of champions.value) {
+      list.push({
+        gameName: c.name,
+        tagLine: '',
+        direct: false,
+        kind: 'champion',
+        href: `/champions/${championSlug(c.name)}`,
+        title: c.name,
+        detail: 'Champion',
+        champion: c.id,
+      })
+    }
+    for (const p of pros.value) {
+      list.push({
+        gameName: p.name,
+        tagLine: '',
+        direct: false,
+        kind: 'pro',
+        href: `/pro/${p.slug}`,
+        title: p.name,
+        detail: [
+          p.staff ? 'Staff' : 'Pro',
+          p.team?.name,
+          p.role && !p.staff ? p.role.charAt(0) + p.role.slice(1).toLowerCase() : null,
+        ]
+          .filter(Boolean)
+          .join(' · '),
+        team: p.team,
+      })
+    }
+    for (const t of teams.value) {
+      list.push({
+        gameName: t.name,
+        tagLine: '',
+        direct: false,
+        kind: 'team',
+        href: `/team/${t.slug}`,
+        title: t.name,
+        detail: ['Team', t.shortName, t.region].filter(Boolean).join(' · '),
+        team: t,
+      })
+    }
+  }
   for (const r of results.value) {
     if (typedTarget.value && r.gameName === typedTarget.value.gameName) continue
     list.push({
@@ -154,15 +259,20 @@ watch(query, (value) => {
   }
   if (trimmed.length < 2) {
     results.value = []
+    pros.value = []
+    teams.value = []
     isOpen.value = Boolean(typedTarget.value || pastedPlayers.value)
     return
   }
   isOpen.value = true
+  loadChampions()
 
   // A query we have already answered needs no request and no debounce.
   const remembered = answered.get(trimmed.toLowerCase())
   if (remembered) {
-    results.value = remembered
+    results.value = remembered.players
+    pros.value = remembered.pros
+    teams.value = remembered.teams
     return
   }
 
@@ -174,12 +284,21 @@ async function search(q: string) {
   const { signal } = searchController
   isLoading.value = true
   try {
-    const res = await fetch(`/api/summoners/search?q=${encodeURIComponent(q)}&limit=8`, { signal })
+    // Players, and pros and teams, side by side: neither waits for the other to fail.
+    const [res, proRes] = await Promise.all([
+      fetch(`/api/summoners/search?q=${encodeURIComponent(q)}&limit=8`, { signal }),
+      fetch(`/api/pros/search?q=${encodeURIComponent(q)}`, { signal }).catch(() => null),
+    ])
     if (res.ok) {
       const data: Result[] = await res.json()
+      const found: { pros: ProResult[]; teams: TeamResult[] } = proRes?.ok
+        ? await proRes.json()
+        : { pros: [], teams: [] }
       if (signal.aborted) return
-      remember(q, data)
+      remember(q, { players: data, pros: found.pros ?? [], teams: found.teams ?? [] })
       results.value = data
+      pros.value = found.pros ?? []
+      teams.value = found.teams ?? []
     }
   } catch {
     // Leave the previous answer on screen: an empty list reads as "no such
@@ -189,7 +308,7 @@ async function search(q: string) {
   }
 }
 
-function remember(q: string, data: Result[]) {
+function remember(q: string, data: Answer) {
   answered.set(q.toLowerCase(), data)
   if (answered.size > MAX_REMEMBERED) {
     answered.delete(answered.keys().next().value!)
@@ -205,7 +324,11 @@ function remember(q: string, data: Result[]) {
 function warm(entry: Entry | { gameName: string; tagLine: string }) {
   if ('multi' in entry && entry.multi) return
   try {
-    router.prefetch(href(entry), { method: 'get' }, { cacheFor: '30s' })
+    router.prefetch(
+      'href' in entry && entry.href ? entry.href : href(entry),
+      { method: 'get' },
+      { cacheFor: '30s' }
+    )
   } catch {
     // Prefetching is an optimisation; never let it break navigation.
   }
@@ -244,7 +367,7 @@ function go(entry: Entry) {
   picked.value = []
   results.value = []
   input.value?.blur()
-  router.visit(entry.multi ? multisearchPath(entry.multi) : href(entry))
+  router.visit(entry.multi ? multisearchPath(entry.multi) : (entry.href ?? href(entry)))
 }
 
 function isListed(entry: Entry) {
@@ -253,7 +376,7 @@ function isListed(entry: Entry) {
 }
 
 function canAdd(entry: Entry) {
-  return !entry.multi && listed.value.length < MAX_PLAYERS && !isListed(entry)
+  return !entry.multi && !entry.kind && listed.value.length < MAX_PLAYERS && !isListed(entry)
 }
 
 /** "+" puts the player in the field, icon first, and empties the text for the next name. */
@@ -365,7 +488,7 @@ function submit() {
                 : 'Search a Riot ID, e.g. Faker#KR1'
               : tight
                 ? 'Search'
-                : 'Search a player'
+                : 'Search a player, pro or champion'
         "
         class="field search-input"
         @focus="isOpen = entries.length > 0"
@@ -412,6 +535,22 @@ function submit() {
           <Users :size="15" />
         </span>
         <img
+          v-else-if="entry.kind === 'champion' && entry.champion"
+          :src="champIcon(entry.champion)"
+          alt=""
+          width="28"
+          height="28"
+          class="result-icon h-7 w-7 shrink-0 rounded-[5px] object-cover"
+          @load="shown"
+        />
+        <TeamLogo v-else-if="entry.kind && entry.team" :team="entry.team" :size="28" />
+        <span
+          v-else-if="entry.kind"
+          class="grid h-7 w-7 shrink-0 place-items-center rounded-[5px] bg-raised text-[11px] font-bold text-ink-2"
+        >
+          {{ entry.title?.slice(0, 2).toUpperCase() }}
+        </span>
+        <img
           v-else-if="!entry.direct"
           :src="profileIcon(entry.icon)"
           alt=""
@@ -428,13 +567,24 @@ function submit() {
         <span v-if="entry.multi" class="min-w-0 flex-1 truncate">
           <span class="font-medium text-ink">Search {{ entry.multi.length }} players together</span>
         </span>
+        <span v-else-if="entry.kind" class="min-w-0 flex-1 truncate">
+          <span class="font-medium text-ink">{{ entry.title }}</span>
+          <span v-if="entry.kind === 'pro'" class="pro-word">Pro</span>
+        </span>
         <span v-else class="min-w-0 flex-1 truncate">
           <span v-if="entry.direct" class="text-ink-3">Go to </span>
           <span class="font-medium text-ink">{{ entry.gameName }}</span>
           <span class="text-ink-3">#{{ entry.tagLine }}</span>
         </span>
 
-        <span v-if="!entry.direct" class="num shrink-0 text-[12px] text-ink-3">
+        <span
+          v-if="entry.kind"
+          class="shrink-0 truncate text-[12px] text-ink-3"
+          style="max-width: 50%"
+        >
+          {{ entry.detail }}
+        </span>
+        <span v-else-if="!entry.direct" class="num shrink-0 text-[12px] text-ink-3">
           {{ entry.region }}<template v-if="entry.level"> · Lv {{ entry.level }}</template>
         </span>
 
@@ -454,6 +604,20 @@ function submit() {
 </template>
 
 <style scoped>
+.pro-word {
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  margin-left: 6px;
+  padding: 0 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-1);
+  vertical-align: 1px;
+  background: var(--surface-4);
+  border-radius: var(--r-xs);
+}
+
 .search-sm .search-input {
   padding-left: calc(32px + var(--chips));
   padding-right: 44px;

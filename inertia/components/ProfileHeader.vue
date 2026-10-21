@@ -14,6 +14,14 @@ const props = defineProps<{
   syncMessage: string | null
   lastGameMs: number | null
   mainChampion?: number
+  /** Set when the account belongs to a professional player. */
+  pro?: {
+    slug: string
+    name: string
+    staff: boolean
+    role: string | null
+    team: { id: string; slug: string; name: string; shortName: string | null } | null
+  } | null
 }>()
 
 defineEmits<{ sync: []; share: [] }>()
@@ -79,13 +87,23 @@ onBeforeUnmount(() => clearTimeout(copiedTimer))
           <Check v-if="copied" :size="13" />
           <Copy v-else :size="13" />
         </button>
-        <span
-          v-if="copied"
-          class="text-[12px] font-medium tracking-normal text-ink-3"
-          role="status"
+        <span v-if="copied" class="text-[12px] font-medium tracking-normal text-ink-3" role="status"
           >Copied</span
         >
       </h1>
+
+      <Link
+        v-if="pro"
+        :href="`/pro/${pro.slug}`"
+        class="pro-tag mt-2"
+        :title="`${pro.name}${pro.team ? `, ${pro.team.name}` : ''}`"
+      >
+        <span class="pro-word">{{ pro.staff ? 'Staff' : 'Pro' }}</span>
+        <span class="truncate"
+          >{{ pro.name
+          }}<template v-if="pro.team"> · {{ pro.team.shortName || pro.team.name }}</template></span
+        >
+      </Link>
 
       <p class="num mt-1 text-[12.5px] leading-5 text-ink-3">
         <span>{{ regionLabel(summoner.platform) }}</span>
@@ -127,6 +145,39 @@ onBeforeUnmount(() => clearTimeout(copiedTimer))
 </template>
 
 <style scoped>
+.pro-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  height: 24px;
+  padding: 0 9px 0 3px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-1);
+  background: var(--btn);
+  border-radius: var(--r-sm);
+  box-shadow: var(--btn-shadow);
+  transition: background-color var(--t-fast);
+}
+
+.pro-tag:hover {
+  background: var(--btn-hover);
+}
+
+.pro-word {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text-1);
+  background: var(--surface-4);
+  border-radius: var(--r-xs);
+}
+
 .name {
   color: inherit;
   text-decoration: none;

@@ -32,6 +32,21 @@ import {
   type Release,
 } from '#services/riot/asset_paths'
 
+/** A champion of the live patch (Community Dragon's champion summary). */
+export interface ChampionEntry {
+  id: number
+  name: string
+  alias: string
+  /** Classes in lower case: marksman, mage, assassin, fighter, tank, support. */
+  roles: string[]
+}
+
+/** Rune trees by style id: rows of rune ids, keystones first; and the shard rows. */
+export interface RuneTrees {
+  styles: Record<number, { name: string; rows: number[][] }>
+  shards: number[][]
+}
+
 export interface AssetPayload {
   body: Uint8Array
   contentType: string
@@ -125,6 +140,57 @@ export class RiotAssetsService {
       return Object.keys(out).length ? out : null
     })
     return keys ?? {}
+  }
+
+  /** Every champion on the live patch: id, name, Data Dragon alias (`MonkeyKing`) and classes. */
+  async championList(): Promise<ChampionEntry[]> {
+    const release = await this.live()
+    const list = await this.cached(`riot:champion-list:v2:${release.cdragon}`, async () => {
+      const raw = await this.downloadJson(`${gameData(release)}/${MANIFESTS.champion}`)
+      const out: ChampionEntry[] = []
+      for (const row of Array.isArray(raw) ? raw : []) {
+        const id = Number(row?.id)
+        // Mode variants (Swarm, Jade…) reuse the name under ids in the tens of thousands.
+        if (!Number.isInteger(id) || id <= 0 || id >= 10_000 || typeof row.name !== 'string')
+          continue
+        out.push({
+          id,
+          name: row.name,
+          alias: typeof row.alias === 'string' ? row.alias : String(id),
+          roles: Array.isArray(row.roles) ? row.roles.map(String) : [],
+        })
+      }
+      return out.length ? out.sort((a, b) => a.name.localeCompare(b.name)) : null
+    })
+    return list ?? []
+  }
+
+  /**
+   * The rune trees on the live patch, as the client draws them: each tree's rows (keystones
+   * first), and the three rows of shards.
+   */
+  async runeTrees(): Promise<RuneTrees> {
+    const release = await this.live()
+    const trees = await this.cached(`riot:rune-trees:${release.cdragon}`, async () => {
+      const raw = await this.downloadJson(`${gameData(release)}/${MANIFESTS.perkstyle}`)
+      const styles: RuneTrees['styles'] = {}
+      let shards: number[][] = []
+      for (const style of Array.isArray(raw?.styles) ? raw.styles : []) {
+        const id = Number(style?.id)
+        if (!Number.isInteger(id) || !Array.isArray(style.slots)) continue
+        const rows: number[][] = []
+        const mods: number[][] = []
+        for (const slot of style.slots) {
+          const perks = Array.isArray(slot?.perks) ? slot.perks.map(Number) : []
+          if (slot?.type === 'kStatMod') mods.push(perks)
+          else rows.push(perks)
+        }
+        styles[id] = { name: String(style.name ?? ''), rows }
+        if (mods.length) shards = mods
+      }
+      return Object.keys(styles).length ? { styles, shards } : null
+    })
+    return trees ?? { styles: {}, shards: [] }
   }
 
   /** Every id of a kind on the live patch, used by the warming command. */
