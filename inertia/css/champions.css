@@ -1,0 +1,1615 @@
+/* ──────────────────────────────────────────────────────────────
+   Champion, tier list and pro pages ("banner"): every page opens
+   on the champion's or team's art, full width, with its name, its
+   figures and its tabs on it. Classes are `cs-` so the shared
+   views and the site's own primitives are never touched.
+   ────────────────────────────────────────────────────────────── */
+
+/* ── Banner ──────────────────────────────────────────────────── */
+.cs-hero {
+  position: relative;
+  height: 430px;
+  overflow: hidden;
+  isolation: isolate;
+}
+.cs-hero.list {
+  height: 330px;
+}
+.cs-hero > .cs-art {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  display: flex;
+}
+.cs-hero > .cs-art img {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 22%;
+}
+.cs-hero > .cs-art.band img + img {
+  margin-left: -6%;
+  mask-image: linear-gradient(90deg, transparent, #000 18%);
+}
+.cs-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(
+      0deg,
+      rgb(13 14 19) 0%,
+      rgb(13 14 19 / 0.7) 38%,
+      rgb(13 14 19 / 0.15) 75%,
+      rgb(13 14 19 / 0.35) 100%
+    ),
+    linear-gradient(90deg, rgb(13 14 19 / 0.75), transparent 55%);
+}
+.cs-hero {
+  color: var(--text-1);
+  background: rgb(13 14 19);
+}
+.cs-hero.list::before {
+  background:
+    linear-gradient(0deg, rgb(13 14 19) 0%, rgb(13 14 19 / 0.78) 45%, rgb(13 14 19 / 0.45) 100%),
+    linear-gradient(90deg, rgb(13 14 19 / 0.7), transparent 60%);
+}
+.cs-hero .page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.cs-id {
+  display: flex;
+  align-items: flex-end;
+  gap: 22px;
+}
+.cs-id .cs-face {
+  width: 96px;
+  height: 96px;
+  flex: none;
+  border-radius: var(--r-md);
+  box-shadow: var(--portrait);
+  object-fit: cover;
+  background: var(--well);
+}
+.cs-id .cs-kick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+}
+.cs-id h1 {
+  margin-top: 8px;
+  font-size: 64px;
+  font-weight: 650;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--text-1);
+}
+.cs-hero.list .cs-id h1 {
+  font-size: 56px;
+}
+.cs-nums {
+  display: flex;
+  margin-left: auto;
+  padding-bottom: 4px;
+}
+.cs-nums > div {
+  padding: 0 26px;
+  border-left: 1px solid var(--line-2);
+}
+.cs-nums > div:first-child {
+  border: 0;
+}
+.cs-nums > div:last-child {
+  padding-right: 0;
+}
+.cs-nums span {
+  font-size: 12px;
+  color: var(--text-2);
+}
+.cs-nums b {
+  display: block;
+  margin-top: 6px;
+  font-size: 34px;
+  font-weight: 700;
+  font-stretch: var(--fig);
+  line-height: 1;
+  letter-spacing: -0.015em;
+  color: var(--text-1);
+  white-space: nowrap;
+}
+.cs-nums small {
+  display: block;
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+.cs-kit {
+  display: flex;
+  gap: 5px;
+  margin-top: 14px;
+}
+.cs-kit span {
+  position: relative;
+}
+.cs-kit img {
+  width: 30px;
+  height: 30px;
+  border-radius: 5px;
+  box-shadow: var(--contact);
+}
+.cs-kit b {
+  position: absolute;
+  right: -3px;
+  bottom: -4px;
+  padding: 2px 3px;
+  font: 700 9.5px/1 var(--font);
+  color: var(--text-2);
+  background: var(--solid-1);
+  border-radius: 3px;
+}
+
+/* Tabs on the banner's edge. */
+.cs-tabs {
+  display: flex;
+  gap: 24px;
+  margin-top: 30px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line-2);
+  scrollbar-width: none;
+}
+.cs-tabs::-webkit-scrollbar {
+  display: none;
+}
+.cs-tabs a {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 42px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text-3);
+  transition: color var(--t-fast);
+}
+.cs-tabs a:hover {
+  color: var(--text-1);
+}
+.cs-tabs a.on {
+  color: var(--text-1);
+}
+.cs-tabs a.on::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--brand);
+}
+.cs-tabs a small {
+  font-size: 11.5px;
+  color: var(--text-4);
+}
+
+/* ── Filters ─────────────────────────────────────────────────── */
+.cs-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  margin-top: 20px;
+}
+.cs-bar .cs-picks {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+.cs-roles {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 7px;
+  background: var(--inset);
+  box-shadow: var(--inset-shadow);
+}
+.cs-roles a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-3);
+  border-radius: var(--r-sm);
+  white-space: nowrap;
+  transition:
+    color var(--t-fast),
+    background-color var(--t-fast);
+}
+.cs-roles a:hover {
+  color: var(--text-1);
+  background: var(--surface-2);
+}
+.cs-roles a.on {
+  color: var(--text-1);
+  background: var(--key);
+  box-shadow: var(--key-shadow);
+}
+.cs-roles a small {
+  font-size: 11px;
+  color: var(--text-4);
+}
+.cs-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  min-width: 240px;
+  padding: 0 10px;
+  border-radius: var(--r-sm);
+  background: var(--inset);
+  box-shadow: var(--inset-shadow);
+}
+.cs-field input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-1);
+  background: none;
+  border: 0;
+  outline: none;
+}
+.cs-field input::placeholder {
+  color: var(--text-4);
+}
+
+/* ── Layout and cards ────────────────────────────────────────── */
+.cs-main {
+  padding-bottom: 72px;
+}
+.cs-cols {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+  align-items: start;
+}
+.cs-c-420 {
+  grid-template-columns: 420px minmax(0, 1fr);
+}
+.cs-c-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.cs-c-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.cs-c-side {
+  grid-template-columns: minmax(0, 1fr) 380px;
+}
+.cs-stack > * + * {
+  margin-top: 16px;
+}
+.cs-card {
+  padding: 18px 20px;
+}
+.cs-card > h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin-bottom: 16px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.cs-card > h2 .meta {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+.cs-card > h2 .end {
+  margin-left: auto;
+}
+.cs-card.flush {
+  padding: 0;
+  overflow: hidden;
+}
+.cs-card.flush > h2 {
+  margin: 0;
+  padding: 18px 20px 14px;
+}
+.cs-empty {
+  padding: 20px 0 8px;
+  font-size: 13px;
+  color: var(--text-3);
+}
+.cs-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-2);
+  transition: color var(--t-fast);
+}
+.cs-link:hover {
+  color: var(--text-1);
+}
+
+/* ── Tier letter ─────────────────────────────────────────────── */
+.cs-tier {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 20px;
+  padding: 0 5px;
+  font: 700 12px/1 var(--font);
+  font-stretch: var(--fig);
+  color: var(--text-2);
+  background: var(--surface-3);
+  border-radius: var(--r-xs);
+}
+.cs-tier.t0 {
+  color: var(--gold-c);
+  background: rgb(var(--gold-rgb) / 0.13);
+}
+.cs-tier.t1 {
+  color: var(--text-1);
+  background: var(--surface-4);
+}
+.cs-tier.t2 {
+  color: var(--text-1);
+}
+.cs-tier.t4 {
+  color: var(--text-3);
+}
+.cs-tier.t5 {
+  color: var(--text-4);
+}
+.cs-tier.lg {
+  min-width: 34px;
+  height: 28px;
+  font-size: 16px;
+  border-radius: var(--r-sm);
+}
+
+/* ── Rows: a picture, a name, a share bar, a rate ───────────── */
+.cs-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 90px 58px 44px;
+  align-items: center;
+  gap: 12px;
+  min-height: 46px;
+  padding: 6px 0;
+}
+.cs-row + .cs-row {
+  border-top: 1px solid var(--line);
+}
+.cs-row .pics {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.cs-row .pics img {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  box-shadow: var(--contact);
+}
+.cs-row .pics img.round {
+  border-radius: 50%;
+}
+.cs-row .pics .chev {
+  color: var(--text-4);
+}
+.cs-row .nm {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cs-row .nm small {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+.cs-row .v {
+  text-align: right;
+  font-size: 13.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.cs-row .s {
+  text-align: right;
+  font-size: 12px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+.cs-row.low {
+  opacity: 0.55;
+}
+.cs-narrow .cs-row {
+  grid-template-columns: auto minmax(0, 1fr) 44px 52px 34px;
+  gap: 10px;
+}
+.cs-track {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--track);
+}
+.cs-track i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--bar);
+}
+.cs-up {
+  color: var(--win);
+}
+.cs-down {
+  color: var(--loss);
+}
+
+/* Champion rows (counters, duos). */
+.cs-ch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 4px 0;
+}
+.cs-ch + .cs-ch {
+  border-top: 1px solid var(--line);
+}
+.cs-ch img {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  box-shadow: var(--portrait-sm);
+}
+.cs-ch .nm {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.cs-ch .nm small {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+.cs-ch .v {
+  font-size: 13.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.cs-ch.low {
+  opacity: 0.55;
+}
+.cs-h {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+/* ── Rune page, as the client draws it ───────────────────────── */
+.cs-runes {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 0 32px;
+  justify-content: start;
+}
+.cs-runes.big {
+  gap: 0 64px;
+  justify-content: center;
+}
+.cs-tree {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+.cs-tree .th {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.cs-tree .th img {
+  width: 18px;
+  height: 18px;
+}
+.cs-tree .r {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+.cs-tree .r img {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  opacity: 0.2;
+  filter: grayscale(1);
+}
+.cs-tree .r img.on {
+  opacity: 1;
+  filter: none;
+  box-shadow: 0 0 0 1.5px var(--line-3);
+}
+.cs-tree .r.key img {
+  width: 38px;
+  height: 38px;
+}
+.cs-tree .r.key img.on {
+  width: 46px;
+  height: 46px;
+  box-shadow: none;
+  clip-path: circle(46%);
+}
+.cs-tree .r.sh img {
+  width: 20px;
+  height: 20px;
+}
+.cs-tree .shards {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.cs-runes.big .cs-tree {
+  gap: 16px;
+}
+.cs-runes.big .r {
+  gap: 18px;
+}
+.cs-runes.big .r img {
+  width: 40px;
+  height: 40px;
+}
+.cs-runes.big .r.key img {
+  width: 50px;
+  height: 50px;
+}
+.cs-runes.big .r.key img.on {
+  width: 64px;
+  height: 64px;
+}
+.cs-runes.big .r.sh img {
+  width: 24px;
+  height: 24px;
+}
+.cs-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 16px;
+}
+.cs-keys span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px 0 6px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-3);
+  background: var(--surface-1);
+  border-radius: var(--r-sm);
+}
+.cs-keys span.on {
+  color: var(--text-1);
+  background: var(--surface-3);
+}
+.cs-keys img {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+.cs-keys small {
+  color: var(--text-4);
+}
+
+/* ── Build order ─────────────────────────────────────────────── */
+.cs-path {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.cs-step {
+  display: grid;
+  flex: 1;
+  justify-items: center;
+  gap: 6px;
+  min-width: 0;
+  text-align: center;
+}
+.cs-step .k {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+.cs-step .i {
+  display: flex;
+  gap: 3px;
+}
+.cs-step .i img {
+  width: 46px;
+  height: 46px;
+  border-radius: 6px;
+  box-shadow: var(--contact);
+}
+.cs-step .n {
+  min-height: 30px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 15px;
+  color: var(--text-1);
+}
+.cs-step .v b {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.cs-step .v small {
+  margin-left: 4px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+.cs-core {
+  display: grid;
+  flex: 3.2;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: -8px;
+  padding: 8px 0 10px;
+  border-radius: var(--r-md);
+  background: var(--well);
+  box-shadow: var(--inset-shadow);
+}
+.cs-core .n {
+  min-height: 15px;
+}
+.cs-core .foot {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.cs-core .foot b {
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+/* ── Skill order ─────────────────────────────────────────────── */
+.cs-skill-p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.cs-skill-p .k {
+  position: relative;
+}
+.cs-skill-p .k img {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  box-shadow: var(--contact);
+}
+.cs-skill-p .k b {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  padding: 2px 3px;
+  font: 700 10px/1 var(--font);
+  background: var(--solid-1);
+  border-radius: 3px;
+}
+.cs-skill-p .c {
+  color: var(--text-4);
+}
+.cs-skill-p .v {
+  margin-left: auto;
+  text-align: right;
+}
+.cs-skill-p .v b {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+}
+.cs-skill-p .v small {
+  font-size: 11px;
+  color: var(--text-3);
+}
+.cs-skill-g {
+  display: grid;
+  grid-template-columns: 36px repeat(15, minmax(0, 1fr));
+  gap: 3px;
+  align-items: center;
+}
+.cs-skill-g .l {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-3);
+}
+.cs-skill-g .l img {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+.cs-skill-g i {
+  height: 22px;
+  font: 600 10.5px/22px var(--font);
+  font-style: normal;
+  text-align: center;
+  color: var(--text-1);
+  background: var(--well);
+  border-radius: 4px;
+}
+.cs-skill-g i.on {
+  background: var(--surface-4);
+}
+.cs-skill-g i.on.r {
+  color: var(--gold-c);
+}
+
+/* Spells. */
+.cs-sp {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+}
+.cs-sp + .cs-sp {
+  border-top: 1px solid var(--line);
+}
+.cs-sp .i {
+  display: flex;
+  gap: 3px;
+}
+.cs-sp .i img {
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  box-shadow: var(--contact);
+}
+.cs-sp .n {
+  flex: 1;
+  font-size: 12.5px;
+  color: var(--text-2);
+}
+.cs-sp .v {
+  text-align: right;
+}
+.cs-sp .v b {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+.cs-sp .v small {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+/* After the core. */
+.cs-later {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 28px;
+}
+.cs-later .h {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+.cs-later .r {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+}
+.cs-later .r + .r {
+  border-top: 1px solid var(--line);
+}
+.cs-later .r img {
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  box-shadow: var(--contact);
+}
+.cs-later .r .n {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cs-later .r .v {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+/* ── Tables ──────────────────────────────────────────────────── */
+.cs-table td.c {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+}
+.cs-table td.c img {
+  width: 30px;
+  height: 30px;
+  border-radius: 5px;
+  box-shadow: var(--portrait-sm);
+}
+.cs-table td.c b {
+  font-weight: 600;
+}
+.cs-table td.c small {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.cs-table th.on {
+  color: var(--text-1);
+}
+.cs-table .rk {
+  width: 40px;
+  color: var(--text-3);
+}
+.cs-table .ic {
+  display: flex;
+  gap: 3px;
+}
+.cs-table .ic img {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  box-shadow: var(--contact);
+}
+.cs-mv {
+  font-size: 11px;
+  font-weight: 700;
+}
+.cs-dv {
+  position: relative;
+  width: 150px;
+  height: 8px;
+  margin-left: auto;
+}
+.cs-dv::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -4px;
+  bottom: -4px;
+  width: 1px;
+  background: var(--line-3);
+}
+.cs-dv i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 3px;
+}
+.cs-dv i.g {
+  left: 50%;
+  background: rgb(var(--win-rgb) / 0.8);
+}
+.cs-dv i.b {
+  right: 50%;
+  background: rgb(var(--loss-rgb) / 0.8);
+}
+
+/* ── Champion grid (the list) ────────────────────────────────── */
+.cs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+.cs-tile {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  padding: 14px 6px 12px;
+  text-align: center;
+  border-radius: var(--r-md);
+  background: var(--sheen), var(--surface-1);
+  box-shadow: var(--lit);
+  transition: background-color var(--t-base);
+}
+.cs-tile:hover {
+  background: var(--sheen), var(--surface-2);
+}
+.cs-tile img {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--r-sm);
+  box-shadow: var(--portrait-sm);
+}
+.cs-tile b {
+  max-width: 100%;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cs-tile .m {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 20px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.cs-tile .m .w {
+  font-weight: 600;
+  color: var(--text-2);
+}
+.cs-tile .rl {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  gap: 3px;
+  color: var(--text-4);
+}
+.cs-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.cs-chips > * {
+  flex: none;
+}
+.cs-chips button {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-3);
+  border-radius: var(--r-sm);
+  transition:
+    color var(--t-fast),
+    background-color var(--t-fast);
+}
+.cs-chips button:hover {
+  color: var(--text-1);
+}
+.cs-chips button.on {
+  color: var(--text-1);
+  background: var(--surface-3);
+}
+.cs-chips .sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 6px;
+  background: var(--line-2);
+}
+.cs-chips .label {
+  margin-right: 4px;
+}
+.cs-chips button small {
+  margin-left: 6px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+/* ── Tier rows ───────────────────────────────────────────────── */
+.cs-tiers {
+  margin-top: 20px;
+  padding: 4px 0;
+}
+.cs-trow {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+}
+.cs-trow + .cs-trow {
+  border-top: 1px solid var(--line);
+}
+.cs-trow .k {
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 6px;
+  padding-top: 22px;
+}
+.cs-trow .k small {
+  font-size: 11px;
+  color: var(--text-4);
+}
+.cs-trow .cs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 12px 12px 12px 0;
+}
+.cs-tc {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  width: 98px;
+  padding: 8px 0;
+  text-align: center;
+  border-radius: var(--r-sm);
+  transition: background-color var(--t-fast);
+}
+.cs-tc:hover {
+  background: var(--surface-2);
+}
+.cs-tc img {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--r-sm);
+  box-shadow: var(--portrait-sm);
+}
+.cs-tc b {
+  max-width: 92px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cs-tc small {
+  font-size: 11px;
+  color: var(--text-3);
+}
+.cs-tc .mv {
+  position: absolute;
+  top: 4px;
+  right: 12px;
+}
+
+/* ── By rank ─────────────────────────────────────────────────── */
+.cs-ranks {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+}
+.cs-ranks > div {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 10px 0 4px;
+  text-align: center;
+}
+.cs-ranks > div + div {
+  border-left: 1px solid var(--line);
+}
+.cs-ranks .n {
+  font-size: 12px;
+  color: var(--text-3);
+}
+.cs-ranks .w {
+  font-size: 13px;
+  font-weight: 600;
+}
+.cs-ranks small {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+/* Figures inside a card. */
+.cs-kv {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+}
+.cs-kv > div {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.cs-kv > div:nth-child(odd) {
+  padding-right: 16px;
+}
+.cs-kv > div:nth-child(even) {
+  padding-left: 16px;
+  border-left: 1px solid var(--line);
+}
+.cs-kv span {
+  font-size: 12px;
+  color: var(--text-3);
+}
+.cs-kv b {
+  display: block;
+  margin-top: 4px;
+  font-size: 20px;
+  font-weight: 700;
+  font-stretch: var(--fig);
+}
+
+/* ── Games (pro builds, a pro's and a team's games) ──────────── */
+.cs-games {
+  display: grid;
+  gap: 4px;
+}
+.cs-game {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 210px) 92px 52px minmax(0, 1fr) 54px 84px;
+  align-items: center;
+  gap: 16px;
+  min-height: 72px;
+  padding: 8px 16px 8px 19px;
+  border-radius: var(--r-sm);
+  box-shadow: var(--row);
+  background: linear-gradient(90deg, var(--tint), var(--tint-end) 45%), var(--surface-1);
+}
+.cs-game::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: var(--r-sm) 0 0 var(--r-sm);
+  background: var(--edge-c);
+}
+.cs-game.w {
+  --tint: rgb(var(--win-rgb) / 0.15);
+  --tint-end: rgb(var(--win-rgb) / 0);
+  --edge-c: var(--win);
+}
+.cs-game.l {
+  --tint: rgb(var(--loss-rgb) / 0.15);
+  --tint-end: rgb(var(--loss-rgb) / 0);
+  --edge-c: var(--loss);
+}
+.cs-game .who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.cs-game .who img {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 6px;
+  box-shadow: var(--portrait-sm);
+}
+.cs-game .who b {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cs-game .who small {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cs-game .kda b {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+}
+.cs-game .kda small {
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.cs-game .ld {
+  display: grid;
+  grid-template-columns: 22px 22px;
+  gap: 3px;
+}
+.cs-game .ld img {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+}
+.cs-game .ld img.round {
+  border-radius: 50%;
+  background: var(--well);
+}
+.cs-game .its {
+  display: flex;
+  gap: 3px;
+}
+.cs-game .its img,
+.cs-game .its i {
+  width: 30px;
+  height: 30px;
+  border-radius: 5px;
+  background: var(--well);
+  box-shadow: var(--contact);
+}
+.cs-game .vs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+.cs-game .vs img {
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+}
+.cs-game .when {
+  text-align: right;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.cs-game .when b {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+/* ── Pros ────────────────────────────────────────────────────── */
+.cs-logo {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  overflow: hidden;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  font-weight: 700;
+  font-stretch: var(--fig);
+  color: var(--text-2);
+}
+.cs-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.cs-pro {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 18px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text-1);
+  background: var(--surface-4);
+  border-radius: var(--r-xs);
+}
+.cs-acc {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 6px 0;
+}
+.cs-acc + .cs-acc {
+  border-top: 1px solid var(--line);
+}
+.cs-acc b {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cs-acc b span {
+  font-weight: 500;
+  color: var(--text-3);
+}
+.cs-acc small {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.cs-acc .v {
+  text-align: right;
+  font-size: 13px;
+  font-weight: 600;
+}
+.cs-acc .v small {
+  font-weight: 500;
+}
+.cs-member {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 6px 0;
+}
+.cs-member + .cs-member {
+  border-top: 1px solid var(--line);
+}
+.cs-member .role {
+  width: 22px;
+  color: var(--text-3);
+}
+.cs-member .nm {
+  flex: 1;
+  min-width: 0;
+}
+.cs-member .nm b {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.cs-member .nm small {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+.cs-teams {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px;
+}
+.cs-team {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  background: var(--sheen), var(--surface-1);
+  box-shadow: var(--lit);
+  transition: background-color var(--t-base);
+}
+.cs-team:hover {
+  background: var(--sheen), var(--surface-2);
+}
+.cs-team b {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.cs-team small {
+  display: block;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+/* ── Phones ──────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .cs-c-side,
+  .cs-c-3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cs-cols > .cs-lead {
+    order: -1;
+  }
+}
+@media (max-width: 900px) {
+  .cs-c-420 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cs-c-420 > .cs-stack:last-child {
+    order: -1;
+  }
+}
+@media (max-width: 760px) {
+  .cs-hero {
+    height: auto;
+    min-height: 420px;
+    padding-top: 150px;
+  }
+  .cs-hero.list {
+    min-height: 300px;
+    padding-top: 120px;
+  }
+  .cs-hero > .cs-art img {
+    object-position: 62% 18%;
+  }
+  .cs-hero::before {
+    background: linear-gradient(
+      0deg,
+      rgb(13 14 19) 0%,
+      rgb(13 14 19 / 0.82) 45%,
+      rgb(13 14 19 / 0.2) 85%
+    );
+  }
+  .cs-id {
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .cs-id .cs-face {
+    width: 64px;
+    height: 64px;
+  }
+  .cs-id h1,
+  .cs-hero.list .cs-id h1 {
+    font-size: 38px;
+  }
+  .cs-nums {
+    width: 100%;
+    margin: 6px 0 0;
+  }
+  .cs-nums > div {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0 10px;
+  }
+  .cs-nums > div:first-child {
+    padding-left: 0;
+  }
+  .cs-nums b {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 22px;
+  }
+  .cs-nums small {
+    display: none;
+  }
+  .cs-tabs {
+    gap: 20px;
+    margin-top: 20px;
+  }
+  .cs-bar .cs-picks {
+    width: 100%;
+    margin-left: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .cs-roles {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .cs-field {
+    width: 100%;
+    min-width: 0;
+  }
+  .cs-field input {
+    font-size: 16px;
+  }
+  .cs-c-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cs-card {
+    padding: 16px 14px;
+  }
+  .cs-row {
+    grid-template-columns: auto minmax(0, 1fr) 54px 44px;
+  }
+  .cs-row .cs-track {
+    display: none;
+  }
+  .cs-path {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    row-gap: 14px;
+  }
+  .cs-core {
+    grid-column: span 3;
+  }
+  .cs-step .i img {
+    width: 40px;
+    height: 40px;
+  }
+  .cs-skill-g {
+    grid-template-columns: 22px repeat(15, minmax(0, 1fr));
+    gap: 2px;
+  }
+  .cs-skill-g .l {
+    gap: 0;
+    font-size: 0;
+  }
+  .cs-skill-g i {
+    height: 18px;
+    font-size: 9px;
+    line-height: 18px;
+  }
+  .cs-runes,
+  .cs-runes.big {
+    gap: 0 20px;
+    justify-content: center;
+  }
+  .cs-runes.big .r {
+    gap: 10px;
+  }
+  .cs-runes.big .r img {
+    width: 32px;
+    height: 32px;
+  }
+  .cs-runes.big .r.key img.on {
+    width: 48px;
+    height: 48px;
+  }
+  .cs-later {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+  .cs-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .cs-tile img {
+    width: 56px;
+    height: 56px;
+  }
+  .cs-tile .rl {
+    display: none;
+  }
+  .cs-trow {
+    grid-template-columns: 50px minmax(0, 1fr);
+  }
+  .cs-tc {
+    width: 25%;
+  }
+  .cs-tc img {
+    width: 46px;
+    height: 46px;
+  }
+  .cs-tc b {
+    max-width: 76px;
+    font-size: 11px;
+  }
+  .cs-table .hm {
+    display: none;
+  }
+  .cs-table td,
+  .cs-table th {
+    padding: 0 6px;
+  }
+  .cs-ranks {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    row-gap: 10px;
+  }
+  .cs-ranks > div:nth-child(5) {
+    border-left: 0;
+  }
+  .cs-game {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'who kda' 'its its';
+    gap: 10px;
+    padding: 12px 12px 12px 15px;
+  }
+  .cs-game .who {
+    grid-area: who;
+  }
+  .cs-game .kda {
+    grid-area: kda;
+    text-align: right;
+  }
+  .cs-game .its {
+    grid-area: its;
+  }
+  .cs-game .ld,
+  .cs-game .vs,
+  .cs-game .when {
+    display: none;
+  }
+}

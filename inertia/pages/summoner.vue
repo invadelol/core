@@ -53,6 +53,14 @@ const props = defineProps<{
   summoner: string
   section?: string
   initialProfile?: Summoner | null
+  /** The professional player behind this account, when there is one. */
+  pro?: {
+    slug: string
+    name: string
+    staff: boolean
+    role: string | null
+    team: { id: string; slug: string; name: string; shortName: string | null } | null
+  } | null
   /**
    * The requests to make, as the server defined them. The same list produced
    * the preload hints in the document head, so what this page asks for is
@@ -62,7 +70,9 @@ const props = defineProps<{
 }>()
 
 /** `mastery` is the Champions section's lifetime view, with an address of its own. */
-const section = computed(() => (props.section === 'mastery' ? 'champions' : (props.section ?? 'overview')))
+const section = computed(() =>
+  props.section === 'mastery' ? 'champions' : (props.section ?? 'overview')
+)
 
 /**
  * Whether the viewer is this player. The site has no accounts yet, so it cannot know: this stays
@@ -322,10 +332,13 @@ watch(section, () => {
 /** The two Champions views are two addresses; switching keeps the page as it is. */
 function showChampionsView(view: 'stats' | 'mastery') {
   if (view === championsView.value) return
-  router.visit(`/${encodeURIComponent(slug.value)}/${view === 'mastery' ? 'mastery' : 'champions'}`, {
-    preserveState: true,
-    preserveScroll: true,
-  })
+  router.visit(
+    `/${encodeURIComponent(slug.value)}/${view === 'mastery' ? 'mastery' : 'champions'}`,
+    {
+      preserveState: true,
+      preserveScroll: true,
+    }
+  )
 }
 
 /** Picking a champion anywhere sends you to that champion's games. */
@@ -688,6 +701,7 @@ async function sync() {
             :sync-message="syncMessage"
             :last-game-ms="lastGameMs"
             :main-champion="mainChampion"
+            :pro="props.pro ?? null"
             @sync="sync"
             @share="shareOpen = true"
           />

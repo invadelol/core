@@ -38,11 +38,15 @@ const SynergyController = () => import('#controllers/synergy_controller')
 const LegalController = () => import('#controllers/legal_controller')
 const ChangelogController = () => import('#controllers/changelog_controller')
 const MultisearchController = () => import('#controllers/multisearch_controller')
+const ChampionsController = () => import('#controllers/champions_controller')
+const ProsController = () => import('#controllers/pros_controller')
 
 // API routes group
 router
   .group(() => {
     router.get('/summoners/search', [SummonersController, 'search'])
+    /** Pros and teams whose name starts with `q`, for the site's search. */
+    router.get('/pros/search', [ProsController, 'search'])
     router.post('/summoners/sync', [SummonersController, 'sync'])
     /**
      * Summoner spells from our own ranked games, for any champion in any role. Before the
@@ -129,6 +133,9 @@ router
   })
   .prefix('/api')
 
+/** A team's logo from our own origin, before the game art below takes `/cdn/:kind/:id`. */
+router.get('/cdn/team/:id', [ProsController, 'logo'])
+
 /**
  * Riot game art, proxied and mirrored so the site and the desktop app never
  * talk to Riot's CDNs directly (docs/cdn.md). `/:patch/:kind/:id` pins a patch
@@ -152,6 +159,18 @@ router.get('/app', [AppPageController, 'show']).use(middleware.httpCache({ page:
 /** The desktop app's release notes, all of them or opened at one version (`v0.3.2` leads to `0.3.2`). */
 router.get('/app/changelog', [ChangelogController, 'index'])
 router.get('/app/changelog/:version', [ChangelogController, 'show'])
+
+/** Champion statistics, before the summoner catch-all below. */
+router.get('/champions', [ChampionsController, 'index'])
+router
+  .get('/champions/:slug/:tab?', [ChampionsController, 'show'])
+  .where('tab', /^(build|runes|items|matchups|statistics|pros)$/)
+router.get('/tier-list', [ChampionsController, 'tierList'])
+
+/** Professional players and teams, before the summoner catch-all below. */
+router.get('/pros', [ProsController, 'index'])
+router.get('/pro/:slug', [ProsController, 'show'])
+router.get('/team/:slug', [ProsController, 'team'])
 
 /** Several players scouted side by side (a lobby), before the summoner catch-all below. */
 router.get('/multisearch/:region?', [MultisearchController, 'show'])
@@ -241,6 +260,10 @@ router.get('/:summoner/:section?', async ({ inertia, params, response }) => {
    * already open and, more often than not, on responses already in flight.
    */
   const preload = initialProfile ? analyticsUrls(initialProfile.puuid) : []
+  // A pro's account carries the "Pro" tag and leads to their page.
+  const identity = summonerService.normalize(params.summoner)
+  const { default: proService } = await import('#services/pro_service')
+  const pro = identity ? await proService.byRiotId(identity.gameName, identity.tagLine) : null
 
   return inertia.render('summoner', {
     summoner: params.summoner,
@@ -256,5 +279,6 @@ router.get('/:summoner/:section?', async ({ inertia, params, response }) => {
       : null,
     panels: ANALYTICS_PANELS,
     preload,
+    pro,
   })
 })

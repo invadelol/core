@@ -7,7 +7,19 @@ import SearchBar from './SearchBar.vue'
 import ThemeToggle from './ui/ThemeToggle.vue'
 
 const page = usePage()
-const onApp = computed(() => page.url.split('?')[0] === '/app')
+const path = computed(() => page.url.split('?')[0])
+const onApp = computed(() => path.value === '/app')
+
+/** The site's sections beside the players: champions, the tier list and the pros. */
+const SECTIONS = [
+  { href: '/champions', label: 'Champions', match: (p: string) => p.startsWith('/champions') },
+  { href: '/tier-list', label: 'Tier list', match: (p: string) => p.startsWith('/tier-list') },
+  {
+    href: '/pros',
+    label: 'Pros',
+    match: (p: string) => p === '/pros' || p.startsWith('/pro/') || p.startsWith('/team/'),
+  },
+]
 
 withDefaults(
   defineProps<{
@@ -30,6 +42,19 @@ withDefaults(
       >
         <Logo :size="22" word />
       </Link>
+
+      <nav class="hidden items-center gap-0.5 lg:flex" aria-label="Sections">
+        <Link
+          v-for="s in SECTIONS"
+          :key="s.href"
+          :href="s.href"
+          class="section-link"
+          :class="{ on: s.match(path) }"
+          :aria-current="s.match(path) ? 'page' : undefined"
+        >
+          {{ s.label }}
+        </Link>
+      </nav>
 
       <nav
         v-if="crumbs?.length"
@@ -67,3 +92,31 @@ withDefaults(
     </div>
   </header>
 </template>
+
+<style scoped>
+.section-link {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 11px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-2);
+  border-radius: var(--r-sm);
+  transition:
+    color var(--t-fast),
+    background-color var(--t-fast);
+}
+
+.section-link:hover {
+  color: var(--text-1);
+  background: var(--surface-1);
+}
+
+/* The current section: the violet-lit pill of the app's sidebar. */
+.section-link.on {
+  color: var(--text-1);
+  background: var(--lit-pill);
+  box-shadow: var(--lit-pill-edge);
+}
+</style>
