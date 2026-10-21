@@ -602,9 +602,9 @@ function submit() {
         </span>
         <span v-else class="min-w-0 flex-1 truncate">
           <span v-if="entry.direct" class="text-ink-3">Go to </span>
+          <span v-if="entry.proName" class="pro-word lead">Pro</span>
           <span class="font-medium text-ink">{{ entry.gameName }}</span>
           <span class="text-ink-3">#{{ entry.tagLine }}</span>
-          <span v-if="entry.proName" class="pro-word">Pro</span>
         </span>
 
         <span
@@ -635,6 +635,10 @@ function submit() {
 </template>
 
 <style scoped>
+/* Before a long Riot ID, so the truncation never hides it. */
+.pro-word.lead {
+  margin: 0 6px 0 0;
+}
 .pro-word {
   display: inline-flex;
   align-items: center;
