@@ -1,5 +1,6 @@
 import { test } from '@japa/runner'
-import { evidenceLevel, isTie, summarize } from '#services/rune_stats_service'
+import { evidenceLevel, isTie } from '#services/ranked_stats'
+import { summarize } from '#services/rune_stats'
 
 const COMET = [8200, 8229, 8226, 8210, 8237, 8300, 8345, 8347, 5007, 5008, 5011]
 const AERY = [8200, 8214, 8226, 8210, 8237, 8300, 8345, 8347, 5007, 5008, 5011]
