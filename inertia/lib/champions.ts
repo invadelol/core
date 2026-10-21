@@ -297,6 +297,29 @@ export function rankLabel(
   return `${name}${div}${lp !== null && lp !== undefined ? ` · ${thousands(lp)} LP` : ''}`
 }
 
+const TIER_ORDER = [
+  'CHALLENGER',
+  'GRANDMASTER',
+  'MASTER',
+  'DIAMOND',
+  'EMERALD',
+  'PLATINUM',
+  'GOLD',
+  'SILVER',
+  'BRONZE',
+  'IRON',
+]
+
+/** Highest rank first: tier, then division, then LP. */
+export function byRank(
+  a: { tier: string | null; division?: number | null; lp?: number | null } | null | undefined,
+  b: { tier: string | null; division?: number | null; lp?: number | null } | null | undefined
+) {
+  const at = a?.tier ? TIER_ORDER.indexOf(a.tier) : 99
+  const bt = b?.tier ? TIER_ORDER.indexOf(b.tier) : 99
+  return at - bt || (a?.division ?? 0) - (b?.division ?? 0) || (b?.lp ?? 0) - (a?.lp ?? 0)
+}
+
 /** "3 h ago", "2 d ago". */
 export function ago(ms: number) {
   const min = Math.max(1, Math.round((Date.now() - ms) / 60_000))

@@ -9,6 +9,7 @@ import TeamLogo from '../../components/champions/TeamLogo.vue'
 import GameRow from '../../components/champions/GameRow.vue'
 import { championName } from '../../lib/assets.js'
 import {
+  byRank,
   champIconUrl,
   championSlug,
   laneOf,
@@ -53,7 +54,9 @@ const art = computed(() => {
   return (top.length ? top : [222, 103, 64]).map(splashUrl)
 })
 const record = computed(() => props.team.record)
-const ranked = computed(() => players.value.filter((m) => m.best))
+const ranked = computed(() =>
+  players.value.filter((m) => m.best).sort((a, b) => byRank(a.best, b.best))
+)
 const figures = computed(() => [
   {
     label: 'Players',
