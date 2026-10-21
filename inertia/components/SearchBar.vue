@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
-import { CornerDownLeft, Search, Users } from 'lucide-vue-next'
+import { CornerDownLeft, Plus, Search, Users, X } from 'lucide-vue-next'
 import { profileIcon, regionLabel } from '../lib/assets.js'
-import { multisearchPath, parseRiotIds, type RiotIdentity } from '../lib/multisearch.js'
+import {
+  MAX_PLAYERS,
+  multisearchPath,
+  parseRiotIds,
+  type RiotIdentity,
+} from '../lib/multisearch.js'
 
 const props = withDefaults(
   defineProps<{
@@ -33,7 +38,16 @@ interface Entry {
   multi?: RiotIdentity[]
 }
 
+/** A player put on the list with "+": shown in the field with their icon, before the text. */
+interface Picked extends RiotIdentity {
+  icon?: number | null
+}
+
 const query = ref('')
+const picked = ref<Picked[]>([])
+const chips = ref<HTMLElement>()
+const chipsWidth = ref(0)
+const chipsOverflow = ref(false)
 const results = ref<Result[]>([])
 const isLoading = ref(false)
 const isOpen = ref(false)
@@ -60,9 +74,22 @@ const MAX_REMEMBERED = 50
 /** Short enough to feel like it is keeping up, long enough not to spam. */
 const DEBOUNCE_MS = 120
 
+/**
+ * The list being built: players added with "+", then any typed before the last comma. The
+ * search runs on what is typed after it.
+ */
+const lastComma = computed(() => query.value.lastIndexOf(','))
+const listed = computed(() =>
+  unique([
+    ...picked.value,
+    ...(lastComma.value < 0 ? [] : parseRiotIds(query.value.slice(0, lastComma.value))),
+  ])
+)
+const typing = computed(() => query.value.slice(lastComma.value + 1))
+
 /** "Faker#EUW" typed in full is a destination on its own, listed first. */
 const typedTarget = computed(() => {
-  const trimmed = query.value.trim()
+  const trimmed = typing.value.trim()
   const hash = trimmed.indexOf('#')
   if (hash <= 0 || hash >= trimmed.length - 1) return null
   const gameName = trimmed.slice(0, hash).trim()
@@ -72,15 +99,29 @@ const typedTarget = computed(() => {
 
 /** A pasted lobby or list ("A#EUW, B#EUW"): more than one player is a multi search. */
 const pastedPlayers = computed(() => {
-  const players = parseRiotIds(query.value)
+  const players = unique([...picked.value, ...parseRiotIds(query.value)]).slice(0, MAX_PLAYERS)
   return players.length > 1 ? players : null
 })
+
+function unique(players: RiotIdentity[]) {
+  const seen = new Set<string>()
+  return players
+    .filter((p) => {
+      const key = `${p.gameName}#${p.tagLine}`.toLowerCase()
+      return !seen.has(key) && seen.add(key)
+    })
+    .map(({ gameName, tagLine }) => ({ gameName, tagLine }))
+}
+
+/** The last name is a whole Riot ID: nothing left to look up, the list is the answer. */
+const typingDone = computed(() => parseRiotIds(typing.value).length > 0)
 
 /** Flat list of everything selectable, so arrow keys have one index space. */
 const entries = computed(() => {
   const list: Entry[] = []
   if (pastedPlayers.value) {
-    return [{ gameName: '', tagLine: '', direct: true, multi: pastedPlayers.value }]
+    list.push({ gameName: '', tagLine: '', direct: true, multi: pastedPlayers.value })
+    if (typingDone.value) return list
   }
   if (typedTarget.value) list.push({ ...typedTarget.value, direct: true })
   for (const r of results.value) {
@@ -105,15 +146,15 @@ watch(query, (value) => {
   isLoading.value = false
   activeIndex.value = 0
 
-  const trimmed = value.trim()
-  if (pastedPlayers.value) {
+  const trimmed = typing.value.trim()
+  if (pastedPlayers.value && typingDone.value) {
     results.value = []
     isOpen.value = true
     return
   }
   if (trimmed.length < 2) {
     results.value = []
-    isOpen.value = Boolean(typedTarget.value)
+    isOpen.value = Boolean(typedTarget.value || pastedPlayers.value)
     return
   }
   isOpen.value = true
@@ -194,15 +235,69 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onHotkey)
   clearTimeout(debounce)
   searchController?.abort()
+  chipsObserver?.disconnect()
 })
 
 function go(entry: Entry) {
   isOpen.value = false
   query.value = ''
+  picked.value = []
   results.value = []
   input.value?.blur()
   router.visit(entry.multi ? multisearchPath(entry.multi) : href(entry))
 }
+
+function isListed(entry: Entry) {
+  const key = `${entry.gameName}#${entry.tagLine}`.toLowerCase()
+  return listed.value.some((p) => `${p.gameName}#${p.tagLine}`.toLowerCase() === key)
+}
+
+function canAdd(entry: Entry) {
+  return !entry.multi && listed.value.length < MAX_PLAYERS && !isListed(entry)
+}
+
+/** "+" puts the player in the field, icon first, and empties the text for the next name. */
+async function add(entry: Entry) {
+  picked.value = [
+    ...picked.value,
+    { gameName: entry.gameName, tagLine: entry.tagLine, icon: entry.icon },
+  ]
+  query.value = ''
+  await nextTick()
+  input.value?.focus()
+  const el = chips.value
+  if (el) {
+    chipsObserver?.observe(el.lastElementChild!)
+    el.scrollTo({ left: el.scrollWidth })
+  }
+}
+
+function remove(index: number) {
+  picked.value = picked.value.filter((_, i) => i !== index)
+  input.value?.focus()
+}
+
+/** Backspace in an empty field takes the last player back off the list. */
+function onBackspace(event: KeyboardEvent) {
+  const el = input.value
+  if (!picked.value.length || !el || el.selectionStart !== 0 || el.selectionEnd !== 0) return
+  event.preventDefault()
+  picked.value = picked.value.slice(0, -1)
+}
+
+/** The text starts after the players: the field's left padding follows their width. */
+let chipsObserver: ResizeObserver | undefined
+watch(chips, (el) => {
+  chipsObserver?.disconnect()
+  chipsWidth.value = 0
+  if (!el) return
+  chipsObserver = new ResizeObserver(() => {
+    chipsWidth.value = el.offsetWidth
+    chipsOverflow.value = el.scrollWidth > el.clientWidth
+  })
+  chipsObserver.observe(el)
+  for (const chip of el.children) chipsObserver.observe(chip)
+})
 
 function highlight(index: number, entry: Entry) {
   activeIndex.value = index
@@ -235,11 +330,25 @@ function submit() {
 
 <template>
   <div class="search relative w-full" :class="`search-${props.size}`">
-    <div class="relative">
+    <div class="relative" :style="{ '--chips': chipsWidth ? `${chipsWidth + 6}px` : '0px' }">
       <Search
         class="pointer-events-none absolute top-1/2 z-10 -translate-y-1/2 text-ink-3"
         :class="props.size === 'lg' ? 'left-4 h-[18px] w-[18px]' : 'left-2.5 h-[15px] w-[15px]'"
       />
+      <div v-if="picked.length" ref="chips" class="chips" :data-overflow="chipsOverflow">
+        <button
+          v-for="(player, index) in picked"
+          :key="`${player.gameName}#${player.tagLine}`"
+          type="button"
+          class="chip"
+          :title="`Remove ${player.gameName}#${player.tagLine}`"
+          @mousedown.prevent="remove(index)"
+        >
+          <img :src="profileIcon(player.icon)" alt="" width="16" height="16" class="chip-icon" />
+          <span class="chip-name truncate">{{ player.gameName }}</span>
+          <X :size="11" class="chip-x" />
+        </button>
+      </div>
       <input
         ref="input"
         v-model="query"
@@ -248,13 +357,15 @@ function submit() {
         autocomplete="off"
         :autofocus="props.autofocus"
         :placeholder="
-          props.size === 'lg'
-            ? tight
-              ? 'Search a Riot ID'
-              : 'Search a Riot ID, e.g. Faker#KR1'
-            : tight
-              ? 'Search'
-              : 'Search a player'
+          picked.length
+            ? 'Add another player'
+            : props.size === 'lg'
+              ? tight
+                ? 'Search a Riot ID'
+                : 'Search a Riot ID, e.g. Faker#KR1'
+              : tight
+                ? 'Search'
+                : 'Search a player'
         "
         class="field search-input"
         @focus="isOpen = entries.length > 0"
@@ -263,6 +374,7 @@ function submit() {
         @keydown.up.prevent="move(-1)"
         @keydown.enter.prevent="submit"
         @keydown.esc="isOpen = false"
+        @keydown.backspace="onBackspace"
       />
 
       <span
@@ -270,7 +382,7 @@ function submit() {
         class="absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin rounded-full border-2 border-line-2 border-t-ink-2"
       />
       <kbd
-        v-else-if="!query"
+        v-else-if="!query && !picked.length"
         class="pointer-events-none absolute right-2.5 top-1/2 hidden h-[20px] -translate-y-1/2 items-center rounded-[4px] bg-control px-1.5 font-sans text-[11px] font-medium text-ink-3 sm:flex"
       >
         ⌘K
@@ -281,7 +393,9 @@ function submit() {
     <ul
       v-if="showDropdown"
       class="menu absolute z-50 mt-1.5 w-full p-1"
-      :class="props.size === 'sm' ? 'max-sm:fixed max-sm:inset-x-2 max-sm:top-[54px] max-sm:w-auto' : ''"
+      :class="
+        props.size === 'sm' ? 'max-sm:fixed max-sm:inset-x-2 max-sm:top-[54px] max-sm:w-auto' : ''
+      "
       role="listbox"
     >
       <li
@@ -323,6 +437,17 @@ function submit() {
         <span v-if="!entry.direct" class="num shrink-0 text-[12px] text-ink-3">
           {{ entry.region }}<template v-if="entry.level"> · Lv {{ entry.level }}</template>
         </span>
+
+        <button
+          v-if="canAdd(entry)"
+          type="button"
+          class="add"
+          aria-label="Add to lobby"
+          @mousedown.prevent.stop="add(entry)"
+        >
+          <Plus :size="14" :stroke-width="2.25" />
+          <span class="add-tip" aria-hidden="true">Add to lobby</span>
+        </button>
       </li>
     </ul>
   </div>
@@ -330,8 +455,94 @@ function submit() {
 
 <style scoped>
 .search-sm .search-input {
-  padding-left: 32px;
+  padding-left: calc(32px + var(--chips));
   padding-right: 44px;
+}
+
+/* Players on the list sit in the field, left of the text; the oldest scroll out under a fade. */
+.chips {
+  position: absolute;
+  top: 50%;
+  left: 30px;
+  z-index: 10;
+  display: flex;
+  gap: 4px;
+  max-width: calc(100% - 140px);
+  overflow-x: auto;
+  scrollbar-width: none;
+  transform: translateY(-50%);
+}
+
+.chips[data-overflow='true'] {
+  mask-image: linear-gradient(to right, transparent, #000 12px);
+}
+
+.chips::-webkit-scrollbar {
+  display: none;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  max-width: 132px;
+  height: 22px;
+  padding: 0 5px 0 3px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-1);
+  background: var(--btn);
+  border-radius: var(--r-sm);
+  box-shadow: var(--btn-shadow);
+  transition: background-color var(--t-fast) var(--ease);
+}
+
+.chip:hover {
+  background: var(--btn-hover);
+}
+
+.chip-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border-radius: 3px;
+  object-fit: cover;
+}
+
+.chip-x {
+  flex-shrink: 0;
+  color: var(--text-3);
+}
+
+.chip:hover .chip-x {
+  color: var(--text-1);
+}
+
+/* The header's field is narrow: its players are their icons, the name in the title. */
+.search-sm .chip {
+  gap: 3px;
+  height: 20px;
+  padding: 0 3px 0 2px;
+}
+
+.search-sm .chip-name {
+  display: none;
+}
+
+.search-lg .chips {
+  left: 42px;
+}
+
+.search-lg .chip {
+  height: 28px;
+  font-size: 13px;
+}
+
+.search-lg .chip-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
 }
 
 /* No ⌘K on a phone: the placeholder takes its room. */
@@ -348,7 +559,7 @@ function submit() {
 /* The home search is the page's subject: taller, and set a size up. */
 .search-lg .search-input {
   height: 52px;
-  padding-left: 46px;
+  padding-left: calc(46px + var(--chips));
   padding-right: 56px;
   font-size: 16px;
   border-radius: var(--r-md);
@@ -362,6 +573,64 @@ function submit() {
 
 .search-lg kbd {
   right: 14px;
+}
+
+.add {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  margin-right: -4px;
+  border-radius: var(--r-sm);
+  color: var(--text-3);
+  transition:
+    background-color var(--t-fast) var(--ease),
+    color var(--t-fast) var(--ease);
+}
+
+.add:hover,
+.add:focus-visible {
+  background: var(--btn-hover);
+  color: var(--text-1);
+}
+
+/* Left of the button, inside the row: the list clips anything that leaves it. */
+.add-tip {
+  position: absolute;
+  top: 50%;
+  right: calc(100% + 6px);
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  white-space: nowrap;
+  color: var(--text-1);
+  background: var(--solid-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-2);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-50%);
+  transition: opacity 120ms var(--ease);
+}
+
+.add:hover .add-tip,
+.add:focus-visible .add-tip {
+  opacity: 1;
+}
+
+@media (pointer: coarse) {
+  .add {
+    width: 32px;
+    height: 32px;
+  }
+
+  .add-tip {
+    display: none;
+  }
 }
 
 .result-icon {
