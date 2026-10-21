@@ -44,7 +44,7 @@ export default class ProsController {
    */
   async search({ request, response }: HttpContext) {
     const q = String(request.input('q', ''))
-    const found = await proService.search(q, 5).catch(() => ({ pros: [], teams: [] }))
+    const found = await proService.search(q, 5).catch(() => ({ pros: [], teams: [], accounts: [] }))
     response.header('Cache-Control', 'public, max-age=300')
     return response.ok(found)
   }

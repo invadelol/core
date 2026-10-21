@@ -46,10 +46,20 @@ interface TeamResult {
   members: number
 }
 
+/** A pro's account among the players found: marked "Pro" with the pro's name. */
+interface ProAccount {
+  gameName: string
+  tagLine: string
+  platform: string
+  slug: string
+  name: string
+}
+
 interface Answer {
   players: Result[]
   pros: ProResult[]
   teams: TeamResult[]
+  accounts: ProAccount[]
 }
 
 interface Entry {
@@ -66,6 +76,8 @@ interface Entry {
   icon?: number | null
   region?: string
   level?: number | null
+  /** The pro this account belongs to. */
+  proName?: string
   /** Several Riot IDs pasted at once: the entry opens them side by side. */
   multi?: RiotIdentity[]
 }
@@ -83,6 +95,14 @@ const chipsOverflow = ref(false)
 const results = ref<Result[]>([])
 const pros = ref<ProResult[]>([])
 const teams = ref<TeamResult[]>([])
+const proAccounts = ref<ProAccount[]>([])
+/** The pro behind a player found, by Riot ID and platform. */
+const proOf = computed(() => {
+  const map = new Map<string, string>()
+  for (const a of proAccounts.value)
+    map.set(`${a.platform}:${a.gameName}#${a.tagLine}`.toLowerCase(), a.name)
+  return map
+})
 
 /** Champion names, fetched once the first time someone types. */
 const championNames = ref<{ id: number; name: string }[]>([])
@@ -238,6 +258,7 @@ const entries = computed(() => {
       icon: r.profileIconId,
       region: regionLabel(r.platform),
       level: r.summonerLevel,
+      proName: proOf.value.get(`${r.platform}:${r.gameName}#${r.tagLine}`.toLowerCase()),
     })
   }
   return list
@@ -261,6 +282,7 @@ watch(query, (value) => {
     results.value = []
     pros.value = []
     teams.value = []
+    proAccounts.value = []
     isOpen.value = Boolean(typedTarget.value || pastedPlayers.value)
     return
   }
@@ -273,6 +295,7 @@ watch(query, (value) => {
     results.value = remembered.players
     pros.value = remembered.pros
     teams.value = remembered.teams
+    proAccounts.value = remembered.accounts
     return
   }
 
@@ -291,14 +314,20 @@ async function search(q: string) {
     ])
     if (res.ok) {
       const data: Result[] = await res.json()
-      const found: { pros: ProResult[]; teams: TeamResult[] } = proRes?.ok
+      const found: { pros: ProResult[]; teams: TeamResult[]; accounts?: ProAccount[] } = proRes?.ok
         ? await proRes.json()
         : { pros: [], teams: [] }
       if (signal.aborted) return
-      remember(q, { players: data, pros: found.pros ?? [], teams: found.teams ?? [] })
+      remember(q, {
+        players: data,
+        pros: found.pros ?? [],
+        teams: found.teams ?? [],
+        accounts: found.accounts ?? [],
+      })
       results.value = data
       pros.value = found.pros ?? []
       teams.value = found.teams ?? []
+      proAccounts.value = found.accounts ?? []
     }
   } catch {
     // Leave the previous answer on screen: an empty list reads as "no such
@@ -575,6 +604,7 @@ function submit() {
           <span v-if="entry.direct" class="text-ink-3">Go to </span>
           <span class="font-medium text-ink">{{ entry.gameName }}</span>
           <span class="text-ink-3">#{{ entry.tagLine }}</span>
+          <span v-if="entry.proName" class="pro-word">Pro</span>
         </span>
 
         <span
@@ -585,7 +615,8 @@ function submit() {
           {{ entry.detail }}
         </span>
         <span v-else-if="!entry.direct" class="num shrink-0 text-[12px] text-ink-3">
-          {{ entry.region }}<template v-if="entry.level"> · Lv {{ entry.level }}</template>
+          <template v-if="entry.proName">{{ entry.proName }} · </template>{{ entry.region
+          }}<template v-if="entry.level"> · Lv {{ entry.level }}</template>
         </span>
 
         <button

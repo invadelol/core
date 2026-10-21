@@ -176,9 +176,9 @@ export class ProService {
   /** Pros and teams whose name starts with `q` (a team's short name matches whole). */
   async search(q: string, limit = 5) {
     const term = q.trim()
-    if (term.length < 2) return { pros: [], teams: [] }
+    if (term.length < 2) return { pros: [], teams: [], accounts: [] }
     const like = `${escapeLike(term.toLowerCase())}%`
-    const [pros, teams] = await Promise.all([
+    const [pros, teams, accounts] = await Promise.all([
       db.rawQuery(
         `SELECT p.id, p.slug, p.name, p.role, p.country, ct.*, ba.*
          FROM pro_player p ${CURRENT_TEAM} ${BEST_ACCOUNT}
@@ -199,6 +199,14 @@ export class ProService {
          LIMIT ?`,
         [like, term, term, term, Math.min(limit, 4)]
       ),
+      // Pro accounts by Riot ID: the search marks them among the players it finds.
+      db.rawQuery(
+        `SELECT a.game_name, a.tag_line, a.platform, p.slug, p.name
+         FROM pro_account a JOIN pro_player p ON p.id = a.player_id
+         WHERE lower(a.game_name) LIKE ? ESCAPE '\\'
+         LIMIT 20`,
+        [like]
+      ),
     ])
     return {
       pros: pros.rows.map((r: Record<string, any>) => ({ ...tagOf(r), best: bestOf(r) })),
@@ -210,6 +218,13 @@ export class ProService {
         region: r.region,
         active: r.active,
         members: r.members,
+      })),
+      accounts: accounts.rows.map((r: Record<string, any>) => ({
+        gameName: r.game_name,
+        tagLine: r.tag_line,
+        platform: r.platform,
+        slug: r.slug,
+        name: r.name,
       })),
     }
   }
