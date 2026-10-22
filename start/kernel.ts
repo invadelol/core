@@ -23,6 +23,8 @@ server.errorHandler(() => import('#exceptions/handler'))
  * the request URL.
  */
 server.use([
+  // First: a key written onto Object.prototype is removed before it breaks the next requests.
+  () => import('#middleware/prototype_guard_middleware'),
   () => import('#middleware/container_bindings_middleware'),
   () => import('#middleware/force_json_response_middleware'),
   () => import('@adonisjs/cors/cors_middleware'),
