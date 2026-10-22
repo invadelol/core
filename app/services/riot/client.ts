@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { randomUUID } from 'node:crypto'
+import { createRequire } from 'node:module'
 import { RiotAPI } from '@fightmegg/riot-api'
 import { SyncGuard } from '#utils/sync_guard'
 import { RiotUpstreamException, translateRiotError } from '#utils/riot_errors'
@@ -89,6 +90,31 @@ export function saneRateLimits<T extends RiotRateLimits>(rateLimits: T): T {
       : appCounts,
   }
 }
+
+/**
+ * Bottleneck 2.19.5, which the SDK queues with, stops refilling a limiter's reservoir the first
+ * time its settings change: `_startHeartbeat` clears the running interval and never starts a new
+ * one. The SDK changes them after nearly every response, so a limiter that reaches 0 stays at 0,
+ * its queue never moves again, and every request of that method is refused until the process
+ * restarts (2026-10-22: every Update refused for hours while the key sat idle). Restart the
+ * interval instead.
+ */
+function keepReservoirRefills() {
+  const sdk = createRequire(createRequire(import.meta.url).resolve('@fightmegg/riot-rate-limiter'))
+  const store = sdk('bottleneck/lib/LocalDatastore.js').prototype
+  if (store.__refillsKept) return
+  const start = store._startHeartbeat
+  store._startHeartbeat = function (this: { heartbeat: NodeJS.Timeout | null }) {
+    if (this.heartbeat != null) {
+      clearInterval(this.heartbeat)
+      this.heartbeat = null
+    }
+    return start.call(this)
+  }
+  store.__refillsKept = true
+}
+
+keepReservoirRefills()
 
 /** Share identical reads before they enter the SDK's Bottleneck queues, and bound those queues. */
 export class CoalescingRiotAPI extends RiotAPI {

@@ -1,5 +1,6 @@
 import { test } from '@japa/runner'
 import { PlatformId } from '@fightmegg/riot-api'
+import Bottleneck from 'bottleneck'
 import {
   CoalescingRiotAPI,
   inBackground,
@@ -237,5 +238,23 @@ test.group('Concurrent Riot requests', () => {
     await Promise.all([...background, visitor])
     client.riotRateLimiter.execute = async () => ({})
     assert.deepEqual(await inBackground(() => match(100)), {}, 'drained: taken again')
+  })
+
+  test('a limiter keeps refilling its reservoir after its settings change', async ({ assert }) => {
+    new CoalescingRiotAPI('test-key')
+    const limiter = new Bottleneck({
+      reservoir: 0,
+      reservoirRefreshAmount: 2,
+      reservoirRefreshInterval: 50,
+      heartbeatInterval: 10,
+    })
+    // What the SDK does after a response: the reservoir follows Riot's count, here spent.
+    await limiter.updateSettings({ reservoir: 0 })
+    const ran = await Promise.race([
+      limiter.schedule(async () => true),
+      new Promise((resolve) => setTimeout(() => resolve(false), 1000)),
+    ])
+    await limiter.stop({ dropWaitingJobs: true })
+    assert.isTrue(ran)
   })
 })
