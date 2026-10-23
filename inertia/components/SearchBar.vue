@@ -62,6 +62,8 @@ interface Answer {
   accounts: ProAccount[]
 }
 
+type Section = 'champions' | 'esports' | 'summoners'
+
 interface Entry {
   gameName: string
   tagLine: string
@@ -78,8 +80,18 @@ interface Entry {
   level?: number | null
   /** The pro this account belongs to. */
   proName?: string
+  /** A pro's or staff member's word beside their name. */
+  badge?: 'Pro' | 'Staff'
   /** Several Riot IDs pasted at once: the entry opens them side by side. */
   multi?: RiotIdentity[]
+  /** The titled group the entry is listed under; a pasted lobby stands above them all. */
+  section?: Section
+}
+
+const SECTION_LABELS: Record<Section, string> = {
+  champions: 'Champions',
+  esports: 'Esports',
+  summoners: 'Summoners',
 }
 
 /** A player put on the list with "+": shown in the field with their icon, before the text. */
@@ -113,12 +125,27 @@ function loadChampions() {
   fetch('/cdn/names/champion')
     .then((r) => (r.ok ? (r.json() as Promise<Record<string, string>>) : null))
     .then((json) => {
-      if (json)
-        championNames.value = Object.entries(json).map(([id, name]) => ({ id: Number(id), name }))
+      if (json) championNames.value = playable(json)
       else championsAsked = false
     })
     .catch(() => (championsAsked = false))
 }
+/**
+ * The champions anyone can pick, once each. The names map also holds the mode variants (Swarm,
+ * Jade…), which reuse a champion's name under ids in the tens of thousands: Veigar came up twice.
+ */
+function playable(json: Record<string, string>) {
+  const seen = new Set<string>()
+  return Object.entries(json)
+    .map(([id, name]) => ({ id: Number(id), name }))
+    .filter((c) => Number.isInteger(c.id) && c.id > 0 && c.id < 10_000)
+    .sort((a, b) => a.id - b.id)
+    .filter((c) => {
+      const key = c.name.toLowerCase()
+      return !seen.has(key) && seen.add(key)
+    })
+}
+
 const champions = computed(() => {
   const q = typing.value.trim().toLowerCase()
   if (q.length < 2 || q.includes('#')) return []
@@ -134,6 +161,7 @@ const isLoading = ref(false)
 const isOpen = ref(false)
 const activeIndex = ref(0)
 const input = ref<HTMLInputElement>()
+const list = ref<HTMLElement>()
 
 let debounce: ReturnType<typeof setTimeout>
 let searchController: AbortController | undefined
@@ -197,17 +225,22 @@ function unique(players: RiotIdentity[]) {
 /** The last name is a whole Riot ID: nothing left to look up, the list is the answer. */
 const typingDone = computed(() => parseRiotIds(typing.value).length > 0)
 
-/** Flat list of everything selectable, so arrow keys have one index space. */
-const entries = computed(() => {
-  const list: Entry[] = []
+/** Esports takes five rows at most: pros first, and teams keep two when both are found. */
+const MAX_ESPORTS = 5
+
+/** Everything selectable, grouped by section; `entries` flattens it so arrow keys have one index space. */
+const groups = computed(() => {
+  const top: Entry[] = []
+  const bySection: Record<Section, Entry[]> = { champions: [], esports: [], summoners: [] }
+
   if (pastedPlayers.value) {
-    list.push({ gameName: '', tagLine: '', direct: true, multi: pastedPlayers.value })
-    if (typingDone.value) return list
+    top.push({ gameName: '', tagLine: '', direct: true, multi: pastedPlayers.value })
+    if (typingDone.value) return [{ section: null, entries: top }]
   }
-  if (typedTarget.value) list.push({ ...typedTarget.value, direct: true })
+  if (typedTarget.value) bySection.summoners.push({ ...typedTarget.value, direct: true })
   if (!pastedPlayers.value) {
     for (const c of champions.value) {
-      list.push({
+      bySection.champions.push({
         gameName: c.name,
         tagLine: '',
         direct: false,
@@ -218,8 +251,9 @@ const entries = computed(() => {
         champion: c.id,
       })
     }
-    for (const p of pros.value) {
-      list.push({
+    const teamRows = Math.min(teams.value.length, Math.max(2, MAX_ESPORTS - pros.value.length))
+    for (const p of pros.value.slice(0, MAX_ESPORTS - teamRows)) {
+      bySection.esports.push({
         gameName: p.name,
         tagLine: '',
         direct: false,
@@ -227,31 +261,31 @@ const entries = computed(() => {
         href: `/pro/${p.slug}`,
         title: p.name,
         detail: [
-          p.staff ? 'Staff' : 'Pro',
           p.team?.name,
           p.role && !p.staff ? p.role.charAt(0) + p.role.slice(1).toLowerCase() : null,
         ]
           .filter(Boolean)
           .join(' · '),
         team: p.team,
+        badge: p.staff ? 'Staff' : 'Pro',
       })
     }
-    for (const t of teams.value) {
-      list.push({
+    for (const t of teams.value.slice(0, teamRows)) {
+      bySection.esports.push({
         gameName: t.name,
         tagLine: '',
         direct: false,
         kind: 'team',
         href: `/team/${t.slug}`,
         title: t.name,
-        detail: ['Team', t.shortName, t.region].filter(Boolean).join(' · '),
+        detail: [t.shortName, t.region].filter(Boolean).join(' · '),
         team: t,
       })
     }
   }
   for (const r of results.value) {
     if (typedTarget.value && r.gameName === typedTarget.value.gameName) continue
-    list.push({
+    bySection.summoners.push({
       gameName: r.gameName,
       tagLine: r.tagLine,
       direct: false,
@@ -261,7 +295,29 @@ const entries = computed(() => {
       proName: proOf.value.get(`${r.platform}:${r.gameName}#${r.tagLine}`.toLowerCase()),
     })
   }
+
+  // A whole Riot ID typed is a player's: their section leads, so Enter opens them.
+  const order: Section[] = typedTarget.value
+    ? ['summoners', 'champions', 'esports']
+    : ['champions', 'esports', 'summoners']
+  const list: { section: Section | null; entries: Entry[] }[] = []
+  if (top.length) list.push({ section: null, entries: top })
+  for (const section of order) {
+    if (bySection[section].length) list.push({ section, entries: bySection[section] })
+  }
   return list
+})
+
+const entries = computed(() => groups.value.flatMap((g) => g.entries))
+
+/** Where each group starts in `entries`, for the rows' flat index. */
+const offsets = computed(() => {
+  let at = 0
+  return groups.value.map((g) => {
+    const start = at
+    at += g.entries.length
+    return start
+  })
 })
 
 const showDropdown = computed(() => isOpen.value && entries.value.length > 0)
@@ -462,6 +518,12 @@ function move(delta: number) {
   activeIndex.value = (next + entries.value.length) % entries.value.length
   const entry = entries.value[activeIndex.value]
   if (entry) warm(entry)
+  // The list scrolls on a short screen: the row the keys reach stays in sight.
+  nextTick(() =>
+    list.value
+      ?.querySelector(`[data-index="${activeIndex.value}"]`)
+      ?.scrollIntoView({ block: 'nearest' })
+  )
 }
 
 function handleBlur() {
@@ -542,99 +604,186 @@ function submit() {
     </div>
 
     <!-- In the header of a phone the field is narrow: the list takes the screen's width. -->
-    <ul
+    <div
       v-if="showDropdown"
-      class="menu absolute z-50 mt-1.5 w-full p-1"
+      ref="list"
+      class="menu results absolute z-50 mt-1.5 w-full"
       :class="
         props.size === 'sm' ? 'max-sm:fixed max-sm:inset-x-2 max-sm:top-[54px] max-sm:w-auto' : ''
       "
       role="listbox"
     >
-      <li
-        v-for="(entry, index) in entries"
-        :key="`${entry.gameName}-${entry.tagLine}-${index}`"
-        class="menu-item cursor-pointer !min-h-[40px]"
-        role="option"
-        :aria-selected="index === activeIndex"
-        :data-active="index === activeIndex"
-        @mouseenter="highlight(index, entry)"
-        @mousedown.prevent="go(entry)"
+      <div
+        v-for="(group, g) in groups"
+        :key="group.section ?? 'top'"
+        class="group"
+        role="group"
+        :aria-labelledby="group.section ? `search-${group.section}` : undefined"
       >
-        <span v-if="entry.multi" class="grid h-7 w-7 shrink-0 place-items-center text-ink-3">
-          <Users :size="15" />
-        </span>
-        <img
-          v-else-if="entry.kind === 'champion' && entry.champion"
-          :src="champIcon(entry.champion)"
-          alt=""
-          width="28"
-          height="28"
-          class="result-icon h-7 w-7 shrink-0 rounded-[5px] object-cover"
-          @load="shown"
-        />
-        <TeamLogo v-else-if="entry.kind && entry.team" :team="entry.team" :size="28" />
-        <span
-          v-else-if="entry.kind"
-          class="grid h-7 w-7 shrink-0 place-items-center rounded-[5px] bg-raised text-[11px] font-bold text-ink-2"
+        <div v-if="group.section" :id="`search-${group.section}`" class="group-label">
+          {{ SECTION_LABELS[group.section] }}
+        </div>
+        <div
+          v-for="(entry, i) in group.entries"
+          :key="`${entry.kind ?? 'player'}-${entry.gameName}-${entry.tagLine}-${i}`"
+          class="menu-item result cursor-pointer"
+          role="option"
+          :data-index="offsets[g] + i"
+          :aria-selected="offsets[g] + i === activeIndex"
+          :data-active="offsets[g] + i === activeIndex"
+          @mouseenter="highlight(offsets[g] + i, entry)"
+          @mousedown.prevent="go(entry)"
         >
-          {{ entry.title?.slice(0, 2).toUpperCase() }}
-        </span>
-        <img
-          v-else-if="!entry.direct"
-          :src="profileIcon(entry.icon)"
-          alt=""
-          width="28"
-          height="28"
-          decoding="async"
-          class="result-icon h-7 w-7 shrink-0 rounded-[5px] object-cover"
-          @load="shown"
-        />
-        <span v-else class="grid h-7 w-7 shrink-0 place-items-center text-ink-3">
-          <CornerDownLeft :size="15" />
-        </span>
+          <span v-if="entry.multi" class="glyph">
+            <Users :size="15" />
+          </span>
+          <img
+            v-else-if="entry.kind === 'champion' && entry.champion"
+            :src="champIcon(entry.champion)"
+            alt=""
+            width="28"
+            height="28"
+            class="result-icon portrait-28"
+            @load="shown"
+          />
+          <TeamLogo
+            v-else-if="entry.kind && entry.team"
+            :team="entry.team"
+            :size="28"
+            class="result-logo"
+          />
+          <span v-else-if="entry.kind" class="glyph initials">
+            {{ entry.title?.slice(0, 2).toUpperCase() }}
+          </span>
+          <img
+            v-else-if="!entry.direct"
+            :src="profileIcon(entry.icon)"
+            alt=""
+            width="28"
+            height="28"
+            decoding="async"
+            class="result-icon portrait-28"
+            @load="shown"
+          />
+          <span v-else class="glyph">
+            <CornerDownLeft :size="15" />
+          </span>
 
-        <span v-if="entry.multi" class="min-w-0 flex-1 truncate">
-          <span class="font-medium text-ink">Search {{ entry.multi.length }} players together</span>
-        </span>
-        <span v-else-if="entry.kind" class="min-w-0 flex-1 truncate">
-          <span class="font-medium text-ink">{{ entry.title }}</span>
-          <span v-if="entry.kind === 'pro'" class="pro-word">Pro</span>
-        </span>
-        <span v-else class="min-w-0 flex-1 truncate">
-          <span v-if="entry.direct" class="text-ink-3">Go to </span>
-          <span v-if="entry.proName" class="pro-word lead">Pro</span>
-          <span class="font-medium text-ink">{{ entry.gameName }}</span>
-          <span class="text-ink-3">#{{ entry.tagLine }}</span>
-        </span>
+          <span v-if="entry.multi" class="min-w-0 flex-1 truncate">
+            <span class="font-medium text-ink"
+              >Search {{ entry.multi.length }} players together</span
+            >
+          </span>
+          <span v-else-if="entry.kind" class="min-w-0 flex-1 truncate">
+            <span class="font-medium text-ink">{{ entry.title }}</span>
+            <span v-if="entry.badge" class="pro-word">{{ entry.badge }}</span>
+          </span>
+          <span v-else class="min-w-0 flex-1 truncate">
+            <span v-if="entry.direct" class="text-ink-3">Go to </span>
+            <span v-if="entry.proName" class="pro-word lead">Pro</span>
+            <span class="font-medium text-ink">{{ entry.gameName }}</span>
+            <span class="text-ink-3">#{{ entry.tagLine }}</span>
+          </span>
 
-        <span
-          v-if="entry.kind"
-          class="shrink-0 truncate text-[12px] text-ink-3"
-          style="max-width: 50%"
-        >
-          {{ entry.detail }}
-        </span>
-        <span v-else-if="!entry.direct" class="num shrink-0 text-[12px] text-ink-3">
-          <template v-if="entry.proName">{{ entry.proName }} · </template>{{ entry.region
-          }}<template v-if="entry.level"> · Lv {{ entry.level }}</template>
-        </span>
+          <span v-if="entry.kind && entry.kind !== 'champion'" class="meta truncate">
+            {{ entry.detail }}
+          </span>
+          <span v-else-if="!entry.kind && !entry.direct" class="meta num">
+            <template v-if="entry.proName">{{ entry.proName }} · </template>{{ entry.region
+            }}<template v-if="entry.level"> · Lv {{ entry.level }}</template>
+          </span>
 
-        <button
-          v-if="canAdd(entry)"
-          type="button"
-          class="add"
-          aria-label="Add to lobby"
-          @mousedown.prevent.stop="add(entry)"
-        >
-          <Plus :size="14" :stroke-width="2.25" />
-          <span class="add-tip" aria-hidden="true">Add to lobby</span>
-        </button>
-      </li>
-    </ul>
+          <button
+            v-if="canAdd(entry)"
+            type="button"
+            class="add"
+            aria-label="Add to lobby"
+            @mousedown.prevent.stop="add(entry)"
+          >
+            <Plus :size="14" :stroke-width="2.25" />
+            <span class="add-tip" aria-hidden="true">Add to lobby</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
+/* The results: titled sections, a hairline between them; a short screen scrolls the list. */
+.results {
+  max-height: min(560px, calc(100dvh - 120px));
+  padding: 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.group + .group {
+  margin: 4px -4px 0;
+  padding: 4px 4px 0;
+  border-top: 1px solid var(--line);
+}
+
+.group-label {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+  user-select: none;
+}
+
+.result {
+  min-height: 40px;
+}
+
+.result .meta {
+  flex-shrink: 0;
+  max-width: 50%;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.glyph {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  color: var(--text-3);
+}
+
+.glyph.initials {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
+}
+
+.portrait-28 {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: var(--r-sm);
+  object-fit: cover;
+  background: var(--well);
+  box-shadow: var(--portrait-sm);
+}
+
+/* A logo is drawn on transparency: it sits in a well, inset so its edges breathe. */
+.result-logo {
+  background: var(--well);
+  box-shadow: var(--portrait-sm);
+}
+
+.result-logo :deep(img) {
+  padding: 3px;
+}
+
 /* Before a long Riot ID, so the truncation never hides it. */
 .pro-word.lead {
   margin: 0 6px 0 0;
