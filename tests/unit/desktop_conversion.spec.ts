@@ -1,5 +1,10 @@
 import { test } from '@japa/runner'
-import { buildMatchRow, buildParticipantRows, buildTimelineRows } from '#utils/clickhouse'
+import {
+  buildMatchRow,
+  buildParticipantRows,
+  buildTimelineRows,
+  skillOrders,
+} from '#utils/clickhouse'
 import {
   canonicalHash,
   compareFacts,
@@ -141,17 +146,28 @@ test.group('Desktop LCU → match-v5 conversion', (group) => {
 
     const rows = buildTimelineRows(upload.matchId, 'EUW1', 0, match.info, timeline)
     assert.lengthOf(rows, upload.timeline!.frames.length * 10)
+    const players = buildParticipantRows(
+      upload.matchId,
+      'EUW1',
+      0,
+      match.info,
+      skillOrders(timeline)
+    )
 
     const last = rows.filter((row) => row.frame_ms === 1810000)
     for (const participant of upload.game.participants) {
       const row = last.find((r) => r.participant_id === participant.participantId)!
+      const player = players.find((p) => p.participant_id === participant.participantId)!
       assert.equal(row.kills, participant.stats.kills)
       assert.equal(row.deaths, participant.stats.deaths)
       assert.equal(row.assists, participant.stats.assists)
-      assert.equal(row.keystone, participant.stats.perk0)
-      assert.isAbove(row.skill_order.length, 10)
+      assert.equal(player.keystone, participant.stats.perk0)
+      assert.equal(player.rune1, participant.stats.perk0)
+      assert.isAbove(player.skill_order.length, 10)
+      // The last frame holds the whole skill order.
+      assert.equal(row.skill_points, player.skill_order.length)
       // Stat shards are not reported by the client.
-      assert.equal(row.stat_offense, 0)
+      assert.equal(player.stat_offense, 0)
     }
   })
 

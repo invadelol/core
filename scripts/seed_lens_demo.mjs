@@ -7,8 +7,9 @@
  *
  * The demo games are synthetic and stored without timelines. For about half of the profile's
  * recent laned games, this writes `match_timeline` frames for all ten players (CS, gold, XP and
- * levels drawn towards each player's final line, kills, deaths and assists from the events) and
- * `match_events` kills and epic monsters consistent with the stored game. Everything is drawn from
+ * levels drawn towards each player's final line, kills, deaths and assists from the events),
+ * `match_events` kills and epic monsters consistent with the stored game, and the participant id
+ * and skill order the frames are joined to on the players' stored `participants` rows. Everything is drawn from
  * a generator seeded by the match id, so a game always gets the same timeline, and games that
  * already have frames or events are left alone: running it twice changes nothing. `--reseed`
  * deletes what it wrote for the chosen games first, to draw them again after a change here.
@@ -279,23 +280,9 @@ function timelineOf(match, players, rand, demoPuuid) {
         game_start_ms: match.game_start_ms,
         frame_ms: ms,
         participant_id: p.id,
-        puuid: p.puuid,
         team_id: p.team_id,
-        spell1: p.spell1,
-        spell2: p.spell2,
-        primary_style: p.primary_style,
-        secondary_style: p.secondary_style,
-        keystone: p.keystone,
-        rune1: p.keystone,
-        rune2: 0,
-        rune3: 0,
-        rune4: 0,
-        rune5: 0,
-        rune6: 0,
-        stat_offense: 0,
-        stat_flex: 0,
-        stat_defense: 0,
-        skill_order: SKILLS.slice(0, level),
+        // One skill point a level: the frame's order is that much of the player's (`SKILLS`).
+        skill_points: level,
         level,
         xp,
         gold_current: Math.floor(rand() * 1400),
@@ -387,10 +374,12 @@ const participants = await select(`
 
 const frames = []
 const events = []
+/** `match_id:puuid` → [participant id, skill points at the last frame], for the participant rows. */
+const players = new Map()
 for (const match of matches) {
   for (const key of Object.keys(match))
     if (/^(t[12]_|duration|game_start)/.test(key)) match[key] = Number(match[key])
-  const players = participants
+  const lineup = participants
     .filter((p) => p.match_id === match.match_id)
     .map((p) =>
       Object.fromEntries(
@@ -402,13 +391,34 @@ for (const match of matches) {
         ])
       )
     )
-  if (players.length !== 10) continue
-  const made = timelineOf(match, players, seeded(match.match_id), demo.puuid)
+  if (lineup.length !== 10) continue
+  const made = timelineOf(match, lineup, seeded(match.match_id), demo.puuid)
   frames.push(...made.frames)
+  for (const p of lineup) {
+    const points = Math.max(
+      0,
+      ...made.frames.filter((f) => f.participant_id === p.id).map((f) => f.skill_points)
+    )
+    players.set(`${match.match_id}:${p.puuid}`, [p.id, points])
+  }
   if (!heldEvents.has(match.match_id)) events.push(...made.events)
 }
 
 const lines = (rows) => rows.map((row) => JSON.stringify(row)).join('\n')
+// Frames are joined to their player by participant id, and read their skill order from the
+// player's row: both are written onto the stored participant rows first.
+if (players.size) {
+  const keys = `[${[...players.keys()].map(quote).join(',')}]`
+  const ids = `[${[...players.values()].map(([id]) => id).join(',')}]`
+  const points = `[${[...players.values()].map(([, n]) => n).join(',')}]`
+  const key = "concat(match_id, ':', puuid)"
+  await clickhouse(
+    `ALTER TABLE participants UPDATE
+       participant_id = transform(${key}, ${keys}, ${ids}, participant_id),
+       skill_order = arraySlice([${SKILLS}], 1, transform(${key}, ${keys}, ${points}, 0))
+     WHERE match_id IN (${list}) SETTINGS mutations_sync = 1`
+  )
+}
 await clickhouse('INSERT INTO match_timeline FORMAT JSONEachRow', lines(frames))
 if (events.length) await clickhouse('INSERT INTO match_events FORMAT JSONEachRow', lines(events))
 console.log(

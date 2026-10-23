@@ -67,15 +67,27 @@ export class LensRepository {
     return result.map((row) => ({ role: asString(row[0]), games: number(row[1]) }))
   }
 
-  /** Every player's frames of the first fifteen minutes, in the window's games with a timeline. */
+  /**
+   * Every player's frames of the first fifteen minutes, in the window's games with a timeline.
+   * Frames name no player: the puuid comes from the game's participant rows, by participant id.
+   */
   async frames(window: LensWindow): Promise<LensFrame[]> {
     const result = await rows(`
-      SELECT match_id, puuid, participant_id, intDiv(frame_ms, 60000) AS minute,
-             cs + jungle_cs, gold_total, xp, deaths
-      FROM match_timeline
-      WHERE match_id IN (${this.window(window)})
-        AND intDiv(frame_ms, 60000) <= ${LENS_LAST_MINUTE}
-      LIMIT 1 BY match_id, participant_id, minute
+      SELECT t.match_id, p.puuid, t.participant_id, t.minute, t.farm, t.gold_total, t.xp, t.deaths
+      FROM (
+        SELECT match_id, participant_id, intDiv(frame_ms, 60000) AS minute,
+               cs + jungle_cs AS farm, gold_total, xp, deaths
+        FROM match_timeline
+        WHERE match_id IN (${this.window(window)})
+          AND intDiv(frame_ms, 60000) <= ${LENS_LAST_MINUTE}
+        LIMIT 1 BY match_id, participant_id, minute
+      ) AS t
+      INNER JOIN (
+        SELECT match_id, participant_id, puuid
+        FROM participants
+        WHERE match_id IN (${this.window(window)}) AND participant_id != 0
+        LIMIT 1 BY match_id, participant_id
+      ) AS p ON p.match_id = t.match_id AND p.participant_id = t.participant_id
     `)
     return result.map((row) => ({
       matchId: asString(row[0]),

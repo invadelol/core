@@ -107,21 +107,80 @@ export function buildMatchRow(
   }
 }
 
+/**
+ * A player's rune page as match-v5 describes it: both trees (the first two styles when Riot leaves
+ * out their descriptions), the four primary runes, the two secondary ones and the three shards.
+ */
+function perkColumns(p: any) {
+  const styles: any[] = Array.isArray(p?.perks?.styles) ? p.perks.styles : []
+  const primary = styles.find((s) => s?.description === 'primaryStyle') ?? styles[0] ?? {}
+  const sub = styles.find((s) => s?.description === 'subStyle') ?? styles[1] ?? {}
+  const primarySelections: any[] = Array.isArray(primary?.selections) ? primary.selections : []
+  const subSelections: any[] = Array.isArray(sub?.selections) ? sub.selections : []
+  const statPerks = p?.perks?.statPerks ?? {}
+
+  return {
+    primary_style: toInt(primary?.style ?? 0, 0),
+    keystone: toInt(primarySelections?.[0]?.perk ?? 0, 0),
+    secondary_style: toInt(sub?.style ?? 0, 0),
+    rune1: toInt(primarySelections?.[0]?.perk ?? 0, 0),
+    rune2: toInt(primarySelections?.[1]?.perk ?? 0, 0),
+    rune3: toInt(primarySelections?.[2]?.perk ?? 0, 0),
+    rune4: toInt(primarySelections?.[3]?.perk ?? 0, 0),
+    rune5: toInt(subSelections?.[0]?.perk ?? 0, 0),
+    rune6: toInt(subSelections?.[1]?.perk ?? 0, 0),
+    stat_offense: toInt(statPerks.offense ?? 0, 0),
+    stat_flex: toInt(statPerks.flex ?? 0, 0),
+    stat_defense: toInt(statPerks.defense ?? 0, 0),
+  }
+}
+
+/** A `SKILL_LEVEL_UP` event's player and skill slot (1 Q, 2 W, 3 E, 4 R), or null. */
+function skillUp(event: any): [participantId: number, slot: number] | null {
+  if (asString(event?.type) !== 'SKILL_LEVEL_UP') return null
+  const participantId = toInt(event?.participantId ?? 0, 0)
+  const skillSlot = toInt(event?.skillSlot ?? 0, 0)
+  return participantId && skillSlot ? [participantId, skillSlot] : null
+}
+
+/**
+ * Every player's skill points in the order they were spent, by participant id: the whole game's
+ * order, stored once per player (`participants.skill_order`). A timeline frame's order is its
+ * first `skill_points` entries.
+ */
+export function skillOrders(timeline: any): Map<number, number[]> {
+  const frames: any[] = Array.isArray(timeline?.info?.frames) ? timeline.info.frames : []
+  const orders = new Map<number, number[]>()
+  for (const frame of frames) {
+    const events: any[] = Array.isArray(frame?.events) ? frame.events : []
+    for (const event of events) {
+      const up = skillUp(event)
+      if (!up) continue
+      const order = orders.get(up[0]) ?? []
+      order.push(up[1])
+      orders.set(up[0], order)
+    }
+  }
+  return orders
+}
+
+/**
+ * `orders` (`skillOrders`) comes from the game's timeline when there is one by the time the game
+ * is stored; without it the players' skill orders stay empty.
+ */
 export function buildParticipantRows(
   matchId: string,
   platform: string,
   gameStartMs: number,
-  info: any
+  info: any,
+  orders?: Map<number, number[]>
 ): ClickhouseParticipantRow[] {
   const participants: any[] = Array.isArray(info.participants) ? info.participants : []
   const queueId = matchQueueId(info.queueId)
 
   return participants
     .map((p) => {
-      const styles: any[] = Array.isArray(p?.perks?.styles) ? p.perks.styles : []
-      const primary = styles.find((s) => s?.description === 'primaryStyle') ?? {}
-      const sub = styles.find((s) => s?.description === 'subStyle') ?? {}
-      const selections: any[] = Array.isArray(primary?.selections) ? primary.selections : []
+      const participantId = toUInt(p.participantId, 0xff)
 
       return {
         match_id: matchId,
@@ -129,6 +188,7 @@ export function buildParticipantRows(
         game_start_ms: gameStartMs,
         queue_id: queueId,
 
+        participant_id: participantId,
         puuid: asString(p.puuid),
         riot_id_game_name: asString(p.riotIdGameName),
         riot_id_tag_line: asString(p.riotIdTagline),
@@ -167,9 +227,8 @@ export function buildParticipantRows(
         spell1: toInt(p.summoner1Id ?? 0, 0),
         spell2: toInt(p.summoner2Id ?? 0, 0),
 
-        primary_style: toInt(primary.style ?? 0, 0),
-        keystone: toInt(selections?.[0]?.perk ?? 0, 0),
-        secondary_style: toInt(sub.style ?? 0, 0),
+        ...perkColumns(p),
+        skill_order: (participantId && orders?.get(participantId)) || [],
 
         dmg_to_turrets: toInt(p.damageDealtToTurrets ?? 0, 0),
         dmg_to_objectives: toInt(p.damageDealtToObjectives ?? 0, 0),
@@ -200,6 +259,12 @@ export function buildParticipantRows(
     .filter((row) => row.puuid)
 }
 
+/**
+ * One row per player per timeline frame: the frame's own numbers only. What a player keeps for the
+ * whole game (spells, runes, the skill order) lives on their `participants` row, joined by
+ * `(match_id, participant_id)`; `skill_points` counts the points spent by the frame (its skill
+ * order is that prefix of the player's).
+ */
 export function buildTimelineRows(
   matchId: string,
   platform: string,
@@ -208,45 +273,18 @@ export function buildTimelineRows(
   timeline: any
 ): ClickhouseTimelineRow[] {
   const participants: any[] = Array.isArray(info?.participants) ? info.participants : []
-  const participantMap = new Map<number, any>()
+  const teams = new Map<number, number>()
 
   for (const p of participants) {
     const participantId = toInt(p.participantId ?? 0, 0)
-    if (!participantId) continue
-
-    const styles: any[] = Array.isArray(p?.perks?.styles) ? p.perks.styles : []
-    const primary =
-      styles.find((s) => s?.description === 'primaryStyle') ?? styles[0] ?? {}
-    const sub = styles.find((s) => s?.description === 'subStyle') ?? styles[1] ?? {}
-    const primarySelections: any[] = Array.isArray(primary?.selections)
-      ? primary.selections
-      : []
-    const subSelections: any[] = Array.isArray(sub?.selections) ? sub.selections : []
-    const statPerks = p?.perks?.statPerks ?? {}
-
-    participantMap.set(participantId, {
-      puuid: asString(p.puuid),
-      teamId: toInt(p.teamId ?? 0, 0),
-      spell1: toInt(p.summoner1Id ?? 0, 0),
-      spell2: toInt(p.summoner2Id ?? 0, 0),
-      primaryStyle: toInt(primary?.style ?? 0, 0),
-      secondaryStyle: toInt(sub?.style ?? 0, 0),
-      keystone: toInt(primarySelections?.[0]?.perk ?? 0, 0),
-      rune1: toInt(primarySelections?.[0]?.perk ?? 0, 0),
-      rune2: toInt(primarySelections?.[1]?.perk ?? 0, 0),
-      rune3: toInt(primarySelections?.[2]?.perk ?? 0, 0),
-      rune4: toInt(primarySelections?.[3]?.perk ?? 0, 0),
-      rune5: toInt(subSelections?.[0]?.perk ?? 0, 0),
-      rune6: toInt(subSelections?.[1]?.perk ?? 0, 0),
-      statOffense: toInt(statPerks.offense ?? 0, 0),
-      statFlex: toInt(statPerks.flex ?? 0, 0),
-      statDefense: toInt(statPerks.defense ?? 0, 0),
-    })
+    // Players without a puuid are not stored, here as in `participants`.
+    if (!participantId || !asString(p.puuid)) continue
+    teams.set(participantId, toInt(p.teamId ?? 0, 0))
   }
 
   const frames: any[] = Array.isArray(timeline?.info?.frames) ? timeline.info.frames : []
 
-  const skillOrders = new Map<number, number[]>()
+  const skillPoints = new Map<number, number>()
   const kills = new Map<number, number>()
   const deaths = new Map<number, number>()
   const assists = new Map<number, number>()
@@ -259,15 +297,8 @@ export function buildTimelineRows(
     for (const event of events) {
       const eventType = asString(event?.type)
 
-      if (eventType === 'SKILL_LEVEL_UP') {
-        const participantId = toInt(event?.participantId ?? 0, 0)
-        const skillSlot = toInt(event?.skillSlot ?? 0, 0)
-        if (participantId && skillSlot) {
-          const order = skillOrders.get(participantId) ?? []
-          order.push(skillSlot)
-          skillOrders.set(participantId, order)
-        }
-      }
+      const up = skillUp(event)
+      if (up) skillPoints.set(up[0], (skillPoints.get(up[0]) ?? 0) + 1)
 
       if (eventType === 'CHAMPION_KILL') {
         const killerId = toInt(event?.killerId ?? 0, 0)
@@ -291,13 +322,9 @@ export function buildTimelineRows(
 
     const participantFrames = frame?.participantFrames ?? {}
     for (const [key, participantFrame] of Object.entries(participantFrames)) {
-      const participantId = toInt(
-        (participantFrame as any)?.participantId ?? key,
-        0
-      )
-      if (!participantId) continue
+      const participantId = toInt((participantFrame as any)?.participantId ?? key, 0)
+      if (!participantId || !teams.has(participantId)) continue
 
-      const base = participantMap.get(participantId) ?? {}
       const position = (participantFrame as any)?.position ?? {}
 
       rows.push({
@@ -307,27 +334,9 @@ export function buildTimelineRows(
         frame_ms: toUInt(frame?.timestamp),
 
         participant_id: participantId,
-        puuid: asString(base.puuid),
-        team_id: toInt(base.teamId ?? 0, 0),
+        team_id: teams.get(participantId) ?? 0,
 
-        spell1: toInt(base.spell1 ?? 0, 0),
-        spell2: toInt(base.spell2 ?? 0, 0),
-
-        primary_style: toInt(base.primaryStyle ?? 0, 0),
-        secondary_style: toInt(base.secondaryStyle ?? 0, 0),
-        keystone: toInt(base.keystone ?? 0, 0),
-        rune1: toInt(base.rune1 ?? 0, 0),
-        rune2: toInt(base.rune2 ?? 0, 0),
-        rune3: toInt(base.rune3 ?? 0, 0),
-        rune4: toInt(base.rune4 ?? 0, 0),
-        rune5: toInt(base.rune5 ?? 0, 0),
-        rune6: toInt(base.rune6 ?? 0, 0),
-
-        stat_offense: toInt(base.statOffense ?? 0, 0),
-        stat_flex: toInt(base.statFlex ?? 0, 0),
-        stat_defense: toInt(base.statDefense ?? 0, 0),
-
-        skill_order: skillOrders.get(participantId) ?? [],
+        skill_points: toUInt(skillPoints.get(participantId), 0xff),
 
         level: toUInt((participantFrame as any)?.level, 0xff),
         xp: toUInt((participantFrame as any)?.xp),
@@ -350,7 +359,7 @@ export function buildTimelineRows(
     }
   }
 
-  return rows.filter((row) => row.puuid)
+  return rows
 }
 
 const MONSTERS: Record<string, string> = {
@@ -446,7 +455,8 @@ export function buildEventRows(
           ...base,
           t_ms: t,
           kind,
-          sub: kind === 'dragon' ? asString(event?.monsterSubType) : kind === 'monster' ? monster : '',
+          sub:
+            kind === 'dragon' ? asString(event?.monsterSubType) : kind === 'monster' ? monster : '',
           lane: '',
           team_id: team,
           killer,
@@ -498,4 +508,3 @@ export function buildEventRows(
   }
   return rows
 }
-

@@ -395,22 +395,15 @@ export class PublicationService {
     // Somebody else holds the lock, or a writer from before the lock stored it.
     if (!claimed || (await this.inClickhouse(matchId))) return false
 
-    let meta: { platform: string; gameStartMs: number }
-    try {
-      meta = await ingestionService.ingestMatch(matchId, match)
-    } catch (error) {
-      await matchSourceService.release(matchId).catch(() => {})
-      throw error
-    }
-    await this.archive(matchId, match)
-
-    // The client's timeline saves the timeline call whenever it lines up with Riot's players.
+    // The client's timeline saves the timeline call whenever it lines up with Riot's players. It
+    // comes before the game is written: the players' skill orders are stored on their rows.
     const ownTimeline =
       trustTimeline &&
       Boolean(payload.timeline?.frames?.length) &&
       timelineFits(payload, match.info)
+    let timeline: RiotAPITypes.MatchV5.MatchTimelineDTO | null = null
     try {
-      const timeline = ownTimeline
+      timeline = ownTimeline
         ? toTimelineDto(
             payload.timeline!,
             matchId,
@@ -420,9 +413,29 @@ export class PublicationService {
         : await this.riot(upload.platform, (cluster) =>
             riotApiService.client.matchV5.getMatchTimelineById({ matchId, cluster })
           )
-      await ingestionService.ingestTimeline(matchId, match, timeline, meta)
     } catch (error) {
       logger.warn({ err: error, matchId }, 'desktop upload stored without a timeline')
+    }
+
+    let meta: { platform: string; gameStartMs: number }
+    try {
+      meta = await ingestionService.ingestMatch(matchId, match, timeline)
+    } catch (error) {
+      await matchSourceService.release(matchId).catch(() => {})
+      throw error
+    }
+    await this.archive(matchId, match)
+
+    let stored = false
+    if (timeline) {
+      try {
+        await ingestionService.ingestTimeline(matchId, match, timeline, meta)
+        stored = true
+      } catch (error) {
+        logger.warn({ err: error, matchId }, 'desktop upload stored without a timeline')
+      }
+    }
+    if (!stored) {
       await matchSourceService.update(matchId, { completeness: riotCompleteness(false) })
     }
 
@@ -461,32 +474,40 @@ export class PublicationService {
     if (!claimed) return false
 
     const match = toMatchDto(payload, resolution.puuids)
+    const participants = match.info.participants.map((p) => ({
+      participantId: p.participantId,
+      puuid: p.puuid,
+    }))
+    // Converted before the game is written: the players' skill orders are stored on their rows.
+    let timeline: RiotAPITypes.MatchV5.MatchTimelineDTO | null = null
+    let timelineError: unknown = null
+    if (completeness.timeline) {
+      try {
+        timeline = toTimelineDto(payload.timeline!, matchId, payload.game.gameId, participants)
+      } catch (error) {
+        timelineError = error
+      }
+    }
     let meta: { platform: string; gameStartMs: number }
     try {
-      meta = await ingestionService.ingestMatch(matchId, match)
+      meta = await ingestionService.ingestMatch(matchId, match, timeline)
     } catch (error) {
       await matchSourceService.release(matchId).catch(() => {})
       throw error
     }
 
-    if (completeness.timeline) {
+    if (timeline) {
       try {
-        const participants = match.info.participants.map((p) => ({
-          participantId: p.participantId,
-          puuid: p.puuid,
-        }))
-        await ingestionService.ingestTimeline(
-          matchId,
-          match,
-          toTimelineDto(payload.timeline!, matchId, payload.game.gameId, participants),
-          meta
-        )
+        await ingestionService.ingestTimeline(matchId, match, timeline, meta)
       } catch (error) {
-        logger.warn({ err: error, matchId }, 'desktop timeline not stored')
-        await matchSourceService.update(matchId, {
-          completeness: { ...completeness, timeline: false },
-        })
+        timelineError = error
       }
+    }
+    if (timelineError) {
+      logger.warn({ err: timelineError, matchId }, 'desktop timeline not stored')
+      await matchSourceService.update(matchId, {
+        completeness: { ...completeness, timeline: false },
+      })
     }
 
     await this.invalidate(
