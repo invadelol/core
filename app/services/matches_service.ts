@@ -127,8 +127,9 @@ class MatchesService {
         })
         let stored = 0
         if (missing.frames) {
-          // Frames carry each player's spells and runes: read from the archived game, so only
-          // a game stored before the archive costs a second Riot call.
+          // Frames are numbered by the game's players: read from the archived game, so only a
+          // game stored before the archive costs a second Riot call. The players' skill orders
+          // stay empty (they live on participant rows, never rewritten): its page shows none.
           const matchData =
             (await this.archived(match.matchId)) ??
             (await riotApiService.client.matchV5.getMatchById({ matchId: match.matchId, cluster }))
@@ -214,25 +215,35 @@ class MatchesService {
       }
     }
 
+    // The timeline comes before the game is written: its players' skill orders are stored on
+    // their participant rows, which are never rewritten. A game whose timeline fails is still
+    // stored, without one: the next sync would skip it, and the whole sync must not fail over one
+    // game. The match page fetches the timeline again when someone opens it.
+    let timeline: RiotAPITypes.MatchV5.MatchTimelineDTO | null = null
+    try {
+      timeline = await riotApiService.client.matchV5.getMatchTimelineById({ matchId, cluster })
+    } catch (error) {
+      logger.warn({ err: error, matchId }, 'match stored without a timeline')
+    }
+
     let meta: Awaited<ReturnType<typeof ingestionService.ingestMatch>>
     try {
-      meta = await ingestionService.ingestMatch(matchId, matchData)
+      meta = await ingestionService.ingestMatch(matchId, matchData, timeline)
     } catch (error) {
       await matchSourceService.release(matchId).catch(() => {})
       throw error
     }
 
-    // The game is stored by now, so the next sync skips it: throwing would cost it its
-    // timeline for good and fail the whole sync over one game. It is kept without one
-    // instead, and the match page fetches the timeline again when someone opens it.
-    try {
-      const timeline = await riotApiService.client.matchV5.getMatchTimelineById({
-        matchId,
-        cluster,
-      })
-      await ingestionService.ingestTimeline(matchId, matchData, timeline, meta)
-    } catch (error) {
-      logger.warn({ err: error, matchId }, 'match stored without a timeline')
+    let stored = false
+    if (timeline) {
+      try {
+        await ingestionService.ingestTimeline(matchId, matchData, timeline, meta)
+        stored = true
+      } catch (error) {
+        logger.warn({ err: error, matchId }, 'match stored without a timeline')
+      }
+    }
+    if (!stored) {
       await matchSourceService
         .update(matchId, { completeness: riotCompleteness(false) })
         .catch(() => {})

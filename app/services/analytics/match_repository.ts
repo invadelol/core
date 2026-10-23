@@ -224,9 +224,34 @@ const fullParticipantPlan = plan<any>(
   participantExtras
 )
 
+/**
+ * What a player keeps for the whole game, read for their timeline frames: frames store only their
+ * own numbers and are joined to their player by `participant_id`. Never part of a participant's
+ * output (the frames carry it).
+ */
+const TIMELINE_PLAYER_COLUMNS = [
+  'participant_id',
+  'rune1',
+  'rune2',
+  'rune3',
+  'rune4',
+  'rune5',
+  'rune6',
+  'stat_offense',
+  'stat_flex',
+  'stat_defense',
+  'skill_order',
+] as const
+
+/** `fullParticipantPlan` plus the timeline's player columns: the match page's participants. */
+export const matchParticipantPlan = plan<any>(
+  [...SUMMARY_PARTICIPANT_COLUMNS, ...DETAIL_PARTICIPANT_COLUMNS, ...TIMELINE_PLAYER_COLUMNS],
+  { ...SUMMARY_PARTICIPANT_FIELDS, ...DETAIL_PARTICIPANT_FIELDS },
+  participantExtras
+)
+
 const TIMELINE_COLUMNS = [
   'participant_id',
-  'puuid',
   'team_id',
   'frame_ms',
   'level',
@@ -242,67 +267,116 @@ const TIMELINE_COLUMNS = [
   'pos_x',
   'pos_y',
   'time_cc',
-  'spell1',
-  'spell2',
-  'primary_style',
-  'secondary_style',
-  'keystone',
-  'rune1',
-  'rune2',
-  'rune3',
-  'rune4',
-  'rune5',
-  'rune6',
-  'stat_offense',
-  'stat_flex',
-  'stat_defense',
-  'skill_order',
+  'skill_points',
 ] as const
 
-const timelinePlan = plan<any>(
-  TIMELINE_COLUMNS,
-  {
-    participantId: 'participant_id',
-    puuid: 'puuid',
-    teamId: 'team_id',
-    frameMs: 'frame_ms',
-    level: 'level',
-    xp: 'xp',
-    goldCurrent: 'gold_current',
-    goldTotal: 'gold_total',
-    goldPerSec: 'gold_per_sec',
-    cs: 'cs',
-    jungleCs: 'jungle_cs',
-    kills: 'kills',
-    deaths: 'deaths',
-    assists: 'assists',
-    posX: 'pos_x',
-    posY: 'pos_y',
-    timeCc: 'time_cc',
-  },
-  (row, at) => ({
-    spells: [row[at('spell1')], row[at('spell2')]],
-    perks: {
-      primaryStyle: row[at('primary_style')],
-      secondaryStyle: row[at('secondary_style')],
-      keystone: row[at('keystone')],
-      runes: [
-        row[at('rune1')],
-        row[at('rune2')],
-        row[at('rune3')],
-        row[at('rune4')],
-        row[at('rune5')],
-        row[at('rune6')],
-      ],
-      statPerks: {
-        offense: row[at('stat_offense')],
-        flex: row[at('stat_flex')],
-        defense: row[at('stat_defense')],
+export const timelinePlan = plan<any>(TIMELINE_COLUMNS, {
+  teamId: 'team_id',
+  frameMs: 'frame_ms',
+  level: 'level',
+  xp: 'xp',
+  goldCurrent: 'gold_current',
+  goldTotal: 'gold_total',
+  goldPerSec: 'gold_per_sec',
+  cs: 'cs',
+  jungleCs: 'jungle_cs',
+  kills: 'kills',
+  deaths: 'deaths',
+  assists: 'assists',
+  posX: 'pos_x',
+  posY: 'pos_y',
+  timeCc: 'time_cc',
+})
+
+/** The whole-game half of a timeline frame, from the player's participant row. */
+export interface TimelinePlayer {
+  puuid: unknown
+  spells: unknown[]
+  perks: {
+    primaryStyle: unknown
+    secondaryStyle: unknown
+    keystone: unknown
+    runes: unknown[]
+    statPerks: { offense: unknown; flex: unknown; defense: unknown }
+  }
+  /** The game's whole skill order. */
+  skillOrder: number[]
+}
+
+/**
+ * The timeline players of a match by participant id, from its participant rows (read with
+ * `matchParticipantPlan`). Rows stored before participant ids were kept (0) match no frame.
+ */
+export function timelinePlayers(
+  rows: readonly (readonly unknown[])[],
+  at: (column: string) => number = matchParticipantPlan.at
+): Map<number, TimelinePlayer> {
+  const players = new Map<number, TimelinePlayer>()
+  for (const row of rows) {
+    const id = Number(row[at('participant_id')]) || 0
+    if (!id) continue
+    const order = row[at('skill_order')]
+    players.set(id, {
+      puuid: row[at('puuid')],
+      spells: [row[at('spell1')], row[at('spell2')]],
+      perks: {
+        primaryStyle: row[at('primary_style')],
+        secondaryStyle: row[at('secondary_style')],
+        keystone: row[at('keystone')],
+        runes: [
+          row[at('rune1')],
+          row[at('rune2')],
+          row[at('rune3')],
+          row[at('rune4')],
+          row[at('rune5')],
+          row[at('rune6')],
+        ],
+        statPerks: {
+          offense: row[at('stat_offense')],
+          flex: row[at('stat_flex')],
+          defense: row[at('stat_defense')],
+        },
       },
-    },
-    skillOrder: row[at('skill_order')] ?? [],
+      skillOrder: Array.isArray(order) ? order.map(Number) : [],
+    })
+  }
+  return players
+}
+
+/**
+ * Timeline frames (rows of `timelinePlan`) in the shape the match page reads: each frame's own
+ * numbers, then its player's puuid, spells, runes and skill order.
+ *
+ * A frame carries the game's whole skill order once the player has spent a point, none before:
+ * what the stored frames always held (each player's frames shared one array, filled to the end of
+ * the game before the rows were written), and what the shared match view relies on (it takes the
+ * first frame with a skill order as the player's). A game stored before its timeline has no
+ * skill order: its frames show none.
+ */
+export function timelineFrames(
+  rows: readonly (readonly unknown[])[],
+  players: Map<number, TimelinePlayer>
+) {
+  const points = timelinePlan.at('skill_points')
+  return rows.map((row) => {
+    const participantId = row[timelinePlan.at('participant_id')]
+    const player = players.get(Number(participantId))
+    return {
+      participantId,
+      puuid: player?.puuid ?? '',
+      ...timelinePlan.read(row),
+      spells: player?.spells ?? [0, 0],
+      perks: player?.perks ?? {
+        primaryStyle: 0,
+        secondaryStyle: 0,
+        keystone: 0,
+        runes: [0, 0, 0, 0, 0, 0],
+        statPerks: { offense: 0, flex: 0, defense: 0 },
+      },
+      skillOrder: Number(row[points]) > 0 ? (player?.skillOrder ?? []) : [],
+    }
   })
-)
+}
 
 /** One positional result set: a single `JSON.parse`, no per-row key strings. */
 async function rawRows(query: string): Promise<unknown[][]> {
@@ -585,12 +659,13 @@ export class MatchRepository {
    * Load full match details (including timeline) by match id.
    *
    * Four parallel flat reads, no joins and no GROUP BY. The timeline arrives
-   * ordered by frame, so nothing downstream has to sort it.
+   * ordered by frame, so nothing downstream has to sort it; each frame takes its
+   * player's spells, runes and skill order from the participant rows read here.
    */
   async getById(matchId: string) {
     const escapedMatchId = escapeClickhouseString(matchId)
 
-    const [matches, participants, timeline, events] = await Promise.all([
+    const [matches, participantRows, timelineRows, events] = await Promise.all([
       readRows<any>(
         `SELECT ${matchPlan.select}
          FROM matches
@@ -598,18 +673,16 @@ export class MatchRepository {
          LIMIT 1`,
         matchPlan
       ),
-      readRows<any>(
-        `SELECT ${fullParticipantPlan.select}
+      rawRows(
+        `SELECT ${matchParticipantPlan.select}
          FROM participants
-         PREWHERE match_id = '${escapedMatchId}'`,
-        fullParticipantPlan
+         PREWHERE match_id = '${escapedMatchId}'`
       ),
-      readRows<any>(
+      rawRows(
         `SELECT ${timelinePlan.select}
          FROM match_timeline
          PREWHERE match_id = '${escapedMatchId}'
-         ORDER BY frame_ms ASC`,
-        timelinePlan
+         ORDER BY frame_ms ASC`
       ),
       // Optional: a match page must still open where `match_events` is not migrated yet.
       readRows<any>(
@@ -628,6 +701,9 @@ export class MatchRepository {
     if (!base?.matchId) return null
     // A Brawl or League Classic game stored before they were excluded is never shown.
     if (isExcludedQueue(base.queueId)) return null
+
+    const participants = participantRows.map(matchParticipantPlan.read)
+    const timeline = timelineFrames(timelineRows, timelinePlayers(participantRows))
 
     // Shop actions travel apart: hosts that predate them read every event as a kill or an objective.
     const isShop = (e: any) => e.kind === 'buy' || e.kind === 'sell'

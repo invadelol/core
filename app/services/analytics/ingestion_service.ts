@@ -6,6 +6,7 @@ import {
   buildParticipantRows,
   buildTimelineRows,
   buildEventRows,
+  skillOrders,
 } from '#utils/clickhouse'
 import { RiotAPITypes } from '@fightmegg/riot-api'
 
@@ -14,11 +15,15 @@ import { RiotAPITypes } from '@fightmegg/riot-api'
  */
 export class IngestionService {
   /**
-   * Ingest a match and its participants into ClickHouse
+   * Ingest a match and its participants into ClickHouse. With its timeline, each participant row
+   * keeps the player's skill order (`participants.skill_order`), which the timeline's frames are
+   * read from; a game stored without one keeps empty skill orders for good, even when its timeline
+   * is stored later (ClickHouse rewrites no rows for that).
    */
   async ingestMatch(
     matchId: string,
-    matchData: RiotAPITypes.MatchV5.MatchDTO
+    matchData: RiotAPITypes.MatchV5.MatchDTO,
+    timelineData?: RiotAPITypes.MatchV5.MatchTimelineDTO | null
   ): Promise<{
     platform: string
     gameStartMs: number
@@ -29,7 +34,13 @@ export class IngestionService {
     const gameStartMs = toInt(info.gameStartTimestamp ?? info.gameCreation ?? 0, 0)
 
     const matchRow = buildMatchRow(matchId, platform, gameStartMs, info)
-    const participantRows = buildParticipantRows(matchId, platform, gameStartMs, info)
+    const participantRows = buildParticipantRows(
+      matchId,
+      platform,
+      gameStartMs,
+      info,
+      timelineData ? skillOrders(timelineData) : undefined
+    )
 
     await clickhouse.insert({
       table: 'matches',

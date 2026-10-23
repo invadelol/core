@@ -31,6 +31,8 @@ export type ClickhouseParticipantRow = {
   game_start_ms: number
   queue_id: number
 
+  /** The player's place in the game (1‥10), as the timeline numbers them; 0 on rows stored before it was kept. */
+  participant_id: number
   puuid: string
   riot_id_game_name: string
   riot_id_tag_line: string
@@ -73,6 +75,18 @@ export type ClickhouseParticipantRow = {
   primary_style: number
   keystone: number
   secondary_style: number
+  /** Rows 1–4 of the primary tree (rune1 is the keystone), then the two secondary runes. */
+  rune1: number
+  rune2: number
+  rune3: number
+  rune4: number
+  rune5: number
+  rune6: number
+  stat_offense: number
+  stat_flex: number
+  stat_defense: number
+  /** Every skill point of the game in order (1 Q, 2 W, 3 E, 4 R); empty without a timeline. */
+  skill_order: number[]
 
   dmg_to_turrets: number
   dmg_to_objectives: number
@@ -107,27 +121,13 @@ export type ClickhouseTimelineRow = {
   frame_ms: number
 
   participant_id: number
-  puuid: string
   team_id: number
 
-  spell1: number
-  spell2: number
-
-  primary_style: number
-  secondary_style: number
-  keystone: number
-  rune1: number
-  rune2: number
-  rune3: number
-  rune4: number
-  rune5: number
-  rune6: number
-
-  stat_offense: number
-  stat_flex: number
-  stat_defense: number
-
-  skill_order: number[]
+  /**
+   * Skill points spent by this frame: its skill order is that prefix of `participants.skill_order`.
+   * Rows written before this column hold the whole order's length from their first point on.
+   */
+  skill_points: number
 
   level: number
   xp: number

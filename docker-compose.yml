@@ -22,7 +22,7 @@ services:
       - redis_data:/data
 
   clickhouse:
-    image: clickhouse/clickhouse-server:24.8
+    image: clickhouse/clickhouse-server:25.11
     container_name: invade_clickhouse
     restart: unless-stopped
     env_file:

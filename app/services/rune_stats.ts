@@ -112,31 +112,20 @@ export function summarize(rows: PageRow[]) {
 }
 
 /**
- * The page query: frame-0 runes of the players in `scope`, joined to their games by one hash of
- * (match, player). Every champion and role at once (`scope` null) prefixes each row with the
- * champion and Riot's position.
+ * The page query: the runes and shards of the players in `scope`, straight from their participant
+ * rows. Rows without runes (`rune1` is the keystone; 0 on rows stored before runes were kept) are
+ * skipped. Every champion and role at once (`scope` null) prefixes each row with the champion and
+ * Riot's position.
  */
 export function pageRowsSql(bracket: Bracket, scope: Scope) {
-  const players = `
-      SELECT match_id, puuid, win, champion_id, team_position FROM participants
-      WHERE queue_id = ${RANKED_SOLO} ${scopeSql(scope)} AND match_id IN (${gamesSql(bracket)})
-    `
-  const by = scope ? '' : 'p.champion_id, p.team_position, '
-  // Both sides keyed by one hash of (match, player): the join stays a few MB however many games.
+  const by = scope ? '' : 'champion_id, team_position, '
   return `
-          WITH p AS (SELECT cityHash64(match_id, puuid) AS k, win${scope ? '' : ', champion_id, team_position'} FROM (${players}))
-          SELECT ${by}primary_style, keystone, rune2, rune3, rune4, secondary_style,
+          SELECT ${by}primary_style, rune1, rune2, rune3, rune4, secondary_style,
                  least(rune5, rune6), greatest(rune5, rune6), stat_offense, stat_flex, stat_defense,
-                 count(), sum(p.win)
-          FROM (
-            SELECT cityHash64(match_id, puuid) AS k, primary_style, keystone, rune2, rune3, rune4,
-                   secondary_style, rune5, rune6, stat_offense, stat_flex, stat_defense
-            FROM match_timeline
-            WHERE frame_ms = 0 AND keystone != 0
-              AND match_id IN (SELECT match_id FROM (${players}))
-            LIMIT 1 BY match_id, puuid
-          ) AS t
-          INNER JOIN p USING (k)
+                 count(), sum(win)
+          FROM participants
+          WHERE queue_id = ${RANKED_SOLO} ${scopeSql(scope)} AND rune1 != 0
+            AND match_id IN (${gamesSql(bracket)})
           GROUP BY ALL
         `
 }

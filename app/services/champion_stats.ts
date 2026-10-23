@@ -189,20 +189,21 @@ export function teammatesSql(filter: Filter) {
 }
 
 /**
- * The first 15 skill points of each game (1 Q, 2 W, 3 E, 4 R) from the player's last timeline
- * frame, joined to the game by one hash of (match, participant): order, games, wins.
+ * The first 15 skill points of each game (1 Q, 2 W, 3 E, 4 R) from the player's skill order on
+ * their participant row, joined to the game by one hash of (match, participant): order, games,
+ * wins. Games stored without a timeline have no skill order and are skipped.
  */
 export function skillOrderSql(filter: Filter) {
   return `
     WITH me AS (${mineSql(filter)})
     SELECT o, count(), sum(me.win) FROM (
-      SELECT cityHash64(match_id, participant_id) AS k, arraySlice(argMax(skill_order, frame_ms), 1, 15) AS o
-      FROM match_timeline
-      WHERE match_id IN (SELECT match_id FROM me)
-      GROUP BY match_id, participant_id
+      SELECT cityHash64(match_id, participant_id) AS k, arraySlice(skill_order, 1, 15) AS o
+      FROM participants
+      WHERE match_id IN (SELECT match_id FROM me) AND participant_id != 0
+        AND length(skill_order) >= 15
+      LIMIT 1 BY match_id, participant_id
     ) AS t
     INNER JOIN (SELECT cityHash64(match_id, participant_id) AS k, win FROM me) AS me USING (k)
-    WHERE length(o) = 15
     GROUP BY o
     ORDER BY count() DESC
     LIMIT 12
