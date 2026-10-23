@@ -3,6 +3,7 @@ import logger from '@adonisjs/core/services/logger'
 import buildStatsService from '#services/build_stats_service'
 import { AnswerCache, RANKED_SOLO } from '#services/ranked_stats'
 import { latestPatch, rows } from '#services/ranked_games_service'
+import { StatsCache } from '#services/stats_cache'
 
 /**
  * Professional players, their teams and their accounts (`pro_*` tables), and what their games
@@ -29,6 +30,11 @@ const TIER_SQL = `array_position(ARRAY[${TIER_ORDER.map((t) => `'${t}'`).join(',
 
 /** The platforms pro accounts are on. */
 export const PRO_PLATFORMS = ['EUW1', 'NA1', 'BR1']
+/**
+ * Pro pages and games are fresh half an hour (the crawler links pro games all day), then served
+ * while one refresh runs, for a day at most.
+ */
+const PRO_CACHE = { freshMs: 30 * 60_000, keepMs: 86_400_000 }
 /** How far back a pro's games are read. */
 const GAMES_DAYS = 30
 const CHAMPION_GAMES_DAYS = 14
@@ -150,8 +156,8 @@ const bestOf = (r: Record<string, any>) =>
 
 export class ProService {
   #tags = new AnswerCache(4096)
-  #pages = new AnswerCache(512)
-  #games = new AnswerCache(512)
+  #pages = new StatsCache('pro-pages', PRO_CACHE)
+  #games = new StatsCache('pro-games', PRO_CACHE)
 
   /** The pro behind a Riot ID, or null. Never throws: a profile renders without its tag. */
   async byRiotId(gameName: string, tagLine: string): Promise<ProTag | null> {

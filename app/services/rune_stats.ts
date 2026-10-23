@@ -1,4 +1,5 @@
 import {
+  PATCH_START_SQL,
   RANKED_SOLO,
   gamesSql,
   ranked,
@@ -113,9 +114,10 @@ export function summarize(rows: PageRow[]) {
 
 /**
  * The page query: the runes and shards of the players in `scope`, straight from their participant
- * rows. Rows without runes (`rune1` is the keystone; 0 on rows stored before runes were kept) are
- * skipped. Every champion and role at once (`scope` null) prefixes each row with the champion and
- * Riot's position.
+ * rows, from the patch's first game on (so the `by_champion` projection of `participants` reads one
+ * champion's recent games only). Rows without runes (`rune1` is the keystone; 0 on rows stored
+ * before runes were kept) are skipped. Every champion and role at once (`scope` null) prefixes each
+ * row with the champion and Riot's position.
  */
 export function pageRowsSql(bracket: Bracket, scope: Scope) {
   const by = scope ? '' : 'champion_id, team_position, '
@@ -125,7 +127,7 @@ export function pageRowsSql(bracket: Bracket, scope: Scope) {
                  count(), sum(win)
           FROM participants
           WHERE queue_id = ${RANKED_SOLO} ${scopeSql(scope)} AND rune1 != 0
-            AND match_id IN (${gamesSql(bracket)})
+            AND game_start_ms >= ${PATCH_START_SQL} AND match_id IN (${gamesSql(bracket)})
           GROUP BY ALL
         `
 }

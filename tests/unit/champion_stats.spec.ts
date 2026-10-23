@@ -1,12 +1,16 @@
 import { test } from '@japa/runner'
 import {
+  laneSql,
+  matchups,
   positionOf,
   seedGamesSql,
+  skillOrderSql,
   skillOrders,
   summarize,
   tierOf,
   type Filter,
 } from '#services/champion_stats'
+import { pageRowsSql } from '#services/rune_stats'
 import { championSlug } from '../../inertia/lib/champions.js'
 
 const FILTER: Filter = { patch: '16.20', bracket: 'emerald_plus', region: null }
@@ -71,6 +75,35 @@ test.group('Champion stats', () => {
     assert.isNull(positionOf('nope'))
     assert.notInclude(seedGamesSql({ ...FILTER, bracket: 'all' }), 'seed_tier')
     assert.include(seedGamesSql(FILTER), 'seed_tier IN')
+  })
+
+  test('reads per-player and per-game tables from the patch on, not whole tables', ({ assert }) => {
+    // Skill orders and rune pages: one champion's rows of participants, from the patch on.
+    const skills = skillOrderSql(FILTER)
+    assert.include(skills, 'FROM participants')
+    assert.include(skills, 'champion_id = {champion:UInt16}')
+    assert.include(skills, 'game_start_ms >= least(')
+    assert.notInclude(skills, 'match_timeline')
+    const lane = laneSql(FILTER)
+    assert.include(lane, 'FROM match_lineups')
+    assert.include(lane, 'WHERE patch = {patch:String}')
+    assert.equal(lane.match(/FROM participant_items/g)?.length, 1)
+    const runes = pageRowsSql('emerald_plus', { champion: 21, position: 'BOTTOM' })
+    assert.include(runes, 'FROM participants')
+    assert.include(runes, 'game_start_ms >= least(')
+    assert.notInclude(runes, 'match_timeline')
+  })
+
+  test('orders matchups by games, then by champion, so equal counts never swap', ({ assert }) => {
+    const list = matchups([
+      [30, 10, 5],
+      [12, 10, 4],
+      [40, 20, 9],
+    ])
+    assert.deepEqual(
+      list.map((m) => m.champion),
+      [40, 12, 30]
+    )
   })
 
   test('gives each champion a plain address', ({ assert }) => {

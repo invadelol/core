@@ -1,5 +1,6 @@
 import {
   BRACKETS,
+  PATCH_START_SQL,
   RANKED_SOLO,
   evidenceLevel,
   round,
@@ -155,43 +156,34 @@ const mineSql = (filter: Filter) => `
     WHERE ${itemsWhere(filter)} AND champion_id = {champion:UInt16} AND team_position = {position:String}
   `
 
-/** The lane opponent of each game: opponent, games, wins. */
-export function matchupsSql(filter: Filter) {
+/**
+ * The lane opponents (`opponent`, Riot's position) and teammates (`teammate`, their position) of
+ * one champion in one role, from each game's lineup (`match_lineups`, one row per game): kind,
+ * position, champion, games, wins.
+ */
+export function laneSql(filter: Filter) {
   return `
     WITH me AS (${mineSql(filter)})
-    SELECT o.champion_id, count(), sum(me.win)
+    SELECT if(o.2 = me.team_id, 'teammate', 'opponent') AS kind, o.3 AS pos, o.4 AS champion,
+           count(), sum(me.win)
     FROM me
     INNER JOIN (
-      SELECT match_id, team_id, champion_id FROM participant_items FINAL
-      WHERE patch = {patch:String} AND queue_id = ${RANKED_SOLO} AND team_position = {position:String}
-        AND match_id IN (SELECT match_id FROM me)
-    ) AS o ON o.match_id = me.match_id
-    WHERE o.team_id != me.team_id
-    GROUP BY o.champion_id
-  `
-}
-
-/** Each teammate by role: position, champion, games, wins. */
-export function teammatesSql(filter: Filter) {
-  return `
-    WITH me AS (${mineSql(filter)})
-    SELECT t.team_position, t.champion_id, count(), sum(me.win)
-    FROM me
-    INNER JOIN (
-      SELECT match_id, team_id, team_position, champion_id FROM participant_items FINAL
-      WHERE patch = {patch:String} AND queue_id = ${RANKED_SOLO}
-        AND team_position NOT IN ('', {position:String})
-        AND match_id IN (SELECT match_id FROM me)
-    ) AS t ON t.match_id = me.match_id
-    WHERE t.team_id = me.team_id
-    GROUP BY t.team_position, t.champion_id
+      SELECT match_id, groupUniqArrayArray(players) AS players FROM match_lineups
+      WHERE patch = {patch:String} AND match_id IN (SELECT match_id FROM me)
+      GROUP BY match_id
+    ) AS l USING (match_id)
+    ARRAY JOIN l.players AS o
+    WHERE (o.2 != me.team_id AND o.3 = {position:String})
+       OR (o.2 = me.team_id AND o.3 NOT IN ('', {position:String}))
+    GROUP BY kind, pos, champion
   `
 }
 
 /**
  * The first 15 skill points of each game (1 Q, 2 W, 3 E, 4 R) from the player's skill order on
  * their participant row, joined to the game by one hash of (match, participant): order, games,
- * wins. Games stored without a timeline have no skill order and are skipped.
+ * wins. Games stored without a timeline have no skill order and are skipped. The champion, role
+ * and patch start let the `by_champion` projection of `participants` read that champion's games.
  */
 export function skillOrderSql(filter: Filter) {
   return `
@@ -199,13 +191,15 @@ export function skillOrderSql(filter: Filter) {
     SELECT o, count(), sum(me.win) FROM (
       SELECT cityHash64(match_id, participant_id) AS k, arraySlice(skill_order, 1, 15) AS o
       FROM participants
-      WHERE match_id IN (SELECT match_id FROM me) AND participant_id != 0
+      WHERE queue_id = ${RANKED_SOLO} AND champion_id = {champion:UInt16}
+        AND team_position = {position:String} AND game_start_ms >= ${PATCH_START_SQL}
+        AND match_id IN (SELECT match_id FROM me) AND participant_id != 0
         AND length(skill_order) >= 15
       LIMIT 1 BY match_id, participant_id
     ) AS t
     INNER JOIN (SELECT cityHash64(match_id, participant_id) AS k, win FROM me) AS me USING (k)
     GROUP BY o
-    ORDER BY count() DESC
+    ORDER BY count() DESC, o
     LIMIT 12
   `
 }
@@ -235,7 +229,7 @@ export function averagesSql(filter: Filter) {
       SELECT match_id, kills, deaths, assists, total_cs, gold_earned, dmg_to_champ, vision_score
       FROM participants
       WHERE queue_id = ${RANKED_SOLO} AND champion_id = {champion:UInt16} AND team_position = {position:String}
-        AND match_id IN (SELECT match_id FROM me)
+        AND game_start_ms >= ${PATCH_START_SQL} AND match_id IN (SELECT match_id FROM me)
     ) AS p
     INNER JOIN (
       SELECT match_id, duration_sec FROM matches
@@ -416,7 +410,7 @@ export function matchups(rows: [number, number, number][]) {
       win: round(wins / games),
       level: evidenceLevel(games, wins),
     }))
-    .sort((a, b) => b.games - a.games)
+    .sort((a, b) => b.games - a.games || a.champion - b.champion)
 }
 
 /** Teammates per role, the ones with enough games, most played first. */
@@ -436,7 +430,7 @@ export function teammates(rows: [string, number, number, number][]) {
         win: round(wins / games),
         level: evidenceLevel(games, wins),
       }))
-      .sort((a, b) => b.games - a.games)
+      .sort((a, b) => b.games - a.games || a.champion - b.champion)
   }
   return out
 }

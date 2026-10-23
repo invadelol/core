@@ -123,6 +123,8 @@ const roleTabs = computed(() =>
                 :key="r.champion"
                 :href="champHref(r.c!.slug)"
                 class="cs-tc"
+                prefetch
+                cache-for="30s"
               >
                 <span
                   v-if="r.was && r.was !== r.rank"
@@ -162,7 +164,7 @@ const roleTabs = computed(() =>
                 <td class="rk num">{{ r.rank }}</td>
                 <td class="c">
                   <img :src="champIconUrl(r.champion)" alt="" />
-                  <Link :href="champHref(r.c!.slug)"
+                  <Link :href="champHref(r.c!.slug)" prefetch cache-for="30s"
                     ><b>{{ r.c!.name }}</b></Link
                   >
                   <span

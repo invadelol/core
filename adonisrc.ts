@@ -73,6 +73,7 @@ export default defineConfig({
     () => import('#start/kernel'),
     () => import('#start/routes'),
     () => import('#start/events'),
+    { file: () => import('#start/stats'), environment: ['web'] },
   ],
 
   /*
