@@ -204,62 +204,76 @@ export function skillOrderSql(filter: Filter) {
   `
 }
 
-/** Games by length, five-minute buckets: bucket (0 = under 5 min), games, wins. */
-export function lengthSql(filter: Filter) {
+/**
+ * The Statistics tab in one query: games by length (five-minute buckets, 0 = under 5 min) and the
+ * sums the averages are made of. A bucket row: bucket, games, wins, then over the games that have
+ * the player's participant row (one per game): those games, kills, deaths, assists, CS, gold,
+ * damage, vision, seconds played.
+ */
+export function profileSql(filter: Filter) {
+  // Each source read once (a CTE named twice is run twice): the patch's games on the left, the
+  // champion's few thousand on the right, where ClickHouse builds its hash tables.
   return `
-    WITH me AS (${mineSql(filter)})
-    SELECT intDiv(m.duration_sec, 300) AS b, count(), sum(me.win)
-    FROM me
-    INNER JOIN (
-      SELECT match_id, duration_sec FROM matches
-      WHERE queue_id = ${RANKED_SOLO} AND patch = {patch:String} AND match_id IN (SELECT match_id FROM me)
-    ) AS m USING (match_id)
+    SELECT intDiv(m.duration_sec, 300) AS b, count(), sum(me.win),
+           countIf(p.found = 1), sum(p.kills), sum(p.deaths), sum(p.assists), sum(p.total_cs),
+           sum(p.gold_earned), sum(p.dmg_to_champ), sum(p.vision_score),
+           sumIf(m.duration_sec, p.found = 1)
+    FROM (
+      SELECT match_id, duration_sec FROM matches WHERE queue_id = ${RANKED_SOLO} AND patch = {patch:String}
+    ) AS m
+    INNER JOIN (${mineSql(filter)}) AS me USING (match_id)
+    LEFT JOIN (
+      SELECT match_id, 1 AS found, kills, deaths, assists, total_cs, gold_earned, dmg_to_champ, vision_score
+      FROM participants
+      WHERE queue_id = ${RANKED_SOLO} AND champion_id = {champion:UInt16} AND team_position = {position:String}
+        AND game_start_ms >= ${PATCH_START_SQL}
+      LIMIT 1 BY match_id
+    ) AS p USING (match_id)
     GROUP BY b ORDER BY b
   `
 }
 
-/** Averages per game: games, kills, deaths, assists, CS a minute, gold, damage, vision, length. */
-export function averagesSql(filter: Filter) {
+/** The crawled games of the trend's days (`{since:UInt64}` to `{until:UInt64}`), any patch. */
+const trendSeedsSql = (filter: Filter) => {
+  const tiers = seedTiers(filter.bracket)
+  return `SELECT match_id FROM match_seed
+      WHERE game_start_ms >= {since:UInt64} AND game_start_ms < {until:UInt64}
+      ${tiers ? `AND seed_tier IN (${tiers})` : ''} ${regionSql(filter)}`
+}
+
+const DAY_SQL = 'toDate(toDateTime(intDiv(game_start_ms, 1000)))'
+
+/**
+ * Every champion's side of the trend, a day at a time from `{since:UInt64}` to `{until:UInt64}`:
+ * day, games that day, and the champions banned that day with their counts (a game counts once
+ * per champion, whichever team banned it). The same for every champion, so it is asked once.
+ */
+export function trendDaysSql(filter: Filter) {
   return `
-    WITH me AS (${mineSql(filter)})
-    SELECT count(), avg(p.kills), avg(p.deaths), avg(p.assists),
-           sum(p.total_cs) / greatest(sum(m.duration_sec) / 60, 1),
-           avg(p.gold_earned), avg(p.dmg_to_champ), avg(p.vision_score), avg(m.duration_sec)
+    SELECT toString(d), count(), sumMap(b, arrayMap(x -> toUInt32(1), b))
     FROM (
-      SELECT match_id, kills, deaths, assists, total_cs, gold_earned, dmg_to_champ, vision_score
-      FROM participants
-      WHERE queue_id = ${RANKED_SOLO} AND champion_id = {champion:UInt16} AND team_position = {position:String}
-        AND game_start_ms >= ${PATCH_START_SQL} AND match_id IN (SELECT match_id FROM me)
-    ) AS p
-    INNER JOIN (
-      SELECT match_id, duration_sec FROM matches
-      WHERE queue_id = ${RANKED_SOLO} AND patch = {patch:String} AND match_id IN (SELECT match_id FROM me)
-    ) AS m USING (match_id)
+      SELECT ${DAY_SQL} AS d, arrayDistinct(arrayConcat(t1_bans, t2_bans)) AS b FROM matches
+      WHERE queue_id = ${RANKED_SOLO} AND game_start_ms >= {since:UInt64} AND game_start_ms < {until:UInt64}
+        AND match_id IN (${trendSeedsSql(filter)})
+    )
+    GROUP BY d ORDER BY d
   `
 }
 
 /**
- * One champion in one role, a day at a time from `{since:UInt64}` (any patch): day, games,
- * wins, games that day, bans that day.
+ * One champion in one role, a day at a time from `{since:UInt64}` to `{until:UInt64}` (any
+ * patch): day, games, wins. The month's crawled games are on the left of the join and the
+ * champion's few thousand on the right, where ClickHouse builds its hash table.
  */
-export function trendSql(filter: Filter) {
-  const tiers = seedTiers(filter.bracket)
-  const seeds = `SELECT match_id FROM match_seed WHERE game_start_ms >= {since:UInt64}
-      ${tiers ? `AND seed_tier IN (${tiers})` : ''} ${regionSql(filter)}`
-  const day = 'toDate(toDateTime(intDiv(game_start_ms, 1000)))'
+export function trendGamesSql(filter: Filter) {
   return `
-    SELECT d, sum(g), sum(w), sum(total), sum(bans) FROM (
-      SELECT ${day} AS d, count() AS g, sum(win) AS w, 0 AS total, 0 AS bans
-      FROM participant_items FINAL
+    SELECT toString(${DAY_SQL}) AS d, count(), sum(win)
+    FROM (${trendSeedsSql(filter)}) AS s
+    INNER JOIN (
+      SELECT match_id, game_start_ms, win FROM participant_items FINAL
       WHERE queue_id = ${RANKED_SOLO} AND champion_id = {champion:UInt16} AND team_position = {position:String}
-        AND game_start_ms >= {since:UInt64} AND match_id IN (${seeds})
-      GROUP BY d
-      UNION ALL
-      SELECT ${day} AS d, 0, 0, count(), countIf(has(t1_bans, {champion:UInt16}) OR has(t2_bans, {champion:UInt16}))
-      FROM matches
-      WHERE queue_id = ${RANKED_SOLO} AND game_start_ms >= {since:UInt64} AND match_id IN (${seeds})
-      GROUP BY d
-    )
+        AND game_start_ms >= {since:UInt64} AND game_start_ms < {until:UInt64}
+    ) AS mine USING (match_id)
     GROUP BY d ORDER BY d
   `
 }
@@ -469,21 +483,44 @@ export function byLength(rows: [number, number, number][]) {
     .map(([b, games, wins]) => ({ minutes: b * 5, games, win: round(wins / games) }))
 }
 
-export function averages(row: number[] | undefined) {
-  if (!row || !row[0]) return null
-  const [games, kills, deaths, assists, csMin, gold, damage, vision, length] = row.map(Number)
+/** The averages of `profileSql`'s bucket rows (null without a game). */
+export function averages(rows: number[][]) {
+  const sum = (i: number) => rows.reduce((total, row) => total + Number(row[i] ?? 0), 0)
+  const games = sum(3)
+  if (!games) return null
+  const [kills, deaths, assists, cs, gold, damage, vision, seconds] = [
+    4, 5, 6, 7, 8, 9, 10, 11,
+  ].map(sum)
+  const per = (total: number) => total / games
   return {
     games,
-    kills: round(kills, 1),
-    deaths: round(deaths, 1),
-    assists: round(assists, 1),
-    kda: round((kills + assists) / Math.max(deaths, 0.1), 2),
-    csPerMin: round(csMin, 1),
-    gold: Math.round(gold),
-    damage: Math.round(damage),
-    vision: round(vision, 1),
-    length: Math.round(length),
+    kills: round(per(kills), 1),
+    deaths: round(per(deaths), 1),
+    assists: round(per(assists), 1),
+    kda: round((per(kills) + per(assists)) / Math.max(per(deaths), 0.1), 2),
+    csPerMin: round(cs / Math.max(seconds / 60, 1), 1),
+    gold: Math.round(per(gold)),
+    damage: Math.round(per(damage)),
+    vision: round(per(vision), 1),
+    length: Math.round(per(seconds)),
   }
+}
+
+/**
+ * One champion's trend days from every champion's (`trendDaysSql`: day, games, [champions, bans])
+ * and its own (`trendGamesSql`: day, games, wins): day, games, wins, games that day, bans.
+ */
+export function trendRows(
+  days: [string, number, [number[], number[]]][],
+  mine: [string, number, number][],
+  champion: number
+): [string, number, number, number, number][] {
+  const own = new Map(mine.map(([day, games, wins]) => [day, [games, wins]]))
+  return days.map(([day, total, [ids, bans]]) => {
+    const at = ids.indexOf(champion)
+    const [games, wins] = own.get(day) ?? [0, 0]
+    return [day, games, wins, total, at >= 0 ? bans[at] : 0]
+  })
 }
 
 /** Day rows into rates, the days with enough games of the filter. */

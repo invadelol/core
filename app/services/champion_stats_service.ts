@@ -4,13 +4,12 @@ import { latestPatch, rows, statsCache } from '#services/ranked_games_service'
 import {
   REGIONS,
   averages,
-  averagesSql,
   byLength,
   byRank,
   laneSql,
-  lengthSql,
   matchups,
   patchesSql,
+  profileSql,
   skillOrderSql,
   skillOrders,
   summarize,
@@ -19,7 +18,9 @@ import {
   teammates,
   totalsSql,
   trend,
-  trendSql,
+  trendDaysSql,
+  trendGamesSql,
+  trendRows,
   type Filter,
   type Position,
   type Summary,
@@ -33,6 +34,7 @@ const MIN_PATCH_GAMES = 5_000
 /** A patch's ranks are compared with the previous patch's from this many games there. */
 const MIN_PREVIOUS_GAMES = 20_000
 const TREND_DAYS = 30
+const DAY_MS = 86_400_000
 
 const num = (v: unknown) => Number(v)
 
@@ -49,6 +51,7 @@ export class ChampionStatsService {
   #summaries = statsCache('summary', 64)
   #byRank = statsCache('by-rank', 16)
   #champion = statsCache('champion')
+  #trendDays = statsCache('trend-days', 16)
   #patches = new AnswerCache(1, PATCHES_TTL_MS)
 
   /** The filters of an address: `?rank=emerald_plus&patch=16.20&region=euw`, defaults filled. */
@@ -162,28 +165,47 @@ export class ChampionStatsService {
   /** Win rate by game length, and the averages of a game. */
   async profile(filter: Filter, champion: number, position: Position) {
     return this.one('profile', filter, champion, position, async (params) => {
-      const [length, avg] = await Promise.all([
-        rows(lengthSql(filter), params),
-        rows(averagesSql(filter), params),
-      ])
+      const result = await rows(profileSql(filter), params)
+      const found = result.map((r) => r.map(num))
       return {
-        length: byLength(length.map((r) => r.map(num) as [number, number, number])),
-        averages: averages(avg[0]?.map(num)),
+        length: byLength(found.map((r) => r.slice(0, 3) as [number, number, number])),
+        averages: averages(found),
       }
     })
   }
 
-  /** The last 30 days, a day at a time (any patch). */
+  /**
+   * The 30 days before today (UTC), a day at a time, any patch. Whole days only, so the games of
+   * every champion that day (asked once for all of them, `#trendDays`) and this champion's games
+   * cover the same hours.
+   */
   trend(filter: Filter, champion: number, position: Position) {
     return this.one('trend', filter, champion, position, async (params) => {
-      const since = Date.now() - TREND_DAYS * 86_400_000
-      const found = await rows(trendSql(filter), { ...params, since })
+      const until = Math.floor(Date.now() / DAY_MS) * DAY_MS
+      const window = { since: until - TREND_DAYS * DAY_MS, until }
+      const [days, mine] = await Promise.all([
+        this.trendDays(filter, window),
+        rows(trendGamesSql(filter), { ...params, ...window }),
+      ])
       return trend(
-        found.map(
-          ([d, g, w, t, b]) =>
-            [String(d), num(g), num(w), num(t), num(b)] as [string, number, number, number, number]
+        trendRows(
+          days,
+          mine.map(([d, g, w]) => [String(d), num(g), num(w)]),
+          champion
         )
       )
+    })
+  }
+
+  /** Every champion's side of the trend's days: games that day and bans per champion. */
+  private trendDays(filter: Filter, window: { since: number; until: number }) {
+    const at = `${filter.bracket}:${filter.region ?? ''}:${window.since}`
+    return this.#trendDays.get(at, async () => {
+      const found = await rows(trendDaysSql(filter), window)
+      return found.map((row) => {
+        const [d, total, [ids, bans]] = row as [unknown, unknown, [unknown[], unknown[]]]
+        return [String(d), num(total), [ids.map(num), bans.map(num)]]
+      }) as [string, number, [number[], number[]]][]
     })
   }
 

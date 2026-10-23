@@ -9,7 +9,8 @@ import type { Role } from '#services/ranked_stats'
 
 /**
  * Answers the default champion pages before anyone asks: the champion list and tier list, and
- * the build tab of every champion in its main role (default rank, newest patch, every region).
+ * the build and statistics tabs of every champion in its main role (default rank, newest patch,
+ * every region).
  * Runs at start, when a new patch becomes the default, and every few hours; an answer already
  * fresh in the stats cache costs nothing, so a run mostly refreshes what went stale.
  */
@@ -47,6 +48,9 @@ export async function warmStats() {
         spellStatsService.forRole(r.champion, role, filter.bracket, filter.patch),
         championStatsService.skills(filter, r.champion, r.position),
         championStatsService.matchups(filter, r.champion, r.position),
+        championStatsService.byRank(filter, r.champion, r.position),
+        championStatsService.trend(filter, r.champion, r.position),
+        championStatsService.profile(filter, r.champion, r.position),
       ]).catch((error) =>
         logger.warn({ err: error, champion: r.champion }, 'stats warm-up of a champion failed')
       )

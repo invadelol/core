@@ -1,17 +1,23 @@
 import { test } from '@japa/runner'
 import {
+  averages,
   laneSql,
   matchups,
   positionOf,
+  profileSql,
   seedGamesSql,
   skillOrderSql,
   skillOrders,
   summarize,
   tierOf,
+  trendGamesSql,
+  trendRows,
   type Filter,
 } from '#services/champion_stats'
 import { pageRowsSql } from '#services/rune_stats'
 import { championSlug } from '../../inertia/lib/champions.js'
+
+const round2 = (n: number) => Math.round(n * 100) / 100
 
 const FILTER: Filter = { patch: '16.20', bracket: 'emerald_plus', region: null }
 
@@ -111,5 +117,52 @@ test.group('Champion stats', () => {
     assert.equal(championSlug("Kai'Sa"), 'kaisa')
     assert.equal(championSlug('Nunu & Willump'), 'nunu-willump')
     assert.equal(championSlug('Dr. Mundo'), 'dr-mundo')
+  })
+
+  test('averages the Statistics tab from its length buckets', ({ assert }) => {
+    // bucket, games, wins, games with a participant row, kills, deaths, assists, CS, gold,
+    // damage, vision, seconds of those games.
+    const rows = [
+      [5, 30, 15, 30, 150, 90, 210, 4500, 300000, 450000, 600, 49500],
+      [6, 10, 6, 9, 54, 27, 63, 1620, 108000, 162000, 216, 17820],
+    ]
+    const a = averages(rows)!
+    assert.equal(a.games, 39)
+    assert.equal(a.kills, 5.2)
+    assert.equal(a.deaths, 3)
+    assert.equal(a.kda, round2((204 + 273) / 117))
+    assert.equal(a.csPerMin, 5.5)
+    assert.equal(a.length, 1726)
+    assert.isNull(averages([]))
+    assert.isNull(averages([[5, 3, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]]))
+  })
+
+  test("builds a champion trend from every champion's days and its own", ({ assert }) => {
+    const days: [string, number, [number[], number[]]][] = [
+      [
+        '2026-10-21',
+        1000,
+        [
+          [1, 21],
+          [40, 120],
+        ],
+      ],
+      ['2026-10-22', 1200, [[1], [50]]],
+    ]
+    assert.deepEqual(trendRows(days, [['2026-10-22', 60, 33]], 21), [
+      ['2026-10-21', 0, 0, 1000, 120],
+      ['2026-10-22', 60, 33, 1200, 0],
+    ])
+  })
+
+  test('reads each source of the Statistics tab once', ({ assert }) => {
+    const profile = profileSql(FILTER)
+    assert.notInclude(profile, 'WITH me')
+    assert.equal(profile.match(/FROM participant_items/g)?.length, 1)
+    assert.include(profile, 'LIMIT 1 BY match_id')
+    const trend = trendGamesSql(FILTER)
+    assert.equal(trend.match(/FROM participant_items/g)?.length, 1)
+    assert.include(trend, 'game_start_ms < {until:UInt64}')
+    assert.notInclude(trend, 'FROM matches')
   })
 })
