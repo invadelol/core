@@ -78,3 +78,42 @@ DROP TABLE default.matches_old_20261023;
 ALTER TABLE default.league_entries UNFREEZE WITH NAME 'pre_league_merge_20261023';
 ALTER TABLE default.participant_items UNFREEZE WITH NAME 'pre_items_puuid_20261023';
 ```
+
+## 6. Before deploying `stats-perf`: the stats read paths (0012)
+
+The champion pages of `stats-perf` read `match_lineups` (lane opponents and teammates), so its
+tables must exist before that code is live. After step 4, as the database user (every statement
+can run again: the table and view use `IF NOT EXISTS`, and a game inserted twice into
+`match_lineups` changes nothing):
+
+```sql
+ALTER TABLE default.participants ADD PROJECTION IF NOT EXISTS by_champion (
+  SELECT queue_id, champion_id, team_position, game_start_ms, match_id, participant_id, win,
+         spell1, spell2, kills, deaths, assists, total_cs, gold_earned, dmg_to_champ, vision_score,
+         primary_style, rune1, rune2, rune3, rune4, secondary_style, rune5, rune6,
+         stat_offense, stat_flex, stat_defense, skill_order
+  ORDER BY (queue_id, champion_id, team_position, game_start_ms)
+);
+ALTER TABLE default.participants MATERIALIZE PROJECTION by_champion;  -- background, a few minutes
+
+CREATE TABLE IF NOT EXISTS default.match_lineups (
+  patch    LowCardinality(String),
+  match_id String,
+  players  SimpleAggregateFunction(groupUniqArrayArray,
+             Array(Tuple(UInt8, UInt16, String, UInt16))) CODEC(ZSTD(3))
+) ENGINE = AggregatingMergeTree PARTITION BY patch ORDER BY (patch, match_id);
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS default.match_lineups_mv TO default.match_lineups AS
+SELECT patch, match_id,
+  groupUniqArray(tuple(participant_id, team_id, toString(team_position), champion_id)) AS players
+FROM default.participant_items WHERE queue_id = 420 GROUP BY patch, match_id;
+
+INSERT INTO default.match_lineups
+SELECT patch, match_id,
+  groupUniqArray(tuple(participant_id, team_id, toString(team_position), champion_id)) AS players
+FROM default.participant_items WHERE queue_id = 420 GROUP BY patch, match_id;
+```
+
+Check the projection is built (`SELECT count() FROM system.mutations WHERE table = 'participants'
+AND NOT is_done` gives 0), then deploy, then run `node ace clickhouse:migration:run` once more: it
+records 0012 (repeating its statements changes nothing).

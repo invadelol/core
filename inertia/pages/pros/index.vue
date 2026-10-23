@@ -70,7 +70,14 @@ const shown = computed(() => regions.value.find(([r]) => r === region.value) ?? 
             </button>
           </div>
           <div class="cs-teams">
-            <Link v-for="t in shown[1]" :key="t.id" :href="`/team/${t.slug}`" class="cs-team">
+            <Link
+              v-for="t in shown[1]"
+              :key="t.id"
+              :href="`/team/${t.slug}`"
+              class="cs-team"
+              prefetch
+              cache-for="30s"
+            >
               <TeamLogo :team="t" :size="40" />
               <span class="min-w-0"
                 ><b>{{ t.name }}</b
@@ -86,6 +93,8 @@ const shown = computed(() => regions.value.find(([r]) => r === region.value) ?? 
             :key="p.slug"
             :href="`/pro/${p.slug}`"
             class="cs-member"
+            prefetch
+            cache-for="30s"
           >
             <span class="w-6 text-right text-[12px] text-ink-3">{{ i + 1 }}</span>
             <span class="role"

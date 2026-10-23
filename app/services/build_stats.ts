@@ -84,14 +84,23 @@ export function itemKinds(items: Record<string, DdItem>): ItemKinds {
   return kinds
 }
 
-const ids = (list: number[]) =>
-  `CAST([${list.map((id) => Math.trunc(id)).join(',')}] AS Array(UInt16))`
+/**
+ * Whether item `i` is one of `list`, as a set lookup (a literal array was scanned item by item).
+ * Ids are taken modulo 2^16 as `purchases` (UInt16) stores them; an empty list matches nothing.
+ */
+const isOneOf = (list: number[]) => {
+  const ids = [...new Set(list.map((id) => ((Math.trunc(id) % 65536) + 65536) % 65536))]
+  return ids.length ? `i IN (${ids.join(',')})` : '0'
+}
 
 /**
  * One row per option and how often it was played, for the players in `scope`:
  * `kind` (`start`, `boots`, `core`, `slot`, `item`, `games`), the item ids, the slot (4th item
  * = 1 …), games, wins. Every champion and role at once (`scope` null) prefixes each row with
  * the champion and Riot's position.
+ *
+ * One pass: each player's options are listed in one array and counted together, so the games
+ * are read once (a CTE named six times was read six times).
  */
 export function buildRowsSql(bracket: Bracket, scope: Scope, kinds: ItemKinds) {
   const tiers = seedTiers(bracket)
@@ -99,31 +108,28 @@ export function buildRowsSql(bracket: Bracket, scope: Scope, kinds: ItemKinds) {
   // Per player: starting items (a multiset), the legendary items in the order first bought,
   // the first finished boots (0 without).
   const players = `
-      SELECT ${by}win,
-        arraySort(arrayFilter((i, s) -> s < ${START_SEC} AND NOT has(${ids(kinds.trinkets)}, i), purchases, purchase_sec)) AS opening,
-        arrayFilter(i -> has(${ids(kinds.legendary)}, i), purchases) AS bought,
+      SELECT champion_id, team_position, win,
+        arraySort(arrayFilter((i, s) -> s < ${START_SEC} AND NOT ${isOneOf(kinds.trinkets)}, purchases, purchase_sec)) AS opening,
+        arrayFilter(i -> ${isOneOf(kinds.legendary)}, purchases) AS bought,
         arrayFilter((i, n) -> indexOf(bought, i) = n, bought, arrayEnumerate(bought)) AS legs,
-        arrayFilter(i -> has(${ids(kinds.boots)}, i), purchases)[1] AS boots
+        arrayFilter(i -> ${isOneOf(kinds.boots)}, purchases)[1] AS boots
       FROM participant_items FINAL
       WHERE patch = {patch:String} AND queue_id = ${RANKED_SOLO} ${scopeSql(scope)}
       ${tiers ? `AND match_id IN (SELECT match_id FROM match_seed WHERE patch = {patch:String} AND seed_tier IN (${tiers}))` : ''}
     `
   const none = 'CAST([] AS Array(UInt16))'
   return `
-          WITH g AS (${players})
-          SELECT ${by}'start', opening, 0, count(), sum(win) FROM g WHERE length(opening) > 0 GROUP BY ALL
-          UNION ALL
-          SELECT ${by}'boots', [boots], 0, count(), sum(win) FROM g WHERE boots != 0 GROUP BY ALL
-          UNION ALL
-          SELECT ${by}'core', arraySlice(legs, 1, 3), 0, count(), sum(win) FROM g WHERE length(legs) >= 3 GROUP BY ALL
-          UNION ALL
-          SELECT ${by}'slot', [item], slot, count(), sum(win) FROM g
-          ARRAY JOIN arraySlice(legs, 4, 3) AS item, arrayEnumerate(arraySlice(legs, 4, 3)) AS slot
-          GROUP BY ALL
-          UNION ALL
-          SELECT ${by}'item', [item], 0, count(), sum(win) FROM g ARRAY JOIN legs AS item GROUP BY ALL
-          UNION ALL
-          SELECT ${by}'games', ${none}, 0, count(), sum(win) FROM g GROUP BY ALL
+          SELECT ${by}o.1, o.2, o.3, count(), sum(win)
+          FROM (${players})
+          ARRAY JOIN arrayConcat(
+            if(length(opening) > 0, [('start', opening, 0)], []),
+            if(boots != 0, [('boots', [boots], 0)], []),
+            if(length(legs) >= 3, [('core', arraySlice(legs, 1, 3), 0)], []),
+            arrayMap((item, slot) -> ('slot', [item], slot), arraySlice(legs, 4, 3), arrayEnumerate(arraySlice(legs, 4, 3))),
+            arrayMap(item -> ('item', [item], 0), legs),
+            [('games', ${none}, 0)]
+          ) AS o
+          GROUP BY ${by}o.1, o.2, o.3
         `
 }
 

@@ -1,12 +1,16 @@
 import clickhouse from 'adonisjs-clickhouse/services/main'
 import { AnswerCache, PATCH_READY_GAMES, RANKED_SOLO } from '#services/ranked_stats'
+import { StatsCache } from '#services/stats_cache'
 
 /**
  * The ranked games of our own ClickHouse (the crawler fills the same tables as the site), as
  * the rune, build and summoner spell statistics read them.
  */
 
-const patches = new AnswerCache(1)
+/** How soon a new patch is noticed: the default patch is asked again this often. */
+const PATCH_CHECK_MS = 10 * 60_000
+
+const patches = new AnswerCache(1, PATCH_CHECK_MS)
 
 /** The newest patch with enough ranked games: every statistic defaults to it. */
 export function latestPatch(): Promise<string | null> {
@@ -18,6 +22,17 @@ export function latestPatch(): Promise<string | null> {
           ORDER BY max(game_start_ms) DESC LIMIT 1
         `)
     return row ? String(row[0]) : null
+  })
+}
+
+/**
+ * The statistics cache of one kind of answer, kept a day (`stats_cache.ts`). Its generation is
+ * the default patch: once a new one has enough games, every answer is computed again.
+ */
+export function statsCache(namespace: string, maxLocal?: number) {
+  return new StatsCache(namespace, {
+    generation: async () => (await latestPatch()) ?? 'none',
+    ...(maxLocal ? { maxLocal } : {}),
   })
 }
 

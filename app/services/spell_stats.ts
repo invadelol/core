@@ -1,4 +1,5 @@
 import {
+  PATCH_START_SQL,
   RANKED_SOLO,
   gamesSql,
   ranked,
@@ -30,7 +31,7 @@ export function spellRowsSql(bracket: Bracket, scope: Scope) {
                  count(), sum(win), countIf(spell1 = a), countIf(spell1 = ${FLASH}), countIf(spell2 = ${FLASH})
           FROM participants
           WHERE queue_id = ${RANKED_SOLO} ${scopeSql(scope)} AND spell1 != 0 AND spell2 != 0
-            AND match_id IN (${gamesSql(bracket)})
+            AND game_start_ms >= ${PATCH_START_SQL} AND match_id IN (${gamesSql(bracket)})
           GROUP BY ALL
         `
 }

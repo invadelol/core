@@ -1,6 +1,6 @@
 import { DDRAGON, FETCH_TIMEOUT_MS } from '#constants/assets'
 import { AnswerCache, ROLES, type Bracket, type Role } from '#services/ranked_stats'
-import { latestPatch, rows } from '#services/ranked_games_service'
+import { latestPatch, rows, statsCache } from '#services/ranked_games_service'
 import {
   buildRowsSql,
   itemKinds,
@@ -20,7 +20,7 @@ export class ItemDataUnavailable extends Error {}
  * items or trinkets comes from the patch's Data Dragon items.
  */
 export class BuildStatsService {
-  #cache = new AnswerCache()
+  #cache = statsCache('builds')
   #items = new AnswerCache(8)
 
   async forRole(

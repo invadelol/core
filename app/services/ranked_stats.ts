@@ -115,6 +115,15 @@ export function gamesSql(bracket: Bracket) {
     `
 }
 
+/**
+ * When the first game of the patch (`{patch:String}`) started, in ms: the per-champion and
+ * per-player tables are sorted by time, so a read skips every older game. The earliest of
+ * `matches` and `match_seed`, so a game the crawler is still writing is never left out.
+ */
+export const PATCH_START_SQL = `least(
+      (SELECT min(game_start_ms) FROM matches WHERE queue_id = ${RANKED_SOLO} AND patch = {patch:String}),
+      (SELECT min(game_start_ms) FROM match_seed WHERE patch = {patch:String}))`
+
 /** The champion filter of a scope (`{champion:UInt16}`, `{position:String}` parameters). */
 export function scopeSql(scope: Scope) {
   return scope
@@ -122,18 +131,23 @@ export function scopeSql(scope: Scope) {
     : "AND team_position != ''"
 }
 
-/** In-process answers for half an hour, at most `max`, oldest dropped first. A failure is not kept. */
+/**
+ * In-process answers for half an hour (or `ttlMs`), at most `max`, oldest dropped first. A
+ * failure is not kept.
+ */
 export class AnswerCache {
   #cache = new Map<string, { at: number; value: Promise<unknown> }>()
   #max: number
+  #ttlMs: number
 
-  constructor(max = MAX_CACHED) {
+  constructor(max = MAX_CACHED, ttlMs = TTL_MS) {
     this.#max = max
+    this.#ttlMs = ttlMs
   }
 
   get<T>(key: string, load: () => Promise<T>): Promise<T> {
     const hit = this.#cache.get(key)
-    if (hit && Date.now() - hit.at < TTL_MS) return hit.value as Promise<T>
+    if (hit && Date.now() - hit.at < this.#ttlMs) return hit.value as Promise<T>
     const value = load()
     this.#cache.delete(key)
     if (this.#cache.size >= this.#max) this.#cache.delete(this.#cache.keys().next().value!)

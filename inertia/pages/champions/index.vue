@@ -157,6 +157,8 @@ const champHref = (slug: string, position?: string) =>
           :key="x.c.id"
           :href="champHref(x.c.slug, x.main?.position)"
           class="cs-tile"
+          prefetch
+          cache-for="30s"
         >
           <span class="rl"
             ><RoleIcon

@@ -80,18 +80,21 @@ export default class ChampionsController {
     if (!CHAMPION_TABS.some((t) => t.key === tab)) return response.notFound()
 
     const filter = await championStatsService.filter(request.qs())
+    const asked = positionOf(request.input('role'))
+    // A role in the address needs no summary first: the tab loads alongside it.
+    const early =
+      filter && asked ? this.tab(tab, filter, champion.id, asked).catch(() => null) : null
     const [summary, patches] = await Promise.all([
       filter ? championStatsService.summary(filter) : null,
       championStatsService.patches(),
     ])
     const mine = (summary?.roles ?? []).filter((r) => r.champion === champion.id)
-    const asked = positionOf(request.input('role'))
     const main = [...mine].sort((a, b) => b.games - a.games)[0]?.position ?? null
     const position: Position = asked ?? main ?? 'MIDDLE'
     const stat = mine.find((r) => r.position === position) ?? null
 
     const data = filter
-      ? await this.tab(tab, filter, champion.id, position).catch(() => null)
+      ? await (early ?? this.tab(tab, filter, champion.id, position).catch(() => null))
       : null
     return inertia.render('champions/show', {
       champion,

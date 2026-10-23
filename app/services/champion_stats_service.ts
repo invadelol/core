@@ -1,15 +1,15 @@
 import riotAssetsService from '#services/riot/assets'
 import { AnswerCache, BRACKETS, type Bracket } from '#services/ranked_stats'
-import { latestPatch, rows } from '#services/ranked_games_service'
+import { latestPatch, rows, statsCache } from '#services/ranked_games_service'
 import {
   REGIONS,
   averages,
   averagesSql,
   byLength,
   byRank,
+  laneSql,
   lengthSql,
   matchups,
-  matchupsSql,
   patchesSql,
   skillOrderSql,
   skillOrders,
@@ -17,7 +17,6 @@ import {
   summaryByRankSql,
   summarySql,
   teammates,
-  teammatesSql,
   totalsSql,
   trend,
   trendSql,
@@ -37,15 +36,20 @@ const TREND_DAYS = 30
 
 const num = (v: unknown) => Number(v)
 
+/** The patch menu is asked again this often: a new patch shows up within it. */
+const PATCHES_TTL_MS = 10 * 60_000
+
 /**
  * Champion statistics from our own crawled ranked games (`champion_stats.ts` counts them): the
- * champion list and tier list, and a champion's page. Answers are kept half an hour.
+ * champion list and tier list, and a champion's page. Answers are kept a day, in this process
+ * and in Redis (`stats_cache.ts`), and computed again when a new patch becomes the default.
  */
 export class ChampionStatsService {
-  #summaries = new AnswerCache(64)
-  #byRank = new AnswerCache(16)
-  #champion = new AnswerCache()
-  #patches = new AnswerCache(1)
+  // Every champion at once (~100 kB each): few kept in this process, all of them in Redis.
+  #summaries = statsCache('summary', 64)
+  #byRank = statsCache('by-rank', 16)
+  #champion = statsCache('champion')
+  #patches = new AnswerCache(1, PATCHES_TTL_MS)
 
   /** The filters of an address: `?rank=emerald_plus&patch=16.20&region=euw`, defaults filled. */
   async filter(input: {
@@ -117,22 +121,28 @@ export class ChampionStatsService {
   }
 
   /** The lane opponents of a champion in a role. */
-  matchups(filter: Filter, champion: number, position: Position) {
-    return this.one('matchups', filter, champion, position, async (params) => {
-      const found = await rows(matchupsSql(filter), params)
-      return matchups(found.map((r) => r.map(num) as [number, number, number]))
-    })
+  async matchups(filter: Filter, champion: number, position: Position) {
+    const lane = await this.lane(filter, champion, position)
+    return lane.matchups
   }
 
   /** Teammates by role. */
-  teammates(filter: Filter, champion: number, position: Position) {
-    return this.one('teammates', filter, champion, position, async (params) => {
-      const found = await rows(teammatesSql(filter), params)
-      return teammates(
-        found.map(
-          ([p, c, g, w]) => [String(p), num(c), num(g), num(w)] as [string, number, number, number]
-        )
-      )
+  async teammates(filter: Filter, champion: number, position: Position) {
+    const lane = await this.lane(filter, champion, position)
+    return lane.teammates
+  }
+
+  /** Lane opponents and teammates, from one read of the games' lineups. */
+  private lane(filter: Filter, champion: number, position: Position) {
+    return this.one('lane', filter, champion, position, async (params) => {
+      const found = await rows(laneSql(filter), params)
+      const opponents: [number, number, number][] = []
+      const mates: [string, number, number, number][] = []
+      for (const [kind, pos, c, g, w] of found) {
+        if (kind === 'opponent') opponents.push([num(c), num(g), num(w)])
+        else mates.push([String(pos), num(c), num(g), num(w)])
+      }
+      return { matchups: matchups(opponents), teammates: teammates(mates) }
     })
   }
 

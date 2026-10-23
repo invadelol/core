@@ -1,5 +1,5 @@
-import { AnswerCache, ROLES, type Bracket, type Role } from '#services/ranked_stats'
-import { latestPatch, rows } from '#services/ranked_games_service'
+import { ROLES, type Bracket, type Role } from '#services/ranked_stats'
+import { latestPatch, rows, statsCache } from '#services/ranked_games_service'
 import {
   spellRowsSql,
   summarizeSpells,
@@ -13,7 +13,7 @@ import {
  * counting is in `spell_stats.ts`.
  */
 export class SpellStatsService {
-  #cache = new AnswerCache()
+  #cache = statsCache('spells')
 
   async forRole(
     champion: number,

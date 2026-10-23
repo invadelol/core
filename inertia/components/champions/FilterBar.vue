@@ -47,7 +47,15 @@ const patch = computed({
 <template>
   <div class="cs-bar">
     <nav v-if="roles?.length" class="cs-roles" aria-label="Role">
-      <Link v-for="r in roles" :key="r.href" :href="r.href" :class="{ on: r.on }" preserve-scroll>
+      <Link
+        v-for="r in roles"
+        :key="r.href"
+        :href="r.href"
+        :class="{ on: r.on }"
+        preserve-scroll
+        prefetch
+        cache-for="30s"
+      >
         <RoleIcon :lane="r.lane as any" :size="13" />{{ r.label
         }}<small v-if="r.share">{{ r.share }}</small>
       </Link>

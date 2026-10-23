@@ -133,10 +133,22 @@ test.group('Build stats', () => {
     const one = buildRowsSql('emerald_plus', { champion: 103, position: 'MIDDLE' }, kinds)
     assert.include(one, 'champion_id = {champion:UInt16}')
     assert.include(one, "seed_tier IN ('EMERALD','DIAMOND','MASTER','GRANDMASTER','CHALLENGER')")
-    assert.include(one, 'CAST([3003,3089,6655] AS Array(UInt16))')
+    assert.include(one, 'i IN (3003,3089,6655)')
+    // One read of the games, every option counted in the same pass.
+    assert.equal(one.match(/FROM participant_items/g)?.length, 1)
     const every = buildRowsSql('all', null, kinds)
     assert.notInclude(every, 'match_seed')
-    assert.include(every, "SELECT champion_id, team_position, 'core'")
+    assert.include(every, 'SELECT champion_id, team_position, o.1')
+    assert.include(every, 'GROUP BY champion_id, team_position, o.1')
+  })
+
+  test('item ids wrap to UInt16 as the purchases store them, and no ids match nothing', ({
+    assert,
+  }) => {
+    const kinds = { legendary: [3003, 3003 + 65536], boots: [], trinkets: [], gold: {} }
+    const sql = buildRowsSql('all', { champion: 1, position: 'TOP' }, kinds)
+    assert.include(sql, 'arrayFilter(i -> i IN (3003), purchases) AS bought')
+    assert.include(sql, 'arrayFilter(i -> 0, purchases)[1] AS boots')
   })
 })
 

@@ -58,7 +58,15 @@ withDefaults(
         </div>
       </div>
       <nav v-if="tabs.length" class="cs-tabs">
-        <Link v-for="t in tabs" :key="t.href" :href="t.href" :class="{ on: t.on }" preserve-scroll>
+        <Link
+          v-for="t in tabs"
+          :key="t.href"
+          :href="t.href"
+          :class="{ on: t.on }"
+          preserve-scroll
+          prefetch
+          cache-for="30s"
+        >
           <RoleIcon v-if="t.lane" :lane="t.lane as any" :size="14" />
           {{ t.label }}<small v-if="t.small !== undefined">{{ t.small }}</small>
         </Link>

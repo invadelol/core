@@ -1,5 +1,5 @@
-import { AnswerCache, ROLES, type Bracket, type Role } from '#services/ranked_stats'
-import { latestPatch, rows } from '#services/ranked_games_service'
+import { ROLES, type Bracket, type Role } from '#services/ranked_stats'
+import { latestPatch, rows, statsCache } from '#services/ranked_games_service'
 import { pageRowsSql, summarize, type PageRow, type RuneStats } from '#services/rune_stats'
 
 /**
@@ -9,7 +9,7 @@ import { pageRowsSql, summarize, type PageRow, type RuneStats } from '#services/
  * support, a mage top). The counting is in `rune_stats.ts`.
  */
 export class RuneStatsService {
-  #cache = new AnswerCache()
+  #cache = statsCache('runes')
 
   async forRole(
     champion: number,
