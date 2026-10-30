@@ -14,8 +14,12 @@ import { platformFromMatchId, toInt } from '#utils/clickhouse'
 import matchSourceService from '#services/match_source_service'
 import { riotCompleteness } from '#services/desktop/conversion'
 import { isExcludedQueue } from '#constants/riot'
+import { riotErrorStatus } from '#utils/riot_errors'
+import pendingMatches from '#services/pending_matches'
 
 type MatchCluster = Exclude<RiotAPITypes.Cluster, PlatformId.ESPORTS>
+/** A game a sync stored (or found another writer storing). */
+type Stored = NonNullable<Awaited<ReturnType<MatchesService['fetchAndStoreMatch']>>>
 
 /** A match whose events could not be fetched is not asked for again before this. */
 const BACKFILL_RETRY_MS = 10 * 60 * 1000
@@ -61,10 +65,28 @@ class MatchesService {
       return []
     }
 
-    const fetched = await Promise.all(
+    // Every game is waited for, whatever happens to the others: the sync answers once all of them
+    // are stored, so the list read right after it holds them (one failure used to answer at once,
+    // while the other games were still being stored). A game Riot named but could not give right
+    // now (match-v5 does not serve it yet, the key is busy) goes to the pending queue, which asks
+    // again a few minutes later. Only a sync that stored nothing fails.
+    const settled = await Promise.allSettled(
       newIds.map((matchId) => this.fetchAndStoreMatch(matchId, cluster))
     )
-    const results = fetched.filter((result) => result !== null)
+    const results: Stored[] = []
+    let failure: unknown = null
+    const later: string[] = []
+    for (const [index, outcome] of settled.entries()) {
+      if (outcome.status === 'fulfilled') {
+        if (outcome.value !== null) results.push(outcome.value)
+        continue
+      }
+      later.push(newIds[index])
+      // Riot not having the game yet says nothing about the sync.
+      if (riotErrorStatus(outcome.reason) !== 404) failure ??= outcome.reason
+    }
+    for (const matchId of later) pendingMatches.enqueue(matchId)
+    if (failure && !results.length) throw failure
 
     const summoner = await Summoner.find(puuid)
     if (summoner) {
