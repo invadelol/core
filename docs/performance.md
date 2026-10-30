@@ -1,9 +1,101 @@
 # Performance
 
-Three rounds of work are recorded here, newest first. The first reshaped what
+Four rounds of work are recorded here, newest first. The first reshaped what
 the profile page asks for and when. The second went after what it costs to
 answer. The third measured the API against a production-shaped dataset and
 removed the repeated reads, serial waits and per-row statements that were left.
+The fourth made a champion's builds, runes and summoner spells cheap to count
+when nobody has asked for them yet.
+
+---
+
+# Round four: one champion's builds, runes and spells (2026-10-30)
+
+No migration. The queries were rewritten, the patch's start is asked once, the
+champion page's build tab sends what it has, and one new route answers several
+rank brackets at once.
+
+## What was slow
+
+Measured on production first. An answer the stats cache holds came back in
+about 50 ms of server time (0.15–0.25 s with the TLS handshake). A cold one,
+for a champion, role and bracket nobody had asked for that day:
+
+| Route (cold)               | Before      |
+| -------------------------- | ----------- |
+| `/api/runes/…`             | 1.3–2.1 s   |
+| `/api/summoners/…`         | 1.2–1.9 s   |
+| `/api/builds/…`            | 0.35–0.96 s |
+| Champion build tab, a role nobody had opened | 2.7–3.1 s |
+
+`system.query_log` over three days put the rune and spell queries at a median
+of 1.3 s, reading 11 million rows and up to 700 MiB of memory each, whichever
+champion was asked. The champion's own rows, read through the `by_champion`
+projection of `participants`, were a few hundred granules. The rest was the
+same for every champion:
+
+- `match_id IN (the bracket's games)` made ClickHouse build a hash set of every
+  ranked game of the patch in the bracket (millions of ids, from a scan of
+  `matches` and of every patch of `match_seed`) before reading a single row of
+  the champion's. The builds and the champion page's skills, lane and profile
+  queries did the same with `match_seed`, the lane query once per mention of
+  its CTE.
+- The patch's first game was found by two more scans (`matches` and
+  `match_seed`, 5.9 million rows) inside every one of those queries.
+
+The site's build tab waited for its seven blocks, so the slowest one (the lane
+query) set the page's time. A desktop client that reads a chain of brackets
+(its rank, then broader ones) asked them one after the other.
+
+## What changed
+
+- **The champion's games are the set.** A bracket's games are now looked up
+  among the champion's own: the set an `IN` builds is the champion's few
+  thousand games of the patch, and the patch's games are read against it.
+  Brackets read `match_seed` of the patch, as the builds and the champion pages
+  already did; all ranks read every ranked game of the patch in `matches`.
+- **The patch's start is a parameter** (`patchStart()`), asked once per patch
+  and kept ten minutes, like the default patch.
+- **The build tab sends what it has.** Every block starts at once; what is done
+  within 150 ms (anything the cache holds) goes with the page, the rest follows
+  as Inertia deferred props and a placeholder holds each panel meanwhile. A
+  page the cache answers is sent whole, exactly as before.
+- **`GET /api/picks/:champion/:role?brackets=a,b,c`** answers what
+  `/api/runes`, `/api/builds` and `/api/summoners` answer for up to five
+  brackets in one request, every bracket counted at the same time. The three
+  routes are unchanged.
+
+## Results
+
+Every rewritten query was run on production next to the one it replaces, on
+the same data, one thread each, old first: ten champion, role and bracket
+cases (popular and off-role picks, all ranks and four brackets), six kinds
+each. All 60 pairs returned identical rows (two differed by a game the crawler
+wrote between the two runs, and matched when run again). Server time, one
+thread:
+
+| Query            | Before (min–median–max) | After (min–median–max) | Rows read (median)  |
+| ---------------- | ----------------------- | ---------------------- | ------------------- |
+| Rune pages       | 0.84–1.79–2.04 s        | 0.17–0.43–0.75 s       | 13.6 M → 3.1 M      |
+| Summoner spells  | 0.83–1.67–1.92 s        | 0.16–0.37–0.70 s       | 13.6 M → 3.1 M      |
+| Builds           | 0.15–0.67–1.14 s        | 0.13–0.53–0.96 s       | 2.8 M → 3.0 M       |
+| Skill orders     | 0.67–1.45–2.92 s        | 0.28–0.71–1.40 s       | 11.9 M → 6.5 M      |
+| Lane (matchups)  | 1.05–2.24–5.26 s        | 0.30–1.64–3.50 s       | 8.7 M → 9.1 M       |
+| Statistics tab   | 0.56–1.24–2.21 s        | 0.30–0.65–1.24 s       | 12.2 M → 6.6 M      |
+
+Memory per query fell from 90–700 MiB to 1–80 MiB for runes and spells, and
+from 1.2 GiB to 435 MiB for the heaviest lane query.
+
+## Left as it is
+
+- **Builds of the most played champions** stay at 0.5–1 s on one thread: the
+  cost is counting their own purchases (hundreds of thousands of players,
+  thirteen options each), not finding their games. `FINAL` is a quarter of it.
+- **The lane query** reads the patch's lineups (about 680 MiB) for a popular
+  champion. It is cached, warmed for main roles, and deferred on the build tab.
+- A pre-aggregated table per patch, champion, role and bracket would make both
+  constant; it needs a migration and the crawler's write order, so it was not
+  done here.
 
 ---
 
