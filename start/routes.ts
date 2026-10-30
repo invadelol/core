@@ -34,6 +34,7 @@ const LensController = () => import('#controllers/lens_controller')
 const RuneStatsController = () => import('#controllers/rune_stats_controller')
 const BuildStatsController = () => import('#controllers/build_stats_controller')
 const SpellStatsController = () => import('#controllers/spell_stats_controller')
+const MatchupStatsController = () => import('#controllers/matchup_stats_controller')
 const SynergyController = () => import('#controllers/synergy_controller')
 const LegalController = () => import('#controllers/legal_controller')
 const ChangelogController = () => import('#controllers/changelog_controller')
@@ -108,6 +109,9 @@ router
 
     /** Item builds from our own ranked games, for any champion in any role. */
     router.get('/builds/:champion/:role', [BuildStatsController, 'show'])
+
+    /** Lane matchups from our own ranked games, for any champion in any role and any stored patch. */
+    router.get('/matchups/:champion/:role', [MatchupStatsController, 'show'])
 
     router.put('/summoners/puuid/:puuid/increment', [SummonersController, 'incrementViews'])
 
