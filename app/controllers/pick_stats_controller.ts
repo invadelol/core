@@ -19,7 +19,14 @@ export default class PickStatsController {
     const { champion, role } = await request.validateUsing(runeParamsValidator, {
       data: { champion: Number(params.champion), role: String(params.role).toLowerCase() },
     })
-    const { brackets, patch } = await request.validateUsing(pickQueryValidator)
+    // The query string parser reads `a,b` as a list: one string again, as the validator expects.
+    const query = request.qs()
+    const { brackets, patch } = await request.validateUsing(pickQueryValidator, {
+      data: {
+        ...query,
+        brackets: Array.isArray(query.brackets) ? query.brackets.join(',') : query.brackets,
+      },
+    })
     try {
       const answers = await pickStatsService.forRole(champion, role, bracketList(brackets), patch)
       response.header('Cache-Control', 'public, max-age=1800')
