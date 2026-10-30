@@ -1,27 +1,30 @@
 import '../styles/base.css';
 import '../styles/primitives.css';
 import './MatchRow.css';
-import { defineComponent as ee, computed as m, openBlock as a, createElementBlock as s, createElementVNode as t, normalizeClass as p, unref as e, toDisplayString as o, createCommentVNode as v, Fragment as k, renderList as B, createTextVNode as g, createBlock as S } from "vue";
-import { useInvadeUi as le, useFormat as te, useNames as ae, gameFavorite as se } from "../context.js";
+import { defineComponent as te, computed as m, openBlock as a, createElementBlock as s, createElementVNode as l, normalizeClass as f, unref as e, toDisplayString as n, createCommentVNode as v, Fragment as p, renderList as B, createTextVNode as k, createBlock as I } from "vue";
+import { useInvadeUi as le, useFormat as ae, useNames as se, gameFavorite as oe } from "../context.js";
 import { hideBroken as d } from "../dom.js";
-import { queueName as ne, queueShort as oe, topBadges as ue, BADGES as V } from "../logic/labels.js";
-import ie from "./Icon.vue.js";
-import re from "./PerfDial.vue.js";
+import { queueName as ne, queueShort as ue, topBadges as ie, BADGES as A } from "../logic/labels.js";
+import { rowTeamRating as re } from "../logic/team.js";
+import ce from "./Icon.vue.js";
+import me from "./PerfDial.vue.js";
 /* empty css              */
-import ce from "./StarButton.vue.js";
+import ve from "./StarButton.vue.js";
 /* empty css                */
+import de from "./TeamBadge.vue.js";
+/* empty css               */
 /* empty css                 */
 /* empty css                       */
-const me = { class: "iv-mr-wrap" }, ve = ["aria-expanded"], de = { class: "iv-mr-grid" }, pe = ["title"], ke = { class: "iv-mr-portrait" }, ge = ["src"], ye = { key: 0 }, he = {
+const pe = { class: "iv-mr-wrap" }, ke = ["aria-expanded"], ge = { class: "iv-mr-grid" }, ye = ["title"], fe = { class: "iv-mr-portrait" }, he = ["src"], _e = { key: 0 }, be = {
   key: 0,
   class: "iv-mr-load"
-}, fe = ["src", "alt", "title"], _e = ["src", "alt", "title"], be = { key: 1 }, Ie = ["src", "alt", "title"], Ne = { key: 3 }, $e = ["title"], Be = { class: "iv-mr-q" }, Se = { class: "iv-mr-q brief" }, qe = { class: "iv-mr-kda" }, we = {
+}, we = ["src", "alt", "title"], Ie = ["src", "alt", "title"], $e = { key: 1 }, Ne = ["src", "alt", "title"], Be = { key: 3 }, Se = ["title"], qe = { class: "iv-mr-q" }, Ee = { class: "iv-mr-q brief" }, Ce = { class: "iv-mr-kda" }, Le = {
   key: 0,
   class: "iv-mr-kp"
-}, Ee = { class: "iv-mr-farm" }, Ce = { class: "iv-unit" }, Le = { class: "iv-mr-well" }, xe = ["src", "alt", "title"], ze = {
+}, Re = { class: "iv-mr-farm" }, xe = { class: "iv-unit" }, ze = { class: "iv-mr-items" }, Ve = { class: "iv-mr-well" }, Ae = ["src", "alt", "title"], De = {
   key: 0,
   class: "iv-mr-badges"
-}, Re = ["title"], Ve = { class: "iv-mr-vs" }, Ae = ["title"], De = ["src", "alt"], Fe = { class: "iv-mr-score" }, Qe = /* @__PURE__ */ ee({
+}, Fe = ["title"], Me = { class: "iv-mr-vs" }, Pe = ["title"], Te = ["src", "alt"], Ge = { class: "iv-mr-score" }, at = /* @__PURE__ */ te({
   __name: "MatchRow",
   props: {
     game: {},
@@ -35,165 +38,168 @@ const me = { class: "iv-mr-wrap" }, ve = ["aria-expanded"], de = { class: "iv-mr
     puuid: { default: null }
   },
   emits: ["toggle"],
-  setup(r) {
-    const c = r, f = le(), { t: n } = f, { compact: A, date: D, kdaRatio: F, mmss: M, num: P, ordinal: q, pct: G, score100: K, signedLp: T } = te(), { champIcon: w, champName: _, itemIcon: U, itemName: E, runeIcon: W, runeName: C, spellIcon: j, spellName: L, styleIcon: H, styleName: x } = ae(), l = m(() => c.game), J = m(() => l.value.remake ? "remake" : l.value.win ? "win" : "loss"), O = m(() => l.value.queueId === 420 ? n("Ranked Solo") : ne(l.value.queueId, n)), Q = m(() => oe(l.value.queueId, n)), X = m(() => l.value.remake ? n("Remake") : l.value.placement ? n("{place} place", { place: q(l.value.placement) }) : c.lp != null ? `${T(c.lp)} ${n("LP")}` : l.value.win ? n("Win") : n("Loss")), b = m(() => c.opponent ?? c.score?.opponent ?? null), z = m(() => c.kp ?? c.score?.kp ?? null), N = m(() => ue(c.badges.length ? c.badges : c.score?.badges)), I = m(() => c.score?.tag || ""), R = m(() => c.score ? I.value === "mvp" ? n("MVP") : I.value === "ace" ? n("ACE") : q(c.score.rank) : ""), Y = m(() => D(l.value.creation, { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })), y = m(() => f.favorites && c.puuid ? se(c.puuid, _(l.value.championId), l.value) : null);
-    return (Z, i) => (a(), s("div", me, [
-      t("button", {
+  setup(c) {
+    const i = c, h = le(), { t: o } = h, { compact: D, date: F, kdaRatio: M, mmss: P, num: T, ordinal: S, pct: G, score100: K, signedLp: U } = ae(), { champIcon: q, champName: _, itemIcon: W, itemName: E, runeIcon: j, runeName: C, spellIcon: H, spellName: L, styleIcon: J, styleName: R } = se(), t = m(() => i.game), O = m(() => t.value.remake ? "remake" : t.value.win ? "win" : "loss"), Q = m(() => t.value.queueId === 420 ? o("Ranked Solo") : ne(t.value.queueId, o)), X = m(() => ue(t.value.queueId, o)), Y = m(() => t.value.remake ? o("Remake") : t.value.placement ? o("{place} place", { place: S(t.value.placement) }) : i.lp != null ? `${U(i.lp)} ${o("LP")}` : t.value.win ? o("Win") : o("Loss")), b = m(() => i.opponent ?? i.score?.opponent ?? null), x = m(() => i.kp ?? i.score?.kp ?? null), z = m(() => ie(i.badges.length ? i.badges : i.score?.badges)), $ = m(() => re(t.value, i.score)), w = m(() => i.score?.tag || ""), V = m(() => i.score ? w.value === "mvp" ? o("MVP") : w.value === "ace" ? o("ACE") : S(i.score.rank) : ""), Z = m(() => F(t.value.creation, { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })), g = m(() => h.favorites && i.puuid ? oe(i.puuid, _(t.value.championId), t.value) : null);
+    return (ee, r) => (a(), s("div", pe, [
+      l("button", {
         type: "button",
-        class: p(["iv-mr", [J.value, { open: r.open, compact: r.compact, starred: y.value }]]),
-        "aria-expanded": r.compact ? void 0 : r.open,
-        onClick: i[4] || (i[4] = (u) => Z.$emit("toggle"))
+        class: f(["iv-mr", [O.value, { open: c.open, compact: c.compact, starred: g.value }]]),
+        "aria-expanded": c.compact ? void 0 : c.open,
+        onClick: r[4] || (r[4] = (u) => ee.$emit("toggle"))
       }, [
-        t("span", de, [
-          t("span", {
+        l("span", ge, [
+          l("span", {
             class: "iv-mr-champ",
-            title: e(_)(l.value.championId)
+            title: e(_)(t.value.championId)
           }, [
-            t("span", ke, [
-              t("img", {
-                src: e(w)(l.value.championId),
+            l("span", fe, [
+              l("img", {
+                src: e(q)(t.value.championId),
                 alt: ""
-              }, null, 8, ge)
+              }, null, 8, he)
             ]),
-            r.compact ? v("", !0) : (a(), s("em", ye, o(l.value.level), 1))
-          ], 8, pe),
-          r.compact ? v("", !0) : (a(), s("span", he, [
-            (a(!0), s(k, null, B(l.value.spells.slice(0, 2), (u, h) => (a(), s("img", {
-              key: `s${h}`,
-              src: e(j)(u),
+            c.compact ? v("", !0) : (a(), s("em", _e, n(t.value.level), 1))
+          ], 8, ye),
+          c.compact ? v("", !0) : (a(), s("span", be, [
+            (a(!0), s(p, null, B(t.value.spells.slice(0, 2), (u, y) => (a(), s("img", {
+              key: `s${y}`,
+              src: e(H)(u),
               alt: e(L)(u),
               title: e(L)(u),
-              onError: i[0] || (i[0] = //@ts-ignore
-              (...$) => e(d) && e(d)(...$))
-            }, null, 40, fe))), 128)),
-            l.value.keystone ? (a(), s("img", {
+              onError: r[0] || (r[0] = //@ts-ignore
+              (...N) => e(d) && e(d)(...N))
+            }, null, 40, we))), 128)),
+            t.value.keystone ? (a(), s("img", {
               key: 0,
-              src: e(W)(l.value.keystone),
-              alt: e(C)(l.value.keystone),
-              title: e(C)(l.value.keystone),
+              src: e(j)(t.value.keystone),
+              alt: e(C)(t.value.keystone),
+              title: e(C)(t.value.keystone),
               class: "key",
-              onError: i[1] || (i[1] = //@ts-ignore
+              onError: r[1] || (r[1] = //@ts-ignore
               (...u) => e(d) && e(d)(...u))
-            }, null, 40, _e)) : (a(), s("i", be)),
-            l.value.subStyle ? (a(), s("img", {
+            }, null, 40, Ie)) : (a(), s("i", $e)),
+            t.value.subStyle ? (a(), s("img", {
               key: 2,
-              src: e(H)(l.value.subStyle),
-              alt: e(x)(l.value.subStyle),
-              title: e(x)(l.value.subStyle),
+              src: e(J)(t.value.subStyle),
+              alt: e(R)(t.value.subStyle),
+              title: e(R)(t.value.subStyle),
               class: "sub",
-              onError: i[2] || (i[2] = //@ts-ignore
+              onError: r[2] || (r[2] = //@ts-ignore
               (...u) => e(d) && e(d)(...u))
-            }, null, 40, Ie)) : (a(), s("i", Ne))
+            }, null, 40, Ne)) : (a(), s("i", Be))
           ])),
-          t("span", {
+          l("span", {
             class: "iv-mr-game",
-            title: Y.value
+            title: Z.value
           }, [
-            t("b", null, [
-              t("span", Be, o(O.value), 1),
-              t("span", Se, o(Q.value), 1)
+            l("b", null, [
+              l("span", qe, n(Q.value), 1),
+              l("span", Ee, n(X.value), 1)
             ]),
-            t("small", null, [
-              t("span", {
-                class: p(["iv-mr-outcome", { lp: r.lp != null && !l.value.remake && !l.value.placement }])
-              }, o(X.value), 3),
-              g(" · " + o(e(M)(l.value.duration)), 1)
+            l("small", null, [
+              l("span", {
+                class: f(["iv-mr-outcome", { lp: c.lp != null && !t.value.remake && !t.value.placement }])
+              }, n(Y.value), 3),
+              k(" · " + n(e(P)(t.value.duration)), 1)
             ])
-          ], 8, $e),
-          t("span", qe, [
-            t("b", null, [
-              g(o(l.value.kills), 1),
-              i[6] || (i[6] = t("i", null, "/", -1)),
-              g(o(l.value.deaths), 1),
-              i[7] || (i[7] = t("i", null, "/", -1)),
-              g(o(l.value.assists), 1)
+          ], 8, Se),
+          l("span", Ce, [
+            l("b", null, [
+              k(n(t.value.kills), 1),
+              r[6] || (r[6] = l("i", null, "/", -1)),
+              k(n(t.value.deaths), 1),
+              r[7] || (r[7] = l("i", null, "/", -1)),
+              k(n(t.value.assists), 1)
             ]),
-            t("small", null, [
-              g(o(e(F)(l.value.kills, l.value.deaths, l.value.assists)) + " " + o(e(n)("KDA")), 1),
-              z.value != null ? (a(), s("span", we, " · " + o(e(G)(z.value)) + " " + o(e(n)("KP")), 1)) : v("", !0)
+            l("small", null, [
+              k(n(e(M)(t.value.kills, t.value.deaths, t.value.assists)) + " " + n(e(o)("KDA")), 1),
+              x.value != null ? (a(), s("span", Le, " · " + n(e(G)(x.value)) + " " + n(e(o)("KP")), 1)) : v("", !0)
             ])
           ]),
-          t("span", Ee, [
-            t("b", null, [
-              g(o(e(P)(l.value.csMin, 1)), 1),
-              t("span", Ce, o(e(n)("CS/min")), 1)
+          l("span", Re, [
+            l("b", null, [
+              k(n(e(T)(t.value.csMin, 1)), 1),
+              l("span", xe, n(e(o)("CS/min")), 1)
             ]),
-            t("small", null, o(e(A)(l.value.damage)) + " " + o(e(n)("dmg")), 1)
+            l("small", null, n(e(D)(t.value.damage)) + " " + n(e(o)("dmg")), 1)
           ]),
-          r.compact ? v("", !0) : (a(), s(k, { key: 1 }, [
-            t("span", {
-              class: p(["iv-mr-items", { tagged: N.value.length }])
-            }, [
-              t("span", Le, [
-                (a(!0), s(k, null, B(l.value.items.slice(0, 7), (u, h) => (a(), s(k, { key: h }, [
+          c.compact ? v("", !0) : (a(), s(p, { key: 1 }, [
+            l("span", ze, [
+              l("span", Ve, [
+                (a(!0), s(p, null, B(t.value.items.slice(0, 7), (u, y) => (a(), s(p, { key: y }, [
                   u ? (a(), s("img", {
                     key: 0,
-                    src: e(U)(u),
+                    src: e(W)(u),
                     alt: e(E)(u),
                     title: e(E)(u),
-                    class: p({ trinket: h === 6 }),
-                    onError: i[3] || (i[3] = //@ts-ignore
-                    (...$) => e(d) && e(d)(...$))
-                  }, null, 42, xe)) : (a(), s("i", {
+                    class: f({ trinket: y === 6 }),
+                    onError: r[3] || (r[3] = //@ts-ignore
+                    (...N) => e(d) && e(d)(...N))
+                  }, null, 42, Ae)) : (a(), s("i", {
                     key: 1,
-                    class: p({ trinket: h === 6 })
+                    class: f({ trinket: y === 6 })
                   }, null, 2))
                 ], 64))), 128))
               ]),
-              N.value.length ? (a(), s("span", ze, [
-                (a(!0), s(k, null, B(N.value, (u) => (a(), s("span", {
+              $.value || z.value.length ? (a(), s("span", De, [
+                $.value ? (a(), I(de, {
+                  key: 0,
+                  verdict: $.value,
+                  win: t.value.win
+                }, null, 8, ["verdict", "win"])) : v("", !0),
+                (a(!0), s(p, null, B(z.value, (u) => (a(), s("span", {
                   key: u,
                   class: "iv-badge",
-                  title: e(n)(e(V)[u].tip)
-                }, o(e(n)(e(V)[u].label)), 9, Re))), 128))
+                  title: e(o)(e(A)[u].tip)
+                }, n(e(o)(e(A)[u].label)), 9, Fe))), 128))
               ])) : v("", !0)
-            ], 2),
-            t("span", Ve, [
-              b.value ? (a(), s(k, { key: 0 }, [
-                t("small", null, o(e(n)("vs")), 1),
-                t("span", {
+            ]),
+            l("span", Me, [
+              b.value ? (a(), s(p, { key: 0 }, [
+                l("small", null, n(e(o)("vs")), 1),
+                l("span", {
                   class: "iv-mr-portrait",
-                  title: e(n)("Lane opponent: {champion}", { champion: e(_)(b.value) })
+                  title: e(o)("Lane opponent: {champion}", { champion: e(_)(b.value) })
                 }, [
-                  t("img", {
-                    src: e(w)(b.value),
+                  l("img", {
+                    src: e(q)(b.value),
                     alt: e(_)(b.value)
-                  }, null, 8, De)
-                ], 8, Ae)
+                  }, null, 8, Te)
+                ], 8, Pe)
               ], 64)) : v("", !0)
             ])
           ], 64)),
-          t("span", Fe, [
-            r.compact && R.value ? (a(), s("small", {
+          l("span", Ge, [
+            c.compact && V.value ? (a(), s("small", {
               key: 0,
-              class: p(["iv-mr-place", I.value])
-            }, o(R.value), 3)) : v("", !0),
-            r.score ? (a(), S(re, {
+              class: f(["iv-mr-place", w.value])
+            }, n(V.value), 3)) : v("", !0),
+            c.score ? (a(), I(me, {
               key: 1,
-              score: e(K)(r.score.score),
-              rank: r.score.rank,
-              tag: I.value,
-              size: r.compact ? "sm" : "md"
+              score: e(K)(c.score.score),
+              rank: c.score.rank,
+              tag: w.value,
+              size: c.compact ? "sm" : "md"
             }, null, 8, ["score", "rank", "tag", "size"])) : v("", !0)
           ]),
-          r.compact ? v("", !0) : (a(), S(ie, {
+          c.compact ? v("", !0) : (a(), I(ce, {
             key: 2,
             name: "down",
             size: 15,
             class: "iv-mr-chev"
           }))
         ])
-      ], 10, ve),
-      y.value ? (a(), S(ce, {
+      ], 10, ke),
+      g.value ? (a(), I(ve, {
         key: 0,
         class: "iv-mr-star",
-        saved: e(f).favorites.has(y.value.key),
-        label: `${e(n)("Game")} · ${y.value.label}`,
-        onToggle: i[5] || (i[5] = (u) => e(f).favorites.toggle(y.value))
+        saved: e(h).favorites.has(g.value.key),
+        label: `${e(o)("Game")} · ${g.value.label}`,
+        onToggle: r[5] || (r[5] = (u) => e(h).favorites.toggle(g.value))
       }, null, 8, ["saved", "label"])) : v("", !0)
     ]));
   }
 });
 export {
-  Qe as default
+  at as default
 };
