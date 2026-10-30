@@ -33,7 +33,8 @@ async function load() {
   if (!loading.value) return
   try {
     const res = await fetch(`/api/matches/${encodeURIComponent(id)}`)
-    if (!res.ok) throw new Error()
+    // 202 is a game not stored yet (the API is fetching it), never a match to draw.
+    if (res.status !== 200) throw new Error()
     const d = detailOf((await res.json()) as Match)
     cache.set(id, d)
     if (id === props.match.matchId) detail.value = d
