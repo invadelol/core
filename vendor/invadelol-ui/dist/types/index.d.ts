@@ -30,6 +30,7 @@ export { default as RoleIcon } from './components/RoleIcon.vue';
 export { default as RunePage } from './components/RunePage.vue';
 export { default as MatchRow } from './components/MatchRow.vue';
 export { default as MatchRowSkeleton } from './components/MatchRowSkeleton.vue';
+export { default as TeamBadge } from './components/TeamBadge.vue';
 export { default as MatchList } from './components/MatchList.vue';
 export { default as MoreMatches } from './components/MoreMatches.vue';
 export { default as MatchDetailPanel } from './components/MatchDetailPanel.vue';
