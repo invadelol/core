@@ -148,7 +148,7 @@ All routes require a valid PUUID and are cached.
 | `GET` | `/summoners/puuid/:puuid/stats` | Overall stats |
 | `GET` | `/summoners/puuid/:puuid/champions` | Per-champion stats |
 | `GET` | `/summoners/puuid/:puuid/matches` | Recent matches (`count`, `offset`, filters); `before=<epoch ms>` pages older games, stored pages are free; a short unfiltered page is filled from Riot at most 3 times right away, then 1 per 2 min per player and IP (12, then 1 per 30 s per IP). Over that (or under Riot's own limit), 200 with the stored games only, possibly none, and `Retry-After`: the list ends quietly for now |
-| `GET` | `/matches/:id` | One match in full, with its timeline |
+| `GET` | `/matches/:id` | One match in full, with its timeline. Not stored yet (a game that just ended): `202 { status: "pending", retryAfter }` with `Retry-After` while it is fetched from Riot in the background (at once, then 1, 3, 6 and 15 min later; 12 new games per 10 min per IP), `404` once Riot did not give it. Neither is cached |
 | `PUT` | `/summoners/puuid/:puuid/increment` | Increment profile view count |
 
 ### Desktop sync

@@ -11,6 +11,9 @@ import UpdateSummonerRank from '#listeners/update_summoner_rank'
 import ingestionService from '#services/analytics/ingestion_service'
 import matchSourceService from '#services/match_source_service'
 import redis from '@adonisjs/redis/services/main'
+import { Exception } from '@adonisjs/core/exceptions'
+import pendingMatches from '#services/pending_matches'
+import { RiotUpstreamException } from '#utils/riot_errors'
 
 test.group('Match sync lifecycle', (group) => {
   const client = riotApiService.client
@@ -25,6 +28,16 @@ test.group('Match sync lifecycle', (group) => {
   const ingestMatch = ingestionService.ingestMatch
   const ingestTimeline = ingestionService.ingestTimeline
   const pipeline = redis.pipeline
+  const enqueue = pendingMatches.enqueue
+  /** The games a sync handed to the pending queue (never fetched here: no Riot call may escape). */
+  let queued: string[] = []
+  group.each.setup(() => {
+    queued = []
+    pendingMatches.enqueue = (matchId) => {
+      queued.push(matchId)
+      return true
+    }
+  })
 
   group.each.teardown(() => {
     riotApiService.client = client
@@ -39,6 +52,7 @@ test.group('Match sync lifecycle', (group) => {
     ingestionService.ingestMatch = ingestMatch
     ingestionService.ingestTimeline = ingestTimeline
     redis.pipeline = pipeline
+    pendingMatches.enqueue = enqueue
   })
 
   test('coalesces by resolved PUUID even when callers use different profile routes', async ({
@@ -226,5 +240,54 @@ test.group('Match sync lifecycle', (group) => {
 
     await matchService.fetchAndStoreMatch('EUW1_5', PlatformId.EUROPE)
     assert.equal(timelines, 0)
+  })
+
+  test('a sync waits for every game, and hands those Riot cannot give yet to the pending queue', async ({
+    assert,
+  }) => {
+    riotApiService.client = {
+      matchV5: { getIdsByPuuid: async () => ['EUW1_10', 'EUW1_11'] },
+    } as unknown as typeof client
+    matchRepository.getExistingIds = async () => new Set()
+    Summoner.find = (async () => null) as unknown as typeof find
+    let storedSlowly = false
+    matchService.fetchAndStoreMatch = async (matchId) => {
+      if (matchId === 'EUW1_11') {
+        // match-v5 does not serve a game that just ended yet.
+        throw new Exception('Summoner not found', { status: 404, code: 'E_SUMMONER_NOT_FOUND' })
+      }
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      storedSlowly = true
+      return { matchId, platform: 'EUW1', gameStartMs: 1 }
+    }
+
+    const result = await matchService.update('slow-player', PlatformId.EUROPE)
+    assert.isTrue(storedSlowly, 'answered once the slower game was stored')
+    assert.deepEqual(result, [{ matchId: 'EUW1_10', platform: 'EUW1', gameStartMs: 1 }])
+    assert.deepEqual(queued, ['EUW1_11'], 'asked again a few minutes later')
+  })
+
+  test('a sync fails only when it stored nothing, and still queues the games', async ({
+    assert,
+  }) => {
+    riotApiService.client = {
+      matchV5: { getIdsByPuuid: async () => ['EUW1_12', 'EUW1_13'] },
+    } as unknown as typeof client
+    matchRepository.getExistingIds = async () => new Set()
+    Summoner.find = (async () => null) as unknown as typeof find
+    const busy = new RiotUpstreamException('busy', 'E_RIOT_RATE_LIMITED', 429, 60)
+    matchService.fetchAndStoreMatch = async (matchId) => {
+      if (matchId === 'EUW1_12') throw busy
+      throw new Exception('Summoner not found', { status: 404, code: 'E_SUMMONER_NOT_FOUND' })
+    }
+    await assert.rejects(() => matchService.update('busy-player', PlatformId.EUROPE), 'busy')
+    assert.deepEqual(queued, ['EUW1_12', 'EUW1_13'])
+
+    // Nothing Riot could give yet, and nothing else wrong: an empty sync, not a failed one.
+    riotApiService.client = {
+      matchV5: { getIdsByPuuid: async () => ['EUW1_14'] },
+    } as unknown as typeof client
+    assert.deepEqual(await matchService.update('early-player', PlatformId.EUROPE), [])
+    assert.deepEqual(queued, ['EUW1_12', 'EUW1_13', 'EUW1_14'])
   })
 })
