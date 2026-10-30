@@ -10,7 +10,7 @@ import type { Role } from '#services/ranked_stats'
 /**
  * Answers the default champion pages before anyone asks: the champion list and tier list, and
  * the build and statistics tabs of every champion in its main role (default rank, newest patch,
- * every region), and every lane pair of the newest patch at all ranks (the desktop app's matchups).
+ * every region), and the tier list at all ranks (the desktop app's matchups).
  * Runs at start, when a new patch becomes the default, and every few hours; an answer already
  * fresh in the stats cache costs nothing, so a run mostly refreshes what went stale.
  */
@@ -31,12 +31,8 @@ export async function warmStats() {
   if (!filter) return { champions: 0 }
   await championStatsService.patches()
   const summary = await championStatsService.summary(filter)
-  // The desktop app's matchups and draft counters read all ranks: every pair in one pass.
-  const allRanks = { ...filter, bracket: 'all' as const }
-  await Promise.all([
-    championStatsService.summary(allRanks),
-    championStatsService.lanePairs(allRanks),
-  ])
+  // The desktop app's matchups and draft counters read all ranks.
+  await championStatsService.summary({ ...filter, bracket: 'all' })
   await championStatsService.previous(filter)
 
   const main = new Map<number, RoleStat>()

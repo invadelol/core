@@ -1,8 +1,14 @@
 import { test } from '@japa/runner'
 import {
+  cellCountsSql,
+  laneOpponentsSql,
+  lanePairCellsSql,
   lanePairs,
   lanePairsSql,
   opponentsOf,
+  roleCellsSql,
+  summaryCellsSql,
+  totalsCellsSql,
   type Filter,
   type RoleStat,
 } from '#services/champion_stats'
@@ -36,6 +42,43 @@ test.group('Matchup stats', () => {
     // The other team's player in the same position.
     assert.include(sql, 'x.3 = a.3 AND x.2 != a.2')
     assert.include(sql, "join_algorithm = 'full_sorting_merge'")
+  })
+
+  test('counts each patch per seed tier and platform, one platform of pairs at a time', ({
+    assert,
+  }) => {
+    const pairs = lanePairCellsSql()
+    assert.include(pairs, 'FROM match_lineups FINAL')
+    assert.include(pairs, 'FROM match_seed FINAL')
+    // Every table read by the platform's game ids.
+    assert.equal(pairs.match(/startsWith\(match_id, \{prefix:String\}\)/g)?.length, 2)
+    assert.include(pairs, 'platform = {platform:String}')
+    assert.include(pairs, 'GROUP BY s.seed_tier, s.platform, a.3, a.4, b.4')
+    assert.include(roleCellsSql(), 'FROM participant_items FINAL')
+    assert.include(
+      roleCellsSql(),
+      'GROUP BY s.seed_tier, s.platform, p.team_position, p.champion_id'
+    )
+    // The cell's games under champion 0, then the bans.
+    assert.include(cellCountsSql(), 'toUInt16(0), toUInt32(count())')
+    assert.include(cellCountsSql(), 'arrayDistinct(arrayConcat(t1_bans, t2_bans))')
+  })
+
+  test('reads a filter as a sum of its cells', ({ assert }) => {
+    const all = summaryCellsSql({ patch: '16.21', bracket: 'all', region: null })
+    assert.notInclude(all, 'seed_tier IN')
+    assert.notInclude(all, 'platform IN')
+    const narrow: Filter = { patch: '16.21', bracket: 'master_plus', region: 'kr' }
+    for (const sql of [summaryCellsSql(narrow), totalsCellsSql(narrow), laneOpponentsSql(narrow)]) {
+      assert.include(sql, "seed_tier IN ('MASTER','GRANDMASTER','CHALLENGER')")
+      assert.include(sql, "platform IN ('KR')")
+      assert.include(sql, 'patch = {patch:String}')
+    }
+    assert.include(
+      laneOpponentsSql(narrow),
+      'position = {position:String} AND champion = {champion:UInt16}'
+    )
+    assert.include(totalsCellsSql(narrow), "if(champion = 0, 'games', 'ban')")
   })
 
   test('keeps each champion-role opponents as one flat list', ({ assert }) => {
