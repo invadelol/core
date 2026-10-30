@@ -1,5 +1,10 @@
 import clickhouse from 'adonisjs-clickhouse/services/main'
-import { AnswerCache, PATCH_READY_GAMES, RANKED_SOLO } from '#services/ranked_stats'
+import {
+  AnswerCache,
+  PATCH_READY_GAMES,
+  PATCH_START_SQL,
+  RANKED_SOLO,
+} from '#services/ranked_stats'
 import { StatsCache } from '#services/stats_cache'
 
 /**
@@ -22,6 +27,20 @@ export function latestPatch(): Promise<string | null> {
           ORDER BY max(game_start_ms) DESC LIMIT 1
         `)
     return row ? String(row[0]) : null
+  })
+}
+
+const starts = new AnswerCache(8, PATCH_CHECK_MS)
+
+/**
+ * When `patch`'s first game started, in ms (`PATCH_START_SQL`): the `{patchStart:UInt64}` of the
+ * per-champion queries. Asked once per patch and kept as long as the default patch, instead of
+ * two scans of `matches` and `match_seed` in every query.
+ */
+export function patchStart(patch: string): Promise<number> {
+  return starts.get(patch, async () => {
+    const [row] = await rows(`SELECT ${PATCH_START_SQL}`, { patch })
+    return Number(row?.[0] ?? 0)
   })
 }
 

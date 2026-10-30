@@ -88,16 +88,40 @@ test.group('Champion stats', () => {
     const skills = skillOrderSql(FILTER)
     assert.include(skills, 'FROM participants')
     assert.include(skills, 'champion_id = {champion:UInt16}')
-    assert.include(skills, 'game_start_ms >= least(')
+    assert.include(skills, 'game_start_ms >= {patchStart:UInt64}')
     assert.notInclude(skills, 'match_timeline')
     const lane = laneSql(FILTER)
     assert.include(lane, 'FROM match_lineups')
     assert.include(lane, 'WHERE patch = {patch:String}')
-    assert.equal(lane.match(/FROM participant_items/g)?.length, 1)
+    // The champion's games, then the crawled games looked up among them only.
+    assert.equal(lane.match(/FROM participant_items/g)?.length, 2)
     const runes = pageRowsSql('emerald_plus', { champion: 21, position: 'BOTTOM' })
     assert.include(runes, 'FROM participants')
-    assert.include(runes, 'game_start_ms >= least(')
+    assert.include(runes, 'game_start_ms >= {patchStart:UInt64}')
     assert.notInclude(runes, 'match_timeline')
+    // The patch start is a parameter, asked once per patch, not two scans per query.
+    for (const sql of [skills, runes, profileSql(FILTER)])
+      assert.notInclude(sql, 'min(game_start_ms)')
+  })
+
+  test("a champion's crawled games are looked up among its own, not the patch's", ({ assert }) => {
+    // The set an IN builds is the champion's games of the patch: a few thousand, not millions.
+    for (const sql of [laneSql(FILTER), skillOrderSql(FILTER), profileSql(FILTER)]) {
+      const seeds = sql.indexOf('FROM match_seed')
+      assert.isAbove(seeds, 0)
+      const inside = sql.slice(seeds, sql.indexOf('))', seeds))
+      assert.include(
+        inside,
+        "seed_tier IN ('EMERALD','DIAMOND','MASTER','GRANDMASTER','CHALLENGER')"
+      )
+      assert.include(inside, 'match_id IN (SELECT match_id FROM participant_items')
+      assert.include(
+        inside,
+        'champion_id = {champion:UInt16} AND team_position = {position:String}'
+      )
+    }
+    // Every champion at once has no champion to start from: the bracket's games, as before.
+    assert.notInclude(seedGamesSql(FILTER), 'participant_items')
   })
 
   test('orders matchups by games, then by champion, so equal counts never swap', ({ assert }) => {
@@ -158,7 +182,7 @@ test.group('Champion stats', () => {
   test('reads each source of the Statistics tab once', ({ assert }) => {
     const profile = profileSql(FILTER)
     assert.notInclude(profile, 'WITH me')
-    assert.equal(profile.match(/FROM participant_items/g)?.length, 1)
+    assert.equal(profile.match(/FROM participant_items FINAL/g)?.length, 1)
     assert.include(profile, 'LIMIT 1 BY match_id')
     const trend = trendGamesSql(FILTER)
     assert.equal(trend.match(/FROM participant_items/g)?.length, 1)

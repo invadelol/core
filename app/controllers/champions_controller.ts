@@ -5,9 +5,20 @@ import runeStatsService from '#services/rune_stats_service'
 import spellStatsService from '#services/spell_stats_service'
 import championStatsService from '#services/champion_stats_service'
 import proService from '#services/pro_service'
+import { onceEach, settle } from '#services/page_blocks'
 import { POSITIONS, positionOf, type Filter, type Position } from '#services/champion_stats'
 import type { Role } from '#services/ranked_stats'
 import { CHAMPION_TABS, type ChampionTab } from '../../inertia/lib/champions.js'
+
+/**
+ * How long a page waits for its build tab's blocks before it is sent: an answer the stats cache
+ * holds comes back well within it. A block still counting then arrives on its own (an Inertia
+ * deferred prop), so the page shows what it has instead of waiting for its slowest query.
+ */
+const READY_MS = 150
+
+/** The build tab's blocks that load together: matchups and teammates are one query. */
+const BLOCK_GROUP: Record<string, string> = { matchups: 'lane', teammates: 'lane' }
 
 /** The role names the build, rune and spell services take. */
 const SERVICE_ROLE: Record<Position, Role> = {
@@ -81,9 +92,16 @@ export default class ChampionsController {
 
     const filter = await championStatsService.filter(request.qs())
     const asked = positionOf(request.input('role'))
+    // The build tab's blocks load one by one: a partial reload asks for those still missing.
+    const partial = tab === 'build' && Boolean(request.header('x-inertia-partial-data'))
     // A role in the address needs no summary first: the tab loads alongside it.
+    const earlyBlocks =
+      filter && asked && tab === 'build' ? this.blocks(filter, champion.id, asked) : null
+    if (earlyBlocks && !partial) for (const load of Object.values(earlyBlocks)) void load()
     const early =
-      filter && asked ? this.tab(tab, filter, champion.id, asked).catch(() => null) : null
+      filter && asked && tab !== 'build'
+        ? this.tab(tab, filter, champion.id, asked).catch(() => null)
+        : null
     const [summary, patches] = await Promise.all([
       filter ? championStatsService.summary(filter) : null,
       championStatsService.patches(),
@@ -93,10 +111,21 @@ export default class ChampionsController {
     const position: Position = asked ?? main ?? 'MIDDLE'
     const stat = mine.find((r) => r.position === position) ?? null
 
-    const data = filter
-      ? await (early ?? this.tab(tab, filter, champion.id, position).catch(() => null))
-      : null
+    let data: Record<string, unknown> | null = null
+    const late: Record<string, unknown> = {}
+    if (filter && tab === 'build') {
+      const blocks = earlyBlocks ?? this.blocks(filter, champion.id, position)
+      const { ready, waiting } = partial
+        ? { ready: {}, waiting: Object.keys(blocks) }
+        : await settle(blocks, READY_MS)
+      data = ready
+      for (const key of waiting) late[key] = inertia.defer(blocks[key], BLOCK_GROUP[key] ?? key)
+    } else if (filter) {
+      data =
+        (await (early ?? this.tab(tab, filter, champion.id, position).catch(() => null))) ?? null
+    }
     return inertia.render('champions/show', {
+      ...late,
       champion,
       tab,
       position,
@@ -115,24 +144,26 @@ export default class ChampionsController {
     })
   }
 
-  /** What one tab shows. */
+  /** The build tab's blocks, each loaded once whoever asks first (`onceEach`). */
+  private blocks(filter: Filter, champion: number, position: Position) {
+    const role = SERVICE_ROLE[position]
+    return onceEach({
+      build: () => buildStatsService.forRole(champion, role, filter.bracket, filter.patch),
+      runes: () => runeStatsService.forRole(champion, role, filter.bracket, filter.patch),
+      spells: () => spellStatsService.forRole(champion, role, filter.bracket, filter.patch),
+      skills: () => championStatsService.skills(filter, champion, position),
+      matchups: () => championStatsService.matchups(filter, champion, position),
+      teammates: () => championStatsService.teammates(filter, champion, position),
+      trees: () => riotAssetsService.runeTrees(),
+    })
+  }
+
+  /** What one of the other tabs shows (the build tab is `blocks`). */
   private async tab(tab: ChampionTab, filter: Filter, champion: number, position: Position) {
     const role = SERVICE_ROLE[position]
     const build = () => buildStatsService.forRole(champion, role, filter.bracket, filter.patch)
     const runes = () => runeStatsService.forRole(champion, role, filter.bracket, filter.patch)
     switch (tab) {
-      case 'build': {
-        const [b, r, s, skills, matchups, teammates, trees] = await Promise.all([
-          build(),
-          runes(),
-          spellStatsService.forRole(champion, role, filter.bracket, filter.patch),
-          championStatsService.skills(filter, champion, position),
-          championStatsService.matchups(filter, champion, position),
-          championStatsService.teammates(filter, champion, position),
-          riotAssetsService.runeTrees(),
-        ])
-        return { build: b, runes: r, spells: s, skills, matchups, teammates, trees }
-      }
       case 'runes': {
         const [r, trees] = await Promise.all([runes(), riotAssetsService.runeTrees()])
         return { runes: r, trees }

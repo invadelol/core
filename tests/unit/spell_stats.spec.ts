@@ -54,4 +54,22 @@ test.group('Spell stats', () => {
     assert.include(spellRowsSql('gold', null), "seed_tier IN ('GOLD')")
     assert.include(spellRowsSql('gold', null), 'SELECT champion_id, team_position, least')
   })
+
+  test("a bracket's games are looked up among the champion's own", ({ assert }) => {
+    const one = spellRowsSql('emerald_plus', { champion: 1, position: 'UTILITY' })
+    assert.include(one, 'FROM match_seed WHERE patch = {patch:String} AND seed_tier IN (')
+    assert.include(
+      one,
+      'AND match_id IN (SELECT match_id FROM participants WHERE queue_id = 420 AND champion_id = {champion:UInt16} AND team_position = {position:String} AND game_start_ms >= {patchStart:UInt64})'
+    )
+    // All ranks: every ranked game of the patch, still only among the champion's.
+    const all = spellRowsSql('all', { champion: 1, position: 'UTILITY' })
+    assert.include(
+      all,
+      'FROM matches WHERE queue_id = 420 AND patch = {patch:String} AND match_id IN (SELECT match_id FROM participants'
+    )
+    assert.notInclude(all, 'match_seed')
+    // Every champion at once: the bracket's games themselves.
+    assert.notInclude(spellRowsSql('gold', null), 'FROM participants WHERE')
+  })
 })

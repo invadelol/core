@@ -1,5 +1,5 @@
 import { ROLES, type Bracket, type Role } from '#services/ranked_stats'
-import { latestPatch, rows, statsCache } from '#services/ranked_games_service'
+import { latestPatch, patchStart, rows, statsCache } from '#services/ranked_games_service'
 import {
   spellRowsSql,
   summarizeSpells,
@@ -30,6 +30,7 @@ export class SpellStatsService {
         champion,
         position,
         patch: resolvedPatch,
+        patchStart: await patchStart(resolvedPatch),
       })
       const result = summarizeSpells(found.map((row) => row.map(Number)) as SpellRow[])
       return { champion, role: position, patch: resolvedPatch, bracket, ...result }
