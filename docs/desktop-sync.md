@@ -294,6 +294,11 @@ neither an object nor `null`; a malformed or implausible LP object only makes `l
 `uploader` that is not one of the participants is a 422 `E_INVALID_MATCH` (linking would not fix it);
 403 `E_NOT_LINKED` means a participant uploader that this device has no link for.
 
+The `url` of a `deferred` game opens before the game is stored: `GET /api/matches/:id` answers 202
+`{ "status": "pending", "retryAfter": 5 }` (with `Retry-After`) and fetches the game from Riot in the
+background, and the match page says the game just ended and fills in once it is stored. 404 once
+Riot did not give it (README, `/matches/:id`).
+
 ### 2.6 `POST /api/desktop/matches/known` (auth, 60 / hour / device; v1.3)
 
 Which of these games core already holds, so the app sends only the others.

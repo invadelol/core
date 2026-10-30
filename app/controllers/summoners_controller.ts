@@ -113,11 +113,14 @@ export default class SummonersController {
       let rankRefreshFailed = false
       try {
         await rankRefresh
-        await invalidateResponseCache([`summoner:${puuid}`])
       } catch (error) {
         rankRefreshFailed = true
         logger.warn({ err: error }, 'Match update succeeded but rank refresh failed')
       }
+      // Whatever the ranks did: the profile read right after the sync must not be a cached one.
+      await invalidateResponseCache([`summoner:${puuid}`]).catch((error) =>
+        logger.warn({ err: error }, 'Sync cache invalidation failed')
+      )
       return { summoner: resolvedSummoner, matches: newMatches, rankRefreshFailed }
     })
     return response.ok(result)
