@@ -100,11 +100,16 @@ const isOneOf = (list: number[]) => {
  * the champion and Riot's position.
  *
  * One pass: each player's options are listed in one array and counted together, so the games
- * are read once (a CTE named six times was read six times).
+ * are read once (a CTE named six times was read six times). A bracket's crawled games are only
+ * looked up among the champion's own (`IN` builds its set first: the champion's thousands of
+ * games, not the patch's millions).
  */
 export function buildRowsSql(bracket: Bracket, scope: Scope, kinds: ItemKinds) {
   const tiers = seedTiers(bracket)
   const by = scope ? '' : 'champion_id, team_position, '
+  const mine = scope
+    ? `AND match_id IN (SELECT match_id FROM participant_items WHERE patch = {patch:String} AND queue_id = ${RANKED_SOLO} ${scopeSql(scope)})`
+    : ''
   // Per player: starting items (a multiset), the legendary items in the order first bought,
   // the first finished boots (0 without).
   const players = `
@@ -115,7 +120,7 @@ export function buildRowsSql(bracket: Bracket, scope: Scope, kinds: ItemKinds) {
         arrayFilter(i -> ${isOneOf(kinds.boots)}, purchases)[1] AS boots
       FROM participant_items FINAL
       WHERE patch = {patch:String} AND queue_id = ${RANKED_SOLO} ${scopeSql(scope)}
-      ${tiers ? `AND match_id IN (SELECT match_id FROM match_seed WHERE patch = {patch:String} AND seed_tier IN (${tiers}))` : ''}
+      ${tiers ? `AND match_id IN (SELECT match_id FROM match_seed WHERE patch = {patch:String} AND seed_tier IN (${tiers}) ${mine})` : ''}
     `
   const none = 'CAST([] AS Array(UInt16))'
   return `

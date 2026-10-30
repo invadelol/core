@@ -35,6 +35,7 @@ const RuneStatsController = () => import('#controllers/rune_stats_controller')
 const BuildStatsController = () => import('#controllers/build_stats_controller')
 const SpellStatsController = () => import('#controllers/spell_stats_controller')
 const MatchupStatsController = () => import('#controllers/matchup_stats_controller')
+const PickStatsController = () => import('#controllers/pick_stats_controller')
 const SynergyController = () => import('#controllers/synergy_controller')
 const LegalController = () => import('#controllers/legal_controller')
 const ChangelogController = () => import('#controllers/changelog_controller')
@@ -112,6 +113,9 @@ router
 
     /** Lane matchups from our own ranked games, for any champion in any role and any stored patch. */
     router.get('/matchups/:champion/:role', [MatchupStatsController, 'show'])
+
+    /** Rune pages, builds and summoner spells of a pick, several brackets in one request. */
+    router.get('/picks/:champion/:role', [PickStatsController, 'show'])
 
     router.put('/summoners/puuid/:puuid/increment', [SummonersController, 'incrementViews'])
 

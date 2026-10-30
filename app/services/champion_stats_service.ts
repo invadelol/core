@@ -1,6 +1,6 @@
 import riotAssetsService from '#services/riot/assets'
 import { AnswerCache, BRACKETS, type Bracket } from '#services/ranked_stats'
-import { latestPatch, rows, statsCache } from '#services/ranked_games_service'
+import { latestPatch, patchStart, rows, statsCache } from '#services/ranked_games_service'
 import {
   REGIONS,
   averages,
@@ -297,8 +297,8 @@ export class ChampionStatsService {
     position: Position,
     load: (params: Record<string, unknown>) => Promise<T>
   ): Promise<T> {
-    return this.#champion.get(`${kind}:${key(filter)}:${champion}:${position}`, () =>
-      load({ patch: filter.patch, champion, position })
+    return this.#champion.get(`${kind}:${key(filter)}:${champion}:${position}`, async () =>
+      load({ patch: filter.patch, champion, position, patchStart: await patchStart(filter.patch) })
     )
   }
 }

@@ -1,6 +1,5 @@
 import {
   BRACKETS,
-  PATCH_START_SQL,
   RANKED_SOLO,
   evidenceLevel,
   round,
@@ -150,10 +149,20 @@ export function summaryByRankSql(filter: Filter) {
   `
 }
 
-/** The games of one champion in one role (`{champion:UInt16}`, `{position:String}`). */
+/** One champion in one role (`{champion:UInt16}`, `{position:String}`). */
+const ONE_SQL = 'champion_id = {champion:UInt16} AND team_position = {position:String}'
+
+/**
+ * The games of one champion in one role. The filter's crawled games are only looked up among the
+ * champion's own: `IN` builds its set before reading, and a champion's few thousand games make a
+ * far smaller set than every crawled game of the patch.
+ */
 const mineSql = (filter: Filter) => `
     SELECT match_id, participant_id, team_id, win FROM participant_items FINAL
-    WHERE ${itemsWhere(filter)} AND champion_id = {champion:UInt16} AND team_position = {position:String}
+    WHERE patch = {patch:String} AND queue_id = ${RANKED_SOLO} AND ${ONE_SQL}
+      AND match_id IN (${seedGamesSql(filter)}
+        AND match_id IN (SELECT match_id FROM participant_items
+          WHERE patch = {patch:String} AND queue_id = ${RANKED_SOLO} AND ${ONE_SQL}))
   `
 
 /**
@@ -332,7 +341,7 @@ export function skillOrderSql(filter: Filter) {
       SELECT cityHash64(match_id, participant_id) AS k, arraySlice(skill_order, 1, 15) AS o
       FROM participants
       WHERE queue_id = ${RANKED_SOLO} AND champion_id = {champion:UInt16}
-        AND team_position = {position:String} AND game_start_ms >= ${PATCH_START_SQL}
+        AND team_position = {position:String} AND game_start_ms >= {patchStart:UInt64}
         AND match_id IN (SELECT match_id FROM me) AND participant_id != 0
         AND length(skill_order) >= 15
       LIMIT 1 BY match_id, participant_id
@@ -366,7 +375,7 @@ export function profileSql(filter: Filter) {
       SELECT match_id, 1 AS found, kills, deaths, assists, total_cs, gold_earned, dmg_to_champ, vision_score
       FROM participants
       WHERE queue_id = ${RANKED_SOLO} AND champion_id = {champion:UInt16} AND team_position = {position:String}
-        AND game_start_ms >= ${PATCH_START_SQL}
+        AND game_start_ms >= {patchStart:UInt64}
       LIMIT 1 BY match_id
     ) AS p USING (match_id)
     GROUP BY b ORDER BY b
