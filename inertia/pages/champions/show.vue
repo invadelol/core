@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { Head, Link } from '@inertiajs/vue3'
 import { ChevronRight } from 'lucide-vue-next'
-import { RankCrest, RoleIcon } from '@invadelol/ui'
+import { RankCrest, RoleIcon, Skeleton } from '@invadelol/ui'
 import AppHeader from '../../components/AppHeader.vue'
 import SiteFooter from '../../components/SiteFooter.vue'
 import Banner from '../../components/champions/Banner.vue'
@@ -61,7 +61,24 @@ const props = defineProps<{
   patches: { patch: string; games: number }[]
   filter: Filter | null
   data: Record<string, any> | null
+  /** Build tab blocks still counting when the page was sent: each arrives on its own. */
+  build?: BuildStats | null
+  runes?: RuneStats | null
+  spells?: SpellStats | null
+  skills?: Skills | null
+  matchups?: Matchup[] | null
+  teammates?: Teammates | null
+  trees?: RuneTrees | null
 }>()
+
+type Block = 'build' | 'runes' | 'spells' | 'skills' | 'matchups' | 'teammates' | 'trees'
+/** A block of the tab: sent with the page, or arrived since. */
+const block = (key: Block): any => (props.data && key in props.data ? props.data[key] : props[key])
+/** Whether a build tab block is still on its way (its panel holds its place meanwhile). */
+const waiting = (...keys: Block[]) =>
+  props.tab === 'build' &&
+  !!props.data &&
+  keys.some((key) => !(key in props.data!) && props[key] === undefined)
 
 const latest = computed(() => props.patches[0]?.patch)
 const role = computed(() => roleOf(props.position))
@@ -133,13 +150,13 @@ const figures = computed(() => {
 })
 
 /* ── Build tab ───────────────────────────────────────────────── */
-const build = computed(() => props.data?.build as BuildStats | null | undefined)
-const runes = computed(() => props.data?.runes as RuneStats | null | undefined)
-const spells = computed(() => props.data?.spells as SpellStats | null | undefined)
-const skills = computed(() => props.data?.skills as Skills | null | undefined)
-const trees = computed(() => props.data?.trees as RuneTrees | undefined)
-const matchups = computed(() => (props.data?.matchups ?? []) as Matchup[])
-const teammates = computed(() => props.data?.teammates as Teammates | undefined)
+const build = computed(() => block('build') as BuildStats | null | undefined)
+const runes = computed(() => block('runes') as RuneStats | null | undefined)
+const spells = computed(() => block('spells') as SpellStats | null | undefined)
+const skills = computed(() => block('skills') as Skills | null | undefined)
+const trees = computed(() => (block('trees') ?? undefined) as RuneTrees | undefined)
+const matchups = computed(() => (block('matchups') ?? []) as Matchup[])
+const teammates = computed(() => (block('teammates') ?? undefined) as Teammates | undefined)
 
 /** Opponents with enough games to be compared: 2 % of the champion's games, 30 at least. */
 const reliable = computed(() => {
@@ -296,9 +313,17 @@ const rune = (id: number) => nameOf('rune', id) ?? ''
               >
             </div>
           </section>
+          <section v-else-if="waiting('runes', 'trees')" class="iv-panel cs-card" aria-busy="true">
+            <h2>Runes</h2>
+            <Skeleton height="300px" />
+          </section>
           <section v-if="spells?.pairs.length" class="iv-panel cs-card">
             <h2>Summoner spells</h2>
             <SpellPairs :spells="spells" />
+          </section>
+          <section v-else-if="waiting('spells')" class="iv-panel cs-card" aria-busy="true">
+            <h2>Summoner spells</h2>
+            <Skeleton height="96px" />
           </section>
           <section v-if="duos.length" class="iv-panel cs-card">
             <ChampionRows
@@ -307,6 +332,10 @@ const rune = (id: number) => nameOf('rune', id) ?? ''
               note="games together"
               :href="championHref"
             />
+          </section>
+          <section v-else-if="waiting('teammates')" class="iv-panel cs-card" aria-busy="true">
+            <span class="cs-h">Best with · {{ roleOf(duoRole).label }}</span>
+            <Skeleton height="220px" />
           </section>
         </div>
         <div class="cs-stack">
@@ -319,9 +348,17 @@ const rune = (id: number) => nameOf('rune', id) ?? ''
             </h2>
             <BuildPath :build="build" />
           </section>
+          <section v-else-if="waiting('build')" class="iv-panel cs-card" aria-busy="true">
+            <h2>Build<span class="meta">Most played order</span></h2>
+            <Skeleton height="220px" />
+          </section>
           <section v-if="skills" class="iv-panel cs-card">
             <h2>Skill order</h2>
             <SkillOrder :skills="skills" :champion="champion.id" />
+          </section>
+          <section v-else-if="waiting('skills')" class="iv-panel cs-card" aria-busy="true">
+            <h2>Skill order</h2>
+            <Skeleton height="150px" />
           </section>
           <div v-if="reliable.length" class="cs-cols cs-c-2" style="margin: 0">
             <section class="iv-panel cs-card">
@@ -329,6 +366,17 @@ const rune = (id: number) => nameOf('rune', id) ?? ''
             </section>
             <section class="iv-panel cs-card">
               <ChampionRows :rows="easiest" title="Easiest lanes" polar :href="championHref" />
+            </section>
+          </div>
+          <div v-else-if="waiting('matchups')" class="cs-cols cs-c-2" style="margin: 0">
+            <section
+              v-for="t in ['Hardest lanes', 'Easiest lanes']"
+              :key="t"
+              class="iv-panel cs-card"
+              aria-busy="true"
+            >
+              <span class="cs-h">{{ t }}</span>
+              <Skeleton height="220px" />
             </section>
           </div>
         </div>
