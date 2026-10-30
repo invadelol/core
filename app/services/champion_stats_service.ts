@@ -6,8 +6,11 @@ import {
   averages,
   byLength,
   byRank,
+  lanePairs,
+  lanePairsSql,
   laneSql,
   matchups,
+  opponentsOf,
   patchesSql,
   profileSql,
   skillOrderSql,
@@ -25,6 +28,7 @@ import {
   type Position,
   type Summary,
 } from '#services/champion_stats'
+import { matchupReport } from '#services/matchup_stats'
 import { championSlug } from '../../inertia/lib/champions.js'
 
 /** The bracket a page shows unless the address names another. */
@@ -52,6 +56,8 @@ export class ChampionStatsService {
   #byRank = statsCache('by-rank', 16)
   #champion = statsCache('champion')
   #trendDays = statsCache('trend-days', 16)
+  // Every lane pair of a patch (~1.5 MB each): few kept in this process, all of them in Redis.
+  #pairs = statsCache('lane-pairs', 4)
   #patches = new AnswerCache(1, PATCHES_TTL_MS)
 
   /** The filters of an address: `?rank=emerald_plus&patch=16.20&region=euw`, defaults filled. */
@@ -127,6 +133,41 @@ export class ChampionStatsService {
   async matchups(filter: Filter, champion: number, position: Position) {
     const lane = await this.lane(filter, champion, position)
     return lane.matchups
+  }
+
+  /**
+   * The desktop app's matchups: every lane opponent with its share of the games and its gap to
+   * the champion's own win rate, the champion's row of the tier list and the patches that can be
+   * asked for. The same games and pairs as the Matchups tab, counted for every champion at once.
+   */
+  async report(filter: Filter, champion: number, position: Position) {
+    const [pairs, summary, patches] = await Promise.all([
+      this.lanePairs(filter),
+      this.summary(filter),
+      this.patches(),
+    ])
+    const stat = summary.roles.find((r) => r.champion === champion && r.position === position)
+    return matchupReport(
+      filter,
+      champion,
+      position,
+      opponentsOf(pairs, champion, position),
+      stat ?? null,
+      patches
+    )
+  }
+
+  /** Every lane pair of the filter, read in one pass (~10 s for a whole patch at all ranks). */
+  lanePairs(filter: Filter): Promise<Record<string, number[]>> {
+    return this.#pairs.get(key(filter), async () => {
+      const found = await rows(lanePairsSql(filter), { patch: filter.patch })
+      return lanePairs(
+        found.map(
+          ([p, c, o, g, w]) =>
+            [String(p), num(c), num(o), num(g), num(w)] as [string, number, number, number, number]
+        )
+      )
+    })
   }
 
   /** Teammates by role. */

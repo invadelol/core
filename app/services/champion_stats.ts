@@ -180,6 +180,33 @@ export function laneSql(filter: Filter) {
 }
 
 /**
+ * Every lane pair of the filter's games at once, each game read once: position, champion,
+ * opponent (the other team's player in that position), games, wins of the champion. The same
+ * games and the same pairs as `laneSql` (one champion's opponents), for every champion: the
+ * lineups merged as they are read (`FINAL`, one row per game), joined to each game's winner by
+ * match id (both sides sorted on it, so neither is held in memory).
+ */
+export function lanePairsSql(filter: Filter) {
+  return `
+    SELECT a.3 AS pos, a.4 AS champion, b.4 AS opponent, count(),
+           sum(if(a.2 = 100, m.t1_win, m.t2_win))
+    FROM (
+      SELECT match_id, players FROM match_lineups FINAL
+      WHERE patch = {patch:String} AND match_id IN (${seedGamesSql(filter)})
+    ) AS l
+    INNER JOIN (
+      SELECT match_id, t1_win, t2_win FROM matches
+      WHERE patch = {patch:String} AND queue_id = ${RANKED_SOLO}
+    ) AS m USING (match_id)
+    ARRAY JOIN l.players AS a
+    ARRAY JOIN arrayFilter(x -> x.3 = a.3 AND x.2 != a.2, l.players) AS b
+    WHERE a.3 != ''
+    GROUP BY pos, champion, opponent
+    SETTINGS join_algorithm = 'full_sorting_merge', max_threads = 2
+  `
+}
+
+/**
  * The first 15 skill points of each game (1 Q, 2 W, 3 E, 4 R) from the player's skill order on
  * their participant row, joined to the game by one hash of (match, participant): order, games,
  * wins. Games stored without a timeline have no skill order and are skipped. The champion, role
@@ -278,11 +305,11 @@ export function trendGamesSql(filter: Filter) {
   `
 }
 
-/** Patches with crawled games, newest first: patch, games. */
+/** Patches with crawled games, newest first (a year of them at most): patch, games. */
 export function patchesSql() {
   return `
     SELECT patch, count() FROM match_seed
-    GROUP BY patch ORDER BY max(game_start_ms) DESC LIMIT 6
+    GROUP BY patch ORDER BY max(game_start_ms) DESC LIMIT 24
   `
 }
 
@@ -425,6 +452,26 @@ export function matchups(rows: [number, number, number][]) {
       level: evidenceLevel(games, wins),
     }))
     .sort((a, b) => b.games - a.games || a.champion - b.champion)
+}
+
+/**
+ * `lanePairsSql`'s rows by `position:champion`, each a flat list of opponent, games, wins (a
+ * patch holds ~100k pairs: flat lists keep the cached answer small).
+ */
+export function lanePairs(rows: [string, number, number, number, number][]) {
+  const out: Record<string, number[]> = {}
+  for (const [pos, champion, opponent, games, wins] of rows) {
+    ;(out[`${pos}:${champion}`] ??= []).push(opponent, games, wins)
+  }
+  return out
+}
+
+/** One champion's opponents from `lanePairs`: champion, games, wins. */
+export function opponentsOf(pairs: Record<string, number[]>, champion: number, position: Position) {
+  const flat = pairs[`${position}:${champion}`] ?? []
+  const out: [number, number, number][] = []
+  for (let i = 0; i + 2 < flat.length; i += 3) out.push([flat[i], flat[i + 1], flat[i + 2]])
+  return out
 }
 
 /** Teammates per role, the ones with enough games, most played first. */
