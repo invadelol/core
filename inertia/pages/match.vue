@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
 import { ChevronLeft } from 'lucide-vue-next'
-import { computed, onMounted, ref, shallowRef } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
 import { Breakdown, BuildTab, GoldChart, Scoreboard, Timeline } from '@invadelol/ui'
 import { hasEvents, type MatchDetail } from '@invadelol/ui/logic'
 import AppHeader from '../components/AppHeader.vue'
@@ -42,10 +42,48 @@ const SECTIONS = computed(() => [
   { id: 'build', label: 'Build' },
 ])
 
-onMounted(async () => {
+/**
+ * A game that just ended is not stored yet: the API answers 202 while it fetches it from Riot,
+ * which publishes a game minutes after its end. The page says so and asks again when told to,
+ * for as long as the API keeps it queued, and a little longer.
+ */
+const pending = ref(false)
+const PENDING_FOR_MS = 20 * 60_000
+let pendingSince = 0
+let retry: ReturnType<typeof setTimeout> | undefined
+let disposed = false
+
+/** Asks again after `seconds`, once the tab is in view. */
+function askAgain(seconds: number) {
+  retry = setTimeout(
+    () => {
+      if (document.visibilityState === 'visible') void load()
+      else document.addEventListener('visibilitychange', onVisible, { once: true })
+    },
+    Math.min(60, Math.max(3, seconds)) * 1000
+  )
+}
+function onVisible() {
+  if (!disposed) void load()
+}
+
+async function load() {
   try {
-    const res = await fetch(`/api/matches/${encodeURIComponent(props.matchId)}`)
-    if (!res.ok) {
+    const res = await fetch(`/api/matches/${encodeURIComponent(props.matchId)}`, {
+      cache: 'no-store',
+    })
+    if (disposed) return
+    if (res.status === 202) {
+      const body = await res.json().catch(() => null)
+      pendingSince ||= Date.now()
+      if (Date.now() - pendingSince < PENDING_FOR_MS) {
+        pending.value = true
+        askAgain(Number(res.headers.get('Retry-After')) || Number(body?.retryAfter) || 10)
+        return
+      }
+    }
+    pending.value = false
+    if (res.status !== 200) {
       error.value = 'This match could not be found.'
       return
     }
@@ -56,10 +94,19 @@ onMounted(async () => {
       detail.value.players.findIndex((p) => p.puuid === ownerPuuid.value)
     )
   } catch {
+    pending.value = false
     error.value = 'Something broke while loading this match.'
   } finally {
     isLoading.value = false
   }
+}
+
+// Browser-only, like every timer here: one scheduled during SSR would fire inside the server.
+onMounted(load)
+onBeforeUnmount(() => {
+  disposed = true
+  clearTimeout(retry)
+  document.removeEventListener('visibilitychange', onVisible)
 })
 </script>
 
@@ -86,6 +133,16 @@ onMounted(async () => {
 
       <div v-else-if="error" class="mx-auto max-w-[520px] py-24">
         <h1 class="text-[20px] font-semibold text-ink">{{ error }}</h1>
+        <a :href="`/${encodeURIComponent(slug)}`" class="iv-btn mt-5">Back to profile</a>
+      </div>
+
+      <!-- A game that just ended: Riot publishes it a few minutes later, and the page fills in
+           on its own once it is stored. -->
+      <div v-else-if="pending" class="mx-auto max-w-[520px] py-24" role="status">
+        <h1 class="text-[20px] font-semibold text-ink">This game just ended</h1>
+        <p class="mt-2 text-[14px] text-ink-2">
+          It will be ready in a moment. This page opens it as soon as it is.
+        </p>
         <a :href="`/${encodeURIComponent(slug)}`" class="iv-btn mt-5">Back to profile</a>
       </div>
 
