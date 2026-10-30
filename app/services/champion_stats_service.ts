@@ -6,6 +6,7 @@ import {
   averages,
   byLength,
   byRank,
+  laneOpponentsSql,
   lanePairs,
   lanePairsSql,
   laneSql,
@@ -17,8 +18,10 @@ import {
   skillOrders,
   summarize,
   summaryByRankSql,
+  summaryCellsSql,
   summarySql,
   teammates,
+  totalsCellsSql,
   totalsSql,
   trend,
   trendDaysSql,
@@ -29,6 +32,7 @@ import {
   type Summary,
 } from '#services/champion_stats'
 import { matchupReport } from '#services/matchup_stats'
+import { isCounted } from '#services/stats_cells'
 import { championSlug } from '../../inertia/lib/champions.js'
 
 /** The bracket a page shows unless the address names another. */
@@ -58,6 +62,8 @@ export class ChampionStatsService {
   #trendDays = statsCache('trend-days', 16)
   // Every lane pair of a patch (~1.5 MB each): few kept in this process, all of them in Redis.
   #pairs = statsCache('lane-pairs', 4)
+  /** One champion's opponents from the counted cells: a burst of asks reads them once. */
+  #opponents = new AnswerCache(2048, 10 * 60_000)
   #patches = new AnswerCache(1, PATCHES_TTL_MS)
 
   /** The filters of an address: `?rank=emerald_plus&patch=16.20&region=euw`, defaults filled. */
@@ -86,13 +92,14 @@ export class ChampionStatsService {
     })
   }
 
-  /** Every champion in every role, ranked within each role. */
+  /** Every champion in every role, ranked within each role (from the counted cells once the patch is counted). */
   summary(filter: Filter): Promise<Summary> {
     return this.#summaries.get(key(filter), async () => {
       const params = { patch: filter.patch }
+      const cells = await isCounted(filter.patch)
       const [found, totals] = await Promise.all([
-        rows(summarySql(filter), params),
-        rows(totalsSql(filter), params),
+        rows(cells ? summaryCellsSql(filter) : summarySql(filter), params),
+        rows(cells ? totalsCellsSql(filter) : totalsSql(filter), params),
       ])
       return summarize(
         filter,
@@ -141,20 +148,35 @@ export class ChampionStatsService {
    * asked for. The same games and pairs as the Matchups tab, counted for every champion at once.
    */
   async report(filter: Filter, champion: number, position: Position) {
-    const [pairs, summary, patches] = await Promise.all([
-      this.lanePairs(filter),
+    const [opponents, summary, patches] = await Promise.all([
+      this.opponents(filter, champion, position),
       this.summary(filter),
       this.patches(),
     ])
     const stat = summary.roles.find((r) => r.champion === champion && r.position === position)
-    return matchupReport(
-      filter,
-      champion,
-      position,
-      opponentsOf(pairs, champion, position),
-      stat ?? null,
-      patches
-    )
+    return matchupReport(filter, champion, position, opponents, stat ?? null, patches)
+  }
+
+  /**
+   * One champion's lane opponents: a few thousand counted rows once the patch is counted
+   * (milliseconds), else its slice of every lane pair of the filter.
+   */
+  private async opponents(
+    filter: Filter,
+    champion: number,
+    position: Position
+  ): Promise<[number, number, number][]> {
+    if (!(await isCounted(filter.patch))) {
+      return opponentsOf(await this.lanePairs(filter), champion, position)
+    }
+    return this.#opponents.get(`${key(filter)}:${champion}:${position}`, async () => {
+      const found = await rows(laneOpponentsSql(filter), {
+        patch: filter.patch,
+        champion,
+        position,
+      })
+      return found.map(([o, g, w]) => [num(o), num(g), num(w)] as [number, number, number])
+    })
   }
 
   /** Every lane pair of the filter, read in one pass (~10 s for a whole patch at all ranks). */

@@ -206,6 +206,119 @@ export function lanePairsSql(filter: Filter) {
   `
 }
 
+/* ── Pre-counted cells (migration 0013, `stats_cells.ts`) ──────── */
+
+/**
+ * The seed tier and platform cells of a filter in the pre-counted tables: a bracket is a set of
+ * seed tiers, a region a set of platforms.
+ */
+const cellsSql = (filter: Filter) => {
+  const tiers = seedTiers(filter.bracket)
+  return `${tiers ? `AND seed_tier IN (${tiers})` : ''} ${regionSql(filter)}`
+}
+
+/** The crawled games of a patch with their cell (`{patch:String}`), one row per game. */
+const seedCellsSql = (platform = false) => `
+    SELECT match_id, seed_tier, platform FROM match_seed FINAL
+    WHERE patch = {patch:String} ${platform ? 'AND platform = {platform:String}' : ''}`
+
+/**
+ * Every lane pair of one platform's crawled games of a patch (`{patch:String}`,
+ * `{platform:String}`, `{prefix:String}`: the platform and `_`), counted per cell: the rows of
+ * `stats_lane_pairs`. The pairs of `lanePairsSql`; a platform at a time keeps each pass small
+ * (every table is read by the game ids, which start with the platform).
+ */
+export function lanePairCellsSql() {
+  return `
+    SELECT {patch:String}, s.seed_tier, s.platform, a.3, a.4, b.4, toUInt32(count()),
+           toUInt32(sum(if(a.2 = 100, m.t1_win, m.t2_win)))
+    FROM (
+      SELECT match_id, players FROM match_lineups FINAL
+      WHERE patch = {patch:String} AND startsWith(match_id, {prefix:String})
+    ) AS l
+    INNER JOIN (${seedCellsSql(true)}) AS s USING (match_id)
+    INNER JOIN (
+      SELECT match_id, t1_win, t2_win FROM matches
+      WHERE patch = {patch:String} AND queue_id = ${RANKED_SOLO}
+        AND startsWith(match_id, {prefix:String})
+    ) AS m USING (match_id)
+    ARRAY JOIN l.players AS a
+    ARRAY JOIN arrayFilter(x -> x.3 = a.3 AND x.2 != a.2, l.players) AS b
+    WHERE a.3 != ''
+    GROUP BY s.seed_tier, s.platform, a.3, a.4, b.4
+  `
+}
+
+/** Every champion in every role of a patch's crawled games, per cell: the rows of `stats_champion_roles` (`summarySql`'s counts). */
+export function roleCellsSql() {
+  return `
+    SELECT {patch:String}, s.seed_tier, s.platform, p.team_position, p.champion_id,
+           toUInt32(count()), toUInt32(sum(p.win))
+    FROM (
+      SELECT match_id, champion_id, team_position, win FROM participant_items FINAL
+      WHERE patch = {patch:String} AND queue_id = ${RANKED_SOLO} AND team_position != ''
+    ) AS p
+    INNER JOIN (${seedCellsSql()}) AS s USING (match_id)
+    GROUP BY s.seed_tier, s.platform, p.team_position, p.champion_id
+  `
+}
+
+/**
+ * A patch's crawled games per cell (`champion` 0) and the games each champion was banned in
+ * (a game counts once per champion, whichever team banned it): the rows of `stats_cell_counts`
+ * (`totalsSql`'s counts), stamped with the time of the count.
+ */
+export function cellCountsSql() {
+  return `
+    SELECT {patch:String}, seed_tier, platform, toUInt16(0), toUInt32(count()), now()
+    FROM (${seedCellsSql()})
+    GROUP BY seed_tier, platform
+    UNION ALL
+    SELECT {patch:String}, s.seed_tier, s.platform, ban, toUInt32(count()), now()
+    FROM (
+      SELECT match_id, arrayDistinct(arrayConcat(t1_bans, t2_bans)) AS bans FROM matches
+      WHERE queue_id = ${RANKED_SOLO} AND patch = {patch:String}
+    ) AS m
+    INNER JOIN (${seedCellsSql()}) AS s USING (match_id)
+    ARRAY JOIN m.bans AS ban
+    WHERE ban != 0
+    GROUP BY s.seed_tier, s.platform, ban
+  `
+}
+
+/** `summarySql` from the counted cells: champion, position, games, wins. */
+export function summaryCellsSql(filter: Filter) {
+  return `
+    SELECT champion, position, sum(games), sum(wins) FROM stats_champion_roles
+    WHERE patch = {patch:String} ${cellsSql(filter)}
+    GROUP BY champion, position
+  `
+}
+
+/** `totalsSql` from the counted cells: `games`, 0, games; `ban`, champion, games banned in. */
+export function totalsCellsSql(filter: Filter) {
+  return `
+    SELECT if(champion = 0, 'games', 'ban'), champion, sum(games) FROM stats_cell_counts
+    WHERE patch = {patch:String} ${cellsSql(filter)}
+    GROUP BY champion
+  `
+}
+
+/** One champion's lane opponents from the counted cells (`{champion:UInt16}`, `{position:String}`): opponent, games, wins. */
+export function laneOpponentsSql(filter: Filter) {
+  return `
+    SELECT opponent, sum(games), sum(wins) FROM stats_lane_pairs
+    WHERE patch = {patch:String} AND position = {position:String} AND champion = {champion:UInt16}
+      ${cellsSql(filter)}
+    GROUP BY opponent
+  `
+}
+
+/** The patches counted into the cells, with when each was last counted (seconds). */
+export function countedPatchesSql() {
+  return `SELECT patch, toUnixTimestamp(max(refreshed)) FROM stats_cell_counts GROUP BY patch`
+}
+
 /**
  * The first 15 skill points of each game (1 Q, 2 W, 3 E, 4 R) from the player's skill order on
  * their participant row, joined to the game by one hash of (match, participant): order, games,
