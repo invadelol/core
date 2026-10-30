@@ -1,0 +1,1 @@
+.iv-team svg{flex:none;opacity:.75}.iv-team.great{color:var(--win);background:rgb(var(--win-rgb) / .18)}.iv-team.good{color:var(--win);background:rgb(var(--win-rgb) / .08)}.iv-team.bad{color:var(--loss);background:rgb(var(--loss-rgb) / .08)}.iv-team.poor{color:var(--loss);background:rgb(var(--loss-rgb) / .18)}
