@@ -40,6 +40,9 @@ export const BRACKETS = {
 
 export type Bracket = keyof typeof BRACKETS
 
+/** Brackets one request of `/api/picks` may ask for (the longest chain a client reads). */
+export const MAX_PICK_BRACKETS = 5
+
 export const RANKED_SOLO = 420
 /** A patch is the default once it holds this many ranked games. */
 export const PATCH_READY_GAMES = 50_000
