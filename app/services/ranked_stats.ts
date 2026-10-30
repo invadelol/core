@@ -105,20 +105,31 @@ export function seedTiers(bracket: Bracket) {
   return tiers ? tiers.map((t) => `'${t}'`).join(',') : null
 }
 
-/** The ranked games of the patch in the bracket (`{patch:String}` is a query parameter). */
-export function gamesSql(bracket: Bracket) {
+/**
+ * The ranked games of the patch (`{patch:String}`) in the bracket: every ranked game of the
+ * patch for all ranks (`matches`), the games the crawler found at the bracket's tiers otherwise
+ * (`match_seed`, as the builds and the champion pages count them).
+ *
+ * With a `scope`, only that champion's games from the patch's start (`{patchStart:UInt64}`) on are
+ * looked up. ClickHouse builds the set of an `IN` before reading, and the patch holds millions of
+ * games against a champion's thousands: the champion's set is built and the patch's games are
+ * read against it, instead of hashing every game of the patch for each champion asked.
+ */
+export function gamesSql(bracket: Bracket, scope: Scope = null) {
   const tiers = seedTiers(bracket)
-  return `
-      SELECT match_id FROM matches
-      WHERE queue_id = ${RANKED_SOLO} AND patch = {patch:String}
-      ${tiers ? `AND match_id IN (SELECT match_id FROM match_seed WHERE seed_tier IN (${tiers}))` : ''}
-    `
+  const mine = scope
+    ? `AND match_id IN (SELECT match_id FROM participants WHERE queue_id = ${RANKED_SOLO} ${scopeSql(scope)} AND game_start_ms >= {patchStart:UInt64})`
+    : ''
+  return tiers
+    ? `SELECT match_id FROM match_seed WHERE patch = {patch:String} AND seed_tier IN (${tiers}) ${mine}`
+    : `SELECT match_id FROM matches WHERE queue_id = ${RANKED_SOLO} AND patch = {patch:String} ${mine}`
 }
 
 /**
  * When the first game of the patch (`{patch:String}`) started, in ms: the per-champion and
  * per-player tables are sorted by time, so a read skips every older game. The earliest of
- * `matches` and `match_seed`, so a game the crawler is still writing is never left out.
+ * `matches` and `match_seed`, so a game the crawler is still writing is never left out. Asked
+ * once per patch (`patchStart()`), then passed to the queries as `{patchStart:UInt64}`.
  */
 export const PATCH_START_SQL = `least(
       (SELECT min(game_start_ms) FROM matches WHERE queue_id = ${RANKED_SOLO} AND patch = {patch:String}),

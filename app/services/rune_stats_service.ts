@@ -1,5 +1,5 @@
 import { ROLES, type Bracket, type Role } from '#services/ranked_stats'
-import { latestPatch, rows, statsCache } from '#services/ranked_games_service'
+import { latestPatch, patchStart, rows, statsCache } from '#services/ranked_games_service'
 import { pageRowsSql, summarize, type PageRow, type RuneStats } from '#services/rune_stats'
 
 /**
@@ -26,6 +26,7 @@ export class RuneStatsService {
         champion,
         position,
         patch: resolvedPatch,
+        patchStart: await patchStart(resolvedPatch),
       })
       const result = summarize(found.map((row) => row.map(Number)) as PageRow[])
       return { champion, role: position, patch: resolvedPatch, bracket, ...result }

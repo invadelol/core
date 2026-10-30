@@ -135,7 +135,16 @@ test.group('Build stats', () => {
     assert.include(one, "seed_tier IN ('EMERALD','DIAMOND','MASTER','GRANDMASTER','CHALLENGER')")
     assert.include(one, 'i IN (3003,3089,6655)')
     // One read of the games, every option counted in the same pass.
-    assert.equal(one.match(/FROM participant_items/g)?.length, 1)
+    assert.equal(one.match(/FROM participant_items FINAL/g)?.length, 1)
+    // The bracket's crawled games are looked up among the champion's own only.
+    assert.include(
+      one,
+      "seed_tier IN ('EMERALD','DIAMOND','MASTER','GRANDMASTER','CHALLENGER') AND match_id IN (SELECT match_id FROM participant_items WHERE patch = {patch:String} AND queue_id = 420 AND champion_id = {champion:UInt16}"
+    )
+    assert.notInclude(
+      buildRowsSql('emerald_plus', null, kinds),
+      'SELECT match_id FROM participant_items'
+    )
     const every = buildRowsSql('all', null, kinds)
     assert.notInclude(every, 'match_seed')
     assert.include(every, 'SELECT champion_id, team_position, o.1')
