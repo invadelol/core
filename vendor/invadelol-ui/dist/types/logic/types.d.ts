@@ -132,6 +132,8 @@ export interface ScoreRow {
     kp?: number | null;
     /** Earned badges other than MVP / ACE. */
     badges?: Badge[];
+    /** The teammates' scores 0‥10, `null` for an AFK one: what the team rating is read from (`teamRating`). */
+    mates?: (number | null)[] | null;
 }
 export interface MatchSummary {
     gameId: number;

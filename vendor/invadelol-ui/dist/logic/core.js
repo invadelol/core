@@ -1,155 +1,155 @@
-import { roleSlot as as, SCORE_CATEGORIES as os, PINGS as ls } from "./detail.js";
-import { rankValue as rs } from "./labels.js";
-const ds = Object.keys(ls), q = { TOP: "TOP", JUNGLE: "JUNGLE", MIDDLE: "MID", BOTTOM: "ADC", UTILITY: "SUPPORT" }, cs = /* @__PURE__ */ new Set(["carry_damage", "tank", "vision", "cc", "objectives", "first_blood", "triple", "quadra", "penta", "deathless", "lane_won"]), X = 300, us = 900 * 1e3, Is = (e) => q[e ?? ""] ?? null, ms = (e) => Number(e.slice(e.lastIndexOf("_") + 1)) || 0, Q = (e) => {
-  const m = Object.keys(q).indexOf(e.position);
+import { roleSlot as ae, SCORE_CATEGORIES as oe, PINGS as le } from "./detail.js";
+import { rankValue as re } from "./labels.js";
+const de = Object.keys(le), q = { TOP: "TOP", JUNGLE: "JUNGLE", MIDDLE: "MID", BOTTOM: "ADC", UTILITY: "SUPPORT" }, ce = /* @__PURE__ */ new Set(["carry_damage", "tank", "vision", "cc", "objectives", "first_blood", "triple", "quadra", "penta", "deathless", "lane_won"]), X = 300, ue = 900 * 1e3, ke = (s) => q[s ?? ""] ?? null, me = (s) => Number(s.slice(s.lastIndexOf("_") + 1)) || 0, Q = (s) => {
+  const m = Object.keys(q).indexOf(s.position);
   return m < 0 ? 5 : m;
 };
-function ps(e, m) {
+function pe(s, m) {
   if (m.position) {
-    const f = e.find((o) => o.teamId !== m.teamId && o.position === m.position);
+    const f = s.find((i) => i.teamId !== m.teamId && i.position === m.position);
     if (f) return f;
   }
-  const c = e.filter((f) => f.teamId === m.teamId), n = e.filter((f) => f.teamId !== m.teamId);
+  const c = s.filter((f) => f.teamId === m.teamId), n = s.filter((f) => f.teamId !== m.teamId);
   return n[c.indexOf(m)] ?? n[0];
 }
-function hs(e, m = {}) {
-  const c = [...e.participants].sort((s, i) => s.teamId - i.teamId || Q(s) - Q(i)), n = e.timeline ?? [], f = e.events ?? [], o = f.length > 0, I = Math.max(e.duration / 60, 1), g = c.some((s) => s.position in q), v = e.completeness?.pings !== !1 && c.some((s) => s.allInPings !== void 0), T = /* @__PURE__ */ new Map();
-  for (const s of n) s.puuid && !T.has(s.puuid) && T.set(s.puuid, s.participantId);
-  const h = (s) => T.get(s.puuid) ?? c.indexOf(s) + 1, w = [...new Set(n.map((s) => s.frameMs))].sort((s, i) => s - i), x = new Map(w.map((s, i) => [s, i])), b = (s, i) => {
+function he(s, m = {}) {
+  const c = [...s.participants].sort((e, a) => e.teamId - a.teamId || Q(e) - Q(a)), n = s.timeline ?? [], f = s.events ?? [], i = f.length > 0, k = Math.max(s.duration / 60, 1), g = c.some((e) => e.position in q), v = s.completeness?.pings !== !1 && c.some((e) => e.allInPings !== void 0), T = /* @__PURE__ */ new Map();
+  for (const e of n) e.puuid && !T.has(e.puuid) && T.set(e.puuid, e.participantId);
+  const h = (e) => T.get(e.puuid) ?? c.indexOf(e) + 1, w = [...new Set(n.map((e) => e.frameMs))].sort((e, a) => e - a), x = new Map(w.map((e, a) => [e, a])), b = (e, a) => {
     const r = new Array(w.length).fill(0);
-    for (const p of n) p.puuid === s && (r[x.get(p.frameMs)] = i(p));
+    for (const p of n) p.puuid === e && (r[x.get(p.frameMs)] = a(p));
     for (let p = 1; p < r.length; p++) !r[p] && r[p - 1] && (r[p] = r[p - 1]);
     return r;
-  }, O = c.map((s) => b(s.puuid, (i) => i.goldTotal)), t = c.map((s) => b(s.puuid, (i) => i.xp)), a = c.map((s) => b(s.puuid, (i) => i.cs + i.jungleCs)), l = c.map((s) => b(s.puuid, (i) => i.level)), y = x.get(us), D = f.filter((s) => s.kind === "kill").map((s) => ({ t: s.t, killer: s.killer, victim: s.victim, assists: s.assists ?? [], x: s.x, y: s.y })).sort((s, i) => s.t - i.t), j = f.filter((s) => s.kind !== "kill").map((s) => ({ t: s.t, kind: s.kind, sub: s.sub, team: s.team, lane: s.lane, killer: s.killer })).sort((s, i) => s.t - i.t), G = D[0]?.killer ?? 0, S = /* @__PURE__ */ new Map();
-  for (const s of e.shop ?? [])
-    s.item && (S.has(s.player) || S.set(s.player, []), S.get(s.player).push({ t: s.t, item: s.item, sold: s.sold }));
-  const K = /* @__PURE__ */ new Map(), U = /* @__PURE__ */ new Map(), F = /* @__PURE__ */ new Map(), H = (s, i, r) => s.set(i, (s.get(i) ?? 0) + (r || 0));
-  for (const s of c)
-    H(K, s.teamId, s.kills), H(U, s.teamId, s.goldEarned), H(F, s.teamId, s.totalDamageDealtToChampions);
-  const N = m.scores ?? {}, W = c.filter((s) => N[s.puuid] !== void 0).sort((s, i) => N[i.puuid] - N[s.puuid]), P = e.duration < X, $ = P ? void 0 : W.find((s) => s.win), Z = P ? void 0 : W.find((s) => !s.win), Y = c.map((s, i) => {
-    const r = g ? ps(c, s) : void 0, p = r ? c.indexOf(r) : -1, d = (u) => y !== void 0 && p >= 0 ? u[i][y] - u[p][y] : null, k = n.find((u) => u.puuid === s.puuid && u.perks?.keystone)?.perks, L = k?.statPerks ? [k.statPerks.offense, k.statPerks.flex, k.statPerks.defense] : [], _ = k ? k.runes.filter((u) => u > 0) : [], A = k?.keystone || s.perks.keystone, is = _.length ? (_[0] === A ? _ : [A, ..._]).slice(0, 6) : A ? [A] : [], M = [];
-    s === $ ? M.push("mvp") : s === Z && M.push("ace");
-    for (const u of m.badges?.[s.puuid] ?? []) cs.has(u) && !M.includes(u) && M.push(u);
-    o && G === h(s) && !M.includes("first_blood") && M.push("first_blood");
-    const B = P ? void 0 : N[s.puuid], R = B === void 0 ? void 0 : m.parts?.[s.puuid];
+  }, O = c.map((e) => b(e.puuid, (a) => a.goldTotal)), t = c.map((e) => b(e.puuid, (a) => a.xp)), o = c.map((e) => b(e.puuid, (a) => a.cs + a.jungleCs)), l = c.map((e) => b(e.puuid, (a) => a.level)), y = x.get(ue), D = f.filter((e) => e.kind === "kill").map((e) => ({ t: e.t, killer: e.killer, victim: e.victim, assists: e.assists ?? [], x: e.x, y: e.y })).sort((e, a) => e.t - a.t), j = f.filter((e) => e.kind !== "kill").map((e) => ({ t: e.t, kind: e.kind, sub: e.sub, team: e.team, lane: e.lane, killer: e.killer })).sort((e, a) => e.t - a.t), G = D[0]?.killer ?? 0, S = /* @__PURE__ */ new Map();
+  for (const e of s.shop ?? [])
+    e.item && (S.has(e.player) || S.set(e.player, []), S.get(e.player).push({ t: e.t, item: e.item, sold: e.sold }));
+  const K = /* @__PURE__ */ new Map(), U = /* @__PURE__ */ new Map(), F = /* @__PURE__ */ new Map(), H = (e, a, r) => e.set(a, (e.get(a) ?? 0) + (r || 0));
+  for (const e of c)
+    H(K, e.teamId, e.kills), H(U, e.teamId, e.goldEarned), H(F, e.teamId, e.totalDamageDealtToChampions);
+  const N = m.scores ?? {}, W = c.filter((e) => N[e.puuid] !== void 0).sort((e, a) => N[a.puuid] - N[e.puuid]), P = s.duration < X, $ = P ? void 0 : W.find((e) => e.win), Z = P ? void 0 : W.find((e) => !e.win), Y = c.map((e, a) => {
+    const r = g ? pe(c, e) : void 0, p = r ? c.indexOf(r) : -1, d = (u) => y !== void 0 && p >= 0 ? u[a][y] - u[p][y] : null, I = n.find((u) => u.puuid === e.puuid && u.perks?.keystone)?.perks, L = I?.statPerks ? [I.statPerks.offense, I.statPerks.flex, I.statPerks.defense] : [], _ = I ? I.runes.filter((u) => u > 0) : [], A = I?.keystone || e.perks.keystone, ie = _.length ? (_[0] === A ? _ : [A, ..._]).slice(0, 6) : A ? [A] : [], M = [];
+    e === $ ? M.push("mvp") : e === Z && M.push("ace");
+    for (const u of m.badges?.[e.puuid] ?? []) ce.has(u) && !M.includes(u) && M.push(u);
+    i && G === h(e) && !M.includes("first_blood") && M.push("first_blood");
+    const B = P ? void 0 : N[e.puuid], R = B === void 0 ? void 0 : m.parts?.[e.puuid];
     return {
-      participantId: h(s),
-      teamId: s.teamId,
-      win: !!s.win,
-      puuid: s.puuid,
-      gameName: s.gameName,
-      tagLine: s.tagLine,
-      championId: s.championId,
-      level: s.champLevel || s.level,
-      spells: s.spells,
-      perks: is,
-      styles: [k?.primaryStyle || s.perks.primary, k?.secondaryStyle || s.perks.sub],
-      items: s.items,
-      kills: s.kills,
-      deaths: s.deaths,
-      assists: s.assists,
-      kp: K.get(s.teamId) ? (s.kills + s.assists) / K.get(s.teamId) : 0,
-      cs: s.cs,
-      jungleCs: s.neutralMinionsKilled,
-      csMin: s.cs / I,
-      gold: s.goldEarned,
-      goldShare: U.get(s.teamId) ? s.goldEarned / U.get(s.teamId) : 0,
-      damage: s.totalDamageDealtToChampions,
-      physical: s.physicalDamageDealtToChampions,
-      magic: s.magicDamageDealtToChampions,
-      trueDamage: s.trueDamageDealtToChampions,
-      damageShare: F.get(s.teamId) ? s.totalDamageDealtToChampions / F.get(s.teamId) : 0,
-      damageTaken: s.damageTaken,
+      participantId: h(e),
+      teamId: e.teamId,
+      win: !!e.win,
+      puuid: e.puuid,
+      gameName: e.gameName,
+      tagLine: e.tagLine,
+      championId: e.championId,
+      level: e.champLevel || e.level,
+      spells: e.spells,
+      perks: ie,
+      styles: [I?.primaryStyle || e.perks.primary, I?.secondaryStyle || e.perks.sub],
+      items: e.items,
+      kills: e.kills,
+      deaths: e.deaths,
+      assists: e.assists,
+      kp: K.get(e.teamId) ? (e.kills + e.assists) / K.get(e.teamId) : 0,
+      cs: e.cs,
+      jungleCs: e.neutralMinionsKilled,
+      csMin: e.cs / k,
+      gold: e.goldEarned,
+      goldShare: U.get(e.teamId) ? e.goldEarned / U.get(e.teamId) : 0,
+      damage: e.totalDamageDealtToChampions,
+      physical: e.physicalDamageDealtToChampions,
+      magic: e.magicDamageDealtToChampions,
+      trueDamage: e.trueDamageDealtToChampions,
+      damageShare: F.get(e.teamId) ? e.totalDamageDealtToChampions / F.get(e.teamId) : 0,
+      damageTaken: e.damageTaken,
       mitigated: null,
       healing: null,
-      vision: s.visionScore,
-      wardsPlaced: s.wardsPlaced,
-      wardsKilled: s.wardsKilled,
-      controlWards: s.visionWardsBoughtInGame,
+      vision: e.visionScore,
+      wardsPlaced: e.wardsPlaced,
+      wardsKilled: e.wardsKilled,
+      controlWards: e.visionWardsBoughtInGame,
       ccTime: null,
-      objectiveDamage: s.damageDealtToObjectives,
-      turretDamage: s.damageDealtToTurrets,
+      objectiveDamage: e.damageDealtToObjectives,
+      turretDamage: e.damageDealtToTurrets,
       doubles: null,
       triples: null,
       quadras: null,
       pentas: null,
       largestSpree: null,
       largestMulti: null,
-      firstBlood: o && G === h(s),
-      position: g ? q[s.position] ?? null : null,
+      firstBlood: i && G === h(e),
+      position: g ? q[e.position] ?? null : null,
       opponent: r ? h(r) : null,
       gold15: d(O),
       xp15: d(t),
-      cs15: d(a),
+      cs15: d(o),
       score: B === void 0 ? null : B / 10,
-      parts: R ? os.filter((u) => R.weights[u] > 0).map((u) => ({ key: u, value: R.categories[u], weight: R.weights[u] })) : [],
-      rank: B === void 0 ? 0 : W.indexOf(s) + 1,
+      parts: R ? oe.filter((u) => R.weights[u] > 0).map((u) => ({ key: u, value: R.categories[u], weight: R.weights[u] })) : [],
+      rank: B === void 0 ? 0 : W.indexOf(e) + 1,
       badges: M,
-      skills: n.find((u) => u.puuid === s.puuid && u.skillOrder?.length)?.skillOrder ?? [],
+      skills: n.find((u) => u.puuid === e.puuid && u.skillOrder?.length)?.skillOrder ?? [],
       augments: [],
       placement: 0,
       ...L.every(Boolean) ? { shards: L } : {},
-      ...S.size ? { purchases: S.get(h(s)) ?? [] } : {},
-      ...as(s.roleItem) ? { roleItem: s.roleItem } : {},
-      ...v ? { pings: Object.fromEntries(ds.map((u) => [u, s[`${u}Pings`] ?? 0])) } : {}
+      ...S.size ? { purchases: S.get(h(e)) ?? [] } : {},
+      ...ae(e.roleItem) ? { roleItem: e.roleItem } : {},
+      ...v ? { pings: Object.fromEntries(de.map((u) => [u, e[`${u}Pings`] ?? 0])) } : {}
     };
-  }), ss = new Map(Y.map((s) => [s.participantId, s])), es = (s) => s === 100, E = (s, i, r) => s === 100 ? i : s === 200 ? r : 0, C = (s, i) => {
-    if (!o) return null;
-    const r = j.find((p) => p.kind === i);
-    return !!r && r.team === s;
-  }, ts = [...new Set(c.map((s) => s.teamId))].sort((s, i) => s - i).map((s) => {
-    const i = Y.filter((d) => d.teamId === s), r = (d) => i.reduce((k, L) => k + d(L), 0), p = (d) => j.filter((k) => k.kind === d && k.team === s);
+  }), ee = new Map(Y.map((e) => [e.participantId, e])), se = (e) => e === 100, E = (e, a, r) => e === 100 ? a : e === 200 ? r : 0, C = (e, a) => {
+    if (!i) return null;
+    const r = j.find((p) => p.kind === a);
+    return !!r && r.team === e;
+  }, te = [...new Set(c.map((e) => e.teamId))].sort((e, a) => e - a).map((e) => {
+    const a = Y.filter((d) => d.teamId === e), r = (d) => a.reduce((I, L) => I + d(L), 0), p = (d) => j.filter((I) => I.kind === d && I.team === e);
     return {
-      teamId: s,
-      win: i.some((d) => d.win),
-      bans: ((es(s) ? e.t1Bans : s === 200 ? e.t2Bans : []) ?? []).filter((d) => d > 0),
+      teamId: e,
+      win: a.some((d) => d.win),
+      bans: ((se(e) ? s.t1Bans : e === 200 ? s.t2Bans : []) ?? []).filter((d) => d > 0),
       kills: r((d) => d.kills),
       deaths: r((d) => d.deaths),
       assists: r((d) => d.assists),
       gold: r((d) => d.gold),
       damage: r((d) => d.damage),
-      towers: E(s, e.t1Towers, e.t2Towers),
-      inhibitors: E(s, e.t1Inhibs, e.t2Inhibs),
-      dragons: E(s, e.t1Dragons, e.t2Dragons),
-      barons: E(s, e.t1Barons, e.t2Barons),
-      heralds: E(s, e.t1Heralds, e.t2Heralds),
-      grubs: o ? p("grubs").length : null,
+      towers: E(e, s.t1Towers, s.t2Towers),
+      inhibitors: E(e, s.t1Inhibs, s.t2Inhibs),
+      dragons: E(e, s.t1Dragons, s.t2Dragons),
+      barons: E(e, s.t1Barons, s.t2Barons),
+      heralds: E(e, s.t1Heralds, s.t2Heralds),
+      grubs: i ? p("grubs").length : null,
       dragonTypes: p("dragon").map((d) => d.sub),
-      firstBlood: o ? ss.get(G)?.teamId === s : null,
-      firstTower: C(s, "tower"),
-      firstDragon: C(s, "dragon"),
-      firstBaron: C(s, "baron"),
-      firstInhibitor: C(s, "inhibitor")
+      firstBlood: i ? ee.get(G)?.teamId === e : null,
+      firstTower: C(e, "tower"),
+      firstDragon: C(e, "dragon"),
+      firstBaron: C(e, "baron"),
+      firstInhibitor: C(e, "inhibitor")
     };
-  }), z = (s) => w.map((i, r) => s.reduce((p, d, k) => p + (c[k].teamId === 100 ? 1 : c[k].teamId === 200 ? -1 : 0) * d[r], 0)), ns = w.length > 1 ? { t: w.map((s) => Math.round(s / 1e3)), gold: O, xp: t, cs: a, level: l, goldDiff: z(O), xpDiff: z(t), kills: D, objectives: j } : null;
+  }), z = (e) => w.map((a, r) => e.reduce((p, d, I) => p + (c[I].teamId === 100 ? 1 : c[I].teamId === 200 ? -1 : 0) * d[r], 0)), ne = w.length > 1 ? { t: w.map((e) => Math.round(e / 1e3)), gold: O, xp: t, cs: o, level: l, goldDiff: z(O), xpDiff: z(t), kills: D, objectives: j } : null;
   return {
-    gameId: ms(e.matchId),
-    creation: Number(e.gameStartMs),
-    duration: e.duration,
-    queueId: e.queueId,
-    mapId: e.mapId,
-    version: e.patch,
+    gameId: me(s.matchId),
+    creation: Number(s.gameStartMs),
+    duration: s.duration,
+    queueId: s.queueId,
+    mapId: s.mapId,
+    version: s.patch,
     remake: P,
-    teams: ts,
+    teams: te,
     players: Y,
-    timeline: ns,
+    timeline: ne,
     fromCore: !0
   };
 }
-function vs(e, m, c = null) {
-  const n = e.players.find((o) => o.puuid === m);
+function ve(s, m, c = null) {
+  const n = s.players.find((i) => i.puuid === m);
   if (!n) return null;
-  const f = e.players.find((o) => o.participantId === n.opponent);
+  const f = s.players.find((i) => i.participantId === n.opponent);
   return {
-    gameId: e.gameId,
+    gameId: s.gameId,
     matchId: c,
-    creation: e.creation,
-    duration: e.duration,
-    queueId: e.queueId,
-    mapId: e.mapId,
+    creation: s.creation,
+    duration: s.duration,
+    queueId: s.queueId,
+    mapId: s.mapId,
     championId: n.championId,
     win: n.win,
-    remake: e.remake,
+    remake: s.remake,
     kills: n.kills,
     deaths: n.deaths,
     assists: n.assists,
@@ -167,48 +167,49 @@ function vs(e, m, c = null) {
     lane: n.position,
     placement: n.placement,
     score: n.score === null ? null : {
-      gameId: e.gameId,
+      gameId: s.gameId,
       score: n.score,
       rank: n.rank,
       tag: n.badges.includes("mvp") ? "mvp" : n.badges.includes("ace") ? "ace" : "",
       opponent: f?.championId ?? null,
       kp: n.kp,
-      badges: n.badges.filter((o) => o !== "mvp" && o !== "ace")
+      badges: n.badges.filter((i) => i !== "mvp" && i !== "ace"),
+      mates: s.players.filter((i) => i.teamId === n.teamId && i !== n).map((i) => i.score)
     }
   };
 }
-const V = (e) => ({
-  tier: e.tier,
-  division: ["MASTER", "GRANDMASTER", "CHALLENGER"].includes(e.tier) ? "" : e.division,
-  lp: e.leaguePoints,
-  wins: e.wins,
-  losses: e.losses ?? 0,
+const V = (s) => ({
+  tier: s.tier,
+  division: ["MASTER", "GRANDMASTER", "CHALLENGER"].includes(s.tier) ? "" : s.division,
+  lp: s.leaguePoints,
+  wins: s.wins,
+  losses: s.losses ?? 0,
   provisional: !1,
   previous: ""
 }), J = { solo: "RANKED_SOLO_5x5", flex: "RANKED_FLEX_SR" };
-function ws({ summoner: e, ranks: m, mastery: c, games: n }) {
+function we({ summoner: s, ranks: m, mastery: c, games: n }) {
   const f = (t) => {
-    const a = m?.current.find((l) => l.queueType === J[t] && l.tier);
-    return a ? V(a) : null;
-  }, o = n.filter((t) => !t.remake), I = /* @__PURE__ */ new Map(), g = /* @__PURE__ */ new Map();
-  for (const t of o) {
-    const a = I.get(t.championId) ?? { championId: t.championId, games: 0, wins: 0, kills: 0, deaths: 0, assists: 0, cs: 0, seconds: 0, damage: 0, gold: 0, vision: 0 };
-    a.games++, t.win && a.wins++, a.kills += t.kills, a.deaths += t.deaths, a.assists += t.assists, a.cs += t.cs, a.seconds += t.duration, a.damage += t.damage, a.gold += t.gold, a.vision += t.vision, I.set(t.championId, a), t.lane && g.set(t.lane, (g.get(t.lane) ?? 0) + 1);
+    const o = m?.current.find((l) => l.queueType === J[t] && l.tier);
+    return o ? V(o) : null;
+  }, i = n.filter((t) => !t.remake), k = /* @__PURE__ */ new Map(), g = /* @__PURE__ */ new Map();
+  for (const t of i) {
+    const o = k.get(t.championId) ?? { championId: t.championId, games: 0, wins: 0, kills: 0, deaths: 0, assists: 0, cs: 0, seconds: 0, damage: 0, gold: 0, vision: 0 };
+    o.games++, t.win && o.wins++, o.kills += t.kills, o.deaths += t.deaths, o.assists += t.assists, o.cs += t.cs, o.seconds += t.duration, o.damage += t.damage, o.gold += t.gold, o.vision += t.vision, k.set(t.championId, o), t.lane && g.set(t.lane, (g.get(t.lane) ?? 0) + 1);
   }
-  const v = [...I.values()].sort((t, a) => a.games - t.games || a.wins - t.wins), T = (t) => {
-    const a = (l) => t.reduce((y, D) => y + l(D), 0);
-    return { games: a((l) => l.games), wins: a((l) => l.wins), kills: a((l) => l.kills), deaths: a((l) => l.deaths), assists: a((l) => l.assists), cs: a((l) => l.cs), seconds: a((l) => l.seconds) };
-  }, h = o.map((t) => t.win), w = h.findIndex((t) => t !== h[0]), x = h.length ? (w < 0 ? h.length : w) * (h[0] ? 1 : -1) : 0, b = [...g].sort((t, a) => a[1] - t[1]), O = (m?.history ?? []).flatMap((t) => {
-    const a = t.queueType === J.solo ? "solo" : t.queueType === J.flex ? "flex" : null, l = V(t), y = rs(l), D = Date.parse(t.fetchedAt);
-    return a && y !== null && D ? [{ t: D, queue: a, tier: l.tier, division: l.division, lp: l.lp, wins: l.wins, losses: l.losses, value: Math.round(y * 100) }] : [];
-  }).sort((t, a) => t.t - a.t);
+  const v = [...k.values()].sort((t, o) => o.games - t.games || o.wins - t.wins), T = (t) => {
+    const o = (l) => t.reduce((y, D) => y + l(D), 0);
+    return { games: o((l) => l.games), wins: o((l) => l.wins), kills: o((l) => l.kills), deaths: o((l) => l.deaths), assists: o((l) => l.assists), cs: o((l) => l.cs), seconds: o((l) => l.seconds) };
+  }, h = i.map((t) => t.win), w = h.findIndex((t) => t !== h[0]), x = h.length ? (w < 0 ? h.length : w) * (h[0] ? 1 : -1) : 0, b = [...g].sort((t, o) => o[1] - t[1]), O = (m?.history ?? []).flatMap((t) => {
+    const o = t.queueType === J.solo ? "solo" : t.queueType === J.flex ? "flex" : null, l = V(t), y = re(l), D = Date.parse(t.fetchedAt);
+    return o && y !== null && D ? [{ t: D, queue: o, tier: l.tier, division: l.division, lp: l.lp, wins: l.wins, losses: l.losses, value: Math.round(y * 100) }] : [];
+  }).sort((t, o) => t.t - o.t);
   return {
     card: {
-      puuid: e.puuid,
-      gameName: e.gameName,
-      tagLine: e.tagLine,
-      icon: e.profileIconId ?? 0,
-      level: e.summonerLevel ?? 0,
+      puuid: s.puuid,
+      gameName: s.gameName,
+      tagLine: s.tagLine,
+      icon: s.profileIconId ?? 0,
+      level: s.summonerLevel ?? 0,
       private: !1,
       solo: f("solo"),
       flex: f("flex"),
@@ -218,9 +219,9 @@ function ws({ summoner: e, ranks: m, mastery: c, games: n }) {
         streak: x,
         lanes: b,
         champions: v.map((t) => ({ championId: t.championId, games: t.games, wins: t.wins, kills: t.kills, deaths: t.deaths, assists: t.assists, cs: t.cs, seconds: t.seconds })),
-        ranked: o.filter((t) => t.queueId === 420).length
+        ranked: i.filter((t) => t.queueId === 420).length
       },
-      mastery: [...c].sort((t, a) => a.championPoints - t.championPoints),
+      mastery: [...c].sort((t, o) => o.championPoints - t.championPoints),
       offline: !1
     },
     isSelf: !1,
@@ -230,27 +231,27 @@ function ws({ summoner: e, ranks: m, mastery: c, games: n }) {
     lp: O
   };
 }
-function ys(e, m) {
-  const c = /* @__PURE__ */ new Map(), f = [...e.filter((o) => o.duration >= X && o.participants.some((I) => I.puuid === m))].sort((o, I) => Number(I.gameStartMs) - Number(o.gameStartMs)).slice(0, 40);
-  for (const o of f) {
-    const I = o.participants.find((g) => g.puuid === m).teamId;
-    for (const g of o.participants) {
-      if (!g.puuid || g.puuid === m || g.teamId !== I) continue;
-      const v = c.get(g.puuid) ?? { puuid: g.puuid, gameName: g.gameName, tagLine: g.tagLine, icon: g.profileIconId ?? 0, games: 0, wins: 0, last: Number(o.gameStartMs) };
+function ye(s, m) {
+  const c = /* @__PURE__ */ new Map(), f = [...s.filter((i) => i.duration >= X && i.participants.some((k) => k.puuid === m))].sort((i, k) => Number(k.gameStartMs) - Number(i.gameStartMs)).slice(0, 40);
+  for (const i of f) {
+    const k = i.participants.find((g) => g.puuid === m).teamId;
+    for (const g of i.participants) {
+      if (!g.puuid || g.puuid === m || g.teamId !== k) continue;
+      const v = c.get(g.puuid) ?? { puuid: g.puuid, gameName: g.gameName, tagLine: g.tagLine, icon: g.profileIconId ?? 0, games: 0, wins: 0, last: Number(i.gameStartMs) };
       v.games++, g.win && v.wins++, c.set(g.puuid, v);
     }
   }
   return {
-    mates: [...c.values()].filter((o) => o.games >= 2).sort((o, I) => I.games - o.games || I.last - o.last).slice(0, 8),
+    mates: [...c.values()].filter((i) => i.games >= 2).sort((i, k) => k.games - i.games || k.last - i.last).slice(0, 8),
     games: f.length
   };
 }
 export {
-  hs as fromCoreMatch,
-  ms as gameIdOf,
-  ys as playedWithFromCore,
-  Is as positionOf,
-  ws as profileFromCore,
+  he as fromCoreMatch,
+  me as gameIdOf,
+  ye as playedWithFromCore,
+  ke as positionOf,
+  we as profileFromCore,
   V as rankFromCore,
-  vs as summaryOf
+  ve as summaryOf
 };

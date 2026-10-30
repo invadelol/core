@@ -7,6 +7,7 @@ export type * from './types.js';
 export * from './i18n.js';
 export * from './format.js';
 export * from './labels.js';
+export * from './team.js';
 export * from './detail.js';
 export * from './shop.js';
 export * from './story.js';
