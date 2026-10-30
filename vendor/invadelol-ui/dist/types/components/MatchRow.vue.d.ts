@@ -5,7 +5,7 @@ import '../styles/primitives.css';
  * One game in one line. The result is the row's left edge and tint, nothing else; figures stay
  * white. The whole row toggles the detail, which the parent renders right below it. Opponent,
  * kill participation and badges come from the score row when the parent does not pass them (they
- * are computed from the same full game).
+ * are computed from the same full game), and so does the team rating, first of the badges.
  *
  * The row is its own size container: from ~560px to 1600px it drops the matchup, then farm, then
  * items, instead of squeezing every column.
