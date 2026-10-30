@@ -746,7 +746,7 @@ async function sync() {
 
           <!-- ── Overview ─────────────────────────────────────────── -->
           <template v-if="section === 'overview'">
-            <div v-if="pending.stats" class="iv-skel h-[300px]" />
+            <div v-if="pending.stats" class="iv-skel h-[248px]" />
             <StatBoard
               v-else
               :stats="stats?.global ?? null"

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { PerfDial, TrendLine } from '@invadelol/ui'
-import { compact } from '../lib/format.js'
 import {
   isRemake,
   killParticipation,
@@ -13,6 +12,12 @@ import {
 } from '../lib/match.js'
 import type { GlobalStats, Match } from '../lib/types.js'
 
+/**
+ * The profile's Performance panel, built as the desktop app's: the average Invade score on the dial
+ * with the record, then each key figure with its value, the gap to the window before and its
+ * game-by-game line over that dashed value. Below, aligned on the same columns, the form and what
+ * the score is made of.
+ */
 const props = defineProps<{
   /** The window being shown, already filtered. */
   stats: GlobalStats | null
@@ -51,6 +56,7 @@ const games = computed(() =>
         kda: (me.kills + me.assists) / Math.max(1, me.deaths),
         kp: killParticipation(me, totals),
         csMin: me.cs / minutes,
+        visionMin: (me.visionScore || 0) / minutes,
         goldMin: me.goldEarned / minutes,
       }
     })
@@ -92,54 +98,119 @@ const score = computed(() => {
   }
 })
 
-/** Change against the window before, in percent. */
-function delta(now: number | undefined, before: number | undefined) {
-  if (now === undefined || before === undefined || !before) return null
-  return ((now - before) / Math.abs(before)) * 100
+type Game = (typeof games.value)[number]
+
+interface Figure {
+  id: string
+  label: string
+  /** The figure's full name, for its tooltip. */
+  name: string
+  /** Game by game, oldest first. */
+  values: number[]
+  value: number
+  /** The window before; NaN when there is none. */
+  base: number
+  /** The least range its line stands for, so ordinary noise stays gentle. */
+  span: number
+  digits: number
+  percent?: boolean
+  tone: '' | 'up' | 'down'
 }
 
-/** A change only takes a colour when it is big enough to mean something. */
-const MEANINGFUL = 10
+/** The app's five key figures, in its order. Kill participation is in percent throughout. */
+const FIGURES = [
+  {
+    id: 'csm',
+    label: 'CS/min',
+    name: 'CS per minute',
+    of: (s: GlobalStats) => s.csMin,
+    game: (g: Game) => g.csMin,
+    digits: 1,
+    span: 3,
+  },
+  {
+    id: 'kp',
+    label: 'KP',
+    name: 'Kill participation',
+    of: (s: GlobalStats) => s.killParticipation * 100,
+    game: (g: Game) => g.kp,
+    digits: 0,
+    percent: true,
+    span: 40,
+  },
+  {
+    id: 'vpm',
+    label: 'Vision/min',
+    name: 'Vision score per minute',
+    of: (s: GlobalStats) => s.visionMin,
+    game: (g: Game) => g.visionMin,
+    digits: 2,
+    span: 1,
+  },
+  {
+    id: 'kda',
+    label: 'KDA',
+    name: 'KDA',
+    of: (s: GlobalStats) => s.kda,
+    game: (g: Game) => g.kda,
+    digits: 2,
+    span: 6,
+  },
+  {
+    id: 'gpm',
+    label: 'Gold/min',
+    name: 'Gold per minute',
+    of: (s: GlobalStats) => s.goldPerMinute,
+    game: (g: Game) => g.goldMin,
+    digits: 0,
+    span: 200,
+  },
+] as const
 
-const cells = computed(() => {
-  const g = props.stats
-  if (!g) return []
-  const p = props.previous
-  return [
-    {
-      label: 'KDA',
-      value: g.kda.toFixed(2),
-      trend: games.value.map((x) => x.kda),
-      reference: p?.kda ?? null,
-      delta: delta(g.kda, p?.kda),
-    },
-    {
-      label: 'Kill participation',
-      value: `${Math.round(g.killParticipation * 100)}%`,
-      trend: games.value.map((x) => x.kp),
-      reference: p ? p.killParticipation * 100 : null,
-      delta: delta(g.killParticipation, p?.killParticipation),
-    },
-    {
-      label: 'CS per minute',
-      value: g.csMin.toFixed(1),
-      trend: games.value.map((x) => x.csMin),
-      reference: p?.csMin ?? null,
-      delta: delta(g.csMin, p?.csMin),
-    },
-    {
-      label: 'Gold per minute',
-      value: compact(g.goldPerMinute),
-      trend: games.value.map((x) => x.goldMin),
-      reference: p?.goldPerMinute ?? null,
-      delta: delta(g.goldPerMinute, p?.goldPerMinute),
-    },
-  ]
+const figures = computed<Figure[]>(() => {
+  const now = props.stats
+  if (!now) return []
+  const before = props.previous?.total ? props.previous : null
+  const played = games.value.filter((g) => !g.remake)
+  return FIGURES.map((f) => {
+    const value = f.of(now)
+    const base = before ? f.of(before) : NaN
+    const d = value - base
+    /* A gap counts when it is more than 5% of the line, as in the app. */
+    const tone = Math.abs(d) >= Math.abs(base) * 0.05 && d !== 0 ? (d > 0 ? 'up' : 'down') : ''
+    return {
+      id: f.id,
+      label: f.label,
+      name: f.name,
+      values: played.map(f.game).filter((v) => Number.isFinite(v)),
+      value,
+      base,
+      span: f.span,
+      digits: f.digits,
+      percent: 'percent' in f,
+      tone,
+    }
+  })
 })
+
+/** A figure as shown: a percentage, or the number with its digits; '–' when there is none. */
+const fmt = (f: Figure, v: number) =>
+  !Number.isFinite(v) ? '–' : f.percent ? `${Math.round(v)}%` : v.toFixed(f.digits)
+
+/** Signed gap to the base; percentages in points. A gap that rounds to nothing shows as 0. */
+function gap(f: Figure) {
+  const d = f.value - f.base
+  if (!Number.isFinite(d)) return ''
+  if (Math.abs(d) < 0.5 / 10 ** f.digits) return (0).toFixed(f.digits)
+  return `${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(f.digits)}`
+}
+
+const winrate = computed(() => Math.round((props.stats?.winrate ?? 0) * 100))
 </script>
 
 <template>
-  <!-- Performance: the record, the score and what it is made of, then each metric over the games. -->
+  <!-- Performance: the desktop app's strip (score, record, the key figures over the games), then
+       the form and the parts of the score on the same columns. -->
   <section>
     <div class="section">
       <h2>Performance</h2>
@@ -153,104 +224,307 @@ const cells = computed(() => {
       No games in this window.
     </p>
 
-    <div v-else class="iv-panel lit-sheet">
-      <div
-        class="grid gap-x-10 gap-y-6 p-5 sm:grid-cols-[auto_auto] xl:grid-cols-[auto_auto_minmax(0,1fr)]"
-      >
-        <!-- Record -->
-        <div>
-          <div class="label">Win rate</div>
-          <div class="mt-2 flex items-baseline gap-2.5">
-            <span class="iv-fig text-[32px] text-ink">{{ Math.round(stats.winrate * 100) }}%</span>
-            <span class="num text-[13px] text-ink-3">{{ record.wins }}W {{ record.losses }}L</span>
-          </div>
-          <span
-            v-if="games.length"
-            class="iv-form mt-3 max-w-[220px]"
-            :title="`Last ${games.length} games, oldest first`"
-          >
-            <i
-              v-for="game in games"
-              :key="game.id"
-              :class="game.remake ? 'r' : game.win ? 'w' : 'l'"
-              :title="game.remake ? 'Remake' : game.win ? 'Win' : 'Loss'"
-            />
-          </span>
-        </div>
-
-        <!-- Score -->
-        <div v-if="score">
-          <div class="label" title="0–100, each game rated against the other nine players">
-            Average score
-          </div>
-          <div
-            class="mt-2 flex items-center gap-3"
-            :title="`Average score ${score.average} of 100 over ${score.count} scored games`"
-          >
-            <PerfDial :score="score.average" />
-            <div class="num text-[12px] leading-[18px] text-ink-3">
-              <div>
-                best <span class="font-semibold text-ink-2">{{ score.best }}</span>
-              </div>
-              <div v-if="score.trend">
-                <span
-                  :class="
-                    Math.abs(score.trend) >= 5 ? (score.trend > 0 ? 'text-win' : 'text-loss') : ''
-                  "
-                  >{{ score.trend > 0 ? '+' : '−' }}{{ Math.abs(score.trend) }}</span
-                >
-                in the later games
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- What the score is made of: plain figures, thin neutral bars -->
-        <ul
-          v-if="score"
-          class="grid grid-cols-3 content-start gap-x-5 gap-y-4 sm:col-span-2 sm:grid-cols-5 xl:col-span-1 xl:border-l xl:border-line xl:pl-10"
+    <div v-else class="iv-panel lit-sheet sb">
+      <div class="sb-grid">
+        <div
+          class="sb-head"
+          :title="
+            score
+              ? `Average Invade score ${score.average} of 100 over ${score.count} scored games, each rated against the other nine players`
+              : undefined
+          "
         >
-          <li v-for="category in score.categories" :key="category.key" class="min-w-0">
-            <div class="truncate text-[12px] text-ink-3">{{ category.label }}</div>
-            <div class="num mt-2 text-[17px] font-semibold leading-none text-ink">
-              {{ category.value }}
+          <PerfDial :score="score?.average ?? null" />
+          <p>
+            <small>Invade score</small>
+            <span>{{ record.wins }}W {{ record.losses }}L · {{ winrate }}%</span>
+            <small v-if="score">
+              Best {{ score.best }}
+              <template v-if="score.trend">
+                ·
+                <em :class="Math.abs(score.trend) >= 5 ? (score.trend > 0 ? 'up' : 'down') : ''"
+                  >{{ score.trend > 0 ? '+' : '−' }}{{ Math.abs(score.trend) }}</em
+                >
+                in later games
+              </template>
+            </small>
+          </p>
+        </div>
+
+        <ul class="sb-figs">
+          <li
+            v-for="f in figures"
+            :key="f.id"
+            :title="
+              Number.isFinite(f.base)
+                ? `${f.name}: ${fmt(f, f.value)}, ${fmt(f, f.base)} over the ${previous?.total} games before`
+                : f.name
+            "
+          >
+            <span>{{ f.label }}</span>
+            <p>
+              <b>{{ fmt(f, f.value) }}</b
+              ><em :class="f.tone">{{ gap(f) }}</em>
+            </p>
+            <div
+              class="sb-spark"
+              role="img"
+              :aria-label="`${f.name} over the last ${f.values.length} games`"
+            >
+              <TrendLine
+                :values="f.values"
+                :baseline="Number.isFinite(f.base) ? f.base : null"
+                :span="f.span"
+                :height="32"
+                area
+              />
             </div>
-            <div class="meter mt-2 !h-[3px]">
-              <span :style="{ width: `${category.value}%` }" />
-            </div>
+            <small>{{ Number.isFinite(f.base) ? `Before ${fmt(f, f.base)}` : '' }}</small>
           </li>
         </ul>
-      </div>
 
-      <!-- Metrics: label, the games as a line against the window before (dashed), value, change -->
-      <ul class="border-t border-line px-5">
-        <li
-          v-for="cell in cells"
-          :key="cell.label"
-          class="grid h-[48px] grid-cols-[minmax(0,92px)_minmax(0,1fr)_minmax(44px,auto)_minmax(32px,auto)] items-center gap-3 border-b border-line last:border-b-0 xs:grid-cols-[96px_minmax(0,1fr)_64px_48px] xs:gap-4 sm:grid-cols-[140px_minmax(0,1fr)_80px_56px] sm:gap-6"
-        >
-          <span class="truncate text-[13px] text-ink-2">{{ cell.label }}</span>
-          <span role="img" :aria-label="`${cell.label} over the last ${cell.trend.length} games`">
-            <TrendLine :values="cell.trend" :baseline="cell.reference" :height="26" />
-          </span>
-          <span class="num text-right text-[17px] font-semibold text-ink">{{ cell.value }}</span>
-          <span
-            class="num text-right text-[12px] font-medium"
-            :class="
-              cell.delta === null || Math.abs(cell.delta) < MEANINGFUL
-                ? 'text-ink-3'
-                : cell.delta > 0
-                  ? 'text-win'
-                  : 'text-loss'
-            "
-            :title="previous ? `Against the previous ${previous.total} games` : undefined"
-          >
-            <template v-if="cell.delta !== null && Math.round(cell.delta) !== 0">
-              {{ cell.delta > 0 ? '+' : '−' }}{{ Math.abs(Math.round(cell.delta)) }}%
-            </template>
-          </span>
-        </li>
-      </ul>
+        <template v-if="games.length || score?.categories.length">
+          <div class="sb-rule" />
+
+          <div v-if="games.length" class="sb-form">
+            <small>Form</small>
+            <span class="iv-form" :title="`Last ${games.length} games, oldest first`">
+              <i
+                v-for="game in games"
+                :key="game.id"
+                :class="game.remake ? 'r' : game.win ? 'w' : 'l'"
+                :title="game.remake ? 'Remake' : game.win ? 'Win' : 'Loss'"
+              />
+            </span>
+          </div>
+
+          <ul v-if="score?.categories.length" class="sb-parts">
+            <li
+              v-for="category in score.categories"
+              :key="category.key"
+              :title="`${category.label}: ${category.value} of 100, part of the Invade score`"
+            >
+              <span>{{ category.label }}</span>
+              <b>{{ category.value }}</b>
+              <div class="meter">
+                <span :style="{ width: `${category.value}%` }" />
+              </div>
+            </li>
+          </ul>
+        </template>
+      </div>
     </div>
   </section>
 </template>
+
+<style scoped>
+/* One wide strip, as the app's profile: the dial and the record on the left, then the five figures
+   side by side, each with its value and gap, a short line over the dashed window before, and that
+   value in small type. A narrow strip puts the record on top and the figures 3 + 2. */
+.sb {
+  padding: 16px 20px;
+  container-type: inline-size;
+}
+.sb-grid {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0 24px;
+}
+.sb-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding-right: 24px;
+  border-right: 1px solid var(--line);
+}
+.sb-head :deep(.iv-dial) {
+  width: 56px;
+  height: 56px;
+}
+.sb-head :deep(.iv-dial b) {
+  font-size: 18px;
+}
+.sb-head p {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+}
+.sb-head span {
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--text-1);
+}
+.sb-head small {
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--text-3);
+}
+.sb em {
+  font-style: normal;
+}
+.sb em.up {
+  color: var(--win);
+}
+.sb em.down {
+  color: var(--loss);
+}
+
+.sb-figs,
+.sb-parts {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px 20px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sb-figs li,
+.sb-parts li {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.sb-figs li > span,
+.sb-figs li > small,
+.sb-parts li > span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.sb-figs li > span,
+.sb-parts li > span {
+  font-size: 12px;
+  color: var(--text-2);
+}
+.sb-figs p {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.sb-figs b,
+.sb-parts b {
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-1);
+}
+.sb-figs em {
+  font-size: 12px;
+  color: var(--text-3);
+}
+/* The line in a box of a fixed height with the SVG pinned to it. */
+.sb-spark {
+  position: relative;
+  height: 32px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+.sb-spark :deep(.iv-trend) {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.sb-spark :deep(.iv-trend-base) {
+  opacity: 0.5;
+}
+.sb-figs li > small {
+  min-height: 1.3em;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-4);
+}
+
+/* The second row: a hairline across, then the form under the record and the parts of the score
+   under the figures. */
+.sb-rule {
+  grid-column: 1 / -1;
+  height: 1px;
+  margin: 14px 0;
+  background: var(--line);
+}
+.sb-form {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  align-self: start;
+}
+.sb-form small {
+  font-size: 12px;
+  color: var(--text-2);
+}
+/* The games as one row of ticks that fills the column, however many there are. */
+.sb-form .iv-form {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 2px;
+  width: 100%;
+}
+.sb-form .iv-form i {
+  flex: 1 1 0;
+  min-width: 2px;
+  max-width: 8px;
+  height: 12px;
+}
+.sb-parts {
+  grid-column: 2;
+  align-self: start;
+}
+.sb-parts li {
+  gap: 4px;
+}
+.sb-parts .meter {
+  height: 3px;
+  margin-top: 2px;
+}
+
+/* Narrow: the record above, the figures and the parts 3 + 2. */
+@container (max-width: 760px) {
+  .sb-grid {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 12px;
+  }
+  .sb-head {
+    padding: 0 0 12px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .sb-head :deep(.iv-dial) {
+    width: 44px;
+    height: 44px;
+  }
+  .sb-head :deep(.iv-dial b) {
+    font-size: 15px;
+  }
+  .sb-head p {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 10px;
+  }
+  .sb-figs,
+  .sb-parts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    row-gap: 10px;
+  }
+  .sb-spark {
+    height: 28px;
+  }
+  .sb-rule {
+    margin: 2px 0;
+  }
+  .sb-parts {
+    grid-column: 1;
+  }
+}
+</style>
