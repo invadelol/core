@@ -140,7 +140,7 @@ onBeforeUnmount(() => {
            on its own once it is stored. -->
       <div v-else-if="pending" class="mx-auto max-w-[520px] py-24" role="status">
         <h1 class="text-[20px] font-semibold text-ink">This game just ended</h1>
-        <p class="mt-2 text-[14px] text-ink-2">
+        <p class="mt-2 text-[14px] leading-relaxed text-ink-2">
           It will be ready in a moment. This page opens it as soon as it is.
         </p>
         <a :href="`/${encodeURIComponent(slug)}`" class="iv-btn mt-5">Back to profile</a>
