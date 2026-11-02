@@ -1,6 +1,10 @@
 import { test } from '@japa/runner'
 import {
   cellCountsSql,
+  earlyCellsSql,
+  earlyFromCellsSql,
+  firstBloodCellsSql,
+  firstBloodFromCellsSql,
   laneOpponentsSql,
   lanePairCellsSql,
   lanePairs,
@@ -79,6 +83,36 @@ test.group('Matchup stats', () => {
       'position = {position:String} AND champion = {champion:UInt16}'
     )
     assert.include(totalsCellsSql(narrow), "if(champion = 0, 'games', 'ban')")
+  })
+
+  test("counts the early game and first blood a platform at a time, by the event tables' key", ({
+    assert,
+  }) => {
+    for (const sql of [earlyCellsSql(), firstBloodCellsSql()]) {
+      // The timeline and the events are keyed by platform then game id, partitioned by month.
+      assert.include(sql, 'platform = {platform:String} AND game_start_ms >= {patchStart:UInt64}')
+      assert.equal(sql.match(/startsWith\(match_id, \{prefix:String\}\)/g)?.length, 2)
+      assert.include(sql, 'FROM match_lineups FINAL')
+      assert.include(sql, 'GROUP BY s.seed_tier, s.platform, a.3, a.4')
+    }
+    const early = earlyCellsSql()
+    assert.include(early, 'FROM match_timeline')
+    assert.include(early, 'intDiv(frame_ms, 60000) IN (10, 15)')
+    // Against the other team's player in the role, both frames present.
+    assert.include(early, 'o.3 = a.3 AND o.2 != a.2')
+    assert.include(early, 'b.1 != 0 AND x.1 != 0 AND y.1 != 0')
+    assert.include(firstBloodCellsSql(), "kind = 'kill'")
+  })
+
+  test('reads the early game and first blood of a filter as sums of their cells', ({ assert }) => {
+    const narrow: Filter = { patch: '16.21', bracket: 'master_plus', region: 'kr' }
+    for (const sql of [earlyFromCellsSql(narrow), firstBloodFromCellsSql(narrow)]) {
+      assert.include(sql, "seed_tier IN ('MASTER','GRANDMASTER','CHALLENGER')")
+      assert.include(sql, "platform IN ('KR')")
+      assert.include(sql, 'position = {position:String} AND champion = {champion:UInt16}')
+    }
+    assert.include(earlyFromCellsSql(narrow), 'GROUP BY minute ORDER BY minute')
+    assert.notInclude(earlyFromCellsSql(FILTER), 'seed_tier IN')
   })
 
   test('keeps each champion-role opponents as one flat list', ({ assert }) => {

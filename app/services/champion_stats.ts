@@ -315,6 +315,117 @@ export function countedPatchesSql() {
 }
 
 /**
+ * The crawled games of one platform of a patch, read by the event tables' key (platform, then
+ * game id) and their partitions from the patch's start (`{patchStart:UInt64}`).
+ */
+const platformGamesSql = () => `
+      platform = {platform:String} AND game_start_ms >= {patchStart:UInt64}
+      AND match_id IN (SELECT match_id FROM match_seed WHERE patch = {patch:String} AND platform = {platform:String})`
+
+/** The lineups, cells and results of one platform's crawled games of a patch, by game id. */
+const platformLineupsSql = () => `
+    INNER JOIN (
+      SELECT match_id, players FROM match_lineups FINAL
+      WHERE patch = {patch:String} AND startsWith(match_id, {prefix:String})
+    ) AS l USING (match_id)
+    INNER JOIN (${seedCellsSql(true)}) AS s USING (match_id)
+    INNER JOIN (
+      SELECT match_id, t1_win, t2_win FROM matches
+      WHERE patch = {patch:String} AND queue_id = ${RANKED_SOLO}
+        AND startsWith(match_id, {prefix:String})
+    ) AS m USING (match_id)
+    ARRAY JOIN l.players AS a`
+
+/**
+ * Every player of one platform's crawled games of a patch at minute 10 and 15 against the other
+ * team's player in the role, counted per cell: the rows of `stats_early` (`earlySql`'s sums for
+ * every champion at once). A lineup player is (participant, team, position, champion).
+ */
+export function earlyCellsSql() {
+  return `
+    SELECT {patch:String}, s.seed_tier, s.platform, a.3, a.4, f.minute, toUInt32(count()),
+           sum(x.2), sum(x.3), sum(x.4),
+           sum(toInt64(x.2) - toInt64(y.2)), sum(toInt64(x.3) - toInt64(y.3)),
+           sum(toInt64(x.4) - toInt64(y.4)),
+           toUInt32(countIf(x.3 > y.3)), toUInt32(countIf(x.3 > y.3 AND won)),
+           toUInt32(countIf(x.3 < y.3)), toUInt32(countIf(x.3 < y.3 AND won))
+    FROM (
+      SELECT match_id, minute,
+             groupArray((participant_id, toUInt32(cs + jungle_cs), gold_total, xp)) AS players
+      FROM (
+        SELECT match_id, participant_id, intDiv(frame_ms, 60000) AS minute, cs, jungle_cs,
+               gold_total, xp
+        FROM match_timeline
+        WHERE ${platformGamesSql()}
+          AND intDiv(frame_ms, 60000) IN (${EARLY_MINUTES.join(', ')})
+        LIMIT 1 BY match_id, participant_id, minute
+      )
+      GROUP BY match_id, minute
+    ) AS f
+    ${platformLineupsSql()}
+    LEFT ARRAY JOIN [arrayFirst(o -> o.3 = a.3 AND o.2 != a.2, l.players)] AS b
+    LEFT ARRAY JOIN [arrayFirst(p -> p.1 = a.1, f.players)] AS x
+    LEFT ARRAY JOIN [arrayFirst(p -> p.1 = b.1, f.players)] AS y
+    LEFT ARRAY JOIN [if(a.2 = 100, m.t1_win, m.t2_win)] AS won
+    WHERE a.3 != '' AND b.1 != 0 AND x.1 != 0 AND y.1 != 0
+    GROUP BY s.seed_tier, s.platform, a.3, a.4, f.minute
+  `
+}
+
+/**
+ * First blood in one platform's crawled games of a patch, for every player: games with a kill
+ * event, games the player took it, assisted it, gave it, and the wins of the games it was part
+ * of, per cell: the rows of `stats_first_blood`.
+ */
+export function firstBloodCellsSql() {
+  return `
+    SELECT {patch:String}, s.seed_tier, s.platform, a.3, a.4, toUInt32(count()),
+           toUInt32(countIf(fb.killer = a.1)), toUInt32(countIf(has(fb.assists, a.1))),
+           toUInt32(countIf(fb.victim = a.1)),
+           toUInt32(countIf((fb.killer = a.1 OR has(fb.assists, a.1)) AND if(a.2 = 100, m.t1_win, m.t2_win)))
+    FROM (
+      SELECT match_id, argMin(killer, t_ms) AS killer, argMin(victim, t_ms) AS victim,
+             argMin(assists, t_ms) AS assists
+      FROM (
+        SELECT DISTINCT match_id, t_ms, killer, victim, assists FROM match_events
+        WHERE ${platformGamesSql()} AND kind = 'kill'
+      )
+      GROUP BY match_id
+    ) AS fb
+    ${platformLineupsSql()}
+    WHERE a.3 != ''
+    GROUP BY s.seed_tier, s.platform, a.3, a.4
+  `
+}
+
+/** `earlySql` from the counted cells (`{champion:UInt16}`, `{position:String}`): the same columns. */
+export function earlyFromCellsSql(filter: Filter) {
+  return `
+    SELECT minute, sum(games), sum(cs), sum(gold), sum(xp), sum(cs_diff), sum(gold_diff),
+           sum(xp_diff), sum(ahead), sum(ahead_wins), sum(behind), sum(behind_wins)
+    FROM stats_early
+    WHERE patch = {patch:String} AND position = {position:String} AND champion = {champion:UInt16}
+      ${cellsSql(filter)}
+    GROUP BY minute ORDER BY minute
+  `
+}
+
+/** `firstBloodSql` from the counted cells: games, kills, assists, victims, wins when part of it. */
+export function firstBloodFromCellsSql(filter: Filter) {
+  return `
+    SELECT sum(games), sum(kills), sum(assists), sum(victims), sum(involved_wins)
+    FROM stats_first_blood
+    WHERE patch = {patch:String} AND position = {position:String} AND champion = {champion:UInt16}
+      ${cellsSql(filter)}
+  `
+}
+
+/** The patches counted into the early game and first blood cells, with when (seconds). */
+export function eventCountedPatchesSql() {
+  return `SELECT patch, toUnixTimestamp(max(refreshed)) FROM stats_event_counts GROUP BY patch`
+}
+
+/**
  * The first 15 skill points of each game (1 Q, 2 W, 3 E, 4 R) from the player's skill order on
  * their participant row, joined to the game by one hash of (match, participant): order, games,
  * wins. Games stored without a timeline have no skill order and are skipped. The champion, role
