@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ChampIcon, useFormat, useNames } from '@invadelol/ui'
+import { ChampIcon, StatLabel, useFormat, useNames } from '@invadelol/ui'
 import type { MatchDetail, PlayerView } from '@invadelol/ui/logic'
 import PlayerLink from './PlayerLink.vue'
 
@@ -26,7 +26,7 @@ const rows = computed(() => {
 <template>
   <section class="dmg" aria-label="Damage">
     <header class="dmg-head">
-      <h3>Damage</h3>
+      <h3><StatLabel stat="damage" label="Damage" /></h3>
       <span class="dmg-key"><i class="dealt" />To champions</span>
       <span class="dmg-key"><i class="taken" />Taken</span>
     </header>
