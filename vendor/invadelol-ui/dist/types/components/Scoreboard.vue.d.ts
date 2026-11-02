@@ -9,6 +9,8 @@ import '../styles/detail.css';
  * player row follows the table spec, the viewed player's row in brand. A name links to that
  * player (through the host's `linkTo` / `onOpen`). A row opens that player's game under it
  * (`PlayerDetail`), one at a time: a click anywhere on it but a link, or its chevron button.
+ * Stat heads carry Riot's icons; when a translated name no longer fits its column, every head
+ * drops to its icon (`StatLabel`). On a phone the figures under the name lead with their icon.
  */
 type __VLS_Props = {
     detail: MatchDetail;
