@@ -1,6 +1,13 @@
 import riotAssetsService from '#services/riot/assets'
 import { AnswerCache, BRACKETS, type Bracket } from '#services/ranked_stats'
-import { latestPatch, patchStart, rows, statsCache } from '#services/ranked_games_service'
+import {
+  latestPatch,
+  patchStart,
+  rows,
+  shownPatches,
+  statsCache,
+  type StoredPatch,
+} from '#services/ranked_games_service'
 import {
   REGIONS,
   averages,
@@ -12,7 +19,6 @@ import {
   laneSql,
   matchups,
   opponentsOf,
-  patchesSql,
   profileSql,
   skillOrderSql,
   skillOrders,
@@ -37,17 +43,10 @@ import { championSlug } from '../../inertia/lib/champions.js'
 
 /** The bracket a page shows unless the address names another. */
 export const DEFAULT_BRACKET: Bracket = 'emerald_plus'
-/** A patch is offered in the patch menu from this many crawled games. */
-const MIN_PATCH_GAMES = 5_000
-/** A patch's ranks are compared with the previous patch's from this many games there. */
-const MIN_PREVIOUS_GAMES = 20_000
 const TREND_DAYS = 30
 const DAY_MS = 86_400_000
 
 const num = (v: unknown) => Number(v)
-
-/** The patch menu is asked again this often: a new patch shows up within it. */
-const PATCHES_TTL_MS = 10 * 60_000
 
 /**
  * Champion statistics from our own crawled ranked games (`champion_stats.ts` counts them): the
@@ -64,7 +63,6 @@ export class ChampionStatsService {
   #pairs = statsCache('lane-pairs', 4)
   /** One champion's opponents from the counted cells: a burst of asks reads them once. */
   #opponents = new AnswerCache(2048, 10 * 60_000)
-  #patches = new AnswerCache(1, PATCHES_TTL_MS)
 
   /** The filters of an address: `?rank=emerald_plus&patch=16.20&region=euw`, defaults filled. */
   async filter(input: {
@@ -82,14 +80,9 @@ export class ChampionStatsService {
     return { patch, bracket, region: region in REGIONS ? region : null }
   }
 
-  /** Patches with enough crawled games, newest first. */
-  patches(): Promise<{ patch: string; games: number }[]> {
-    return this.#patches.get('patches', async () => {
-      const found = await rows(patchesSql())
-      return found
-        .map(([patch, games]) => ({ patch: String(patch), games: num(games) }))
-        .filter((p) => p.games >= MIN_PATCH_GAMES)
-    })
+  /** The patch menu: patches with enough crawled games, newest first (`shownPatches`). */
+  patches(): Promise<StoredPatch[]> {
+    return shownPatches()
   }
 
   /** Every champion in every role, ranked within each role (from the counted cells once the patch is counted). */
@@ -109,12 +102,12 @@ export class ChampionStatsService {
     })
   }
 
-  /** The previous patch's summary when it has enough games, to show how each rank moved. */
+  /** The previous patch's summary (it is in the menu: it has enough games), to show how each rank moved. */
   async previous(filter: Filter): Promise<Summary | null> {
     const patches = await this.patches()
     const at = patches.findIndex((p) => p.patch === filter.patch)
     const before = at >= 0 ? patches[at + 1] : undefined
-    if (!before || before.games < MIN_PREVIOUS_GAMES) return null
+    if (!before) return null
     return this.summary({ ...filter, patch: before.patch })
   }
 

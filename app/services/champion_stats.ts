@@ -427,14 +427,6 @@ export function trendGamesSql(filter: Filter) {
   `
 }
 
-/** Patches with crawled games, newest first (a year of them at most): patch, games. */
-export function patchesSql() {
-  return `
-    SELECT patch, count() FROM match_seed
-    GROUP BY patch ORDER BY max(game_start_ms) DESC LIMIT 24
-  `
-}
-
 /* ── Counting ─────────────────────────────────────────────────── */
 
 /** One champion in one role. */
