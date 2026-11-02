@@ -39,7 +39,7 @@ test.group('Match share', () => {
       score,
       tag: 'MVP',
     })
-    assert.equal(share.social.title, 'Moonfern#EUW · Victory on LeBlanc')
+    assert.equal(share.social.title, 'Moonfern#EUW: Victory on LeBlanc')
     assert.equal(
       share.social.description,
       `18/1/11, Invade score ${score}, MVP. Mid, Ranked Solo/Duo, 32:18.`
@@ -57,7 +57,7 @@ test.group('Match share', () => {
     const match = shareMatch({ ...LOSS, 4: { gameName: 'Sable Fox', tagLine: 'SLY' } })
     const loss = shareOf(match, 'Moonfern-EUW')!
     assert.isFalse(loss.card.win)
-    assert.equal(loss.social.title, 'Moonfern#EUW · Defeat')
+    assert.equal(loss.social.title, 'Moonfern#EUW: Defeat')
     assert.match(loss.social.description, /^3\/7\/4, Invade score \d+(, ACE)?\. Mid, /)
     const spaced = shareOf(match, 'Sable%20Fox-SLY')!
     assert.equal(spaced.card.championId, 14)

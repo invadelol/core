@@ -30,7 +30,7 @@ const minutes = () => Math.round(props.game.durationSec / 60)
         <Link :href="`/pro/${game.pro.slug}`"
           ><b>{{ game.pro.name }}</b></Link
         >
-        <small>{{ game.pro.team?.name ?? 'No team' }} · {{ regionLabel(game.platform) }}</small>
+        <small>{{ game.pro.team?.name ?? 'No team' }}, {{ regionLabel(game.platform) }}</small>
       </span>
       <span v-else class="min-w-0">
         <b>{{ championName(game.champion) }}</b>
@@ -39,7 +39,7 @@ const minutes = () => Math.round(props.game.durationSec / 60)
     </span>
     <span class="kda"
       ><b>{{ game.kills }} / {{ game.deaths }} / {{ game.assists }}</b
-      ><small>{{ kda() }} KDA · {{ game.cs }} CS</small></span
+      ><small>{{ kda() }} KDA, {{ game.cs }} CS</small></span
     >
     <span class="ld">
       <img class="round" :src="perkUrl(game.keystone)" :alt="nameOf('rune', game.keystone) ?? ''" />
@@ -69,7 +69,7 @@ const minutes = () => Math.round(props.game.durationSec / 60)
     </span>
     <span class="when"
       ><b>{{ game.win ? 'Win' : 'Loss' }}</b
-      >{{ minutes() }} min · {{ ago(game.startMs) }}</span
+      >{{ minutes() }} min, {{ ago(game.startMs) }}</span
     >
   </div>
 </template>

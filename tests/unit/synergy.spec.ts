@@ -91,11 +91,11 @@ test.group('Friends synergy', (group) => {
     )
     const lucky = report.partners.find((p) => p.puuid === 'lucky')!
     const steady = report.partners.find((p) => p.puuid === 'steady')!
-    // 2–0 is 100 %, but only a few points above the usual rate once pulled toward it.
+    // 2-0 is 100 %, but only a few points above the usual rate once pulled toward it.
     assert.isBelow(lucky.synergy, 8)
     assert.isAbove(lucky.synergy, 0)
     assert.equal(lucky.confidence, 'low')
-    // 21–9 is 70 % against 50 % without: most of the 20 points survive.
+    // 21-9 is 70 % against 50 % without: most of the 20 points survive.
     assert.isAbove(steady.synergy, 10)
     assert.isAbove(steady.synergy, lucky.synergy)
     assert.equal(steady.confidence, 'solid')

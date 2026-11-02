@@ -90,7 +90,7 @@ const roleTabs = computed(() =>
         { label: 'Champions', value: rows.length },
         {
           label: 'Games',
-          value: summary ? compact(summary.games) : '–',
+          value: summary ? compact(summary.games) : '-',
           sub: filter ? `Patch ${filter.patch}` : undefined,
         },
         ...(top
@@ -98,13 +98,13 @@ const roleTabs = computed(() =>
               {
                 label: 'Top pick',
                 value: top.c!.name,
-                sub: `${TIERS[top.tier ?? 0]} · ${pct(top.win)}`,
+                sub: `${TIERS[top.tier ?? 0]}, ${pct(top.win)}`,
               },
             ]
           : []),
       ]"
     >
-      <template #kicker>{{ role.label }} · our own ranked games</template>
+      <template #kicker>{{ role.label }}, our own ranked games</template>
     </Banner>
     <main class="page cs-main flex-1">
       <FilterBar :rank="rank" :patch="patch" :patches="patches" :href="href" />
@@ -142,8 +142,8 @@ const roleTabs = computed(() =>
         <section class="iv-panel cs-card flush" style="margin-top: 16px">
           <h2>
             All {{ role.label.toLowerCase() }} champions<span class="meta"
-              >{{ rows.length }} ranked<template v-if="previousPatch">
-                · moves since {{ previousPatch }}</template
+              >{{ rows.length }} ranked<template v-if="previousPatch"
+                >, moves since {{ previousPatch }}</template
               ></span
             >
           </h2>

@@ -32,7 +32,7 @@ function stat(stats: LcuStats | undefined, key: string): number {
   return number(stats?.[key])
 }
 
-/** The rune page: perk0–3 are the primary tree, perk4–5 the secondary one. */
+/** The rune page: perk0-3 are the primary tree, perk4-5 the secondary one. */
 function perksOf(stats: LcuStats) {
   const selection = (slot: number) => ({
     perk: stat(stats, `perk${slot}`),
@@ -220,7 +220,7 @@ const CLIENT_FRAME_INTERVAL = 60_000
 
 /**
  * The client's timeline in match-v5's envelope. Participant ids are the
- * game's own (1–10 in team order on both sides), so frames keep their keys
+ * game's own (1-10 in team order on both sides), so frames keep their keys
  * and `participants` ties them to whichever PUUIDs the match was stored with.
  */
 export function toTimelineDto(

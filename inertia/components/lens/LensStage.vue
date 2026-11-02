@@ -131,11 +131,11 @@ const splash = computed(() => (props.champion ? championSplash(props.champion) :
 
     <div class="lv-stage-copy">
       <p class="lv-stage-over">
-        {{ roleName }}<template v-if="champion"> · {{ championName(champion) }}</template>
+        {{ roleName }}<template v-if="champion">, {{ championName(champion) }}</template>
       </p>
       <div class="lv-stage-score">
         <span class="iv-fig" :aria-label="`Invade score ${score ?? 'not rated'}`">{{
-          score === null ? '–' : counted
+          score === null ? '-' : counted
         }}</span>
         <span class="lv-stage-score-label num"> Invade score<br />{{ games }} games </span>
       </div>
@@ -196,7 +196,7 @@ const splash = computed(() => (props.champion ? championSplash(props.champion) :
               {{ p.label }}
             </text>
             <text :x="p.lx" :y="p.ly + 17" :text-anchor="p.anchor" class="value">
-              {{ p.rating ?? '–' }}
+              {{ p.rating ?? '-' }}
             </text>
           </g>
         </g>

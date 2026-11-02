@@ -113,7 +113,7 @@ function tooltip(cell: Cell) {
       <h3>Activity</h3>
       <span class="meta">Last {{ WEEKS }} weeks</span>
       <span v-if="activity.length" class="num meta ml-auto">
-        {{ totals.games }} games <span class="text-ink-4">·</span> {{ totals.winrate }}%
+        {{ totals.games }} games, {{ totals.winrate }}%
       </span>
     </div>
 

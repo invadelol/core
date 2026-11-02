@@ -45,7 +45,7 @@ export default class ChampionsController {
       patches,
       filter,
       social: {
-        title: 'Champions · invade.lol',
+        title: 'Champions | invade.lol',
         description:
           'Every League of Legends champion: tier, win rate, pick and ban rate in each role.',
         url: 'https://invade.lol/champions',
@@ -76,7 +76,7 @@ export default class ChampionsController {
       patches,
       filter,
       social: {
-        title: 'Tier list · invade.lol',
+        title: 'Tier list | invade.lol',
         description: 'League of Legends tier list from our own ranked games, role by role.',
         url: 'https://invade.lol/tier-list',
       },
@@ -137,7 +137,7 @@ export default class ChampionsController {
       filter,
       data,
       social: {
-        title: `${champion.name} ${tab === 'build' ? 'build' : tab} · invade.lol`,
+        title: `${champion.name} ${tab === 'build' ? 'build' : tab} | invade.lol`,
         description: `${champion.name}'s build, runes, matchups and statistics from our own ranked games.`,
         url: `https://invade.lol/champions/${champion.slug}${tab === 'build' ? '' : `/${tab}`}`,
       },

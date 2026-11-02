@@ -50,7 +50,7 @@ export function buildSocial(build: SharedBuild) {
   image.query.set('v', buildCardVersion())
   const lane = LANE_LABELS[build.lane]
   const title = build.name
-    ? `${build.name} — ${build.championName} build`
+    ? `${build.name}: ${build.championName} build`
     : `${build.championName} ${lane} build`
   const route = [...build.items.core, ...build.items.later.map((o) => o[0])]
     .map((id) => build.itemNames[String(id)])

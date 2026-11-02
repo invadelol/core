@@ -81,7 +81,7 @@ const shown = computed(() => regions.value.find(([r]) => r === region.value) ?? 
               <TeamLogo :team="t" :size="40" />
               <span class="min-w-0"
                 ><b>{{ t.name }}</b
-                ><small>{{ t.shortName }} · {{ t.players }} players</small></span
+                ><small>{{ t.shortName }}, {{ t.players }} players</small></span
               >
             </Link>
           </div>
@@ -103,7 +103,7 @@ const shown = computed(() => regions.value.find(([r]) => r === region.value) ?? 
             <span class="nm"
               ><b>{{ p.name }}</b
               ><small
-                >{{ p.team?.name ?? 'No team' }} · {{ regionLabel(p.account.platform) }}</small
+                >{{ p.team?.name ?? 'No team' }}, {{ regionLabel(p.account.platform) }}</small
               ></span
             >
             <RankCrest v-if="p.best" :tier="p.best.tier" :size="20" />

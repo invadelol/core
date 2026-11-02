@@ -67,11 +67,11 @@ const need = computed(() => {
 })
 
 function text(figure: LensFigure, value: number | null) {
-  if (value === null) return '–'
+  if (value === null) return '-'
   return `${figure.plusMinus ? '±' : ''}${figureText(value, figure.digits, figure.unit)}`
 }
 const refsOf = (figure: LensFigure) =>
-  figure.refs.map((ref) => `${ref.label} ${text(figure, ref.value)}`).join(' · ')
+  figure.refs.map((ref) => `${ref.label} ${text(figure, ref.value)}`).join(', ')
 function lean(figure: LensFigure) {
   if (figure.standing === null) return null
   const s = Math.max(-2, Math.min(2, figure.standing))

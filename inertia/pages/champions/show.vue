@@ -130,22 +130,22 @@ const figures = computed(() => {
   return [
     {
       label: 'Tier',
-      value: s?.tier !== null && s?.tier !== undefined ? TIERS[s.tier] : '–',
+      value: s?.tier !== null && s?.tier !== undefined ? TIERS[s.tier] : '-',
       sub: s?.rank
         ? `#${s.rank} of ${props.ranked} in ${role.value.label.toLowerCase()}`
         : 'Not ranked',
     },
     {
       label: 'Win rate',
-      value: s ? pct(s.win) : '–',
+      value: s ? pct(s.win) : '-',
       sub: s ? `${thousands(s.games)} games` : 'No games yet',
     },
     {
       label: 'Pick rate',
-      value: s ? pct(s.pick) : '–',
+      value: s ? pct(s.pick) : '-',
       sub: `of ${role.value.label.toLowerCase()} games`,
     },
-    { label: 'Ban rate', value: s ? pct(s.ban) : '–', sub: 'of games' },
+    { label: 'Ban rate', value: s ? pct(s.ban) : '-', sub: 'of games' },
   ]
 })
 
@@ -266,8 +266,8 @@ const rune = (id: number) => nameOf('rune', id) ?? ''
     >
       <template #kicker>
         <RoleIcon :lane="role.lane as any" :size="14" />{{ role.label
-        }}<template v-if="classes"> · {{ classes }}</template
-        ><template v-if="filter"> · Patch {{ filter.patch }}</template>
+        }}<template v-if="classes">, {{ classes }}</template
+        ><template v-if="filter">, Patch {{ filter.patch }}</template>
       </template>
       <template #under>
         <div class="cs-kit">
@@ -298,7 +298,7 @@ const rune = (id: number) => nameOf('rune', id) ?? ''
           <section v-if="runes?.pages.length && trees" class="iv-panel cs-card">
             <h2>
               Runes<span class="meta"
-                >{{ rune(runes.pages[0].page.keystone) }} · {{ pct(runes.pages[0].win) }} win ·
+                >{{ rune(runes.pages[0].page.keystone) }}, {{ pct(runes.pages[0].win) }} win,
                 {{ thousands(runes.pages[0].games) }} games</span
               >
             </h2>
@@ -328,13 +328,13 @@ const rune = (id: number) => nameOf('rune', id) ?? ''
           <section v-if="duos.length" class="iv-panel cs-card">
             <ChampionRows
               :rows="duos"
-              :title="`Best with · ${roleOf(duoRole).label}`"
+              :title="`Best with: ${roleOf(duoRole).label}`"
               note="games together"
               :href="championHref"
             />
           </section>
           <section v-else-if="waiting('teammates')" class="iv-panel cs-card" aria-busy="true">
-            <span class="cs-h">Best with · {{ roleOf(duoRole).label }}</span>
+            <span class="cs-h">Best with: {{ roleOf(duoRole).label }}</span>
             <Skeleton height="220px" />
           </section>
         </div>
@@ -617,7 +617,7 @@ const rune = (id: number) => nameOf('rune', id) ?? ''
         <section class="iv-panel cs-card" style="margin-top: 20px">
           <h2>
             By rank<span class="meta"
-              >Tier, win rate and pick rate at each rank · patch {{ patch }}</span
+              >Tier, win rate and pick rate at each rank, patch {{ patch }}</span
             >
           </h2>
           <div class="cs-ranks">

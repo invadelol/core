@@ -21,8 +21,8 @@ const url = ref('')
 
 const cells = computed(() => [
   { name: 'Win rate', value: `${Math.round((props.stats?.winrate ?? 0) * 100)}%` },
-  { name: 'KDA', value: props.stats?.kda.toFixed(2) ?? '—' },
-  { name: 'CS per minute', value: props.stats?.csMin.toFixed(1) ?? '—' },
+  { name: 'KDA', value: props.stats?.kda.toFixed(2) ?? '-' },
+  { name: 'CS per minute', value: props.stats?.csMin.toFixed(1) ?? '-' },
 ])
 
 onMounted(() => {
@@ -82,7 +82,7 @@ async function download() {
     ctx.fillText(props.profile.gameName, 64, 280)
     ctx.font = '500 28px Archivo, Inter, sans-serif'
     ctx.fillStyle = '#a6a7b8'
-    ctx.fillText(`#${props.profile.tagLine}  ·  ${regionLabel(props.profile.platform)}`, 64, 326)
+    ctx.fillText(`#${props.profile.tagLine}, ${regionLabel(props.profile.platform)}`, 64, 326)
     if (includeStats.value && props.stats)
       cells.value.forEach((cell, i) => {
         ctx.fillStyle = '#ececf3'
@@ -154,7 +154,7 @@ async function download() {
               {{ profile.gameName }}
             </h3>
             <p class="num mt-1 text-[12px] text-[#a6a7b8]">
-              #{{ profile.tagLine }} · {{ regionLabel(profile.platform) }}
+              #{{ profile.tagLine }}, {{ regionLabel(profile.platform) }}
             </p>
           </div>
         </div>

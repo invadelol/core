@@ -19,7 +19,7 @@ const appName = import.meta.env.VITE_APP_NAME || 'invade.lol'
 createInertiaApp({
   progress: { color: '#7b6dff' },
 
-  title: (title: string) => (title ? `${title} · ${appName}` : appName),
+  title: (title: string) => (title ? `${title} | ${appName}` : appName),
 
   resolve: (name: string) => {
     return resolvePageComponent(

@@ -95,13 +95,13 @@ const champHref = (slug: string, position?: string) =>
         { label: 'Champions', value: champions.length },
         {
           label: 'Games',
-          value: summary ? compact(summary.games) : '–',
+          value: summary ? compact(summary.games) : '-',
           sub: filter ? `Patch ${filter.patch}` : undefined,
         },
       ]"
     >
       <template #kicker
-        >Our own ranked games · {{ rank === 'emerald_plus' ? 'Emerald+' : rank }}</template
+        >Our own ranked games, {{ rank === 'emerald_plus' ? 'Emerald+' : rank }}</template
       >
     </Banner>
     <main class="page cs-main flex-1">
@@ -174,7 +174,7 @@ const champHref = (slug: string, position?: string) =>
               ><TierMark :tier="x.main.tier" /><span class="w">{{
                 pct(x.main.win)
               }}</span></template
-            ><template v-else>–</template></span
+            ><template v-else>-</template></span
           >
         </Link>
       </div>

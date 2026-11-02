@@ -58,7 +58,7 @@ const rows = computed(() => {
         <span v-else class="dmg-name">{{ champName(p.championId) }}</span>
         <span
           class="dmg-bars"
-          :title="`${compact(p.damage)} to champions · ${compact(p.damageTaken)} taken`"
+          :title="`${compact(p.damage)} to champions, ${compact(p.damageTaken)} taken`"
         >
           <i
             class="dealt"

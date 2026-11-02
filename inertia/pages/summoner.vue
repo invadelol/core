@@ -112,7 +112,7 @@ const filterSummary = computed(() => {
   for (const match of list) {
     if (match.participants.find((p) => p.puuid === profile.value?.puuid)?.win) wins++
   }
-  return `${list.length} games · ${wins}W ${list.length - wins}L · ${Math.round((wins / list.length) * 100)}%`
+  return `${list.length} games, ${wins}W ${list.length - wins}L, ${Math.round((wins / list.length) * 100)}%`
 })
 
 const performanceMatches = shallowRef<Match[]>([])

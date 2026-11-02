@@ -46,7 +46,7 @@ type Kind = 'json' | 'html'
  *   compute  the controller, coalesced so a burst costs one computation
  *
  * Responses carry a strong `ETag` and `no-cache`. That keeps the freshness
- * guarantee exactly as it was — the browser still asks us on every request —
+ * guarantee exactly as it was (the browser still asks us on every request)
  * while letting an unchanged answer come back as a bodyless 304 instead of
  * re-sending the whole payload.
  */

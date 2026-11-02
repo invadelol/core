@@ -27,7 +27,7 @@ OUT = ROOT / 'app/services/build_card_glyphs.ts'
 ASCII = ''.join(chr(c) for c in range(0x20, 0x7F))
 LATIN1 = ''.join(chr(c) for c in range(0xA0, 0x180))  # Latin-1 supplement + Extended-A
 CYR = ''.join(chr(c) for c in range(0x400, 0x460))
-MARKS = '·–—’‘“”…'
+MARKS = '\u00b7\u2013\u2014’‘“”…'
 
 FACES = {
     # The build's name, as the editor's title: 650.

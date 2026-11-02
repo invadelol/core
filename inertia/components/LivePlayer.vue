@@ -41,7 +41,7 @@ const form = computed(() => {
 const ranked = computed(() => {
   const r = p.value.rank
   if (!r || r.wins == null || r.losses == null || r.wins + r.losses === 0) return ''
-  return `${Math.round((r.wins / (r.wins + r.losses)) * 100)}% · ${r.wins + r.losses} games`
+  return `${Math.round((r.wins / (r.wins + r.losses)) * 100)}%, ${r.wins + r.losses} games`
 })
 const spell = (id: number) => nameOf('spell', id) ?? 'Summoner spell'
 </script>
@@ -92,7 +92,7 @@ const spell = (id: number) => nameOf('spell', id) ?? 'Summoner spell'
       </span>
       <span class="lv-sub" :class="{ 'has-record': record }">
         <span class="lv-champ">{{ champ }}</span>
-        <template v-if="record"><span class="lv-sep"> · </span>{{ record }}</template>
+        <template v-if="record"><span class="lv-sep">, </span>{{ record }}</template>
       </span>
     </span>
 

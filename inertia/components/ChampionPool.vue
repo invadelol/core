@@ -56,8 +56,8 @@ const rows = computed(() =>
               {{ championName(champ.championId) }}
             </span>
             <span class="num block text-[12px] leading-4 text-ink-3">
-              {{ champ.games }} {{ champ.games === 1 ? 'game' : 'games' }}
-              <span class="text-ink-4">·</span> {{ champ.kda.toFixed(1) }} KDA
+              {{ champ.games }} {{ champ.games === 1 ? 'game' : 'games' }},
+              {{ champ.kda.toFixed(1) }} KDA
             </span>
           </span>
           <span class="num shrink-0 text-right">

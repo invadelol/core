@@ -35,8 +35,8 @@ server.use([
   () => import('#middleware/static_assets_middleware'),
   /**
    * Wraps everything that generates a body per request, so it can encode the
-   * result on the way out. Responses that already carry a Content-Encoding —
-   * cached analytics, static assets — pass straight through.
+   * result on the way out. Responses that already carry a Content-Encoding
+   * (cached analytics, static assets) pass straight through.
    */
   () => import('#middleware/compression_middleware'),
   () => import('@adonisjs/inertia/inertia_middleware'),

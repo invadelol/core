@@ -66,7 +66,7 @@ export function goldShare(p: Participant, totals: Record<number, TeamTotals>) {
 
 /* ── Score ─────────────────────────────────────────────────────────
 
-   One 0–100 number for how a game went: a real scale, not a ranking of
+   One 0-100 number for how a game went: a real scale, not a ranking of
    the lobby. The desktop app computes the same score from the same
    figures (src-tauri/src/profile/score.rs); both check it against
    tests/fixtures/score_lobbies.json.
@@ -188,9 +188,9 @@ export function isRemake(match: Pick<Match, 'duration'>) {
 }
 
 export interface PlayerScore {
-  /** 0–100 overall. */
+  /** 0-100 overall. */
   score: number
-  /** 0–100 per category, before role weighting. */
+  /** 0-100 per category, before role weighting. */
   categories: Record<ScoreCategory, number>
   /** The role weights that produced the overall, summing to 100. */
   weights: Record<ScoreCategory, number>

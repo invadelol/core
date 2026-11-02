@@ -40,7 +40,7 @@ const lane = computed(() => LANES[props.build.lane])
  *  angle brackets become their quiet lookalikes, so no name closes the tag. */
 const title = computed(() =>
   (props.build.name
-    ? `${props.build.name} — ${props.build.championName} build`
+    ? `${props.build.name}: ${props.build.championName} build`
     : `${props.build.championName} ${lane.value} build`
   )
     .replace(/</g, '‹')
@@ -141,7 +141,7 @@ onMounted(async () => (target.value = await detectDesktopTarget()))
               <li v-for="(id, i) in build.items.core" :key="i" class="sb-step">
                 <ChevronRight v-if="i" :size="16" class="sb-chev" aria-hidden="true" />
                 <div class="sb-col">
-                  <span class="sb-lab strong">{{ ORDINALS[i] }}<template v-if="!i"> · core</template></span>
+                  <span class="sb-lab strong">{{ ORDINALS[i] }}<template v-if="!i">, core</template></span>
                   <span class="sb-icons"><img :src="item(id)" :alt="itemName(id)" class="sb-item" /></span>
                   <span class="sb-name strong">{{ itemName(id) }}</span>
                 </div>

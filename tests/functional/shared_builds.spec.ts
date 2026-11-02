@@ -42,7 +42,7 @@ test.group('Shared builds', (group) => {
     assert.include(html, 'name="twitter:card" content="summary_large_image"')
     assert.include(
       html,
-      'content="Burst &lt;/title&gt;&lt;b&gt;x&lt;/b&gt; &amp; &quot;q&quot; — Ahri build"'
+      'content="Burst &lt;/title&gt;&lt;b&gt;x&lt;/b&gt; &amp; &quot;q&quot;: Ahri build"'
     )
     assert.include(html, '<title inertia>Burst ‹/title›‹b›x‹/b›')
     assert.notInclude(html, '<b>x</b>')

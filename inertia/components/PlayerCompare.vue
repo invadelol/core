@@ -376,7 +376,7 @@ const ROLE_COLUMNS = [
 const roles = computed(() => (ready.value ? roleRows(sides.value) : []))
 
 function cell(line: Line | null, column: (typeof ROLE_COLUMNS)[number]) {
-  if (!line?.games) return '—'
+  if (!line?.games) return '-'
   const raw = line[column.key] * column.factor
   return `${column.dense ? compact(raw) : raw.toFixed(column.decimals)}${column.unit}`
 }
@@ -496,7 +496,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
                 class="max-w-full text-[15px] sm:text-[17px]"
               />
               <div class="num mt-0.5 truncate text-[12px] text-ink-3">
-                {{ regionLabel(p.platform) }} · Level {{ p.summonerLevel }}
+                {{ regionLabel(p.platform) }}, Level {{ p.summonerLevel }}
               </div>
             </div>
           </div>
@@ -512,7 +512,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
                 class="fig mt-1.5 text-[24px] sm:text-[28px]"
                 :class="leader('winrate') === 1 - i ? 'text-ink-3' : 'text-ink'"
               >
-                {{ value(i, 'winrate', 100, 0) ?? '—' }}%
+                {{ value(i, 'winrate', 100, 0) ?? '-' }}%
               </div>
             </div>
             <div>
@@ -521,7 +521,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
                 class="fig mt-1.5 text-[24px] sm:text-[28px]"
                 :class="leader('kda') === 1 - i ? 'text-ink-3' : 'text-ink'"
               >
-                {{ value(i, 'kda', 1, 2) ?? '—' }}
+                {{ value(i, 'kda', 1, 2) ?? '-' }}
               </div>
             </div>
             <div>
@@ -542,7 +542,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
         >
           <div class="fig text-[32px] sm:text-[36px]">
             <span :class="wins[0] >= wins[1] ? 'text-ink' : 'text-ink-3'">{{ wins[0] }}</span>
-            <span class="px-1 text-ink-4">–</span>
+            <span class="px-1 text-ink-4">-</span>
             <span :class="wins[1] >= wins[0] ? 'text-ink' : 'text-ink-3'">{{ wins[1] }}</span>
           </div>
           <div class="label mt-1.5">Metrics ahead</div>
@@ -563,7 +563,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
                     class="text-[15px] font-semibold sm:text-[16px]"
                     :class="leader(metric.key) === 0 ? 'text-ink' : 'text-ink-3'"
                   >
-                    {{ value(0, metric.key, metric.factor, metric.decimals) ?? '—'
+                    {{ value(0, metric.key, metric.factor, metric.decimals) ?? '-'
                     }}{{ metric.unit }}
                   </span>
                 </div>
@@ -609,7 +609,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
                     class="text-[15px] font-semibold sm:text-[16px]"
                     :class="leader(metric.key) === 1 ? 'text-ink' : 'text-ink-3'"
                   >
-                    {{ value(1, metric.key, metric.factor, metric.decimals) ?? '—'
+                    {{ value(1, metric.key, metric.factor, metric.decimals) ?? '-'
                     }}{{ metric.unit }}
                   </span>
                   <span v-if="leader(metric.key) === 1" class="text-[11px] font-medium text-ink-3">
@@ -642,7 +642,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
             <div class="label">Record</div>
             <div class="fig mt-1.5 text-[24px]">
               <span class="text-win">{{ record.won }}</span>
-              <span class="text-ink-4">–</span>
+              <span class="text-ink-4">-</span>
               <span class="text-loss">{{ record.lost }}</span>
               <span class="num ml-1.5 text-[12px] font-semibold text-ink-3">
                 {{ Math.round((record.won / record.played) * 100) }}%
@@ -907,10 +907,10 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
                       {{ Math.round(stat.winrate * 100) }}%
                     </div>
                     <div class="mt-0.5 text-[11px] text-ink-3">
-                      {{ stat.games }}g · {{ stat.kda.toFixed(2) }}
+                      {{ stat.games }}g, {{ stat.kda.toFixed(2) }}
                     </div>
                   </template>
-                  <span v-else class="text-ink-4">—</span>
+                  <span v-else class="text-ink-4">-</span>
                 </td>
               </tr>
             </tbody>
@@ -946,10 +946,10 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
                         {{ Math.round(stat.winrate * 100) }}%
                       </div>
                       <div class="mt-0.5 text-[11px] text-ink-3">
-                        {{ stat.games }}g · {{ stat.kda.toFixed(2) }}
+                        {{ stat.games }}g, {{ stat.kda.toFixed(2) }}
                       </div>
                     </template>
-                    <span v-else class="text-ink-4">—</span>
+                    <span v-else class="text-ink-4">-</span>
                   </td>
                 </tr>
               </template>

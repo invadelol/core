@@ -194,9 +194,9 @@ const more = computed(() => games.value.length > 0 && !exhausted.value)
             }}<span class="font-normal text-ink-3">#{{ partner.tagLine }}</span>
           </h3>
           <p class="num mt-0.5 truncate text-[12px] text-ink-3">
-            {{ TIER[partner.tier] }} · {{ partner.games }} games
+            {{ TIER[partner.tier] }}, {{ partner.games }} games
             <span class="max-sm:hidden"
-              >since {{ shortDate(partner.firstMs) }} · last {{ shortDate(partner.lastMs) }}</span
+              >since {{ shortDate(partner.firstMs) }}, last {{ shortDate(partner.lastMs) }}</span
             >
           </p>
         </div>

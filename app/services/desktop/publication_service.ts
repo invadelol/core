@@ -111,7 +111,7 @@ export function isRetriable(error: unknown) {
  * Its whole point is to remove match-v5 calls, so the Riot budget decides
  * the shape: a game already stored costs nothing; a trusted device's game
  * costs nothing; anything else costs exactly one `getMatchById`, whose
- * answer is then used for everything at once — publishing the game, judging
+ * answer is then used for everything at once: publishing the game, judging
  * the device, and learning every participant's identity. A game Riot has not
  * published yet waits in-process and costs at most three more. Only a sample
  * of observed games is checked at all, and every call comes out of a budget
@@ -356,7 +356,7 @@ export class PublicationService {
 
   /**
    * Riot's game, used for everything: judging the device, learning every
-   * participant's identity, and publishing — Riot's data, not the upload.
+   * participant's identity, and publishing (Riot's data, not the upload).
    */
   private async applyRiot(upload: Upload, match: MatchDTO): Promise<Outcome> {
     const { payload, device } = upload

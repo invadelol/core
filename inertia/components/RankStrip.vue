@@ -107,11 +107,10 @@ function record(rank: Rank) {
               </span>
             </div>
             <div class="num text-[12px] text-ink-3">
-              {{ rank.wins }}W{{ record(rank).losses === null ? '' : ` ${record(rank).losses}L` }}
-              <template v-if="record(rank).winrate !== null">
-                <span class="text-ink-4">·</span>
-                {{ record(rank).winrate }}%
-              </template>
+              {{ rank.wins }}W{{ record(rank).losses === null ? '' : ` ${record(rank).losses}L`
+              }}<template v-if="record(rank).winrate !== null"
+                >, {{ record(rank).winrate }}%</template
+              >
             </div>
           </div>
         </li>

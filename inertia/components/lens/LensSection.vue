@@ -79,9 +79,9 @@ const gamesBy = computed(
 )
 const roleName = computed(() => (shownRole.value ? ROLE_NAMES[shownRole.value] : ''))
 
-/** What each game was, for the trends' hover: "Darius · Win". */
+/** What each game was, for the trends' hover: "Darius, Win". */
 const labels = computed(() =>
-  (lens.value?.games ?? []).map((g) => `${championName(g.championId)} · ${g.win ? 'Win' : 'Loss'}`)
+  (lens.value?.games ?? []).map((g) => `${championName(g.championId)}, ${g.win ? 'Win' : 'Loss'}`)
 )
 
 /** The champion played most in the window: the stage's art and the face of the cards. */
@@ -90,7 +90,7 @@ const champion = computed(() => lens.value?.champions[0]?.championId ?? null)
 const summary = computed(() => {
   const l = lens.value
   if (!l?.role || !l.games.length) return ''
-  return `${ROLE_NAMES[l.role]} · last ${l.games.length} ${l.games.length === 1 ? 'game' : 'games'}`
+  return `${ROLE_NAMES[l.role]}, last ${l.games.length} ${l.games.length === 1 ? 'game' : 'games'}`
 })
 
 function open(key: string) {
@@ -117,7 +117,7 @@ function open(key: string) {
           type="button"
           :class="{ on: shownRole === r }"
           :disabled="Boolean(lens) && !gamesBy.get(r)"
-          :title="`${ROLE_NAMES[r]}${gamesBy.get(r) ? ` · ${gamesBy.get(r)} recent games` : ''}`"
+          :title="`${ROLE_NAMES[r]}${gamesBy.get(r) ? `, ${gamesBy.get(r)} recent games` : ''}`"
           :aria-label="ROLE_NAMES[r]"
           @click="role = r"
         >

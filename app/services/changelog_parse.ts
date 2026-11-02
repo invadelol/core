@@ -7,7 +7,7 @@
  *
  * A heading may carry the release date: `## 0.3.1 - 2026-10-15` (none while unreleased). A bullet
  * may end with markers, HTML comments GitHub does not show:
- * - `<!-- highlight -->`: one of the version's 2–3 headlines;
+ * - `<!-- highlight -->`: one of the version's 2-3 headlines;
  * - `<!-- image presence.webp -->`: its screenshot, a file in `public/changelog/`.
  *
  * Highlights: the marked bullets, else the first three of New, then Changed / Improved. Each is

@@ -38,7 +38,7 @@ const PARTNER_LIMIT = 40
 /** The same friends together this many times are a premade group. */
 const GROUP_MIN = 3
 const GROUP_LIMIT = 6
-/** Seats and picks taken fewer times than this are not shown: a 2–0 pair is not a best pair. */
+/** Seats and picks taken fewer times than this are not shown: a 2-0 pair is not a best pair. */
 export const SAMPLE_MIN = 3
 /** Without at least this many games apart, the player's overall win rate is the baseline. */
 const APART_MIN = 10
@@ -86,7 +86,7 @@ export interface Form {
   /** Average Invade score; null when none of the games was scored. */
   score: number | null
   kda: number
-  /** Kill participation, 0–100. */
+  /** Kill participation, 0-100. */
   kp: number
   deaths: number
 }
@@ -105,7 +105,7 @@ export interface Partner extends Identity, Tally {
   lastMs: number
   /** Win rate together minus the baseline, in points, after the pull toward the baseline. */
   synergy: number
-  /** The player's win rate without them (0–1): what the synergy is measured against. */
+  /** The player's win rate without them (0-1): what the synergy is measured against. */
   baseline: number
   confidence: Confidence
   /** The usual seats: this player's, theirs. Empty in modes without lanes. */
@@ -249,8 +249,8 @@ function most(counts: Map<string, number>) {
 const PICK_PRIOR = 10
 
 /**
- * Best first, by the win rate pulled toward the player's usual one: a 2–0 pair ranks below a
- * 14–8 one, and only a longer perfect run (5–0) can pass it.
+ * Best first, by the win rate pulled toward the player's usual one: a 2-0 pair ranks below a
+ * 14-8 one, and only a longer perfect run (5-0) can pass it.
  */
 export function ranked<T extends Tally>(rows: T[], baseline: number) {
   const rate = (row: T) => shrink(row.wins, row.games, baseline, PICK_PRIOR)

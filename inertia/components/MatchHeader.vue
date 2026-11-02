@@ -75,11 +75,8 @@ async function copyId() {
         </h1>
         <p class="num text-[12.5px] text-ink-3">
           {{ date(detail.creation, { day: 'numeric', month: 'short', year: 'numeric' }) }},
-          {{ ago(detail.creation) }}
-          <span class="text-ink-4">·</span> {{ regionLabel(match.platform) }}
-          <template v-if="provenance">
-            <span class="text-ink-4">·</span> {{ provenance }}
-          </template>
+          {{ ago(detail.creation) }}, {{ regionLabel(match.platform)
+          }}<template v-if="provenance">, {{ provenance }}</template>
         </p>
       </div>
 
@@ -106,7 +103,7 @@ async function copyId() {
           <span :class="team.win ? 'text-win' : 'text-loss'">{{
             team.win ? 'Victory' : 'Defeat'
           }}</span>
-          <span class="font-medium text-ink-3"> · {{ team.side }}</span>
+          <span class="font-medium text-ink-3">, {{ team.side }}</span>
         </div>
         <div class="iv-fig mt-2 text-[40px] sm:text-[44px]">{{ team.kills }}</div>
         <div

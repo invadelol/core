@@ -112,7 +112,7 @@ const where = computed(() => {
   if (!game.value) return ''
   const map = MAPS[game.value.mapId ?? 0]
   const queue = queueName(game.value.gameQueueConfigId)
-  return map && map !== queue ? `${queue} · ${map}` : queue
+  return map && map !== queue ? `${queue}, ${map}` : queue
 })
 
 type Player = LiveGame['participants'][number]

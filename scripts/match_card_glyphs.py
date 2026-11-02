@@ -33,14 +33,14 @@ WORDS = LETTERS + DIGITS + " :/&-'()"
 FACES = {
     # `.iv-fig`, the K/D/A: weight 700, width 92 %.
     'fig': ({'wght': 700, 'wdth': 92}, DIGITS),
-    # The quiet slash of the match row's K/D/A, and the meta's separator dot (weight 400).
-    'thin': ({'wght': 400, 'wdth': 100}, '/·'),
+    # The quiet slash of the match row's K/D/A, and a middle dot (weight 400).
+    'thin': ({'wght': 400, 'wdth': 100}, '/\u00b7'),
     # PerfDial's number: 750, normal width.
     'dial': ({'wght': 750, 'wdth': 100}, DIGITS),
     # The result ("Victory"), as the match header's title: 650.
     'title': ({'wght': 650, 'wdth': 100}, WORDS),
     # The queue and the length, as the row's meta: 500.
-    'label': ({'wght': 500, 'wdth': 100}, WORDS + '·'),
+    'label': ({'wght': 500, 'wdth': 100}, WORDS + '\u00b7'),
     # PerfDial's placement (MVP, ACE): 700.
     'place': ({'wght': 700, 'wdth': 100}, string.ascii_uppercase + DIGITS),
 }

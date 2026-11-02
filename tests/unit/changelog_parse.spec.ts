@@ -71,7 +71,7 @@ test.group('Changelog parser', () => {
     assert.deepEqual([c.version, c.date], ['1.1.0', undefined])
     // What a typo looks like: an en dash, brackets, or a date in another form is not read.
     for (const bad of [
-      '## 1.2.0 – 2026-10-15',
+      '## 1.2.0 \u2013 2026-10-15',
       '## [1.2.0]',
       '## 1.2.0 (2026-10-15)',
       '## 1.2.0 - 15/10/2026',
@@ -210,7 +210,7 @@ test.group('Changelog content', () => {
     )
   })
 
-  test('every version has sections and 1–3 plain highlights', ({ assert }) => {
+  test('every version has sections and 1-3 plain highlights', ({ assert }) => {
     for (const r of releases) {
       assert.isAbove(r.sections.length, 0, r.version)
       assert.isAtLeast(r.highlights.length, 1, r.version)

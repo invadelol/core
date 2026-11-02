@@ -9,11 +9,11 @@ import { shortDate } from '../lib/format.js'
  */
 const props = withDefaults(
   defineProps<{
-    /** 0–1, one per game, oldest first. */
+    /** 0-1, one per game, oldest first. */
     values: number[]
     /** Each game's start (epoch ms) and result, in the same order. */
     games: Array<{ t: number; win: boolean }>
-    /** 0–1, drawn dashed. */
+    /** 0-1, drawn dashed. */
     baseline: number | null
     height?: number
     label: string
@@ -201,7 +201,7 @@ const id = `fr-fade-${Math.random().toString(36).slice(2, 8)}`
     </svg>
 
     <div v-if="tip" class="fr-trend-tip num" :style="{ left: `${tip.left}px` }">
-      <span class="text-ink-3">{{ tip.date }} · {{ tip.result }}</span>
+      <span class="text-ink-3">{{ tip.date }}, {{ tip.result }}</span>
       <b>{{ tip.form }}%</b>
     </div>
   </div>

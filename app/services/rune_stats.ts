@@ -23,7 +23,7 @@ const TOP_KEYSTONES = 4
 export interface RunePage {
   primaryStyle: number
   keystone: number
-  /** Rows 1–3 of the primary tree. */
+  /** Rows 1-3 of the primary tree. */
   primary: [number, number, number]
   secondaryStyle: number
   /** The two secondary runes, smallest id first. */

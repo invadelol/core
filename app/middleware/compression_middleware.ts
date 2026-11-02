@@ -12,7 +12,7 @@ const deflate = promisify(gzip)
  * The response cache stores its payloads Brotli-encoded and sends those bytes
  * straight through, so cached analytics never reach this middleware. What does
  * reach it is everything else we generate per request: server-rendered HTML,
- * Inertia's navigation JSON, search results and the asset name maps — all of
+ * Inertia's navigation JSON, search results and the asset name maps, all of
  * which went out uncompressed before.
  *
  * It works on the buffered body rather than by wrapping the socket, so a

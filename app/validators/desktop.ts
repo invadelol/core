@@ -146,7 +146,7 @@ export const uploadValidator = vine.compile(
 )
 
 /**
- * A batch of player snapshots (§6.1). Only the batch is checked here: 1–25
+ * A batch of player snapshots (§6.1). Only the batch is checked here: 1-25
  * players, each an object with a raw PUUID, no PUUID twice. Everything else
  * is checked player by player (`player_rules.ts`), so one bad player is
  * `rejected` on its own instead of failing the batch.
@@ -171,7 +171,7 @@ export const playersValidator = vine.compile(
 /** Most match ids one `known` request may ask about (§2.6). */
 export const MAX_KNOWN_IDS = 100
 
-/** Which of these games core already holds (§2.6): 1–100 distinct match ids. */
+/** Which of these games core already holds (§2.6): 1-100 distinct match ids. */
 export const knownValidator = vine.compile(
   vine.object({
     matchIds: vine

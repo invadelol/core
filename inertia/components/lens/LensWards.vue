@@ -19,7 +19,7 @@ defineProps<{
   <ul class="lv-wards">
     <li v-for="(w, i) in items" :key="w.key" :style="{ animationDelay: `${150 + i * 110}ms` }">
       <img :src="assetUrl('item', w.item)" alt="" width="40" height="40" loading="lazy" />
-      <span class="lv-wards-value num">{{ w.you === null ? '–' : figureText(w.you, 1) }}</span>
+      <span class="lv-wards-value num">{{ w.you === null ? '-' : figureText(w.you, 1) }}</span>
       <span class="lv-wards-label">{{ w.label }}</span>
       <span v-if="w.opponents !== null" class="lv-wards-opp num">
         Opponents {{ figureText(w.opponents, 1) }}

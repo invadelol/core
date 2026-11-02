@@ -13,7 +13,7 @@ import type { Match, Participant } from './types.js'
 
    A player's recent games in one role, read domain by domain: laning,
    farming, teamfighting, vision, objectives, survival and consistency.
-   Each domain is a 0–100 rating on the Invade score's own scale
+   Each domain is a 0-100 rating on the Invade score's own scale
    (lib/match.ts): ~41 is the Emerald pace of the role, 80 is rare.
 
    Every figure of a game is measured as the score measures it. Against
@@ -133,7 +133,7 @@ export interface LensFigure {
 export interface LensDomain {
   key: LensDomainKey
   label: string
-  /** 0–100 on the score's scale; null until enough games say something. */
+  /** 0-100 on the score's scale; null until enough games say something. */
   rating: number | null
   /** Games the rating is read from. */
   games: number
