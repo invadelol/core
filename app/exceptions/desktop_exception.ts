@@ -54,7 +54,12 @@ export class DesktopException extends Exception {
     return new DesktopException('Too many requests', 429, 'E_RATE_LIMITED', retryAfter)
   }
 
-  static paused(what: 'uploads' | 'resolve', retryAfter = 1800) {
+  /**
+   * A switched-off feature. Uploads wait 6 hours, the longest pause the app
+   * honours and how often it reads `GET /config` again: a switched-off upload
+   * stays off for long, so shipped apps ask as rarely as they can.
+   */
+  static paused(what: 'uploads' | 'resolve', retryAfter = what === 'uploads' ? 6 * 3600 : 1800) {
     return new DesktopException(
       what === 'uploads' ? 'Uploads are paused' : 'Riot ID lookups are paused',
       503,

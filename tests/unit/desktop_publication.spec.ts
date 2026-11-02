@@ -15,6 +15,7 @@ import MatchSource from '#models/match_source'
 import { apiPuuids, makeUpload, riotMatch, UPLOADER_PARTICIPANT } from '#tests/fixtures/desktop'
 import { DesktopSeed, TRUSTED, type DeviceCounters } from '#tests/fixtures/desktop_db'
 import type { MatchUpload } from '#types/desktop'
+import { forceSwitches } from '#services/desktop/switches'
 
 /**
  * The publication policy (docs/desktop-sync.md §4.2) against the isolated
@@ -44,6 +45,8 @@ test.group('Desktop publication policy', (group) => {
 
   group.each.setup(() => {
     seed = new DesktopSeed()
+    // Core takes no desktop data by default (switches.ts): these tests exercise it switched on.
+    forceSwitches({ uploads: true, observed: true })
     calls = { match: [], timeline: [] }
     ingested = { matches: [], timelines: [] }
     ingestionService.ingestMatch = async (_id, match) => {
@@ -65,6 +68,7 @@ test.group('Desktop publication policy', (group) => {
   })
 
   group.each.teardown(async () => {
+    forceSwitches({})
     publicationService.retries.clear()
     riotApiService.client = client
     ingestionService.ingestMatch = ingestMatch

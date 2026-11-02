@@ -67,12 +67,14 @@ export default await Env.create(new URL('../', import.meta.url), {
   |----------------------------------------------------------
   | Desktop app sync (docs/desktop-sync.md)
   |----------------------------------------------------------
-  | Kill switches, read by the app through GET /api/desktop/config.
-  | Both default to on; `false` pauses the feature with a 503.
+  | Kill switches, read by the app through GET /api/desktop/config. Uploads
+  | (games and player snapshots) and observed games default to off: core takes
+  | no League client data unless switched on (`app/services/desktop/switches.ts`).
+  | Resolve defaults to on. Off pauses the feature with a 503.
   */
   DESKTOP_UPLOADS_ENABLED: Env.schema.boolean.optional(),
   DESKTOP_RESOLVE_ENABLED: Env.schema.boolean.optional(),
-  /** Games the app read without the uploader playing them (v1.3); off answers them with a 503. */
+  /** Games the app read without the uploader playing them (v1.3); off (default) answers them with a 503. */
   DESKTOP_OBSERVED_ENABLED: Env.schema.boolean.optional(),
   /** Riot calls per routing cluster per 2 minutes the desktop pipeline may spend (default 30). */
   DESKTOP_RIOT_BUDGET: Env.schema.number.optional(),

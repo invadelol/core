@@ -15,6 +15,7 @@ import encryption from '@adonisjs/core/services/encryption'
 import { apiPuuids, makeUpload, riotMatch, UPLOADER_PARTICIPANT } from '#tests/fixtures/desktop'
 import { DesktopSeed } from '#tests/fixtures/desktop_db'
 import { compressedPost, desktopClient } from '#tests/fixtures/desktop_http'
+import { forceSwitches } from '#services/desktop/switches'
 
 /**
  * The desktop routes end to end, against the isolated Postgres and
@@ -37,6 +38,8 @@ test.group('Desktop sync API', (group) => {
 
   group.each.setup(() => {
     seed = new DesktopSeed()
+    // Core takes no desktop data by default (switches.ts): these tests exercise it switched on.
+    forceSwitches({ uploads: true, observed: true })
     // Fresh counters per test: the per-IP limits would otherwise carry across runs.
     rateLimiter.prefix = `desktop:rl:test:${randomUUID()}:`
     publicationService.championIds = async () => null
@@ -47,6 +50,7 @@ test.group('Desktop sync API', (group) => {
   })
 
   group.each.teardown(async () => {
+    forceSwitches({})
     publicationService.retries.clear()
     riotApiService.client = client
     summonerService.resolveAndUpsert = resolve
@@ -94,6 +98,31 @@ test.group('Desktop sync API', (group) => {
       maxPayloadBytes: 2000000,
       minAppVersion: null,
     })
+  })
+
+  test('by default core takes no client data, and shipped apps are told to pause for 6 hours', async ({
+    client: http,
+    assert,
+  }) => {
+    const { upload, credentials } = await onboarded()
+    seed.matchIds.push(upload.matchId)
+    forceSwitches({})
+    const config = await http.get('/api/desktop/config')
+    config.assertStatus(200)
+    assert.include(config.body(), { uploads: false, resolve: true, observed: false })
+    const desktop = desktopClient(http, credentials)
+    for (const [path, body] of [
+      ['/api/desktop/matches', upload],
+      ['/api/desktop/matches/known', { matchIds: [upload.matchId] }],
+      ['/api/desktop/players', { schema: 1, platform: 'EUW1', app: '0.3.6', players: [] }],
+    ] as const) {
+      const response = await desktop.post(path, body)
+      response.assertStatus(503)
+      assert.equal(response.body().errors[0].code, 'E_UPLOADS_PAUSED', path)
+      assert.equal(response.header('retry-after'), String(6 * 3600), path)
+    }
+    const stored = await db.from('match_source').where('match_id', upload.matchId).first()
+    assert.notExists(stored, 'nothing is stored')
   })
 
   test('an observed game: asked about first, sent deflated, published without LP (v1.3)', async ({
