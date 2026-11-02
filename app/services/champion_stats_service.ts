@@ -38,6 +38,7 @@ import {
   type Summary,
 } from '#services/champion_stats'
 import { matchupReport } from '#services/matchup_stats'
+import { tierListReport } from '#services/tier_list_stats'
 import { isCounted } from '#services/stats_cells'
 import { championSlug } from '../../inertia/lib/champions.js'
 
@@ -109,6 +110,19 @@ export class ChampionStatsService {
     const before = at >= 0 ? patches[at + 1] : undefined
     if (!before) return null
     return this.summary({ ...filter, patch: before.patch })
+  }
+
+  /**
+   * The desktop app's tier list: the summary, each row with its place in the role on the patch
+   * before (same bracket and region), and the patches that can be asked for.
+   */
+  async tierList(filter: Filter) {
+    const [summary, previous, patches] = await Promise.all([
+      this.summary(filter),
+      this.previous(filter),
+      this.patches(),
+    ])
+    return tierListReport(summary, previous, patches)
   }
 
   /** One champion's record at each rank group. */
