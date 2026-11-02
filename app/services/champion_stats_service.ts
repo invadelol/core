@@ -16,8 +16,10 @@ import {
   detailSql,
   details,
   early,
+  earlyFromCellsSql,
   earlySql,
   firstBlood,
+  firstBloodFromCellsSql,
   firstBloodSql,
   laneOpponentsSql,
   lanePairs,
@@ -46,7 +48,7 @@ import {
 } from '#services/champion_stats'
 import { matchupReport } from '#services/matchup_stats'
 import { tierListReport } from '#services/tier_list_stats'
-import { isCounted } from '#services/stats_cells'
+import { areEventsCounted, isCounted } from '#services/stats_cells'
 import { championSlug } from '../../inertia/lib/champions.js'
 
 /** The bracket a page shows unless the address names another. */
@@ -269,18 +271,28 @@ export class ChampionStatsService {
     })
   }
 
-  /** CS, gold and experience at 10 and 15 minutes, and the gaps to the lane opponent. */
-  early(filter: Filter, champion: number, position: Position) {
-    return this.one('early', filter, champion, position, async (params) => {
-      const found = await rows(earlySql(filter), params, EVENT_LIMITS)
+  /**
+   * CS, gold and experience at 10 and 15 minutes, and the gaps to the lane opponent: from the
+   * counted cells once the patch's events are counted (every game), else a sample of the games.
+   */
+  async early(filter: Filter, champion: number, position: Position) {
+    const cells = await areEventsCounted(filter.patch)
+    return this.one(cells ? 'early-cells' : 'early', filter, champion, position, async (params) => {
+      const found = cells
+        ? await rows(earlyFromCellsSql(filter), params)
+        : await rows(earlySql(filter), params, EVENT_LIMITS)
       return early(found.map((r) => r.map(num)))
     })
   }
 
-  /** How often the champion takes first blood, helps it or gives it. */
-  firstBlood(filter: Filter, champion: number, position: Position) {
-    return this.one('first-blood', filter, champion, position, async (params) => {
-      const [row] = await rows(firstBloodSql(filter), params, EVENT_LIMITS)
+  /** How often the champion takes first blood, helps it or gives it (counted cells, else a sample). */
+  async firstBlood(filter: Filter, champion: number, position: Position) {
+    const cells = await areEventsCounted(filter.patch)
+    const kind = cells ? 'first-blood-cells' : 'first-blood'
+    return this.one(kind, filter, champion, position, async (params) => {
+      const [row] = cells
+        ? await rows(firstBloodFromCellsSql(filter), params)
+        : await rows(firstBloodSql(filter), params, EVENT_LIMITS)
       return firstBlood((row ?? []).map(num))
     })
   }

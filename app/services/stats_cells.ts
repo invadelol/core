@@ -2,10 +2,13 @@ import logger from '@adonisjs/core/services/logger'
 import redis from '@adonisjs/redis/services/main'
 import clickhouse from 'adonisjs-clickhouse/services/main'
 import { AnswerCache } from '#services/ranked_stats'
-import { rows, storedPatches } from '#services/ranked_games_service'
+import { patchStart, rows, storedPatches } from '#services/ranked_games_service'
 import {
   cellCountsSql,
   countedPatchesSql,
+  earlyCellsSql,
+  eventCountedPatchesSql,
+  firstBloodCellsSql,
   lanePairCellsSql,
   roleCellsSql,
 } from '#services/champion_stats'
@@ -34,6 +37,12 @@ const LOCK_MS = 30 * 60_000
 const CHECK_MS = 10 * 60_000
 
 const TABLES = ['stats_lane_pairs', 'stats_champion_roles', 'stats_cell_counts'] as const
+/**
+ * The early game and first blood cells (migration 0014): every frame and kill event of a patch,
+ * a few minutes of reading, so the newest patches are counted again daily and the older ones once.
+ */
+const EVENT_TABLES = ['stats_early', 'stats_first_blood'] as const
+const EVENTS_EVERY_MS = 24 * 3600_000
 
 /** Long statements report progress so the HTTP connection is never idle long enough to drop. */
 const LONG = {
@@ -44,6 +53,7 @@ const LONG = {
 } as const
 
 const counted = new AnswerCache(1, 60_000)
+const eventsCounted = new AnswerCache(1, 60_000)
 
 /** When each counted patch was last counted (ms); none while the tables cannot be read. */
 export function countedPatches(): Promise<Map<string, number>> {
@@ -54,6 +64,23 @@ export function countedPatches(): Promise<Map<string, number>> {
     })
     return new Map(found.map(([patch, at]) => [String(patch), Number(at) * 1000]))
   })
+}
+
+/** When each patch was last counted into the early game and first blood cells (ms). */
+export function eventCountedPatches(): Promise<Map<string, number>> {
+  return eventsCounted.get('counted', async () => {
+    const found = await rows(eventCountedPatchesSql()).catch((error) => {
+      logger.warn({ err: error }, 'event cells unreadable: reading the games')
+      return []
+    })
+    return new Map(found.map(([patch, at]) => [String(patch), Number(at) * 1000]))
+  })
+}
+
+/** Whether `patch`'s early game and first blood are read from the counted cells. */
+export async function areEventsCounted(patch: string) {
+  const done = await eventCountedPatches()
+  return done.has(patch)
 }
 
 /** Whether `patch` is read from the counted cells. */
@@ -88,6 +115,51 @@ export async function countPatch(patch: string) {
     await command(`ALTER TABLE ${table} REPLACE PARTITION ${partition} FROM ${table}_next`)
     await command(`ALTER TABLE ${table}_next DROP PARTITION ${partition}`)
   }
+}
+
+/**
+ * Counts one patch's early game and first blood into their cells, a platform at a time, swaps
+ * them in, then notes when (`stats_event_counts`), so a patch without any event is not counted
+ * again on every tick.
+ */
+export async function countPatchEvents(patch: string) {
+  if (!/^\d{1,2}\.\d{1,2}$/.test(patch)) throw new Error(`not a patch: ${patch}`)
+  const partition = `'${patch}'`
+  for (const table of EVENT_TABLES) {
+    await command(`ALTER TABLE ${table}_next DROP PARTITION ${partition}`)
+  }
+  const start = await patchStart(patch)
+  const found = await rows(
+    'SELECT DISTINCT platform FROM match_seed WHERE patch = {patch:String}',
+    { patch }
+  )
+  for (const platform of found.map(([p]) => String(p))) {
+    const params = { patch, platform, prefix: `${platform}_`, patchStart: start }
+    await command(`INSERT INTO stats_early_next ${earlyCellsSql()}`, params)
+    await command(`INSERT INTO stats_first_blood_next ${firstBloodCellsSql()}`, params)
+  }
+  for (const table of EVENT_TABLES) {
+    await command(`ALTER TABLE ${table} REPLACE PARTITION ${partition} FROM ${table}_next`)
+    await command(`ALTER TABLE ${table}_next DROP PARTITION ${partition}`)
+  }
+  await command('INSERT INTO stats_event_counts SELECT {patch:String}, now()', { patch })
+}
+
+/**
+ * The early game and first blood of the patches that are due: the newest never counted or
+ * counted over a day ago, the older ones never counted. The patch list is newest first.
+ */
+export async function countDuePatchEvents(patches: string[]) {
+  const done = await eventCountedPatches()
+  const counts: { patch: string; ms: number }[] = []
+  for (const [i, patch] of patches.entries()) {
+    const at = done.get(patch)
+    if (at && (i >= LIVE_PATCHES || Date.now() - at < EVENTS_EVERY_MS)) continue
+    const started = Date.now()
+    await countPatchEvents(patch)
+    counts.push({ patch, ms: Date.now() - started })
+  }
+  return counts
 }
 
 /**
@@ -127,6 +199,8 @@ export function startCellCounter(list = countablePatches, delayMs = 30_000) {
       const patches = await list()
       const counts = await countDuePatches(patches.map((p) => p.patch))
       if (counts.length) logger.info({ counts }, 'stats cells counted')
+      const events = await countDuePatchEvents(patches.map((p) => p.patch))
+      if (events.length) logger.info({ counts: events }, 'event cells counted')
     } catch (error) {
       logger.warn({ err: error }, 'stats cells count failed')
     } finally {
