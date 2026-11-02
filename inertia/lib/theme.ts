@@ -1,4 +1,5 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { afterPaint } from './after_paint.js'
 
 export type ThemeChoice = 'light' | 'dark' | 'system'
 
@@ -63,7 +64,8 @@ export function useTheme() {
 
   function setTheme(value: ThemeChoice) {
     choice.value = value
-    paint(value)
+    // The button's icon turns in this frame; the whole page restyles in the next.
+    afterPaint(() => choice.value === value && paint(value))
     try {
       localStorage.setItem(THEME_KEY, value)
     } catch {
