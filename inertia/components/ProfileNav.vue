@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
-import { ArrowLeftRight, LayoutGrid, Radio, ScanEye, Swords, Users } from 'lucide-vue-next'
+import { ArrowLeftRight, Crown, LayoutGrid, Radio, ScanEye, Swords, Users } from 'lucide-vue-next'
 
 const props = defineProps<{ slug: string; section: string }>()
 
@@ -45,6 +45,7 @@ const TABS = [
   // shows only while it is the open section. Remove `hidden` to list it again.
   { key: 'lens', label: 'Lens', icon: ScanEye, hidden: true },
   { key: 'champions', label: 'Champions', icon: Swords },
+  { key: 'mastery', label: 'Mastery', icon: Crown },
   { key: 'friends', label: 'Friends', icon: Users },
   { key: 'compare', label: 'Compare', icon: ArrowLeftRight },
   { key: 'live', label: 'Live', icon: Radio },

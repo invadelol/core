@@ -69,10 +69,7 @@ const props = defineProps<{
   panels?: ReadonlyArray<{ key: PanelKey; path: string }>
 }>()
 
-/** `mastery` is the Champions section's lifetime view, with an address of its own. */
-const section = computed(() =>
-  props.section === 'mastery' ? 'champions' : (props.section ?? 'overview')
-)
+const section = computed(() => props.section ?? 'overview')
 
 /**
  * Whether the viewer is this player. The site has no accounts yet, so it cannot know: this stays
@@ -96,13 +93,6 @@ const mastery = shallowRef<ChampionMastery[]>([])
 const masteryComplete = ref(false)
 const masteryLoading = ref(false)
 const masteryError = ref(false)
-
-/** Champions has two readings of the same pool: recent form, and lifetime (`/<player>/mastery`). */
-const championsView = computed(() => (props.section === 'mastery' ? 'mastery' : 'stats'))
-const CHAMPION_VIEWS = [
-  { value: 'stats' as const, label: 'Recent form' },
-  { value: 'mastery' as const, label: 'Mastery' },
-]
 
 let filterController: AbortController | undefined
 let moreController: AbortController | undefined
@@ -204,7 +194,7 @@ async function loadFriends(again = false) {
  * the top ones, which the API can answer from a snapshot the Invade app
  * reported instead of asking Riot.
  */
-async function loadMastery(complete = section.value === 'champions') {
+async function loadMastery(complete = section.value === 'mastery') {
   if (!profile.value) return
   masteryController?.abort()
   masteryController = new AbortController()
@@ -324,22 +314,10 @@ watch(
 )
 
 watch(section, () => {
-  if (section.value === 'champions' && !masteryComplete.value) void loadMastery(true)
+  if (section.value === 'mastery' && !masteryComplete.value) void loadMastery(true)
   if (section.value === 'friends') void loadFriends()
   if (['overview', 'champions'].includes(section.value)) void applyFilters()
 })
-
-/** The two Champions views are two addresses; switching keeps the page as it is. */
-function showChampionsView(view: 'stats' | 'mastery') {
-  if (view === championsView.value) return
-  router.visit(
-    `/${encodeURIComponent(slug.value)}/${view === 'mastery' ? 'mastery' : 'champions'}`,
-    {
-      preserveState: true,
-      preserveScroll: true,
-    }
-  )
-}
 
 /** Picking a champion anywhere sends you to that champion's games. */
 function championMatches(id: number) {
@@ -803,23 +781,7 @@ async function sync() {
           <!-- ── Champions ────────────────────────────────────────── -->
           <div v-else-if="section === 'champions'">
             <div class="mb-5 flex flex-wrap items-center gap-3">
-              <div class="iv-seg">
-                <button
-                  v-for="option in CHAMPION_VIEWS"
-                  :key="option.value"
-                  type="button"
-                  :class="{ on: championsView === option.value }"
-                  @click="showChampionsView(option.value)"
-                >
-                  {{ option.label }}
-                </button>
-              </div>
-              <MatchFilters
-                v-if="championsView === 'stats'"
-                v-model="filters"
-                hide-champion
-                :busy="filterBusy"
-              />
+              <MatchFilters v-model="filters" hide-champion :busy="filterBusy" />
             </div>
 
             <p v-if="filterError" class="notice mb-4" role="alert">
@@ -828,19 +790,20 @@ async function sync() {
             </p>
 
             <ChampionExplorer
-              v-if="championsView === 'stats'"
               :champions="filteredChampions ?? champions"
               :busy="filterBusy || pending.champions"
               @matches="championMatches"
             />
-            <MasteryPanel
-              v-else
-              :mastery="mastery"
-              :loading="masteryLoading"
-              :error="masteryError"
-              @retry="loadMastery(true)"
-            />
           </div>
+
+          <!-- ── Mastery ──────────────────────────────────────────── -->
+          <MasteryPanel
+            v-else-if="section === 'mastery'"
+            :mastery="mastery"
+            :loading="masteryLoading"
+            :error="masteryError"
+            @retry="loadMastery(true)"
+          />
 
           <!-- ── Friends ──────────────────────────────────────────── -->
           <FriendsPanel
