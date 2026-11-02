@@ -3,6 +3,7 @@ import { computed, shallowRef } from 'vue'
 import { MatchRow, useFormat } from '@invadelol/ui'
 import { summaryOf, type MatchSummary } from '@invadelol/ui/logic'
 import GameDetail from './GameDetail.vue'
+import { afterPaint } from '../lib/after_paint.js'
 import { detailOf } from '../lib/match.js'
 import { selfTag, type SelfTag } from '../lib/self_tags.js'
 import type { Match } from '../lib/types.js'
@@ -58,7 +59,18 @@ const days = computed(() => {
 })
 
 const open = shallowRef<string | null>(null)
-const toggle = (id: string) => (open.value = open.value === id ? null : id)
+/**
+ * The game whose detail is drawn. It follows `open` once the tapped row has painted open: the
+ * scoreboard is the heaviest thing on the page, and a phone would otherwise hold the tap until it
+ * is built.
+ */
+const shown = shallowRef<string | null>(null)
+function toggle(id: string) {
+  const next = open.value === id ? null : id
+  open.value = next
+  if (!next) return void (shown.value = null)
+  afterPaint(() => open.value === next && (shown.value = next))
+}
 </script>
 
 <template>
@@ -96,7 +108,7 @@ const toggle = (id: string) => (open.value = open.value === id ? null : id)
             <span :title="tag.tip">{{ tag.label }}</span>
           </p>
           <GameDetail
-            v-if="open === match.matchId"
+            v-if="shown === match.matchId"
             :match="match"
             :puuid="puuid"
             :game-name="gameName"
