@@ -2,6 +2,7 @@ import {
   BRACKETS,
   RANKED_SOLO,
   evidenceLevel,
+  platformSql,
   round,
   seedTiers,
   type Bracket,
@@ -41,19 +42,7 @@ export function positionOf(slug: unknown): Position | null {
 }
 
 /** Regions a page can be narrowed to (`match_seed.platform`). */
-export const REGIONS: Record<string, { label: string; platforms: string[] }> = {
-  euw: { label: 'EUW', platforms: ['EUW1'] },
-  eune: { label: 'EUNE', platforms: ['EUN1'] },
-  na: { label: 'NA', platforms: ['NA1'] },
-  kr: { label: 'KR', platforms: ['KR'] },
-  br: { label: 'BR', platforms: ['BR1'] },
-  lan: { label: 'LAN', platforms: ['LA1'] },
-  las: { label: 'LAS', platforms: ['LA2'] },
-  tr: { label: 'TR', platforms: ['TR1'] },
-  jp: { label: 'JP', platforms: ['JP1'] },
-  oce: { label: 'OCE', platforms: ['OC1'] },
-  vn: { label: 'VN', platforms: ['VN2'] },
-}
+export { REGIONS } from '#services/ranked_stats'
 
 /** The filters every query shares: a patch, a rank bracket, maybe a region. */
 export interface Filter {
@@ -85,10 +74,7 @@ const PRIOR_GAMES = 400
 export const TIER_CUTS = [0.05, 0.18, 0.42, 0.7, 0.88] as const
 export const TIERS = ['S+', 'S', 'A', 'B', 'C', 'D'] as const
 
-const regionSql = (filter: Filter) => {
-  const platforms = filter.region ? REGIONS[filter.region]?.platforms : null
-  return platforms ? `AND platform IN (${platforms.map((p) => `'${p}'`).join(',')})` : ''
-}
+const regionSql = (filter: Filter) => platformSql(filter.region).trimEnd()
 
 /** The crawled games of the filter (`{patch:String}` is a parameter). */
 export function seedGamesSql(filter: Filter, bracket: Bracket = filter.bracket) {
@@ -353,22 +339,33 @@ export function skillOrderSql(filter: Filter) {
   `
 }
 
+/** A team's epic monsters and towers in `matches`, in the order `profileSql` sums them. */
+const OBJECTIVES = ['dragons', 'heralds', 'barons', 'towers'] as const
+
 /**
  * The Statistics tab in one query: games by length (five-minute buckets, 0 = under 5 min) and the
  * sums the averages are made of. A bucket row: bucket, games, wins, then over the games that have
  * the player's participant row (one per game): those games, kills, deaths, assists, CS, gold,
- * damage, vision, seconds played.
+ * damage, vision, seconds played; then over every game, the dragons, heralds, barons and towers
+ * the champion's team took, and the same for the other team.
  */
 export function profileSql(filter: Filter) {
+  const side = (mine: boolean) =>
+    OBJECTIVES.map(
+      (o) => `sum(if(me.team_id = 100, m.${mine ? 't1' : 't2'}_${o}, m.${mine ? 't2' : 't1'}_${o}))`
+    ).join(', ')
   // Each source read once (a CTE named twice is run twice): the patch's games on the left, the
   // champion's few thousand on the right, where ClickHouse builds its hash tables.
   return `
     SELECT intDiv(m.duration_sec, 300) AS b, count(), sum(me.win),
            countIf(p.found = 1), sum(p.kills), sum(p.deaths), sum(p.assists), sum(p.total_cs),
            sum(p.gold_earned), sum(p.dmg_to_champ), sum(p.vision_score),
-           sumIf(m.duration_sec, p.found = 1)
+           sumIf(m.duration_sec, p.found = 1),
+           ${side(true)},
+           ${side(false)}
     FROM (
-      SELECT match_id, duration_sec FROM matches WHERE queue_id = ${RANKED_SOLO} AND patch = {patch:String}
+      SELECT match_id, duration_sec, ${OBJECTIVES.map((o) => `t1_${o}, t2_${o}`).join(', ')}
+      FROM matches WHERE queue_id = ${RANKED_SOLO} AND patch = {patch:String}
     ) AS m
     INNER JOIN (${mineSql(filter)}) AS me USING (match_id)
     LEFT JOIN (
@@ -379,6 +376,111 @@ export function profileSql(filter: Filter) {
       LIMIT 1 BY match_id
     ) AS p USING (match_id)
     GROUP BY b ORDER BY b
+  `
+}
+
+/**
+ * What a champion's participant rows hold beyond `profileSql`'s averages, in one row: games,
+ * then the sums of damage taken, damage to turrets, damage to objectives, wards placed, wards
+ * cleared, control wards bought, level at the end, damage to champions (physical, magic, true)
+ * and jungle monsters killed.
+ *
+ * These columns are not in the `by_champion` projection, so the rows are found by game: the
+ * champion's games of the filter (its ids from the projection, then the crawled games among
+ * them, as `mineSql` does) and its participant rows of those games (the `by_match` projection).
+ */
+export function detailSql(filter: Filter) {
+  const own = `queue_id = ${RANKED_SOLO} AND ${ONE_SQL} AND game_start_ms >= {patchStart:UInt64}`
+  return `
+    SELECT count(), sum(dmg_taken), sum(dmg_to_turrets), sum(dmg_to_objectives), sum(wards_placed),
+           sum(wards_killed), sum(vision_wards_bought), sum(champ_level),
+           sum(physical_dmg_to_champ), sum(magic_dmg_to_champ), sum(true_dmg_to_champ),
+           sum(neutral_minions_killed)
+    FROM (
+      SELECT match_id, dmg_taken, dmg_to_turrets, dmg_to_objectives, wards_placed, wards_killed,
+             vision_wards_bought, champ_level, physical_dmg_to_champ, magic_dmg_to_champ,
+             true_dmg_to_champ, neutral_minions_killed
+      FROM participants
+      WHERE ${own}
+        AND match_id IN (${seedGamesSql(filter)}
+          AND match_id IN (SELECT match_id FROM participants WHERE ${own}))
+      LIMIT 1 BY match_id
+    )
+  `
+}
+
+/** The minutes of the early game: the timeline frames read at 10:00 and 15:00. */
+export const EARLY_MINUTES = [10, 15] as const
+
+/**
+ * The champion against its lane opponent at 10 and 15 minutes, from the games with a timeline:
+ * minute, games, the champion's CS (lane and jungle), gold and experience summed, the same three
+ * as gaps to the opponent (signed), then the games it led in gold with their wins and the games
+ * it trailed with theirs. The opponent is the other team's player in the role (`match_lineups`);
+ * a game missing either frame is left out.
+ */
+export function earlySql(filter: Filter) {
+  return `
+    WITH me AS (${mineSql(filter)})
+    SELECT minute, count(), sum(a.2), sum(a.3), sum(a.4),
+           sum(toInt64(a.2) - toInt64(b.2)), sum(toInt64(a.3) - toInt64(b.3)),
+           sum(toInt64(a.4) - toInt64(b.4)),
+           countIf(a.3 > b.3), sumIf(win, a.3 > b.3), countIf(a.3 < b.3), sumIf(win, a.3 < b.3)
+    FROM (
+      SELECT f.minute AS minute, p.win AS win,
+             arrayFirst(x -> x.1 = p.mine, f.players) AS a,
+             arrayFirst(x -> x.1 = p.theirs, f.players) AS b
+      FROM (
+        SELECT match_id, minute,
+               groupArray((participant_id, toUInt32(cs + jungle_cs), gold_total, xp)) AS players
+        FROM (
+          SELECT match_id, participant_id, intDiv(frame_ms, 60000) AS minute, cs, jungle_cs,
+                 gold_total, xp
+          FROM match_timeline
+          WHERE match_id IN (SELECT match_id FROM me)
+            AND intDiv(frame_ms, 60000) IN (${EARLY_MINUTES.join(', ')})
+          LIMIT 1 BY match_id, participant_id, minute
+        )
+        GROUP BY match_id, minute
+      ) AS f
+      INNER JOIN (
+        SELECT me.match_id AS match_id, me.participant_id AS mine, me.win AS win, o.1 AS theirs
+        FROM me
+        INNER JOIN (
+          SELECT match_id, groupUniqArrayArray(players) AS players FROM match_lineups
+          WHERE patch = {patch:String} AND match_id IN (SELECT match_id FROM me)
+          GROUP BY match_id
+        ) AS l USING (match_id)
+        ARRAY JOIN l.players AS o
+        WHERE o.2 != me.team_id AND o.3 = {position:String}
+      ) AS p USING (match_id)
+    )
+    WHERE a.1 != 0 AND b.1 != 0
+    GROUP BY minute ORDER BY minute
+  `
+}
+
+/**
+ * First blood in the champion's games with kill events (`match_events`): games, games it took
+ * first blood, games it assisted it, games it died first, and the wins of the games it was part
+ * of (killer or assist).
+ */
+export function firstBloodSql(filter: Filter) {
+  return `
+    WITH me AS (${mineSql(filter)})
+    SELECT count(), countIf(fb.killer = me.participant_id),
+           countIf(has(fb.assists, me.participant_id)), countIf(fb.victim = me.participant_id),
+           sumIf(me.win, fb.killer = me.participant_id OR has(fb.assists, me.participant_id))
+    FROM me
+    INNER JOIN (
+      SELECT match_id, argMin(killer, t_ms) AS killer, argMin(victim, t_ms) AS victim,
+             argMin(assists, t_ms) AS assists
+      FROM (
+        SELECT DISTINCT match_id, t_ms, killer, victim, assists FROM match_events
+        WHERE match_id IN (SELECT match_id FROM me) AND kind = 'kill'
+      )
+      GROUP BY match_id
+    ) AS fb USING (match_id)
   `
 }
 
@@ -664,6 +766,138 @@ export function averages(rows: number[][]) {
     damage: Math.round(per(damage)),
     vision: round(per(vision), 1),
     length: Math.round(per(seconds)),
+  }
+}
+
+/** A team's dragons, heralds, barons and towers per game. */
+export interface TeamObjectives {
+  dragons: number
+  heralds: number
+  barons: number
+  towers: number
+}
+
+/**
+ * What the champion's team took per game, and the other team, from `profileSql`'s bucket rows;
+ * null without a game, or when no game has any objective stored.
+ */
+export function objectives(rows: number[][]) {
+  const sum = (i: number) => rows.reduce((total, row) => total + Number(row[i] ?? 0), 0)
+  const games = sum(1)
+  const team = (from: number) =>
+    Object.fromEntries(
+      OBJECTIVES.map((o, i) => [o, games ? round(sum(from + i) / games, 2) : 0])
+    ) as unknown as TeamObjectives
+  const own = team(12)
+  const enemy = team(12 + OBJECTIVES.length)
+  const any = OBJECTIVES.some((o) => own[o] > 0 || enemy[o] > 0)
+  return games && any ? { games, ...own, enemy } : null
+}
+
+/** A sample this small says little: a block counted on fewer games is left out. */
+const MIN_SAMPLE = 30
+
+/** `detailSql`'s row as averages per game and the split of damage to champions; null without games. */
+export function details(row: number[]) {
+  const [
+    games,
+    taken,
+    turrets,
+    objective,
+    placed,
+    cleared,
+    control,
+    level,
+    physical,
+    magic,
+    pure,
+    jungle,
+  ] = Array.from({ length: 12 }, (_, i) => Number(row[i] ?? 0))
+  if (games < MIN_SAMPLE) return null
+  const per = (total: number, digits = 1) => round(total / games, digits)
+  const damage = physical + magic + pure
+  const share = (part: number) => (damage ? round(part / damage, 3) : 0)
+  return {
+    games,
+    damageTaken: Math.round(taken / games),
+    damageToTurrets: Math.round(turrets / games),
+    damageToObjectives: Math.round(objective / games),
+    wardsPlaced: per(placed),
+    wardsCleared: per(cleared),
+    controlWards: per(control),
+    level: per(level),
+    jungleMonsters: per(jungle),
+    damageSplit: { physical: share(physical), magic: share(magic), true: share(pure) },
+  }
+}
+
+/** One minute of `earlySql`. */
+export interface EarlyMinute {
+  minute: number
+  games: number
+  cs: number
+  gold: number
+  xp: number
+  /** The gaps to the lane opponent, per game (positive: ahead). */
+  csDiff: number
+  goldDiff: number
+  xpDiff: number
+  /** Share of the games it led in gold. */
+  ahead: number
+  /** Win rate in the games it led, and in the games it trailed (null without such games). */
+  aheadWin: number | null
+  behindWin: number | null
+}
+
+/** `earlySql`'s rows as averages per game, the minutes with enough games; null without one. */
+export function early(rows: number[][]): EarlyMinute[] | null {
+  const minutes = rows
+    .filter(([minute, games]) => EARLY_MINUTES.includes(minute as 10 | 15) && games >= MIN_SAMPLE)
+    .map(
+      ([
+        minute,
+        games,
+        cs,
+        gold,
+        xp,
+        csDiff,
+        goldDiff,
+        xpDiff,
+        ahead,
+        aheadWins,
+        behind,
+        behindWins,
+      ]) => ({
+        minute,
+        games,
+        cs: round(cs / games, 1),
+        gold: Math.round(gold / games),
+        xp: Math.round(xp / games),
+        csDiff: round(csDiff / games, 1),
+        goldDiff: Math.round(goldDiff / games),
+        xpDiff: Math.round(xpDiff / games),
+        ahead: round(ahead / games),
+        aheadWin: ahead ? round(aheadWins / ahead) : null,
+        behindWin: behind ? round(behindWins / behind) : null,
+      })
+    )
+  return minutes.length ? minutes : null
+}
+
+/** `firstBloodSql`'s row as shares of the games; null with too few games. */
+export function firstBlood(row: number[]) {
+  const [games, kills, assists, deaths, involvedWins] = Array.from({ length: 5 }, (_, i) =>
+    Number(row[i] ?? 0)
+  )
+  if (games < MIN_SAMPLE) return null
+  const involved = kills + assists
+  return {
+    games,
+    kill: round(kills / games),
+    assist: round(assists / games),
+    victim: round(deaths / games),
+    /** Win rate in the games it took part in first blood. */
+    involvedWin: involved ? round(involvedWins / involved) : null,
   }
 }
 

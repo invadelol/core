@@ -1,8 +1,15 @@
 import { test } from '@japa/runner'
 import {
   averages,
+  detailSql,
+  details,
+  early,
+  earlySql,
+  firstBlood,
+  firstBloodSql,
   laneSql,
   matchups,
+  objectives,
   positionOf,
   profileSql,
   seedGamesSql,
@@ -14,6 +21,7 @@ import {
   trendRows,
   type Filter,
 } from '#services/champion_stats'
+import { gamesSql } from '#services/ranked_stats'
 import { pageRowsSql } from '#services/rune_stats'
 import { championSlug } from '../../inertia/lib/champions.js'
 
@@ -177,6 +185,109 @@ test.group('Champion stats', () => {
       ['2026-10-21', 0, 0, 1000, 120],
       ['2026-10-22', 60, 33, 1200, 0],
     ])
+  })
+
+  test("counts both teams' objectives per game, and nothing when none is stored", ({ assert }) => {
+    // bucket … seconds (12 columns, as above), then the team's dragons, heralds, barons, towers
+    // and the other team's.
+    const head = [5, 30, 15, 30, 150, 90, 210, 4500, 300000, 450000, 600, 49500]
+    const o = objectives([
+      [...head, 75, 15, 18, 180, 45, 9, 9, 120],
+      [6, 10, 6, 9, 54, 27, 63, 1620, 108000, 162000, 216, 17820, 25, 5, 2, 60, 15, 3, 1, 40],
+    ])!
+    assert.equal(o.games, 40)
+    assert.equal(o.dragons, 2.5)
+    assert.equal(o.barons, 0.5)
+    assert.equal(o.towers, 6)
+    assert.deepEqual(o.enemy, { dragons: 1.5, heralds: 0.3, barons: 0.25, towers: 4 })
+    assert.isNull(objectives([[...head, 0, 0, 0, 0, 0, 0, 0, 0]]))
+    // Rows counted before the objectives were: no columns, no block.
+    assert.isNull(objectives([head]))
+    assert.isNull(objectives([]))
+  })
+
+  test('averages what the participant rows hold beyond the averages', ({ assert }) => {
+    // games, damage taken, to turrets, to objectives, wards placed, cleared, control wards,
+    // levels, physical, magic and true damage to champions, jungle monsters.
+    const d = details([40, 800000, 120000, 200000, 400, 120, 90, 640, 200000, 760000, 40000, 160])!
+    assert.equal(d.games, 40)
+    assert.equal(d.damageTaken, 20000)
+    assert.equal(d.damageToTurrets, 3000)
+    assert.equal(d.wardsPlaced, 10)
+    assert.equal(d.controlWards, 2.3)
+    assert.equal(d.level, 16)
+    assert.deepEqual(d.damageSplit, { physical: 0.2, magic: 0.76, true: 0.04 })
+    // Too few games to say anything.
+    assert.isNull(details([12, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]))
+    assert.isNull(details([]))
+  })
+
+  test('reads the early game against the lane opponent', ({ assert }) => {
+    // minute, games, CS, gold, XP, their gaps, games ahead in gold and their wins, games behind
+    // and their wins.
+    const minutes = early([
+      [10, 100, 7800, 380000, 520000, 450, 21000, -3000, 60, 36, 40, 16],
+      [15, 100, 12500, 610000, 860000, -120, -5000, 1000, 45, 27, 55, 22],
+      // Too few games at that minute.
+      [20, 10, 2000, 90000, 120000, 0, 0, 0, 5, 3, 5, 2],
+    ])!
+    assert.deepEqual(
+      minutes.map((m) => m.minute),
+      [10, 15]
+    )
+    assert.equal(minutes[0].cs, 78)
+    assert.equal(minutes[0].gold, 3800)
+    assert.equal(minutes[0].csDiff, 4.5)
+    assert.equal(minutes[0].goldDiff, 210)
+    assert.equal(minutes[0].xpDiff, -30)
+    assert.equal(minutes[0].ahead, 0.6)
+    assert.equal(minutes[0].aheadWin, 0.6)
+    assert.equal(minutes[0].behindWin, 0.4)
+    assert.equal(minutes[1].goldDiff, -50)
+    assert.isNull(early([]))
+    assert.isNull(early([[10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]))
+  })
+
+  test('reads first blood as shares of the games', ({ assert }) => {
+    const fb = firstBlood([200, 30, 40, 24, 42])!
+    assert.equal(fb.kill, 0.15)
+    assert.equal(fb.assist, 0.2)
+    assert.equal(fb.victim, 0.12)
+    assert.equal(fb.involvedWin, 0.6)
+    assert.isNull(firstBlood([10, 1, 1, 1, 1]))
+    assert.isNull(firstBlood([]))
+  })
+
+  test("reads the new blocks by game, from the champion's own games", ({ assert }) => {
+    // Participant columns outside the by_champion projection: found by the champion's games.
+    const detail = detailSql(FILTER)
+    assert.include(detail, 'dmg_taken')
+    assert.include(detail, 'LIMIT 1 BY match_id')
+    assert.include(detail, 'game_start_ms >= {patchStart:UInt64}')
+    const seeds = detail.slice(detail.indexOf('FROM match_seed'))
+    assert.include(seeds, 'AND match_id IN (SELECT match_id FROM participants WHERE queue_id = 420')
+    // Frames at 10 and 15 minutes of the champion's games, against the other team's player in the role.
+    const frames = earlySql(FILTER)
+    assert.include(frames, 'FROM match_timeline')
+    assert.include(frames, 'intDiv(frame_ms, 60000) IN (10, 15)')
+    assert.include(frames, 'o.2 != me.team_id AND o.3 = {position:String}')
+    assert.notInclude(frames, 'min(game_start_ms)')
+    const blood = firstBloodSql(FILTER)
+    assert.include(blood, "kind = 'kill'")
+    assert.include(blood, 'argMin(killer, t_ms)')
+  })
+
+  test('a region narrows every query to its platforms, and every region changes nothing', ({
+    assert,
+  }) => {
+    const euw = { ...FILTER, region: 'euw' }
+    assert.include(seedGamesSql(euw), "AND platform IN ('EUW1')")
+    assert.include(profileSql(euw), "AND platform IN ('EUW1')")
+    assert.include(gamesSql('all', null, 'kr'), "AND platform IN ('KR')")
+    assert.include(gamesSql('gold', null, 'na'), "seed_tier IN ('GOLD') AND platform IN ('NA1')")
+    assert.notInclude(gamesSql('gold', null, null), 'platform')
+    assert.notInclude(gamesSql('gold', null, 'nowhere'), 'platform')
+    assert.equal(gamesSql('gold'), gamesSql('gold', null, null))
   })
 
   test('reads each source of the Statistics tab once', ({ assert }) => {

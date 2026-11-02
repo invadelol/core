@@ -21,17 +21,18 @@ const TOP_PAIRS = 5
 /**
  * One row per pair (smallest id first): games, wins, games with that order (smallest on D),
  * games with Flash on D, games with Flash on F, from the patch's first game on
- * (`{patchStart:UInt64}`) in the bracket's games of the patch (`gamesSql`). Every champion and role
- * at once (`scope` null) prefixes each row with the champion and Riot's position.
+ * (`{patchStart:UInt64}`) in the bracket's games of the patch (`gamesSql`; of the `region` when
+ * one is given). Every champion and role at once (`scope` null) prefixes each row with the
+ * champion and Riot's position.
  */
-export function spellRowsSql(bracket: Bracket, scope: Scope) {
+export function spellRowsSql(bracket: Bracket, scope: Scope, region: string | null = null) {
   const by = scope ? '' : 'champion_id, team_position, '
   return `
           SELECT ${by}least(spell1, spell2) AS a, greatest(spell1, spell2) AS b,
                  count(), sum(win), countIf(spell1 = a), countIf(spell1 = ${FLASH}), countIf(spell2 = ${FLASH})
           FROM participants
           WHERE queue_id = ${RANKED_SOLO} ${scopeSql(scope)} AND spell1 != 0 AND spell2 != 0
-            AND game_start_ms >= {patchStart:UInt64} AND match_id IN (${gamesSql(bracket, scope)})
+            AND game_start_ms >= {patchStart:UInt64} AND match_id IN (${gamesSql(bracket, scope, region)})
           GROUP BY ALL
         `
 }

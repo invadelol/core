@@ -151,6 +151,27 @@ test.group('Build stats', () => {
     assert.include(every, 'GROUP BY champion_id, team_position, o.1')
   })
 
+  test("a region reads its platforms' crawled games, at any rank", ({ assert }) => {
+    const kinds = itemKinds(ITEMS)
+    const scope = { champion: 103, position: 'MIDDLE' }
+    // Every region: the query is the one it always was.
+    assert.equal(
+      buildRowsSql('emerald_plus', scope, kinds, null),
+      buildRowsSql('emerald_plus', scope, kinds)
+    )
+    assert.include(
+      buildRowsSql('emerald_plus', scope, kinds, 'euw'),
+      "seed_tier IN ('EMERALD','DIAMOND','MASTER','GRANDMASTER','CHALLENGER') AND platform IN ('EUW1') AND match_id IN (SELECT match_id FROM participant_items"
+    )
+    // All ranks read no crawled games but the region's.
+    const all = buildRowsSql('all', scope, kinds, 'kr')
+    assert.include(
+      all,
+      "FROM match_seed WHERE patch = {patch:String} AND platform IN ('KR') AND match_id IN"
+    )
+    assert.notInclude(all, 'seed_tier')
+  })
+
   test('item ids wrap to UInt16 as the purchases store them, and no ids match nothing', ({
     assert,
   }) => {

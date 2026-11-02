@@ -120,7 +120,7 @@ router
     /** The tier list from our own ranked games, for any stored patch, bracket and region. */
     router.get('/tier-list', [TierListStatsController, 'show'])
 
-    /** A champion's statistics tab from our own ranked games: by rank, trend, game length, averages. */
+    /** Everything counted for a champion in a role, for the desktop app's statistics page. */
     router.get('/statistics/:champion/:role', [ChampionStatisticsController, 'show'])
 
     /** Rune pages, builds and summoner spells of a pick, several brackets in one request. */
