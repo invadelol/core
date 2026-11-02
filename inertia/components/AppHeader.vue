@@ -14,6 +14,7 @@ onMounted(startSeason)
 const page = usePage()
 const path = computed(() => page.url.split('?')[0])
 const onApp = computed(() => path.value === '/app')
+const onContact = computed(() => path.value === '/contact')
 
 /** The site's sections beside the players: champions, the tier list and the pros. */
 const SECTIONS = [
@@ -96,6 +97,14 @@ withDefaults(
         >
           App
         </Link>
+        <Link
+          href="/contact"
+          class="iv-btn ghost hidden lg:inline-flex"
+          :class="onContact ? '!text-ink' : ''"
+          :aria-current="onContact ? 'page' : undefined"
+        >
+          Contact
+        </Link>
         <ThemeToggle />
       </div>
     </div>
@@ -120,6 +129,11 @@ withDefaults(
 .section-link:hover {
   color: var(--text-1);
   background: var(--surface-1);
+}
+
+/* The shared ghost button sets no shadow of its own, which hides the site's focus ring. */
+.iv-btn.ghost:focus-visible {
+  box-shadow: var(--focus);
 }
 
 /* The current section: the violet-lit pill of the app's sidebar. */
