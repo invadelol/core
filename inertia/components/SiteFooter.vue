@@ -3,7 +3,7 @@ import { Link } from '@inertiajs/vue3'
 import { Logo } from '@invadelol/ui'
 import { DISCORD_URL, REPO_URL, X_URL } from '../lib/links.js'
 
-/** The same quiet line at the bottom of every page: the source, the community, the policies, and Riot's notice. */
+/** The same quiet line at the bottom of every page: the source, the community, contact, the policies, and Riot's notice. */
 </script>
 
 <template>
@@ -47,6 +47,9 @@ import { DISCORD_URL, REPO_URL, X_URL } from '../lib/links.js'
       >
         X
       </a>
+      <Link href="/contact" class="transition-colors hover:text-ink pointer-coarse:py-3.5"
+        >Contact</Link
+      >
       <Link href="/privacy" class="transition-colors hover:text-ink pointer-coarse:py-3.5"
         >Privacy</Link
       >

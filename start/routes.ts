@@ -38,6 +38,7 @@ const MatchupStatsController = () => import('#controllers/matchup_stats_controll
 const PickStatsController = () => import('#controllers/pick_stats_controller')
 const SynergyController = () => import('#controllers/synergy_controller')
 const LegalController = () => import('#controllers/legal_controller')
+const ContactController = () => import('#controllers/contact_controller')
 const ChangelogController = () => import('#controllers/changelog_controller')
 const MultisearchController = () => import('#controllers/multisearch_controller')
 const ChampionsController = () => import('#controllers/champions_controller')
@@ -187,6 +188,9 @@ router.get('/multisearch/:region?', [MultisearchController, 'show'])
 router.get('/privacy', [LegalController, 'privacy'])
 router.get('/legal', [LegalController, 'legal'])
 router.get('/terms', ({ response }) => response.redirect('/legal#terms', false, 302))
+
+/** The ways to reach the team, before the summoner catch-all below. */
+router.get('/contact', [ContactController, 'show'])
 
 /** The community server, before the summoner catch-all below. */
 router.get('/discord', ({ response }) => response.redirect(DISCORD_URL, false, 302))
