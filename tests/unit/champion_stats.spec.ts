@@ -4,6 +4,7 @@ import {
   detailSql,
   details,
   early,
+  EVENT_SAMPLE,
   earlySql,
   firstBlood,
   firstBloodSql,
@@ -275,6 +276,11 @@ test.group('Champion stats', () => {
     const blood = firstBloodSql(FILTER)
     assert.include(blood, "kind = 'kill'")
     assert.include(blood, 'argMin(killer, t_ms)')
+    // Timelines and events: a fixed sample of the champion's games, from the patch's partitions on.
+    for (const sql of [frames, blood]) {
+      assert.include(sql, `ORDER BY cityHash64(match_id) LIMIT ${EVENT_SAMPLE}`)
+      assert.include(sql, 'game_start_ms >= {patchStart:UInt64}')
+    }
   })
 
   test('a region narrows every query to its platforms, and every region changes nothing', ({
