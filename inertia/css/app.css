@@ -6,6 +6,7 @@
 @import '@invadelol/ui/tokens-light.css';
 @import '@invadelol/ui/style.css' layer(components);
 @import './components.css';
+@import './season.css';
 
 /* Every class used by the app lives under inertia/. */
 @source '../';
