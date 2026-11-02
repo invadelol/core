@@ -21,8 +21,8 @@ const CARDS: Array<{ name: ShotName; title: string; text: string; alt: string }>
   {
     name: 'g-live',
     title: 'The game, live.',
-    text: 'Both teams with items, gold and the win estimate, once a second.',
-    alt: 'The Live tab in game: both teams, kills 21 to 16, a 2.7k gold lead and a 68% win estimate',
+    text: 'Both teams with items and gold, once a second.',
+    alt: 'The Live tab in game: both teams, kills 21 to 16 and a 2.7k gold lead',
   },
   {
     name: 'g-favorites',
@@ -41,12 +41,6 @@ const CARDS: Array<{ name: ShotName; title: string; text: string; alt: string }>
     title: 'In twelve languages.',
     text: 'It follows the League client’s language, and you can pick another.',
     alt: 'Home in French',
-  },
-  {
-    name: 'g-sync',
-    title: 'Synced with invade.lol.',
-    text: 'Each game you finish reaches your web profile the moment it ends.',
-    alt: 'Settings, invade.lol: your games are published to your profile',
   },
 ]
 

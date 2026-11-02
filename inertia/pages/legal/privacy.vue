@@ -31,24 +31,28 @@ defineProps<{ publisher: LegalPublisher }>()
       and match pages.
     </p>
     <p><strong>What the desktop app sends, if you use it.</strong></p>
+    <p>
+      It no longer sends your games, your ranks or what the League client shows about other players:
+      they stay on your computer. Versions before 0.3.7 also sent your finished games, the recent
+      games of the other players of your games, and the rank, level and mastery of the players the
+      client showed you; invade.lol stopped taking them on 2 November 2026. What they sent before
+      then stays on the profiles it updated, unless you ask us to remove it (below). The app still
+      sends:
+    </p>
     <ul>
       <li>
-        Your finished games: the League client’s data for the game and its timeline, reduced to the
-        Riot IDs, PUUIDs and icons of the ten players, numeric statistics, and kills, objectives,
-        buildings, items, skills and wards. It adds each player’s position as the app estimates it,
-        and your LP change when it is certain.
+        Your device, with its first crash report: a random device token and its signing secret, the
+        app version and operating system, and a keyed hash of your IP address used against abuse. We
+        never store the address itself.
       </li>
       <li>
-        Other players the client shows you: Riot ID, icon, level, profile privacy setting, Solo/Duo
-        and Flex rank, and their 10 best champions by mastery. Never their match history, never
-        hidden players, never enemies during ranked champion select.
+        The Riot IDs it looks up on invade.lol (one you type, a player you keep in the app, the
+        Update button), to find their profile.
       </li>
       <li>
-        Your device: a random device token and its signing secret, the app version and operating
-        system, and a keyed hash of your IP address used against abuse. We never store the address
-        itself.
+        The champion, role, rank bracket and patch of the statistics it asks for, which name no
+        player.
       </li>
-      <li>The Riot accounts signed in on your computer, so their games reach their profiles.</li>
     </ul>
     <p>
       <strong>Anonymous usage statistics.</strong> The app sends one event when it starts and one
@@ -64,9 +68,9 @@ defineProps<{ publisher: LegalPublisher }>()
     <p>
       <strong>Website visits.</strong> We count page views, downloads and clicks on outside links
       with OpenPanel, which we run on our own server. It sets no cookies and doesn’t keep your IP
-      address. The app’s device registrations and uploaded games are counted there too, under the
-      device’s random id. Our servers keep technical logs (IP address, browser, page) for 14 days
-      for security. invade.lol sets no cookies.
+      address. The app’s device registrations are counted there too, under the device’s random id.
+      Our servers keep technical logs (IP address, browser, page) for 14 days for security.
+      invade.lol sets no cookies.
     </p>
     <p>
       <strong>What never leaves your computer.</strong> The app’s database (your accounts, games,
@@ -76,12 +80,9 @@ defineProps<{ publisher: LegalPublisher }>()
     <h2>Why, and on what legal basis</h2>
     <ul>
       <li>
-        Showing League profiles and match statistics, and keeping them current through the app: our
-        legitimate interest in running a statistics service for League of Legends players, with data
-        Riot Games makes available for such services (GDPR article 6(1)(f)).
-      </li>
-      <li>
-        Syncing your own games when you use the app: the service you asked for (article 6(1)(b)).
+        Showing League profiles and match statistics: our legitimate interest in running a
+        statistics service for League of Legends players, with data Riot Games makes available for
+        such services (GDPR article 6(1)(f)).
       </li>
       <li>
         Security, signed requests and rate limits: our legitimate interest in protecting the
