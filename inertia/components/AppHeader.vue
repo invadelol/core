@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, defineAsyncComponent, onMounted } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
 import { ChevronRight } from 'lucide-vue-next'
 import { Logo } from '@invadelol/ui'
 import SearchBar from './SearchBar.vue'
 import ThemeToggle from './ui/ThemeToggle.vue'
+import { season, startSeason } from '../lib/season.js'
+
+/** Christmas (../lib/season.ts): its own chunk, loaded only in season, and only in the browser. */
+const SeasonLayer = defineAsyncComponent(() => import('./SeasonLayer.vue'))
+onMounted(startSeason)
 
 const page = usePage()
 const path = computed(() => page.url.split('?')[0])
@@ -34,6 +39,10 @@ withDefaults(
 
 <template>
   <header class="chrome sticky top-0 z-30">
+    <template v-if="season">
+      <SeasonLayer part="chrome" />
+      <SeasonLayer part="ground" />
+    </template>
     <div class="page flex h-[56px] items-center gap-3 sm:gap-5">
       <Link
         href="/"

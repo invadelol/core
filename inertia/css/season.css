@@ -1,0 +1,101 @@
+/*
+ * The seasonal dress of the site (../lib/season.ts), on `data-season` of <html>, as in the desktop
+ * app. Here: the winter light and what must show from the first paint. The snow and the lights are
+ * drawn by ../components/SeasonLayer.vue. Christmas stays in the chrome and the ground: never on a
+ * panel or data.
+ */
+
+/* Moonlight: the one light turns a cooler silver-violet and the ink leans towards night blue. */
+html[data-season='christmas'] {
+  --season-moon-rgb: 158 172 255;
+  --ink-0: #07090d;
+  --ink-1: #0b0d14;
+  --light: radial-gradient(
+    90% 75% at 75% -15%,
+    rgb(var(--season-moon-rgb) / 0.075),
+    rgb(var(--season-moon-rgb) / 0.072) 10%,
+    rgb(var(--season-moon-rgb) / 0.065) 20%,
+    rgb(var(--season-moon-rgb) / 0.055) 30%,
+    rgb(var(--season-moon-rgb) / 0.0435) 40%,
+    rgb(var(--season-moon-rgb) / 0.032) 50%,
+    rgb(var(--season-moon-rgb) / 0.0215) 60%,
+    rgb(var(--season-moon-rgb) / 0.013) 70%,
+    rgb(var(--season-moon-rgb) / 0.007) 80%,
+    rgb(var(--season-moon-rgb) / 0.0026) 90%,
+    rgb(var(--season-moon-rgb) / 0)
+  );
+  /* The header's edge, where the page starts, turns a colder white. */
+  --edge: linear-gradient(
+    90deg,
+    rgb(226 232 255 / 0.05),
+    rgb(226 232 255 / 0.13) 72%,
+    rgb(226 232 255 / 0.06)
+  );
+  --season-snow: rgb(228 232 255);
+  --season-wire: rgb(255 255 255 / 0.16);
+  --season-cap: rgb(255 255 255 / 0.28);
+  --season-bulb-gold: var(--gold-c);
+  --season-bulb-warm: #f3e9da;
+  --season-bulb-violet: var(--brand-hi);
+  --season-bulb-rim: transparent;
+  --season-logo-snow: #e4e8f8;
+}
+
+/* Light: a pale winter morning, the same pieces in ink. Repeated for a system-light visitor. */
+html[data-theme='light'][data-season='christmas'] {
+  --ink-0: #ffffff;
+  --ink-1: #f4f5fa;
+  --light: radial-gradient(90% 75% at 75% -15%, rgb(150 165 230 / 0.1), rgb(150 165 230 / 0) 70%);
+  --edge: linear-gradient(var(--line-2), var(--line-2));
+  --season-snow: rgb(150 160 205);
+  --season-wire: rgb(16 17 24 / 0.2);
+  --season-cap: rgb(16 17 24 / 0.25);
+  --season-bulb-gold: #d0a23f;
+  --season-bulb-warm: #c3c8d6;
+  --season-bulb-violet: var(--brand);
+  --season-bulb-rim: rgb(16 17 24 / 0.12);
+  --season-logo-snow: #d6dbee;
+}
+@media (prefers-color-scheme: light) {
+  html[data-theme='system'][data-season='christmas'] {
+    --ink-0: #ffffff;
+    --ink-1: #f4f5fa;
+    --light: radial-gradient(90% 75% at 75% -15%, rgb(150 165 230 / 0.1), rgb(150 165 230 / 0) 70%);
+    --edge: linear-gradient(var(--line-2), var(--line-2));
+    --season-snow: rgb(150 160 205);
+    --season-wire: rgb(16 17 24 / 0.2);
+    --season-cap: rgb(16 17 24 / 0.25);
+    --season-bulb-gold: #d0a23f;
+    --season-bulb-warm: #c3c8d6;
+    --season-bulb-violet: var(--brand);
+    --season-bulb-rim: rgb(16 17 24 / 0.12);
+    --season-logo-snow: #d6dbee;
+  }
+}
+
+/* The snow falls behind the header's content, never through its search field: the field's
+   translucent well is laid over the header's ink, the same colour, but opaque. */
+html[data-season] .chrome {
+  isolation: isolate;
+}
+html[data-season] .chrome .field {
+  background: linear-gradient(var(--inset), var(--inset)), var(--ink-0);
+}
+
+/* Snow resting on the Invade mark (22px in the header): a mask over the mark's upward edges. */
+html[data-season='christmas'] .chrome .iv-logo {
+  position: relative;
+}
+html[data-season='christmas'] .chrome .iv-logo::before {
+  content: '';
+  position: absolute;
+  /* The mask's viewBox (49 12 165 180) around the mark's (54 22 155 170), at 22px for 170 units. */
+  left: -0.65px;
+  top: -1.29px;
+  width: 21.35px;
+  height: 23.29px;
+  background: var(--season-logo-snow);
+  -webkit-mask: url('./logo-snow.svg') center / 100% 100% no-repeat;
+  mask: url('./logo-snow.svg') center / 100% 100% no-repeat;
+  pointer-events: none;
+}

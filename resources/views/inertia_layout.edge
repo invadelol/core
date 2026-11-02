@@ -21,7 +21,8 @@
       The stored theme has to be on <html> before the first paint, or a
       dark-theme visitor gets a white flash on every navigation. This is
       the one script that must run synchronously, ahead of the stylesheet.
-      Without a choice the page follows the system (`system`).
+      Without a choice the page follows the system (`system`). The season's
+      winter light is painted the same way.
     --}}
     <script>
       (function () {
@@ -33,6 +34,11 @@
             document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) { m.content = bar })
           }
         } catch (e) {}
+        // Christmas, 15 November to 31 December by the visitor's date (inertia/lib/season.ts).
+        var d = new Date()
+        if ((d.getMonth() === 10 && d.getDate() >= 15) || d.getMonth() === 11) {
+          document.documentElement.setAttribute('data-season', 'christmas')
+        }
       })()
     </script>
 
