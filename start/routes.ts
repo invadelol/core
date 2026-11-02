@@ -34,6 +34,7 @@ const LensController = () => import('#controllers/lens_controller')
 const RuneStatsController = () => import('#controllers/rune_stats_controller')
 const BuildStatsController = () => import('#controllers/build_stats_controller')
 const SpellStatsController = () => import('#controllers/spell_stats_controller')
+const ChampionStatisticsController = () => import('#controllers/champion_statistics_controller')
 const MatchupStatsController = () => import('#controllers/matchup_stats_controller')
 const TierListStatsController = () => import('#controllers/tier_list_stats_controller')
 const PickStatsController = () => import('#controllers/pick_stats_controller')
@@ -118,6 +119,9 @@ router
 
     /** The tier list from our own ranked games, for any stored patch, bracket and region. */
     router.get('/tier-list', [TierListStatsController, 'show'])
+
+    /** A champion's statistics tab from our own ranked games: by rank, trend, game length, averages. */
+    router.get('/statistics/:champion/:role', [ChampionStatisticsController, 'show'])
 
     /** Rune pages, builds and summoner spells of a pick, several brackets in one request. */
     router.get('/picks/:champion/:role', [PickStatsController, 'show'])
