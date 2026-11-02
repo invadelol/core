@@ -19,14 +19,16 @@ export class SpellStatsService {
     champion: number,
     role: Role,
     bracket: Bracket = 'all',
-    patch?: string
+    patch?: string,
+    region: string | null = null
   ): Promise<SpellStats | null> {
     const resolvedPatch = patch ?? (await latestPatch())
     if (!resolvedPatch) return null
     const position = ROLES[role]
-    const key = `${champion}:${position}:${bracket}:${resolvedPatch}`
+    // Every region keeps the key it always had.
+    const key = `${champion}:${position}:${bracket}:${resolvedPatch}${region ? `:${region}` : ''}`
     return this.#cache.get(key, async () => {
-      const found = await rows(spellRowsSql(bracket, { champion, position }), {
+      const found = await rows(spellRowsSql(bracket, { champion, position }, region), {
         champion,
         position,
         patch: resolvedPatch,

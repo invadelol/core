@@ -13,11 +13,18 @@ import {
   averages,
   byLength,
   byRank,
+  detailSql,
+  details,
+  early,
+  earlySql,
+  firstBlood,
+  firstBloodSql,
   laneOpponentsSql,
   lanePairs,
   lanePairsSql,
   laneSql,
   matchups,
+  objectives,
   opponentsOf,
   profileSql,
   skillOrderSql,
@@ -232,7 +239,7 @@ export class ChampionStatsService {
     })
   }
 
-  /** Win rate by game length, and the averages of a game. */
+  /** Win rate by game length, the averages of a game, and the objectives of the two teams. */
   async profile(filter: Filter, champion: number, position: Position) {
     return this.one('profile', filter, champion, position, async (params) => {
       const result = await rows(profileSql(filter), params)
@@ -240,7 +247,32 @@ export class ChampionStatsService {
       return {
         length: byLength(found.map((r) => r.slice(0, 3) as [number, number, number])),
         averages: averages(found),
+        objectives: objectives(found),
       }
+    })
+  }
+
+  /** What the participant rows hold beyond the averages: damage taken, wards, levels, damage split. */
+  details(filter: Filter, champion: number, position: Position) {
+    return this.one('details', filter, champion, position, async (params) => {
+      const [row] = await rows(detailSql(filter), params)
+      return details((row ?? []).map(num))
+    })
+  }
+
+  /** CS, gold and experience at 10 and 15 minutes, and the gaps to the lane opponent. */
+  early(filter: Filter, champion: number, position: Position) {
+    return this.one('early', filter, champion, position, async (params) => {
+      const found = await rows(earlySql(filter), params)
+      return early(found.map((r) => r.map(num)))
+    })
+  }
+
+  /** How often the champion takes first blood, helps it or gives it. */
+  firstBlood(filter: Filter, champion: number, position: Position) {
+    return this.one('first-blood', filter, champion, position, async (params) => {
+      const [row] = await rows(firstBloodSql(filter), params)
+      return firstBlood((row ?? []).map(num))
     })
   }
 

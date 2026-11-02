@@ -40,6 +40,30 @@ export const BRACKETS = {
 
 export type Bracket = keyof typeof BRACKETS
 
+/** Regions a page can be narrowed to, with their platforms (`platform` on `match_seed` and `matches`). */
+export const REGIONS: Record<string, { label: string; platforms: string[] }> = {
+  euw: { label: 'EUW', platforms: ['EUW1'] },
+  eune: { label: 'EUNE', platforms: ['EUN1'] },
+  na: { label: 'NA', platforms: ['NA1'] },
+  kr: { label: 'KR', platforms: ['KR'] },
+  br: { label: 'BR', platforms: ['BR1'] },
+  lan: { label: 'LAN', platforms: ['LA1'] },
+  las: { label: 'LAS', platforms: ['LA2'] },
+  tr: { label: 'TR', platforms: ['TR1'] },
+  jp: { label: 'JP', platforms: ['JP1'] },
+  oce: { label: 'OCE', platforms: ['OC1'] },
+  vn: { label: 'VN', platforms: ['VN2'] },
+}
+
+/**
+ * A region's games on a table with a `platform` column (`AND platform IN ('EUW1') `, with its
+ * trailing space), or nothing for every region (`null`, or a name that is not a region).
+ */
+export function platformSql(region: string | null | undefined) {
+  const platforms = region ? REGIONS[region]?.platforms : null
+  return platforms ? `AND platform IN (${platforms.map((p) => `'${p}'`).join(',')}) ` : ''
+}
+
 /** Brackets one request of `/api/picks` may ask for (the longest chain a client reads). */
 export const MAX_PICK_BRACKETS = 5
 
@@ -126,21 +150,23 @@ export function seedTiers(bracket: Bracket) {
 /**
  * The ranked games of the patch (`{patch:String}`) in the bracket: every ranked game of the
  * patch for all ranks (`matches`), the games the crawler found at the bracket's tiers otherwise
- * (`match_seed`, as the builds and the champion pages count them).
+ * (`match_seed`, as the builds and the champion pages count them). A `region` keeps its
+ * platforms' games only (every region by default).
  *
  * With a `scope`, only that champion's games from the patch's start (`{patchStart:UInt64}`) on are
  * looked up. ClickHouse builds the set of an `IN` before reading, and the patch holds millions of
  * games against a champion's thousands: the champion's set is built and the patch's games are
  * read against it, instead of hashing every game of the patch for each champion asked.
  */
-export function gamesSql(bracket: Bracket, scope: Scope = null) {
+export function gamesSql(bracket: Bracket, scope: Scope = null, region: string | null = null) {
   const tiers = seedTiers(bracket)
   const mine = scope
     ? `AND match_id IN (SELECT match_id FROM participants WHERE queue_id = ${RANKED_SOLO} ${scopeSql(scope)} AND game_start_ms >= {patchStart:UInt64})`
     : ''
+  const where = platformSql(region)
   return tiers
-    ? `SELECT match_id FROM match_seed WHERE patch = {patch:String} AND seed_tier IN (${tiers}) ${mine}`
-    : `SELECT match_id FROM matches WHERE queue_id = ${RANKED_SOLO} AND patch = {patch:String} ${mine}`
+    ? `SELECT match_id FROM match_seed WHERE patch = {patch:String} AND seed_tier IN (${tiers}) ${where}${mine}`
+    : `SELECT match_id FROM matches WHERE queue_id = ${RANKED_SOLO} AND patch = {patch:String} ${where}${mine}`
 }
 
 /**
