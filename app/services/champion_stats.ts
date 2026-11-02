@@ -409,6 +409,19 @@ export function detailSql(filter: Filter) {
   `
 }
 
+/**
+ * The most games the timeline and event blocks read (`early`, `firstBlood`). Their figures are
+ * averages and rates that a sample this size already pins down; reading every frame of a popular
+ * champion's games (150k+, ~300 timeline rows each) takes half a minute. The sample is picked by
+ * a hash of the game id, so it is the same on every ask and unrelated to how the games went.
+ */
+export const EVENT_SAMPLE = 20_000
+
+/** `mineSql`, at most `EVENT_SAMPLE` games of it, picked by game id hash. */
+const sampledMineSql = (filter: Filter) => `
+    SELECT * FROM (${mineSql(filter)}) ORDER BY cityHash64(match_id) LIMIT ${EVENT_SAMPLE}
+  `
+
 /** The minutes of the early game: the timeline frames read at 10:00 and 15:00. */
 export const EARLY_MINUTES = [10, 15] as const
 
@@ -417,11 +430,12 @@ export const EARLY_MINUTES = [10, 15] as const
  * minute, games, the champion's CS (lane and jungle), gold and experience summed, the same three
  * as gaps to the opponent (signed), then the games it led in gold with their wins and the games
  * it trailed with theirs. The opponent is the other team's player in the role (`match_lineups`);
- * a game missing either frame is left out.
+ * a game missing either frame is left out. At most `EVENT_SAMPLE` games, and only the timeline's
+ * partitions from the patch's start (`{patchStart:UInt64}`).
  */
 export function earlySql(filter: Filter) {
   return `
-    WITH me AS (${mineSql(filter)})
+    WITH me AS (${sampledMineSql(filter)})
     SELECT minute, count(), sum(a.2), sum(a.3), sum(a.4),
            sum(toInt64(a.2) - toInt64(b.2)), sum(toInt64(a.3) - toInt64(b.3)),
            sum(toInt64(a.4) - toInt64(b.4)),
@@ -437,7 +451,7 @@ export function earlySql(filter: Filter) {
           SELECT match_id, participant_id, intDiv(frame_ms, 60000) AS minute, cs, jungle_cs,
                  gold_total, xp
           FROM match_timeline
-          WHERE match_id IN (SELECT match_id FROM me)
+          WHERE game_start_ms >= {patchStart:UInt64} AND match_id IN (SELECT match_id FROM me)
             AND intDiv(frame_ms, 60000) IN (${EARLY_MINUTES.join(', ')})
           LIMIT 1 BY match_id, participant_id, minute
         )
@@ -463,11 +477,11 @@ export function earlySql(filter: Filter) {
 /**
  * First blood in the champion's games with kill events (`match_events`): games, games it took
  * first blood, games it assisted it, games it died first, and the wins of the games it was part
- * of (killer or assist).
+ * of (killer or assist). At most `EVENT_SAMPLE` games, and only the events from the patch's start.
  */
 export function firstBloodSql(filter: Filter) {
   return `
-    WITH me AS (${mineSql(filter)})
+    WITH me AS (${sampledMineSql(filter)})
     SELECT count(), countIf(fb.killer = me.participant_id),
            countIf(has(fb.assists, me.participant_id)), countIf(fb.victim = me.participant_id),
            sumIf(me.win, fb.killer = me.participant_id OR has(fb.assists, me.participant_id))
@@ -477,7 +491,8 @@ export function firstBloodSql(filter: Filter) {
              argMin(assists, t_ms) AS assists
       FROM (
         SELECT DISTINCT match_id, t_ms, killer, victim, assists FROM match_events
-        WHERE match_id IN (SELECT match_id FROM me) AND kind = 'kill'
+        WHERE game_start_ms >= {patchStart:UInt64} AND kind = 'kill'
+          AND match_id IN (SELECT match_id FROM me)
       )
       GROUP BY match_id
     ) AS fb USING (match_id)

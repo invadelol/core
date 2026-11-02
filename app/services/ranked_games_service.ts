@@ -1,3 +1,4 @@
+import type { ClickHouseSettings } from '@clickhouse/client'
 import clickhouse from 'adonisjs-clickhouse/services/main'
 import { AnswerCache, PATCH_START_SQL, readyPatches } from '#services/ranked_stats'
 import { StatsCache } from '#services/stats_cache'
@@ -68,12 +69,17 @@ export function statsCache(namespace: string, maxLocal?: number) {
   })
 }
 
-/** A query's rows as arrays (`JSONCompactEachRow`). */
-export async function rows(query: string, params?: Record<string, unknown>): Promise<unknown[][]> {
+/** A query's rows as arrays (`JSONCompactEachRow`), with optional ClickHouse settings. */
+export async function rows(
+  query: string,
+  params?: Record<string, unknown>,
+  settings?: ClickHouseSettings
+): Promise<unknown[][]> {
   const result = await clickhouse.query({
     query,
     query_params: params,
     format: 'JSONCompactEachRow',
+    ...(settings ? { clickhouse_settings: settings } : {}),
   })
   return ((await result.json<unknown[]>()) ?? []) as unknown[][]
 }

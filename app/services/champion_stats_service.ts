@@ -52,6 +52,15 @@ import { championSlug } from '../../inertia/lib/champions.js'
 /** The bracket a page shows unless the address names another. */
 export const DEFAULT_BRACKET: Bracket = 'emerald_plus'
 const TREND_DAYS = 30
+/**
+ * The timeline and event blocks read a sample, but stay bounded on a busy server: ClickHouse
+ * stops them past this, and stops them too if the request that asked has gone.
+ */
+const EVENT_LIMITS = {
+  max_execution_time: 20,
+  max_threads: 2,
+  cancel_http_readonly_queries_on_client_close: 1,
+} as const
 const DAY_MS = 86_400_000
 
 const num = (v: unknown) => Number(v)
@@ -263,7 +272,7 @@ export class ChampionStatsService {
   /** CS, gold and experience at 10 and 15 minutes, and the gaps to the lane opponent. */
   early(filter: Filter, champion: number, position: Position) {
     return this.one('early', filter, champion, position, async (params) => {
-      const found = await rows(earlySql(filter), params)
+      const found = await rows(earlySql(filter), params, EVENT_LIMITS)
       return early(found.map((r) => r.map(num)))
     })
   }
@@ -271,7 +280,7 @@ export class ChampionStatsService {
   /** How often the champion takes first blood, helps it or gives it. */
   firstBlood(filter: Filter, champion: number, position: Position) {
     return this.one('first-blood', filter, champion, position, async (params) => {
-      const [row] = await rows(firstBloodSql(filter), params)
+      const [row] = await rows(firstBloodSql(filter), params, EVENT_LIMITS)
       return firstBlood((row ?? []).map(num))
     })
   }
