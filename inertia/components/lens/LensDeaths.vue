@@ -16,7 +16,7 @@ const columns = computed(() =>
     id: g.matchId,
     you: (g.deaths / max.value) * 100,
     them: g.opponentDeaths === null ? null : (g.opponentDeaths / max.value) * 100,
-    title: `${props.labels[i] ?? ''} · ${g.deaths} deaths${
+    title: `${props.labels[i] ?? ''}, ${g.deaths} deaths${
       g.opponentDeaths === null ? '' : `, opponent ${g.opponentDeaths}`
     }`,
     delay: `${120 + i * 22}ms`,

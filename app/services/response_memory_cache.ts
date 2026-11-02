@@ -12,7 +12,7 @@ import { createHash } from 'node:crypto'
  *
  * Correctness comes from the same generation counter Redis uses, plus a
  * broadcast: invalidating a resource publishes its name, and every process
- * drops its copies on receipt. The short TTL is the backstop — Redis pub/sub
+ * drops its copies on receipt. The short TTL is the backstop: Redis pub/sub
  * is fire-and-forget, so if a message is ever lost an entry still expires on
  * its own within seconds rather than lingering for the full Redis TTL.
  */

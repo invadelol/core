@@ -65,13 +65,13 @@ const figures = computed(() => [
   },
   {
     label: 'Best rank',
-    value: ranked.value[0]?.best ? rankLabel(ranked.value[0].best.tier).split(' ·')[0] : '–',
+    value: ranked.value[0]?.best ? rankLabel(ranked.value[0].best.tier).split(',')[0] : '-',
     sub: ranked.value[0]?.name,
   },
   { label: 'Games', value: record.value.games, sub: 'last 30 days' },
   {
     label: 'Win rate',
-    value: record.value.games ? pct(record.value.wins / record.value.games) : '–',
+    value: record.value.games ? pct(record.value.wins / record.value.games) : '-',
   },
 ])
 const year = (d: string | null) => (d ? new Date(d).getFullYear() : '')
@@ -86,7 +86,8 @@ const year = (d: string | null) => (d ? new Date(d).getFullYear() : '')
       <template #kicker>
         <span class="cs-pro">Team</span
         ><template v-if="team.shortName">{{ team.shortName }}</template
-        ><template v-if="team.region"> · {{ team.region }}</template> ·
+        ><template v-if="team.region">, {{ team.region }}</template
+        >,
         {{ team.active ? 'Active' : 'Inactive' }}
       </template>
     </Banner>
@@ -114,15 +115,15 @@ const year = (d: string | null) => (d ? new Date(d).getFullYear() : '')
                 ><b>{{ m.name }}</b
                 ><small
                   >{{ m.role ? m.role.charAt(0) + m.role.slice(1).toLowerCase() : 'Player'
-                  }}<template v-if="m.title === 'sub'"> · sub</template
-                  ><template v-if="m.country"> · {{ m.country }}</template> · since
-                  {{ year(m.joinedAt) }}</small
+                  }}<template v-if="m.title === 'sub'">, sub</template
+                  ><template v-if="m.country">, {{ m.country }}</template
+                  >, since {{ year(m.joinedAt) }}</small
                 ></span
               >
               <RankCrest v-if="m.best" :tier="m.best.tier" :size="22" />
               <span class="text-[12.5px] font-semibold">{{
                 m.best
-                  ? rankLabel(m.best.tier, m.best.division, m.best.lp).replace(' · ', ' ')
+                  ? rankLabel(m.best.tier, m.best.division, m.best.lp).replace(', ', ' ')
                   : 'Unranked'
               }}</span>
             </component>
@@ -169,7 +170,7 @@ const year = (d: string | null) => (d ? new Date(d).getFullYear() : '')
               <img :src="champIconUrl(c.champion)" alt="" />
               <span class="nm"
                 >{{ championName(c.champion)
-                }}<small>{{ c.games }} games · {{ c.kda }} KDA</small></span
+                }}<small>{{ c.games }} games, {{ c.kda }} KDA</small></span
               >
               <span class="v">{{ pct(c.wins / c.games) }}</span>
             </Link>
@@ -191,7 +192,7 @@ const year = (d: string | null) => (d ? new Date(d).getFullYear() : '')
               /></span>
               <span class="nm"
                 ><b>{{ m.name }}</b
-                ><small>{{ year(m.joinedAt) }}–{{ year(m.leftAt) }}</small></span
+                ><small>{{ year(m.joinedAt) }}-{{ year(m.leftAt) }}</small></span
               >
             </component>
           </section>

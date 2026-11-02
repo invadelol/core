@@ -44,10 +44,9 @@ useScrollFx(stage, (box, vh) => {
       <DownloadButtons class="hero-dl on-pc" />
       <PhoneActions class="hero-dl on-phone" />
       <p class="hero-meta label on-pc">
-        Free<template v-if="version">
-          · <Link href="/app/changelog" class="hero-version">Version {{ version }}</Link></template
-        >
-        · Windows and macOS
+        Free<template v-if="version"
+          >, <Link href="/app/changelog" class="hero-version">Version {{ version }}</Link></template
+        >, Windows and macOS
       </p>
       <p class="hero-meta label on-phone">Invade runs on Windows and macOS.</p>
     </div>

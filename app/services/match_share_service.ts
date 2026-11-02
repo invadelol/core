@@ -89,7 +89,7 @@ export function shareOf(
     version,
     social: {
       type: 'website',
-      title: `${riotId} · ${result}${champion ? ` on ${champion}` : ''}`,
+      title: `${riotId}: ${result}${champion ? ` on ${champion}` : ''}`,
       description: `${kda}, Invade score ${score}${tag ? `, ${tag}` : ''}. ${facts}.`,
       url,
       canonical: url,

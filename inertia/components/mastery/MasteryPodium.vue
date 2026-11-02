@@ -43,7 +43,7 @@ const places = computed(() =>
         </p>
         <p class="ms-meta num">
           <span>Level {{ entry.championLevel }}</span>
-          <span class="ms-sep" aria-hidden="true">·</span>
+          <span class="ms-sep" aria-hidden="true">,</span>
           <span>{{ timeAgo(entry.lastPlayTime) }}</span>
         </p>
       </div>
@@ -157,7 +157,7 @@ const places = computed(() =>
 }
 
 .ms-sep {
-  margin-inline: 5px;
+  margin-inline: 0 5px;
   color: var(--text-4);
 }
 

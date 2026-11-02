@@ -250,7 +250,7 @@ class SummonerService {
    * Current rank per queue and the history behind it, with provenance
    * (docs/desktop-sync.md §6.5): `source` says who reported a row (`riot`,
    * or `desktop` for the Invade app), `observedAt` when it was last known
-   * true — for a current rank, the later of its row and its confirmation.
+   * true; for a current rank, the later of its row and its confirmation.
    * `losses` is null on rows from another player's client snapshot.
    * Solo/Duo and Flex only: rows of other queues stored before they were
    * dropped at the door stay hidden.

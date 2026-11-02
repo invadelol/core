@@ -14,7 +14,7 @@ const lensValidator = vine.compile(
 export default class LensController {
   /**
    * A player's performance in one role, grouped by domain (laning, farming, teamfighting,
-   * vision, objectives, survival, consistency), each rated 0–100 on the Invade score's scale.
+   * vision, objectives, survival, consistency), each rated 0-100 on the Invade score's scale.
    * Without `role`, the role played most lately in the queue.
    * @paramPath puuid - Summoner PUUID
    * @paramQuery role - TOP, JUNGLE, MIDDLE, BOTTOM or SUPPORT

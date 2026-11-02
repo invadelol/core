@@ -291,7 +291,7 @@ router.get('/:summoner/:section?', async ({ inertia, params, response }) => {
     initialProfile,
     social: initialProfile
       ? {
-          title: `${initialProfile.gameName}#${initialProfile.tagLine} · invade.lol`,
+          title: `${initialProfile.gameName}#${initialProfile.tagLine} | invade.lol`,
           description: `${initialProfile.gameName}'s League of Legends profile, recent performance and champion pool.`,
           url: `https://invade.lol/${encodeURIComponent(`${initialProfile.gameName}-${initialProfile.tagLine}`)}`,
           image: `https://invade.lol/og/${encodeURIComponent(`${initialProfile.gameName}-${initialProfile.tagLine}`)}`,

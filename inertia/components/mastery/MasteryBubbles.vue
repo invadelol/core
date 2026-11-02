@@ -208,11 +208,10 @@ onBeforeUnmount(() => {
       <span class="min-w-0">
         <span class="ms-tip-name">{{ championName(tip.entry.championId) }}</span>
         <span class="ms-tip-line num">
-          Level {{ tip.entry.championLevel }} <span class="ms-dot">·</span>
-          {{ compact(tip.entry.championPoints) }} points
+          Level {{ tip.entry.championLevel }}, {{ compact(tip.entry.championPoints) }} points
         </span>
         <span class="ms-tip-line num">
-          {{ tip.share }}% of all points <span class="ms-dot">·</span>
+          {{ tip.share }}% of all points,
           {{ timeAgo(tip.entry.lastPlayTime) }}
         </span>
       </span>
@@ -364,10 +363,5 @@ onBeforeUnmount(() => {
 
 .ms-tip-line + .ms-tip-line {
   color: var(--text-3);
-}
-
-.ms-dot {
-  margin-inline: 3px;
-  color: var(--text-4);
 }
 </style>

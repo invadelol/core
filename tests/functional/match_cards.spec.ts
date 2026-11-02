@@ -134,7 +134,7 @@ test.group('Match share cards', (group) => {
     const page = await client.get(PAGE).header('user-agent', 'Discordbot/2.0')
     page.assertStatus(200)
     const html = page.text()
-    page.assertTextIncludes('property="og:title" content="Moonfern#EUW · Victory on LeBlanc"')
+    page.assertTextIncludes('property="og:title" content="Moonfern#EUW: Victory on LeBlanc"')
     assert.match(
       html,
       /property="og:description" content="18\/1\/11, Invade score 9\d, MVP\. Mid, Ranked Solo\/Duo, 32:18\."/
@@ -170,7 +170,7 @@ test.group('Match share cards', (group) => {
   test('a loss reads as a defeat', async ({ client }) => {
     stored = shareMatch(LOSS, { t1Win: 0, t2Win: 1 })
     const page = await client.get(PAGE)
-    page.assertTextIncludes('property="og:title" content="Moonfern#EUW · Defeat on LeBlanc"')
+    page.assertTextIncludes('property="og:title" content="Moonfern#EUW: Defeat on LeBlanc"')
   })
 
   test('an unknown game or player keeps the generic page', async ({ client, assert }) => {

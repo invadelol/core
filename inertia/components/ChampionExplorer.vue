@@ -70,8 +70,7 @@ function order(key: keyof ChampionStats) {
     <div class="section flex-wrap !items-center">
       <h2>Champion pool</h2>
       <span class="meta num">
-        {{ champions.length }} champions <span class="text-ink-4">·</span> {{ totals.games }} games
-        <span class="text-ink-4">·</span> {{ hours(totals.time) }} played
+        {{ champions.length }} champions, {{ totals.games }} games, {{ hours(totals.time) }} played
       </span>
       <label class="relative ml-auto w-[200px] max-sm:ml-0 max-sm:w-full">
         <Search
@@ -206,8 +205,8 @@ function order(key: keyof ChampionStats) {
               <td class="text-right text-ink">{{ c.csMin.toFixed(1) }}</td>
               <td class="text-right text-ink">{{ Math.round(c.goldMin) }}</td>
               <td class="text-right text-ink">{{ compact(c.damageMin) }}</td>
-              <td class="text-right text-ink-2">{{ c.maxKills || '—' }}</td>
-              <td class="text-right text-ink-3">{{ c.duration ? hours(c.duration) : '—' }}</td>
+              <td class="text-right text-ink-2">{{ c.maxKills || '-' }}</td>
+              <td class="text-right text-ink-3">{{ c.duration ? hours(c.duration) : '-' }}</td>
 
               <td class="!pr-3 text-right">
                 <button

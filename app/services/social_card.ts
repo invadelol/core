@@ -43,7 +43,7 @@ export async function renderSocialCard(
     <g font-family="DejaVu Sans, sans-serif" fill="white">
       <text x="64" y="78" font-size="24" font-weight="bold">invade.lol</text>
       <text x="64" y="280" font-size="${size}" font-weight="bold">${name}</text>
-      <text x="64" y="328" font-size="28" fill="#aab2c2">#${escapeSvg(profile.tagLine)} · ${escapeSvg(profile.platform)}</text>
+      <text x="64" y="328" font-size="28" fill="#aab2c2">#${escapeSvg(profile.tagLine)}, ${escapeSvg(profile.platform)}</text>
       ${cells.map(([label, value], index) => `<text x="${64 + index * 340}" y="470" font-size="50" font-weight="bold">${value}</text><text x="${64 + index * 340}" y="505" font-size="17" fill="#a99aff">${label}</text>`).join('')}
     </g>
   </svg>`)

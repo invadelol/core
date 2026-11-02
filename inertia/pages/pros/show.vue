@@ -71,18 +71,18 @@ const roleLabel = computed(() =>
 const figures = computed(() => [
   {
     label: 'Best rank',
-    value: best.value ? rankLabel(best.value.tier).split(' ·')[0] : 'Unranked',
+    value: best.value ? rankLabel(best.value.tier).split(',')[0] : 'Unranked',
     sub: best.value?.lp !== null && best.value ? `${thousands(best.value.lp ?? 0)} LP` : undefined,
   },
   {
     label: 'Accounts',
     value: props.pro.accounts.length,
-    sub: [...new Set(props.pro.accounts.map((a) => regionLabel(a.platform)))].join(' · '),
+    sub: [...new Set(props.pro.accounts.map((a) => regionLabel(a.platform)))].join(', '),
   },
   { label: 'Games', value: record.value.games, sub: 'last 30 days' },
   {
     label: 'Win rate',
-    value: record.value.games ? pct(record.value.wins / record.value.games) : '–',
+    value: record.value.games ? pct(record.value.wins / record.value.games) : '-',
     sub: record.value.games
       ? `${((record.value.kills + record.value.assists) / Math.max(1, record.value.deaths)).toFixed(2)} KDA`
       : undefined,
@@ -119,7 +119,7 @@ const year = (d: string | null) => (d ? new Date(d).getFullYear() : '')
       <template #kicker>
         <span class="cs-pro">{{ pro.staff ? roleLabel : 'Pro' }}</span>
         <RoleIcon v-if="lane" :lane="lane as any" :size="14" />{{ pro.staff ? '' : roleLabel
-        }}<template v-if="pro.country"> · {{ pro.country }}</template>
+        }}<template v-if="pro.country">, {{ pro.country }}</template>
       </template>
       <template #under>
         <div class="mt-3 flex flex-wrap items-center gap-2 text-[13px]">
@@ -198,13 +198,13 @@ const year = (d: string | null) => (d ? new Date(d).getFullYear() : '')
                   >{{ a.gameName }}<span>#{{ a.tagLine }}</span></b
                 ><small
                   >{{ regionLabel(a.platform)
-                  }}<template v-if="a.peakTier">
-                    · peak {{ rankLabel(a.peakTier).split(' ·')[0] }}</template
+                  }}<template v-if="a.peakTier"
+                    >, peak {{ rankLabel(a.peakTier).split(',')[0] }}</template
                   ></small
                 ></span
               >
               <span class="v"
-                >{{ rankLabel(a.tier, a.division, a.lp).replace(' · ', ' ')
+                >{{ rankLabel(a.tier, a.division, a.lp).replace(', ', ' ')
                 }}<small v-if="a.wins !== null && (a.wins || a.losses)"
                   >{{ a.wins }}W {{ a.losses }}L</small
                 ></span
@@ -249,7 +249,7 @@ const year = (d: string | null) => (d ? new Date(d).getFullYear() : '')
                                 : t.role
                         ).label
                       : t.title
-                  }}<template v-if="t.title === 'sub'"> · sub</template> · {{ year(t.joinedAt) }}–{{
+                  }}<template v-if="t.title === 'sub'">, sub</template>, {{ year(t.joinedAt) }}-{{
                     t.current ? 'now' : year(t.leftAt)
                   }}</small
                 ></span

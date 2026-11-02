@@ -92,7 +92,7 @@ export const MAX_CACHED = 2048
 /** One champion in one role (`position` as Riot names it: `MIDDLE`), or every one of them. */
 export type Scope = { champion: number; position: string } | null
 
-/** Agresti–Coull 95 % half-width of a win rate, as the app's pipeline computes it. */
+/** Agresti-Coull 95 % half-width of a win rate, as the app's pipeline computes it. */
 export function halfWidth(games: number, wins: number) {
   const p = (wins + 2) / (games + 4)
   return 1.96 * Math.sqrt((p * (1 - p)) / (games + 4))

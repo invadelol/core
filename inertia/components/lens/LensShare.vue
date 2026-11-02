@@ -9,7 +9,7 @@ import { champIcon, championName } from '../../lib/assets.js'
  */
 const props = defineProps<{
   champion: number | null
-  /** Percent, 0–100. */
+  /** Percent, 0-100. */
   kills: number | null
   damage: number | null
   /** Percent: the Emerald kill participation of the role. */
@@ -33,7 +33,7 @@ const tick = computed(() => {
     y2: (OUTER + 10) * Math.sin(a),
   }
 })
-const round = (v: number | null) => (v === null ? '–' : `${Math.round(v)}%`)
+const round = (v: number | null) => (v === null ? '-' : `${Math.round(v)}%`)
 </script>
 
 <template>
@@ -64,8 +64,8 @@ const round = (v: number | null) => (v === null ? '–' : `${Math.round(v)}%`)
         <dt><i class="outer" />Kills</dt>
         <dd class="num">{{ round(kills) }}</dd>
         <p class="num">
-          of your team's<template v-if="opponents.kills !== null">
-            · opponents {{ round(opponents.kills) }}</template
+          of your team's<template v-if="opponents.kills !== null"
+            >, opponents {{ round(opponents.kills) }}</template
           >
         </p>
       </div>
@@ -73,8 +73,8 @@ const round = (v: number | null) => (v === null ? '–' : `${Math.round(v)}%`)
         <dt><i class="inner" />Damage</dt>
         <dd class="num">{{ round(damage) }}</dd>
         <p class="num">
-          of your team's<template v-if="opponents.damage !== null">
-            · opponents {{ round(opponents.damage) }}</template
+          of your team's<template v-if="opponents.damage !== null"
+            >, opponents {{ round(opponents.damage) }}</template
           >
         </p>
       </div>

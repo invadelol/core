@@ -60,7 +60,7 @@ const solo = computed(() => {
       total ? `${Math.round((rank.wins / total) * 100)}%` : '',
     ]
       .filter(Boolean)
-      .join(' · '),
+      .join(', '),
   }
 })
 
@@ -139,10 +139,10 @@ const score = (value: number | undefined) => (value === undefined ? null : Math.
           <span class="name">{{ name }}<span class="tag">#{{ tag }}</span></span>
           <span class="meta num">
             <template v-if="entry.summoner">
-              {{ regionLabel(entry.summoner.platform) }}
-              <template v-if="entry.summoner.summonerLevel">
-                · Lv {{ entry.summoner.summonerLevel }}
-              </template>
+              {{ regionLabel(entry.summoner.platform)
+              }}<template v-if="entry.summoner.summonerLevel"
+                >, Lv {{ entry.summoner.summonerLevel }}</template
+              >
             </template>
             <template v-else-if="failure">{{ failure }}</template>
             <template v-else>&nbsp;</template>
@@ -259,7 +259,7 @@ const score = (value: number | undefined) => (value === undefined ? null : Math.
               <span class="stack-text">
                 <span class="champ-name">{{ championName(champ.championId) }}</span>
                 <span class="stack-meta num">
-                  {{ champ.games }} {{ champ.games === 1 ? 'game' : 'games' }} · {{ champ.kda }} KDA
+                  {{ champ.games }} {{ champ.games === 1 ? 'game' : 'games' }}, {{ champ.kda }} KDA
                 </span>
               </span>
               <span class="num champ-wr" :class="{ quiet: champ.games < 3 }">{{ champ.winrate }}%</span>
@@ -292,7 +292,7 @@ const score = (value: number | undefined) => (value === undefined ? null : Math.
       <footer v-if="mates.length || entry.note" class="block foot">
         <p v-for="mate in mates" :key="`${mate.gameName}#${mate.tagLine}`" class="mate">
           Played with <span class="text-ink">{{ mate.gameName }}</span>
-          <span class="num text-ink-3"> · {{ mate.games }} {{ mate.games === 1 ? 'game' : 'games' }}</span>
+          <span class="num text-ink-3">, {{ mate.games }} {{ mate.games === 1 ? 'game' : 'games' }}</span>
         </p>
         <p v-if="entry.note" class="meta">{{ entry.note }}</p>
       </footer>

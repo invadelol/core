@@ -25,7 +25,7 @@ export default class ContactController {
       description: DESCRIPTION,
       social: {
         type: 'website',
-        title: 'Contact · invade.lol',
+        title: 'Contact | invade.lol',
         description: DESCRIPTION,
         url: 'https://invade.lol/contact',
         image: 'https://invade.lol/landing/app-og-v2.png',

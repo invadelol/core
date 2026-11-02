@@ -123,7 +123,7 @@ test.group('Lens', () => {
     assert.equal(lens.games[0].score, scoreLobby(early)[ME].score)
   })
 
-  test('every rating stays within 0–100', ({ assert }) => {
+  test('every rating stays within 0-100', ({ assert }) => {
     const stomp = games(8, {
       0: { kills: 20, deaths: 0, cs: 320, goldEarned: 21000, visionScore: 60 },
     })

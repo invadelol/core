@@ -101,19 +101,17 @@ onBeforeUnmount(() => clearTimeout(copiedTimer))
         <span class="pro-word">{{ pro.staff ? 'Staff' : 'Pro' }}</span>
         <span class="truncate"
           >{{ pro.name
-          }}<template v-if="pro.team"> · {{ pro.team.shortName || pro.team.name }}</template></span
+          }}<template v-if="pro.team">, {{ pro.team.shortName || pro.team.name }}</template></span
         >
       </Link>
 
       <p class="num mt-1 text-[12.5px] leading-5 text-ink-3">
         <span>{{ regionLabel(summoner.platform) }}</span>
-        <span v-if="summoner.summonerLevel">
-          <span class="mx-1 text-ink-4">·</span>Level {{ summoner.summonerLevel }}
-        </span>
+        <span v-if="summoner.summonerLevel">, Level {{ summoner.summonerLevel }}</span>
         <br v-if="lastGameMs || viewCount" />
         <span v-if="lastGameMs">Last game {{ ago(lastGameMs) }}</span>
         <span v-if="viewCount">
-          <span v-if="lastGameMs" class="mx-1 text-ink-4">·</span>{{ viewCount }}
+          <template v-if="lastGameMs">, </template>{{ viewCount }}
           {{ viewCount === 1 ? 'view' : 'views' }}
         </span>
       </p>

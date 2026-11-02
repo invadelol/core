@@ -265,7 +265,7 @@ const groups = computed(() => {
           p.role && !p.staff ? p.role.charAt(0) + p.role.slice(1).toLowerCase() : null,
         ]
           .filter(Boolean)
-          .join(' · '),
+          .join(', '),
         team: p.team,
         badge: p.staff ? 'Staff' : 'Pro',
       })
@@ -278,7 +278,7 @@ const groups = computed(() => {
         kind: 'team',
         href: `/team/${t.slug}`,
         title: t.name,
-        detail: [t.shortName, t.region].filter(Boolean).join(' · '),
+        detail: [t.shortName, t.region].filter(Boolean).join(', '),
         team: t,
       })
     }
@@ -689,8 +689,8 @@ function submit() {
             {{ entry.detail }}
           </span>
           <span v-else-if="!entry.kind && !entry.direct" class="meta num">
-            <template v-if="entry.proName">{{ entry.proName }} · </template>{{ entry.region
-            }}<template v-if="entry.level"> · Lv {{ entry.level }}</template>
+            <template v-if="entry.proName">{{ entry.proName }}, </template>{{ entry.region
+            }}<template v-if="entry.level">, Lv {{ entry.level }}</template>
           </span>
 
           <button

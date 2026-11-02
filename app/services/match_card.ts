@@ -307,7 +307,7 @@ export function cardOverlay(card: MatchCard) {
   ).svg
   const meta: Run[] = [
     { text: card.queue, fill: T.text3 },
-    { text: '  ·  ', fill: T.text4 },
+    { text: '    ', fill: T.text4 },
     { text: clock(card.duration), fill: T.text3 },
   ]
   svg += setType('label', meta, 14 * X, pad, cy + 20 * X).svg

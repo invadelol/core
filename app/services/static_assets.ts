@@ -16,7 +16,7 @@ const deflate = promisify(gzip)
  *
  * 1. The bytes can be compressed once, at the highest Brotli setting, and
  *    reused for every subsequent request. Compressing per request would be far
- *    too slow at quality 11; compressing never — which is what we did before —
+ *    too slow at quality 11; compressing never (which is what we did before)
  *    means shipping roughly three times the bytes on every cold load.
  * 2. The response can be marked `immutable`, so a returning browser reuses it
  *    without a revalidation round trip. `serve-static` defaults to

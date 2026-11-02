@@ -16,7 +16,7 @@ import Shot from '../app-page/Shot.vue'
         </p>
         <div class="actions">
           <Link href="/app" class="iv-btn primary lg">Get the app</Link>
-          <span class="label">Free · Windows and macOS</span>
+          <span class="label">Free, Windows and macOS</span>
         </div>
       </div>
 

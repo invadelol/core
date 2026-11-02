@@ -3,7 +3,7 @@
  *
  * Every analytics query names its columns explicitly, so we always know the
  * exact shape of a result row before it arrives. That lets us ask ClickHouse
- * for `JSONCompactEachRow` — an array of values per row rather than an object
+ * for `JSONCompactEachRow`: an array of values per row rather than an object
  * with every key repeated. On a match list of 150 rows x ~45 columns the
  * repeated key names are several times larger than the data itself, and every
  * one of those bytes costs transfer, `JSON.parse` work and garbage collection.

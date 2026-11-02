@@ -18,7 +18,7 @@ export type RiotQueueType = keyof typeof QUEUE_IDS | 'all'
  *
  * Riot's queues.json does not list League Classic yet (checked 2026-10-14). The ids below come
  * from the client's own queue list (patch 16.20), where League Classic is the "Jade" group:
- * PvP 4300–4311, co-op vs AI 4320–4321, customs 3260–3262. Brawl is 2300–2305. The desktop app
+ * PvP 4300-4311, co-op vs AI 4320-4321, customs 3260-3262. Brawl is 2300-2305. The desktop app
  * keeps the same ranges (`lcu::RESTRICTED_QUEUES`). Every read and write below goes through this list.
  */
 const range = (lo: number, hi: number) => Array.from({ length: hi - lo + 1 }, (_, i) => lo + i)

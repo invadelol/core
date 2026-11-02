@@ -10,6 +10,6 @@ defineProps<{ tier: number | null | undefined; large?: boolean }>()
     class="cs-tier"
     :class="[tier === null || tier === undefined ? 't5' : `t${tier}`, { lg: large }]"
   >
-    {{ tier === null || tier === undefined ? '–' : TIERS[tier] }}
+    {{ tier === null || tier === undefined ? '-' : TIERS[tier] }}
   </span>
 </template>

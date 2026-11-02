@@ -17,7 +17,7 @@ export default class ProsController {
     return inertia.render('pros/show', {
       pro,
       social: {
-        title: `${pro.name} · invade.lol`,
+        title: `${pro.name} | invade.lol`,
         description: `${pro.name}${pro.team ? ` (${pro.team.name})` : ''}: every ranked account, champions and recent games.`,
         url: `https://invade.lol/pro/${pro.slug}`,
       },
@@ -31,7 +31,7 @@ export default class ProsController {
     return inertia.render('pros/team', {
       team,
       social: {
-        title: `${team.name} · invade.lol`,
+        title: `${team.name} | invade.lol`,
         description: `${team.name}: roster, every player's ranked accounts and recent games.`,
         url: `https://invade.lol/team/${team.slug}`,
       },

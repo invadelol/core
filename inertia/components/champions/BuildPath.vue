@@ -52,7 +52,7 @@ const boots = computed(() => props.build.boots[0] ?? null)
         <span class="n">{{ item(id) }}</span>
       </div>
       <span class="foot"
-        ><b>{{ pct(core.win) }}</b> win · {{ pct(core.share, 0) }} of games</span
+        ><b>{{ pct(core.win) }}</b> win, {{ pct(core.share, 0) }} of games</span
       >
     </div>
     <div v-for="(s, i) in later" :key="s.item" class="cs-step">

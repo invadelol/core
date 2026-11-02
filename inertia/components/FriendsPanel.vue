@@ -117,9 +117,8 @@ function seats(partner: Partner) {
     <div class="section flex-wrap">
       <h2>Friends</h2>
       <span v-if="report?.games" class="meta num">
-        From the last {{ report.games }} games
-        <span class="max-sm:hidden"
-          >· {{ shortDate(report.firstMs) }} to {{ shortDate(report.lastMs) }}</span
+        From the last {{ report.games }} games<span class="max-sm:hidden"
+          >, {{ shortDate(report.firstMs) }} to {{ shortDate(report.lastMs) }}</span
         >
       </span>
     </div>
@@ -201,7 +200,7 @@ function seats(partner: Partner) {
                     {{ main.gameName }}
                   </span>
                   <span class="num block text-[12px] leading-4 text-ink-3">
-                    {{ main.games }} games · {{ rate(main.wins, main.games) }}% won
+                    {{ main.games }} games, {{ rate(main.wins, main.games) }}% won
                   </span>
                 </span>
               </button>
@@ -512,8 +511,8 @@ button.fr-row.on {
 }
 
 .fr-sub > span + span::before {
-  content: '·';
-  margin: 0 6px;
+  content: ',';
+  margin: 0 6px 0 0;
   color: var(--text-4);
 }
 

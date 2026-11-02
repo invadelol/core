@@ -193,9 +193,9 @@ const figures = computed<Figure[]>(() => {
   })
 })
 
-/** A figure as shown: a percentage, or the number with its digits; '–' when there is none. */
+/** A figure as shown: a percentage, or the number with its digits; '-' when there is none. */
 const fmt = (f: Figure, v: number) =>
-  !Number.isFinite(v) ? '–' : f.percent ? `${Math.round(v)}%` : v.toFixed(f.digits)
+  !Number.isFinite(v) ? '-' : f.percent ? `${Math.round(v)}%` : v.toFixed(f.digits)
 
 /** Signed gap to the base; percentages in points. A gap that rounds to nothing shows as 0. */
 function gap(f: Figure) {
@@ -216,7 +216,7 @@ const winrate = computed(() => Math.round((props.stats?.winrate ?? 0) * 100))
       <h2>Performance</h2>
       <span v-if="stats?.total" class="meta num">Last {{ stats.total }} games</span>
       <span v-if="previous?.total" class="meta num hidden sm:inline">
-        <span class="text-ink-4">·</span> against the {{ previous.total }} before
+        against the {{ previous.total }} before
       </span>
     </div>
 
@@ -237,11 +237,11 @@ const winrate = computed(() => Math.round((props.stats?.winrate ?? 0) * 100))
           <PerfDial :score="score?.average ?? null" />
           <p>
             <small>Invade score</small>
-            <span>{{ record.wins }}W {{ record.losses }}L · {{ winrate }}%</span>
+            <span>{{ record.wins }}W {{ record.losses }}L, {{ winrate }}%</span>
             <small v-if="score">
-              Best {{ score.best }}
-              <template v-if="score.trend">
-                ·
+              Best {{ score.best
+              }}<template v-if="score.trend"
+                >,
                 <em :class="Math.abs(score.trend) >= 5 ? (score.trend > 0 ? 'up' : 'down') : ''"
                   >{{ score.trend > 0 ? '+' : '−' }}{{ Math.abs(score.trend) }}</em
                 >

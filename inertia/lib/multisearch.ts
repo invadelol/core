@@ -14,7 +14,7 @@ export const MAX_PLAYERS = 10
 /**
  * Every Riot ID in a paste, in order and once each: a list split by commas or lines, an op.gg
  * address's `summoners`, or the lobby chat ("Name #TAG joined the lobby", in any language). A
- * name is 3–16 characters without `#` or `,`; a tag is 2–5 letters or digits.
+ * name is 3-16 characters without `#` or `,`; a tag is 2-5 letters or digits.
  */
 export function parseRiotIds(text: string): RiotIdentity[] {
   const found: RiotIdentity[] = []

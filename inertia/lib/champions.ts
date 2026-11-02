@@ -104,7 +104,7 @@ export function filterQuery(
 }
 
 export const pct = (x: number | null | undefined, digits = 1) =>
-  x === null || x === undefined ? '—' : `${(x * 100).toFixed(digits)}%`
+  x === null || x === undefined ? '-' : `${(x * 100).toFixed(digits)}%`
 
 /* ── What the server sends (app/services/*_stats.ts, pro_service.ts) ── */
 
@@ -294,7 +294,7 @@ export function rankLabel(
   const name = tier.charAt(0) + tier.slice(1).toLowerCase()
   const apex = ['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(tier)
   const div = !apex && division ? ` ${['', 'I', 'II', 'III', 'IV'][division] ?? ''}` : ''
-  return `${name}${div}${lp !== null && lp !== undefined ? ` · ${thousands(lp)} LP` : ''}`
+  return `${name}${div}${lp !== null && lp !== undefined ? `, ${thousands(lp)} LP` : ''}`
 }
 
 const TIER_ORDER = [

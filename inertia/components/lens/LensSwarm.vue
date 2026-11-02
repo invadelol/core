@@ -4,7 +4,7 @@ import { champIcon, championName } from '../../lib/assets.js'
 import { PACE_RATING, type LensGame } from '../../lib/lens.js'
 
 /**
- * Every game of the window as its champion, placed by its Invade score on one 0–100 line and
+ * Every game of the window as its champion, placed by its Invade score on one 0-100 line and
  * stacked where games collide, so the swing is something you see: a tight cluster is a steady
  * player, a long spread a swinging one. Your average is the violet line, a band one swing wide
  * around it.
@@ -84,7 +84,7 @@ const at = (score: number) => `${score}%`
         class="lv-swarm-game"
         :src="champIcon(p.g.championId)"
         :alt="`${championName(p.g.championId)}, ${p.g.score}`"
-        :title="`${championName(p.g.championId)} · ${p.g.win ? 'Win' : 'Loss'} · ${p.g.score}`"
+        :title="`${championName(p.g.championId)}, ${p.g.win ? 'Win' : 'Loss'}, ${p.g.score}`"
         :style="{
           left: `${p.x}px`,
           top: `${placed.centre - p.level * placed.gap}px`,

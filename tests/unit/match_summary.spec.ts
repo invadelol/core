@@ -6,7 +6,7 @@ import matchRepository from '#services/analytics/match_repository'
  * Stands in for ClickHouse.
  *
  * Rows are returned positionally, in the order the query's own SELECT clause
- * names them — the same contract `JSONCompactEachRow` provides. A query that
+ * names them, the same contract `JSONCompactEachRow` provides. A query that
  * asked for a column it cannot read, or read a column it did not ask for,
  * fails here rather than in production.
  */

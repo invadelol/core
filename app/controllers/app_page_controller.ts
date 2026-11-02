@@ -19,7 +19,7 @@ export default class AppPageController {
       description: DESCRIPTION,
       social: {
         type: 'website',
-        title: 'Invade for desktop · invade.lol',
+        title: 'Invade for desktop | invade.lol',
         description: DESCRIPTION,
         url: 'https://invade.lol/app',
         image: 'https://invade.lol/landing/app-og-v2.png',

@@ -75,7 +75,7 @@ export type ClickhouseParticipantRow = {
   primary_style: number
   keystone: number
   secondary_style: number
-  /** Rows 1–4 of the primary tree (rune1 is the keystone), then the two secondary runes. */
+  /** Rows 1-4 of the primary tree (rune1 is the keystone), then the two secondary runes. */
   rune1: number
   rune2: number
   rune3: number

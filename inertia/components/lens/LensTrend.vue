@@ -10,7 +10,7 @@ const props = withDefaults(
   defineProps<{
     /** One value per game; null where the game said nothing. */
     values: (number | null)[]
-    /** What each game is, for the hover: "Darius · Win". */
+    /** What each game is, for the hover: "Darius, Win". */
     labels: string[]
     /** Average the line over this many games, so form reads through noise. */
     smooth?: number
@@ -129,7 +129,7 @@ const shown = computed(() => {
       >
         <span class="text-ink-3">{{ shown.label }}</span>
         <b>{{ Math.round(shown.value) }}</b>
-        <span v-if="smooth > 1" class="text-ink-3">· {{ Math.round(shown.line) }} avg</span>
+        <span v-if="smooth > 1" class="text-ink-3">({{ Math.round(shown.line) }} avg)</span>
       </span>
     </template>
   </div>

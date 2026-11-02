@@ -84,8 +84,9 @@ function toggle(id: string) {
       <h3 class="iv-mr-day mb-2">
         {{ day.label }}
         <span class="num">
-          {{ day.wins }}W {{ day.losses }}L
-          <template v-if="day.lp !== null">· {{ signedLp(day.lp) }} LP</template>
+          {{ day.wins }}W {{ day.losses }}L<template v-if="day.lp !== null"
+            >, {{ signedLp(day.lp) }} LP</template
+          >
         </span>
       </h3>
 

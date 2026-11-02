@@ -164,7 +164,7 @@ export const PLACEHOLDER_COLORS = [
 export const ASSET_IMMUTABLE_SECONDS = 60 * 60 * 24 * 365
 
 /**
- * Files we serve under a stable name — the self-hosted fonts — are cached for
+ * Files we serve under a stable name (the self-hosted fonts) are cached for
  * a month rather than declared immutable, so replacing one still reaches
  * everybody within a month instead of never.
  */

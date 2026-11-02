@@ -13,7 +13,7 @@ export default class HomeController {
       description: DESCRIPTION,
       social: {
         type: 'website',
-        title: 'invade.lol · League of Legends profiles and the Invade desktop app',
+        title: 'invade.lol | League of Legends profiles and the Invade desktop app',
         description: DESCRIPTION,
         url: 'https://invade.lol/',
         image: 'https://invade.lol/landing/app-og-v2.png',

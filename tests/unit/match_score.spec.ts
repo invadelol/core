@@ -55,7 +55,7 @@ test.group('Match score', () => {
     }
   })
 
-  test('scores and every category stay within 0–100', ({ assert }) => {
+  test('scores and every category stay within 0-100', ({ assert }) => {
     const scores = scoreLobby(
       lobby({ 2: { kills: 25, deaths: 0, totalDamageDealtToChampions: 90000 } })
     )

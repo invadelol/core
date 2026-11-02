@@ -111,7 +111,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Head :title="`${parsed.gameName} · match`" />
+  <Head :title="`${parsed.gameName} | match`" />
 
   <div class="flex min-h-screen flex-col">
     <AppHeader
