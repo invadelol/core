@@ -1,10 +1,5 @@
 import clickhouse from 'adonisjs-clickhouse/services/main'
-import {
-  AnswerCache,
-  PATCH_READY_GAMES,
-  PATCH_START_SQL,
-  RANKED_SOLO,
-} from '#services/ranked_stats'
+import { AnswerCache, PATCH_START_SQL, readyPatches } from '#services/ranked_stats'
 import { StatsCache } from '#services/stats_cache'
 
 /**
@@ -12,22 +7,40 @@ import { StatsCache } from '#services/stats_cache'
  * the rune, build and summoner spell statistics read them.
  */
 
-/** How soon a new patch is noticed: the default patch is asked again this often. */
+/** How soon a new patch is noticed: the patch list is asked again this often. */
 const PATCH_CHECK_MS = 10 * 60_000
 
 const patches = new AnswerCache(1, PATCH_CHECK_MS)
 
-/** The newest patch with enough ranked games: every statistic defaults to it. */
-export function latestPatch(): Promise<string | null> {
-  return patches.get('patch', async () => {
-    const [row] = await rows(`
-          SELECT patch FROM matches
-          WHERE queue_id = ${RANKED_SOLO}
-          GROUP BY patch HAVING count() >= ${PATCH_READY_GAMES}
-          ORDER BY max(game_start_ms) DESC LIMIT 1
-        `)
-    return row ? String(row[0]) : null
+export interface StoredPatch {
+  patch: string
+  /** Crawled ranked games of the patch. */
+  games: number
+}
+
+/** Every patch with crawled games, newest first (a year of them at most). */
+export function storedPatches(): Promise<StoredPatch[]> {
+  return patches.get('stored', async () => {
+    const found = await rows(`
+      SELECT patch, count() FROM match_seed
+      GROUP BY patch ORDER BY max(game_start_ms) DESC LIMIT 24
+    `)
+    return found.map(([patch, games]) => ({ patch: String(patch), games: Number(games) }))
   })
+}
+
+/**
+ * The patches every patch menu offers, newest first: those with enough crawled games
+ * (`PATCH_READY_GAMES`). The site and the desktop app read their menus from here.
+ */
+export async function shownPatches(): Promise<StoredPatch[]> {
+  return readyPatches(await storedPatches())
+}
+
+/** The newest patch of the menus: every statistic defaults to it. */
+export async function latestPatch(): Promise<string | null> {
+  const [newest] = await shownPatches()
+  return newest?.patch ?? null
 }
 
 const starts = new AnswerCache(8, PATCH_CHECK_MS)

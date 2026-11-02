@@ -2,7 +2,7 @@ import logger from '@adonisjs/core/services/logger'
 import redis from '@adonisjs/redis/services/main'
 import clickhouse from 'adonisjs-clickhouse/services/main'
 import { AnswerCache } from '#services/ranked_stats'
-import { rows } from '#services/ranked_games_service'
+import { rows, storedPatches } from '#services/ranked_games_service'
 import {
   cellCountsSql,
   countedPatchesSql,
@@ -16,6 +16,9 @@ import {
  * matchups is a sum of a few thousand rows. A patch is counted into the `_next` tables, then
  * swapped in; the newest patches again every hour (the crawler keeps adding games), the older
  * ones every day. A patch not counted yet is read from the games as before.
+ *
+ * A patch is counted long before it is shown (`PATCH_READY_GAMES`): the day a new patch reaches
+ * the menus, its cells are already there.
  */
 
 /** Counted again this often: the patches still filling up, and the others. */
@@ -23,6 +26,8 @@ const LIVE_EVERY_MS = 3600_000
 const OLD_EVERY_MS = 24 * 3600_000
 /** The newest patches, counted hourly. */
 const LIVE_PATCHES = 2
+/** A patch is counted from this many crawled games. */
+const MIN_COUNTED_GAMES = 5_000
 /** One count at a time across processes (a deploy runs two for a moment). */
 const LOCK = 'stats:cells:refresh'
 const LOCK_MS = 30 * 60_000
@@ -87,7 +92,7 @@ export async function countPatch(patch: string) {
 
 /**
  * Counts the patches that are due: never counted, or counted longer ago than their period. The
- * patch list is the patch menu's (`patches`), newest first.
+ * patch list is newest first.
  */
 export async function countDuePatches(patches: string[]) {
   const done = await countedPatches()
@@ -103,8 +108,14 @@ export async function countDuePatches(patches: string[]) {
   return counts
 }
 
+/** The patches counted: every stored patch with `MIN_COUNTED_GAMES`, newest first. */
+async function countablePatches() {
+  const stored = await storedPatches()
+  return stored.filter((p) => p.games >= MIN_COUNTED_GAMES)
+}
+
 /** Counts the due patches now (after `delayMs`) and every ten minutes, one process at a time. */
-export function startCellCounter(list: () => Promise<{ patch: string }[]>, delayMs = 30_000) {
+export function startCellCounter(list = countablePatches, delayMs = 30_000) {
   let running = false
   const tick = async () => {
     if (running) return

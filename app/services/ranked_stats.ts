@@ -44,8 +44,23 @@ export type Bracket = keyof typeof BRACKETS
 export const MAX_PICK_BRACKETS = 5
 
 export const RANKED_SOLO = 420
-/** A patch is the default once it holds this many ranked games. */
-export const PATCH_READY_GAMES = 50_000
+/**
+ * A patch is offered in every patch menu, and the newest of them is the default of every
+ * statistic, once it holds this many crawled ranked games: a new patch shows up by itself, on
+ * the site and in the desktop app, once its numbers are worth reading.
+ */
+export const PATCH_READY_GAMES = 250_000
+
+/**
+ * The patches to offer (`stored`: every patch with crawled games, newest first): those with
+ * `PATCH_READY_GAMES`, newest first. A database that holds none yet (a fresh one) offers its
+ * newest, so its pages are not empty.
+ */
+export function readyPatches<T extends { games: number }>(stored: T[]): T[] {
+  const ready = stored.filter((p) => p.games >= PATCH_READY_GAMES)
+  return ready.length ? ready : stored.slice(0, 1)
+}
+
 export const TTL_MS = 30 * 60_000
 /** Answers kept at most per kind, oldest dropped first. */
 export const MAX_CACHED = 2048
