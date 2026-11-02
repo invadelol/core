@@ -1,4 +1,5 @@
 import logger from '@adonisjs/core/services/logger'
+import { uploadsEnabled } from '#services/desktop/switches'
 
 /**
  * Where the rest of core tells the player snapshot pipeline that it learned
@@ -29,6 +30,8 @@ export interface LearnedRiotId {
 
 /** Core now holds the `riot_player` row (and so the API PUUID) of these Riot IDs. */
 export function riotIdsLearned(players: LearnedRiotId[]) {
+  // Switched off, the desktop's snapshots are not used, staged ones included.
+  if (!uploadsEnabled()) return
   const known = players.filter((p) => p.gameName && p.tagLine && p.platform)
   if (!known.length) return
   track('Riot ID lookup', async () => {
@@ -39,7 +42,7 @@ export function riotIdsLearned(players: LearnedRiotId[]) {
 
 /** match-v5 proved these raw PUUIDs' API PUUIDs. */
 export function aliasesVerified(rawPuuids: string[]) {
-  if (!rawPuuids.length) return
+  if (!rawPuuids.length || !uploadsEnabled()) return
   track('verified aliases', async () => {
     const { default: snapshots } = await import('#services/desktop/player_snapshot_service')
     await snapshots.applyStagedByRawPuuid(rawPuuids)

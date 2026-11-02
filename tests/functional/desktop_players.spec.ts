@@ -9,6 +9,7 @@ import playerSnapshotService from '#services/desktop/player_snapshot_service'
 import rateLimiter from '#services/desktop/rate_limiter'
 import { DesktopSeed } from '#tests/fixtures/desktop_db'
 import { desktopClient } from '#tests/fixtures/desktop_http'
+import { forceSwitches } from '#services/desktop/switches'
 
 /**
  * `POST /api/desktop/players` end to end (docs/desktop-sync.md §6), and the
@@ -28,6 +29,8 @@ test.group('Desktop player snapshots API', (group) => {
 
   group.each.setup(() => {
     seed = new DesktopSeed()
+    // Core takes no desktop data by default (switches.ts): these tests exercise it switched on.
+    forceSwitches({ uploads: true, observed: true })
     riotCalls = []
     rateLimiter.prefix = `desktop:rl:test:${randomUUID()}:`
     playerSnapshotService.championIds = async () => null
@@ -46,6 +49,7 @@ test.group('Desktop player snapshots API', (group) => {
   })
 
   group.each.teardown(async () => {
+    forceSwitches({})
     riotApiService.client = client
     playerInsightsService.mastery = mastery
     matchesService.update = update

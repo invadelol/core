@@ -23,6 +23,7 @@ import { DEFAULT_DESKTOP_RIOT_BUDGET, RiotBudget } from '#services/desktop/riot_
 import { isObserved, validateStructure } from '#services/desktop/match_validation'
 import { hashAddress } from '#services/desktop/tokens'
 import * as snapshotHooks from '#services/desktop/snapshot_hooks'
+import { observedEnabled as observedSwitch, uploadsEnabled } from '#services/desktop/switches'
 import {
   canonicalHash,
   compareFacts,
@@ -144,13 +145,14 @@ export class PublicationService {
     }
   }
 
+  /** Off by default (`switches.ts`): core takes no League client data unless switched on. */
   enabled() {
-    return env.get('DESKTOP_UPLOADS_ENABLED', true)
+    return uploadsEnabled()
   }
 
   /** Observed games (v1.3) have their own switch: each one may cost a match-v5 call. */
   observedEnabled() {
-    return this.enabled() && env.get('DESKTOP_OBSERVED_ENABLED', true)
+    return observedSwitch()
   }
 
   async upload(payload: MatchUpload, context: { device: DesktopDevice; ip: string }) {

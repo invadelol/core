@@ -14,6 +14,7 @@ import Summoner from '#models/summoner'
 import { apiPuuid } from '#tests/fixtures/desktop'
 import { DesktopSeed, TRUSTED } from '#tests/fixtures/desktop_db'
 import type { PlayerStatus } from '#services/desktop/player_snapshot_service'
+import { forceSwitches } from '#services/desktop/switches'
 
 /**
  * Player snapshots (docs/desktop-sync.md §6) against the isolated Postgres
@@ -35,6 +36,8 @@ test.group('Desktop player snapshots', (group) => {
 
   group.each.setup(() => {
     seed = new DesktopSeed()
+    // Core takes no desktop data by default (switches.ts): these tests exercise it switched on.
+    forceSwitches({ uploads: true, observed: true })
     leagueCalls = []
     playerSnapshotService.championIds = async () => null
     playerSnapshotService.sample = () => false
@@ -50,6 +53,7 @@ test.group('Desktop player snapshots', (group) => {
   })
 
   group.each.teardown(async () => {
+    forceSwitches({})
     await snapshotHooks.settled()
     playerSnapshotService.audits.clear()
     riotApiService.client = client
