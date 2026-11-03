@@ -1,0 +1,1165 @@
+/* ──────────────────────────────────────────────────────────────
+   The site's shell, on every page: the header (its section menus,
+   the search palette, the phone's menu) and the footer. Prefixed
+   `sh-`. Tokens only; floating parts are opaque (--solid-*), the
+   bar is the chrome (--ink-0). Opening anything is a fade, never a
+   layout change of the page under it.
+   ────────────────────────────────────────────────────────────── */
+@layer components {
+  /* ── Bar ──────────────────────────────────────────────────── */
+  .sh-head {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+
+  .sh-in {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 56px;
+  }
+
+  .sh-logo {
+    display: flex;
+    flex: none;
+    align-items: center;
+    height: 40px;
+    margin-right: 18px;
+    border-radius: var(--r-sm);
+  }
+
+  .sh-skip {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 60;
+    display: inline-flex;
+    align-items: center;
+    height: 40px;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-1);
+    background: var(--solid-2);
+    border-radius: var(--r-sm);
+    box-shadow: var(--shadow-2);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .sh-skip:focus-visible {
+    opacity: 1;
+    pointer-events: auto;
+    box-shadow: var(--shadow-2), var(--focus);
+  }
+
+  .sh-nav {
+    display: none;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .sh-trig {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 32px;
+    padding: 0 9px 0 11px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-2);
+    white-space: nowrap;
+    border-radius: var(--r-sm);
+    transition:
+      background-color var(--t-fast) var(--ease),
+      color var(--t-fast) var(--ease);
+  }
+
+  .sh-trig:hover {
+    color: var(--text-1);
+    background: var(--glint);
+  }
+
+  .sh-trig .chev {
+    display: inline-flex;
+    color: var(--text-4);
+    transition: transform var(--t-base) var(--ease);
+  }
+
+  .sh-trig.on {
+    color: var(--text-1);
+    background: var(--lit-pill);
+    box-shadow: var(--lit-pill-edge);
+  }
+
+  .sh-trig.open {
+    color: var(--text-1);
+    background: var(--surface-2);
+    box-shadow: none;
+  }
+
+  .sh-trig.open .chev {
+    transform: rotate(180deg);
+    color: var(--text-2);
+  }
+
+  .sh-trig:focus-visible {
+    box-shadow: var(--focus);
+  }
+
+  .sh-crumbs {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    margin-left: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-2);
+  }
+
+  .sh-crumbs .chev {
+    flex: none;
+    color: var(--text-4);
+  }
+
+  .sh-crumbs .c {
+    max-width: 22ch;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .sh-crumbs a.c:hover {
+    color: var(--text-1);
+  }
+
+  .sh-crumbs .here {
+    color: var(--text-1);
+  }
+
+  .sh-search-zone {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 340px;
+    margin-left: auto;
+    margin-right: 8px;
+  }
+
+  /* The header's search: a field that opens the palette. */
+  .sh-field {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    height: 34px;
+    padding: 0 6px 0 10px;
+    color: var(--text-3);
+    background: var(--inset);
+    border-radius: var(--r-sm);
+    box-shadow: var(--inset-shadow);
+    cursor: text;
+    transition: box-shadow var(--t-fast) var(--ease);
+  }
+
+  .sh-field .ph {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 13px;
+    text-align: left;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .sh-field kbd,
+  .sh-kbd {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    height: 20px;
+    padding: 0 6px;
+    font: 500 11px/1 var(--font);
+    color: var(--text-3);
+    background: var(--surface-3);
+    border-radius: 4px;
+  }
+
+  .sh-field.focus,
+  .sh-field:focus-visible {
+    box-shadow: var(--inset-shadow), var(--focus);
+  }
+
+  html[data-season] .sh-field {
+    background: linear-gradient(var(--inset), var(--inset)), var(--ink-0);
+  }
+
+  .sh-end {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .sh-end.alone {
+    margin-left: auto;
+  }
+
+  .sh-get {
+    gap: 6px;
+  }
+
+  .sh-ib {
+    display: inline-grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    color: var(--text-2);
+    border-radius: var(--r-sm);
+    transition:
+      background-color var(--t-fast) var(--ease),
+      color var(--t-fast) var(--ease);
+  }
+
+  .sh-ib:hover,
+  .sh-ib.on {
+    color: var(--text-1);
+    background: var(--surface-2);
+  }
+
+  .sh-ib .burger {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+  }
+
+  /* Phones: the mark, the search button, the menu. */
+  .sh-only-phone {
+    display: none;
+  }
+
+  @media (max-width: 39.99rem) {
+    .sh-in {
+      padding-right: 8px;
+    }
+
+    .sh-search-zone {
+      position: static;
+      flex: 0 0 0;
+      margin: 0;
+    }
+
+    .sh-field,
+    .sh-get,
+    .sh-theme {
+      display: none !important;
+    }
+
+    .sh-only-phone {
+      display: inline-grid;
+    }
+
+    .sh-end {
+      margin-left: auto;
+      gap: 2px;
+    }
+  }
+
+  /* A tablet: the field, the app, the theme and the menu. */
+  @media (min-width: 40rem) and (max-width: 63.99rem) {
+    .sh-head.is-menu .sh-get {
+      display: none;
+    }
+  }
+
+  /* Wide: the sections open as menus. */
+  @media (min-width: 64rem) {
+    .sh-nav {
+      display: flex;
+    }
+
+    .sh-burger {
+      display: none;
+    }
+
+    .sh-search-zone {
+      flex: 0 1 300px;
+    }
+  }
+
+  @media (min-width: 80rem) {
+    .sh-crumbs {
+      display: flex;
+    }
+  }
+
+  /* ── Floating menus ──────────────────────────────────────── */
+  .sh-pop {
+    position: absolute;
+    top: 62px;
+    z-index: 40;
+    background: var(--solid-1);
+    border-radius: var(--r-lg);
+    box-shadow:
+      var(--shadow-3),
+      inset 0 0 0 1px var(--line),
+      inset 0 1px 0 var(--line-2);
+    animation: sh-in var(--t-fast) var(--ease);
+  }
+
+  @keyframes sh-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  /* The gap between a trigger and its menu stays inside the menu for the mouse. */
+  .sh-mega::before {
+    content: '';
+    position: absolute;
+    inset: -20px 0 auto;
+    height: 20px;
+  }
+
+  .sh-mega {
+    --w: 830px;
+    display: grid;
+    grid-template-columns: 252px minmax(0, 1fr);
+    gap: 6px;
+    width: var(--w);
+    max-width: calc(100% - 48px);
+    padding: 6px;
+    /* Under its trigger, moved left as far as the page needs to keep it whole. */
+    left: clamp(24px, var(--x), 100% - var(--w) - 24px);
+  }
+
+  .sh-mega.is-champions {
+    --x: 121px;
+  }
+
+  .sh-mega.is-pros {
+    --x: 229px;
+    --w: 640px;
+  }
+
+  .sh-mega.is-pros:has(.sh-leagues) {
+    --w: 900px;
+    grid-template-columns: 252px minmax(0, 1fr) 190px;
+  }
+
+  .sh-mega.is-stats {
+    --x: 296px;
+  }
+
+  .sh-mega.is-tools {
+    --x: 367px;
+    --w: 640px;
+  }
+
+  .sh-feat {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    padding: 16px 16px 12px;
+    background: var(--sheen), var(--surface-1);
+    border-radius: var(--r-md);
+    box-shadow: var(--lit);
+  }
+
+  .sh-feat::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      120% 90% at 100% 0%,
+      rgb(var(--brand-rgb) / var(--sheet-light)),
+      transparent 62%
+    );
+  }
+
+  .sh-feat > * {
+    position: relative;
+  }
+
+  .sh-feat .k {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-3);
+  }
+
+  .sh-feat h3 {
+    margin-top: 2px;
+    font-size: 15px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    color: var(--text-1);
+  }
+
+  .sh-feat h3.app {
+    margin-top: 12px;
+  }
+
+  .sh-feat .p {
+    margin-top: 4px;
+    font-size: 12px;
+    line-height: 17px;
+    color: var(--text-3);
+  }
+
+  .sh-feat ul {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin: 12px -8px 0;
+  }
+
+  .sh-feat li a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 36px;
+    padding: 0 8px;
+    border-radius: var(--r-sm);
+    transition: background-color var(--t-fast) var(--ease);
+  }
+
+  .sh-feat li a:hover {
+    background: var(--glint);
+  }
+
+  .sh-feat li a.two {
+    height: 42px;
+  }
+
+  .sh-feat li .r {
+    display: inline-flex;
+    width: 16px;
+    color: var(--text-3);
+  }
+
+  .sh-feat li .pic {
+    display: inline-flex;
+    flex: none;
+    overflow: hidden;
+    border-radius: var(--r-sm);
+  }
+
+  .sh-feat li .logo {
+    flex: none;
+    background: var(--well);
+    box-shadow: var(--portrait-sm);
+  }
+
+  .sh-feat li .logo :is(img) {
+    padding: 3px;
+  }
+
+  .sh-feat li .logo.none {
+    display: inline-grid;
+    place-items: center;
+    color: var(--text-4);
+    width: 28px;
+    height: 28px;
+    border-radius: var(--r-sm);
+  }
+
+  .sh-feat li .n {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-1);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .sh-feat li .two .n {
+    line-height: 16px;
+  }
+
+  .sh-feat li .n small {
+    display: block;
+    overflow: hidden;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-3);
+    text-overflow: ellipsis;
+  }
+
+  .sh-feat li .v {
+    flex: none;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-2);
+  }
+
+  .sh-feat li .v .was {
+    color: var(--text-4);
+  }
+
+  .sh-feat li .v .to {
+    display: inline;
+    margin: 0 2px;
+    vertical-align: -1px;
+    color: var(--text-4);
+  }
+
+  .sh-feat li .mv {
+    width: 26px;
+    flex: none;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: right;
+  }
+
+  .sh-feat .sk {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 36px;
+    padding: 0 8px;
+  }
+
+  .sh-feat .sk.two {
+    height: 42px;
+  }
+
+  .sh-feat .sk span {
+    height: 10px;
+    background: var(--surface-2);
+    border-radius: var(--r-xs);
+  }
+
+  .sh-feat .sk span:first-child {
+    width: 24px;
+    height: 24px;
+  }
+
+  .sh-feat .sk span:last-child {
+    flex: 1;
+    max-width: 120px;
+  }
+
+  .sh-feat .more {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: 4px;
+    margin-top: auto;
+    padding-top: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--brand-hi);
+    border-radius: var(--r-xs);
+  }
+
+  .sh-feat .more:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .sh-links {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    gap: 2px;
+    padding: 6px;
+  }
+
+  .sh-links.one {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sh-link {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px;
+    border-radius: var(--r-md);
+    transition: background-color var(--t-fast) var(--ease);
+  }
+
+  .sh-link:hover,
+  .sh-link:focus-visible {
+    background: var(--surface-2);
+  }
+
+  .sh-link .ic {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    color: var(--text-2);
+    background: var(--btn);
+    border-radius: var(--r-sm);
+    box-shadow: var(--btn-shadow);
+  }
+
+  .sh-link:hover .ic {
+    color: var(--text-1);
+  }
+
+  .sh-link .t {
+    min-width: 0;
+  }
+
+  .sh-link b {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 18px;
+    color: var(--text-1);
+  }
+
+  .sh-link .d {
+    display: block;
+    margin-top: 1px;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--text-3);
+  }
+
+  .sh-mega-foot {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    margin: 0 -6px -6px;
+    padding: 8px 12px;
+    border-top: 1px solid var(--line);
+  }
+
+  .sh-mega-foot .lbl,
+  .sh-leagues .lbl {
+    margin-right: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-3);
+  }
+
+  .sh-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 28px;
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-2);
+    border-radius: var(--r-sm);
+  }
+
+  .sh-chip:hover {
+    color: var(--text-1);
+    background: var(--glint);
+  }
+
+  .sh-leagues {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 6px 6px;
+    border-left: 1px solid var(--line);
+  }
+
+  .sh-leagues .lbl {
+    padding: 0 8px 6px;
+  }
+
+  .sh-leagues a {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 34px;
+    padding: 0 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-2);
+    border-radius: var(--r-sm);
+  }
+
+  .sh-leagues a:hover {
+    color: var(--text-1);
+    background: var(--glint);
+  }
+
+  .sh-leagues .nm {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .sh-leagues small {
+    font-size: 11.5px;
+    color: var(--text-4);
+  }
+
+  /* A league's or a team's logo slot: the acronym stands in until the file is served. */
+  .sh-lgo {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    overflow: hidden;
+    font-weight: 700;
+    font-stretch: var(--fig);
+    letter-spacing: 0.02em;
+    color: var(--text-1);
+    background: var(--solid-2);
+    border-radius: var(--r-xs);
+    box-shadow: inset 0 0 0 1px var(--line-2);
+  }
+
+  .sh-lgo img {
+    width: 100%;
+    height: 100%;
+    padding: 12%;
+    object-fit: contain;
+  }
+
+  /* Tier marks, as the tier list draws them: S+ in gold, the rest in ink. */
+  .sh-tier {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    min-width: 26px;
+    height: 20px;
+    padding: 0 5px;
+    font: 700 12px/1 var(--font);
+    font-stretch: var(--fig);
+    color: var(--text-2);
+    background: var(--surface-3);
+    border-radius: var(--r-xs);
+  }
+
+  .sh-tier.t0 {
+    color: var(--gold-c);
+    background: rgb(var(--gold-rgb) / 0.13);
+  }
+
+  .sh-tier.t1 {
+    color: var(--text-1);
+    background: var(--surface-4);
+  }
+
+  .sh-tier.t2 {
+    color: var(--text-1);
+  }
+
+  .sh-tier.t4,
+  .sh-tier.t5 {
+    color: var(--text-3);
+  }
+
+  .sh-head .up,
+  .sh-foot .up {
+    color: var(--win);
+  }
+
+  .sh-head .down,
+  .sh-foot .down {
+    color: var(--loss);
+  }
+
+  /* ── Search palette ──────────────────────────────────────── */
+  .sh-palette {
+    top: 40px;
+    right: 0;
+    width: min(560px, calc(100vw - 32px));
+    overflow: hidden;
+  }
+
+  @media (max-width: 39.99rem) {
+    .sh-palette {
+      position: fixed;
+      top: 60px;
+      right: 8px;
+      left: 8px;
+      width: auto;
+    }
+  }
+
+  /* ── Phone menu ─────────────────────────────────────────── */
+  html.sh-locked {
+    overflow: hidden;
+  }
+
+  .sh-sheet {
+    position: fixed;
+    inset: 56px 0 0;
+    z-index: 35;
+    display: flex;
+    flex-direction: column;
+    background: var(--solid-1);
+    box-shadow: inset 0 1px 0 var(--line);
+    animation: sh-in var(--t-fast) var(--ease);
+  }
+
+  .sh-sheet .scroll {
+    flex: 1;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 12px 12px 16px;
+  }
+
+  @media (min-width: 40rem) {
+    .sh-sheet .scroll,
+    .sh-sheet .foot {
+      width: 100%;
+      max-width: 560px;
+      margin-inline: auto;
+    }
+  }
+
+  .sh-msearch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    height: 44px;
+    margin-bottom: 10px;
+    padding: 0 12px;
+    font-size: 16px;
+    color: var(--text-3);
+    background: var(--inset);
+    border-radius: var(--r-md);
+    box-shadow: var(--inset-shadow);
+  }
+
+  .sh-msearch:focus-visible {
+    box-shadow: var(--inset-shadow), var(--focus);
+  }
+
+  .sh-acc-h {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    height: 52px;
+    padding: 0 8px 0 12px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-1);
+    border-radius: var(--r-md);
+  }
+
+  .sh-acc-h .ic,
+  .sh-acc-h .chev {
+    display: inline-flex;
+    color: var(--text-3);
+  }
+
+  .sh-acc-h .chev {
+    margin-left: auto;
+    transition: transform var(--t-base) var(--ease);
+  }
+
+  .sh-acc-h.open {
+    background: var(--surface-2);
+  }
+
+  .sh-acc-h.open .chev {
+    transform: rotate(180deg);
+  }
+
+  .sh-acc-b {
+    display: flex;
+    flex-direction: column;
+    padding: 4px 0 8px 44px;
+  }
+
+  .sh-acc-b > a {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 48px;
+    padding: 4px 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-1);
+    border-radius: var(--r-sm);
+  }
+
+  .sh-acc-b > a small {
+    font-size: 12px;
+    color: var(--text-3);
+  }
+
+  .sh-acc-b .roles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 4px 0 4px -6px;
+  }
+
+  .sh-acc-b .roles a {
+    display: inline-grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    color: var(--text-2);
+    background: var(--surface-1);
+    border-radius: var(--r-sm);
+    box-shadow: var(--row);
+  }
+
+  .sh-sheet .foot {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 16px calc(18px + env(safe-area-inset-bottom));
+    background: var(--solid-2);
+    box-shadow: inset 0 1px 0 var(--line);
+  }
+
+  .sh-sheet .foot .theme {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 40px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-2);
+  }
+
+  .sh-sheet .foot .iv-btn {
+    justify-content: center;
+    width: 100%;
+    height: 44px;
+    gap: 8px;
+    font-size: 14px;
+  }
+
+  /* ── Footer ─────────────────────────────────────────────── */
+  .sh-foot {
+    position: relative;
+    margin-top: 64px;
+    background: var(--ink-0);
+  }
+
+  .sh-foot::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 1px;
+    background: var(--edge);
+  }
+
+  .sh-foot-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) repeat(4, minmax(0, 1fr));
+    gap: 32px;
+    padding: 56px 0 44px;
+  }
+
+  .sh-brand > a {
+    display: inline-flex;
+    border-radius: var(--r-sm);
+  }
+
+  .sh-brand p {
+    max-width: 34ch;
+    margin-top: 14px;
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--text-3);
+  }
+
+  .sh-social {
+    display: flex;
+    gap: 6px;
+    margin-top: 20px;
+  }
+
+  .sh-social a {
+    display: inline-grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    color: var(--text-2);
+    background: var(--btn);
+    border-radius: var(--r-sm);
+    box-shadow: var(--btn-shadow);
+    transition: color var(--t-fast) var(--ease);
+  }
+
+  .sh-social a:hover {
+    color: var(--text-1);
+  }
+
+  .sh-social a:focus-visible {
+    box-shadow: var(--btn-shadow), var(--focus);
+  }
+
+  .sh-social svg {
+    width: 16px;
+    height: 16px;
+    fill: currentColor;
+  }
+
+  .sh-social svg.x {
+    width: 14px;
+    height: 14px;
+  }
+
+  .sh-app {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: 360px;
+    margin-top: 22px;
+    padding: 12px 14px;
+    background: var(--surface-1);
+    border-radius: var(--r-md);
+    box-shadow: var(--row);
+  }
+
+  .sh-app b {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-1);
+  }
+
+  .sh-app small {
+    display: block;
+    font-size: 12px;
+    color: var(--text-3);
+  }
+
+  .sh-app .iv-btn {
+    margin-left: auto;
+  }
+
+  .sh-col h3 {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-3);
+  }
+
+  .sh-col ul {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 12px;
+  }
+
+  .sh-col a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 30px;
+    font-size: 13px;
+    color: var(--text-2);
+    border-radius: var(--r-xs);
+    transition: color var(--t-fast) var(--ease);
+  }
+
+  .sh-col a:hover {
+    color: var(--text-1);
+  }
+
+  .sh-foot-bot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 22px;
+    padding: 18px 0 26px;
+    font-size: 12px;
+    color: var(--text-3);
+    box-shadow: inset 0 1px 0 var(--line);
+  }
+
+  .sh-foot-bot a {
+    border-radius: var(--r-xs);
+  }
+
+  .sh-foot-bot a:hover {
+    color: var(--text-1);
+  }
+
+  .sh-foot-bot .end {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+  }
+
+  .sh-legal {
+    max-width: 90ch;
+    padding-bottom: 28px;
+    font-size: 11.5px;
+    line-height: 17px;
+    color: var(--text-4);
+  }
+
+  @media (pointer: coarse) {
+    .sh-col a,
+    .sh-foot-bot a {
+      min-height: 40px;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .sh-social a {
+      width: 40px;
+      height: 40px;
+    }
+  }
+
+  @media (max-width: 63.99rem) {
+    .sh-foot-top {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 32px 24px;
+    }
+
+    .sh-brand {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (max-width: 47.99rem) {
+    .sh-foot-top {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      padding: 40px 0 32px;
+    }
+  }
+
+  @media (max-width: 39.99rem) {
+    .sh-foot-bot .end {
+      width: 100%;
+      margin-left: 0;
+    }
+  }
+
+  /* The shared buttons and segments keep their shadow on focus, which hid the focus ring:
+     the ring is added to whatever lights them. */
+  .iv-btn:focus-visible {
+    box-shadow: var(--btn-shadow), var(--focus);
+  }
+
+  .iv-btn.ghost:focus-visible,
+  .iv-btn.danger:focus-visible {
+    box-shadow: var(--focus);
+  }
+
+  .iv-btn.primary:focus-visible {
+    box-shadow: var(--primary-shadow), var(--focus);
+  }
+
+  .iv-seg > button:focus-visible {
+    box-shadow: var(--focus);
+  }
+}

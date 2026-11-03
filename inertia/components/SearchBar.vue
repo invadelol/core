@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { CornerDownLeft, Plus, Search, Users, X } from 'lucide-vue-next'
 import { champIcon, profileIcon, regionLabel } from '../lib/assets.js'
 import { championSlug } from '../lib/champions.js'
+import { recentPlayers, type RecentPlayer } from '../lib/recent.js'
 import TeamLogo from './champions/TeamLogo.vue'
 import {
   MAX_PLAYERS,
@@ -16,9 +17,27 @@ const props = withDefaults(
   defineProps<{
     size?: 'sm' | 'lg'
     autofocus?: boolean
+    /**
+     * `palette`: the header's search, opened over the page (⌘K or its field). The results sit
+     * under the field instead of floating, the profiles opened last show before anything is
+     * typed, and Escape or a choice closes it (`close`). The header owns ⌘K then.
+     */
+    variant?: 'field' | 'palette'
+    placeholder?: string
+    /** The placeholder on a phone, where the long one would be cut. */
+    shortPlaceholder?: string
   }>(),
-  { size: 'sm', autofocus: false }
+  {
+    size: 'sm',
+    autofocus: false,
+    variant: 'field',
+    placeholder: undefined,
+    shortPlaceholder: undefined,
+  }
 )
+
+const emit = defineEmits<{ close: [] }>()
+const palette = computed(() => props.variant === 'palette')
 
 interface Result {
   puuid: string
@@ -62,7 +81,7 @@ interface Answer {
   accounts: ProAccount[]
 }
 
-type Section = 'champions' | 'esports' | 'summoners'
+type Section = 'recent' | 'champions' | 'esports' | 'summoners'
 
 interface Entry {
   gameName: string
@@ -89,6 +108,7 @@ interface Entry {
 }
 
 const SECTION_LABELS: Record<Section, string> = {
+  recent: 'Recently viewed',
   champions: 'Champions',
   esports: 'Esports',
   summoners: 'Summoners',
@@ -101,6 +121,8 @@ interface Picked extends RiotIdentity {
 
 const query = ref('')
 const picked = ref<Picked[]>([])
+/** The profiles this browser opened last, listed in the palette before anything is typed. */
+const recent = ref<RecentPlayer[]>([])
 const chips = ref<HTMLElement>()
 const chipsWidth = ref(0)
 const chipsOverflow = ref(false)
@@ -159,6 +181,8 @@ const champions = computed(() => {
 })
 const isLoading = ref(false)
 const isOpen = ref(false)
+/** Several search fields can be on a page (the header's and the home's). */
+const listId = `search-${useId()}`
 const activeIndex = ref(0)
 const input = ref<HTMLInputElement>()
 const list = ref<HTMLElement>()
@@ -233,6 +257,23 @@ const groups = computed(() => {
   const top: Entry[] = []
   const bySection: Record<Section, Entry[]> = { champions: [], esports: [], summoners: [] }
 
+  if (palette.value && !query.value.trim() && !picked.value.length && recent.value.length) {
+    return [
+      {
+        section: 'recent' as Section,
+        entries: recent.value.slice(0, 5).map(
+          (r): Entry => ({
+            gameName: r.gameName,
+            tagLine: r.tagLine,
+            direct: false,
+            icon: r.profileIconId,
+            region: r.platform ? regionLabel(r.platform) : undefined,
+            level: r.level,
+          })
+        ),
+      },
+    ]
+  }
   if (pastedPlayers.value) {
     top.push({ gameName: '', tagLine: '', direct: true, multi: pastedPlayers.value })
     if (typingDone.value) return [{ section: null, entries: top }]
@@ -320,7 +361,7 @@ const offsets = computed(() => {
   })
 })
 
-const showDropdown = computed(() => isOpen.value && entries.value.length > 0)
+const showDropdown = computed(() => (palette.value || isOpen.value) && entries.value.length > 0)
 
 watch(query, (value) => {
   clearTimeout(debounce)
@@ -423,8 +464,9 @@ function href(entry: { gameName: string; tagLine: string }) {
   return `/${encodeURIComponent(`${entry.gameName}-${entry.tagLine}`)}`
 }
 
-/** ⌘K / Ctrl-K puts the caret here from anywhere on the page. */
+/** ⌘K / Ctrl-K puts the caret here from anywhere on the page (the header's palette has its own). */
 function onHotkey(event: KeyboardEvent) {
+  if (palette.value) return
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
     event.preventDefault()
     input.value?.focus()
@@ -434,11 +476,27 @@ function onHotkey(event: KeyboardEvent) {
 
 /** The narrowest phones have room for a short placeholder only. */
 const tight = ref(false)
+/** A phone: the short placeholder, when there is one. */
+const narrow = ref(false)
 
 onMounted(() => {
   window.addEventListener('keydown', onHotkey)
   tight.value = window.matchMedia('(max-width: 359px)').matches
+  narrow.value = window.matchMedia('(max-width: 479px)').matches
+  if (palette.value) recent.value = recentPlayers()
 })
+
+/** The palette opens with the caret in its field, called within the tap (iOS keeps the keyboard). */
+function focus() {
+  input.value?.focus()
+  input.value?.select()
+}
+defineExpose({ focus })
+
+function onEscape() {
+  isOpen.value = false
+  if (palette.value) emit('close')
+}
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onHotkey)
   clearTimeout(debounce)
@@ -452,6 +510,7 @@ function go(entry: Entry) {
   picked.value = []
   results.value = []
   input.value?.blur()
+  if (palette.value) emit('close')
   router.visit(entry.multi ? multisearchPath(entry.multi) : (entry.href ?? href(entry)))
 }
 
@@ -527,7 +586,8 @@ function move(delta: number) {
 }
 
 function handleBlur() {
-  // Let a click on a result land before the list unmounts.
+  // Let a click on a result land before the list unmounts. The palette closes on its own terms.
+  if (palette.value) return
   setTimeout(() => (isOpen.value = false), 150)
 }
 
@@ -543,11 +603,22 @@ function submit() {
 </script>
 
 <template>
-  <div class="search relative w-full" :class="`search-${props.size}`">
+  <div
+    class="search relative w-full"
+    :class="[`search-${props.size}`, { 'search-palette': palette }]"
+    role="search"
+  >
     <div class="relative" :style="{ '--chips': chipsWidth ? `${chipsWidth + 6}px` : '0px' }">
       <Search
         class="pointer-events-none absolute top-1/2 z-10 -translate-y-1/2 text-ink-3"
-        :class="props.size === 'lg' ? 'left-4 h-[18px] w-[18px]' : 'left-2.5 h-[15px] w-[15px]'"
+        :class="
+          palette
+            ? 'left-3.5 h-[16px] w-[16px]'
+            : props.size === 'lg'
+              ? 'left-4 h-[18px] w-[18px]'
+              : 'left-2.5 h-[15px] w-[15px]'
+        "
+        aria-hidden="true"
       />
       <div v-if="picked.length" ref="chips" class="chips" :data-overflow="chipsOverflow">
         <button
@@ -573,21 +644,27 @@ function submit() {
         :placeholder="
           picked.length
             ? 'Add another player'
-            : props.size === 'lg'
-              ? tight
+            : tight
+              ? props.size === 'lg'
                 ? 'Search a Riot ID'
-                : 'Search a Riot ID, e.g. Faker#KR1'
-              : tight
-                ? 'Search'
-                : 'Search a player, pro or champion'
+                : 'Search'
+              : (narrow && props.shortPlaceholder) ||
+                (props.placeholder ??
+                  (props.size === 'lg'
+                    ? 'Search a Riot ID, e.g. Faker#KR1'
+                    : 'Search a player, pro or champion'))
         "
+        :aria-label="props.placeholder ?? 'Search a player, pro or champion'"
+        aria-autocomplete="list"
+        :aria-expanded="showDropdown"
+        :aria-controls="showDropdown ? listId : undefined"
         class="field search-input"
         @focus="isOpen = entries.length > 0"
         @blur="handleBlur"
         @keydown.down.prevent="move(1)"
         @keydown.up.prevent="move(-1)"
         @keydown.enter.prevent="submit"
-        @keydown.esc="isOpen = false"
+        @keydown.esc.prevent="onEscape"
         @keydown.backspace="onBackspace"
       />
 
@@ -595,6 +672,12 @@ function submit() {
         v-if="isLoading"
         class="absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin rounded-full border-2 border-line-2 border-t-ink-2"
       />
+      <kbd
+        v-else-if="palette"
+        class="pointer-events-none absolute right-3 top-1/2 hidden h-[20px] -translate-y-1/2 items-center rounded-[4px] bg-control px-1.5 font-sans text-[11px] font-medium text-ink-3 pointer-fine:flex"
+      >
+        Esc
+      </kbd>
       <kbd
         v-else-if="!query && !picked.length"
         class="pointer-events-none absolute right-2.5 top-1/2 hidden h-[20px] -translate-y-1/2 items-center rounded-[4px] bg-control px-1.5 font-sans text-[11px] font-medium text-ink-3 sm:flex"
@@ -606,10 +689,18 @@ function submit() {
     <!-- In the header of a phone the field is narrow: the list takes the screen's width. -->
     <div
       v-if="showDropdown"
+      :id="listId"
       ref="list"
-      class="menu results absolute z-50 mt-1.5 w-full"
+      class="results"
       :class="
-        props.size === 'sm' ? 'max-sm:fixed max-sm:inset-x-2 max-sm:top-[54px] max-sm:w-auto' : ''
+        palette
+          ? 'palette-results'
+          : [
+              'menu absolute z-50 mt-1.5 w-full',
+              props.size === 'sm'
+                ? 'max-sm:fixed max-sm:inset-x-2 max-sm:top-[54px] max-sm:w-auto'
+                : '',
+            ]
       "
       role="listbox"
     >
@@ -618,9 +709,9 @@ function submit() {
         :key="group.section ?? 'top'"
         class="group"
         role="group"
-        :aria-labelledby="group.section ? `search-${group.section}` : undefined"
+        :aria-labelledby="group.section ? `${listId}-${group.section}` : undefined"
       >
-        <div v-if="group.section" :id="`search-${group.section}`" class="group-label">
+        <div v-if="group.section" :id="`${listId}-${group.section}`" class="group-label">
           {{ SECTION_LABELS[group.section] }}
         </div>
         <div
@@ -706,10 +797,91 @@ function submit() {
         </div>
       </div>
     </div>
+    <div v-if="palette" class="palette-foot" aria-hidden="true">
+      <span><kbd>↑↓</kbd>Move</span>
+      <span><kbd>↵</kbd>Open</span>
+      <span class="end">Riot ID with a #, several with commas</span>
+    </div>
   </div>
 </template>
 
 <style scoped>
+/* The header's palette: the field is the palette's top row, the results sit under it. */
+.search.search-palette .search-input {
+  height: 48px;
+  padding-left: calc(40px + var(--chips));
+  padding-right: 52px;
+  font-size: 14px;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+
+.search.search-palette .search-input:focus,
+.search.search-palette .search-input:focus-visible {
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+
+@media (pointer: coarse) {
+  .search.search-palette .search-input {
+    font-size: 16px;
+  }
+}
+
+.search.search-palette .chips {
+  left: 38px;
+}
+
+.palette-results {
+  max-height: min(480px, calc(100dvh - 180px));
+}
+
+.palette-results .result {
+  min-height: 44px;
+}
+
+.palette-foot {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 9px 14px;
+  font-size: 12px;
+  color: var(--text-3);
+  background: var(--solid-2);
+  border-top: 1px solid var(--line);
+}
+
+.palette-foot span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.palette-foot kbd {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 5px;
+  font: 500 11px/1 var(--font);
+  color: var(--text-2);
+  background: var(--key);
+  border-radius: var(--r-xs);
+  box-shadow: var(--key-shadow);
+}
+
+.palette-foot .end {
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (pointer: coarse), (max-width: 39.99rem) {
+  .palette-foot {
+    display: none;
+  }
+}
+
 /* The results: titled sections, a hairline between them; a short screen scrolls the list. */
 .results {
   max-height: min(560px, calc(100dvh - 120px));
