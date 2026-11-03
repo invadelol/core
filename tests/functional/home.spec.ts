@@ -27,7 +27,7 @@ test.group('Home page', (group) => {
     })
   }
 
-  test('renders the search and the desktop app, and reads nothing for it', async ({
+  test('renders the search, its sections and the desktop app, and none of the old lists', async ({
     client,
     assert,
   }) => {
@@ -35,10 +35,27 @@ test.group('Home page', (group) => {
     response.assertStatus(200)
     response.assertTextIncludes('Find a player')
     response.assertTextIncludes('href="/app"')
+    response.assertTextIncludes('application/ld+json')
     const page = response.text()
-    for (const prop of ['trending', 'best', 'climbs', 'champions']) {
+    for (const prop of ['trending', 'climbs', 'champions']) {
       assert.notInclude(page, `&quot;${prop}&quot;:`)
     }
+    for (const prop of ['picks', 'pros', 'lanes', 'discord']) {
+      assert.include(page, `&quot;${prop}&quot;:`)
+    }
+  })
+
+  test('sends the header menus their data, small and cacheable', async ({ client, assert }) => {
+    const response = await client.get('/api/site/nav')
+    response.assertStatus(200)
+    assert.include(response.header('cache-control'), 'public')
+    assert.containsSubset(Object.keys(response.body()), ['tierList', 'pros', 'leagues'])
+  })
+
+  test('turns a Riot ID search into its profile', async ({ client }) => {
+    const response = await client.get('/search?q=Test%20Player%23EUW').redirects(0)
+    response.assertStatus(302)
+    response.assertHeader('location', `/${encodeURIComponent('Test Player-EUW')}`)
   })
 
   test('lists a climb from the rank snapshots, with the rank it reached', async ({ assert }) => {

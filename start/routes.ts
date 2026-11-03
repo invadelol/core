@@ -248,6 +248,12 @@ router.get('/sitemap.xml', [() => import('#controllers/sitemaps_controller'), 'i
 
 router.get('/', [HomeController, 'show']).use(middleware.httpCache({ page: true }))
 
+/** What the header's menus show beside their links: the tier list's picks and the top pros. */
+router.get('/api/site/nav', [HomeController, 'nav'])
+
+/** The site's search as an address (`?q=`), before the summoner catch-all below. */
+router.get('/search', [HomeController, 'search'])
+
 router.get('/:summoner/match/:matchId', async ({ inertia, params }) => {
   const { default: matchShareService } = await import('#services/match_share_service')
   // Link previews read the meta tags without running the page: the game's result, its share
