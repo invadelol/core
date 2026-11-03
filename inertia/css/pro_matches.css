@@ -6,7 +6,8 @@
  */
 
 .pm-card,
-.pm-row {
+.pm-row,
+.pm-strip {
   --pm-quiet: color-mix(in srgb, var(--text-3) 65%, var(--text-2));
 }
 
@@ -40,33 +41,35 @@
   color: var(--pm-quiet);
 }
 
-/* ── Card ─────────────────────────────────────────────────────── */
+/* ── Card: a face-off, inside a sheet ─────────────────────────── */
+/* A strip lays its cards in one sheet, split by hairlines: no card draws a sheet of its own. */
 .pm-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+}
+.pm-grid > .pm-card {
+  box-shadow: inset 1px 0 0 var(--line);
+}
+.pm-grid > .pm-card:first-child {
+  box-shadow: none;
 }
 .pm-strip {
   margin-bottom: 12px;
+  overflow: hidden;
 }
-.pm-strip .nb-pb {
-  padding: 8px;
-}
-@media (max-width: 1100px) {
-  .pm-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-/* Phones: one row that scrolls inside its sheet, a card and a half in view. */
+/* Phones: one row that scrolls inside its sheet, a card and a bit in view. */
 @media (max-width: 640px) {
   .pm-grid {
     grid-template-columns: none;
     grid-auto-flow: column;
-    grid-auto-columns: minmax(200px, 72%);
+    grid-auto-columns: minmax(220px, 80%);
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
+  }
+  .pm-grid::-webkit-scrollbar {
+    display: none;
   }
   .pm-grid > * {
     scroll-snap-align: start;
@@ -77,84 +80,208 @@
   container-type: inline-size;
   display: flex;
   flex-direction: column;
-  gap: 2px;
   min-width: 0;
-  padding: 8px 10px 6px;
-  background: var(--surface-1);
-  border-radius: var(--r-sm);
-  box-shadow: var(--row);
+  padding: 12px 14px;
 }
 .pm-card.live {
-  background: linear-gradient(90deg, var(--glint), transparent 70%), var(--surface-1);
+  background: linear-gradient(180deg, rgb(var(--brand-rgb) / 0.08), transparent 70%);
 }
 .pm-top {
   display: flex;
   align-items: center;
   gap: 8px;
-  height: 20px;
-  margin-bottom: 2px;
+  height: 18px;
   font-size: 12px;
+  font-weight: 500;
   color: var(--text-2);
 }
-.pm-top .when {
+.pm-top > :first-child {
   flex: 1;
   min-width: 0;
 }
 .pm-top .end {
-  display: inline-flex;
   flex: none;
-  align-items: center;
-  gap: 6px;
+  min-width: 7ch;
+  text-align: right;
 }
-.pm-top .lg {
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--text-2);
-}
-.pm-top .bo {
-  font-size: 11.5px;
-  font-weight: 500;
+.pm-count {
+  font-size: 12px;
   color: var(--pm-quiet);
+  white-space: nowrap;
 }
-.pm-team {
+
+.pm-face {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 28px;
-  margin-inline: -4px;
-  padding-inline: 4px;
-  border-radius: var(--r-xs);
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-1);
+  margin-top: 14px;
 }
-a.pm-team {
+.pm-side {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px 4px;
+  border-radius: var(--r-sm);
+  color: var(--text-1);
+  text-decoration: none;
+}
+a.pm-side {
   transition: background var(--t-base) var(--ease);
 }
-a.pm-team:hover {
+a.pm-side:hover {
   background: var(--glint);
 }
-.pm-team .nm {
+a.pm-side:focus-visible {
+  box-shadow: var(--focus);
+  outline: none;
+}
+.pm-side .code {
+  font-size: 17px;
+  font-weight: 700;
+  font-stretch: var(--fig);
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+.pm-side .nm {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 11.5px;
+  line-height: 14px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--pm-quiet);
+}
+.pm-side.lost .code {
+  color: var(--pm-quiet);
+}
+.pm-side.lost .lgo {
+  opacity: 0.55;
+}
+
+.pm-mid {
+  display: inline-flex;
+  flex: none;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  margin-top: -18px;
+}
+.pm-mid .vs {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--pm-quiet);
+}
+.pm-mid b {
+  font-size: 26px;
+  font-weight: 700;
+  font-stretch: var(--fig);
+  line-height: 1;
+  color: var(--text-1);
+}
+.pm-mid b.lost {
+  color: var(--pm-quiet);
+}
+.pm-mid .sep {
+  font-size: 18px;
+  color: var(--pm-quiet);
+}
+
+.pm-foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 20px;
+  margin-top: 12px;
+  font-size: 12px;
+}
+.pm-foot .st {
+  display: inline-flex;
   flex: 1;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-.pm-team .sc {
-  flex: none;
-  min-width: 14px;
-  text-align: right;
-  font-size: 14px;
-  font-weight: 700;
-  font-stretch: var(--fig);
+.pm-foot .lg {
+  font-weight: 600;
+  color: var(--text-2);
 }
-.pm-team.won .nm {
-  font-weight: 650;
-}
-.pm-team.lost .nm,
-.pm-team.lost .sc {
+.pm-foot .q {
+  overflow: hidden;
+  text-overflow: ellipsis;
   color: var(--pm-quiet);
+}
+.pm-watch {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 8px;
+  margin-right: -8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-2);
+  border-radius: var(--r-sm);
+  text-decoration: none;
+  transition:
+    background var(--t-base) var(--ease),
+    color var(--t-base) var(--ease);
+}
+.pm-watch:hover {
+  color: var(--text-1);
+  background: var(--glint);
+}
+.pm-watch.on {
+  color: var(--brand-hi);
+}
+.pm-watch:focus-visible {
+  box-shadow: var(--focus);
+  outline: none;
+}
+
+/* The featured next match of a team: the same face-off, larger. */
+.pm-card.lg {
+  padding: 16px 20px 16px;
+}
+.pm-card.lg .pm-top {
+  font-size: 13px;
+}
+.pm-card.lg .pm-face {
+  margin-top: 18px;
+  gap: 16px;
+}
+.pm-card.lg .pm-side .code {
+  font-size: 24px;
+}
+.pm-card.lg .pm-side .nm {
+  font-size: 12.5px;
+}
+.pm-card.lg .pm-mid {
+  min-width: 64px;
+  margin-top: -26px;
+}
+.pm-card.lg .pm-mid .vs {
+  font-size: 14px;
+}
+.pm-card.lg .pm-mid b {
+  font-size: 34px;
+}
+
+/* A narrow card keeps the codes and the score; the full names go. */
+@container (max-width: 190px) {
+  .pm-side .nm {
+    display: none;
+  }
+  .pm-mid {
+    margin-top: 0;
+  }
 }
 
 /* ── Row ──────────────────────────────────────────────────────── */
@@ -264,8 +391,8 @@ a.pm-team:hover {
 }
 
 @media (pointer: coarse) {
-  .pm-team {
-    min-height: 40px;
+  .pm-watch {
+    height: 40px;
   }
   .pm-row .who a.nm {
     display: inline-flex;
@@ -274,10 +401,14 @@ a.pm-team:hover {
   }
 }
 
-/* A narrow card (two to a phone's row) gives its line to the time. */
-@container (max-width: 200px) {
-  .pm-top .bo,
-  .pm-top .lg {
-    display: none;
-  }
+/* A pro's page: the team's next match and last result, one above the other in the panel. */
+.pp-matches .pm-card + .pm-card {
+  border-top: 1px solid var(--line);
+}
+/* A team's page: the next match featured, the ones after it as rows below. */
+.tm-next .pm-card.lg {
+  border-bottom: 1px solid var(--line);
+}
+.tm-next .rows {
+  padding: 0 14px;
 }
