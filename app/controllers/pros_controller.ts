@@ -258,7 +258,7 @@ export default class ProsController {
     const matches = pro.team ? split(await proMatchService.forTeam(pro.team.id)) : null
     const about = pro.about ?? null
     const best = pro.accounts.find((a: { tier: string | null }) => a.tier) ?? null
-    const games = pro.record.games
+    const played = pro.record.games
     const role = roleName(pro.role)
     const facts = [
       pro.team ? `${pro.team.name}${pro.league ? ` (${pro.league.code})` : ''}` : null,
@@ -266,16 +266,19 @@ export default class ProsController {
       best?.tier
         ? `${best.tier.charAt(0)}${best.tier.slice(1).toLowerCase()}${best.lp !== null ? ` ${count(best.lp)} LP` : ''}`
         : null,
-      games
-        ? `${games} solo queue games in 30 days at ${percent(pro.record.wins / games, 0)} wins`
+      played
+        ? `${played} solo queue games in 30 days, ${percent(pro.record.wins / played, 0)} won`
         : null,
     ].filter(Boolean)
     const crumbs = [{ name: 'Pros', path: '/pros' }]
     if (pro.league) crumbs.push({ name: pro.league.code, path: `/pros?league=${pro.league.slug}` })
     if (pro.team) crumbs.push({ name: pro.team.name, path: `/team/${pro.team.slug}` })
     crumbs.push({ name: pro.name, path: `/pro/${pro.slug}` })
+    // Its games as stored matches, drawn and opened like a profile's.
+    const games = await proService.recentMatches(pro.games)
     return inertia.render('pros/show', {
       pro: shown,
+      games,
       matches: { next: matches?.next[0] ?? null, last: matches?.results[0] ?? null },
       now: Date.now(),
       names: await championNames(),
@@ -350,7 +353,7 @@ export default class ProsController {
       },
       ...meta({
         title: `${team.name}${team.league ? ` (${team.league.code})` : ''}: roster and solo queue`,
-        description: `${team.name}: ${players.map((m) => m.name).join(', ') || 'no current roster'}${games ? `. ${games} solo queue games in 30 days at ${percent(team.record.wins / games, 0)} wins` : ''}.`,
+        description: `${team.name}: ${players.map((m) => m.name).join(', ') || 'no current roster'}${games ? `. ${games} solo queue games in 30 days, ${percent(team.record.wins / games, 0)} won` : ''}.`,
         path: `/team/${team.slug}`,
         image: `/og/team/${team.slug}.jpg`,
         version: today(),

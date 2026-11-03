@@ -1295,8 +1295,6 @@ a.nb-tr:hover,
 .pp-matches {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 10px;
 }
 .nb-prohead .tags,
 .nv-teamhead .tags {
@@ -1388,23 +1386,34 @@ a.nb-tr:hover,
 .nb-h .end {
   margin-left: auto;
 }
+/* A pro's champions: list rows split by hairlines, flush with the sheet's edges. The one whose
+   build shows below is the row in the selected wash and full ink; the others read quieter. */
 .pp-pick {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  min-height: 44px;
-  padding: 0 8px;
+  min-height: 48px;
+  padding: 0 14px;
   text-align: left;
-  border-radius: var(--r-sm);
-  transition: background var(--t-fast) var(--ease);
+  border-radius: 0;
+  transition: background var(--t-base) var(--ease);
+}
+.pp-pick + .pp-pick {
+  border-top: 1px solid var(--line);
 }
 .pp-pick:hover {
   background: var(--glint);
 }
 .pp-pick[aria-pressed='true'] {
   background: var(--surface-2);
-  box-shadow: inset 2px 0 0 var(--brand);
+}
+.pp-pick:focus-visible {
+  outline: none;
+  box-shadow: inset var(--focus);
+}
+.pp-pick:last-child {
+  border-radius: 0 0 var(--r-md) var(--r-md);
 }
 .pp-pick .n {
   flex: 1;
@@ -1422,9 +1431,25 @@ a.nb-tr:hover,
   color: var(--nb-quiet, var(--text-3));
 }
 .pp-pick .v {
-  font-size: 12.5px;
-  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  font-size: 13px;
+  font-weight: 650;
   color: var(--text-1);
+}
+.pp-pick .v small {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--nb-quiet, var(--text-3));
+}
+.pp-pick[aria-pressed='false'] .n {
+  font-weight: 500;
+  color: var(--text-2);
+}
+.pp-pick[aria-pressed='true'] .n {
+  font-weight: 600;
 }
 .pp-kv {
   display: flex;

@@ -26,7 +26,7 @@ import {
 } from '../../lib/board.js'
 import { afterPaint } from '../../lib/after_paint.js'
 import { leagueData } from '../../lib/pro_pages.js'
-import { matchList, type ProMatch } from '../../lib/pro_matches.js'
+import { matchList, tournamentPart, type ProMatch } from '../../lib/pro_matches.js'
 import MatchCard from '../../components/pros/MatchCard.vue'
 import '../../css/champions.css'
 
@@ -430,18 +430,16 @@ const crumbs = computed(() => {
                 <h2 id="h-intl">{{ intlLeague?.name ?? 'International' }}</h2>
                 <span class="nb-meta">{{ intlNext.length ? 'Next games' : 'Latest results' }}</span>
                 <span v-if="intlGames[0]?.tournament" class="end nb-meta">{{
-                  intlGames[0].tournament
+                  tournamentPart(intlGames[0])
                 }}</span>
               </div>
-              <div class="nb-pb">
-                <div class="pm-grid">
-                  <MatchCard
-                    v-for="mt in intlGames"
-                    :key="mt.id"
-                    :match="mt"
-                    :show-league="!intlLeague"
-                  />
-                </div>
+              <div class="pm-grid">
+                <MatchCard
+                  v-for="mt in intlGames"
+                  :key="mt.id"
+                  :match="mt"
+                  :show-league="!intlLeague"
+                />
               </div>
             </section>
             <section v-if="leagueGames.length" class="nb-panel pm-strip" aria-labelledby="h-next">
@@ -449,10 +447,8 @@ const crumbs = computed(() => {
                 <h2 id="h-next">Next games</h2>
                 <span class="nb-meta">{{ leagueView.league.code }}</span>
               </div>
-              <div class="nb-pb">
-                <div class="pm-grid">
-                  <MatchCard v-for="mt in leagueGames" :key="mt.id" :match="mt" />
-                </div>
+              <div class="pm-grid">
+                <MatchCard v-for="mt in leagueGames" :key="mt.id" :match="mt" />
               </div>
             </section>
 
