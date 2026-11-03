@@ -6,6 +6,14 @@
    layout change of the page under it.
    ────────────────────────────────────────────────────────────── */
 @layer components {
+  /* Quiet text that still reads (WCAG AA on every sheet, in both themes): the label ink with a
+     share of the body ink. Decorative marks keep --text-4. */
+  .sh-head,
+  .sh-foot,
+  .sh-error {
+    --sh-quiet: color-mix(in srgb, var(--text-3) 65%, var(--text-2));
+  }
+
   /* ── Bar ──────────────────────────────────────────────────── */
   .sh-head {
     position: sticky;
@@ -157,7 +165,7 @@
     width: 100%;
     height: 34px;
     padding: 0 6px 0 10px;
-    color: var(--text-3);
+    color: var(--sh-quiet);
     background: var(--inset);
     border-radius: var(--r-sm);
     box-shadow: var(--inset-shadow);
@@ -183,7 +191,7 @@
     height: 20px;
     padding: 0 6px;
     font: 500 11px/1 var(--font);
-    color: var(--text-3);
+    color: var(--sh-quiet);
     background: var(--surface-3);
     border-radius: 4px;
   }
@@ -393,7 +401,7 @@
   .sh-feat .k {
     font-size: 12px;
     font-weight: 500;
-    color: var(--text-3);
+    color: var(--sh-quiet);
   }
 
   .sh-feat h3 {
@@ -412,7 +420,7 @@
     margin-top: 4px;
     font-size: 12px;
     line-height: 17px;
-    color: var(--text-3);
+    color: var(--sh-quiet);
   }
 
   .sh-feat ul {
@@ -443,7 +451,7 @@
   .sh-feat li .r {
     display: inline-flex;
     width: 16px;
-    color: var(--text-3);
+    color: var(--sh-quiet);
   }
 
   .sh-feat li .pic {
@@ -492,7 +500,7 @@
     overflow: hidden;
     font-size: 12px;
     font-weight: 500;
-    color: var(--text-3);
+    color: var(--sh-quiet);
     text-overflow: ellipsis;
   }
 
@@ -504,7 +512,7 @@
   }
 
   .sh-feat li .v .was {
-    color: var(--text-4);
+    color: var(--sh-quiet);
   }
 
   .sh-feat li .v .to {
@@ -627,7 +635,7 @@
     margin-top: 1px;
     font-size: 12px;
     line-height: 16px;
-    color: var(--text-3);
+    color: var(--sh-quiet);
   }
 
   .sh-mega-foot {
@@ -646,7 +654,7 @@
     margin-right: 8px;
     font-size: 12px;
     font-weight: 500;
-    color: var(--text-3);
+    color: var(--sh-quiet);
   }
 
   .sh-chip {
@@ -704,7 +712,7 @@
 
   .sh-leagues small {
     font-size: 11.5px;
-    color: var(--text-4);
+    color: var(--sh-quiet);
   }
 
   /* A league's or a team's logo slot: the acronym stands in until the file is served. */
@@ -760,7 +768,7 @@
 
   .sh-tier.t4,
   .sh-tier.t5 {
-    color: var(--text-3);
+    color: var(--sh-quiet);
   }
 
   .sh-head .up,
@@ -779,6 +787,17 @@
     right: 0;
     width: min(560px, calc(100vw - 32px));
     overflow: hidden;
+    animation: none;
+    transition: opacity var(--t-fast) var(--ease);
+  }
+
+  .sh-palette.off {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      opacity var(--t-fast) var(--ease),
+      visibility 0s linear var(--t-fast);
   }
 
   @media (max-width: 39.99rem) {
@@ -832,7 +851,7 @@
     margin-bottom: 10px;
     padding: 0 12px;
     font-size: 16px;
-    color: var(--text-3);
+    color: var(--sh-quiet);
     background: var(--inset);
     border-radius: var(--r-md);
     box-shadow: var(--inset-shadow);
@@ -858,7 +877,7 @@
   .sh-acc-h .ic,
   .sh-acc-h .chev {
     display: inline-flex;
-    color: var(--text-3);
+    color: var(--sh-quiet);
   }
 
   .sh-acc-h .chev {
@@ -894,7 +913,7 @@
 
   .sh-acc-b > a small {
     font-size: 12px;
-    color: var(--text-3);
+    color: var(--sh-quiet);
   }
 
   .sh-acc-b .roles {
@@ -975,7 +994,7 @@
     margin-top: 14px;
     font-size: 13px;
     line-height: 20px;
-    color: var(--text-3);
+    color: var(--sh-quiet);
   }
 
   .sh-social {
@@ -1037,7 +1056,7 @@
   .sh-app small {
     display: block;
     font-size: 12px;
-    color: var(--text-3);
+    color: var(--sh-quiet);
   }
 
   .sh-app .iv-btn {
@@ -1047,7 +1066,7 @@
   .sh-col h3 {
     font-size: 12px;
     font-weight: 600;
-    color: var(--text-3);
+    color: var(--sh-quiet);
   }
 
   .sh-col ul {
@@ -1078,7 +1097,7 @@
     gap: 10px 22px;
     padding: 18px 0 26px;
     font-size: 12px;
-    color: var(--text-3);
+    color: var(--sh-quiet);
     box-shadow: inset 0 1px 0 var(--line);
   }
 
@@ -1102,7 +1121,7 @@
     padding-bottom: 28px;
     font-size: 11.5px;
     line-height: 17px;
-    color: var(--text-4);
+    color: var(--sh-quiet);
   }
 
   @media (pointer: coarse) {
@@ -1174,7 +1193,7 @@
   .sh-error .code {
     font-size: 13px;
     font-weight: 500;
-    color: var(--text-3);
+    color: var(--sh-quiet);
   }
 
   .sh-error h1 {
@@ -1198,7 +1217,7 @@
     padding: 8px 12px;
     font-family: var(--font-mono, ui-monospace, monospace);
     font-size: 12px;
-    color: var(--text-3);
+    color: var(--sh-quiet);
     overflow-wrap: anywhere;
     background: var(--well);
     border-radius: var(--r-sm);

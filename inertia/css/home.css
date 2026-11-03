@@ -6,6 +6,8 @@
  (Shot, AppWindow), whose own styles are unlayered too.
  ────────────────────────────────────────────────────────────── */
 .hm {
+  /* Quiet text that still reads (WCAG AA in both themes), as in the shell (shell.css). */
+  --sh-quiet: color-mix(in srgb, var(--text-3) 65%, var(--text-2));
   font-size: 13px;
 }
 
@@ -99,7 +101,7 @@
   margin-right: 6px;
   font-size: 12px;
   font-weight: 500;
-  color: var(--text-3);
+  color: var(--sh-quiet);
 }
 
 .hm-chip {
@@ -142,7 +144,7 @@
 .hm-chip small {
   flex: none;
   font-size: 12px;
-  color: var(--text-4);
+  color: var(--sh-quiet);
 }
 
 .hm-recent .clear {
@@ -150,7 +152,7 @@
   margin-left: 4px;
   padding: 0 8px;
   font-size: 12px;
-  color: var(--text-3);
+  color: var(--sh-quiet);
   border-radius: var(--r-sm);
 }
 
@@ -201,7 +203,7 @@
   min-width: 0;
   overflow: hidden;
   font-size: 12.5px;
-  color: var(--text-3);
+  color: var(--sh-quiet);
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -215,7 +217,7 @@
   margin-left: auto;
   font-size: 13px;
   font-weight: 500;
-  color: var(--text-3);
+  color: var(--sh-quiet);
   border-radius: var(--r-sm);
 }
 
@@ -269,7 +271,7 @@
   width: 74px;
   font-size: 12.5px;
   font-weight: 500;
-  color: var(--text-3);
+  color: var(--sh-quiet);
 }
 
 .hm-row .pic {
@@ -316,7 +318,7 @@
   overflow: hidden;
   font-size: 12px;
   font-weight: 500;
-  color: var(--text-3);
+  color: var(--sh-quiet);
   text-overflow: ellipsis;
 }
 
@@ -336,19 +338,14 @@
   font-size: 11.5px;
   font-weight: 500;
   font-stretch: 100%;
-  color: var(--text-3);
-}
-
-.hm-row .crest {
-  display: inline-flex;
-  flex: none;
+  color: var(--sh-quiet);
 }
 
 .hm-row .pos {
   flex: none;
   width: 18px;
   font-size: 12.5px;
-  color: var(--text-4);
+  color: var(--sh-quiet);
 }
 
 .hm-row .mv {
@@ -501,7 +498,7 @@
   margin-top: 4px;
   font-size: 12.5px;
   line-height: 18px;
-  color: var(--text-3);
+  color: var(--sh-quiet);
 }
 
 /* Champ select: the team's list out of the app's live draft, larger. */
@@ -598,7 +595,7 @@
   gap: 5px;
   margin-top: 2px;
   font-size: 11.5px;
-  color: var(--text-3);
+  color: var(--sh-quiet);
 }
 
 .hm-ban .f {
@@ -611,7 +608,7 @@
   font-size: 12px;
   font-weight: 500;
   font-stretch: 100%;
-  color: var(--text-3);
+  color: var(--sh-quiet);
 }
 
 .hm-bar {
@@ -714,7 +711,7 @@
 .hm-counts dt {
   font-size: 12px;
   font-weight: 500;
-  color: var(--text-3);
+  color: var(--sh-quiet);
 }
 
 .hm-counts dd {
@@ -768,7 +765,7 @@
 
 .hm-chans li span {
   overflow: hidden;
-  color: var(--text-3);
+  color: var(--sh-quiet);
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -845,7 +842,7 @@
   display: block;
   overflow: hidden;
   font-size: 12px;
-  color: var(--text-3);
+  color: var(--sh-quiet);
   white-space: nowrap;
   text-overflow: ellipsis;
 }
