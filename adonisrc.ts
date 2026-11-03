@@ -110,6 +110,11 @@ export default defineConfig({
       reloadServer: false,
     },
     {
+      // The leagues' logos (/cdn/league/:slug), read at run time.
+      pattern: 'resources/leagues/**',
+      reloadServer: false,
+    },
+    {
       // The desktop app's release notes (scripts/sync_changelog.mjs), read at run time.
       pattern: 'resources/changelog/**',
       reloadServer: false,
