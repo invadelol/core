@@ -68,7 +68,7 @@ const sideClass = (i: number) => ({
 
     <div class="pm-face">
       <component
-        :is="href(t) ? Link : 'div'"
+        :is="href(m.teams[i]) ? Link : 'div'"
         v-for="(i, at) in sides"
         :key="i"
         :href="href(m.teams[i]) ?? undefined"
