@@ -23,6 +23,7 @@ import {
   tierColor,
   tierName,
 } from '../../lib/board.js'
+import { proPage } from '../../lib/pro_pages.js'
 import '../../css/champions.css'
 
 interface LeagueRef {
@@ -107,17 +108,18 @@ const props = defineProps<{
 }>()
 
 const page = usePage()
+const player = computed(() => proPage(props.pro))
 const championName = (id: number) => props.names?.[id]?.[0] ?? loadedName(id)
 const canonical = computed(
   () => (page.props.social as { canonical?: string } | undefined)?.canonical ?? ''
 )
 const title = computed(
-  () => (page.props.social as { title?: string } | undefined)?.title ?? props.pro.name
+  () => (page.props.social as { title?: string } | undefined)?.title ?? player.value.name
 )
 const now = computed(() => props.now ?? Date.now())
-const lane = computed(() => proRole(props.pro.role))
-const best = computed(() => props.pro.accounts.find((a) => a.tier) ?? null)
-const record = computed(() => props.pro.record)
+const lane = computed(() => proRole(player.value.role))
+const best = computed(() => player.value.accounts.find((a) => a.tier) ?? null)
+const record = computed(() => player.value.record)
 const kda = computed(() =>
   record.value.games
     ? ((record.value.kills + record.value.assists) / Math.max(1, record.value.deaths)).toFixed(1)
@@ -133,7 +135,7 @@ const SOCIAL: Record<string, [string, (v: string) => string]> = {
   ],
 }
 const socials = computed(() =>
-  Object.entries(props.pro.socials ?? {})
+  Object.entries(player.value.socials ?? {})
     .filter(([k, v]) => SOCIAL[k] && v)
     .map(([k, v]) => ({ k, label: SOCIAL[k][0], href: SOCIAL[k][1](v) }))
 )
@@ -149,7 +151,7 @@ const years = (t: { joinedAt: string | null; leftAt: string | null; current: boo
 /* ── Games ───────────────────────────────────────────────────── */
 const filter = ref<'all' | 'wins' | 'losses'>('all')
 const games = computed(() =>
-  props.pro.games.filter((g) => filter.value === 'all' || g.win === (filter.value === 'wins'))
+  player.value.games.filter((g) => filter.value === 'all' || g.win === (filter.value === 'wins'))
 )
 const open = ref<string | null>(null)
 const boards = reactive<Record<string, Side[] | 'loading' | 'missing'>>({})
@@ -166,24 +168,26 @@ async function toggle(g: Game) {
   }
 }
 const opponentName = (g: Game) => g.opponentPro?.name ?? g.opponentName ?? ''
-const isMe = (p: Side['players'][number]) => p.pro?.slug === props.pro.slug
+const isMe = (p: Side['players'][number]) => p.pro?.slug === player.value.slug
 
 /* ── Builds ──────────────────────────────────────────────────── */
-const picked = ref<number | null>(props.pro.builds[0]?.champion ?? null)
-const build = computed(() => props.pro.builds.find((b) => b.champion === picked.value) ?? null)
+const picked = ref<number | null>(player.value.builds[0]?.champion ?? null)
+const build = computed(() => player.value.builds.find((b) => b.champion === picked.value) ?? null)
 const champHref = (id: number) =>
   `/champions/${props.names?.[id]?.[1] ?? championSlug(championName(id))}`
 const crumbs = computed(() => [
   { label: 'Pros', href: '/pros' },
-  ...(props.pro.league
-    ? [{ label: props.pro.league.code, href: `/pros?league=${props.pro.league.slug}` }]
+  ...(player.value.league
+    ? [{ label: player.value.league.code, href: `/pros?league=${player.value.league.slug}` }]
     : []),
-  ...(props.pro.team ? [{ label: props.pro.team.name, href: `/team/${props.pro.team.slug}` }] : []),
-  { label: props.pro.name },
+  ...(player.value.team
+    ? [{ label: player.value.team.name, href: `/team/${player.value.team.slug}` }]
+    : []),
+  { label: player.value.name },
 ])
 const back = computed(() =>
-  props.pro.team
-    ? { label: props.pro.team.name, href: `/team/${props.pro.team.slug}` }
+  player.value.team
+    ? { label: player.value.team.name, href: `/team/${player.value.team.slug}` }
     : { label: 'Pros', href: '/pros' }
 )
 </script>
@@ -194,26 +198,26 @@ const back = computed(() =>
     <AppHeader />
     <main class="nb nb-page flex-1">
       <Crumbs :back="back" :items="crumbs">
-        <template #end><ShareButton :title="pro.name" :url="canonical" /></template>
+        <template #end><ShareButton :title="player.name" :url="canonical" /></template>
       </Crumbs>
 
-      <section class="nb-panel nb-prohead" :aria-label="pro.name">
+      <section class="nb-panel nb-prohead" :aria-label="player.name">
         <ProPhoto :width="128" :height="144" />
         <div class="min-w-0">
-          <h1>{{ pro.name }}</h1>
+          <h1>{{ player.name }}</h1>
           <div class="tags">
-            <Link v-if="pro.team" :href="`/team/${pro.team.slug}`"
-              ><Logo :team="pro.team" :size="20" eager />{{ pro.team.name }}</Link
+            <Link v-if="player.team" :href="`/team/${player.team.slug}`"
+              ><Logo :team="player.team" :size="20" eager />{{ player.team.name }}</Link
             >
             <span v-else class="q">No team now</span>
-            <Link v-if="pro.league" :href="`/pros?league=${pro.league.slug}`"
-              ><Logo :league="pro.league" :size="20" eager />{{ pro.league.code }}</Link
+            <Link v-if="player.league" :href="`/pros?league=${player.league.slug}`"
+              ><Logo :league="player.league" :size="20" eager />{{ player.league.code }}</Link
             >
             <span v-if="lane"><RoleIcon :lane="lane.lane" :size="14" />{{ lane.label }}</span>
-            <span v-else-if="pro.staff">{{
-              (pro.role ?? '').charAt(0) + (pro.role ?? '').slice(1).toLowerCase()
+            <span v-else-if="player.staff">{{
+              (player.role ?? '').charAt(0) + (player.role ?? '').slice(1).toLowerCase()
             }}</span>
-            <span v-if="pro.country">{{ countryName(pro.country) }}</span>
+            <span v-if="player.country">{{ countryName(player.country) }}</span>
           </div>
           <div v-if="socials.length" class="links">
             <a
@@ -267,14 +271,14 @@ const back = computed(() =>
           <section class="nb-panel">
             <div class="nb-ph">
               <h2>Accounts</h2>
-              <span class="end nb-meta num">{{ pro.accounts.length }}</span>
+              <span class="end nb-meta num">{{ player.accounts.length }}</span>
             </div>
             <div class="nb-pb rows">
-              <p v-if="!pro.accounts.length" class="nb-empty" style="padding-inline: 0">
+              <p v-if="!player.accounts.length" class="nb-empty" style="padding-inline: 0">
                 No ranked account known.
               </p>
               <Link
-                v-for="a in pro.accounts"
+                v-for="a in player.accounts"
                 :key="a.id"
                 :href="profile(a)"
                 class="nb-row"
@@ -299,11 +303,11 @@ const back = computed(() =>
               </Link>
             </div>
           </section>
-          <section v-if="pro.teams.length" class="nb-panel">
+          <section v-if="player.teams.length" class="nb-panel">
             <div class="nb-ph"><h2>Career</h2></div>
             <div class="nb-pb rows">
               <Link
-                v-for="t in pro.teams"
+                v-for="t in player.teams"
                 :key="`${t.team.id}-${t.joinedAt}`"
                 :href="`/team/${t.team.slug}`"
                 class="nb-row"
@@ -351,8 +355,8 @@ const back = computed(() =>
               </button>
             </span>
           </div>
-          <p v-if="!pro.games.length" class="nb-panel nb-empty">
-            No ranked game of {{ pro.name }} is stored for the last 30 days.
+          <p v-if="!player.games.length" class="nb-panel nb-empty">
+            No ranked game of {{ player.name }} is stored for the last 30 days.
           </p>
           <div v-for="g in games" :key="g.matchId" class="nb-game" :class="g.win ? 'w' : 'l'">
             <button
@@ -377,7 +381,7 @@ const back = computed(() =>
               >
               <span class="its"
                 ><GameImg
-                  v-for="(id, i) in g.items.filter(Boolean)"
+                  v-for="(id, i) in (g.items ?? []).filter(Boolean)"
                   :key="i"
                   kind="item"
                   :id="id"
@@ -448,7 +452,7 @@ const back = computed(() =>
                     >
                     <span class="its"
                       ><GameImg
-                        v-for="(id, i) in p.items.slice(0, 4)"
+                        v-for="(id, i) in (p.items ?? []).slice(0, 4)"
                         :key="i"
                         kind="item"
                         :id="id"
@@ -471,7 +475,7 @@ const back = computed(() =>
         </section>
 
         <div class="nb-stack build">
-          <section v-if="pro.builds.length" class="nb-panel">
+          <section v-if="player.builds.length" class="nb-panel">
             <div class="nb-ph">
               <h2>Champions</h2>
               <span class="end nb-meta">30 days</span>
@@ -480,10 +484,10 @@ const back = computed(() =>
               class="nb-pb"
               style="padding: 4px 6px"
               role="group"
-              :aria-label="`${pro.name}'s champions`"
+              :aria-label="`${player.name}'s champions`"
             >
               <button
-                v-for="c in pro.builds"
+                v-for="c in player.builds"
                 :key="c.champion"
                 type="button"
                 class="pp-pick"
@@ -504,13 +508,13 @@ const back = computed(() =>
           <section
             v-if="build"
             class="nb-panel lit-sheet"
-            :aria-label="`${pro.name} on ${championName(build.champion)}`"
+            :aria-label="`${player.name} on ${championName(build.champion)}`"
             aria-live="polite"
           >
             <div class="nb-ph">
               <span class="nb-pic"><ChampIcon :id="build.champion" :size="24" /></span>
-              <h2>{{ pro.name }} on {{ championName(build.champion) }}</h2>
-              <span v-if="build.champion === pro.builds[0].champion" class="end iv-badge"
+              <h2>{{ player.name }} on {{ championName(build.champion) }}</h2>
+              <span v-if="build.champion === player.builds[0].champion" class="end iv-badge"
                 >Most played</span
               >
             </div>
