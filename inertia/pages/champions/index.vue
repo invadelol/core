@@ -181,7 +181,7 @@ const roleName = (position?: string | null) => (position ? roleOf(position).labe
 </script>
 
 <template>
-  <Head :title="tab ? TAB_TITLE[tab] : 'Champions'" />
+  <Head :title="($page.props.social as { title?: string } | undefined)?.title ?? 'Champions'" />
   <div class="flex min-h-screen flex-col">
     <AppHeader />
     <main class="nb nb-page flex-1">

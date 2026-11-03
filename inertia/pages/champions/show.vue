@@ -1,5 +1,14 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref, shallowRef } from 'vue'
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  shallowRef,
+  watch,
+} from 'vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import { ChevronRight } from 'lucide-vue-next'
 import { ChampIcon, RoleIcon, TrendLine } from '@invadelol/ui'
@@ -384,9 +393,21 @@ const SECTIONS = [
 ] as const
 const current = ref<string>(props.section ?? 'build')
 let spy: IntersectionObserver | null = null
+/** An old tab address lands on its section, again once the blocks above it have arrived. */
+let scrolled = false
+const stop = () => (scrolled = true)
+const land = () => {
+  if (props.section && !scrolled) document.getElementById(props.section)?.scrollIntoView()
+}
+watch(
+  () => [props.byRank, props.details, props.pros, props.matchups, props.build, props.runes],
+  () => nextTick(land)
+)
 onMounted(() => {
   now.value = Date.now()
-  if (props.section) document.getElementById(props.section)?.scrollIntoView()
+  land()
+  for (const e of ['wheel', 'touchstart', 'keydown'])
+    addEventListener(e, stop, { once: true, passive: true })
   spy = new IntersectionObserver(
     (entries) => {
       for (const e of entries) if (e.isIntersecting) current.value = e.target.id
@@ -398,11 +419,19 @@ onMounted(() => {
     if (el) spy.observe(el)
   }
 })
-onBeforeUnmount(() => spy?.disconnect())
+onBeforeUnmount(() => {
+  spy?.disconnect()
+  for (const e of ['wheel', 'touchstart', 'keydown']) removeEventListener(e, stop)
+})
 </script>
 
 <template>
-  <Head :title="`${champion.name} ${role.label.toLowerCase()} build`" />
+  <Head
+    :title="
+      (page.props.social as { title?: string } | undefined)?.title ??
+      `${champion.name} ${role.label.toLowerCase()} build`
+    "
+  />
   <div class="flex min-h-screen flex-col">
     <AppHeader />
     <main class="nb nb-page flex-1">
@@ -1614,7 +1643,13 @@ onBeforeUnmount(() => spy?.disconnect())
                   </div>
                 </div>
               </section>
-              <section v-if="details" class="nb-panel">
+              <span
+                v-if="waiting('details')"
+                class="nb-skel"
+                style="height: 176px"
+                aria-busy="true"
+              />
+              <section v-else-if="details" class="nb-panel">
                 <div class="nb-ph"><h3 class="nb-h3">More per game</h3></div>
                 <div class="nb-pb nb-kv">
                   <div>

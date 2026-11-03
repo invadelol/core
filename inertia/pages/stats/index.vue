@@ -557,6 +557,24 @@ const columns = computed<Col<Row>[]>(() => {
       ]
   }
 })
+/** Which deferred prop a column reads: until it arrives the cell holds a placeholder. */
+const sourceOf = (key: string): string | null => {
+  if (props.view === 'overview') {
+    if (['kda', 'cs', 'dmg', 'early', 'late'].includes(key)) return 'averages'
+    if (['gold10', 'cs10', 'ahead', 'aheadWin', 'fb'].includes(key)) return 'events'
+    return null
+  }
+  if (props.view === 'length') return 'averages'
+  if (props.view === 'early') return 'early'
+  if (props.view === 'firstblood') return 'firstBlood'
+  if (props.view === 'regions') return key.startsWith('r-') ? 'byRegion' : null
+  return null
+}
+const pending = (key: string) => {
+  const src = sourceOf(key)
+  return !!src && (props as Record<string, unknown>)[src] === undefined
+}
+
 /** The regions with games, most first. */
 const regionCols = computed(() => {
   const totals = new Map<string, number>()
@@ -790,7 +808,13 @@ const crumbs = computed(() =>
               @sort="byItem('win')"
           /></span>
         </div>
-        <p v-if="!items.length" class="nb-empty">No item data for this patch yet.</p>
+        <span
+          v-if="$props.items === undefined"
+          class="nb-skel"
+          style="height: 480px; margin: 12px 14px"
+          aria-busy="true"
+        />
+        <p v-else-if="!items.length" class="nb-empty">No item data for this patch yet.</p>
         <div v-for="(i, k) in items" :key="i.item" class="nb-tr it-cols" role="row">
           <span class="rk num" role="cell">{{ k + 1 }}</span>
           <span class="c" role="cell"
@@ -862,9 +886,11 @@ const crumbs = computed(() =>
               class="num"
               :class="[c.key === 'tier' ? '' : 'r', c.cls?.(r)]"
             >
-              <TierMark v-if="c.key === 'tier'" :tier="r.tier" /><template v-else>{{
-                c.text(r)
-              }}</template>
+              <TierMark v-if="c.key === 'tier'" :tier="r.tier" /><span
+                v-else-if="pending(c.key)"
+                class="nb-skel"
+                style="display: inline-block; width: 30px; height: 10px"
+              /><template v-else>{{ c.text(r) }}</template>
             </span>
           </div>
         </div>

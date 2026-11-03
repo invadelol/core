@@ -1821,6 +1821,17 @@ a.nv-member:hover {
 .tm-row + .tm-row {
   margin-top: 4px;
 }
+.tm-row {
+  position: relative;
+}
+.tm-row .stretch::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+.tm-row:hover {
+  background: linear-gradient(90deg, var(--tint), transparent 45%), var(--surface-2);
+}
 .tm-row.w {
   --tint: rgb(var(--win-rgb) / 0.12);
   --edge-c: var(--win);
@@ -2456,6 +2467,26 @@ a.nv-member:hover {
 
 /* touch: every control at least 40px tall */
 @media (pointer: coarse) {
+  .nb .control {
+    min-height: 40px;
+  }
+  .nb-ph .end a,
+  .nb-more {
+    min-height: 40px;
+  }
+  /* small links inside dense lines get a taller hit area than they draw */
+  .nb-game .pros a,
+  .nb-prohead .tags a,
+  .nv-teamhead .tags a {
+    position: relative;
+  }
+  .nb-game .pros a::after,
+  .nb-prohead .tags a::after,
+  .nv-teamhead .tags a::after {
+    content: '';
+    position: absolute;
+    inset: -10px -3px;
+  }
   .nb-seg > a,
   .nb-seg > button,
   .nb-filt .opt {
