@@ -5,6 +5,7 @@ import { CornerDownLeft, Plus, Search, Users, X } from 'lucide-vue-next'
 import { champIcon, profileIcon, regionLabel } from '../lib/assets.js'
 import { championSlug } from '../lib/champions.js'
 import { recentPlayers, type RecentPlayer } from '../lib/recent.js'
+import ProPhoto from './champions/ProPhoto.vue'
 import TeamLogo from './champions/TeamLogo.vue'
 import {
   MAX_PLAYERS,
@@ -55,6 +56,8 @@ interface ProResult {
   role: string | null
   staff: boolean
   team: { id: string; slug: string; name: string; shortName: string | null } | null
+  /** Their photo's version, when they have one. */
+  photo?: string
 }
 interface TeamResult {
   id: string
@@ -93,6 +96,8 @@ interface Entry {
   title?: string
   detail?: string
   team?: { id: string; name: string; shortName?: string | null } | null
+  /** A pro's photo (`/cdn/pro/:slug`): their slug and its version. */
+  photo?: { slug: string; v: string }
   champion?: number
   icon?: number | null
   region?: string
@@ -308,6 +313,7 @@ const groups = computed(() => {
           .filter(Boolean)
           .join(', '),
         team: p.team,
+        ...(p.photo ? { photo: { slug: p.slug, v: p.photo } } : {}),
         badge: p.staff ? 'Staff' : 'Pro',
       })
     }
@@ -736,6 +742,14 @@ function submit() {
             height="28"
             class="result-icon portrait-28"
             @load="shown"
+          />
+          <ProPhoto
+            v-else-if="entry.kind === 'pro' && entry.photo"
+            :slug="entry.photo.slug"
+            :photo="entry.photo.v"
+            :width="28"
+            :height="28"
+            class="result-photo"
           />
           <TeamLogo
             v-else-if="entry.kind && entry.team"
