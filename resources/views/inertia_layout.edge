@@ -8,6 +8,9 @@
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#08090c" media="(prefers-color-scheme: dark)" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/icons/icon-192.png" type="image/png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <meta
       name="description"
       content="{{ page.props.description || 'League of Legends statistics: match timelines, lobby-relative scoring and rank history, with nothing in the way.' }}"
@@ -57,9 +60,14 @@
       <link rel="canonical" href="{{ page.props.social.canonical }}" />
     @endif
 
+    @if(page.props.robots)
+      <meta name="robots" content="{{ page.props.robots }}" />
+    @endif
+
     @if(page.props.social)
       <meta property="og:type" content="{{ page.props.social.type || 'profile' }}" />
       <meta property="og:site_name" content="invade.lol" />
+      <meta property="og:locale" content="en_US" />
       <meta property="og:title" content="{{ page.props.social.title }}" />
       <meta property="og:description" content="{{ page.props.social.description }}" />
       <meta property="og:url" content="{{ page.props.social.url }}" />
@@ -75,6 +83,14 @@
       <meta name="twitter:image" content="{{ page.props.social.image }}" />
       <meta name="twitter:image:alt" content="{{ page.props.social.alt || (page.props.social.title + ' champion artwork and recent stats') }}" />
     @endif
+
+    {{--
+      Structured data a page sends (`jsonld`, an array of JSON-LD objects), each in its own tag.
+      `<` is written as its escape, so no value can close the script early.
+    --}}
+    @each(item in (page.props.jsonld || []))
+      <script type="application/ld+json">{{{ JSON.stringify(item).split('<').join('\\u003c') }}}</script>
+    @endeach
 
     {{-- OpenPanel (self-hosted, no cookies): page views, outgoing links, data-track attributes. --}}
     @if(page.props.analytics)
