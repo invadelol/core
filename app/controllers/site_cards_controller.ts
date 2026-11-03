@@ -4,6 +4,8 @@ import logger from '@adonisjs/core/services/logger'
 import championStatsService, { DEFAULT_BRACKET } from '#services/champion_stats_service'
 import { POSITIONS, ROLE_OF, positionOf, type Position } from '#services/champion_stats'
 import homeService from '#services/home_service'
+import proLadderService from '#services/pro_ladder_service'
+import { leagueBySlug } from '#services/pro_leagues'
 import proService from '#services/pro_service'
 import riotAssets from '#services/riot/assets'
 import teamLogoService from '#services/team_logo_service'
@@ -231,10 +233,10 @@ export default class SiteCardsController {
     })
   }
 
-  /** `/og/pros/<league>.jpg`: the pros directory; a league once the directory names them. */
+  /** `/og/pros/<league>.jpg`: the pros directory (`all`), or one league with its logo. */
   async pros(ctx: HttpContext) {
-    const league = nameOf(ctx.params.file)?.toLowerCase()
-    if (league !== 'all') return this.missing(ctx)
+    const name = nameOf(ctx.params.file)?.toLowerCase()
+    if (name !== 'all') return this.league(ctx, name)
     const pros = await homeService.pros()
     if (!pros?.counts) return this.missing(ctx)
     const lead = pros.top.find((p) => p.team)
@@ -252,6 +254,31 @@ export default class SiteCardsController {
         image?.body
       )
       return { body, complete: true }
+    })
+  }
+
+  /** `/og/pros/<league>.jpg` for a league: its logo, its teams and how many of its pros rank. */
+  private async league(ctx: HttpContext, slug: string | undefined) {
+    const league = leagueBySlug(slug)
+    if (!league) return this.missing(ctx)
+    const ladderOf = await proLadderService
+      .ladder({ league: league.slug, limit: 1, apexOnly: false })
+      .catch(() => null)
+    if (!ladderOf) return this.missing(ctx)
+    const key = `pros:${league.slug}:${league.teams.length}:${ladderOf.total}`
+    return this.send(ctx, key, async () => {
+      const image = await teamLogoService.league(league.slug).catch(() => null)
+      const body = await logoCard(
+        {
+          kicker: `${league.name}, ${league.teams.length} teams`,
+          title: league.code,
+          value: ladderOf.total.toLocaleString('en-US'),
+          label: 'ranked players',
+          short: league.code,
+        },
+        image?.body
+      )
+      return { body, complete: Boolean(image) }
     })
   }
 
