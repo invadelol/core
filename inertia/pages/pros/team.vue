@@ -24,6 +24,7 @@ import {
 } from '../../lib/board.js'
 import { teamPage } from '../../lib/pro_pages.js'
 import { matchList, type ProMatch } from '../../lib/pro_matches.js'
+import MatchCard from '../../components/pros/MatchCard.vue'
 import MatchRow from '../../components/pros/MatchRow.vue'
 import '../../css/champions.css'
 
@@ -199,12 +200,13 @@ const crumbs = computed(() => [
       </section>
 
       <div v-if="nextMatches.length || results.length" class="tm-matches">
-        <section v-if="nextMatches.length" class="nb-panel" aria-labelledby="h-next">
+        <section v-if="nextMatches.length" class="nb-panel tm-next" aria-labelledby="h-next">
           <div class="nb-ph">
-            <h2 id="h-next">Next matches</h2>
+            <h2 id="h-next">{{ nextMatches.length > 1 ? 'Next matches' : 'Next match' }}</h2>
           </div>
-          <div class="nb-pb rows">
-            <MatchRow v-for="mt in nextMatches" :key="mt.id" :match="mt" :team="club.id" />
+          <MatchCard :match="nextMatches[0]" size="lg" show-league :team="club.id" />
+          <div v-if="nextMatches.length > 1" class="rows">
+            <MatchRow v-for="mt in nextMatches.slice(1)" :key="mt.id" :match="mt" :team="club.id" />
           </div>
         </section>
         <section v-if="results.length" class="nb-panel" aria-labelledby="h-results">

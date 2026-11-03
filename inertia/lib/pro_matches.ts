@@ -95,3 +95,41 @@ export function statusText(m: ProMatch) {
   if (m.status === 'canceled') return 'Canceled'
   return null
 }
+
+/**
+ * The stage of a match, from its name and tournament: "Worlds Quarterfinal 4: TES vs IG" in the
+ * Worlds reads "Quarterfinal 4"; a name that is only the two teams falls back to the tournament's
+ * last part ("2026, Playoffs" → "Playoffs").
+ */
+export function stageOf(m: ProMatch): string | null {
+  let s = (m.name ?? '').replace(/:.*$/, '').trim()
+  if (/\bvs\.?\b/i.test(s)) s = ''
+  for (const prefix of [m.league?.name, m.league?.code]) {
+    if (prefix && s.toLowerCase().startsWith(prefix.toLowerCase()))
+      s = s.slice(prefix.length).trim()
+  }
+  if (!s && m.tournament) s = m.tournament.split(',').pop()?.trim() ?? ''
+  return s || null
+}
+
+/**
+ * How long until a match starts, after mount: "in 35 min", "in 9 h", "in 2 days". Null once its
+ * time has passed (the status says the rest) or when it is more than two weeks away.
+ */
+export function countdown(iso: string, now = Date.now()): string | null {
+  const ms = new Date(iso).getTime() - now
+  if (!Number.isFinite(ms) || ms <= 0) return null
+  const min = Math.round(ms / 60_000)
+  if (min < 60) return `in ${Math.max(min, 1)} min`
+  const h = Math.round(ms / 3_600_000)
+  if (h < 36) return `in ${h} h`
+  const d = Math.round(ms / 86_400_000)
+  return d <= 14 ? `in ${d} days` : null
+}
+
+/** The match's stage and format on one line: "Quarterfinal 4, Bo5". */
+export const stageLine = (m: ProMatch) => [stageOf(m), bestOfText(m)].filter(Boolean).join(', ')
+
+/** The tournament's last part, for a strip's corner: "2026, Playoffs" → "Playoffs". */
+export const tournamentPart = (m: ProMatch) =>
+  m.tournament?.split(',').pop()?.trim() || m.tournament || null

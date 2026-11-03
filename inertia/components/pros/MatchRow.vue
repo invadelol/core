@@ -6,6 +6,7 @@ import Logo from '../champions/Logo.vue'
 import MatchTime from './MatchTime.vue'
 import {
   bestOfText,
+  stageOf,
   statusText,
   teamLabel,
   teamName,
@@ -81,7 +82,9 @@ const logoTeam = (t: ProMatch['teams'][number]) => ({
     </span>
     <span class="meta">
       <Logo v-if="m.league" :league="m.league" :size="16" />
-      <span class="q">{{ [m.league?.code, bestOfText(m)].filter(Boolean).join(', ') }}</span>
+      <span class="q">{{
+        [stageOf(m) ?? m.league?.code, bestOfText(m)].filter(Boolean).join(', ')
+      }}</span>
     </span>
     <span class="res">
       <b v-if="result" :class="result === 'Win' ? 'up' : 'down'">{{ result }}</b>
