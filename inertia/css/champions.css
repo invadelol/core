@@ -2072,12 +2072,26 @@ a.nv-member:hover {
 .ld-cols {
   grid-template-columns: 40px minmax(0, 1fr) minmax(0, 200px) 60px minmax(0, 170px) 84px;
 }
+/* without the 24-hour column (no day of rank history yet) */
+.pr-cols.no-mv {
+  grid-template-columns: 30px minmax(0, 1fr) minmax(0, 150px) 84px minmax(0, 170px) 76px 76px;
+}
+.ld-cols.no-mv {
+  grid-template-columns: 40px minmax(0, 1fr) minmax(0, 200px) 60px minmax(0, 170px);
+}
 @media (max-width: 767px) {
+  /* the rank keeps room for its LP; the name takes what is left */
   .nb-tr.pr-cols {
-    grid-template-columns: 24px minmax(0, 1fr) minmax(0, 120px) 64px;
+    grid-template-columns: 24px minmax(0, 1fr) 136px 52px;
   }
   .ld-cols {
-    grid-template-columns: 30px minmax(0, 1fr) minmax(0, 120px) 64px;
+    grid-template-columns: 30px minmax(0, 1fr) 136px 52px;
+  }
+  .nb-tr.pr-cols.no-mv {
+    grid-template-columns: 24px minmax(0, 1fr) 144px;
+  }
+  .ld-cols.no-mv {
+    grid-template-columns: 30px minmax(0, 1fr) 144px;
   }
 }
 
@@ -2111,6 +2125,9 @@ a.nv-member:hover {
   }
   .pr-cols {
     grid-template-columns: 30px minmax(0, 1fr) minmax(0, 140px) minmax(0, 160px) 84px 76px;
+  }
+  .pr-cols.no-mv {
+    grid-template-columns: 30px minmax(0, 1fr) minmax(0, 140px) minmax(0, 160px) 76px;
   }
   .nb-layout {
     grid-template-columns: minmax(0, 1fr);
@@ -2513,5 +2530,20 @@ a.nv-member:hover {
   .nb *::after {
     transition: none !important;
     animation: none !important;
+  }
+}
+
+/* Many league and team logos are drawn white for dark grounds, so their well stays dark in the
+   light theme too. */
+[data-theme='light'] .lgo {
+  color: #e9e9ef;
+  background: #17181d;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.1);
+}
+@media (prefers-color-scheme: light) {
+  [data-theme='system'] .lgo {
+    color: #e9e9ef;
+    background: #17181d;
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.1);
   }
 }

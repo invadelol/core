@@ -9,6 +9,8 @@ import championStatsService, { DEFAULT_BRACKET } from '#services/champion_stats_
 import type { Filter, Summary } from '#services/champion_stats'
 import { ladder } from '#services/desktop/lp'
 import { discordServer } from '#services/discord_server'
+import proLadderService, { type LadderRow } from '#services/pro_ladder_service'
+import { LEAGUES } from '#services/pro_leagues'
 import proService from '#services/pro_service'
 import { patchStart, rows as statRows } from '#services/ranked_games_service'
 import { RANKED_SOLO, seedTiers } from '#services/ranked_stats'
@@ -802,8 +804,12 @@ export class HomeService {
     return {
       tierList: picks ? (tierList as SiteNav['tierList']) : null,
       pros: pros && { top: pros.top.slice(0, NAV_PROS), counts: pros.counts },
-      // The directory's leagues arrive with the pros pages; until then the menu lists none.
-      leagues: [],
+      leagues: LEAGUES.map((l) => ({
+        slug: l.slug,
+        name: l.name,
+        short: l.code,
+        teams: l.teams.length,
+      })),
     }
   }
 
@@ -842,19 +848,28 @@ export class HomeService {
   }
 
   /**
-   * The highest ranked pros now, from the pros directory, and how many players, accounts and
-   * teams it holds. `movement` is left out until the ladder's history is read.
+   * The highest ranked pros now, as the pros ladder ranks them with their moves over 24 hours,
+   * and how many players, accounts and teams the directory holds. Falls back to the directory's
+   * top when the ladder cannot be read.
    */
   pros(): Promise<ProBoard | null> {
     return this.section('pros', TTL.pros, async () => {
-      const directory = await proService.directory()
-      const pros: HomePro[] = directory.top.slice(0, HOME_ROWS).map((p: DirectoryPro) => ({
-        slug: p.slug,
-        name: p.name,
-        team: p.team ? { id: p.team.id, name: p.team.name, shortName: p.team.shortName } : null,
-        tier: p.best?.tier ?? null,
-        lp: p.best?.lp ?? null,
-      }))
+      const [directory, ladderTop] = await Promise.all([
+        proService.directory(),
+        proLadderService.ladder({ limit: HOME_ROWS }).catch((error) => {
+          logger.warn({ err: error }, 'home pros: ladder unavailable')
+          return null
+        }),
+      ])
+      const pros: HomePro[] = ladderTop?.rows.length
+        ? ladderTop.rows.map(fromLadder)
+        : directory.top.slice(0, HOME_ROWS).map((p: DirectoryPro) => ({
+            slug: p.slug,
+            name: p.name,
+            team: p.team ? { id: p.team.id, name: p.team.name, shortName: p.team.shortName } : null,
+            tier: p.best?.tier ?? null,
+            lp: p.best?.lp ?? null,
+          }))
       return { top: pros, counts: directory.counts ?? null }
     })
   }
@@ -889,6 +904,20 @@ export class HomeService {
       if (!bullies.length && !firsts.length) return null
       return { bullies, firstBlood: firsts }
     })
+  }
+}
+
+/** A ladder row as the home's lists and the Pros menu show it. */
+function fromLadder(row: LadderRow): HomePro {
+  const team = row.pro.team
+  return {
+    slug: row.pro.slug,
+    name: row.pro.name,
+    team: team ? { id: team.id, name: team.name, shortName: team.shortName } : null,
+    tier: row.account.tier,
+    lp: row.account.lp,
+    movement:
+      row.move && row.move.places !== null ? { places: row.move.places, lp: row.move.lp } : null,
   }
 }
 

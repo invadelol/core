@@ -112,6 +112,9 @@ const SORTS = [
   { value: 'record', label: 'Games, 30 days' },
   { value: 'name', label: 'Name' },
 ] as const
+const sortOptions = computed(() =>
+  leagueMoved.value ? SORTS : SORTS.filter((o) => o.value !== 'move')
+)
 const sortModel = computed({
   get: () => sort.value.key,
   set: (key: Key) => (sort.value = { key, dir: key === 'name' || key === 'rank' ? 'asc' : 'desc' }),
@@ -190,6 +193,8 @@ function loadMore() {
   })
 }
 const ladderMoved = computed(() => (props.ladder ?? []).some((p) => p.move))
+/** The 24-hour column waits for a day of rank history; until then it is left out. */
+const leagueMoved = computed(() => players.value.some((p) => p.move))
 
 const placesText = (m: { places: number | null } | null) =>
   !m || m.places === null
@@ -367,7 +372,7 @@ const crumbs = computed(() => {
                 </label>
                 <Select
                   v-model="sortModel"
-                  :options="SORTS"
+                  :options="sortOptions"
                   label="Sort"
                   width="12rem"
                   align="right"
@@ -402,7 +407,7 @@ const crumbs = computed(() => {
             </section>
 
             <div class="nb-panel nb-table" role="table" :aria-label="`${data.league.code} players`">
-              <div class="nb-tr th pr-cols" role="row">
+              <div class="nb-tr th pr-cols" :class="{ 'no-mv': !leagueMoved }" role="row">
                 <span role="columnheader" :aria-sort="ariaSort(sort, 'rank')"
                   ><SortHead
                     label="#"
@@ -427,7 +432,11 @@ const crumbs = computed(() => {
                 /></span>
                 <span role="columnheader" class="hm ht">Role</span>
                 <span role="columnheader">Best account</span>
-                <span role="columnheader" class="r" :aria-sort="ariaSort(sort, 'move')"
+                <span
+                  v-if="leagueMoved"
+                  role="columnheader"
+                  class="r"
+                  :aria-sort="ariaSort(sort, 'move')"
                   ><SortHead
                     label="Last 24 h"
                     title="Places on this list and LP"
@@ -450,6 +459,7 @@ const crumbs = computed(() => {
                 v-for="p in shownPlayers"
                 :key="p.slug"
                 class="nb-tr link pr-cols"
+                :class="{ 'no-mv': !leagueMoved }"
                 role="row"
                 style="min-height: 52px"
               >
@@ -490,7 +500,7 @@ const crumbs = computed(() => {
                     }}</span
                   ></span
                 >
-                <span class="pr-mv num" role="cell"
+                <span v-if="leagueMoved" class="pr-mv num" role="cell"
                   ><template v-if="p.move"
                     ><b :class="placesCls(p.move)">{{ placesText(p.move) }}</b
                     ><small>{{ lpText(p.move) }}</small></template
@@ -571,12 +581,12 @@ const crumbs = computed(() => {
               </div>
             </div>
             <div class="nb-panel nb-table" role="table" aria-label="Pro ladder">
-              <div class="nb-tr th ld-cols" role="row">
+              <div class="nb-tr th ld-cols" :class="{ 'no-mv': !ladderMoved }" role="row">
                 <span role="columnheader">#</span><span role="columnheader">Player</span
                 ><span role="columnheader" class="hm">Team</span
                 ><span role="columnheader" class="hm">Server</span
                 ><span role="columnheader">Rank</span
-                ><span role="columnheader" class="r">Last 24 h</span>
+                ><span v-if="ladderMoved" role="columnheader" class="r">Last 24 h</span>
               </div>
               <p v-if="!ladder?.length" class="nb-empty">
                 No pro in Master and above with these filters.
@@ -585,6 +595,7 @@ const crumbs = computed(() => {
                 v-for="r in ladder"
                 :key="r.pro.slug"
                 class="nb-tr link ld-cols"
+                :class="{ 'no-mv': !ladderMoved }"
                 role="row"
                 style="min-height: 48px"
               >
@@ -617,7 +628,7 @@ const crumbs = computed(() => {
                     >{{ rankText(r.account.tier, r.account.division, r.account.lp) }}</span
                   ></span
                 >
-                <span class="pr-mv num" role="cell"
+                <span v-if="ladderMoved" class="pr-mv num" role="cell"
                   ><template v-if="r.move"
                     ><b :class="placesCls(r.move)">{{ placesText(r.move) }}</b
                     ><small>{{ lpText(r.move) }}</small></template
