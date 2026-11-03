@@ -656,8 +656,8 @@ const crumbs = computed(() => {
               <div>
                 <h1>Pro ladder</h1>
                 <p class="nb-meta num">
-                  {{ thousands(total ?? 0) }} pros in Master and above on
-                  {{ on ?? 'every server' }}, by LP
+                  {{ thousands(total ?? 0) }} {{ total === 1 ? 'pro' : 'pros' }} in Master and above
+                  on {{ on ?? 'every server' }}, by LP
                 </p>
               </div>
             </div>
