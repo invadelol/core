@@ -120,7 +120,9 @@ function onKey(event: KeyboardEvent) {
               @touchstart.passive="prefetchOnTouch(`/pro/${p.slug}`)"
             >
               <TeamLogo v-if="p.team" :team="p.team" :size="28" class="logo" />
-              <span v-else class="logo none" aria-hidden="true"><Icon name="user" :size="14" /></span>
+              <span v-else class="logo none" aria-hidden="true"
+                ><Icon name="user" :size="14"
+              /></span>
               <span class="n"
                 >{{ p.name }}<small v-if="p.team">{{ p.team.name }}</small></span
               >

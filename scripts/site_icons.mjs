@@ -9,7 +9,9 @@ const MARK = `
   <polygon points="55.54 130.51 73.97 130.39 85.04 143.21 66.99 144.45 55.54 130.51"/>`
 
 /** The icon on a 256 grid: `scale` sizes the mark (0.98 fills the square, less leaves a margin). */
-const icon = (scale) => `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+const icon = (
+  scale
+) => `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
   <defs>
     <radialGradient id="glow" cx="0.5" cy="0.47" r="0.5"><stop offset="0" stop-color="#7b6dff" stop-opacity="0.5"/><stop offset="1" stop-color="#7b6dff" stop-opacity="0"/></radialGradient>
     <linearGradient id="mark" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b7afff"/><stop offset="0.55" stop-color="#7b6dff"/><stop offset="1" stop-color="#5448e0"/></linearGradient>
