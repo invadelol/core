@@ -217,6 +217,16 @@ router.get('/docs', async () => {
   return AutoSwagger.ui('/swagger', swagger)
 })
 
+/** The share cards of the site's pages (`site_card`), before a profile's `/og/:summoner`. */
+const SiteCardsController = () => import('#controllers/site_cards_controller')
+router.get('/og/home.jpg', [SiteCardsController, 'home'])
+router.get('/og/champion/:slug/:file', [SiteCardsController, 'champion'])
+router.get('/og/tier-list/:file', [SiteCardsController, 'tierList'])
+router.get('/og/stats/:file', [SiteCardsController, 'stats'])
+router.get('/og/pros/:file', [SiteCardsController, 'pros'])
+router.get('/og/pro/:file', [SiteCardsController, 'pro'])
+router.get('/og/team/:file', [SiteCardsController, 'team'])
+
 router.get('/og/:summoner', [() => import('#controllers/social_cards_controller'), 'show'])
 
 /** The match page's og:image, one player's game: `/og/match/:matchId/Name-Tag.jpg`. */
