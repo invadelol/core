@@ -231,7 +231,7 @@
   align-items: start;
 }
 
-@media (min-width: 48rem) {
+@media (min-width: 56rem) {
   .hm-two {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -480,7 +480,8 @@
   place-items: center;
   aspect-ratio: 336 / 220;
   overflow: hidden;
-  background: var(--well);
+  /* A dark stage in both themes (.iv-dark): the well over the app's own ink. */
+  background: linear-gradient(var(--well), var(--well)), var(--ink-1);
   box-shadow: inset 0 -1px 0 var(--line);
 }
 

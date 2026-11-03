@@ -78,7 +78,10 @@ function onEnter(key: SectionKey, event: PointerEvent) {
   clearTimeout(leaveTimer)
   clearTimeout(hoverTimer)
   if (open.value === key) return
-  if (open.value) return show(key)
+  if (open.value) {
+    hoveredAt = performance.now()
+    return show(key)
+  }
   hoverTimer = setTimeout(() => {
     hoveredAt = performance.now()
     show(key)
