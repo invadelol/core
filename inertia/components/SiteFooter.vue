@@ -108,6 +108,16 @@ const year = new Date().getFullYear()
         or anyone officially involved in producing or managing Riot Games properties. Riot Games and
         all associated properties are trademarks or registered trademarks of Riot Games, Inc.
       </p>
+      <p class="sh-legal sh-credit">
+        Some pros' accounts come from
+        <a href="https://lol.fandom.com/" rel="noopener" target="_blank">Leaguepedia</a>, under
+        <a
+          href="https://creativecommons.org/licenses/by-sa/3.0/"
+          rel="license noopener"
+          target="_blank"
+          >CC BY-SA 3.0</a
+        >.
+      </p>
     </div>
   </footer>
 </template>

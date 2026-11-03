@@ -170,6 +170,22 @@ const prosByMatch = computed(() =>
   Object.fromEntries(player.value.games.map((g) => [g.matchId, g.pros ?? []]))
 )
 
+/* ── Credits ─────────────────────────────────────────────────── */
+/** Servers our own pro data does not cover: their accounts come from Leaguepedia. */
+const OWN_SERVERS = new Set(['EUW1', 'NA1', 'BR1'])
+const credited = computed(() =>
+  player.value.accounts.filter((a) => !OWN_SERVERS.has(a.platform.toUpperCase()))
+)
+/** "KR account", "KR, LAS accounts". */
+const creditedLabel = computed(() => {
+  const servers = [...new Set(credited.value.map((a) => regionLabel(a.platform)))]
+  return `${servers.join(', ')} ${credited.value.length === 1 ? 'account' : 'accounts'}`
+})
+/** The pro's own Leaguepedia page when we know it, else the wiki. */
+const leaguepedia = computed(
+  () => socials.value.find((x) => x.k === 'leaguepedia')?.href ?? 'https://lol.fandom.com/'
+)
+
 /* ── Builds ──────────────────────────────────────────────────── */
 const picked = ref<number | null>(player.value.builds[0]?.champion ?? null)
 const build = computed(() => player.value.builds.find((b) => b.champion === picked.value) ?? null)
@@ -320,6 +336,16 @@ const back = computed(() =>
                   >{{ rankText(a.tier, a.division, a.lp) }}</span
                 >
               </Link>
+              <p v-if="credited.length" class="pp-credit">
+                {{ creditedLabel }} from
+                <a :href="leaguepedia" rel="noopener" target="_blank">Leaguepedia</a>,
+                <a
+                  href="https://creativecommons.org/licenses/by-sa/3.0/"
+                  rel="license noopener"
+                  target="_blank"
+                  >CC BY-SA 3.0</a
+                >
+              </p>
             </div>
           </section>
           <section v-if="player.teams.length" class="nb-panel">

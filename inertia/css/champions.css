@@ -2499,3 +2499,19 @@ a.nv-member:hover {
     animation: none !important;
   }
 }
+
+/* A pro's accounts that come from Leaguepedia say so, quietly, under the list. */
+.pp-credit {
+  padding: 8px 0 10px;
+  font-size: 11.5px;
+  line-height: 16px;
+  color: var(--nb-quiet, var(--text-3));
+}
+.pp-credit a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.pp-credit a:hover {
+  color: var(--text-1);
+}
