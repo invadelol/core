@@ -157,6 +157,8 @@ router
 router.get('/cdn/team/:id', [ProsController, 'logo'])
 /** A league's logo (`resources/leagues`), before the game art below takes `/cdn/:kind/:id`. */
 router.get('/cdn/league/:slug', [ProsController, 'leagueLogo'])
+/** A pro's photo, fetched and resized server-side, before the game art below takes `/cdn/...`. */
+router.get('/cdn/pro/:slug', [ProsController, 'photo'])
 
 /**
  * Riot game art, proxied and mirrored so the site and the desktop app never

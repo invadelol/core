@@ -5,7 +5,7 @@ import championStatsService, { DEFAULT_BRACKET } from '#services/champion_stats_
 import { POSITIONS, ROLE_OF, positionOf, type Position } from '#services/champion_stats'
 import homeService from '#services/home_service'
 import proLadderService from '#services/pro_ladder_service'
-import { leagueBySlug } from '#services/pro_leagues'
+import { leagueCatalog } from '#services/pro_leagues'
 import proService from '#services/pro_service'
 import riotAssets from '#services/riot/assets'
 import teamLogoService from '#services/team_logo_service'
@@ -259,8 +259,9 @@ export default class SiteCardsController {
 
   /** `/og/pros/<league>.jpg` for a league: its logo, its teams and how many of its pros rank. */
   private async league(ctx: HttpContext, slug: string | undefined) {
-    const league = leagueBySlug(slug)
-    if (!league) return this.missing(ctx)
+    const leagues = await leagueCatalog()
+    const league = leagues.bySlug(slug)
+    if (!league?.teams.length) return this.missing(ctx)
     const ladderOf = await proLadderService
       .ladder({ league: league.slug, limit: 1, apexOnly: false })
       .catch(() => null)

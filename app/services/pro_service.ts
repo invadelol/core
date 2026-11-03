@@ -4,14 +4,9 @@ import buildStatsService from '#services/build_stats_service'
 import { AnswerCache, RANKED_SOLO } from '#services/ranked_stats'
 import { latestPatch, rows } from '#services/ranked_games_service'
 import { StatsCache } from '#services/stats_cache'
-import {
-  LEAGUES,
-  leagueBySlug,
-  leagueOfTeam,
-  leagueRef,
-  type LeagueRef,
-} from '#services/pro_leagues'
+import { catalog, leagueCatalog, leagueRef, type LeagueRef } from '#services/pro_leagues'
 import proLadderService, { placesBefore, rankScore } from '#services/pro_ladder_service'
+import proPhotoService from '#services/pro_photo_service'
 
 /**
  * Professional players, their teams and their accounts (`pro_*` tables), and what their games
@@ -48,7 +43,7 @@ const PRO_CACHE = { freshMs: 30 * 60_000, keepMs: 86_400_000 }
  * deploys and serves a stale one while its refresh runs, so a release that changes what a page
  * reads must bump it: otherwise the pages get the previous release's answers for up to a day.
  */
-export const PRO_SHAPE = 2
+export const PRO_SHAPE = 3
 /** How far back a pro's games are read. */
 const GAMES_DAYS = 30
 const CHAMPION_GAMES_DAYS = 14
@@ -69,6 +64,8 @@ export interface ProTag {
   country: string | null
   staff: boolean
   team: TeamRef | null
+  /** Their photo's version (`/cdn/pro/:slug?v=`), when they have one. */
+  photo?: string
 }
 
 export interface ProAccount {
@@ -118,10 +115,19 @@ export interface ProGame {
   pro?: ProTag
 }
 
-/** The league of a team, by its slug. */
+/** The league of a team, by its slug (after `leagueCatalog()`). */
 const leagueOf = (teamSlug: string | null | undefined): LeagueRef | null => {
-  const l = leagueOfTeam(teamSlug)
+  const l = catalog().ofTeam(teamSlug)
   return l ? leagueRef(l) : null
+}
+
+/** What every page loader reads first: the leagues and which pros have a photo. */
+const ready = () => Promise.all([leagueCatalog(), proPhotoService.index()])
+
+/** A photo version, only when there is one (most tags are sent without). */
+const photoOf = (slug: string) => {
+  const photo = proPhotoService.of(slug)
+  return photo ? { photo } : {}
 }
 
 const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`)
@@ -144,6 +150,7 @@ const tagOf = (r: Record<string, any>): ProTag => ({
   country: r.country ?? null,
   staff: STAFF.has(String(r.role ?? '').toUpperCase()),
   team: teamOf(r),
+  ...photoOf(r.slug),
 })
 
 /** A player's current team (an active one first, the newest). */
@@ -218,6 +225,7 @@ export class ProService {
     const term = q.trim()
     if (term.length < 2) return { pros: [], teams: [], accounts: [] }
     const like = `${escapeLike(term.toLowerCase())}%`
+    await ready()
     const [pros, teams, accounts] = await Promise.all([
       db.rawQuery(
         `SELECT p.id, p.slug, p.name, p.role, p.country, ct.*, ba.*
@@ -272,6 +280,7 @@ export class ProService {
   /** A pro's page: who, their accounts, their teams, and their games of the last 30 days. */
   async player(slug: string) {
     return this.#pages.get(`player:${slug}`, async () => {
+      await ready()
       const { rows: found } = await db.rawQuery(
         `SELECT p.id, p.slug, p.name, p.role, p.country, p.socials, ct.*
          FROM pro_player p ${CURRENT_TEAM} WHERE p.slug = ? LIMIT 1`,
@@ -279,7 +288,7 @@ export class ProService {
       )
       const row = found[0]
       if (!row) return null
-      const [accounts, history] = await Promise.all([
+      const [accounts, history, about] = await Promise.all([
         db.rawQuery(
           `SELECT a.* FROM pro_account a WHERE a.player_id = ?
            ORDER BY ${TIER_SQL} NULLS LAST, a.division NULLS LAST, a.lp DESC NULLS LAST, a.game_name`,
@@ -293,6 +302,7 @@ export class ProService {
            ORDER BY m.current DESC, m.joined_at DESC NULLS LAST`,
           [row.id]
         ),
+        this.about(row.id),
       ])
       const games = await this.games([row.id])
       return {
@@ -300,6 +310,7 @@ export class ProService {
         id: row.id as string,
         socials: (row.socials ?? {}) as Record<string, string>,
         league: leagueOf(row.team_slug),
+        about,
         accounts: accounts.rows.map(accountOf),
         teams: history.rows.map((r: Record<string, any>) => ({
           team: teamOf(r)!,
@@ -318,6 +329,7 @@ export class ProService {
   /** A team's page: who plays there now, who did, and their games of the last 30 days. */
   async team(slug: string) {
     return this.#pages.get(`team:${slug}`, async () => {
+      await ready()
       const { rows: found } = await db.rawQuery(
         `SELECT id, slug, name, short_name, region, active, socials FROM pro_team WHERE slug = ? LIMIT 1`,
         [slug]
@@ -342,6 +354,7 @@ export class ProService {
       const roster = members.map((m: Record<string, any>) => ({
         name: m.name ?? m.member_name,
         slug: m.slug ?? null,
+        ...(m.slug ? photoOf(m.slug) : {}),
         role: m.member_role ?? m.role ?? null,
         title: m.title,
         country: m.country ?? null,
@@ -360,7 +373,7 @@ export class ProService {
         .filter((m: { current: boolean; playerId: string | null }) => !m.current && m.playerId)
         .map((m: { playerId: string }) => m.playerId)
       const now = await this.tags([...new Set(formerIds)] as string[])
-      const league = leagueOfTeam(team.slug)
+      const league = catalog().ofTeam(team.slug)
       const standing = league ? await this.league(league.slug) : null
       const place = standing?.teams.findIndex((t) => t.id === team.id) ?? -1
       return {
@@ -387,6 +400,7 @@ export class ProService {
   /** Active teams by region, and the best ranked pros now. */
   async directory() {
     return this.#pages.get('directory', async () => {
+      await ready()
       const [teams, players, counts] = await Promise.all([
         db.rawQuery(
           `SELECT t.id, t.slug, t.name, t.short_name, t.region,
@@ -473,6 +487,7 @@ export class ProService {
     const key = [...playerIds].sort().join(',')
     return this.#games
       .get(`games:${key}`, async () => {
+        await ready()
         const found = await this.puuids(playerIds)
         const riotIdOf = new Map(found.map((f) => [f.puuid, `${f.game_name}#${f.tag_line}`]))
         const games = found.length
@@ -517,6 +532,7 @@ export class ProService {
   async championGames(champion: number, position?: string) {
     return this.#games
       .get(`champion:${champion}:${position ?? ''}`, async () => {
+        await ready()
         const since = Date.now() - CHAMPION_GAMES_DAYS * 86_400_000
         const found = await rows(
           `SELECT DISTINCT puuid, toString(player_id) FROM pro_puuids FINAL
@@ -570,9 +586,11 @@ export class ProService {
    * their ranked record of the last 30 days and the champions they play most.
    */
   async league(slug: string) {
-    const league = leagueBySlug(slug)
+    const leagues = await leagueCatalog()
+    const league = leagues.bySlug(slug)
     if (!league) return null
     return this.#pages.get(`league:${league.slug}`, async () => {
+      await ready()
       const { rows: found } = await db.rawQuery(
         `SELECT t.id AS team_id, t.slug AS team_slug, t.name AS team_name, t.short_name AS team_short,
                 t.region AS team_region, m.title, m.role AS member_role,
@@ -588,8 +606,8 @@ export class ProService {
            WHERE a.player_id = p.id AND a.tier IS NOT NULL
            ORDER BY ${TIER_SQL} NULLS LAST, a.division NULLS LAST, a.lp DESC NULLS LAST LIMIT 1
          ) a ON true
-         WHERE t.slug = ANY(?)`,
-        [league.teams]
+         WHERE ${leagues.fromTable ? 't.league_slug = ?' : 't.slug = ANY(?)'}`,
+        [leagues.fromTable ? league.slug : league.teams]
       )
       const players = found.map((r: Record<string, any>) => ({
         ...tagOf(r),
@@ -632,6 +650,7 @@ export class ProService {
         return {
           slug: p.slug,
           name: p.name,
+          ...photoOf(p.slug),
           role: p.role,
           country: p.country,
           starter: p.starter,
@@ -682,7 +701,8 @@ export class ProService {
 
   /** Every league with its teams (logo, players, average LP of the starters in Master and above). */
   async leagueTeams() {
-    const all = await Promise.all(LEAGUES.map((l) => this.league(l.slug)))
+    const { listed } = await leagueCatalog()
+    const all = await Promise.all(listed.map((l) => this.league(l.slug)))
     return all
       .filter((l): l is NonNullable<typeof l> => Boolean(l))
       .map((l) => ({ league: l.league, teams: l.teams }))
@@ -838,6 +858,30 @@ export class ProService {
       }
       return { blue: side(100), red: side(200) }
     })
+  }
+
+  /**
+   * A pro's real name, nationality and birthday (`yyyy-mm-dd`), when the esports data has them;
+   * null before the columns' migration or when none is known.
+   */
+  private async about(playerId: string) {
+    try {
+      const { rows: found } = await db.rawQuery(
+        `SELECT first_name, last_name, nationality, to_char(birthday, 'YYYY-MM-DD') AS birthday
+         FROM pro_player WHERE id = ?`,
+        [playerId]
+      )
+      const r = found[0]
+      const about = {
+        firstName: (r?.first_name as string | null) || null,
+        lastName: (r?.last_name as string | null) || null,
+        nationality: (r?.nationality as string | null) || null,
+        birthday: (r?.birthday as string | null) || null,
+      }
+      return Object.values(about).some(Boolean) ? about : null
+    } catch {
+      return null
+    }
   }
 
   /** Tags of players by id. */

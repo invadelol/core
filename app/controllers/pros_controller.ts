@@ -3,9 +3,13 @@ import proService from '#services/pro_service'
 import championStatsService from '#services/champion_stats_service'
 import proLadderService from '#services/pro_ladder_service'
 import teamLogoService, { logoSize } from '#services/team_logo_service'
-import { LEAGUES, leagueBySlug, leagueRef } from '#services/pro_leagues'
-import { breadcrumbs, count, meta, percent, today } from '#services/page_meta'
+import proPhotoService, { photoSize } from '#services/pro_photo_service'
+import proMatchService, { split, type ProMatch } from '#services/pro_match_service'
+import { leagueCatalog, leagueRef } from '#services/pro_leagues'
+import { ORIGIN, breadcrumbs, count, meta, percent, today } from '#services/page_meta'
 
+/** Games in each strip of next games on `/pros` (one row on wide screens). */
+const STRIP_GAMES = 4
 /** Rows of the ladder per page; "Show more" asks for the next ones. */
 const LADDER_PAGE = 50
 const SERVERS: Record<string, string> = { euw: 'EUW1', na: 'NA1', br: 'BR1' }
@@ -27,10 +31,63 @@ const roleName = (role: string | null) =>
 
 /** A country code as its English name ("FR" to "France"). */
 function countryName(code: string) {
+  const fixed = (
+    { FK: 'Falkland Islands', HK: 'Hong Kong', MO: 'Macao', PS: 'Palestine' } as const
+  )[code.toUpperCase() as 'HK']
+  if (fixed) return fixed
   try {
     return new Intl.DisplayNames(['en'], { type: 'region' }).of(code.toUpperCase()) ?? code
   } catch {
     return code
+  }
+}
+
+/** A copy of `o` without some of its keys. */
+function without<T extends object, K extends keyof T>(o: T, ...keys: K[]): Omit<T, K> {
+  const out = { ...o }
+  for (const k of keys) delete out[k]
+  return out
+}
+
+/** A pro's photo address, at a served size. */
+const photoUrl = (slug: string, photo: string, size: number) =>
+  `${ORIGIN}/cdn/pro/${encodeURIComponent(slug)}?s=${size}&v=${photo}`
+
+/** "Bo3 Quarterfinal 4: TES vs IG", "T1 vs Gen.G" */
+const matchTitle = (m: ProMatch) =>
+  m.name || `${m.teams[0].name || m.teams[0].code} vs ${m.teams[1].name || m.teams[1].code}`
+
+/**
+ * schema.org SportsEvent of an upcoming match: online, with both teams as competitors and its
+ * stream (else the page) as the place it is watched.
+ */
+function sportsEvent(m: ProMatch, pageUrl: string) {
+  const team = (t: ProMatch['teams'][number]) => ({
+    '@type': 'SportsTeam',
+    'name': t.name || t.code,
+    ...(t.slug ? { url: `${ORIGIN}/team/${t.slug}` } : {}),
+  })
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'SportsEvent',
+    'name': [m.league?.code, matchTitle(m)].filter(Boolean).join(', '),
+    'sport': 'League of Legends',
+    'startDate': m.at,
+    'eventStatus':
+      m.status === 'postponed'
+        ? 'https://schema.org/EventPostponed'
+        : 'https://schema.org/EventScheduled',
+    'eventAttendanceMode': 'https://schema.org/OnlineEventAttendanceMode',
+    'location': { '@type': 'VirtualLocation', 'url': m.stream ?? pageUrl },
+    'competitor': m.teams.filter((t) => t.name || t.code).map(team),
+    ...(m.tournament
+      ? {
+          superEvent: {
+            '@type': 'SportsEvent',
+            'name': [m.league?.name, m.tournament].filter(Boolean).join(' '),
+          },
+        }
+      : {}),
   }
 }
 
@@ -48,7 +105,8 @@ export default class ProsController {
    */
   async index({ inertia, request, response }: HttpContext) {
     const view = String(request.input('view', ''))
-    const leagues = LEAGUES.map(leagueRef)
+    const catalog = await leagueCatalog()
+    const leagues = catalog.listed.map(leagueRef)
     const version = today()
     if (view === 'ladder') {
       const platform = SERVERS[String(request.input('server', '')).toLowerCase()] ?? null
@@ -69,6 +127,7 @@ export default class ProsController {
             pro: {
               slug: r.pro.slug,
               name: r.pro.name,
+              ...(r.pro.photo ? { photo: r.pro.photo } : {}),
               role: r.pro.role,
               country: r.pro.country,
               team: r.pro.team
@@ -115,12 +174,13 @@ export default class ProsController {
     if (view === 'teams') {
       const groups = await proService.leagueTeams().catch(() => [])
       const teams = groups.reduce((n, g) => n + g.teams.length, 0)
+      const codes = leagues.slice(0, 6).map((l) => l.code)
       return inertia.render('pros/index', {
         view: 'teams',
         leagues,
         groups,
         ...meta({
-          title: 'Pro teams of the LEC, LCK, LPL, LCS, CBLOL and LCP',
+          title: `Pro teams of the ${codes.length > 1 ? `${codes.slice(0, -1).join(', ')} and ${codes.at(-1)}` : (codes[0] ?? 'leagues')}`,
           description: `${teams} teams in ${groups.length} leagues, with their rosters and how their players rank in solo queue.`,
           path: '/pros?view=teams',
           image: '/og/pros/all.jpg',
@@ -136,16 +196,32 @@ export default class ProsController {
       })
     }
     const asked = request.input('league')
-    const league = leagueBySlug(asked ?? LEAGUES[0].slug)
-    if (!league) return response.notFound()
-    const data = await proService.league(league.slug)
+    const found = asked ? catalog.bySlug(asked) : catalog.first
+    // An event without teams of its own (Worlds) has its games on the first league's page.
+    if (found && !found.teams.length) return response.redirect().toPath('/pros')
+    const league = found
+    if (!league) {
+      // A league that moved to another address (its code, or where its teams play now).
+      const moved = catalog.successor(asked)
+      if (moved) {
+        const to = moved.slug === catalog.first?.slug ? '/pros' : `/pros?league=${moved.slug}`
+        return response.redirect().status(301).toPath(to)
+      }
+      return response.notFound()
+    }
+    const [data, next, international] = await Promise.all([
+      proService.league(league.slug),
+      proMatchService.forLeague(league.slug, STRIP_GAMES),
+      proMatchService.international(STRIP_GAMES),
+    ])
     if (!data) return response.notFound()
     const first = data.players[0]
-    const path = league.slug === LEAGUES[0].slug ? '/pros' : `/pros?league=${league.slug}`
+    const path = league.slug === catalog.first?.slug ? '/pros' : `/pros?league=${league.slug}`
     return inertia.render('pros/index', {
       view: 'league',
       leagues,
       data,
+      matches: { league: next, international },
       ...meta({
         title: `${league.code} pros and teams in solo queue`,
         description: `${league.name}: ${data.counts.teams} teams, ${data.counts.players} players and ${data.counts.accounts} ranked accounts${first?.best ? `, led by ${first.name} at ${count(first.best.lp)} LP` : ''}.`,
@@ -168,7 +244,10 @@ export default class ProsController {
   async show({ inertia, params, response }: HttpContext) {
     const pro = await proService.player(String(params.slug))
     if (!pro) return response.notFound()
-    const { id, ...shown } = pro
+    // What the page draws: its builds, not the summaries the share card and the team page use.
+    const shown = without(pro, 'id', 'champions', 'roles', 'items', 'pools')
+    const matches = pro.team ? split(await proMatchService.forTeam(pro.team.id)) : null
+    const about = pro.about ?? null
     const best = pro.accounts.find((a: { tier: string | null }) => a.tier) ?? null
     const games = pro.record.games
     const role = roleName(pro.role)
@@ -188,6 +267,7 @@ export default class ProsController {
     crumbs.push({ name: pro.name, path: `/pro/${pro.slug}` })
     return inertia.render('pros/show', {
       pro: shown,
+      matches: { next: matches?.next[0] ?? null, last: matches?.results[0] ?? null },
       now: Date.now(),
       names: await championNames(),
       ...meta({
@@ -207,6 +287,14 @@ export default class ProsController {
           '@type': 'Person',
           'name': pro.name,
           'url': `https://invade.lol/pro/${pro.slug}`,
+          ...(pro.photo ? { image: photoUrl(pro.slug, pro.photo, 240) } : {}),
+          // The real name as written: given or family name first varies, so it is not split.
+          ...(about?.firstName || about?.lastName
+            ? {
+                alternateName: [about?.firstName, about?.lastName].filter(Boolean).join(' '),
+              }
+            : {}),
+          ...(about?.birthday ? { birthDate: about.birthday } : {}),
           ...(pro.team
             ? {
                 memberOf: {
@@ -216,8 +304,13 @@ export default class ProsController {
                 },
               }
             : {}),
-          ...(pro.country
-            ? { nationality: { '@type': 'Country', 'name': countryName(pro.country) } }
+          ...((about?.nationality ?? pro.country)
+            ? {
+                nationality: {
+                  '@type': 'Country',
+                  'name': countryName((about?.nationality ?? pro.country)!),
+                },
+              }
             : {}),
         },
       ],
@@ -228,6 +321,8 @@ export default class ProsController {
   async team({ inertia, params, response }: HttpContext) {
     const team = await proService.team(String(params.slug))
     if (!team) return response.notFound()
+    const matches = split(await proMatchService.forTeam(team.id))
+    const upcoming = matches.next.filter((m) => m.status !== 'running').slice(0, 3)
     const players = team.roster.filter(
       (m: { current: boolean; title: string }) => m.current && m.title !== 'staff'
     ) as { name: string; slug: string | null }[]
@@ -237,10 +332,11 @@ export default class ProsController {
     crumbs.push({ name: team.name, path: `/team/${team.slug}` })
     const games = team.record.games
     return inertia.render('pros/team', {
+      matches: { next: matches.next.slice(0, 5), results: matches.results.slice(0, 5) },
       now: Date.now(),
       names: await championNames(),
       team: {
-        ...team,
+        ...without(team, 'champions', 'roles', 'items', 'builds'),
         roster: team.roster.map(({ playerId: _, ...m }: Record<string, unknown>) => m),
       },
       ...meta({
@@ -270,6 +366,7 @@ export default class ProsController {
             ...(m.slug ? { url: `https://invade.lol/pro/${m.slug}` } : {}),
           })),
         },
+        ...upcoming.map((m) => sportsEvent(m, `${ORIGIN}/team/${team.slug}`)),
       ],
     })
   }
@@ -301,13 +398,41 @@ export default class ProsController {
     return this.send(response, logo)
   }
 
-  /** `/cdn/league/:slug?s=40`: a league's logo. The files only change with a new address. */
+  /**
+   * `/cdn/league/:slug?s=40`: a league's logo. The repository's files only change with a new
+   * address; a stored logo can change, so it is kept a day.
+   */
   async leagueLogo({ params, request, response }: HttpContext) {
     const slug = String(params.slug).replace(/\.webp$/, '')
     const logo = await teamLogoService.league(slug, logoSize(request.input('s')))
     if (!logo) return response.notFound()
-    response.header('Cache-Control', 'public, max-age=31536000, immutable')
+    response.header(
+      'Cache-Control',
+      (await teamLogoService.isLeagueFile(slug))
+        ? 'public, max-age=31536000, immutable'
+        : 'public, max-age=86400, stale-while-revalidate=604800'
+    )
     return this.send(response, logo)
+  }
+
+  /**
+   * `/cdn/pro/:slug?s=48&v=…`: a pro's photo, square from the top, at a served size. With the
+   * photo's current version (`v`, from the pages) it never changes, so it is kept a year.
+   */
+  async photo({ params, request, response }: HttpContext) {
+    const slug = String(params.slug).replace(/\.webp$/, '')
+    const index = await proPhotoService.index()
+    const version = index.get(slug)
+    if (!version) return response.notFound()
+    const photo = await proPhotoService.get(slug, photoSize(request.input('s')))
+    if (!photo) return response.notFound()
+    response.header(
+      'Cache-Control',
+      request.input('v') === version
+        ? 'public, max-age=31536000, immutable'
+        : 'public, max-age=86400, stale-while-revalidate=604800'
+    )
+    return this.send(response, photo)
   }
 
   private send(response: HttpContext['response'], logo: { body: Uint8Array; contentType: string }) {

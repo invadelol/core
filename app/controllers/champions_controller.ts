@@ -15,7 +15,7 @@ import {
 } from '#services/champion_stats'
 import type { Role } from '#services/ranked_stats'
 import { latestPatch } from '#services/ranked_games_service'
-import { leagueOfTeam, leagueRef } from '#services/pro_leagues'
+import { leagueCatalog, leagueRef } from '#services/pro_leagues'
 import { BRACKET_TEXT, breadcrumbs, count, itemList, meta, percent } from '#services/page_meta'
 import statsExplorerService from '#services/stats_explorer_service'
 import { CHAMPION_TABS, type ChampionTab } from '../../inertia/lib/champions.js'
@@ -330,10 +330,13 @@ export default class ChampionsController {
       byRank: () => championStatsService.byRank(filter, champion, position),
       details: () => championStatsService.details(filter, champion, position),
       pros: async () => {
-        const found = await proService.championGames(champion, position)
+        const [found, leagues] = await Promise.all([
+          proService.championGames(champion, position),
+          leagueCatalog(),
+        ])
         return {
           games: found.games.map(({ opponentPuuid: _o, skillOrder: _s, ...g }) => {
-            const league = leagueOfTeam(g.pro?.team?.slug)
+            const league = leagues.ofTeam(g.pro?.team?.slug)
             return { ...g, league: league ? leagueRef(league) : null }
           }),
           players: found.players,

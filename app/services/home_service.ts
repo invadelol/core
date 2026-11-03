@@ -10,7 +10,8 @@ import type { Filter, Summary } from '#services/champion_stats'
 import { ladder } from '#services/desktop/lp'
 import { discordServer } from '#services/discord_server'
 import proLadderService, { type LadderRow } from '#services/pro_ladder_service'
-import { LEAGUES } from '#services/pro_leagues'
+import { leagueCatalog } from '#services/pro_leagues'
+import proMatchService from '#services/pro_match_service'
 import proService from '#services/pro_service'
 import { patchStart, rows as statRows } from '#services/ranked_games_service'
 import { RANKED_SOLO, seedTiers } from '#services/ranked_stats'
@@ -87,7 +88,11 @@ export const HOME_ROWS = 5
 /** Climbers in the header's Stats menu. */
 export const NAV_CLIMBERS = 4
 /** Pros in the header's Pros menu. */
-export const NAV_PROS = 4
+export const NAV_PROS = 5
+/** Next pro games on the home. */
+export const HOME_GAMES = 4
+/** Leagues in the header's Pros menu, by priority (every league is on `/pros`). */
+export const NAV_LEAGUES = 8
 /** A climb counts once the champion reached this place in its role (a climb to #40 is noise). */
 export const CLIMB_TOP = 20
 /** Below this many games in the role, a champion's lane figures are not listed. */
@@ -142,6 +147,7 @@ type DirectoryPro = {
   slug: string
   name: string
   team: { id: string; slug: string; name: string; shortName: string | null } | null
+  photo?: string
   best: { tier: string; division: number | null; lp: number | null } | null
 }
 
@@ -778,17 +784,19 @@ export class HomeService {
    * and keeps computing into the cache for the next one.
    */
   async page(): Promise<HomePage> {
-    const [picks, pros, lanes, discord] = await Promise.all([
+    const [picks, pros, lanes, discord, games] = await Promise.all([
       capped(this.picks()),
       capped(this.pros()),
       capped(this.lanes()),
       this.discord(),
+      capped(proMatchService.headline(HOME_GAMES)),
     ])
     return {
       picks: picks && { patch: picks.patch, best: picks.best, bans: picks.bans },
       pros: pros?.top.length ? pros.top.map(({ tier, ...p }) => (void tier, p)) : null,
       lanes,
       discord,
+      games: games?.length ? games : null,
     }
   }
 
@@ -802,15 +810,21 @@ export class HomeService {
 
   /** What the header's menus show beside their links. */
   async nav(): Promise<SiteNav> {
-    const [picks, pros] = await Promise.all([capped(this.picks()), capped(this.pros())])
+    const [picks, pros, leagues] = await Promise.all([
+      capped(this.picks()),
+      capped(this.pros()),
+      leagueCatalog(),
+    ])
     const { bans, ...tierList } = picks ?? { bans: null }
     void bans
     return {
       tierList: picks ? (tierList as SiteNav['tierList']) : null,
       pros: pros && { top: pros.top.slice(0, NAV_PROS), counts: pros.counts },
-      leagues: LEAGUES.map((l) => ({
+      leagues: leagues.listed.slice(0, NAV_LEAGUES).map((l) => ({
         slug: l.slug,
+        code: l.code,
         name: l.name,
+        region: l.region,
         short: l.code,
         teams: l.teams.length,
       })),
@@ -871,6 +885,7 @@ export class HomeService {
             slug: p.slug,
             name: p.name,
             team: p.team ? { id: p.team.id, name: p.team.name, shortName: p.team.shortName } : null,
+            ...(p.photo ? { photo: p.photo } : {}),
             tier: p.best?.tier ?? null,
             lp: p.best?.lp ?? null,
           }))
@@ -918,6 +933,7 @@ function fromLadder(row: LadderRow): HomePro {
     slug: row.pro.slug,
     name: row.pro.name,
     team: team ? { id: team.id, name: team.name, shortName: team.shortName } : null,
+    ...(row.pro.photo ? { photo: row.pro.photo } : {}),
     tier: row.account.tier,
     lp: row.account.lp,
     movement:

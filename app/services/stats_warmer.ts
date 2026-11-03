@@ -6,7 +6,7 @@ import spellStatsService from '#services/spell_stats_service'
 import { latestPatch } from '#services/ranked_games_service'
 import statsExplorerService from '#services/stats_explorer_service'
 import proService from '#services/pro_service'
-import { LEAGUES } from '#services/pro_leagues'
+import { leagueCatalog } from '#services/pro_leagues'
 import { POSITIONS } from '#services/champion_stats'
 import type { Position, RoleStat } from '#services/champion_stats'
 import type { Role } from '#services/ranked_stats'
@@ -55,7 +55,8 @@ export async function warmStats() {
       statsExplorerService.regions(filter, position),
     ]).catch((error) => logger.warn({ err: error, position }, 'stats explorer warm-up failed'))
   }
-  for (const league of LEAGUES) {
+  const { listed } = await leagueCatalog()
+  for (const league of listed) {
     await proService.league(league.slug).catch(() => null)
   }
 
