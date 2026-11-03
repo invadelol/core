@@ -10,7 +10,9 @@ test.group('Not found pages', (group) => {
     // Upstream is down: no champion list, so no champion is found.
     const original = globalThis.fetch
     globalThis.fetch = (async () => new Response('not found', { status: 404 })) as typeof fetch
-    return () => (globalThis.fetch = original)
+    return () => {
+      globalThis.fetch = original
+    }
   })
 
   for (const path of ['/champions/notachampion', '/pro/notapro', '/team/notateam']) {
