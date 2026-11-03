@@ -1,16 +1,13 @@
 import { readFile } from 'node:fs/promises'
 import app from '@adonisjs/core/services/app'
-import logger from '@adonisjs/core/services/logger'
+import db from '@adonisjs/lucid/services/db'
 import sharp from 'sharp'
-import { FETCH_TIMEOUT_MS } from '#constants/assets'
 import { ByteCache } from '#utils/byte_cache'
+import { fetchImage, type RemoteImage } from '#utils/remote_image'
 import proService from '#services/pro_service'
-import { leagueBySlug } from '#services/pro_leagues'
 
-/** Raster images only: an SVG from elsewhere is never served from our origin. */
-const TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif'])
-const MAX_BYTES = 2 * 1024 * 1024
 const HOUR = 3_600_000
+const LEAGUE_SLUG = /^[a-z0-9][a-z0-9-]{0,47}$/
 
 /**
  * The sizes a logo is served at (`?s=`, CSS pixels): drawn at twice the size for sharp screens,
@@ -18,10 +15,7 @@ const HOUR = 3_600_000
  */
 export const LOGO_SIZES = [16, 20, 24, 32, 40, 56, 72, 96] as const
 
-export interface Logo {
-  body: Uint8Array
-  contentType: string
-}
+export type Logo = RemoteImage
 
 /** The nearest served size at or above `asked`, or null for the original. */
 export function logoSize(asked: unknown): number | null {
@@ -42,7 +36,8 @@ async function resized(logo: Logo, size: number): Promise<Logo> {
 /**
  * Team logos from our own origin (`/cdn/team/:id`): the stored address is read server-side,
  * fetched once and kept in memory, so pages only ever name invade.lol. League logos
- * (`/cdn/league/:slug`) are files of this repository (`resources/leagues`).
+ * (`/cdn/league/:slug`) are files of this repository (`resources/leagues`) when there is one,
+ * else the league's stored logo, fetched the same way.
  */
 class TeamLogoService {
   #memory = new ByteCache<Logo | null>(32 * 1024 * 1024, 4096)
@@ -59,16 +54,29 @@ class TeamLogoService {
 
   /** A league's logo, at a served size or as stored. */
   league(slug: string, size: number | null = null): Promise<Logo | null> {
-    const league = leagueBySlug(slug)
-    if (!league) return Promise.resolve(null)
-    return this.once(`league:${league.slug}@${size ?? ''}`, async () => {
-      const file = await readFile(app.makePath('resources/leagues', `${league.slug}.webp`)).catch(
-        () => null
-      )
-      if (!file) return null
-      const logo = { body: new Uint8Array(file), contentType: 'image/webp' }
-      return size ? resized(logo, size).catch(() => logo) : logo
+    if (!LEAGUE_SLUG.test(slug)) return Promise.resolve(null)
+    if (size) {
+      return this.once(`league:${slug}@${size}`, async () => {
+        const original = await this.league(slug)
+        return original ? resized(original, size).catch(() => original) : null
+      })
+    }
+    return this.once(`league:${slug}`, async () => {
+      const file = await this.leagueFile(slug)
+      if (file) return file
+      const stored = await fetchImage(await leagueImageUrl(slug), { league: slug })
+      return stored ? forDarkWell(stored).catch(() => stored) : null
     })
+  }
+
+  /** Whether a league's logo is a file of this repository (it then never changes). */
+  async isLeagueFile(slug: string) {
+    return LEAGUE_SLUG.test(slug) && Boolean(await this.leagueFile(slug))
+  }
+
+  private async leagueFile(slug: string): Promise<Logo | null> {
+    const file = await readFile(app.makePath('resources/leagues', `${slug}.webp`)).catch(() => null)
+    return file ? { body: new Uint8Array(file), contentType: 'image/webp' } : null
   }
 
   private once(key: string, load: () => Promise<Logo | null>): Promise<Logo | null> {
@@ -88,17 +96,52 @@ class TeamLogoService {
   }
 
   private async load(teamId: string): Promise<Logo | null> {
-    const url = await proService.logoUrl(teamId)
-    if (!url || !/^https?:\/\//.test(url)) return null
-    try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
-      const type = (res.headers.get('content-type') ?? '').split(';')[0].trim()
-      const body = res.ok && TYPES.has(type) ? new Uint8Array(await res.arrayBuffer()) : null
-      return body && body.byteLength <= MAX_BYTES ? { body, contentType: type } : null
-    } catch (error) {
-      logger.warn({ err: error, teamId }, 'team logo unavailable')
-      return null
-    }
+    return fetchImage(await proService.logoUrl(teamId), { teamId })
+  }
+}
+
+/** The ink a dark logo is drawn in on the logos' dark well (the light theme's `.lgo` text). */
+const LIGHT_INK = { r: 233, g: 233, b: 239 }
+
+/**
+ * Logo wells are dark in both themes, as the repository's league logos are drawn white. A stored
+ * logo drawn dark on transparency (most leagues' own files) would vanish there, so it is redrawn
+ * as a light silhouette of its shape. A logo on its own opaque ground, or a light one, is kept.
+ */
+export async function forDarkWell(logo: Logo): Promise<Logo> {
+  const { data, info } = await sharp(logo.body)
+    .ensureAlpha()
+    .resize(64, 64, { fit: 'inside' })
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+  let seen = 0
+  let ink = 0
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] < 128) continue
+    seen++
+    ink += (0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) / 255
+  }
+  const pixels = info.width * info.height
+  if (!seen || seen / pixels > 0.85 || ink / seen >= 0.35) return logo
+  const meta = await sharp(logo.body).metadata()
+  const alpha = await sharp(logo.body).ensureAlpha().extractChannel('alpha').toBuffer()
+  const body = await sharp({
+    create: { width: meta.width!, height: meta.height!, channels: 3, background: LIGHT_INK },
+  })
+    .joinChannel(alpha)
+    .png()
+    .toBuffer()
+  return { body: new Uint8Array(body), contentType: 'image/png' }
+}
+
+/** A league's stored logo address (never sent to a browser), or null. */
+async function leagueImageUrl(slug: string): Promise<string | null> {
+  try {
+    const { rows } = await db.rawQuery('SELECT image_url FROM pro_league WHERE slug = ?', [slug])
+    return rows[0]?.image_url ?? null
+  } catch {
+    // Before the leagues' migration.
+    return null
   }
 }
 

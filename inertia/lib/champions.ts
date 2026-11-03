@@ -227,6 +227,8 @@ export interface ProTag {
   country: string | null
   staff: boolean
   team: TeamRef | null
+  /** Their photo's version (`/cdn/pro/:slug?v=`), when they have one. */
+  photo?: string
 }
 
 export interface ProGame {

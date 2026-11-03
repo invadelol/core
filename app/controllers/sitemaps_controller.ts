@@ -14,7 +14,7 @@ import {
 import championStatsService from '#services/champion_stats_service'
 import { AnswerCache } from '#services/ranked_stats'
 import { ROLE_OF } from '#services/champion_stats'
-import { LEAGUES } from '#services/pro_leagues'
+import { leagueCatalog } from '#services/pro_leagues'
 import { VIEWS } from '#services/stats_explorer_service'
 
 /** A section's sitemap is built at most once an hour. */
@@ -27,6 +27,7 @@ const MIN_ROLE_GAMES = 1000
 async function section(name: SitemapSection): Promise<SitemapUrl[]> {
   const lastmod = today()
   if (name === 'pages') {
+    const { listed } = await leagueCatalog()
     return [
       { path: '/champions', lastmod },
       { path: '/tier-list', lastmod },
@@ -34,7 +35,7 @@ async function section(name: SitemapSection): Promise<SitemapUrl[]> {
       { path: '/stats', lastmod },
       ...VIEWS.filter((v) => v !== 'overview').map((v) => ({ path: `/stats?view=${v}`, lastmod })),
       { path: '/pros', lastmod },
-      ...LEAGUES.slice(1).map((l) => ({ path: `/pros?league=${l.slug}`, lastmod })),
+      ...listed.slice(1).map((l) => ({ path: `/pros?league=${l.slug}`, lastmod })),
       { path: '/pros?view=teams', lastmod },
       { path: '/pros?view=ladder', lastmod },
     ]

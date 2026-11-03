@@ -1,4 +1,5 @@
 import type { MatchSummary } from '@invadelol/ui/logic'
+import type { ProMatch } from './pro_matches.js'
 
 /**
  * What the home page shows, as the server sends it (app/services/home_service.ts). Every
@@ -117,6 +118,8 @@ export interface HomePro {
   slug: string
   name: string
   team: { id: string; name: string; shortName: string | null } | null
+  /** Their photo's version (`/cdn/pro/:slug?v=`), when they have one. */
+  photo?: string
   /** The best account's tier (the menus' crest); the home leaves it out. */
   tier?: string | null
   lp: number | null
@@ -141,13 +144,19 @@ export interface HomePage {
     firstBlood: HomeLaneRow[]
   } | null
   discord: { members: number; online: number } | null
+  /** The next pro games (international events first while they run), when any is planned. */
+  games?: ProMatch[] | null
 }
 
 /** A league of the pros directory, with its logo at `/cdn/league/<slug>`. */
 export interface NavLeague {
   slug: string
+  /** Its short name ("LEC"), the menu's label. */
+  code?: string
   name: string
-  /** The acronym shown when the logo is missing. */
+  /** Where it plays ("EMEA", "Korea"), when known. */
+  region?: string | null
+  /** The acronym shown when the logo is missing (the code). */
   short: string
   teams: number
 }

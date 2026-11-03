@@ -2,13 +2,8 @@ import db from '@adonisjs/lucid/services/db'
 import logger from '@adonisjs/core/services/logger'
 import redis from '@adonisjs/redis/services/main'
 import { AnswerCache } from '#services/ranked_stats'
-import {
-  LEAGUES,
-  leagueBySlug,
-  leagueOfTeam,
-  leagueRef,
-  type LeagueRef,
-} from '#services/pro_leagues'
+import { catalog, leagueCatalog, leagueRef, type LeagueRef } from '#services/pro_leagues'
+import proPhotoService from '#services/pro_photo_service'
 import type { ProTag } from '#services/pro_service'
 
 /**
@@ -228,7 +223,8 @@ export class ProLadderService {
   }
 
   private async rank(opts: LadderOptions): Promise<LadderRow[]> {
-    const league = opts.league ? leagueBySlug(opts.league) : null
+    const [leagues] = await Promise.all([leagueCatalog(), proPhotoService.index()])
+    const league = opts.league ? leagues.bySlug(opts.league) : null
     if (opts.league && !league) return []
     const params: unknown[] = []
     const where: string[] = ['a.tier IS NOT NULL']
@@ -280,7 +276,8 @@ export class ProLadderService {
             region: r.team_region ?? null,
           }
         : null
-      const ofTeam = leagueOfTeam(team?.slug)
+      const ofTeam = catalog().ofTeam(team?.slug)
+      const photo = proPhotoService.of(r.slug)
       return {
         place: i + 1,
         pro: {
@@ -290,6 +287,7 @@ export class ProLadderService {
           country: r.country ?? null,
           staff: STAFF.has(String(r.role ?? '').toUpperCase()),
           team,
+          ...(photo ? { photo } : {}),
         },
         league: ofTeam ? leagueRef(ofTeam) : null,
         account: {
@@ -307,8 +305,9 @@ export class ProLadderService {
   }
 
   /** The leagues a ladder can be narrowed to. */
-  leagues() {
-    return LEAGUES.map(leagueRef)
+  async leagues() {
+    const { listed } = await leagueCatalog()
+    return listed.map(leagueRef)
   }
 }
 
