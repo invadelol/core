@@ -1,3 +1,5 @@
+import type { HttpContext } from '@adonisjs/core/http'
+
 /**
  * What the champion, stats and pro pages tell search engines and link previews: their `social`
  * tags (title, description, canonical address, share card), their structured data (`jsonld`) and,
@@ -99,4 +101,14 @@ export const BRACKET_TEXT: Record<string, string> = {
 export function meta(opts: Parameters<typeof social>[0]) {
   const tags = social(opts)
   return { social: tags, description: tags.description }
+}
+
+/**
+ * The site's own 404 page, for a champion, pro or team the address does not name. A bare
+ * `response.notFound()` has no body: blank on a full load, and an error box ("a plain JSON
+ * response was received") on an Inertia visit.
+ */
+export function notFoundPage({ inertia, response }: Pick<HttpContext, 'inertia' | 'response'>) {
+  response.status(404)
+  return inertia.render('errors/not_found', { error: { status: 404, message: null } })
 }

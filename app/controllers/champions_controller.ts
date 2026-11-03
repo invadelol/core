@@ -16,7 +16,15 @@ import {
 import type { Role } from '#services/ranked_stats'
 import { latestPatch } from '#services/ranked_games_service'
 import { leagueCatalog, leagueRef } from '#services/pro_leagues'
-import { BRACKET_TEXT, breadcrumbs, count, itemList, meta, percent } from '#services/page_meta'
+import {
+  BRACKET_TEXT,
+  breadcrumbs,
+  count,
+  itemList,
+  meta,
+  notFoundPage,
+  percent,
+} from '#services/page_meta'
 import statsExplorerService from '#services/stats_explorer_service'
 import { CHAMPION_TABS, type ChampionTab } from '../../inertia/lib/champions.js'
 
@@ -221,9 +229,10 @@ export default class ChampionsController {
   /** `/champions/:slug/:tab?role=bot`: one champion in one role, every section on one page. */
   async show({ inertia, params, request, response }: HttpContext) {
     const champion = await championStatsService.champion(String(params.slug))
-    if (!champion) return response.notFound()
     const tab = (params.tab ?? 'build') as ChampionTab
-    if (!CHAMPION_TABS.some((t) => t.key === tab)) return response.notFound()
+    if (!champion || !CHAMPION_TABS.some((t) => t.key === tab)) {
+      return notFoundPage({ inertia, response })
+    }
 
     const filter = await championStatsService.filter(request.qs())
     const asked = positionOf(request.input('role'))
