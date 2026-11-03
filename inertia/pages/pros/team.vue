@@ -1,25 +1,40 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { Head, Link } from '@inertiajs/vue3'
-import { RankCrest, RoleIcon } from '@invadelol/ui'
+import { computed, ref } from 'vue'
+import { Head, Link, usePage } from '@inertiajs/vue3'
+import { ExternalLink } from 'lucide-vue-next'
+import { ChampIcon, RoleIcon } from '@invadelol/ui'
 import AppHeader from '../../components/AppHeader.vue'
 import SiteFooter from '../../components/SiteFooter.vue'
-import Banner from '../../components/champions/Banner.vue'
-import TeamLogo from '../../components/champions/TeamLogo.vue'
-import GameRow from '../../components/champions/GameRow.vue'
-import { championName } from '../../lib/assets.js'
+import Crumbs from '../../components/champions/Crumbs.vue'
+import Logo from '../../components/champions/Logo.vue'
+import Crest from '../../components/champions/Crest.vue'
+import ProPhoto from '../../components/champions/ProPhoto.vue'
+import ShareButton from '../../components/champions/ShareButton.vue'
+import { championName as loadedName } from '../../lib/assets.js'
+import { championSlug, type GamesSummary } from '../../lib/champions.js'
 import {
-  byRank,
-  champIconUrl,
-  championSlug,
-  laneOf,
+  PRO_ROLES,
+  ago,
+  countryName,
   pct,
-  rankLabel,
-  splashUrl,
-  type GamesSummary,
-} from '../../lib/champions.js'
+  proRole,
+  thousands,
+  tierColor,
+  tierName,
+} from '../../lib/board.js'
 import '../../css/champions.css'
 
+interface LeagueRef {
+  slug: string
+  code: string
+  name: string
+}
+interface TeamRef {
+  id: string
+  slug: string
+  name: string
+  shortName: string | null
+}
 interface Member {
   name: string
   slug: string | null
@@ -30,9 +45,10 @@ interface Member {
   joinedAt: string | null
   leftAt: string | null
   best: { tier: string; division: number | null; lp: number | null } | null
+  now: TeamRef | null
 }
 
-/** `/team/:slug`: a team's roster, its past players and their recent ranked games. */
+/** `/team/:slug`: a team's roster, latest games, most played champions and former players. */
 const props = defineProps<{
   team: GamesSummary & {
     id: string
@@ -41,160 +57,308 @@ const props = defineProps<{
     shortName: string | null
     region: string | null
     active: boolean
+    socials: Record<string, string>
+    league: LeagueRef | null
+    lp: number | null
+    place: number | null
     roster: Member[]
+    pools: Record<string, { champion: number; games: number; wins: number }[]>
   }
+  now?: number
+  names?: Record<number, [string, string]>
 }>()
 
-const now = computed(() => props.team.roster.filter((m) => m.current))
-const players = computed(() => now.value.filter((m) => m.title !== 'staff'))
-const staff = computed(() => now.value.filter((m) => m.title === 'staff'))
-const past = computed(() => props.team.roster.filter((m) => !m.current).slice(0, 24))
-const art = computed(() => {
-  const top = props.team.champions.slice(0, 3).map((c) => c.champion)
-  return (top.length ? top : [222, 103, 64]).map(splashUrl)
-})
-const record = computed(() => props.team.record)
-const ranked = computed(() =>
-  players.value.filter((m) => m.best).sort((a, b) => byRank(a.best, b.best))
+const page = usePage()
+const canonical = computed(
+  () => (page.props.social as { canonical?: string } | undefined)?.canonical ?? ''
 )
-const figures = computed(() => [
-  {
-    label: 'Players',
-    value: players.value.length,
-    sub: staff.value.length ? `${staff.value.length} staff` : undefined,
-  },
-  {
-    label: 'Best rank',
-    value: ranked.value[0]?.best ? rankLabel(ranked.value[0].best.tier).split(',')[0] : '-',
-    sub: ranked.value[0]?.name,
-  },
-  { label: 'Games', value: record.value.games, sub: 'last 30 days' },
-  {
-    label: 'Win rate',
-    value: record.value.games ? pct(record.value.wins / record.value.games) : '-',
-  },
+const title = computed(
+  () => (page.props.social as { title?: string } | undefined)?.title ?? props.team.name
+)
+const now = computed(() => props.now ?? Date.now())
+const championName = (id: number) => props.names?.[id]?.[0] ?? loadedName(id)
+const champHref = (id: number) =>
+  `/champions/${props.names?.[id]?.[1] ?? championSlug(championName(id))}`
+
+const ORDER = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT']
+const current = computed(() => props.team.roster.filter((m) => m.current))
+const players = computed(() =>
+  current.value
+    .filter((m) => m.title !== 'staff')
+    .sort(
+      (a, b) =>
+        (a.title === 'sub' ? 1 : 0) - (b.title === 'sub' ? 1 : 0) ||
+        ORDER.indexOf(a.role ?? '') - ORDER.indexOf(b.role ?? '')
+    )
+)
+const staff = computed(() => current.value.filter((m) => m.title === 'staff'))
+const former = computed(() =>
+  props.team.roster.filter((m) => !m.current && m.title !== 'staff').slice(0, 12)
+)
+const record = computed(() => props.team.record)
+
+const who = ref<string | null>(null)
+const games = computed(() =>
+  props.team.games.filter((g) => !who.value || (g.pro?.role ?? '') === who.value)
+)
+/** The roster's most played champions, each with the player who plays it most. */
+const pool = computed(() => {
+  const rows: { champion: number; games: number; wins: number; by: string }[] = []
+  for (const [slug, list] of Object.entries(props.team.pools ?? {})) {
+    const name =
+      players.value.find((m) => m.slug === slug)?.name ??
+      current.value.find((m) => m.slug === slug)?.name ??
+      slug
+    for (const c of list) rows.push({ ...c, by: name })
+  }
+  return rows.sort((a, b) => b.games - a.games).slice(0, 8)
+})
+const year = (d: string | null) => (d ? new Date(d).getUTCFullYear() : '')
+const years = (m: Member) => {
+  const from = year(m.joinedAt)
+  const to = m.current ? 'now' : year(m.leftAt)
+  return from && to && String(from) !== String(to) ? `${from} to ${to}` : String(from || to || '')
+}
+const roleLabel = (r: string | null) =>
+  proRole(r)?.label ?? (r ? r.charAt(0) + r.slice(1).toLowerCase() : '')
+const website = computed(() => {
+  const w = props.team.socials?.website
+  return w ? (w.startsWith('http') ? w : `https://${w}`) : null
+})
+const back = computed(() =>
+  props.team.league
+    ? { label: props.team.league.code, href: `/pros?league=${props.team.league.slug}` }
+    : { label: 'Pros', href: '/pros' }
+)
+const crumbs = computed(() => [
+  { label: 'Pros', href: '/pros' },
+  ...(props.team.league
+    ? [{ label: props.team.league.code, href: `/pros?league=${props.team.league.slug}` }]
+    : []),
+  { label: props.team.name },
 ])
-const year = (d: string | null) => (d ? new Date(d).getFullYear() : '')
 </script>
 
 <template>
-  <Head :title="team.name" />
+  <Head :title="title" />
   <div class="flex min-h-screen flex-col">
     <AppHeader />
-    <Banner :art="art" :title="team.name" :figures="figures" list>
-      <template #face><TeamLogo :team="team" :size="96" class="cs-face" /></template>
-      <template #kicker>
-        <span class="cs-pro">Team</span
-        ><template v-if="team.shortName">{{ team.shortName }}</template
-        ><template v-if="team.region">, {{ team.region }}</template
-        >,
-        {{ team.active ? 'Active' : 'Inactive' }}
-      </template>
-    </Banner>
-    <main class="page cs-main flex-1">
-      <div class="cs-cols cs-c-side">
-        <div class="cs-stack">
-          <section class="iv-panel cs-card">
-            <h2>
-              Roster<span class="meta">{{ players.length }} players</span>
-            </h2>
-            <component
-              :is="m.slug ? Link : 'div'"
-              v-for="m in players"
-              :key="m.name"
-              :href="m.slug ? `/pro/${m.slug}` : undefined"
-              class="cs-member"
+    <main class="nb nb-page flex-1">
+      <Crumbs :back="back" :items="crumbs">
+        <template #end><ShareButton :title="team.name" :url="canonical" /></template>
+      </Crumbs>
+
+      <section class="nb-panel nv-teamhead" :aria-label="team.name">
+        <Logo :team="team" :size="72" eager />
+        <div class="min-w-0">
+          <h1>{{ team.name }}</h1>
+          <div class="tags">
+            <Link v-if="team.league" :href="`/pros?league=${team.league.slug}`"
+              ><Logo :league="team.league" :size="20" eager />{{ team.league.code }}</Link
             >
-              <span class="role"
-                ><RoleIcon
-                  v-if="laneOf(m.role ?? '')"
-                  :lane="laneOf(m.role ?? '') as any"
-                  :size="20"
-              /></span>
-              <span class="nm"
-                ><b>{{ m.name }}</b
-                ><small
-                  >{{ m.role ? m.role.charAt(0) + m.role.slice(1).toLowerCase() : 'Player'
-                  }}<template v-if="m.title === 'sub'">, sub</template
-                  ><template v-if="m.country">, {{ m.country }}</template
-                  >, since {{ year(m.joinedAt) }}</small
+            <span v-if="team.shortName">{{ team.shortName }}</span>
+            <span v-if="!team.active" class="q">Inactive</span>
+            <a
+              v-if="website"
+              :href="website"
+              target="_blank"
+              rel="noreferrer"
+              style="color: var(--text-2)"
+              >Website<ExternalLink :size="12" aria-hidden="true" /><span class="nb-sr">
+                (opens a new tab)</span
+              ></a
+            >
+          </div>
+        </div>
+        <div class="nb-figs">
+          <div>
+            <span>Average LP</span
+            ><b class="iv-fig num">{{ team.lp !== null ? thousands(team.lp) : '-' }}</b
+            ><em>starters in Master+</em>
+          </div>
+          <div>
+            <span>Solo queue, 30 days</span
+            ><b class="iv-fig num">{{ record.games ? pct(record.wins / record.games) : '-' }}</b
+            ><em class="num">{{ record.games }} games</em>
+          </div>
+          <div v-if="team.league">
+            <span>Rank in {{ team.league.code }}</span
+            ><b class="iv-fig num">{{ team.place ? `#${team.place}` : '-' }}</b
+            ><em>by average LP</em>
+          </div>
+        </div>
+      </section>
+
+      <section style="margin-top: 16px" aria-labelledby="h-roster">
+        <div class="nb-h">
+          <h2 id="h-roster">Roster</h2>
+          <span class="nb-meta">Best account of each player</span>
+        </div>
+        <p v-if="!players.length" class="nb-panel nb-empty">No current roster is known.</p>
+        <div v-else class="nv-roster">
+          <component
+            :is="m.slug ? Link : 'div'"
+            v-for="m in players"
+            :key="m.name"
+            :href="m.slug ? `/pro/${m.slug}` : undefined"
+            class="nv-member"
+          >
+            <span class="nb-photo" style="position: relative">
+              <span v-if="proRole(m.role)" class="rl"
+                ><RoleIcon :lane="proRole(m.role)!.lane" :size="12" />{{ roleLabel(m.role)
+                }}<template v-if="m.title === 'sub'">, sub</template></span
+              >
+            </span>
+            <span class="body">
+              <b>{{ m.name }}</b>
+              <small>{{
+                [countryName(m.country), m.joinedAt ? `since ${year(m.joinedAt)}` : null]
+                  .filter(Boolean)
+                  .join(', ') || ' '
+              }}</small>
+              <span class="rk" :style="tierColor(m.best?.tier)"
+                ><Crest :tier="m.best?.tier ?? null" :size="16" />{{
+                  m.best ? tierName(m.best.tier) : 'Unranked'
+                }}<span v-if="m.best?.lp !== null && m.best?.lp !== undefined" class="lp num"
+                  >{{ thousands(m.best.lp) }} LP</span
                 ></span
               >
-              <RankCrest v-if="m.best" :tier="m.best.tier" :size="22" />
-              <span class="text-[12.5px] font-semibold">{{
-                m.best
-                  ? rankLabel(m.best.tier, m.best.division, m.best.lp).replace(', ', ' ')
-                  : 'Unranked'
-              }}</span>
-            </component>
-            <template v-if="staff.length">
-              <span class="cs-h" style="margin-top: 14px">Staff</span>
+              <span class="pool"
+                ><ChampIcon
+                  v-for="c in (m.slug ? (team.pools[m.slug] ?? []) : []).slice(0, 4)"
+                  :key="c.champion"
+                  :id="c.champion"
+                  :size="24"
+                  :title="championName(c.champion)"
+              /></span>
+            </span>
+          </component>
+        </div>
+      </section>
+
+      <div class="tm-cols">
+        <section class="min-w-0" aria-labelledby="h-games">
+          <div class="nb-h">
+            <h2 id="h-games">Latest games of the roster</h2>
+            <span class="nb-meta">Solo queue</span>
+            <span
+              class="end nb-seg"
+              role="group"
+              aria-label="Player"
+              style="max-width: 100%; overflow-x: auto"
+            >
+              <button type="button" :class="{ on: !who }" :aria-pressed="!who" @click="who = null">
+                Everyone
+              </button>
+              <button
+                v-for="r in PRO_ROLES"
+                :key="r.role"
+                type="button"
+                :class="{ on: who === r.role }"
+                :aria-pressed="who === r.role"
+                @click="who = r.role"
+              >
+                {{ r.label }}
+              </button>
+            </span>
+          </div>
+          <p v-if="!team.games.length" class="nb-panel nb-empty">
+            No ranked game of this roster is stored for the last 30 days.
+          </p>
+          <p v-else-if="!games.length" class="nb-panel nb-empty">No recent game in this role.</p>
+          <div v-for="g in games" :key="g.matchId" class="tm-row" :class="g.win ? 'w' : 'l'">
+            <span class="e" />
+            <span class="nb-pic"
+              ><ChampIcon :id="g.champion" :size="36" :title="championName(g.champion)"
+            /></span>
+            <span class="min-w-0"
+              ><Link v-if="g.pro" :href="`/pro/${g.pro.slug}`"
+                ><b>{{ g.pro.name }}</b></Link
+              ><small
+                >{{ championName(g.champion)
+                }}<template v-if="proRole(g.pro?.role)"
+                  >, {{ roleLabel(g.pro?.role ?? null) }}</template
+                ></small
+              ></span
+            >
+            <span class="num kda" style="font-size: 13px; font-weight: 600; color: var(--text-1)"
+              >{{ g.kills }} / {{ g.deaths }} / {{ g.assists }}</span
+            >
+            <span class="vs"
+              ><template v-if="g.opponent"
+                ><ChampIcon :id="g.opponent" :size="22" /><span
+                  class="min-w-0"
+                  style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap"
+                  >vs {{ (g as any).opponentPro?.name ?? championName(g.opponent) }}</span
+                ></template
+              ></span
+            >
+            <span class="res"
+              >{{ g.win ? 'Win' : 'Loss'
+              }}<small class="num" style="font-weight: 500">{{ ago(g.startMs, now) }}</small></span
+            >
+          </div>
+        </section>
+
+        <div class="nb-stack">
+          <section v-if="pool.length" class="nb-panel">
+            <div class="nb-ph">
+              <h2>Most played</h2>
+              <span class="end nb-meta">Whole roster, 30 days</span>
+            </div>
+            <div class="nb-pb rows">
+              <Link
+                v-for="c in pool"
+                :key="`${c.champion}-${c.by}`"
+                :href="champHref(c.champion)"
+                class="nb-row"
+              >
+                <span class="pic"><ChampIcon :id="c.champion" :size="26" /></span>
+                <span class="n"
+                  >{{ championName(c.champion) }}<small>{{ c.by }}</small></span
+                >
+                <span class="v q num">{{ c.games }}</span
+                ><span class="v num">{{ pct(c.wins / c.games, 0) }}</span>
+              </Link>
+            </div>
+          </section>
+          <section v-if="former.length" class="nb-panel">
+            <div class="nb-ph"><h2>Former players</h2></div>
+            <div class="nb-pb rows">
+              <component
+                :is="m.slug ? Link : 'div'"
+                v-for="m in former"
+                :key="`${m.name}-${m.joinedAt}`"
+                :href="m.slug ? `/pro/${m.slug}` : undefined"
+                class="nb-row"
+                style="min-height: 46px"
+              >
+                <ProPhoto :width="28" :height="28" />
+                <span class="n"
+                  >{{ m.name
+                  }}<small>{{
+                    [roleLabel(m.role), years(m)].filter(Boolean).join(', ')
+                  }}</small></span
+                >
+                <Logo v-if="m.now" :team="m.now" :size="20" />
+              </component>
+            </div>
+          </section>
+          <section v-if="staff.length" class="nb-panel">
+            <div class="nb-ph"><h2>Staff</h2></div>
+            <div class="nb-pb rows">
               <component
                 :is="m.slug ? Link : 'div'"
                 v-for="m in staff"
                 :key="m.name"
                 :href="m.slug ? `/pro/${m.slug}` : undefined"
-                class="cs-member"
+                class="nb-row"
               >
-                <span class="role" />
-                <span class="nm"
-                  ><b>{{ m.name }}</b
-                  ><small>{{
-                    m.role ? m.role.charAt(0) + m.role.slice(1).toLowerCase() : 'Staff'
-                  }}</small></span
+                <span class="n"
+                  >{{ m.name }}<small>{{ roleLabel(m.role) || 'Staff' }}</small></span
                 >
               </component>
-            </template>
-          </section>
-          <section>
-            <div class="cs-card" style="padding: 0 0 12px">
-              <h2 style="margin: 0">
-                Recent games<span class="meta">The roster's ranked solo games, last 30 days</span>
-              </h2>
             </div>
-            <div v-if="team.games.length" class="cs-games">
-              <GameRow v-for="g in team.games" :key="g.matchId" :game="g" who="pro" />
-            </div>
-            <p v-else class="cs-empty">No ranked game of this roster is stored yet.</p>
-          </section>
-        </div>
-        <div class="cs-stack">
-          <section v-if="team.champions.length" class="iv-panel cs-card">
-            <h2>Champions<span class="meta">The roster, last 30 days</span></h2>
-            <Link
-              v-for="c in team.champions.slice(0, 8)"
-              :key="c.champion"
-              :href="`/champions/${championSlug(championName(c.champion))}`"
-              class="cs-ch"
-            >
-              <img :src="champIconUrl(c.champion)" alt="" />
-              <span class="nm"
-                >{{ championName(c.champion)
-                }}<small>{{ c.games }} games, {{ c.kda }} KDA</small></span
-              >
-              <span class="v">{{ pct(c.wins / c.games) }}</span>
-            </Link>
-          </section>
-          <section v-if="past.length" class="iv-panel cs-card">
-            <h2>Past players</h2>
-            <component
-              :is="m.slug ? Link : 'div'"
-              v-for="m in past"
-              :key="`${m.name}-${m.joinedAt}`"
-              :href="m.slug ? `/pro/${m.slug}` : undefined"
-              class="cs-member"
-            >
-              <span class="role"
-                ><RoleIcon
-                  v-if="laneOf(m.role ?? '')"
-                  :lane="laneOf(m.role ?? '') as any"
-                  :size="18"
-              /></span>
-              <span class="nm"
-                ><b>{{ m.name }}</b
-                ><small>{{ year(m.joinedAt) }}-{{ year(m.leftAt) }}</small></span
-              >
-            </component>
           </section>
         </div>
       </div>
