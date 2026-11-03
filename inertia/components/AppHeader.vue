@@ -9,11 +9,10 @@ import {
   watch,
 } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
-import { Icon, Logo } from '@invadelol/ui'
+import { ChevronDown, ChevronRight, Download, Search, X } from 'lucide-vue-next'
+import { Logo } from '@invadelol/ui'
 import SearchBar from './SearchBar.vue'
 import ThemeToggle from './ui/ThemeToggle.vue'
-import MegaMenu from './header/MegaMenu.vue'
-import MobileMenu from './header/MobileMenu.vue'
 import { SECTIONS, type SectionKey } from './header/sections.js'
 import { loadSiteNav, siteNav } from '../lib/site_nav.js'
 import { season, startSeason } from '../lib/season.js'
@@ -29,6 +28,21 @@ import { season, startSeason } from '../lib/season.js'
 
 /** Christmas (../lib/season.ts): its own chunk, loaded only in season, and only in the browser. */
 const SeasonLayer = defineAsyncComponent(() => import('./SeasonLayer.vue'))
+
+/**
+ * The menus are their own chunks, asked for on the first sign of interest (a hover, a focus, a
+ * touch), so a page carries none of their weight and a menu still opens in the frame it is asked.
+ */
+const loadMega = () => import('./header/MegaMenu.vue')
+const loadMobile = () => import('./header/MobileMenu.vue')
+const MegaMenu = defineAsyncComponent(loadMega)
+const MobileMenu = defineAsyncComponent(loadMobile)
+
+/** The menus' code and data, once: on hover, focus or touch of anything that opens one. */
+function warmMenus() {
+  loadSiteNav()
+  void loadMega().catch(() => {})
+}
 
 const props = withDefaults(
   defineProps<{
@@ -57,7 +71,7 @@ let leaveTimer: ReturnType<typeof setTimeout> | undefined
 let hoveredAt = 0
 
 function show(key: SectionKey) {
-  loadSiteNav()
+  warmMenus()
   clearTimeout(leaveTimer)
   searchOpen.value = false
   open.value = key
@@ -74,7 +88,7 @@ function close(focusTrigger = false) {
 /** A mouse resting on a trigger opens its menu; moving to another trigger switches at once. */
 function onEnter(key: SectionKey, event: PointerEvent) {
   if (event.pointerType !== 'mouse') return
-  loadSiteNav()
+  warmMenus()
   clearTimeout(leaveTimer)
   clearTimeout(hoverTimer)
   if (open.value === key) return
@@ -111,8 +125,10 @@ function onTriggerKey(key: SectionKey, event: KeyboardEvent) {
   } else if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
     event.preventDefault()
     const next = ORDER[(at + (event.key === 'ArrowRight' ? 1 : ORDER.length - 1)) % ORDER.length]
+    // Moving the focus closes the menu it leaves (focusout): an open menu follows the focus.
+    const wasOpen = Boolean(open.value)
     triggers.value[next]?.focus()
-    if (open.value) show(next)
+    if (wasOpen) show(next)
   } else if (event.key === 'Escape' && open.value) {
     event.preventDefault()
     close(true)
@@ -128,7 +144,10 @@ function onFocusOut(key: SectionKey, event: FocusEvent) {
 /* ── Search palette ────────────────────────────────────────────────── */
 
 const searchOpen = ref(false)
-/** Mounted on the first sign of interest, so the tap that opens it can focus its field at once. */
+/**
+ * Mounted (hidden, but laid out) on the first sign of interest, so the tap that opens it only
+ * shows it and can focus its field at once, which is what lets a phone raise its keyboard.
+ */
 const searchReady = ref(false)
 const palette = ref<HTMLElement>()
 const searchBar = ref<InstanceType<typeof SearchBar>>()
@@ -149,7 +168,8 @@ function openSearch() {
     return
   }
   searchOpen.value = true
-  if (palette.value) palette.value.style.display = ''
+  // Laid out while hidden since the hover: showing it is a style change, and the focus is free.
+  palette.value?.classList.remove('off')
   searchBar.value?.focus()
 }
 
@@ -181,6 +201,11 @@ function toggleMobile() {
   searchOpen.value = false
   mobileOpen.value = !mobileOpen.value
   if (mobileOpen.value) loadSiteNav()
+}
+
+function warmMobile() {
+  loadSiteNav()
+  void loadMobile().catch(() => {})
 }
 
 function closeMobile(focusButton = false) {
@@ -291,10 +316,14 @@ function skip(event: MouseEvent) {
             :aria-expanded="open === s.key"
             :aria-controls="`sh-menu-${s.key}`"
             @click="onTrigger(s.key)"
-            @focus="loadSiteNav"
+            @focus="warmMenus"
+            @touchstart.passive="warmMenus"
             @keydown="onTriggerKey(s.key, $event)"
           >
-            {{ s.label }}<span class="chev"><Icon name="down" :size="13" /></span>
+            {{ s.label
+            }}<span class="chev"
+              ><ChevronDown :size="13" :stroke-width="1.8" aria-hidden="true"
+            /></span>
           </button>
           <MegaMenu
             v-if="open === s.key"
@@ -308,7 +337,7 @@ function skip(event: MouseEvent) {
 
       <nav v-if="crumbs?.length" class="sh-crumbs" aria-label="Breadcrumb">
         <template v-for="crumb in crumbs" :key="crumb.label">
-          <Icon name="right" :size="13" class="chev" />
+          <ChevronRight :size="13" :stroke-width="1.8" class="chev" aria-hidden="true" />
           <Link v-if="crumb.href" :href="crumb.href" class="c">{{ crumb.label }}</Link>
           <span v-else class="c here" aria-current="page">{{ crumb.label }}</span>
         </template>
@@ -327,15 +356,15 @@ function skip(event: MouseEvent) {
           @focus="prepareSearch"
           @click="openSearch"
         >
-          <Icon name="search" :size="15" />
+          <Search :size="15" :stroke-width="1.8" aria-hidden="true" />
           <span class="ph">Search a player, champion or pro</span>
           <kbd>⌘ K</kbd>
         </button>
         <div
           v-if="searchReady"
-          v-show="searchOpen"
           ref="palette"
           class="sh-pop sh-palette"
+          :class="{ off: !searchOpen }"
           role="dialog"
           aria-label="Search"
         >
@@ -357,7 +386,7 @@ function skip(event: MouseEvent) {
           :class="{ primary: loudDownload }"
           data-track="header_get_app"
         >
-          <Icon name="download" :size="14" />Get the app
+          <Download :size="14" :stroke-width="1.8" aria-hidden="true" />Get the app
         </Link>
         <ThemeToggle class="sh-theme" />
         <button
@@ -370,7 +399,7 @@ function skip(event: MouseEvent) {
           @pointerenter="prepareSearch"
           @click="toggleSearch"
         >
-          <Icon name="search" :size="18" />
+          <Search :size="18" :stroke-width="1.8" aria-hidden="true" />
         </button>
         <button
           ref="menuButton"
@@ -380,9 +409,12 @@ function skip(event: MouseEvent) {
           :aria-label="mobileOpen ? 'Close menu' : 'Menu'"
           :aria-expanded="mobileOpen"
           aria-controls="sh-mobile"
+          @pointerenter="warmMobile"
+          @touchstart.passive="warmMobile"
+          @focus="warmMobile"
           @click="toggleMobile"
         >
-          <Icon v-if="mobileOpen" name="x" :size="20" />
+          <X v-if="mobileOpen" :size="20" :stroke-width="1.8" aria-hidden="true" />
           <svg v-else class="burger" viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 7h16M4 12h16M4 17h16" />
           </svg>
