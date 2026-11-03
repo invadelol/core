@@ -1,0 +1,860 @@
+/* ──────────────────────────────────────────────────────────────
+ The home page (`/`), prefixed `hm-`, loaded with its page only.
+ One column of sections: the search, two pairs of lists, the
+ desktop app, the most banned and the Discord. Tokens only.
+ Outside the layers on purpose: it places the shared captures
+ (Shot, AppWindow), whose own styles are unlayered too.
+ ────────────────────────────────────────────────────────────── */
+.hm {
+  font-size: 13px;
+}
+
+.hm-wrap {
+  width: 100%;
+  max-width: 1088px;
+  margin-inline: auto;
+  padding-inline: 16px;
+}
+
+@media (min-width: 40rem) {
+  .hm-wrap {
+    padding-inline: 24px;
+  }
+}
+
+.hm-sec {
+  padding-top: 72px;
+}
+
+.hm-sec.far {
+  padding-top: 96px;
+}
+
+@media (min-width: 64rem) {
+  .hm-sec {
+    padding-top: 96px;
+  }
+
+  .hm-sec.far {
+    padding-top: 120px;
+  }
+}
+
+/* ── The search ─────────────────────────────────────────── */
+.hm-hero {
+  max-width: 768px;
+  padding-top: clamp(40px, 9vh, 72px);
+  text-align: center;
+}
+
+.hm-hero h1 {
+  font-size: 28px;
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.016em;
+  color: var(--text-1);
+}
+
+@media (min-width: 40rem) {
+  .hm-hero h1 {
+    font-size: 32px;
+  }
+}
+
+.hm-hero .hm-field {
+  margin-top: 20px;
+  text-align: left;
+}
+
+/* One line whatever the number of players: it scrolls sideways when it is wider than the page,
+   so nothing under it moves when it fills in after the page has loaded. */
+.hm-recent {
+  height: 30px;
+  margin-top: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.hm-recent::-webkit-scrollbar {
+  display: none;
+}
+
+.hm-recent .in {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: max-content;
+  margin-inline: auto;
+  animation: hm-fade 240ms var(--ease) backwards;
+}
+
+@keyframes hm-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.hm-recent .lbl {
+  margin-right: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+.hm-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 7px;
+  max-width: 220px;
+  height: 30px;
+  padding: 0 10px 0 4px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-2);
+  border-radius: var(--r-sm);
+  transition:
+    background-color var(--t-fast) var(--ease),
+    color var(--t-fast) var(--ease);
+}
+
+.hm-chip:hover {
+  color: var(--text-1);
+  background: var(--surface-2);
+}
+
+.hm-chip img {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-xs);
+  object-fit: cover;
+}
+
+.hm-chip .nm {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.hm-chip small {
+  flex: none;
+  font-size: 12px;
+  color: var(--text-4);
+}
+
+.hm-recent .clear {
+  height: 30px;
+  margin-left: 4px;
+  padding: 0 8px;
+  font-size: 12px;
+  color: var(--text-3);
+  border-radius: var(--r-sm);
+}
+
+.hm-recent .clear:hover {
+  color: var(--text-1);
+}
+
+@media (pointer: coarse) {
+  .hm-recent {
+    height: 40px;
+  }
+
+  .hm-chip,
+  .hm-recent .clear {
+    height: 40px;
+  }
+}
+
+/* ── Section heads ──────────────────────────────────────── */
+.hm-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.hm-head .ico {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  color: var(--text-2);
+  background: var(--btn);
+  border-radius: var(--r-sm);
+  box-shadow: var(--btn-shadow);
+}
+
+.hm-head h2 {
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.012em;
+  color: var(--text-1);
+  white-space: nowrap;
+}
+
+.hm-head .meta {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12.5px;
+  color: var(--text-3);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.hm-head .end {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-3);
+  border-radius: var(--r-sm);
+}
+
+.hm-head .end:hover {
+  color: var(--text-1);
+}
+
+/* ── Two lists side by side ─────────────────────────────── */
+.hm-two {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 40px 16px;
+  align-items: start;
+}
+
+@media (min-width: 48rem) {
+  .hm-two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.hm-list {
+  padding: 8px 0;
+  background: var(--sheen), var(--surface-1);
+  border-radius: var(--r-md);
+  box-shadow: var(--lit);
+}
+
+.hm-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 0 22px;
+  transition: background-color var(--t-fast) var(--ease);
+}
+
+.hm-row + .hm-row {
+  box-shadow: inset 0 1px 0 var(--line);
+}
+
+.hm-row:hover {
+  background: var(--glint);
+}
+
+.hm-row .rl {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  width: 74px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+.hm-row .pic {
+  display: inline-flex;
+  flex: none;
+  overflow: hidden;
+  border-radius: var(--r-sm);
+  box-shadow: var(--portrait-sm);
+}
+
+.hm-row .logo {
+  flex: none;
+  background: var(--well);
+  box-shadow: var(--portrait-sm);
+}
+
+.hm-row .logo img {
+  padding: 4px;
+}
+
+.hm-row .logo.none {
+  display: inline-grid;
+  place-items: center;
+  color: var(--text-4);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-sm);
+}
+
+.hm-row .n {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-1);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.hm-row .n small {
+  display: block;
+  margin-top: 2px;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+  text-overflow: ellipsis;
+}
+
+.hm-row .f {
+  flex: none;
+  font-size: 16px;
+  line-height: 1;
+  text-align: right;
+}
+
+.hm-row .f.w {
+  min-width: 64px;
+}
+
+.hm-row .f small {
+  margin-left: 3px;
+  font-size: 11.5px;
+  font-weight: 500;
+  font-stretch: 100%;
+  color: var(--text-3);
+}
+
+.hm-row .crest {
+  display: inline-flex;
+  flex: none;
+}
+
+.hm-row .pos {
+  flex: none;
+  width: 18px;
+  font-size: 12.5px;
+  color: var(--text-4);
+}
+
+.hm-row .mv {
+  flex: none;
+  width: 34px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.hm .up {
+  color: var(--win);
+}
+
+.hm .down {
+  color: var(--loss);
+}
+
+@media (max-width: 39.99rem) {
+  .hm-row {
+    gap: 12px;
+    padding: 0 14px;
+  }
+
+  .hm-row .rl {
+    width: auto;
+  }
+
+  .hm-row .rl span {
+    display: none;
+  }
+}
+
+/* ── The desktop app ────────────────────────────────────── */
+.hm-app-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 20px 24px;
+  margin-bottom: 28px;
+}
+
+.hm-app-head h2 {
+  margin-top: 14px;
+  font-size: 26px;
+  font-weight: 650;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--text-1);
+}
+
+@media (min-width: 40rem) {
+  .hm-app-head h2 {
+    font-size: 30px;
+  }
+}
+
+.hm-app-head p {
+  margin-top: 8px;
+  font-size: 14.5px;
+  color: var(--text-2);
+}
+
+.hm-app-head .cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.hm-app-head .cta .iv-btn {
+  gap: 8px;
+}
+
+@media (max-width: 39.99rem) {
+  .hm-app-head .cta {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .hm-app-head .cta .iv-btn {
+    flex: 1;
+    height: 44px;
+  }
+}
+
+.hm-moments {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+@media (min-width: 56rem) {
+  .hm-moments {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.hm-mo {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--sheen), var(--surface-1);
+  border-radius: var(--r-md);
+  box-shadow: var(--lit);
+}
+
+/* A tablet: the picture beside its words. */
+@media (min-width: 36rem) and (max-width: 55.99rem) {
+  .hm-mo {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  }
+
+  .hm-mo .vis {
+    box-shadow: inset -1px 0 0 var(--line);
+  }
+
+  .hm-mo .txt {
+    align-self: center;
+  }
+}
+
+.hm-mo .vis {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 336 / 220;
+  overflow: hidden;
+  background: var(--well);
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+
+.hm-mo .txt {
+  padding: 16px 18px 18px;
+}
+
+.hm-mo b {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--text-1);
+}
+
+.hm-mo p {
+  margin-top: 4px;
+  font-size: 12.5px;
+  line-height: 18px;
+  color: var(--text-3);
+}
+
+/* Champ select: the team's list out of the app's live draft, larger. */
+.hm-mo .draft picture {
+  position: absolute;
+  top: -47%;
+  left: -40%;
+  width: 247%;
+  max-width: none;
+}
+
+/* In game: the still, dimmed, and the overlay over it as it sits on the game. */
+.hm-mo .game > picture {
+  position: absolute;
+  inset: 0;
+}
+
+.hm-mo .game > picture img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 40% 40%;
+  opacity: 0.8;
+}
+
+.hm-mo .game .ov {
+  position: relative;
+  width: 46%;
+  filter: drop-shadow(0 14px 22px rgb(10 8 40 / 0.45));
+}
+
+.hm-mo .dials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(12px, 6%, 22px);
+}
+
+/* ── Most banned ────────────────────────────────────────── */
+.hm-bans {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  gap: 12px;
+}
+
+.hm-ban {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px;
+  background: var(--sheen), var(--surface-1);
+  border-radius: var(--r-md);
+  box-shadow: var(--lit);
+  transition: background-color var(--t-base) var(--ease);
+}
+
+.hm-ban:hover {
+  background: var(--sheen), var(--surface-2);
+}
+
+.hm-ban .who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.hm-ban .pic {
+  display: inline-flex;
+  flex: none;
+  overflow: hidden;
+  border-radius: var(--r-sm);
+  box-shadow: var(--portrait-sm);
+}
+
+.hm-ban .who > span:last-child {
+  min-width: 0;
+}
+
+.hm-ban .who b {
+  display: block;
+  overflow: hidden;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-1);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.hm-ban .who small {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.hm-ban .f {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.hm-ban .f small {
+  margin-left: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  font-stretch: 100%;
+  color: var(--text-3);
+}
+
+.hm-bar {
+  position: relative;
+  height: 3px;
+  overflow: hidden;
+  background: var(--well);
+  border-radius: 2px;
+}
+
+.hm-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--text-3);
+  border-radius: 2px;
+}
+
+/* Phones: the tiles become rows, so five fit on a screen. */
+@media (max-width: 39.99rem) {
+  .hm-bans {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .hm-ban {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 12px 14px;
+    box-shadow: var(--row);
+    border-radius: var(--r-sm);
+  }
+
+  .hm-ban .f {
+    font-size: 20px;
+  }
+
+  .hm-ban .hm-bar {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ── The Discord ─────────────────────────────────────────── */
+.hm-comm {
+  position: relative;
+  overflow: hidden;
+  padding: 24px;
+  border-radius: var(--r-lg);
+}
+
+@media (min-width: 48rem) {
+  .hm-comm {
+    padding: 48px;
+  }
+}
+
+.hm-comm .grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+
+@media (min-width: 56rem) {
+  .hm-comm .grid {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 48px;
+  }
+}
+
+.hm-comm h2 {
+  font-size: 26px;
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--text-1);
+}
+
+@media (min-width: 40rem) {
+  .hm-comm h2 {
+    font-size: 30px;
+  }
+}
+
+.hm-comm .lead {
+  max-width: 46ch;
+  margin-top: 10px;
+  font-size: 14.5px;
+  line-height: 22px;
+  color: var(--text-2);
+}
+
+.hm-counts {
+  display: flex;
+  gap: 36px;
+  margin-top: 28px;
+}
+
+.hm-counts dt {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+.hm-counts dd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 36px;
+  line-height: 1;
+}
+
+.hm-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--win);
+  box-shadow: 0 0 0 3px rgb(var(--win-rgb) / 0.16);
+}
+
+.hm-comm .acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 28px;
+}
+
+.hm-comm .acts .iv-btn {
+  gap: 8px;
+}
+
+.hm-comm .acts svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.hm-chans li {
+  display: grid;
+  grid-template-columns: 14px auto minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: 8px;
+  padding: 11px 0;
+  font-size: 12.5px;
+  border-bottom: 1px solid var(--line);
+}
+
+.hm-chans li b {
+  font-weight: 500;
+  color: var(--text-1);
+}
+
+.hm-chans li span {
+  overflow: hidden;
+  color: var(--text-3);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.hm-chans svg {
+  align-self: center;
+  width: 13px;
+  height: 13px;
+  color: var(--text-4);
+}
+
+@media (max-width: 39.99rem) {
+  .hm-chans li {
+    grid-template-columns: 14px minmax(0, 1fr);
+  }
+
+  .hm-chans li span {
+    grid-column: 2;
+    white-space: normal;
+  }
+}
+
+.hm-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 16px;
+}
+
+@media (max-width: 23.99rem) {
+  .hm-links {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.hm-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  min-width: 0;
+  padding: 0 12px;
+  border-radius: var(--r-sm);
+  transition: background-color var(--t-fast) var(--ease);
+}
+
+.hm-link:hover {
+  background: var(--glint);
+}
+
+.hm-link .ic {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  color: var(--text-2);
+  background: var(--surface-2);
+  border-radius: var(--r-sm);
+}
+
+.hm-link > span:last-child {
+  min-width: 0;
+}
+
+.hm-link b {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.hm-link small {
+  display: block;
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--text-3);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Every control of the page shows the focus ring over its own shadow (rows draw a hairline). */
+.hm :is(a, button):focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+.hm .iv-btn:not(.ghost):focus-visible {
+  box-shadow: var(--btn-shadow), var(--focus);
+}
