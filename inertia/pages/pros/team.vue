@@ -204,7 +204,7 @@ const crumbs = computed(() => [
           <div class="nb-ph">
             <h2 id="h-next">{{ nextMatches.length > 1 ? 'Next matches' : 'Next match' }}</h2>
           </div>
-          <MatchCard :match="nextMatches[0]" size="lg" show-league />
+          <MatchCard :match="nextMatches[0]" size="lg" show-league :team="club.id" />
           <div v-if="nextMatches.length > 1" class="rows">
             <MatchRow v-for="mt in nextMatches.slice(1)" :key="mt.id" :match="mt" :team="club.id" />
           </div>

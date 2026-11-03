@@ -16,8 +16,14 @@ import '../../css/pro_matches.css'
  * featured next match of a team.
  */
 const props = withDefaults(
-  defineProps<{ match: ProMatch; showLeague?: boolean; size?: 'md' | 'lg' }>(),
-  { showLeague: false, size: 'md' }
+  defineProps<{
+    match: ProMatch
+    showLeague?: boolean
+    size?: 'md' | 'lg'
+    /** A team's page: its id, so it always faces from the left. */
+    team?: string | null
+  }>(),
+  { showLeague: false, size: 'md', team: null }
 )
 const m = computed(() => props.match)
 const live = computed(() => m.value.status === 'running')
@@ -36,6 +42,8 @@ const logoTeam = (t: ProMatch['teams'][number]) => ({
   name: teamName(t),
   shortName: t.code,
 })
+/** The order the two teams read in, left to right: the page's team first. */
+const sides = computed(() => (props.team && m.value.teams[1].id === props.team ? [1, 0] : [0, 1]))
 const sideClass = (i: number) => ({
   won: m.value.winner === i + 1,
   lost: m.value.winner !== null && m.value.winner !== i + 1,
@@ -46,7 +54,7 @@ const sideClass = (i: number) => ({
   <article
     class="pm-card"
     :class="[size, { live, done }]"
-    :aria-label="`${teamName(m.teams[0])} vs ${teamName(m.teams[1])}`"
+    :aria-label="`${teamName(m.teams[sides[0]])} vs ${teamName(m.teams[sides[1]])}`"
   >
     <header class="pm-top">
       <span v-if="live" class="pm-live">Live</span>
@@ -61,22 +69,22 @@ const sideClass = (i: number) => ({
     <div class="pm-face">
       <component
         :is="href(t) ? Link : 'div'"
-        v-for="(t, i) in m.teams"
+        v-for="(i, at) in sides"
         :key="i"
-        :href="href(t) ?? undefined"
+        :href="href(m.teams[i]) ?? undefined"
         class="pm-side"
-        :class="[i ? 'b' : 'a', sideClass(i)]"
-        :style="{ order: i ? 3 : 1 }"
+        :class="[at ? 'b' : 'a', sideClass(i)]"
+        :style="{ order: at ? 3 : 1 }"
       >
-        <Logo :team="logoTeam(t)" :size="logoSize" :eager="size === 'lg'" />
-        <b class="code">{{ teamLabel(t) }}</b>
-        <span class="nm" :title="teamName(t)">{{ teamName(t) }}</span>
+        <Logo :team="logoTeam(m.teams[i])" :size="logoSize" :eager="size === 'lg'" />
+        <b class="code">{{ teamLabel(m.teams[i]) }}</b>
+        <span class="nm" :title="teamName(m.teams[i])">{{ teamName(m.teams[i]) }}</span>
       </component>
       <span class="pm-mid" style="order: 2">
         <template v-if="scored"
-          ><b class="num" :class="sideClass(0)">{{ m.teams[0].score }}</b
+          ><b class="num" :class="sideClass(sides[0])">{{ m.teams[sides[0]].score }}</b
           ><span class="sep" aria-hidden="true">:</span
-          ><b class="num" :class="sideClass(1)">{{ m.teams[1].score }}</b></template
+          ><b class="num" :class="sideClass(sides[1])">{{ m.teams[sides[1]].score }}</b></template
         >
         <span v-else class="vs">vs</span>
       </span>

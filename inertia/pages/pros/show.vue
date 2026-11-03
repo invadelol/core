@@ -283,8 +283,8 @@ const back = computed(() =>
               <span class="end nb-meta">{{ player.team.name }}</span>
             </div>
             <div class="pp-matches">
-              <MatchCard v-if="nextMatch" :match="nextMatch" show-league />
-              <MatchCard v-if="lastMatch" :match="lastMatch" show-league />
+              <MatchCard v-if="nextMatch" :match="nextMatch" show-league :team="player.team?.id" />
+              <MatchCard v-if="lastMatch" :match="lastMatch" show-league :team="player.team?.id" />
             </div>
           </section>
           <section class="nb-panel">
