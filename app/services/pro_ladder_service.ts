@@ -5,6 +5,7 @@ import { AnswerCache } from '#services/ranked_stats'
 import { catalog, leagueCatalog, leagueRef, type LeagueRef } from '#services/pro_leagues'
 import proPhotoService from '#services/pro_photo_service'
 import type { ProTag } from '#services/pro_service'
+import { SERVERS } from '#constants/riot'
 
 /**
  * Where the pros stand on the ranked ladder and how they moved over the last 24 hours.
@@ -20,7 +21,6 @@ import type { ProTag } from '#services/pro_service'
 
 const TIERS = ['IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'EMERALD', 'DIAMOND'] as const
 const APEX = new Set(['MASTER', 'GRANDMASTER', 'CHALLENGER'])
-const TIER_ORDER = ['CHALLENGER', 'GRANDMASTER', 'MASTER', 'DIAMOND', 'EMERALD', 'PLATINUM']
 const DIVISIONS: Record<string, number> = { I: 1, II: 2, III: 3, IV: 4 }
 
 const HOUR = 3_600_000
@@ -72,7 +72,7 @@ export interface LadderRow {
 export interface LadderOptions {
   /** A league slug (`lec`): its teams' current players only. */
   league?: string | null
-  /** `EUW1`, `NA1` or `BR1`: accounts on that server only. */
+  /** A platform (`EUW1`, `KR`, `EUN1`…): accounts on that server only. */
   platform?: string | null
   /** `TOP`, `JUNGLE`, `MID`, `ADC`, `SUPPORT`. */
   role?: string | null
@@ -95,11 +95,21 @@ const CURRENT_TEAM = `
     LIMIT 1
   ) ct ON true`
 
-const TIER_SQL = `array_position(ARRAY[${TIER_ORDER.map((t) => `'${t}'`).join(',')}]::text[], a.tier)`
+/**
+ * `rankScore` of an account in SQL (`a`), so the account picked as a pro's best is the one the
+ * ladder ranks by: Master and above by LP whatever the tier and the server (Riot sends their
+ * division as I, which some writers keep and others leave empty), the others by tier, division
+ * then LP.
+ */
+export const RANK_SCORE_SQL = `(CASE WHEN a.tier IN ('MASTER','GRANDMASTER','CHALLENGER')
+    THEN 2800 + coalesce(a.lp, 0)
+    ELSE (array_position(ARRAY[${TIERS.map((t) => `'${t}'`).join(',')}]::text[], a.tier) - 1) * 400
+      + (4 - coalesce(a.division, 4)) * 100 + coalesce(a.lp, 0) END)`
 
 export class ProLadderService {
   #ladders = new AnswerCache(64, 5 * 60_000)
   #snapshots = new AnswerCache(4, 10 * 60_000)
+  #servers = new AnswerCache(8, 5 * 60_000)
 
   /**
    * The ranks to keep for tomorrow's moves: every ranked account in Master and above, and every
@@ -246,7 +256,7 @@ export class ProLadderService {
               a.id AS account_id, a.game_name, a.tag_line, a.platform, a.tier, a.division, a.lp
        FROM pro_account a JOIN pro_player p ON p.id = a.player_id ${CURRENT_TEAM}
        WHERE ${where.join(' AND ')}
-       ORDER BY p.id, ${TIER_SQL} NULLS LAST, a.division NULLS LAST, a.lp DESC NULLS LAST`,
+       ORDER BY p.id, ${RANK_SCORE_SQL} DESC NULLS LAST`,
       params
     )
     const entries = rows
@@ -301,6 +311,31 @@ export class ProLadderService {
         },
         move: move ? { places: placeBefore[i] - (i + 1), lp: move.lp } : null,
       }
+    })
+  }
+
+  /**
+   * The servers a ladder can be narrowed to: every platform with a pro in Master and above (of
+   * a role, when given), with how many, in `SERVERS` order.
+   */
+  async servers(
+    role?: string | null
+  ): Promise<{ platform: string; label: string; slug: string; pros: number }[]> {
+    return this.#servers.get(role ?? '', async () => {
+      const { rows } = await db.rawQuery(
+        `SELECT a.platform, count(DISTINCT a.player_id)::int AS pros
+         FROM pro_account a ${role ? 'JOIN pro_player p ON p.id = a.player_id' : ''}
+         WHERE a.tier IN ('MASTER','GRANDMASTER','CHALLENGER') ${role ? 'AND p.role = ?' : ''}
+         GROUP BY a.platform`,
+        role ? [role] : []
+      )
+      const pros = new Map<string, number>(
+        rows.map((r: { platform: string; pros: number }) => [r.platform, r.pros])
+      )
+      return SERVERS.filter((s) => pros.has(s.platform)).map((s) => ({
+        ...s,
+        pros: pros.get(s.platform)!,
+      }))
     })
   }
 

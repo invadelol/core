@@ -98,6 +98,9 @@ const props = defineProps<{
   page?: number
   pageSize?: number
   filters?: { server: string | null; role: string | null }
+  /** The ladder's servers (every one with a pro in Master and above), and where it ranks. */
+  servers?: { slug: string; label: string; pros: number }[]
+  on?: string
   /** The league's next games, and the international events running now. */
   matches?: {
     league: ProMatch[]
@@ -131,7 +134,7 @@ const title = computed(
 
 /* ── League view ─────────────────────────────────────────────── */
 const role = ref<string | null>(null)
-const server = ref<string>('ALL')
+const server = ref<string>('')
 const query = ref('')
 type Key = 'rank' | 'name' | 'team' | 'move' | 'record'
 const sort = shallowRef<Sort<Key>>({ key: 'rank', dir: 'asc' })
@@ -148,11 +151,22 @@ const sortModel = computed({
   get: () => sort.value.key,
   set: (key: Key) => (sort.value = { key, dir: key === 'name' || key === 'rank' ? 'asc' : 'desc' }),
 })
-const servers = computed(() => {
-  const set = new Set(
-    (leagueView.value?.players ?? []).flatMap((p) => (p.best ? [p.best.platform] : []))
-  )
-  return ['ALL', ...['EUW1', 'NA1', 'BR1'].filter((s) => set.has(s))]
+/** Every server a player's best account is on, with how many players. */
+const serverOptions = computed(() => {
+  const count = new Map<string, number>()
+  for (const p of leagueView.value?.players ?? []) {
+    if (p.best) count.set(p.best.platform, (count.get(p.best.platform) ?? 0) + 1)
+  }
+  const known = Object.keys(SERVER).filter((s) => count.has(s))
+  const other = [...count.keys()].filter((s) => !SERVER[s]).sort()
+  return [
+    { value: '', label: 'All servers' },
+    ...[...known, ...other].map((s) => ({
+      value: s,
+      label: SERVER[s] ?? s,
+      meta: String(count.get(s)),
+    })),
+  ]
 })
 const place = computed(
   () => new Map((leagueView.value?.players ?? []).map((p, i) => [p.slug, i + 1]))
@@ -162,7 +176,7 @@ const players = computed(() => {
   const list = (leagueView.value?.players ?? []).filter(
     (p) =>
       (!role.value || p.role === role.value) &&
-      (server.value === 'ALL' || p.best?.platform === server.value) &&
+      (!server.value || p.best?.platform === server.value) &&
       (!q || p.name.toLowerCase().includes(q) || (p.team?.name ?? '').toLowerCase().includes(q))
   )
   const { key, dir } = sort.value
@@ -214,6 +228,23 @@ const ladderHref = (c: { server?: string | null; role?: string | null }) => {
   if (r) q.set('role', r)
   return `/pros?${q}`
 }
+const ladderServers = computed(() => {
+  const list = (Array.isArray(props.servers) ? props.servers : []).map((s) => ({
+    value: s.slug,
+    label: s.label,
+    meta: thousands(s.pros),
+  }))
+  // A server asked for that has no pro with this role stays readable as the choice.
+  const asked = props.filters?.server
+  if (asked && !list.some((s) => s.value === asked)) {
+    list.push({ value: asked, label: asked.toUpperCase(), meta: '0' })
+  }
+  return [{ value: '', label: 'All servers' }, ...list]
+})
+const ladderServer = computed({
+  get: () => props.filters?.server ?? '',
+  set: (v: string) => router.visit(ladderHref({ server: v || null }), { preserveScroll: true }),
+})
 const loading = ref(false)
 function loadMore() {
   if (loading.value) return
@@ -342,42 +373,22 @@ const crumbs = computed(() => {
               </Link>
             </nav>
           </div>
-          <div v-if="view !== 'teams'" class="grp">
+          <div v-if="view === 'league' && serverOptions.length > 2" class="grp">
             <span class="nb-label">Server</span>
-            <div
-              v-if="view === 'league'"
-              class="nb-seg"
-              role="group"
-              aria-label="Server"
-              style="margin-left: 8px"
-            >
-              <button
-                v-for="s in servers"
-                :key="s"
-                type="button"
-                :class="{ on: server === s }"
-                :aria-pressed="server === s"
-                @click="server = s"
-              >
-                {{ s === 'ALL' ? 'All' : SERVER[s] }}
-              </button>
+            <div class="sels">
+              <Select v-model="server" :options="serverOptions" label="Server" width="12rem" />
             </div>
-            <nav v-else class="nb-seg" aria-label="Server" style="margin-left: 8px">
-              <Link
-                :href="ladderHref({ server: null })"
-                :class="{ on: !filters?.server }"
-                preserve-scroll
-                >All</Link
-              >
-              <Link
-                v-for="s in ['euw', 'na', 'br']"
-                :key="s"
-                :href="ladderHref({ server: s })"
-                :class="{ on: filters?.server === s }"
-                preserve-scroll
-                >{{ s.toUpperCase() }}</Link
-              >
-            </nav>
+          </div>
+          <div v-else-if="view === 'ladder' && ladderServers.length > 2" class="grp">
+            <span class="nb-label">Server</span>
+            <div class="sels">
+              <Select
+                v-model="ladderServer"
+                :options="ladderServers"
+                label="Server"
+                width="12rem"
+              />
+            </div>
           </div>
         </aside>
 
@@ -645,7 +656,8 @@ const crumbs = computed(() => {
               <div>
                 <h1>Pro ladder</h1>
                 <p class="nb-meta num">
-                  {{ thousands(total ?? 0) }} pros in Master and above on EUW, NA and BR, by LP
+                  {{ thousands(total ?? 0) }} pros in Master and above on
+                  {{ on ?? 'every server' }}, by LP
                 </p>
               </div>
             </div>

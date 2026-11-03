@@ -1,5 +1,7 @@
 import { test } from '@japa/runner'
-import { placesBefore, rankScore } from '#services/pro_ladder_service'
+import db from '@adonisjs/lucid/services/db'
+import { RANK_SCORE_SQL, placesBefore, rankScore } from '#services/pro_ladder_service'
+import { SERVERS, serverLabel, serverList } from '#constants/riot'
 import { buildsOf, maxOrder, type ProGame } from '#services/pro_service'
 
 test.group('Pro ladder', () => {
@@ -10,6 +12,39 @@ test.group('Pro ladder', () => {
     assert.equal(rankScore('MASTER', null, 20), 2820)
     assert.equal(rankScore('CHALLENGER', 1, 1400), 4200)
     assert.isNull(rankScore(null, null, null))
+  })
+
+  test('the SQL rank score reads like rankScore, so the best account is the same', async ({
+    assert,
+  }) => {
+    // Master and above compare by LP whatever the tier, and their division may be I or empty.
+    const ranks: [string, number | null, number][] = [
+      ['CHALLENGER', 1, 900],
+      ['MASTER', null, 1100],
+      ['GRANDMASTER', 1, 1000],
+      ['DIAMOND', 1, 80],
+      ['DIAMOND', 4, 99],
+      ['EMERALD', 2, 50],
+      ['IRON', 4, 0],
+    ]
+    const values = ranks.map(() => '(?::text, ?::smallint, ?::int)').join(', ')
+    const { rows } = await db.rawQuery(
+      `SELECT a.tier, ${RANK_SCORE_SQL} AS score FROM (VALUES ${values}) AS a (tier, division, lp)`,
+      ranks.flat()
+    )
+    assert.deepEqual(
+      rows.map((r: { score: number }) => Number(r.score)),
+      ranks.map(([t, d, lp]) => rankScore(t, d, lp))
+    )
+  })
+
+  test('servers read as players say them, in one order', ({ assert }) => {
+    assert.equal(serverLabel('EUN1'), 'EUNE')
+    assert.equal(serverLabel('SG2'), 'SEA')
+    assert.equal(SERVERS.find((s) => s.slug === 'kr')?.platform, 'KR')
+    assert.equal(serverList(['NA1', 'EUW1', 'BR1']), 'EUW, NA and BR')
+    assert.equal(serverList(['KR']), 'KR')
+    assert.equal(serverList(['EUW1', 'NA1', 'BR1', 'KR', 'EUN1']), '5 servers')
   })
 
   test('places a day ago come from the scores then, unknown ones staying put', ({ assert }) => {

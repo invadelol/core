@@ -5,7 +5,12 @@ import { AnswerCache, RANKED_SOLO } from '#services/ranked_stats'
 import { latestPatch, rows } from '#services/ranked_games_service'
 import { StatsCache } from '#services/stats_cache'
 import { catalog, leagueCatalog, leagueRef, type LeagueRef } from '#services/pro_leagues'
-import proLadderService, { placesBefore, rankScore } from '#services/pro_ladder_service'
+import proLadderService, {
+  RANK_SCORE_SQL,
+  placesBefore,
+  rankScore,
+} from '#services/pro_ladder_service'
+import { PLATFORMS } from '#constants/riot'
 import proPhotoService from '#services/pro_photo_service'
 
 /**
@@ -16,7 +21,7 @@ import proPhotoService from '#services/pro_photo_service'
  * Riot ID.
  */
 
-/** Best first, for sorting accounts and players. */
+/** Best first, for the search's order. */
 const TIER_ORDER = [
   'CHALLENGER',
   'GRANDMASTER',
@@ -29,10 +34,11 @@ const TIER_ORDER = [
   'BRONZE',
   'IRON',
 ]
-const TIER_SQL = `array_position(ARRAY[${TIER_ORDER.map((t) => `'${t}'`).join(',')}]::text[], a.tier)`
 
-/** The platforms pro accounts are on. */
-export const PRO_PLATFORMS = ['EUW1', 'NA1', 'BR1']
+/** The platforms pro accounts can be on: every Riot platform. */
+export const PRO_PLATFORMS: readonly string[] = Object.values(PLATFORMS).flat()
+/** ClickHouse's condition for them (`platform` leads the sorting key of `participants`). */
+const PRO_PLATFORMS_SQL = `platform IN (${PRO_PLATFORMS.map((p) => `'${p}'`).join(',')})`
 /**
  * Pro pages and games are fresh half an hour (the crawler links pro games all day), then served
  * while one refresh runs, for a day at most.
@@ -43,7 +49,7 @@ const PRO_CACHE = { freshMs: 30 * 60_000, keepMs: 86_400_000 }
  * deploys and serves a stale one while its refresh runs, so a release that changes what a page
  * reads must bump it: otherwise the pages get the previous release's answers for up to a day.
  */
-export const PRO_SHAPE = 4
+export const PRO_SHAPE = 5
 /** How far back a pro's games are read. */
 const GAMES_DAYS = 30
 const CHAMPION_GAMES_DAYS = 14
@@ -169,7 +175,7 @@ const BEST_ACCOUNT = `
   LEFT JOIN LATERAL (
     SELECT a.tier AS best_tier, a.division AS best_division, a.lp AS best_lp
     FROM pro_account a WHERE a.player_id = p.id AND a.tier IS NOT NULL
-    ORDER BY ${TIER_SQL} NULLS LAST, a.division NULLS LAST, a.lp DESC NULLS LAST
+    ORDER BY ${RANK_SCORE_SQL} DESC NULLS LAST
     LIMIT 1
   ) ba ON true`
 
@@ -291,7 +297,7 @@ export class ProService {
       const [accounts, history, about] = await Promise.all([
         db.rawQuery(
           `SELECT a.* FROM pro_account a WHERE a.player_id = ?
-           ORDER BY ${TIER_SQL} NULLS LAST, a.division NULLS LAST, a.lp DESC NULLS LAST, a.game_name`,
+           ORDER BY ${RANK_SCORE_SQL} DESC NULLS LAST, a.game_name`,
           [row.id]
         ),
         db.rawQuery(
@@ -344,7 +350,7 @@ export class ProService {
          LEFT JOIN LATERAL (
            SELECT a.tier AS best_tier, a.division AS best_division, a.lp AS best_lp
            FROM pro_account a WHERE a.player_id = p.id AND a.tier IS NOT NULL
-           ORDER BY ${TIER_SQL} NULLS LAST, a.division NULLS LAST, a.lp DESC NULLS LAST LIMIT 1
+           ORDER BY ${RANK_SCORE_SQL} DESC NULLS LAST LIMIT 1
          ) ba ON true
          WHERE m.team_id = ?
          ORDER BY m.current DESC, array_position(ARRAY['TOP','JUNGLE','MID','ADC','SUPPORT']::text[], m.role) NULLS LAST,
@@ -416,7 +422,7 @@ export class ProService {
                   a.lp AS best_lp, a.game_name, a.tag_line, a.platform
            FROM pro_account a JOIN pro_player p ON p.id = a.player_id ${CURRENT_TEAM}
            WHERE a.tier IN ('CHALLENGER', 'GRANDMASTER')
-           ORDER BY ${TIER_SQL}, a.lp DESC
+           ORDER BY ${RANK_SCORE_SQL} DESC
            LIMIT 60`
         ),
         db.rawQuery(
@@ -539,7 +545,7 @@ export class ProService {
            WHERE (platform, puuid) IN (
              SELECT platform, puuid FROM participants
              WHERE queue_id = ${RANKED_SOLO} AND champion_id = {champion:UInt16}
-               AND platform IN ('EUW1','NA1','BR1') AND game_start_ms >= {since:UInt64}
+               AND ${PRO_PLATFORMS_SQL} AND game_start_ms >= {since:UInt64}
                ${position ? 'AND team_position = {position:String}' : ''}
            )`,
           { champion, since, position }
@@ -604,7 +610,7 @@ export class ProService {
          LEFT JOIN LATERAL (
            SELECT a.id, a.platform, a.tier, a.division, a.lp FROM pro_account a
            WHERE a.player_id = p.id AND a.tier IS NOT NULL
-           ORDER BY ${TIER_SQL} NULLS LAST, a.division NULLS LAST, a.lp DESC NULLS LAST LIMIT 1
+           ORDER BY ${RANK_SCORE_SQL} DESC NULLS LAST LIMIT 1
          ) a ON true
          WHERE ${leagues.fromTable ? 't.league_slug = ?' : 't.slug = ANY(?)'}`,
         [leagues.fromTable ? league.slug : league.teams]
@@ -912,7 +918,7 @@ export class ProService {
                 kills, deaths, assists, total_cs, item0, item1, item2, item3, item4, item5,
                 spell1, spell2, keystone, secondary_style, skill_order
          FROM participants
-         WHERE queue_id = ${RANKED_SOLO} AND platform IN ('EUW1','NA1','BR1')
+         WHERE queue_id = ${RANKED_SOLO} AND ${PRO_PLATFORMS_SQL}
            AND puuid IN {puuids:Array(String)} AND game_start_ms >= {since:UInt64}
            ${opts.champion ? 'AND champion_id = {champion:UInt16}' : ''}
            ${opts.position ? 'AND team_position = {position:String}' : ''}

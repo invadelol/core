@@ -7,12 +7,12 @@ import proPhotoService, { photoSize } from '#services/pro_photo_service'
 import proMatchService, { split, type ProMatch } from '#services/pro_match_service'
 import { leagueCatalog, leagueRef } from '#services/pro_leagues'
 import { ORIGIN, breadcrumbs, count, meta, percent, today } from '#services/page_meta'
+import { SERVERS, serverList } from '#constants/riot'
 
 /** Games in each strip of next games on `/pros` (one row on wide screens). */
 const STRIP_GAMES = 4
 /** Rows of the ladder per page; "Show more" asks for the next ones. */
 const LADDER_PAGE = 50
-const SERVERS: Record<string, string> = { euw: 'EUW1', na: 'NA1', br: 'BR1' }
 const ROLE_SLUG: Record<string, string> = {
   top: 'TOP',
   jungle: 'JUNGLE',
@@ -109,18 +109,27 @@ export default class ProsController {
     const leagues = catalog.listed.map(leagueRef)
     const version = today()
     if (view === 'ladder') {
-      const platform = SERVERS[String(request.input('server', '')).toLowerCase()] ?? null
+      const server = SERVERS.find(
+        (s) => s.slug === String(request.input('server', '')).toLowerCase()
+      )
+      const platform = server?.platform ?? null
       const role = ROLE_SLUG[String(request.input('role', '')).toLowerCase()] ?? null
       const page = Math.max(1, Math.min(50, Number.parseInt(String(request.input('page', 1))) || 1))
-      const ladder = await proLadderService
-        .ladder({ platform, role, limit: LADDER_PAGE, offset: (page - 1) * LADDER_PAGE })
-        .catch(() => ({ total: 0, rows: [] }))
+      const [ladder, servers] = await Promise.all([
+        proLadderService
+          .ladder({ platform, role, limit: LADDER_PAGE, offset: (page - 1) * LADDER_PAGE })
+          .catch(() => ({ total: 0, rows: [] })),
+        proLadderService.servers(role).catch(() => []),
+      ])
       const top = ladder.rows[0]
       const filtered = Boolean(platform || role || page > 1)
+      const on = server ? server.label : serverList(servers.map((s) => s.platform))
       return inertia.render('pros/index', {
         view: 'ladder',
         leagues,
-        filters: { server: request.input('server') ?? null, role: request.input('role') ?? null },
+        filters: { server: server?.slug ?? null, role: request.input('role') ?? null },
+        servers: servers.map(({ slug, label, pros }) => ({ slug, label, pros })),
+        on,
         ladder: inertia.merge(() =>
           ladder.rows.map((r) => ({
             place: r.place,
@@ -155,8 +164,8 @@ export default class ProsController {
         ...meta({
           title: 'Pro ladder: every pro ranked by LP',
           description: top
-            ? `${count(ladder.total)} pros in Master and above on EUW, NA and BR, ranked by LP. ${top.pro.name} leads with ${count(top.account.lp)} LP.`
-            : 'Every pro ranked by LP on EUW, NA and BR, with their moves of the last 24 hours.',
+            ? `${count(ladder.total)} pros in Master and above on ${on}, ranked by LP. ${top.pro.name} leads with ${count(top.account.lp)} LP.`
+            : `Every pro ranked by LP on ${on}, with their moves of the last 24 hours.`,
           path: '/pros?view=ladder',
           image: '/og/pros/all.jpg',
           version,
