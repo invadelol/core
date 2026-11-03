@@ -5,7 +5,14 @@ import redis from '@adonisjs/redis/services/main'
 import clickhouse from 'adonisjs-clickhouse/services/main'
 import { summaryOf } from '@invadelol/ui/logic'
 import matchRepository from '#services/analytics/match_repository'
+import championStatsService, { DEFAULT_BRACKET } from '#services/champion_stats_service'
+import type { Filter, Summary } from '#services/champion_stats'
 import { ladder } from '#services/desktop/lp'
+import { discordServer } from '#services/discord_server'
+import proService from '#services/pro_service'
+import { patchStart, rows as statRows } from '#services/ranked_games_service'
+import { RANKED_SOLO, seedTiers } from '#services/ranked_stats'
+import { areEventsCounted } from '#services/stats_cells'
 import { escapeClickhouseString } from '#utils/clickhouse'
 import { detailOf, isRemake, scoreLobby } from '../../inertia/lib/match.js'
 import type { Match } from '../../inertia/lib/types.js'
@@ -13,11 +20,19 @@ import type {
   BestGame,
   ChampionRow,
   Climb,
+  HomeBan,
+  HomeChampion,
   HomeChampions,
+  HomeClimber,
   HomeData,
+  HomeLaneRow,
+  HomePage,
+  HomePick,
   HomePlayer,
+  HomePro,
   HomeRank,
   HomeTrending,
+  SiteNav,
 } from '../../inertia/lib/home.js'
 
 /**
@@ -60,9 +75,243 @@ const TTL = {
   best: '5m',
   climbs: '5m',
   champions: '15m',
+  picks: '10m',
+  pros: '5m',
+  lanes: '10m',
 } as const
 
+/** Rows in each of the home's lists. */
+export const HOME_ROWS = 5
+/** Climbers in the header's Stats menu. */
+export const NAV_CLIMBERS = 4
+/** Pros in the header's Pros menu. */
+export const NAV_PROS = 4
+/** A climb counts once the champion reached this place in its role (a climb to #40 is noise). */
+export const CLIMB_TOP = 20
+/** Below this many games in the role, a champion's lane figures are not listed. */
+export const LANE_MIN_GAMES = 200
+/** Lane bullies: the roles with a lane opponent of their own. */
+export const LANE_POSITIONS = ['TOP', 'MIDDLE', 'BOTTOM'] as const
+/** When the patch's events are not counted yet: at most this many of its games are read. */
+const LANE_SAMPLE = 20_000
+const LANE_LIMITS = { max_execution_time: 20, max_threads: 2 } as const
+
+/** How long the home waits for Discord's counts on a cold cache before it renders without them. */
+const DISCORD_WAIT_MS = 600
+/** How long the home waits for a section computing on a cold cache (a warm one is a lookup). */
+const SECTION_WAIT_MS = 1200
+
+/** `load`, or null once `ms` have passed: the work goes on and fills its cache. */
+function capped<T>(load: Promise<T | null>, ms = SECTION_WAIT_MS): Promise<T | null> {
+  let timer: NodeJS.Timeout | undefined
+  return Promise.race([
+    load.finally(() => clearTimeout(timer)),
+    new Promise<null>((resolve) => {
+      timer = setTimeout(() => resolve(null), ms)
+    }),
+  ])
+}
+
 /* ── Pure parts, tested on their own ─────────────────────────────── */
+
+/** The default tier list as the home and the menus read it (each takes its own part). */
+export interface TierBoard {
+  patch: string
+  previousPatch: string | null
+  games: number
+  champions: number
+  best: HomePick[]
+  bans: HomeBan[]
+  climbers: HomeClimber[]
+}
+
+export interface ProBoard {
+  top: HomePro[]
+  counts: { players: number; accounts: number; teams: number } | null
+}
+
+export interface LaneBoard {
+  bullies: HomeLaneRow[]
+  firstBlood: HomeLaneRow[]
+}
+
+/** A pro as the directory lists them (`proService.directory().top`). */
+type DirectoryPro = {
+  slug: string
+  name: string
+  team: { id: string; slug: string; name: string; shortName: string | null } | null
+  best: { tier: string; division: number | null; lp: number | null } | null
+}
+
+export interface ChampionInfo {
+  id: number
+  name: string
+  slug: string
+}
+
+const championOf = (
+  names: Map<number, ChampionInfo>,
+  championId: number,
+  position: string
+): HomeChampion | null => {
+  const c = names.get(championId)
+  return c ? { championId, name: c.name, slug: c.slug, position } : null
+}
+
+/** The first of each role on the tier list, in the roles' order. */
+export function bestPicks(summary: Summary, names: Map<number, ChampionInfo>): HomePick[] {
+  const picks: HomePick[] = []
+  for (const position of ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']) {
+    const first = summary.roles.find((r) => r.position === position && r.rank === 1)
+    const champion = first && championOf(names, first.champion, position)
+    if (first && champion) picks.push({ ...champion, tier: first.tier, winRate: first.win })
+  }
+  return picks
+}
+
+/** The champions banned in the most games, each in the role it is played most. */
+export function mostBanned(
+  summary: Summary,
+  names: Map<number, ChampionInfo>,
+  limit = HOME_ROWS
+): HomeBan[] {
+  const main = new Map<number, { position: string; games: number; ban: number }>()
+  for (const r of summary.roles) {
+    const known = main.get(r.champion)
+    if (!known || r.games > known.games)
+      main.set(r.champion, { position: r.position, games: r.games, ban: r.ban })
+  }
+  return [...main]
+    .filter(([, r]) => r.ban > 0)
+    .sort((a, b) => b[1].ban - a[1].ban)
+    .slice(0, limit)
+    .flatMap(([id, r]) => {
+      const champion = championOf(names, id, r.position)
+      return champion ? [{ ...champion, banRate: r.ban }] : []
+    })
+}
+
+/**
+ * The champions that gained the most places in their role since the patch before, among those
+ * now in the role's top `CLIMB_TOP`. One line per champion.
+ */
+export function climbersOf(
+  summary: Summary,
+  previous: Summary | null,
+  names: Map<number, ChampionInfo>,
+  limit = NAV_CLIMBERS
+): HomeClimber[] {
+  if (!previous) return []
+  const before = new Map<string, number>()
+  for (const r of previous.roles) if (r.rank) before.set(`${r.position}:${r.champion}`, r.rank)
+  const seen = new Set<number>()
+  return summary.roles
+    .flatMap((r) => {
+      const from = before.get(`${r.position}:${r.champion}`)
+      return r.rank && r.rank <= CLIMB_TOP && from && from > r.rank
+        ? [{ r, from, gain: from - r.rank }]
+        : []
+    })
+    .sort((a, b) => b.gain - a.gain || a.r.rank! - b.r.rank!)
+    .flatMap(({ r, from }) => {
+      if (seen.has(r.champion)) return []
+      seen.add(r.champion)
+      const champion = championOf(names, r.champion, r.position)
+      return champion ? [{ ...champion, from, to: r.rank! }] : []
+    })
+    .slice(0, limit)
+}
+
+/**
+ * A lane figure's list: per role and champion, games and a sum, read as the sum per game. Only the
+ * roles the tier list lists the champion in, with `minGames` games or more there, best first.
+ */
+export function laneRows(
+  found: Array<[string, number, number, number]>,
+  summary: Summary,
+  names: Map<number, ChampionInfo>,
+  minGames = LANE_MIN_GAMES,
+  limit = HOME_ROWS
+): HomeLaneRow[] {
+  const listed = new Set(summary.roles.map((r) => `${r.position}:${r.champion}`))
+  return found
+    .filter(([position, id, games]) => games >= minGames && listed.has(`${position}:${id}`))
+    .map(([position, id, games, sum]) => ({ position, id, games, value: sum / games }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, limit)
+    .flatMap((r) => {
+      const champion = championOf(names, r.id, r.position)
+      return champion ? [{ ...champion, value: r.value }] : []
+    })
+}
+
+/** The cells of the default bracket (every region). */
+const bracketSql = (filter: Filter) => {
+  const tiers = seedTiers(filter.bracket)
+  return tiers ? `AND seed_tier IN (${tiers})` : ''
+}
+
+/** Gold ahead of the lane opponent at minute 10, summed per role and champion (counted cells). */
+const goldCellsSql = (filter: Filter) => `
+  SELECT position, champion, sum(games), sum(gold_diff) FROM stats_early
+  WHERE patch = {patch:String} AND minute = 10
+    AND position IN (${LANE_POSITIONS.map((p) => `'${p}'`).join(',')}) ${bracketSql(filter)}
+  GROUP BY position, champion`
+
+/** Games with a first blood, and the games the champion took or assisted it (counted cells). */
+const firstBloodCellsSql = (filter: Filter) => `
+  SELECT position, champion, sum(games), sum(kills) + sum(assists) FROM stats_first_blood
+  WHERE patch = {patch:String} ${bracketSql(filter)}
+  GROUP BY position, champion`
+
+/** A patch not counted yet: a sample of its crawled games, picked by game id hash. */
+const sampleSql = (filter: Filter) => `
+  SELECT match_id FROM match_seed WHERE patch = {patch:String} ${bracketSql(filter)}
+  ORDER BY cityHash64(match_id) LIMIT ${LANE_SAMPLE}`
+
+const playersSql = (positions: readonly string[] | null) => `
+  SELECT match_id, participant_id, team_id, team_position, champion_id FROM participant_items FINAL
+  WHERE patch = {patch:String} AND queue_id = ${RANKED_SOLO} AND match_id IN (SELECT match_id FROM s)
+    ${positions ? `AND team_position IN (${positions.map((p) => `'${p}'`).join(',')})` : "AND team_position != ''"}`
+
+/** `goldCellsSql` read from the sample's timeline frames. */
+const goldSampleSql = (filter: Filter) => `
+  WITH s AS (${sampleSql(filter)}),
+  gold AS (
+    SELECT match_id, participant_id, any(gold_total) AS g FROM match_timeline
+    WHERE game_start_ms >= {patchStart:UInt64} AND match_id IN (SELECT match_id FROM s)
+      AND intDiv(frame_ms, 60000) = 10
+    GROUP BY match_id, participant_id
+  )
+  SELECT a.team_position, a.champion_id, count(), sum(toInt64(ga.g) - toInt64(gb.g))
+  FROM (${playersSql(LANE_POSITIONS)}) AS a
+  INNER JOIN (${playersSql(LANE_POSITIONS)}) AS b
+    ON a.match_id = b.match_id AND a.team_position = b.team_position
+  INNER JOIN gold AS ga ON ga.match_id = a.match_id AND ga.participant_id = a.participant_id
+  INNER JOIN gold AS gb ON gb.match_id = b.match_id AND gb.participant_id = b.participant_id
+  WHERE a.team_id != b.team_id
+  GROUP BY a.team_position, a.champion_id`
+
+/** `firstBloodCellsSql` read from the sample's kill events. */
+const firstBloodSampleSql = (filter: Filter) => `
+  WITH s AS (${sampleSql(filter)})
+  SELECT p.team_position, p.champion_id, count(),
+         countIf(fb.killer = p.participant_id OR has(fb.assists, p.participant_id))
+  FROM (${playersSql(null)}) AS p
+  INNER JOIN (
+    SELECT match_id, argMin(killer, t_ms) AS killer, argMin(assists, t_ms) AS assists
+    FROM match_events
+    WHERE game_start_ms >= {patchStart:UInt64} AND kind = 'kill'
+      AND match_id IN (SELECT match_id FROM s)
+    GROUP BY match_id
+  ) AS fb USING (match_id)
+  GROUP BY p.team_position, p.champion_id`
+
+const laneFigures = (found: unknown[][]) =>
+  found.map(
+    ([position, id, games, sum]) =>
+      [String(position), Number(id), Number(games), Number(sum)] as [string, number, number, number]
+  )
 
 /** The UTC day keys of profile views, newest first. */
 export function viewBucketKeys(now: number, days = TRENDING_DAYS) {
@@ -513,6 +762,133 @@ export class HomeService {
       minGames: MIN_CHAMPION_GAMES,
       rows: championRows(currentCounts, bans, picked.current.games, previousCounts),
     }
+  }
+
+  /* ── The home and the header's menus ─────────────────────────────── */
+
+  /**
+   * The home's sections in one go; one that cannot be read is null and the rest still show. A
+   * section still computing on a cold cache after `SECTION_WAIT_MS` is left out of this render
+   * and keeps computing into the cache for the next one.
+   */
+  async page(): Promise<HomePage> {
+    const [picks, pros, lanes, discord] = await Promise.all([
+      capped(this.picks()),
+      capped(this.pros()),
+      capped(this.lanes()),
+      this.discord(),
+    ])
+    return {
+      picks: picks && { patch: picks.patch, best: picks.best, bans: picks.bans },
+      pros: pros?.top.length ? pros.top : null,
+      lanes,
+      discord,
+    }
+  }
+
+  /** The community server's counts, left out when Discord is slow or unreachable. */
+  discord() {
+    return capped(
+      discordServer.counts().catch(() => null),
+      DISCORD_WAIT_MS
+    )
+  }
+
+  /** What the header's menus show beside their links. */
+  async nav(): Promise<SiteNav> {
+    const [picks, pros] = await Promise.all([capped(this.picks()), capped(this.pros())])
+    const { bans, ...tierList } = picks ?? { bans: null }
+    void bans
+    return {
+      tierList: picks ? (tierList as SiteNav['tierList']) : null,
+      pros: pros && { top: pros.top.slice(0, NAV_PROS), counts: pros.counts },
+      // The directory's leagues arrive with the pros pages; until then the menu lists none.
+      leagues: [],
+    }
+  }
+
+  /** The default filter of the champion pages (newest shown patch, Emerald and above). */
+  private async filter(): Promise<Filter | null> {
+    const filter = await championStatsService.filter({ rank: DEFAULT_BRACKET })
+    return filter && { ...filter, region: null }
+  }
+
+  private async names(): Promise<Map<number, ChampionInfo>> {
+    const list = await championStatsService.champions()
+    return new Map(list.map((c) => [c.id, { id: c.id, name: c.name, slug: c.slug }]))
+  }
+
+  /** The tier list's best pick per role, the most banned and the climbers since last patch. */
+  picks(): Promise<TierBoard | null> {
+    return this.section('picks', TTL.picks, async () => {
+      const filter = await this.filter()
+      if (!filter) return null
+      const [summary, previous, names] = await Promise.all([
+        championStatsService.summary(filter),
+        championStatsService.previous(filter).catch(() => null),
+        this.names(),
+      ])
+      if (!summary.games) return null
+      return {
+        patch: summary.patch,
+        previousPatch: previous?.patch ?? null,
+        games: summary.games,
+        champions: names.size,
+        best: bestPicks(summary, names),
+        bans: mostBanned(summary, names),
+        climbers: climbersOf(summary, previous, names),
+      }
+    })
+  }
+
+  /**
+   * The highest ranked pros now, from the pros directory, and how many players, accounts and
+   * teams it holds. `movement` is left out until the ladder's history is read.
+   */
+  pros(): Promise<ProBoard | null> {
+    return this.section('pros', TTL.pros, async () => {
+      const directory = await proService.directory()
+      const pros: HomePro[] = directory.top.slice(0, HOME_ROWS).map((p: DirectoryPro) => ({
+        slug: p.slug,
+        name: p.name,
+        team: p.team ? { id: p.team.id, name: p.team.name, shortName: p.team.shortName } : null,
+        tier: p.best?.tier ?? null,
+        lp: p.best?.lp ?? null,
+      }))
+      return { top: pros, counts: directory.counts ?? null }
+    })
+  }
+
+  /**
+   * Gold ahead of the lane opponent at 10 minutes and the share of first bloods, per champion and
+   * role on the default filter: from the counted cells, else from a sample of the patch's games.
+   */
+  lanes(): Promise<LaneBoard | null> {
+    return this.section('lanes', TTL.lanes, async () => {
+      const filter = await this.filter()
+      if (!filter) return null
+      const [summary, names, counted] = await Promise.all([
+        championStatsService.summary(filter),
+        this.names(),
+        areEventsCounted(filter.patch),
+      ])
+      const params = counted
+        ? { patch: filter.patch }
+        : { patch: filter.patch, patchStart: await patchStart(filter.patch) }
+      const settings = counted ? undefined : LANE_LIMITS
+      const [gold, firstBlood] = await Promise.all([
+        statRows(counted ? goldCellsSql(filter) : goldSampleSql(filter), params, settings),
+        statRows(
+          counted ? firstBloodCellsSql(filter) : firstBloodSampleSql(filter),
+          params,
+          settings
+        ),
+      ])
+      const bullies = laneRows(laneFigures(gold), summary, names).filter((r) => r.value > 0)
+      const firsts = laneRows(laneFigures(firstBlood), summary, names)
+      if (!bullies.length && !firsts.length) return null
+      return { bullies, firstBlood: firsts }
+    })
   }
 }
 
