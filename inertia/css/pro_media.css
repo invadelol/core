@@ -1,0 +1,117 @@
+/*
+ * League and team logos (`Logo.vue`) and pros' photos (`ProPhoto.vue`), imported by the components
+ * themselves so every page that draws one (the pro pages, the home, the menus) has them. Tokens
+ * only, except the dark well of the logos in the light theme (many are drawn white).
+ */
+
+/* league and team logos: an image on a quiet well; the short name stands in when there is none */
+.lgo {
+  position: relative;
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  overflow: hidden;
+  width: 24px;
+  height: 24px;
+  font: 700 8.5px/1 var(--font);
+  font-stretch: var(--fig);
+  letter-spacing: 0.02em;
+  color: var(--text-1);
+  background: var(--solid-2);
+  border-radius: var(--r-sm);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+.lgo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 12%;
+}
+.lgo.s16 {
+  width: 16px;
+  height: 16px;
+  font-size: 6px;
+  border-radius: var(--r-xs);
+}
+.lgo.s20 {
+  width: 20px;
+  height: 20px;
+  font-size: 7px;
+  border-radius: var(--r-xs);
+}
+.lgo.s32 {
+  width: 32px;
+  height: 32px;
+  font-size: 10.5px;
+}
+.lgo.s40 {
+  width: 40px;
+  height: 40px;
+  font-size: 12px;
+}
+.lgo.s56 {
+  width: 56px;
+  height: 56px;
+  font-size: 15px;
+  border-radius: var(--r-md);
+}
+.lgo.s72 {
+  width: 72px;
+  height: 72px;
+  font-size: 19px;
+  border-radius: var(--r-md);
+}
+.lgo.team {
+  color: var(--text-2);
+  background: var(--surface-3);
+  box-shadow: var(--lit);
+}
+
+/* a pro without a photo: a quiet silhouette */
+.nb-photo {
+  position: relative;
+  display: block;
+  flex: none;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-1));
+  border-radius: var(--r-sm);
+  box-shadow: var(--lit);
+}
+.nb-photo > img {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 0;
+}
+.nb-photo.has::after {
+  content: none;
+}
+.nb-photo::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 88%;
+  background: var(--surface-3);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='40' r='17'/%3E%3Cpath d='M12 100c2-27 19-38 38-38s36 11 38 38z'/%3E%3C/svg%3E")
+    center bottom / 100% 100% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='40' r='17'/%3E%3Cpath d='M12 100c2-27 19-38 38-38s36 11 38 38z'/%3E%3C/svg%3E")
+    center bottom / 100% 100% no-repeat;
+}
+
+/* Many league and team logos are drawn white for dark grounds, so their well stays dark in the
+   light theme too. */
+[data-theme='light'] .lgo {
+  color: #e9e9ef;
+  background: #17181d;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.1);
+}
+@media (prefers-color-scheme: light) {
+  [data-theme='system'] .lgo {
+    color: #e9e9ef;
+    background: #17181d;
+    box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.1);
+  }
+}

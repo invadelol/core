@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { leagueLogo, teamLogo } from '../../lib/board.js'
+import '../../css/pro_media.css'
 
 /**
  * A team's or a league's logo from our own /cdn, drawn at its size (a resized WebP), or its
@@ -8,7 +9,8 @@ import { leagueLogo, teamLogo } from '../../lib/board.js'
  */
 const props = withDefaults(
   defineProps<{
-    team?: { id: string; name: string; shortName?: string | null } | null
+    /** A team without an id (not one of ours) shows its short name. */
+    team?: { id: string | null; name: string; shortName?: string | null } | null
     league?: { slug: string; code: string; name?: string } | null
     size?: 16 | 20 | 24 | 32 | 40 | 56 | 72
     /** Lazy unless it is part of the first screen. */
@@ -23,7 +25,11 @@ onMounted(() => {
   if (img.value?.complete && !img.value.naturalWidth) failed.value = true
 })
 const src = () =>
-  props.team ? teamLogo(props.team.id, props.size) : leagueLogo(props.league!.slug, props.size)
+  props.team
+    ? props.team.id
+      ? teamLogo(props.team.id, props.size)
+      : null
+    : leagueLogo(props.league!.slug, props.size)
 const label = () => props.team?.name ?? props.league?.code ?? ''
 const initials = () =>
   (props.team ? props.team.shortName || props.team.name : (props.league?.code ?? ''))
@@ -34,7 +40,7 @@ const initials = () =>
 <template>
   <span class="lgo" :class="[`s${size}`, { team: !!team }]" :title="label()">
     <img
-      v-if="!failed && (team || league)"
+      v-if="!failed && (team || league) && src()"
       ref="img"
       data-fallback="applied"
       :src="src()"

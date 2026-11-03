@@ -1725,7 +1725,7 @@ onBeforeUnmount(() => {
                 style="min-height: 48px"
               >
                 <span class="c" role="cell">
-                  <ProPhoto :width="30" :height="30" />
+                  <ProPhoto :slug="g.pro?.slug" :photo="g.pro?.photo" :width="30" :height="30" />
                   <span class="min-w-0"
                     ><Link v-if="g.pro" :href="`/pro/${g.pro.slug}`"
                       ><b>{{ g.pro.name }}</b></Link
@@ -1788,7 +1788,7 @@ onBeforeUnmount(() => {
                     class="nb-row"
                     prefetch="hover"
                   >
-                    <ProPhoto :width="26" :height="26" />
+                    <ProPhoto :slug="p.pro.slug" :photo="p.pro.photo" :width="26" :height="26" />
                     <span class="n"
                       >{{ p.pro.name }}<small>{{ p.pro.team?.name ?? 'No team' }}</small></span
                     >
