@@ -6,10 +6,13 @@ import '../css/home.css'
 import AppHeader from '../components/AppHeader.vue'
 import SearchBar from '../components/SearchBar.vue'
 import SiteFooter from '../components/SiteFooter.vue'
+import ProPhoto from '../components/champions/ProPhoto.vue'
 import TeamLogo from '../components/champions/TeamLogo.vue'
 import HomeApp from '../components/home/HomeApp.vue'
 import HomeDiscord from '../components/home/HomeDiscord.vue'
 import HomeRecent from '../components/home/HomeRecent.vue'
+import MatchCard from '../components/pros/MatchCard.vue'
+import { matchList } from '../lib/pro_matches.js'
 import { TIER_LABELS, championHref, positionOf } from '../components/header/sections.js'
 import { pct } from '../lib/champions.js'
 import type { HomePage } from '../lib/home.js'
@@ -28,6 +31,12 @@ const pros = computed(() => props.pros ?? [])
 const bullies = computed(() => props.lanes?.bullies ?? [])
 const firsts = computed(() => props.lanes?.firstBlood ?? [])
 const topBan = computed(() => bans.value[0]?.banRate || 1)
+const games = computed(() => matchList(props.games))
+/** The league of the next games when they are all one (an international event), else none. */
+const gamesLeague = computed(() => {
+  const set = new Set(games.value.map((g) => g.league?.slug ?? ''))
+  return set.size === 1 ? (games.value[0]?.league ?? null) : null
+})
 
 const lp = (n: number | null) => (n === null ? '' : n.toLocaleString('en-US'))
 const gold = (n: number) => `+${Math.round(n)}`
@@ -111,7 +120,15 @@ const gold = (n: number) => `+${Math.round(n)}`
                 data-track="home_pro"
               >
                 <span class="pos num">{{ i + 1 }}</span>
-                <TeamLogo v-if="p.team" :team="p.team" :size="32" class="logo" />
+                <ProPhoto
+                  v-if="p.photo"
+                  :slug="p.slug"
+                  :photo="p.photo"
+                  :width="32"
+                  :height="32"
+                  class="logo"
+                />
+                <TeamLogo v-else-if="p.team" :team="p.team" :size="32" class="logo" />
                 <span v-else class="logo none" aria-hidden="true"
                   ><Icon name="user" :size="14"
                 /></span>
@@ -134,6 +151,21 @@ const gold = (n: number) => `+${Math.round(n)}`
               </Link>
             </div>
           </div>
+        </div>
+      </section>
+
+      <!-- The next pro games, when any is planned. -->
+      <section v-if="games.length" class="hm-sec hm-wrap" aria-labelledby="hm-games">
+        <div class="hm-head">
+          <span class="ico"><Icon name="clock" :size="14" /></span>
+          <h2 id="hm-games">Next pro games</h2>
+          <span v-if="gamesLeague" class="meta">{{ gamesLeague.name }}</span>
+          <Link href="/pros" prefetch class="end" data-track="home_pro_games"
+            >Pros<Icon name="right" :size="13"
+          /></Link>
+        </div>
+        <div class="hm-games">
+          <MatchCard v-for="g in games" :key="g.id" :match="g" :show-league="!gamesLeague" />
         </div>
       </section>
 

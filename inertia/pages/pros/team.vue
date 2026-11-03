@@ -23,6 +23,8 @@ import {
   tierName,
 } from '../../lib/board.js'
 import { teamPage } from '../../lib/pro_pages.js'
+import { matchList, type ProMatch } from '../../lib/pro_matches.js'
+import MatchRow from '../../components/pros/MatchRow.vue'
 import '../../css/champions.css'
 
 interface LeagueRef {
@@ -39,6 +41,7 @@ interface TeamRef {
 interface Member {
   name: string
   slug: string | null
+  photo?: string
   role: string | null
   title: string
   country: string | null
@@ -65,6 +68,8 @@ const props = defineProps<{
     roster: Member[]
     pools: Record<string, { champion: number; games: number; wins: number }[]>
   }
+  /** The team's next matches and its results of the last two weeks. */
+  matches?: { next: ProMatch[]; results: ProMatch[] }
   now?: number
   names?: Record<number, [string, string]>
 }>()
@@ -98,6 +103,8 @@ const former = computed(() =>
   club.value.roster.filter((m) => !m.current && m.title !== 'staff').slice(0, 12)
 )
 const record = computed(() => club.value.record)
+const nextMatches = computed(() => matchList(props.matches?.next))
+const results = computed(() => matchList(props.matches?.results))
 
 const who = ref<string | null>(null)
 const games = computed(() =>
@@ -191,6 +198,26 @@ const crumbs = computed(() => [
         </div>
       </section>
 
+      <div v-if="nextMatches.length || results.length" class="tm-matches">
+        <section v-if="nextMatches.length" class="nb-panel" aria-labelledby="h-next">
+          <div class="nb-ph">
+            <h2 id="h-next">Next matches</h2>
+          </div>
+          <div class="nb-pb rows">
+            <MatchRow v-for="mt in nextMatches" :key="mt.id" :match="mt" :team="club.id" />
+          </div>
+        </section>
+        <section v-if="results.length" class="nb-panel" aria-labelledby="h-results">
+          <div class="nb-ph">
+            <h2 id="h-results">Results</h2>
+            <span class="end nb-meta">Last two weeks</span>
+          </div>
+          <div class="nb-pb rows">
+            <MatchRow v-for="mt in results" :key="mt.id" :match="mt" :team="club.id" />
+          </div>
+        </section>
+      </div>
+
       <section style="margin-top: 16px" aria-labelledby="h-roster">
         <div class="nb-h">
           <h2 id="h-roster">Roster</h2>
@@ -205,12 +232,12 @@ const crumbs = computed(() => [
             :href="m.slug ? `/pro/${m.slug}` : undefined"
             class="nv-member"
           >
-            <span class="nb-photo" style="position: relative">
+            <ProPhoto :slug="m.slug" :photo="m.photo" :width="240" :height="192" fluid>
               <span v-if="proRole(m.role)" class="rl"
                 ><RoleIcon :lane="proRole(m.role)!.lane" :size="12" />{{ roleLabel(m.role)
                 }}<template v-if="m.title === 'sub'">, sub</template></span
               >
-            </span>
+            </ProPhoto>
             <span class="body">
               <b>{{ m.name }}</b>
               <small>{{
@@ -335,7 +362,7 @@ const crumbs = computed(() => [
                 class="nb-row"
                 style="min-height: 46px"
               >
-                <ProPhoto :width="28" :height="28" />
+                <ProPhoto :slug="m.slug" :photo="m.photo" :width="28" :height="28" />
                 <span class="n"
                   >{{ m.name
                   }}<small>{{
@@ -355,7 +382,9 @@ const crumbs = computed(() => [
                 :key="m.name"
                 :href="m.slug ? `/pro/${m.slug}` : undefined"
                 class="nb-row"
+                style="min-height: 46px"
               >
+                <ProPhoto :slug="m.slug" :photo="m.photo" :width="28" :height="28" />
                 <span class="n"
                   >{{ m.name }}<small>{{ roleLabel(m.role) || 'Staff' }}</small></span
                 >

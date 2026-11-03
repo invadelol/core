@@ -1,0 +1,283 @@
+/*
+ * Pro matches (`components/pros/Match*.vue`): compact cards for the strips of next games and
+ * rows for a team's or a pro's matches. Tokens only. A time is first rendered in UTC, then in the
+ * visitor's zone: it starts at the left of a box that keeps its size, on one line, so the swap
+ * moves nothing.
+ */
+
+.pm-card,
+.pm-row {
+  --pm-quiet: color-mix(in srgb, var(--text-3) 65%, var(--text-2));
+}
+
+.pm-time {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+
+.pm-live,
+.pm-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--text-1);
+  white-space: nowrap;
+}
+.pm-live::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.pm-state {
+  font-weight: 600;
+  color: var(--pm-quiet);
+}
+
+/* ── Card ─────────────────────────────────────────────────────── */
+.pm-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+.pm-strip {
+  margin-bottom: 12px;
+}
+.pm-strip .nb-pb {
+  padding: 8px;
+}
+@media (max-width: 1100px) {
+  .pm-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+/* Phones: one row that scrolls inside its sheet, a card and a half in view. */
+@media (max-width: 640px) {
+  .pm-grid {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(200px, 72%);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .pm-grid > * {
+    scroll-snap-align: start;
+  }
+}
+
+.pm-card {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 10px 6px;
+  background: var(--surface-1);
+  border-radius: var(--r-sm);
+  box-shadow: var(--row);
+}
+.pm-card.live {
+  background: linear-gradient(90deg, var(--glint), transparent 70%), var(--surface-1);
+}
+.pm-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 20px;
+  margin-bottom: 2px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.pm-top .when {
+  flex: 1;
+  min-width: 0;
+}
+.pm-top .end {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+}
+.pm-top .lg {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.pm-top .bo {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--pm-quiet);
+}
+.pm-team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  margin-inline: -4px;
+  padding-inline: 4px;
+  border-radius: var(--r-xs);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-1);
+}
+a.pm-team {
+  transition: background var(--t-base) var(--ease);
+}
+a.pm-team:hover {
+  background: var(--glint);
+}
+.pm-team .nm {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.pm-team .sc {
+  flex: none;
+  min-width: 14px;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 700;
+  font-stretch: var(--fig);
+}
+.pm-team.won .nm {
+  font-weight: 650;
+}
+.pm-team.lost .nm,
+.pm-team.lost .sc {
+  color: var(--pm-quiet);
+}
+
+/* ── Row ──────────────────────────────────────────────────────── */
+.pm-row {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  font-size: 12.5px;
+}
+.pm-row + .pm-row {
+  border-top: 1px solid var(--line);
+}
+.pm-row .when {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  min-width: 0;
+  color: var(--text-2);
+}
+.pm-row .when .pm-time {
+  font-size: 12px;
+}
+.pm-row .who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.pm-row .who .nm {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.pm-row .who a.nm:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.pm-row .who .nm.q {
+  font-weight: 500;
+  color: var(--pm-quiet);
+}
+.pm-row .vs {
+  flex: none;
+  font-size: 12px;
+  color: var(--pm-quiet);
+}
+.pm-row .meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--pm-quiet);
+}
+.pm-row .meta .q {
+  color: var(--pm-quiet);
+}
+.pm-row .res {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 64px;
+  white-space: nowrap;
+}
+.pm-row .res b {
+  font-size: 12.5px;
+  font-weight: 650;
+}
+.pm-row .res .sc {
+  font-size: 13.5px;
+  font-weight: 700;
+  font-stretch: var(--fig);
+  color: var(--text-1);
+}
+
+@media (max-width: 640px) {
+  .pm-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'who res' 'when meta';
+    gap: 2px 12px;
+    padding-block: 8px;
+  }
+  .pm-row .who {
+    grid-area: who;
+  }
+  .pm-row .res {
+    grid-area: res;
+  }
+  .pm-row .when {
+    grid-area: when;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+  .pm-row .meta {
+    grid-area: meta;
+    justify-content: flex-end;
+  }
+}
+
+@media (pointer: coarse) {
+  .pm-team {
+    min-height: 40px;
+  }
+  .pm-row .who a.nm {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+  }
+}
+
+/* A narrow card (two to a phone's row) gives its line to the time. */
+@container (max-width: 200px) {
+  .pm-top .bo,
+  .pm-top .lg {
+    display: none;
+  }
+}
