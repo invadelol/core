@@ -164,7 +164,7 @@ export default class ProsController {
         ...meta({
           title: 'Pro ladder: every pro ranked by LP',
           description: top
-            ? `${count(ladder.total)} pros in Master and above on ${on}, ranked by LP. ${top.pro.name} leads with ${count(top.account.lp)} LP.`
+            ? `${count(ladder.total)} ${ladder.total === 1 ? 'pro' : 'pros'} in Master and above on ${on}, ranked by LP. ${top.pro.name} leads with ${count(top.account.lp)} LP.`
             : `Every pro ranked by LP on ${on}, with their moves of the last 24 hours.`,
           path: '/pros?view=ladder',
           image: '/og/pros/all.jpg',
