@@ -7,7 +7,9 @@ import homeService from '#services/home_service'
 import proLadderService from '#services/pro_ladder_service'
 import { leagueCatalog } from '#services/pro_leagues'
 import proService from '#services/pro_service'
+import playerInsightsService from '#services/player_insights_service'
 import riotAssets from '#services/riot/assets'
+import summonerService from '#services/summoner_service'
 import teamLogoService from '#services/team_logo_service'
 import {
   RENDERER,
@@ -15,6 +17,7 @@ import {
   figureCard,
   homeCard,
   logoCard,
+  masteryCard,
   tierListCard,
   type CardRole,
 } from '#services/site_card'
@@ -24,7 +27,7 @@ import { ByteCache } from '#utils/byte_cache'
  * The share cards of the site's pages (`site_card`), at fixed addresses the pages link with a
  * `?v=` (a patch or a day): `/og/home.jpg`, `/og/champion/<slug>/<role>.jpg`,
  * `/og/tier-list/<role>.jpg`, `/og/stats/<view>.jpg`, `/og/pros/<league>.jpg`, `/og/pro/<slug>.jpg`,
- * `/og/team/<slug>.jpg`. Each reads its figures from the services the pages read, and an
+ * `/og/team/<slug>.jpg`, `/og/mastery/<Name-Tag>.jpg`. Each reads its figures from the services the pages read, and an
  * unknown slug, role or view is a 404. The bytes are kept in memory an hour, keyed by what they
  * draw, and sent with an ETag.
  */
@@ -343,6 +346,39 @@ export default class SiteCardsController {
         image?.body
       )
       return { body, complete: true }
+    })
+  }
+
+  /** `/og/mastery/<Name-Tag>.jpg`: the Mastery tab's pool, every champion sized by its points. */
+  async mastery(ctx: HttpContext) {
+    const riotId = /^(.{1,64})\.jpg$/i.exec(String(ctx.params.file ?? ''))?.[1]
+    const profile = riotId
+      ? await summonerService.findStoredProfile(riotId).catch(() => null)
+      : null
+    if (!profile) return this.missing(ctx)
+    const pool = await playerInsightsService.mastery(profile.puuid).catch(() => null)
+    if (!pool?.length) return this.missing(ctx)
+    const drawn = pool
+      .slice()
+      .sort((a, b) => b.championPoints - a.championPoints)
+      .slice(0, 150)
+    const sum = createHash('sha1')
+      .update(drawn.map((m) => `${m.championId}:${m.championPoints}:${m.championLevel}`).join(','))
+      .digest('base64url')
+      .slice(0, 12)
+    return this.send(ctx, `mastery:${profile.puuid}:${sum}`, async () => {
+      const names = await riotAssets.names('champion').catch(() => ({}) as Record<string, string>)
+      let missing = false
+      const body = await masteryCard(
+        drawn.map((m) => ({ ...m, name: names[String(m.championId)] ?? '' })),
+        async (kind, id) => {
+          const asset = await riotAssets.get(kind, String(id)).catch(() => null)
+          if (asset && !asset.placeholder) return asset.body
+          missing = true
+          return undefined
+        }
+      )
+      return { body, complete: !missing && Object.keys(names).length > 0 }
     })
   }
 

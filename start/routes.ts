@@ -235,6 +235,7 @@ router.get('/og/stats/:file', [SiteCardsController, 'stats'])
 router.get('/og/pros/:file', [SiteCardsController, 'pros'])
 router.get('/og/pro/:file', [SiteCardsController, 'pro'])
 router.get('/og/team/:file', [SiteCardsController, 'team'])
+router.get('/og/mastery/:file', [SiteCardsController, 'mastery'])
 
 router.get('/og/:summoner', [() => import('#controllers/social_cards_controller'), 'show'])
 
@@ -314,16 +315,33 @@ router.get('/:summoner/:section?', async ({ inertia, params, response }) => {
     summoner: params.summoner,
     section,
     initialProfile,
-    social: initialProfile
-      ? {
-          title: `${initialProfile.gameName}#${initialProfile.tagLine} | invade.lol`,
-          description: `${initialProfile.gameName}'s League of Legends profile, recent performance and champion pool.`,
-          url: `https://invade.lol/${encodeURIComponent(`${initialProfile.gameName}-${initialProfile.tagLine}`)}`,
-          image: `https://invade.lol/og/${encodeURIComponent(`${initialProfile.gameName}-${initialProfile.tagLine}`)}`,
-        }
-      : null,
+    social: initialProfile ? profileSocial(initialProfile, section) : null,
     panels: ANALYTICS_PANELS,
     preload,
     pro,
   })
 })
+
+/**
+ * A profile's link preview: the profile card, or on the Mastery tab the pool itself
+ * (`/og/mastery/…`), at that tab's address.
+ */
+function profileSocial(profile: { gameName: string; tagLine: string }, section: string) {
+  const id = encodeURIComponent(`${profile.gameName}-${profile.tagLine}`)
+  const title = `${profile.gameName}#${profile.tagLine} | invade.lol`
+  if (section === 'mastery')
+    return {
+      title,
+      description: `${profile.gameName}'s champion mastery: every champion, sized by mastery points.`,
+      url: `https://invade.lol/${id}/mastery`,
+      image: `https://invade.lol/og/mastery/${id}.jpg`,
+      imageType: 'image/jpeg',
+      alt: `${profile.gameName}'s champion mastery pool`,
+    }
+  return {
+    title,
+    description: `${profile.gameName}'s League of Legends profile, recent performance and champion pool.`,
+    url: `https://invade.lol/${id}`,
+    image: `https://invade.lol/og/${id}`,
+  }
+}
