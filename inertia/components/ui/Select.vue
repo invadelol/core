@@ -29,6 +29,10 @@ const props = withDefaults(
 const model = defineModel<T>({ required: true })
 
 const open = ref(false)
+/** Opens upwards when the list would run past the bottom of the screen (a sticky side bar). */
+const up = ref(false)
+/** The list's height, to fit the room on the side it opens. */
+const listMax = ref(280)
 const query = ref('')
 const active = ref(0)
 const root = ref<HTMLElement>()
@@ -47,6 +51,15 @@ watch(open, async (isOpen) => {
   if (!isOpen) {
     query.value = ''
     return
+  }
+  const box = root.value?.getBoundingClientRect()
+  if (box) {
+    const extra = (props.searchable ? 52 : 0) + 14
+    const want = Math.min(280, props.options.length * 36 + 8)
+    const below = window.innerHeight - box.bottom - extra
+    const above = box.top - extra
+    up.value = below < want && above > below
+    listMax.value = Math.max(120, Math.min(280, up.value ? above : below))
   }
   active.value = Math.max(
     0,
@@ -90,7 +103,7 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside))
 </script>
 
 <template>
-  <div ref="root" class="relative">
+  <div ref="root" class="relative" @keydown.esc="open = false">
     <button
       type="button"
       class="control flex h-[30px] w-full pointer-coarse:h-[38px] items-center gap-2 rounded-[5px] px-2.5 text-[12.5px] font-medium transition-[background-color,box-shadow]"
@@ -117,8 +130,8 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside))
 
     <div
       v-if="open"
-      class="menu absolute z-40 mt-1.5 max-h-[340px] overflow-hidden"
-      :class="align === 'right' ? 'right-0' : 'left-0'"
+      class="menu absolute z-40 max-h-[340px] overflow-hidden"
+      :class="[align === 'right' ? 'right-0' : 'left-0', up ? 'bottom-full mb-1.5' : 'mt-1.5']"
       :style="{ width: `min(${width}, calc(100vw - 32px))` }"
     >
       <div v-if="searchable" class="border-b border-line p-2">
@@ -140,7 +153,12 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside))
         </div>
       </div>
 
-      <div ref="list" role="listbox" class="max-h-[280px] overflow-y-auto p-1">
+      <div
+        ref="list"
+        role="listbox"
+        class="overflow-y-auto p-1"
+        :style="{ maxHeight: `${listMax}px` }"
+      >
         <button
           v-for="(option, index) in visible"
           :key="String(option.value)"
