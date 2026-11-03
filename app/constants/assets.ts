@@ -108,6 +108,12 @@ export const MANIFESTS: Partial<Record<AssetKind, string>> = {
 /** How long a parsed manifest stays cached; a pinned patch's never changes. */
 export const MANIFEST_TTL = '12h'
 
+/**
+ * How long the previous patch's game data stands in for a patch Community Dragon has not
+ * published yet: short, so the patch's own data takes over soon after it is out.
+ */
+export const STAND_IN_TTL = '10m'
+
 /** How often the list of live patches is read again, i.e. how soon a new patch is noticed. */
 export const VERSIONS_TTL_MS = 60 * 60 * 1000
 
