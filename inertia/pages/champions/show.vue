@@ -143,6 +143,8 @@ const props = defineProps<{
   data: Record<string, any> | null
   labels: Labels | null
   names: Record<number, [string, string]>
+  updatedAt?: number | null
+  now?: number
   build?: BuildStats | null
   runes?: RuneStats | null
   spells?: SpellStats | null
@@ -378,7 +380,7 @@ const proCore = computed(() => {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6)
 })
-const now = ref(Date.now())
+const now = ref(props.now ?? Date.now())
 /** Long tables show their first rows until asked for all. */
 const all = reactive({ items: false, pages: false, opponents: false })
 
@@ -404,7 +406,6 @@ watch(
   () => nextTick(land)
 )
 onMounted(() => {
-  now.value = Date.now()
   land()
   for (const e of ['wheel', 'touchstart', 'keydown'])
     addEventListener(e, stop, { once: true, passive: true })
@@ -1108,6 +1109,8 @@ onBeforeUnmount(() => {
             :bracket="filter.bracket"
             :region="filter.region"
             :patch="filter.patch"
+            :updated-at="updatedAt"
+            :now="now"
           />
         </p>
 
