@@ -567,6 +567,22 @@ export class MatchRepository {
    * The games of a window of match ids (a subquery), with their participants, newest first.
    * `since` (epoch ms), when the window has one, prunes both reads to the partitions it spans.
    */
+  /**
+   * Stored games by id, as the match list reads them (`summary`), newest first: a pro's recent
+   * games, opened like a profile's. `since` (epoch ms) lets both tables skip older partitions.
+   */
+  async getByIds(matchIds: string[], since?: number) {
+    const ids = [...new Set(matchIds.filter(Boolean))].slice(0, 100)
+    if (!ids.length) return []
+    const list = ids.map((id) => `'${escapeClickhouseString(id)}'`).join(',')
+    const found = await this.readWindow(
+      `SELECT arrayJoin([${list}]) AS match_id`,
+      'summary',
+      since ? Math.max(0, Math.trunc(since) - 86_400_000) : undefined
+    )
+    return found.sort((a: any, b: any) => Number(b.gameStartMs) - Number(a.gameStartMs))
+  }
+
   private async readWindow(
     matchWindow: string,
     view: 'summary' | 'full' | undefined,

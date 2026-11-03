@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
-import { ChevronDown, ChevronRight, ExternalLink } from 'lucide-vue-next'
+import { ChevronRight, ExternalLink } from 'lucide-vue-next'
 import { ChampIcon, RankCrest, RoleIcon } from '@invadelol/ui'
 import AppHeader from '../../components/AppHeader.vue'
 import SiteFooter from '../../components/SiteFooter.vue'
@@ -14,7 +14,6 @@ import ShareButton from '../../components/champions/ShareButton.vue'
 import { championName as loadedName, regionLabel } from '../../lib/assets.js'
 import { championSlug, type ProGame, type ProTag } from '../../lib/champions.js'
 import {
-  ago,
   countryName,
   pct,
   proRole,
@@ -26,6 +25,7 @@ import {
 import { proPage } from '../../lib/pro_pages.js'
 import { matchOrNull, type ProMatch } from '../../lib/pro_matches.js'
 import MatchCard from '../../components/pros/MatchCard.vue'
+import ProGameList, { type ProGameMatch } from '../../components/pros/ProGameList.vue'
 import '../../css/champions.css'
 
 interface LeagueRef {
@@ -66,24 +66,6 @@ type Game = ProGame & {
   opponentPro?: ProTag | null
   pros?: { pro: ProTag; champion: number; ally: boolean }[]
 }
-interface Side {
-  win: boolean
-  kills: number
-  gold: number
-  players: {
-    position: string
-    champion: number
-    name: string
-    pro: {
-      slug: string
-      team: { id: string; name: string; shortName: string | null } | null
-    } | null
-    kills: number
-    deaths: number
-    assists: number
-    items: number[]
-  }[]
-}
 
 /** `/pro/:slug`: a professional player, their accounts, teams, recent games and builds. */
 const props = defineProps<{
@@ -114,6 +96,8 @@ const props = defineProps<{
   }
   /** Their team's next match and last result. */
   matches?: { next: ProMatch | null; last: ProMatch | null }
+  /** Its recent games as stored matches, opened like a profile's. */
+  games?: ProGameMatch[]
   now?: number
   names?: Record<number, [string, string]>
 }>()
@@ -181,25 +165,10 @@ const years = (t: { joinedAt: string | null; leftAt: string | null; current: boo
 
 /* ── Games ───────────────────────────────────────────────────── */
 const filter = ref<'all' | 'wins' | 'losses'>('all')
-const games = computed(() =>
-  player.value.games.filter((g) => filter.value === 'all' || g.win === (filter.value === 'wins'))
+/** The other pros of each game, by match id, for the opened game's line. */
+const prosByMatch = computed(() =>
+  Object.fromEntries(player.value.games.map((g) => [g.matchId, g.pros ?? []]))
 )
-const open = ref<string | null>(null)
-const boards = reactive<Record<string, Side[] | 'loading' | 'missing'>>({})
-async function toggle(g: Game) {
-  open.value = open.value === g.matchId ? null : g.matchId
-  if (!open.value || boards[g.matchId]) return
-  boards[g.matchId] = 'loading'
-  try {
-    const res = await fetch(`/api/pros/games/${encodeURIComponent(g.matchId)}`)
-    const json = res.ok ? ((await res.json()) as { blue: Side; red: Side }) : null
-    boards[g.matchId] = json ? [json.blue, json.red] : 'missing'
-  } catch {
-    boards[g.matchId] = 'missing'
-  }
-}
-const opponentName = (g: Game) => g.opponentPro?.name ?? g.opponentName ?? ''
-const isMe = (p: Side['players'][number]) => p.pro?.slug === player.value.slug
 
 /* ── Builds ──────────────────────────────────────────────────── */
 const picked = ref<number | null>(player.value.builds[0]?.champion ?? null)
@@ -233,7 +202,14 @@ const back = computed(() =>
       </Crumbs>
 
       <section class="nb-panel nb-prohead" :aria-label="player.name">
-        <ProPhoto :slug="player.slug" :photo="player.photo" :width="128" :height="144" eager fluid />
+        <ProPhoto
+          :slug="player.slug"
+          :photo="player.photo"
+          :width="128"
+          :height="144"
+          eager
+          fluid
+        />
         <div class="min-w-0">
           <h1>{{ player.name }}</h1>
           <p v-if="realName" class="real">{{ realName }}</p>
@@ -306,7 +282,7 @@ const back = computed(() =>
               <h2>Matches</h2>
               <span class="end nb-meta">{{ player.team.name }}</span>
             </div>
-            <div class="nb-pb pp-matches">
+            <div class="pp-matches">
               <MatchCard v-if="nextMatch" :match="nextMatch" show-league />
               <MatchCard v-if="lastMatch" :match="lastMatch" show-league />
             </div>
@@ -401,120 +377,13 @@ const back = computed(() =>
           <p v-if="!player.games.length" class="nb-panel nb-empty">
             No ranked game of {{ player.name }} is stored for the last 30 days.
           </p>
-          <div v-for="g in games" :key="g.matchId" class="nb-game" :class="g.win ? 'w' : 'l'">
-            <button
-              type="button"
-              class="top"
-              :aria-expanded="open === g.matchId"
-              :aria-controls="`b-${g.matchId}`"
-              @click="toggle(g)"
-            >
-              <span class="e" />
-              <span class="nb-pic"
-                ><ChampIcon :id="g.champion" :size="44" :title="championName(g.champion)"
-              /></span>
-              <span class="min-w-0"
-                ><b class="k num">{{ g.kills }} / {{ g.deaths }} / {{ g.assists }}</b
-                ><small class="num">{{ g.cs }} CS</small><small>{{ g.account }}</small
-                ><small v-if="g.opponent" class="k-vs" style="align-items: center; gap: 5px"
-                  >vs <ChampIcon :id="g.opponent" :size="16" />{{
-                    opponentName(g) || championName(g.opponent)
-                  }}</small
-                ></span
-              >
-              <span class="its"
-                ><GameImg
-                  v-for="(id, i) in (g.items ?? []).filter(Boolean)"
-                  :key="i"
-                  kind="item"
-                  :id="id"
-                  :size="24"
-              /></span>
-              <span class="vs">
-                <template v-if="g.opponent">
-                  <ChampIcon :id="g.opponent" :size="26" :title="championName(g.opponent)" />
-                  <span class="min-w-0"
-                    ><b>{{ opponentName(g) || championName(g.opponent) }}</b
-                    ><small style="margin: 0">{{
-                      g.opponentPro?.team?.name ?? championName(g.opponent)
-                    }}</small></span
-                  >
-                </template>
-              </span>
-              <span class="res"
-                ><b>{{ g.win ? 'Win' : 'Loss' }}</b
-                ><small class="num"
-                  >{{ Math.floor(g.durationSec / 60) }}:{{
-                    String(g.durationSec % 60).padStart(2, '0')
-                  }}</small
-                ><small>{{ ago(g.startMs, now) }}</small></span
-              >
-              <span class="tg" aria-hidden="true"><ChevronDown :size="16" /></span>
-            </button>
-            <div v-if="g.pros?.length" class="pros">
-              <span
-                v-for="side in [true, false].filter((a) => g.pros!.some((x) => x.ally === a))"
-                :key="String(side)"
-                ><span class="q">{{ side ? 'With' : 'Against' }}</span
-                ><template
-                  v-for="(x, k) in g.pros!.filter((y) => y.ally === side)"
-                  :key="x.pro.slug"
-                  ><template v-if="k">, </template
-                  ><Link
-                    :href="`/pro/${x.pro.slug}`"
-                    :title="`${x.pro.name} on ${championName(x.champion)}`"
-                    ><Logo v-if="x.pro.team" :team="x.pro.team" :size="16" />{{ x.pro.name }}</Link
-                  ></template
-                ></span
-              >
-            </div>
-            <div v-if="open === g.matchId" :id="`b-${g.matchId}`" class="nb-board">
-              <template v-if="Array.isArray(boards[g.matchId])">
-                <div v-for="(side, si) in boards[g.matchId] as Side[]" :key="si">
-                  <div class="h">
-                    <span :class="side.win ? 'up' : 'down'"
-                      >{{ side.win ? 'Win' : 'Loss' }}, {{ si === 0 ? 'blue' : 'red' }} side</span
-                    ><span class="num"
-                      >{{ side.kills }} kills, {{ (side.gold / 1000).toFixed(1) }}k gold</span
-                    >
-                  </div>
-                  <div
-                    v-for="(p, pi) in side.players"
-                    :key="pi"
-                    class="nb-pl"
-                    :class="{ me: isMe(p) }"
-                  >
-                    <span class="nb-pic"><ChampIcon :id="p.champion" :size="24" /></span>
-                    <span class="nm"
-                      ><Link v-if="p.pro" :href="`/pro/${p.pro.slug}`">{{ p.name }}</Link
-                      ><span v-else>{{ p.name }}</span
-                      ><Logo v-if="p.pro?.team" :team="p.pro.team" :size="16"
-                    /></span>
-                    <span class="num" style="text-align: right"
-                      >{{ p.kills }} / {{ p.deaths }} / {{ p.assists }}</span
-                    >
-                    <span class="its"
-                      ><GameImg
-                        v-for="(id, i) in (p.items ?? []).slice(0, 4)"
-                        :key="i"
-                        kind="item"
-                        :id="id"
-                        :size="20"
-                    /></span>
-                  </div>
-                </div>
-              </template>
-              <p v-else-if="boards[g.matchId] === 'missing'" class="nb-empty">
-                This game's players are not stored.
-              </p>
-              <span
-                v-else
-                class="nb-skel"
-                style="height: 190px; grid-column: 1 / -1; margin-top: 8px"
-                aria-busy="true"
-              />
-            </div>
-          </div>
+          <ProGameList
+            v-if="player.games.length"
+            :items="props.games ?? []"
+            :filter="filter"
+            :pros="prosByMatch"
+            :champion-name="championName"
+          />
         </section>
 
         <div class="nb-stack build">
@@ -523,12 +392,7 @@ const back = computed(() =>
               <h2>Champions</h2>
               <span class="end nb-meta">30 days</span>
             </div>
-            <div
-              class="nb-pb"
-              style="padding: 4px 6px"
-              role="group"
-              :aria-label="`${player.name}'s champions`"
-            >
+            <div class="pp-picks" role="group" :aria-label="`${player.name}'s champions`">
               <button
                 v-for="c in player.builds"
                 :key="c.champion"
@@ -544,7 +408,10 @@ const back = computed(() =>
                     >{{ c.games }} {{ c.games === 1 ? 'game' : 'games' }}, {{ c.kda }} KDA</small
                   ></span
                 >
-                <span class="v num">{{ pct(c.wins / c.games, 0) }}</span>
+                <span class="v num"
+                  >{{ pct(c.wins / c.games, 0)
+                  }}<small>{{ c.wins }}W {{ c.games - c.wins }}L</small></span
+                >
               </button>
             </div>
           </section>
