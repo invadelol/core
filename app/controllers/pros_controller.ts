@@ -25,6 +25,15 @@ const roleName = (role: string | null) =>
       role.charAt(0) + role.slice(1).toLowerCase())
     : ''
 
+/** A country code as its English name ("FR" to "France"). */
+function countryName(code: string) {
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'region' }).of(code.toUpperCase()) ?? code
+  } catch {
+    return code
+  }
+}
+
 /** Every champion's name and address, so a page is sent with them. */
 async function championNames() {
   const list = await championStatsService.champions().catch(() => [])
@@ -207,7 +216,9 @@ export default class ProsController {
                 },
               }
             : {}),
-          ...(pro.country ? { nationality: { '@type': 'Country', 'name': pro.country } } : {}),
+          ...(pro.country
+            ? { nationality: { '@type': 'Country', 'name': countryName(pro.country) } }
+            : {}),
         },
       ],
     })

@@ -17,6 +17,7 @@ import type { Role } from '#services/ranked_stats'
 import { latestPatch } from '#services/ranked_games_service'
 import { leagueOfTeam, leagueRef } from '#services/pro_leagues'
 import { BRACKET_TEXT, breadcrumbs, count, itemList, meta, percent } from '#services/page_meta'
+import statsExplorerService from '#services/stats_explorer_service'
 import { CHAMPION_TABS, type ChampionTab } from '../../inertia/lib/champions.js'
 
 /**
@@ -257,7 +258,10 @@ export default class ChampionsController {
       for (const k of waiting) late[k] = inertia.defer(blocks[k], BLOCK_GROUP[k] ?? k)
       for (const k of LOWER) late[k] = inertia.defer(blocks[k], 'lower')
     }
-    const labels = data ? await labelsOf(data).catch(() => null) : null
+    const [labels, updatedAt] = await Promise.all([
+      data ? labelsOf(data).catch(() => null) : null,
+      filter ? statsExplorerService.updatedAt(filter.patch).catch(() => null) : null,
+    ])
 
     const role = ROLE_OF[position]
     const isMain = position === main || !main
@@ -281,6 +285,8 @@ export default class ChampionsController {
       filter,
       data,
       labels,
+      updatedAt,
+      now: Date.now(),
       names: Object.fromEntries(champions.map((c) => [c.id, [c.name, c.slug]])),
       ...meta({
         title: `${champion.name} ${role.label.toLowerCase()} build, runes and counters${stat ? `, ${percent(stat.win)} win rate` : ''}`,
