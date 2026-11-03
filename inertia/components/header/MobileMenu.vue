@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { Icon, RoleIcon } from '@invadelol/ui'
 import type { SiteNav } from '../../lib/home.js'
+import LeagueLogo from './LeagueLogo.vue'
 import ThemeChoice from './ThemeChoice.vue'
 import { prefetchOnTouch } from './prefetch.js'
 import { ROLE_LINKS, SECTIONS, type SectionKey } from './sections.js'
@@ -33,6 +34,8 @@ const sections = computed(() =>
     }),
   }))
 )
+
+const leagues = computed(() => props.nav?.leagues ?? [])
 
 function toggle(key: SectionKey) {
   opened.value = opened.value === key ? null : key
@@ -98,6 +101,17 @@ function onKey(event: KeyboardEvent) {
               data-track="mobile_champions_role"
             >
               <RoleIcon :lane="r.lane" :size="18" />
+            </Link>
+          </div>
+          <div v-if="s.key === 'pros' && leagues.length" class="leagues">
+            <Link
+              v-for="l in leagues"
+              :key="l.slug"
+              :href="`/pros?league=${l.slug}`"
+              :aria-label="`${l.name} pros`"
+              data-track="mobile_pros_league"
+            >
+              <LeagueLogo :league="l" :size="20" />{{ l.code ?? l.short }}
             </Link>
           </div>
         </div>

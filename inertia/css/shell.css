@@ -471,6 +471,10 @@
     padding: 3px;
   }
 
+  .sh-feat li .logo.nb-photo :is(img) {
+    padding: 0;
+  }
+
   .sh-feat li .logo.none {
     display: inline-grid;
     place-items: center;
@@ -686,14 +690,18 @@
     padding: 0 8px 6px;
   }
 
+  /* One row per league, one line: logo, code, region (or name) quiet with an ellipsis, teams. */
   .sh-leagues a {
-    display: flex;
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr) auto;
     align-items: center;
-    justify-content: space-between;
+    gap: 10px;
     height: 34px;
+    flex: none;
     padding: 0 8px;
     font-size: 13px;
     font-weight: 500;
+    line-height: 16px;
     color: var(--text-2);
     border-radius: var(--r-sm);
   }
@@ -704,10 +712,26 @@
   }
 
   .sh-leagues .nm {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
     min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .sh-leagues .nm b {
+    flex: none;
+    font-weight: 600;
+    color: var(--text-1);
+  }
+
+  .sh-leagues .nm .d {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 12px;
+    color: var(--sh-quiet);
   }
 
   .sh-leagues small {
@@ -942,6 +966,27 @@
     width: 44px;
     height: 44px;
     color: var(--text-2);
+    background: var(--surface-1);
+    border-radius: var(--r-sm);
+    box-shadow: var(--row);
+  }
+
+  .sh-acc-b .leagues {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 4px 0 4px -6px;
+  }
+
+  .sh-acc-b .leagues a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 44px;
+    padding: 0 12px 0 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-1);
     background: var(--surface-1);
     border-radius: var(--r-sm);
     box-shadow: var(--row);
