@@ -114,4 +114,28 @@ test.group('Home lists', () => {
       ]
     )
   })
+
+  test('lists a champion once, in its best role', ({ assert }) => {
+    const s = summary([
+      { champion: 1, position: 'MIDDLE' },
+      { champion: 1, position: 'TOP' },
+      { champion: 2, position: 'TOP' },
+    ])
+    const rows = laneRows(
+      [
+        ['MIDDLE', 1, LANE_MIN_GAMES, LANE_MIN_GAMES * 455],
+        ['TOP', 1, LANE_MIN_GAMES, LANE_MIN_GAMES * 454],
+        ['TOP', 2, LANE_MIN_GAMES, LANE_MIN_GAMES * 300],
+      ],
+      s,
+      names
+    )
+    assert.deepEqual(
+      rows.map((r) => [r.championId, r.position]),
+      [
+        [1, 'MIDDLE'],
+        [2, 'TOP'],
+      ]
+    )
+  })
 })

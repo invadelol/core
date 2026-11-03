@@ -236,15 +236,19 @@ export function laneRows(
   limit = HOME_ROWS
 ): HomeLaneRow[] {
   const listed = new Set(summary.roles.map((r) => `${r.position}:${r.champion}`))
-  return found
-    .filter(([position, id, games]) => games >= minGames && listed.has(`${position}:${id}`))
-    .map(([position, id, games, sum]) => ({ position, id, games, value: sum / games }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, limit)
-    .flatMap((r) => {
-      const champion = championOf(names, r.id, r.position)
-      return champion ? [{ ...champion, value: r.value }] : []
-    })
+  return (
+    found
+      .filter(([position, id, games]) => games >= minGames && listed.has(`${position}:${id}`))
+      .map(([position, id, games, sum]) => ({ position, id, games, value: sum / games }))
+      .sort((a, b) => b.value - a.value)
+      // One line per champion, in its best role.
+      .filter((r, i, rows) => rows.findIndex((o) => o.id === r.id) === i)
+      .slice(0, limit)
+      .flatMap((r) => {
+        const champion = championOf(names, r.id, r.position)
+        return champion ? [{ ...champion, value: r.value }] : []
+      })
+  )
 }
 
 /** The cells of the default bracket (every region). */
