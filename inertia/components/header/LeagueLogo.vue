@@ -21,7 +21,7 @@ const failed = ref(false)
   >
     <img
       v-if="!failed"
-      :src="`/cdn/league/${props.league.slug}`"
+      :src="`/cdn/league/${props.league.slug}?s=${size <= 20 ? 20 : size <= 24 ? 24 : 32}&v=1`"
       :alt="league.short"
       :width="size"
       :height="size"

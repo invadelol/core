@@ -4,6 +4,7 @@ import { Link } from '@inertiajs/vue3'
 import { ChampIcon, Icon, Logo, RankCrest, RoleIcon } from '@invadelol/ui'
 import { pct } from '../../lib/champions.js'
 import type { SiteNav } from '../../lib/home.js'
+import ProPhoto from '../champions/ProPhoto.vue'
 import TeamLogo from '../champions/TeamLogo.vue'
 import LeagueLogo from './LeagueLogo.vue'
 import { prefetchOnTouch } from './prefetch.js'
@@ -119,7 +120,15 @@ function onKey(event: KeyboardEvent) {
               data-track="menu_pros_top"
               @touchstart.passive="prefetchOnTouch(`/pro/${p.slug}`)"
             >
-              <TeamLogo v-if="p.team" :team="p.team" :size="28" class="logo" />
+              <ProPhoto
+                v-if="p.photo"
+                :slug="p.slug"
+                :photo="p.photo"
+                :width="28"
+                :height="28"
+                class="logo"
+              />
+              <TeamLogo v-else-if="p.team" :team="p.team" :size="28" class="logo" />
               <span v-else class="logo none" aria-hidden="true"
                 ><Icon name="user" :size="14"
               /></span>
@@ -136,7 +145,7 @@ function onKey(event: KeyboardEvent) {
               >
             </Link>
           </li>
-          <li v-for="i in loading ? 4 : 0" :key="`s${i}`" class="sk two" aria-hidden="true">
+          <li v-for="i in loading ? 5 : 0" :key="`s${i}`" class="sk two" aria-hidden="true">
             <span /><span />
           </li>
         </ul>
@@ -232,10 +241,15 @@ function onKey(event: KeyboardEvent) {
         :key="l.slug"
         :href="`/pros?league=${l.slug}`"
         prefetch
+        :title="l.name"
         data-track="menu_pros_league"
       >
-        <span class="nm"><LeagueLogo :league="l" :size="20" />{{ l.name }}</span>
-        <small class="num">{{ l.teams }}</small>
+        <LeagueLogo :league="l" :size="20" />
+        <span class="nm"
+          ><b>{{ l.code ?? l.short }}</b
+          ><span class="d">{{ l.region ?? l.name }}</span></span
+        >
+        <small class="num" :aria-label="`${l.teams} teams`">{{ l.teams }}</small>
       </Link>
     </div>
   </div>
