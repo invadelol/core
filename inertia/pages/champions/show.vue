@@ -1166,7 +1166,7 @@ onBeforeUnmount(() => {
               </section>
             </div>
             <div class="nb-cols side" style="margin-top: 12px">
-              <section class="nb-panel nb-table" aria-label="Every item">
+              <section class="nb-panel nb-table" role="table" aria-label="Every item">
                 <div class="nb-ph">
                   <h3 class="nb-h3">Every item</h3>
                   <span class="nb-meta"
@@ -1557,7 +1557,7 @@ onBeforeUnmount(() => {
                     timeline</span
                   >
                 </div>
-                <div v-if="at10 || at15" class="nb-table">
+                <div v-if="at10 || at15" class="nb-table" role="table" aria-label="Early game">
                   <div class="nb-tr th early-cols" role="row">
                     <span role="columnheader">Minute</span
                     ><span role="columnheader" class="r">CS</span
