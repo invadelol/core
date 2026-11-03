@@ -43,6 +43,12 @@ export const PRO_PLATFORMS = ['EUW1', 'NA1', 'BR1']
  * while one refresh runs, for a day at most.
  */
 const PRO_CACHE = { freshMs: 30 * 60_000, keepMs: 86_400_000 }
+/**
+ * The shape of the answers the pro caches hold, part of their keys. Redis keeps answers across
+ * deploys and serves a stale one while its refresh runs, so a release that changes what a page
+ * reads must bump it: otherwise the pages get the previous release's answers for up to a day.
+ */
+export const PRO_SHAPE = 2
 /** How far back a pro's games are read. */
 const GAMES_DAYS = 30
 const CHAMPION_GAMES_DAYS = 14
@@ -180,9 +186,12 @@ const bestOf = (r: Record<string, any>) =>
 
 export class ProService {
   #tags = new AnswerCache(4096)
-  #pages = new StatsCache('pro-pages', PRO_CACHE)
-  #games = new StatsCache('pro-games', PRO_CACHE)
-  #boards = new StatsCache('pro-boards', { freshMs: 86_400_000, keepMs: 7 * 86_400_000 })
+  #pages = new StatsCache(`pro-pages@${PRO_SHAPE}`, PRO_CACHE)
+  #games = new StatsCache(`pro-games@${PRO_SHAPE}`, PRO_CACHE)
+  #boards = new StatsCache(`pro-boards@${PRO_SHAPE}`, {
+    freshMs: 86_400_000,
+    keepMs: 7 * 86_400_000,
+  })
 
   /** The pro behind a Riot ID, or null. Never throws: a profile renders without its tag. */
   async byRiotId(gameName: string, tagLine: string): Promise<ProTag | null> {
