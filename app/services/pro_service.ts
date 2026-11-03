@@ -4,6 +4,8 @@ import buildStatsService from '#services/build_stats_service'
 import { AnswerCache, RANKED_SOLO } from '#services/ranked_stats'
 import { latestPatch, rows } from '#services/ranked_games_service'
 import { StatsCache } from '#services/stats_cache'
+import matchRepository from '#services/analytics/match_repository'
+import type { Match } from '../../inertia/lib/types.js'
 import { catalog, leagueCatalog, leagueRef, type LeagueRef } from '#services/pro_leagues'
 import proLadderService, { placesBefore, rankScore } from '#services/pro_ladder_service'
 import proPhotoService from '#services/pro_photo_service'
@@ -525,6 +527,43 @@ export class ProService {
       .catch((error) => {
         logger.warn({ err: error }, 'pro games failed')
         return { games: [] as ProGame[], ...emptySummary(), builds: [] as ProBuild[], pools: {} }
+      })
+  }
+
+  /**
+   * A pro's recent games as stored matches, each with the pro's own side (`puuid`, Riot ID), so
+   * the page lists and opens them like a profile's games. Games no longer stored are left out.
+   */
+  async recentMatches(
+    games: Pick<ProGame, 'matchId' | 'account' | 'champion' | 'win' | 'startMs'>[]
+  ) {
+    if (!games.length) return []
+    return this.#games
+      .get(`matches:${games.map((g) => g.matchId).join(',')}`, async () => {
+        const since = Math.min(...games.map((g) => g.startMs))
+        const found = (await matchRepository.getByIds(
+          games.map((g) => g.matchId),
+          since
+        )) as Match[]
+        const byId = new Map(found.map((m) => [m.matchId, m]))
+        return games.flatMap((g) => {
+          const match = byId.get(g.matchId)
+          if (!match) return []
+          const at = g.account.lastIndexOf('#')
+          const name = (at > 0 ? g.account.slice(0, at) : g.account).toLowerCase()
+          const tag = (at > 0 ? g.account.slice(at + 1) : '').toLowerCase()
+          const self =
+            match.participants.find(
+              (p) => p.gameName?.toLowerCase() === name && p.tagLine?.toLowerCase() === tag
+            ) ?? match.participants.find((p) => p.championId === g.champion && p.win === g.win)
+          return self
+            ? [{ match, puuid: self.puuid, gameName: self.gameName, tagLine: self.tagLine }]
+            : []
+        })
+      })
+      .catch((error) => {
+        logger.warn({ err: error }, 'pro recent matches failed')
+        return []
       })
   }
 
