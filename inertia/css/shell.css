@@ -1163,3 +1163,65 @@
     box-shadow: var(--focus);
   }
 }
+
+/* ── Error pages (404, 500) ─────────────────────────────────── */
+@layer components {
+  .sh-error {
+    max-width: 640px;
+    padding-top: clamp(48px, 12vh, 120px);
+  }
+
+  .sh-error .code {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-3);
+  }
+
+  .sh-error h1 {
+    margin-top: 8px;
+    font-size: 28px;
+    font-weight: 650;
+    line-height: 1.15;
+    letter-spacing: -0.016em;
+    color: var(--text-1);
+  }
+
+  .sh-error .line {
+    margin-top: 10px;
+    font-size: 14px;
+    line-height: 21px;
+    color: var(--text-2);
+  }
+
+  .sh-error .msg {
+    margin-top: 14px;
+    padding: 8px 12px;
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 12px;
+    color: var(--text-3);
+    overflow-wrap: anywhere;
+    background: var(--well);
+    border-radius: var(--r-sm);
+  }
+
+  .sh-error .acts {
+    margin-top: 20px;
+  }
+
+  .sh-error .find {
+    margin-top: 24px;
+  }
+
+  .sh-error .next {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px;
+    margin: 24px -10px 0;
+  }
+
+  @media (max-width: 29.99rem) {
+    .sh-error .next {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}
