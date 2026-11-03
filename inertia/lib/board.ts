@@ -94,8 +94,20 @@ export const tierColor = (tier: string | null | undefined) =>
 
 /** A country code as a name ("FR" → "France"), or the code when unknown. */
 let regionNames: Intl.DisplayNames | null = null
+/**
+ * Names that differ between runtimes' locale data (Node's against the browsers'): fixed here, so
+ * the server's render and the browser's agree.
+ */
+const COUNTRY_NAMES: Record<string, string> = {
+  FK: 'Falkland Islands',
+  HK: 'Hong Kong',
+  MO: 'Macao',
+  PS: 'Palestine',
+}
+
 export function countryName(code: string | null | undefined) {
   if (!code) return ''
+  if (COUNTRY_NAMES[code.toUpperCase()]) return COUNTRY_NAMES[code.toUpperCase()]
   try {
     regionNames ??= new Intl.DisplayNames(['en'], { type: 'region' })
     return regionNames.of(code.toUpperCase()) ?? code
