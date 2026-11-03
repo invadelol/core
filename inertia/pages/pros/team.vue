@@ -22,6 +22,7 @@ import {
   tierColor,
   tierName,
 } from '../../lib/board.js'
+import { teamPage } from '../../lib/pro_pages.js'
 import '../../css/champions.css'
 
 interface LeagueRef {
@@ -69,11 +70,12 @@ const props = defineProps<{
 }>()
 
 const page = usePage()
+const club = computed(() => teamPage(props.team))
 const canonical = computed(
   () => (page.props.social as { canonical?: string } | undefined)?.canonical ?? ''
 )
 const title = computed(
-  () => (page.props.social as { title?: string } | undefined)?.title ?? props.team.name
+  () => (page.props.social as { title?: string } | undefined)?.title ?? club.value.name
 )
 const now = computed(() => props.now ?? Date.now())
 const championName = (id: number) => props.names?.[id]?.[0] ?? loadedName(id)
@@ -81,7 +83,7 @@ const champHref = (id: number) =>
   `/champions/${props.names?.[id]?.[1] ?? championSlug(championName(id))}`
 
 const ORDER = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT']
-const current = computed(() => props.team.roster.filter((m) => m.current))
+const current = computed(() => club.value.roster.filter((m) => m.current))
 const players = computed(() =>
   current.value
     .filter((m) => m.title !== 'staff')
@@ -93,18 +95,18 @@ const players = computed(() =>
 )
 const staff = computed(() => current.value.filter((m) => m.title === 'staff'))
 const former = computed(() =>
-  props.team.roster.filter((m) => !m.current && m.title !== 'staff').slice(0, 12)
+  club.value.roster.filter((m) => !m.current && m.title !== 'staff').slice(0, 12)
 )
-const record = computed(() => props.team.record)
+const record = computed(() => club.value.record)
 
 const who = ref<string | null>(null)
 const games = computed(() =>
-  props.team.games.filter((g) => !who.value || (g.pro?.role ?? '') === who.value)
+  club.value.games.filter((g) => !who.value || (g.pro?.role ?? '') === who.value)
 )
 /** The roster's most played champions, each with the player who plays it most. */
 const pool = computed(() => {
   const rows: { champion: number; games: number; wins: number; by: string }[] = []
-  for (const [slug, list] of Object.entries(props.team.pools ?? {})) {
+  for (const [slug, list] of Object.entries(club.value.pools ?? {})) {
     const name =
       players.value.find((m) => m.slug === slug)?.name ??
       current.value.find((m) => m.slug === slug)?.name ??
@@ -122,20 +124,20 @@ const years = (m: Member) => {
 const roleLabel = (r: string | null) =>
   proRole(r)?.label ?? (r ? r.charAt(0) + r.slice(1).toLowerCase() : '')
 const website = computed(() => {
-  const w = props.team.socials?.website
+  const w = club.value.socials?.website
   return w ? (w.startsWith('http') ? w : `https://${w}`) : null
 })
 const back = computed(() =>
-  props.team.league
-    ? { label: props.team.league.code, href: `/pros?league=${props.team.league.slug}` }
+  club.value.league
+    ? { label: club.value.league.code, href: `/pros?league=${club.value.league.slug}` }
     : { label: 'Pros', href: '/pros' }
 )
 const crumbs = computed(() => [
   { label: 'Pros', href: '/pros' },
-  ...(props.team.league
-    ? [{ label: props.team.league.code, href: `/pros?league=${props.team.league.slug}` }]
+  ...(club.value.league
+    ? [{ label: club.value.league.code, href: `/pros?league=${club.value.league.slug}` }]
     : []),
-  { label: props.team.name },
+  { label: club.value.name },
 ])
 </script>
 
@@ -145,19 +147,19 @@ const crumbs = computed(() => [
     <AppHeader />
     <main class="nb nb-page flex-1">
       <Crumbs :back="back" :items="crumbs">
-        <template #end><ShareButton :title="team.name" :url="canonical" /></template>
+        <template #end><ShareButton :title="club.name" :url="canonical" /></template>
       </Crumbs>
 
-      <section class="nb-panel nv-teamhead" :aria-label="team.name">
-        <Logo :team="team" :size="72" eager />
+      <section class="nb-panel nv-teamhead" :aria-label="club.name">
+        <Logo :team="club" :size="72" eager />
         <div class="min-w-0">
-          <h1>{{ team.name }}</h1>
+          <h1>{{ club.name }}</h1>
           <div class="tags">
-            <Link v-if="team.league" :href="`/pros?league=${team.league.slug}`"
-              ><Logo :league="team.league" :size="20" eager />{{ team.league.code }}</Link
+            <Link v-if="club.league" :href="`/pros?league=${club.league.slug}`"
+              ><Logo :league="club.league" :size="20" eager />{{ club.league.code }}</Link
             >
-            <span v-if="team.shortName">{{ team.shortName }}</span>
-            <span v-if="!team.active" class="q">Inactive</span>
+            <span v-if="club.shortName">{{ club.shortName }}</span>
+            <span v-if="!club.active" class="q">Inactive</span>
             <a
               v-if="website"
               :href="website"
@@ -173,7 +175,7 @@ const crumbs = computed(() => [
         <div class="nb-figs">
           <div>
             <span>Average LP</span
-            ><b class="iv-fig num">{{ team.lp !== null ? thousands(team.lp) : '-' }}</b
+            ><b class="iv-fig num">{{ club.lp !== null ? thousands(club.lp) : '-' }}</b
             ><em>starters in Master+</em>
           </div>
           <div>
@@ -181,9 +183,9 @@ const crumbs = computed(() => [
             ><b class="iv-fig num">{{ record.games ? pct(record.wins / record.games) : '-' }}</b
             ><em class="num">{{ record.games }} games</em>
           </div>
-          <div v-if="team.league">
-            <span>Rank in {{ team.league.code }}</span
-            ><b class="iv-fig num">{{ team.place ? `#${team.place}` : '-' }}</b
+          <div v-if="club.league">
+            <span>Rank in {{ club.league.code }}</span
+            ><b class="iv-fig num">{{ club.place ? `#${club.place}` : '-' }}</b
             ><em>by average LP</em>
           </div>
         </div>
@@ -225,7 +227,7 @@ const crumbs = computed(() => [
               >
               <span class="pool"
                 ><ChampIcon
-                  v-for="c in (m.slug ? (team.pools[m.slug] ?? []) : []).slice(0, 4)"
+                  v-for="c in (m.slug ? (club.pools[m.slug] ?? []) : []).slice(0, 4)"
                   :key="c.champion"
                   :id="c.champion"
                   :size="24"
@@ -262,7 +264,7 @@ const crumbs = computed(() => [
               </button>
             </span>
           </div>
-          <p v-if="!team.games.length" class="nb-panel nb-empty">
+          <p v-if="!club.games.length" class="nb-panel nb-empty">
             No ranked game of this roster is stored for the last 30 days.
           </p>
           <p v-else-if="!games.length" class="nb-panel nb-empty">No recent game in this role.</p>

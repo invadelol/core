@@ -25,6 +25,7 @@ import {
   type Sort,
 } from '../../lib/board.js'
 import { afterPaint } from '../../lib/after_paint.js'
+import { leagueData } from '../../lib/pro_pages.js'
 import '../../css/champions.css'
 
 interface LeagueRef {
@@ -96,6 +97,15 @@ const props = defineProps<{
 }>()
 
 const inertia = usePage()
+const leagueView = computed(() => leagueData(props.data))
+const teamGroups = computed(() =>
+  (Array.isArray(props.groups) ? props.groups : [])
+    .filter((g) => g?.league)
+    .map((g) => ({ ...g, teams: Array.isArray(g.teams) ? g.teams : [] }))
+)
+const ladderRows = computed(() =>
+  (Array.isArray(props.ladder) ? props.ladder : []).filter((r) => r?.pro && r.account)
+)
 const title = computed(
   () => (inertia.props.social as { title?: string } | undefined)?.title ?? 'Pros'
 )
@@ -120,13 +130,17 @@ const sortModel = computed({
   set: (key: Key) => (sort.value = { key, dir: key === 'name' || key === 'rank' ? 'asc' : 'desc' }),
 })
 const servers = computed(() => {
-  const set = new Set((props.data?.players ?? []).flatMap((p) => (p.best ? [p.best.platform] : [])))
+  const set = new Set(
+    (leagueView.value?.players ?? []).flatMap((p) => (p.best ? [p.best.platform] : []))
+  )
   return ['ALL', ...['EUW1', 'NA1', 'BR1'].filter((s) => set.has(s))]
 })
-const place = computed(() => new Map((props.data?.players ?? []).map((p, i) => [p.slug, i + 1])))
+const place = computed(
+  () => new Map((leagueView.value?.players ?? []).map((p, i) => [p.slug, i + 1]))
+)
 const players = computed(() => {
   const q = query.value.trim().toLowerCase()
-  const list = (props.data?.players ?? []).filter(
+  const list = (leagueView.value?.players ?? []).filter(
     (p) =>
       (!role.value || p.role === role.value) &&
       (server.value === 'ALL' || p.best?.platform === server.value) &&
@@ -149,7 +163,7 @@ const players = computed(() => {
 })
 const teamsShown = computed(() => {
   const q = query.value.trim().toLowerCase()
-  return (props.data?.teams ?? []).filter((t) => !q || t.name.toLowerCase().includes(q))
+  return (leagueView.value?.teams ?? []).filter((t) => !q || t.name.toLowerCase().includes(q))
 })
 const FIRST = 50
 const more = ref(false)
@@ -170,7 +184,7 @@ function by(key: Key) {
     }
   })
 }
-const moved = computed(() => (props.data?.players ?? []).some((p) => p.move))
+const moved = computed(() => (leagueView.value?.players ?? []).some((p) => p.move))
 
 /* ── Ladder view ─────────────────────────────────────────────── */
 const ladderHref = (c: { server?: string | null; role?: string | null }) => {
@@ -192,7 +206,7 @@ function loadMore() {
     onFinish: () => (loading.value = false),
   })
 }
-const ladderMoved = computed(() => (props.ladder ?? []).some((p) => p.move))
+const ladderMoved = computed(() => ladderRows.value.some((p) => p.move))
 /** The 24-hour column waits for a day of rank history; until then it is left out. */
 const leagueMoved = computed(() => players.value.some((p) => p.move))
 
@@ -209,11 +223,11 @@ const placesCls = (m: { places: number | null } | null) =>
 const lpText = (m: { lp: number } | null) => (m ? `${signed(m.lp)} LP` : '-')
 const roleLabel = (r: string | null) => proRole(r)?.label ?? ''
 const leagueHref = (slug: string) =>
-  slug === props.leagues[0]?.slug ? '/pros' : `/pros?league=${slug}`
+  slug === props.leagues?.[0]?.slug ? '/pros' : `/pros?league=${slug}`
 const crumbs = computed(() => {
   if (props.view === 'ladder') return [{ label: 'Pros', href: '/pros' }, { label: 'Ladder' }]
   if (props.view === 'teams') return [{ label: 'Pros', href: '/pros' }, { label: 'Teams' }]
-  return [{ label: 'Pros', href: '/pros' }, { label: props.data?.league.code ?? '' }]
+  return [{ label: 'Pros', href: '/pros' }, { label: leagueView.value?.league.code ?? '' }]
 })
 </script>
 
@@ -236,9 +250,9 @@ const crumbs = computed(() => {
                 :key="l.slug"
                 :href="leagueHref(l.slug)"
                 class="opt"
-                :class="{ on: view === 'league' && data?.league.slug === l.slug }"
+                :class="{ on: view === 'league' && leagueView?.league.slug === l.slug }"
                 :aria-current="
-                  view === 'league' && data?.league.slug === l.slug ? 'page' : undefined
+                  view === 'league' && leagueView?.league.slug === l.slug ? 'page' : undefined
                 "
                 prefetch="hover"
                 ><Logo :league="l" :size="20" eager />{{ l.code }}</Link
@@ -350,16 +364,16 @@ const crumbs = computed(() => {
 
         <div class="min-w-0">
           <!-- A league -->
-          <template v-if="view === 'league' && data">
+          <template v-if="view === 'league' && leagueView">
             <div class="nb-title">
               <div style="display: flex; align-items: center; gap: 16px; min-width: 0">
-                <Logo :league="data.league" :size="56" eager />
+                <Logo :league="leagueView.league" :size="56" eager />
                 <div class="min-w-0">
-                  <h1>{{ data.league.code }}</h1>
+                  <h1>{{ leagueView.league.code }}</h1>
                   <p class="nb-meta num">
-                    {{ data.league.name }}, {{ data.counts.teams }} teams,
-                    {{ data.counts.players }} players, {{ thousands(data.counts.accounts) }} ranked
-                    accounts
+                    {{ leagueView.league.name }}, {{ leagueView.counts.teams }} teams,
+                    {{ leagueView.counts.players }} players,
+                    {{ thousands(leagueView.counts.accounts) }} ranked accounts
                   </p>
                 </div>
               </div>
@@ -406,7 +420,11 @@ const crumbs = computed(() => {
               </div>
             </section>
 
-            <div class="nb-panel nb-table" role="table" :aria-label="`${data.league.code} players`">
+            <div
+              class="nb-panel nb-table"
+              role="table"
+              :aria-label="`${leagueView.league.code} players`"
+            >
               <div class="nb-tr th pr-cols" :class="{ 'no-mv': !leagueMoved }" role="row">
                 <span role="columnheader" :aria-sort="ariaSort(sort, 'rank')"
                   ><SortHead
@@ -534,13 +552,13 @@ const crumbs = computed(() => {
               <div>
                 <h1>Teams</h1>
                 <p class="nb-meta num">
-                  {{ (groups ?? []).reduce((n, g) => n + g.teams.length, 0) }} teams in
-                  {{ (groups ?? []).length }} leagues
+                  {{ teamGroups.reduce((n, g) => n + g.teams.length, 0) }} teams in
+                  {{ teamGroups.length }} leagues
                 </p>
               </div>
             </div>
             <section
-              v-for="g in groups"
+              v-for="g in teamGroups"
               :key="g.league.slug"
               class="nb-panel"
               style="margin-bottom: 12px"
@@ -588,11 +606,11 @@ const crumbs = computed(() => {
                 ><span role="columnheader">Rank</span
                 ><span v-if="ladderMoved" role="columnheader" class="r">Last 24 h</span>
               </div>
-              <p v-if="!ladder?.length" class="nb-empty">
+              <p v-if="!ladderRows.length" class="nb-empty">
                 No pro in Master and above with these filters.
               </p>
               <div
-                v-for="r in ladder"
+                v-for="r in ladderRows"
                 :key="r.pro.slug"
                 class="nb-tr link ld-cols"
                 :class="{ 'no-mv': !ladderMoved }"
@@ -635,9 +653,9 @@ const crumbs = computed(() => {
                   ><small v-else>-</small></span
                 >
               </div>
-              <div v-if="(ladder?.length ?? 0) < (total ?? 0)" class="nb-foot">
+              <div v-if="ladderRows.length < (total ?? 0)" class="nb-foot">
                 <button type="button" class="iv-btn sm" :disabled="loading" @click="loadMore">
-                  Show {{ Math.min(pageSize ?? 100, (total ?? 0) - (ladder?.length ?? 0)) }} more
+                  Show {{ Math.min(pageSize ?? 100, (total ?? 0) - ladderRows.length) }} more
                 </button>
               </div>
             </div>
