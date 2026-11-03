@@ -6,7 +6,7 @@ import teamLogoService, { logoSize } from '#services/team_logo_service'
 import proPhotoService, { photoSize } from '#services/pro_photo_service'
 import proMatchService, { split, type ProMatch } from '#services/pro_match_service'
 import { leagueCatalog, leagueRef } from '#services/pro_leagues'
-import { ORIGIN, breadcrumbs, count, meta, percent, today } from '#services/page_meta'
+import { ORIGIN, breadcrumbs, count, meta, notFoundPage, percent, today } from '#services/page_meta'
 import { SERVERS, serverList } from '#constants/riot'
 
 /** Games in each strip of next games on `/pros` (one row on wide screens). */
@@ -216,14 +216,14 @@ export default class ProsController {
         const to = moved.slug === catalog.first?.slug ? '/pros' : `/pros?league=${moved.slug}`
         return response.redirect().status(301).toPath(to)
       }
-      return response.notFound()
+      return notFoundPage({ inertia, response })
     }
     const [data, next, international] = await Promise.all([
       proService.league(league.slug),
       proMatchService.forLeague(league.slug, STRIP_GAMES),
       proMatchService.international(STRIP_GAMES),
     ])
-    if (!data) return response.notFound()
+    if (!data) return notFoundPage({ inertia, response })
     const first = data.players[0]
     const path = league.slug === catalog.first?.slug ? '/pros' : `/pros?league=${league.slug}`
     return inertia.render('pros/index', {
@@ -252,7 +252,7 @@ export default class ProsController {
   /** `/pro/:slug`: a pro, every account they play on, their teams, games and builds. */
   async show({ inertia, params, response }: HttpContext) {
     const pro = await proService.player(String(params.slug))
-    if (!pro) return response.notFound()
+    if (!pro) return notFoundPage({ inertia, response })
     // What the page draws: its builds, not the summaries the share card and the team page use.
     const shown = without(pro, 'id', 'champions', 'roles', 'items', 'pools')
     const matches = pro.team ? split(await proMatchService.forTeam(pro.team.id)) : null
@@ -332,7 +332,7 @@ export default class ProsController {
   /** `/team/:slug`: a team's roster, past players, games and champions. */
   async team({ inertia, params, response }: HttpContext) {
     const team = await proService.team(String(params.slug))
-    if (!team) return response.notFound()
+    if (!team) return notFoundPage({ inertia, response })
     const matches = split(await proMatchService.forTeam(team.id))
     const upcoming = matches.next.filter((m) => m.status !== 'running').slice(0, 3)
     const players = team.roster.filter(
