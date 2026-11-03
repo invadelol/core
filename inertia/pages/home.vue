@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Head, Link } from '@inertiajs/vue3'
-import { ChampIcon, Icon, RankCrest, RoleIcon } from '@invadelol/ui'
+import { ChampIcon, Icon, RoleIcon } from '@invadelol/ui'
 import '../css/home.css'
 import AppHeader from '../components/AppHeader.vue'
 import SearchBar from '../components/SearchBar.vue'
@@ -118,7 +118,6 @@ const gold = (n: number) => `+${Math.round(n)}`
                 <span class="n"
                   >{{ p.name }}<small v-if="p.team">{{ p.team.name }}</small></span
                 >
-                <span v-if="p.tier" class="crest"><RankCrest :tier="p.tier" :size="16" /></span>
                 <b class="f iv-fig num">{{ lp(p.lp) }}<small>LP</small></b>
                 <span
                   v-if="p.movement"

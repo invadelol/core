@@ -780,7 +780,7 @@ export class HomeService {
     ])
     return {
       picks: picks && { patch: picks.patch, best: picks.best, bans: picks.bans },
-      pros: pros?.top.length ? pros.top : null,
+      pros: pros?.top.length ? pros.top.map(({ tier, ...p }) => (void tier, p)) : null,
       lanes,
       discord,
     }
