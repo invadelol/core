@@ -117,7 +117,8 @@ export interface HomePro {
   slug: string
   name: string
   team: { id: string; name: string; shortName: string | null } | null
-  tier: string | null
+  /** The best account's tier (the menus' crest); the home leaves it out. */
+  tier?: string | null
   lp: number | null
   /** Places and LP gained over the last 24 hours, when the ladder's history is known. */
   movement?: { places: number; lp: number } | null
