@@ -1182,6 +1182,19 @@
     color: var(--sh-quiet);
   }
 
+  /* Credits for content we reuse, under the Riot notice. */
+  .sh-legal:has(+ .sh-credit) {
+    padding-bottom: 6px;
+  }
+  .sh-credit a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .sh-credit a:hover {
+    color: var(--text-1);
+  }
+
   @media (pointer: coarse) {
     .sh-col a,
     .sh-foot-bot a {
