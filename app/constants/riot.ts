@@ -54,3 +54,41 @@ export const PLATFORMS = {
   asia: ['KR', 'JP1'],
   sea: ['OC1', 'SG2', 'TW2', 'VN2'],
 } as const
+
+/**
+ * Every platform as players say it, in the order server filters list them. `slug` is the
+ * lowercase label, as in `?server=kr`.
+ */
+export const SERVERS = [
+  { platform: 'EUW1', label: 'EUW' },
+  { platform: 'EUN1', label: 'EUNE' },
+  { platform: 'NA1', label: 'NA' },
+  { platform: 'BR1', label: 'BR' },
+  { platform: 'LA1', label: 'LAN' },
+  { platform: 'LA2', label: 'LAS' },
+  { platform: 'KR', label: 'KR' },
+  { platform: 'JP1', label: 'JP' },
+  { platform: 'OC1', label: 'OCE' },
+  { platform: 'TR1', label: 'TR' },
+  { platform: 'VN2', label: 'VN' },
+  { platform: 'TW2', label: 'TW' },
+  { platform: 'SG2', label: 'SEA' },
+  { platform: 'ME1', label: 'ME' },
+  { platform: 'RU', label: 'RU' },
+].map((s) => ({ ...s, slug: s.label.toLowerCase() }))
+
+/** A platform as players say it: `EUN1` reads "EUNE". */
+export function serverLabel(platform: string) {
+  return SERVERS.find((s) => s.platform === platform)?.label ?? platform
+}
+
+/**
+ * Labels in reading order: "EUW, NA and BR". Past four, the count stands in for the list
+ * ("12 servers").
+ */
+export function serverList(platforms: string[]) {
+  const labels = SERVERS.filter((s) => platforms.includes(s.platform)).map((s) => s.label)
+  if (!labels.length) return 'every server'
+  if (labels.length > 4) return `${labels.length} servers`
+  return labels.length > 1 ? `${labels.slice(0, -1).join(', ')} and ${labels.at(-1)}` : labels[0]
+}

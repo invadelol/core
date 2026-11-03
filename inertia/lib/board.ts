@@ -116,8 +116,24 @@ export function countryName(code: string | null | undefined) {
   }
 }
 
-/** Riot platforms as players say them. */
-export const SERVER: Record<string, string> = { EUW1: 'EUW', NA1: 'NA', BR1: 'BR' }
+/** Riot platforms as players say them, in the order server filters list them. */
+export const SERVER: Record<string, string> = {
+  EUW1: 'EUW',
+  EUN1: 'EUNE',
+  NA1: 'NA',
+  BR1: 'BR',
+  LA1: 'LAN',
+  LA2: 'LAS',
+  KR: 'KR',
+  JP1: 'JP',
+  OC1: 'OCE',
+  TR1: 'TR',
+  VN2: 'VN',
+  TW2: 'TW',
+  SG2: 'SEA',
+  ME1: 'ME',
+  RU: 'RU',
+}
 
 /** A table's sort: a column and a direction. */
 export interface Sort<K extends string> {
