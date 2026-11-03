@@ -2,10 +2,11 @@ import sharp, { type Sharp } from 'sharp'
 import { GLYPHS } from '#services/site_card_glyphs'
 import { GRAIN_PNG } from '#services/match_card_glyphs'
 import { ROLE_ICONS } from '#services/presence_card'
+import { packBubbles } from '../../inertia/lib/bubble_pack.js'
 
 /**
  * The share cards of the site's pages (`/og/home.jpg`, `/og/champion/…`, `/og/tier-list/…`,
- * `/og/stats/…`, `/og/pros/…`, `/og/pro/…`, `/og/team/…`), of the match card's family: art as
+ * `/og/stats/…`, `/og/pros/…`, `/og/pro/…`, `/og/team/…`, `/og/mastery/…`), of the match card's family: art as
  * the stage (a champion's centred splash, or a team's logo), dimmed and desaturated, under the
  * site's grain and the window's one violet light, the ink rising under the words. Over it sits
  * one thing at poster size (a tier and a win rate, a pro's LP, a team's logo and roster), the
@@ -475,4 +476,151 @@ export async function logoCard(card: LogoCard, image?: Uint8Array | null) {
   const k = fit('label', card.kicker, max, 18 * X, 13 * X)
   body += setType('label', k.text, T.text2, k.size, M, y - t.size * 0.98 - 12 * X).svg
   return finish(inkStage(), frame(body), layers)
+}
+
+export interface MasteryCardEntry {
+  championId: number
+  championPoints: number
+  championLevel: number
+  name: string
+}
+
+export type MasteryArt = (
+  kind: 'splash' | 'champion' | 'mastery',
+  id: number
+) => Promise<Uint8Array | undefined>
+
+/** Circles drawn: the tail past this is a few pixels wide at Discord's size. */
+const POOL_MAX = 150
+/** Circles at least this wide wear the splash, carry their name, and their crest (as on the page). */
+const POOL_ART = 124
+const POOL_LABEL = 128
+const POOL_CREST = 220
+
+/**
+ * `/og/mastery/…`: the Mastery tab's pool and nothing else, every champion a circle whose area is
+ * its points, packed by the page's own `packBubbles`. The biggest wear their splash, their name
+ * and their points over the night ink, the rest their portrait, on the ink under the violet light.
+ */
+export async function masteryCard(pool: MasteryCardEntry[], art: MasteryArt) {
+  const pad = 14 * X
+  const boxW = W - pad * 2
+  const boxH = H - pad * 2
+  const top = pool
+    .filter((m) => m.championPoints > 0)
+    .sort((a, b) => b.championPoints - a.championPoints)
+    .slice(0, POOL_MAX)
+  const entries = new Map(top.map((m) => [m.championId, m]))
+  const layout = packBubbles(
+    top.map((m) => ({ id: m.championId, value: m.championPoints })),
+    { width: boxW, aspect: boxW / boxH, gap: 4, minRadius: 9 }
+  )
+  // The cloud may run a little taller than its box: it is brought back inside, centred.
+  const s = Math.min(1, boxH / Math.max(1, layout.height))
+  const bubbles = layout.bubbles.map((b) => ({
+    ...b,
+    x: W / 2 + (b.x - boxW / 2) * s,
+    y: H / 2 + (b.y - layout.height / 2) * s,
+    r: b.r * s,
+  }))
+
+  const layers: Layer[] = []
+  const over: Layer[] = []
+  let under = ''
+  let body = ''
+  let defs = ''
+  await Promise.all(
+    bubbles.map(async (b, index) => {
+      const d = Math.round(b.r * 2)
+      const left = Math.round(b.x - d / 2)
+      const y0 = Math.round(b.y - d / 2)
+      const cx = left + d / 2
+      const cy = y0 + d / 2
+      under += `<circle cx="${cx}" cy="${cy}" r="${d / 2}" fill="#16171e"/>`
+      const big = d >= POOL_ART
+      const image = await art(big ? 'splash' : 'champion', b.id).catch(() => undefined)
+      if (image) {
+        try {
+          layers[index] = { input: await disc(image, d, big), left, top: y0 }
+        } catch {}
+      }
+      body += `<circle cx="${cx}" cy="${cy}" r="${d / 2 - 0.5}" fill="none" stroke="rgba(255,255,255,0.07)"/>`
+      const entry = entries.get(b.id)!
+      if (d < POOL_LABEL) return
+      // The name and points over a shade of the night ink, as `.ms-label` lays them out.
+      defs += `<clipPath id="c${index}"><circle cx="${cx}" cy="${cy}" r="${d / 2}"/></clipPath>`
+      body += `<rect clip-path="url(#c${index})" x="${left}" y="${y0}" width="${d}" height="${d}" fill="url(#poolShade)"/>`
+      const nameSize = Math.min(17 * X, Math.max(9 * X, d * 0.105))
+      const pointsSize = nameSize * 0.86
+      const pointsBase = y0 + d * 0.85
+      const nameBase = pointsBase - pointsSize * 1.3
+      const n = fit('title', entry.name, d * 0.78, nameSize, nameSize * 0.7)
+      body += setType('title', n.text, T.text1, n.size, cx, nameBase, { anchor: 'middle' }).svg
+      const points = compactPoints(entry.championPoints)
+      const pw = measure('label', points, pointsSize)
+      const crest = d >= POOL_CREST ? Math.round(pointsSize * 1.5) : 0
+      const crestGap = crest ? 3 * X : 0
+      const x0 = cx - (pw + crest + crestGap) / 2
+      body += setType('label', points, T.text2, pointsSize, x0 + crest + crestGap, pointsBase).svg
+      if (crest) {
+        const level = Math.min(Math.max(Math.floor(entry.championLevel) || 0, 0), 10)
+        const mark = await art('mastery', level).catch(() => undefined)
+        if (mark) {
+          try {
+            over.push({
+              input: await sharp(mark)
+                .resize(crest, crest, {
+                  fit: 'contain',
+                  background: { r: 0, g: 0, b: 0, alpha: 0 },
+                })
+                .png()
+                .toBuffer(),
+              left: Math.round(x0),
+              top: Math.round(pointsBase - pointsSize * 0.36 - crest / 2),
+            })
+          } catch {}
+        }
+      }
+    })
+  )
+
+  const L = light(3)
+  const stage = sharp(
+    await inkStage()
+      .composite([
+        {
+          input: Buffer.from(
+            `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><defs>${L.def}</defs>${L.rect}${under}</svg>`
+          ),
+        },
+      ])
+      .png()
+      .toBuffer()
+  )
+  const shade = `<linearGradient id="poolShade" x1="0" x2="0" y1="1" y2="0">
+    <stop offset="0" stop-color="${T.ink0}" stop-opacity="0.88"/><stop offset="0.3" stop-color="${T.ink0}" stop-opacity="0.62"/><stop offset="0.6" stop-color="${T.ink0}" stop-opacity="0"/></linearGradient>`
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs>${shade}${defs}</defs>${body}</svg>`
+  return finish(stage, svg, layers.filter(Boolean), over)
+}
+
+/** A champion's art in a circle `size` wide: the splash covered, or the portrait past its border. */
+async function disc(image: Uint8Array, size: number, splash: boolean) {
+  const mask = Buffer.from(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><circle cx="${size / 2}" cy="${size / 2}" r="${size / 2}"/></svg>`
+  )
+  const over = splash ? size : Math.round(size * 1.1)
+  const inset = Math.round((over - size) / 2)
+  return sharp(image)
+    .resize(over, over, { fit: 'cover' })
+    .extract({ left: inset, top: inset, width: size, height: size })
+    .composite([{ input: mask, blend: 'dest-in' }])
+    .png()
+    .toBuffer()
+}
+
+/** `1.3m`, `981k`, `8,420`: the page's `compact`. */
+function compactPoints(n: number) {
+  if (n >= 999_950) return `${(n / 1_000_000).toFixed(1)}m`
+  if (n >= 9_950) return `${Math.round(n / 1000)}k`
+  return n.toLocaleString('en-US')
 }
