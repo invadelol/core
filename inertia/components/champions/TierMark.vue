@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { TIERS } from '../../lib/champions.js'
 
-/** A champion's tier letter (0 S+ … 5 D); a dash when it has too few games to be ranked. */
+/** A tier letter (S+ to D). The letter always shows; its colour only adds to it. */
 defineProps<{ tier: number | null | undefined; large?: boolean }>()
 </script>
 
 <template>
   <span
-    class="cs-tier"
-    :class="[tier === null || tier === undefined ? 't5' : `t${tier}`, { lg: large }]"
+    v-if="tier !== null && tier !== undefined"
+    class="nb-tier"
+    :class="[`t${tier}`, { lg: large }]"
+    >{{ TIERS[tier] }}<span class="nb-sr"> tier</span></span
   >
-    {{ tier === null || tier === undefined ? '-' : TIERS[tier] }}
-  </span>
+  <span v-else class="nb-tier" :class="{ lg: large }">-</span>
 </template>
