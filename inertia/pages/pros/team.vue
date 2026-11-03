@@ -272,7 +272,7 @@ const crumbs = computed(() => [
               ><ChampIcon :id="g.champion" :size="36" :title="championName(g.champion)"
             /></span>
             <span class="min-w-0"
-              ><Link v-if="g.pro" :href="`/pro/${g.pro.slug}`"
+              ><Link v-if="g.pro" :href="`/pro/${g.pro.slug}`" class="stretch"
                 ><b>{{ g.pro.name }}</b></Link
               ><small
                 >{{ championName(g.champion)

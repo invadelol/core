@@ -157,7 +157,7 @@ export default class ProsController {
 
   /** `/pro/:slug`: a pro, every account they play on, their teams, games and builds. */
   async show({ inertia, params, response }: HttpContext) {
-    const pro = await proService.player(String(params.slug)).catch(() => null)
+    const pro = await proService.player(String(params.slug))
     if (!pro) return response.notFound()
     const { id, ...shown } = pro
     const best = pro.accounts.find((a: { tier: string | null }) => a.tier) ?? null
@@ -215,7 +215,7 @@ export default class ProsController {
 
   /** `/team/:slug`: a team's roster, past players, games and champions. */
   async team({ inertia, params, response }: HttpContext) {
-    const team = await proService.team(String(params.slug)).catch(() => null)
+    const team = await proService.team(String(params.slug))
     if (!team) return response.notFound()
     const players = team.roster.filter(
       (m: { current: boolean; title: string }) => m.current && m.title !== 'staff'

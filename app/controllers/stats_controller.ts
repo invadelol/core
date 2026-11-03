@@ -6,6 +6,10 @@ import { ROLE_OF, positionOf, type Position } from '#services/champion_stats'
 import { latestPatch } from '#services/ranked_games_service'
 import { REGIONS } from '#services/ranked_stats'
 import { BRACKET_TEXT, breadcrumbs, count, meta } from '#services/page_meta'
+import { onceEach, settle } from '#services/page_blocks'
+
+/** How long the page waits for its view's blocks before it is sent (see the champion page). */
+const READY_MS = 150
 
 /** The views' names, as the page and its title say them. */
 export const VIEW_LABELS: Record<View, string> = {
@@ -56,34 +60,34 @@ export default class StatsController {
     ])
     const rows = role?.rows ?? []
     const ids = new Set(rows.map((r) => r.champion))
-    const extra: Record<string, unknown> = {}
-    const settle = <T>(p: Promise<T>, empty: T) => p.catch(() => empty)
+    // The view's blocks: what the cache holds within a short wait is sent with the page, the rest
+    // (a cold filter's averages are a read of the role's games) follows as a deferred prop.
+    const loads: Record<string, () => Promise<unknown>> = {}
     if (view === 'overview' || view === 'length') {
-      const averages = await settle(statsExplorerService.averages(filter, position), {})
-      extra.averages = Object.fromEntries(
-        Object.entries(averages)
-          .filter(([c]) => ids.has(Number(c)))
-          .map(([c, a]) => [
-            c,
-            view === 'overview'
-              ? {
-                  kda: a.kda,
-                  csPerMin: a.csPerMin,
-                  damage: a.damage,
-                  early: a.byLength[0],
-                  late: a.byLength[a.byLength.length - 1],
-                }
-              : { length: a.length, byLength: a.byLength, games: a.games },
-          ])
-      )
+      loads.averages = async () => {
+        const averages = await statsExplorerService.averages(filter, position)
+        return Object.fromEntries(
+          Object.entries(averages)
+            .filter(([c]) => ids.has(Number(c)))
+            .map(([c, a]) => [
+              c,
+              view === 'overview'
+                ? {
+                    kda: a.kda,
+                    csPerMin: a.csPerMin,
+                    damage: a.damage,
+                    early: a.byLength[0],
+                    late: a.byLength[a.byLength.length - 1],
+                  }
+                : { length: a.length, byLength: a.byLength, games: a.games },
+            ])
+        )
+      }
     }
-    if (view === 'overview' || view === 'early' || view === 'firstblood') {
-      const events = await settle(statsExplorerService.events(filter, position), {
-        early: {},
-        firstBlood: {},
-      })
-      if (view === 'overview') {
-        extra.events = Object.fromEntries(
+    if (view === 'overview') {
+      loads.events = async () => {
+        const events = await statsExplorerService.events(filter, position)
+        return Object.fromEntries(
           [...ids].map((c) => {
             const e = events.early[c]
             const f = events.firstBlood[c]
@@ -99,29 +103,37 @@ export default class StatsController {
             ]
           })
         )
-      } else if (view === 'early') {
-        extra.early = Object.fromEntries(
-          Object.entries(events.early).filter(([c]) => ids.has(Number(c)))
-        )
-      } else {
-        extra.firstBlood = Object.fromEntries(
-          Object.entries(events.firstBlood).filter(([c]) => ids.has(Number(c)))
-        )
+      }
+    }
+    if (view === 'early' || view === 'firstblood') {
+      loads[view === 'early' ? 'early' : 'firstBlood'] = async () => {
+        const events = await statsExplorerService.events(filter, position)
+        const of = view === 'early' ? events.early : events.firstBlood
+        return Object.fromEntries(Object.entries(of).filter(([c]) => ids.has(Number(c))))
       }
     }
     if (view === 'regions') {
-      const regions = await settle(statsExplorerService.regions(filter, position), {})
-      extra.byRegion = Object.fromEntries(
-        Object.entries(regions).filter(([c]) => ids.has(Number(c)))
-      )
+      loads.byRegion = async () => {
+        const regions = await statsExplorerService.regions(filter, position)
+        return Object.fromEntries(Object.entries(regions).filter(([c]) => ids.has(Number(c))))
+      }
     }
     if (view === 'items') {
-      const [items, names] = await Promise.all([
-        settle(statsExplorerService.items(filter, position), []),
-        riotAssetsService.names('item').catch(() => ({}) as Record<string, string>),
-      ])
-      extra.items = items.map((i) => ({ ...i, name: names[i.item] ?? null }))
+      loads.items = async () => {
+        const [items, names] = await Promise.all([
+          statsExplorerService.items(filter, position),
+          riotAssetsService.names('item').catch(() => ({}) as Record<string, string>),
+        ])
+        return items.map((i) => ({ ...i, name: names[i.item] ?? null }))
+      }
     }
+    const blocks = onceEach(loads)
+    const partial = Boolean(request.header('x-inertia-partial-data'))
+    const { ready, waiting } = partial
+      ? { ready: {}, waiting: Object.keys(blocks) }
+      : await settle(blocks, READY_MS)
+    const extra: Record<string, unknown> = { ...ready }
+    for (const k of waiting) extra[k] = inertia.defer(blocks[k], 'explorer')
 
     const roleGames = rows.reduce((n, r) => n + r.games, 0)
     const label = ROLE_OF[position].label
