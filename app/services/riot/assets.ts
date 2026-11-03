@@ -13,6 +13,7 @@ import {
   MANIFEST_TTL,
   MASTERY_CREST_MAX,
   MAX_ASSET_BYTES,
+  STAND_IN_TTL,
   TIERS,
   VERSIONS_TTL_MS,
 } from '#constants/assets'
@@ -128,8 +129,8 @@ export class RiotAssetsService {
    */
   async championKeys(): Promise<Record<string, string>> {
     const release = await this.live()
-    const keys = await this.cached(`riot:champion-keys:${release.cdragon}`, async () => {
-      const raw = await this.downloadJson(`${gameData(release)}/${MANIFESTS.champion}`)
+    const key = `riot:champion-keys:${release.cdragon}`
+    const keys = await this.cached(key, release, MANIFESTS.champion!, (raw) => {
       const out: Record<string, string> = {}
       for (const row of Array.isArray(raw) ? raw : []) {
         const id = Number(row?.id)
@@ -145,8 +146,8 @@ export class RiotAssetsService {
   /** Every champion on the live patch: id, name, Data Dragon alias (`MonkeyKing`) and classes. */
   async championList(): Promise<ChampionEntry[]> {
     const release = await this.live()
-    const list = await this.cached(`riot:champion-list:v2:${release.cdragon}`, async () => {
-      const raw = await this.downloadJson(`${gameData(release)}/${MANIFESTS.champion}`)
+    const key = `riot:champion-list:v2:${release.cdragon}`
+    const list = await this.cached(key, release, MANIFESTS.champion!, (raw) => {
       const out: ChampionEntry[] = []
       for (const row of Array.isArray(raw) ? raw : []) {
         const id = Number(row?.id)
@@ -171,8 +172,8 @@ export class RiotAssetsService {
    */
   async runeTrees(): Promise<RuneTrees> {
     const release = await this.live()
-    const trees = await this.cached(`riot:rune-trees:${release.cdragon}`, async () => {
-      const raw = await this.downloadJson(`${gameData(release)}/${MANIFESTS.perkstyle}`)
+    const key = `riot:rune-trees:${release.cdragon}`
+    const trees = await this.cached(key, release, MANIFESTS.perkstyle!, (raw) => {
       const styles: RuneTrees['styles'] = {}
       let shards: number[][] = []
       for (const style of Array.isArray(raw?.styles) ? raw.styles : []) {
@@ -292,8 +293,8 @@ export class RiotAssetsService {
     const file = MANIFESTS[kind]
     if (!file) return {}
 
-    const manifest = await this.cached(`riot:manifest:${release.cdragon}:${kind}`, async () => {
-      const raw = await this.downloadJson(`${gameData(release)}/${file}`)
+    const key = `riot:manifest:${release.cdragon}:${kind}`
+    const manifest = await this.cached(key, release, file, (raw) => {
       const parsed = raw ? parseManifest(kind, raw, release) : {}
       return Object.keys(parsed).length ? parsed : null
     })
@@ -302,16 +303,24 @@ export class RiotAssetsService {
 
   /** The art paths in one champion's own file, shared by its splashes and abilities. */
   private champion(id: string, release: Release): Promise<ChampionArt | null> {
-    return this.cached(`riot:champion:${release.cdragon}:${id}`, async () =>
-      parseChampion(await this.downloadJson(`${gameData(release)}/v1/champions/${id}.json`))
-    )
+    const key = `riot:champion:${release.cdragon}:${id}`
+    return this.cached(key, release, `v1/champions/${id}.json`, parseChampion)
   }
 
   /**
-   * Read-through cache for parsed upstream JSON. A miss (null) is never
-   * stored: that would serve nothing for the whole TTL over one blip upstream.
+   * One game-data file of a release, parsed, through a read-through cache. A miss (null) is
+   * never stored: that would serve nothing for the whole TTL over one blip upstream.
+   *
+   * Community Dragon publishes a patch hours after Data Dragon names it live, and answers 404
+   * for it until then: the file from `latest` (the patch before) stands in meanwhile, cached
+   * briefly so the patch's own file takes over once it is out.
    */
-  private cached<T>(key: string, load: () => Promise<T | null>): Promise<T | null> {
+  private cached<T>(
+    key: string,
+    release: Release,
+    file: string,
+    parse: (raw: any) => T | null
+  ): Promise<T | null> {
     return this.shared(key, async () => {
       try {
         const hit = await cache.get<T>({ key })
@@ -320,12 +329,18 @@ export class RiotAssetsService {
         // A cache outage falls through to upstream.
         logger.warn({ err: error, key }, 'asset cache read failed')
       }
-      const value = await load()
+      let value = parse(await this.downloadJson(`${gameData(release)}/${file}`))
+      let ttl = MANIFEST_TTL
+      if (value === null && release.cdragon !== LATEST.cdragon) {
+        value = parse(await this.downloadJson(`${gameData(LATEST)}/${file}`))
+        ttl = STAND_IN_TTL
+        if (value !== null) logger.info({ key }, 'riot game data not out yet, serving latest')
+      }
       if (value === null) {
         logger.warn({ key }, 'riot game data unavailable')
         return null
       }
-      await cache.set({ key, value, ttl: MANIFEST_TTL }).catch(() => {})
+      await cache.set({ key, value, ttl }).catch(() => {})
       return value
     })
   }

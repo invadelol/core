@@ -3,7 +3,7 @@ import cache from '@adonisjs/cache/services/main'
 import drive from '@adonisjs/drive/services/main'
 
 import riotAssets, { RiotAssetsService } from '#services/riot/assets'
-import { gameData } from '#services/riot/asset_paths'
+import { LATEST, gameData } from '#services/riot/asset_paths'
 import { DDRAGON } from '#constants/assets'
 
 const PNG = Buffer.from('89504e470d0a1a0a0000000d49484452', 'hex')
@@ -155,5 +155,26 @@ test.group('Asset proxy', (group) => {
       .header('origin', 'tauri://localhost')
     response.assertStatus(200)
     response.assertHeader('cross-origin-resource-policy', 'cross-origin')
+  })
+
+  test('a patch Community Dragon has not published yet reads latest meanwhile', async ({
+    assert,
+  }) => {
+    // Data Dragon names 16.21 live while Community Dragon only has `latest` (16.20).
+    const original = globalThis.fetch
+    globalThis.fetch = (async (input: string | URL | Request) => {
+      const url = String(input instanceof Request ? input.url : input)
+      if (url === `${DDRAGON}/api/versions.json`) return Response.json(['16.21.1', '16.20.1'])
+      if (url === `${gameData(LATEST)}/v1/champion-summary.json`) {
+        return Response.json([{ id: 266, name: 'Aatrox', alias: 'Aatrox', roles: ['fighter'] }])
+      }
+      return new Response('not found', { status: 404 })
+    }) as typeof fetch
+    stub = { calls: [], restore: () => (globalThis.fetch = original) }
+    await cache.deleteMany({ keys: ['riot:champion-list:v2:16.21', 'riot:champion-keys:16.21'] })
+
+    const list = await riotAssets.championList()
+    assert.deepEqual(list, [{ id: 266, name: 'Aatrox', alias: 'Aatrox', roles: ['fighter'] }])
+    assert.deepEqual(await riotAssets.championKeys(), { aatrox: '266' })
   })
 })
