@@ -8,7 +8,7 @@ test.group('Site share cards', () => {
     const response = await client.get('/og/home.jpg?v=1')
     response.assertStatus(200)
     response.assertHeader('content-type', 'image/jpeg')
-    const etag = response.header('etag')
+    const etag = String(response.header('etag'))
     assert.match(etag, /^"[\w-]+"$/)
     const again = await client.get('/og/home.jpg?v=1').header('if-none-match', etag)
     again.assertStatus(304)
