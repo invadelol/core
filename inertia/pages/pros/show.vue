@@ -24,6 +24,8 @@ import {
   tierName,
 } from '../../lib/board.js'
 import { proPage } from '../../lib/pro_pages.js'
+import { matchOrNull, type ProMatch } from '../../lib/pro_matches.js'
+import MatchCard from '../../components/pros/MatchCard.vue'
 import '../../css/champions.css'
 
 interface LeagueRef {
@@ -102,7 +104,16 @@ const props = defineProps<{
     record: { games: number; wins: number; kills: number; deaths: number; assists: number }
     champions: { champion: number; games: number; wins: number; kda: number }[]
     builds: Build[]
+    /** Real name, nationality (ISO-2) and birthday (`yyyy-mm-dd`), when known. */
+    about?: {
+      firstName: string | null
+      lastName: string | null
+      nationality: string | null
+      birthday: string | null
+    } | null
   }
+  /** Their team's next match and last result. */
+  matches?: { next: ProMatch | null; last: ProMatch | null }
   now?: number
   names?: Record<number, [string, string]>
 }>()
@@ -117,6 +128,26 @@ const title = computed(
   () => (page.props.social as { title?: string } | undefined)?.title ?? player.value.name
 )
 const now = computed(() => props.now ?? Date.now())
+const about = computed(() => player.value.about ?? null)
+const realName = computed(() =>
+  [about.value?.firstName, about.value?.lastName].filter(Boolean).join(' ')
+)
+const nationality = computed(() => about.value?.nationality ?? player.value.country)
+/** Their age on the page's date (the server's, so both renders agree). */
+const age = computed(() => {
+  const b = about.value?.birthday
+  const m = b ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(b) : null
+  if (!m) return null
+  const d = new Date(now.value)
+  const [y, mo, da] = [Number(m[1]), Number(m[2]), Number(m[3])]
+  const years =
+    d.getUTCFullYear() -
+    y -
+    (d.getUTCMonth() + 1 < mo || (d.getUTCMonth() + 1 === mo && d.getUTCDate() < da) ? 1 : 0)
+  return years > 10 && years < 80 ? years : null
+})
+const nextMatch = computed(() => matchOrNull(props.matches?.next))
+const lastMatch = computed(() => matchOrNull(props.matches?.last))
 const lane = computed(() => proRole(player.value.role))
 const best = computed(() => player.value.accounts.find((a) => a.tier) ?? null)
 const record = computed(() => player.value.record)
@@ -202,9 +233,10 @@ const back = computed(() =>
       </Crumbs>
 
       <section class="nb-panel nb-prohead" :aria-label="player.name">
-        <ProPhoto :width="128" :height="144" />
+        <ProPhoto :slug="player.slug" :photo="player.photo" :width="128" :height="144" eager fluid />
         <div class="min-w-0">
           <h1>{{ player.name }}</h1>
+          <p v-if="realName" class="real">{{ realName }}</p>
           <div class="tags">
             <Link v-if="player.team" :href="`/team/${player.team.slug}`"
               ><Logo :team="player.team" :size="20" eager />{{ player.team.name }}</Link
@@ -217,7 +249,8 @@ const back = computed(() =>
             <span v-else-if="player.staff">{{
               (player.role ?? '').charAt(0) + (player.role ?? '').slice(1).toLowerCase()
             }}</span>
-            <span v-if="player.country">{{ countryName(player.country) }}</span>
+            <span v-if="nationality">{{ countryName(nationality) }}</span>
+            <span v-if="age" class="num">{{ age }} years old</span>
           </div>
           <div v-if="socials.length" class="links">
             <a
@@ -268,6 +301,16 @@ const back = computed(() =>
 
       <div class="pp-cols">
         <div class="nb-stack aside">
+          <section v-if="player.team && (nextMatch || lastMatch)" class="nb-panel">
+            <div class="nb-ph">
+              <h2>Matches</h2>
+              <span class="end nb-meta">{{ player.team.name }}</span>
+            </div>
+            <div class="nb-pb pp-matches">
+              <MatchCard v-if="nextMatch" :match="nextMatch" show-league />
+              <MatchCard v-if="lastMatch" :match="lastMatch" show-league />
+            </div>
+          </section>
           <section class="nb-panel">
             <div class="nb-ph">
               <h2>Accounts</h2>

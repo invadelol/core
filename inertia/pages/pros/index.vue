@@ -26,6 +26,8 @@ import {
 } from '../../lib/board.js'
 import { afterPaint } from '../../lib/after_paint.js'
 import { leagueData } from '../../lib/pro_pages.js'
+import { matchList, type ProMatch } from '../../lib/pro_matches.js'
+import MatchCard from '../../components/pros/MatchCard.vue'
 import '../../css/champions.css'
 
 interface LeagueRef {
@@ -48,6 +50,7 @@ interface Best {
 interface Player {
   slug: string
   name: string
+  photo?: string
   role: string | null
   country: string | null
   starter: boolean
@@ -62,6 +65,7 @@ interface LadderRow {
   pro: {
     slug: string
     name: string
+    photo?: string
     role: string | null
     country: string | null
     team: TeamRef | null
@@ -94,6 +98,11 @@ const props = defineProps<{
   page?: number
   pageSize?: number
   filters?: { server: string | null; role: string | null }
+  /** The league's next games, and the international events running now. */
+  matches?: {
+    league: ProMatch[]
+    international: { next: ProMatch[]; results: ProMatch[] }
+  }
 }>()
 
 const inertia = usePage()
@@ -103,6 +112,16 @@ const teamGroups = computed(() =>
     .filter((g) => g?.league)
     .map((g) => ({ ...g, teams: Array.isArray(g.teams) ? g.teams : [] }))
 )
+const leagueGames = computed(() => matchList(props.matches?.league))
+const intlNext = computed(() => matchList(props.matches?.international?.next))
+const intlGames = computed(() =>
+  intlNext.value.length ? intlNext.value : matchList(props.matches?.international?.results)
+)
+/** The international event's name when one runs, else "International". */
+const intlLeague = computed(() => {
+  const leagues = new Set(intlGames.value.map((m) => m.league?.slug))
+  return leagues.size === 1 ? (intlGames.value[0]?.league ?? null) : null
+})
 const ladderRows = computed(() =>
   (Array.isArray(props.ladder) ? props.ladder : []).filter((r) => r?.pro && r.account)
 )
@@ -394,6 +413,38 @@ const crumbs = computed(() => {
               </div>
             </div>
 
+            <section v-if="intlGames.length" class="nb-panel pm-strip" aria-labelledby="h-intl">
+              <div class="nb-ph">
+                <Logo v-if="intlLeague" :league="intlLeague" :size="20" />
+                <h2 id="h-intl">{{ intlLeague?.name ?? 'International' }}</h2>
+                <span class="nb-meta">{{ intlNext.length ? 'Next games' : 'Latest results' }}</span>
+                <span v-if="intlGames[0]?.tournament" class="end nb-meta">{{
+                  intlGames[0].tournament
+                }}</span>
+              </div>
+              <div class="nb-pb">
+                <div class="pm-grid">
+                  <MatchCard
+                    v-for="mt in intlGames"
+                    :key="mt.id"
+                    :match="mt"
+                    :show-league="!intlLeague"
+                  />
+                </div>
+              </div>
+            </section>
+            <section v-if="leagueGames.length" class="nb-panel pm-strip" aria-labelledby="h-next">
+              <div class="nb-ph">
+                <h2 id="h-next">Next games</h2>
+                <span class="nb-meta">{{ leagueView.league.code }}</span>
+              </div>
+              <div class="nb-pb">
+                <div class="pm-grid">
+                  <MatchCard v-for="mt in leagueGames" :key="mt.id" :match="mt" />
+                </div>
+              </div>
+            </section>
+
             <section class="nb-panel" style="margin-bottom: 12px">
               <div class="nb-ph">
                 <h2>Teams</h2>
@@ -483,7 +534,7 @@ const crumbs = computed(() => {
               >
                 <span class="rk num" role="cell">{{ place.get(p.slug) }}</span>
                 <span class="c" role="cell">
-                  <ProPhoto :width="36" :height="36" />
+                  <ProPhoto :slug="p.slug" :photo="p.photo" :width="36" :height="36" />
                   <span class="min-w-0"
                     ><Link :href="`/pro/${p.slug}`" class="stretch" prefetch="hover"
                       ><b>{{ p.name }}</b></Link
@@ -619,7 +670,7 @@ const crumbs = computed(() => {
               >
                 <span class="rk num" role="cell">{{ r.place }}</span>
                 <span class="c" role="cell">
-                  <ProPhoto :width="30" :height="30" />
+                  <ProPhoto :slug="r.pro.slug" :photo="r.pro.photo" :width="30" :height="30" />
                   <span class="min-w-0"
                     ><Link :href="`/pro/${r.pro.slug}`" class="stretch" prefetch="hover"
                       ><b>{{ r.pro.name }}</b></Link
