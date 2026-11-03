@@ -45,6 +45,7 @@ const ChangelogController = () => import('#controllers/changelog_controller')
 const MultisearchController = () => import('#controllers/multisearch_controller')
 const ChampionsController = () => import('#controllers/champions_controller')
 const ProsController = () => import('#controllers/pros_controller')
+const StatsController = () => import('#controllers/stats_controller')
 
 // API routes group
 router
@@ -52,6 +53,8 @@ router
     router.get('/summoners/search', [SummonersController, 'search'])
     /** Pros and teams whose name starts with `q`, for the site's search. */
     router.get('/pros/search', [ProsController, 'search'])
+    /** One stored game's ten players, for a pro's recent games. */
+    router.get('/pros/games/:matchId', [ProsController, 'board'])
     router.post('/summoners/sync', [SummonersController, 'sync'])
     /**
      * Summoner spells from our own ranked games, for any champion in any role. Before the
@@ -152,6 +155,8 @@ router
 
 /** A team's logo from our own origin, before the game art below takes `/cdn/:kind/:id`. */
 router.get('/cdn/team/:id', [ProsController, 'logo'])
+/** A league's logo (`resources/leagues`), before the game art below takes `/cdn/:kind/:id`. */
+router.get('/cdn/league/:slug', [ProsController, 'leagueLogo'])
 
 /**
  * Riot game art, proxied and mirrored so the site and the desktop app never
@@ -183,6 +188,8 @@ router
   .get('/champions/:slug/:tab?', [ChampionsController, 'show'])
   .where('tab', /^(build|runes|items|matchups|statistics|pros)$/)
 router.get('/tier-list', [ChampionsController, 'tierList'])
+/** Every champion of a role in one table, and its views (`?view=early`). */
+router.get('/stats', [StatsController, 'index'])
 
 /** Professional players and teams, before the summoner catch-all below. */
 router.get('/pros', [ProsController, 'index'])

@@ -4,13 +4,18 @@ import championStatsService from '#services/champion_stats_service'
 import runeStatsService from '#services/rune_stats_service'
 import spellStatsService from '#services/spell_stats_service'
 import { latestPatch } from '#services/ranked_games_service'
+import statsExplorerService from '#services/stats_explorer_service'
+import proService from '#services/pro_service'
+import { LEAGUES } from '#services/pro_leagues'
+import { POSITIONS } from '#services/champion_stats'
 import type { Position, RoleStat } from '#services/champion_stats'
 import type { Role } from '#services/ranked_stats'
 
 /**
- * Answers the default champion pages before anyone asks: the champion list and tier list, and
- * the build and statistics tabs of every champion in its main role (default rank, newest patch,
- * every region), and the tier list at all ranks (the desktop app's matchups).
+ * Answers the default champion pages before anyone asks: the champion list and tier list, every
+ * block of every champion's page in its main role (default rank, newest patch, every region), the
+ * stats explorer's role tables, the pros' league pages, and the tier list at all ranks (the
+ * desktop app's matchups).
  * Runs at start, when a new patch becomes the default, and every few hours; an answer already
  * fresh in the stats cache costs nothing, so a run mostly refreshes what went stale.
  */
@@ -40,6 +45,20 @@ export async function warmStats() {
     const best = main.get(r.champion)
     if (!best || r.games > best.games) main.set(r.champion, r)
   }
+  // The stats explorer's tables of every role (one read of the role's games each), and the
+  // pros' league pages.
+  for (const position of POSITIONS) {
+    await Promise.all([
+      statsExplorerService.averages(filter, position),
+      statsExplorerService.events(filter, position),
+      statsExplorerService.items(filter, position),
+      statsExplorerService.regions(filter, position),
+    ]).catch((error) => logger.warn({ err: error, position }, 'stats explorer warm-up failed'))
+  }
+  for (const league of LEAGUES) {
+    await proService.league(league.slug).catch(() => null)
+  }
+
   const queue = [...main.values()]
   const worker = async () => {
     for (let r = queue.shift(); r; r = queue.shift()) {
@@ -53,6 +72,9 @@ export async function warmStats() {
         championStatsService.byRank(filter, r.champion, r.position),
         championStatsService.trend(filter, r.champion, r.position),
         championStatsService.profile(filter, r.champion, r.position),
+        championStatsService.early(filter, r.champion, r.position),
+        championStatsService.firstBlood(filter, r.champion, r.position),
+        championStatsService.details(filter, r.champion, r.position),
       ]).catch((error) =>
         logger.warn({ err: error, champion: r.champion }, 'stats warm-up of a champion failed')
       )
