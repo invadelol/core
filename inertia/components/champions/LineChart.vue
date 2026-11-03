@@ -117,7 +117,7 @@ const geo = computed(() => {
   text-align: right;
   font: 500 10.5px var(--font);
   font-style: normal;
-  color: var(--text-3);
+  color: var(--nb-quiet, var(--text-3));
 }
 .b {
   position: absolute;
@@ -140,6 +140,6 @@ const geo = computed(() => {
   justify-content: space-between;
   margin-top: 8px;
   font-size: 10.5px;
-  color: var(--text-3);
+  color: var(--nb-quiet, var(--text-3));
 }
 </style>
