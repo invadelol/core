@@ -43,7 +43,7 @@ const PRO_CACHE = { freshMs: 30 * 60_000, keepMs: 86_400_000 }
  * deploys and serves a stale one while its refresh runs, so a release that changes what a page
  * reads must bump it: otherwise the pages get the previous release's answers for up to a day.
  */
-export const PRO_SHAPE = 3
+export const PRO_SHAPE = 4
 /** How far back a pro's games are read. */
 const GAMES_DAYS = 30
 const CHAMPION_GAMES_DAYS = 14
