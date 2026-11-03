@@ -766,7 +766,7 @@
   }
 
   .sh-tier.t0 {
-    color: var(--gold-c);
+    color: color-mix(in srgb, var(--gold-c) var(--tier-ink, 100%), var(--text-1));
     background: rgb(var(--gold-rgb) / 0.13);
   }
 
@@ -1193,6 +1193,22 @@
 
   .iv-seg > button:focus-visible {
     box-shadow: var(--focus);
+  }
+
+  /* Rank and tier inks are drawn for dark sheets: on light ones they lean toward the body ink
+     to read at AA (`--tier-ink`, read by the rank and tier colours). */
+  [data-theme='light'] {
+    --tier-ink: 62%;
+  }
+  @media (prefers-color-scheme: light) {
+    [data-theme='system'] {
+      --tier-ink: 62%;
+    }
+  }
+
+  /* An option not chosen still reads at AA (the package draws it in the label ink). */
+  .iv-seg > button:not(.on) {
+    color: color-mix(in srgb, var(--text-3) 65%, var(--text-2));
   }
 }
 

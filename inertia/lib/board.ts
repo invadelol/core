@@ -88,7 +88,9 @@ export const tierName = (tier: string | null | undefined) =>
   tier ? (TIER_NAMES[tier] ?? tier) : ''
 /** A tier's colour, for its name next to its crest. */
 export const tierColor = (tier: string | null | undefined) =>
-  tier ? `color: var(--tier-${tier.toLowerCase()})` : 'color: var(--text-3)'
+  tier
+    ? `color: color-mix(in srgb, var(--tier-${tier.toLowerCase()}) var(--tier-ink, 100%), var(--text-1))`
+    : 'color: var(--nb-quiet, var(--text-3))'
 
 /** A country code as a name ("FR" → "France"), or the code when unknown. */
 let regionNames: Intl.DisplayNames | null = null

@@ -674,7 +674,7 @@ function submit() {
       />
       <kbd
         v-else-if="palette"
-        class="pointer-events-none absolute right-3 top-1/2 hidden h-[20px] -translate-y-1/2 items-center rounded-[4px] bg-control px-1.5 font-sans text-[11px] font-medium text-ink-3 pointer-fine:flex"
+        class="pointer-events-none absolute right-3 top-1/2 hidden h-[20px] -translate-y-1/2 items-center rounded-[4px] bg-control px-1.5 font-sans text-[11px] font-medium text-ink-2 pointer-fine:flex"
       >
         Esc
       </kbd>
