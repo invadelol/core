@@ -4,6 +4,14 @@ import buildStatsService from '#services/build_stats_service'
 import { AnswerCache, RANKED_SOLO } from '#services/ranked_stats'
 import { latestPatch, rows } from '#services/ranked_games_service'
 import { StatsCache } from '#services/stats_cache'
+import {
+  LEAGUES,
+  leagueBySlug,
+  leagueOfTeam,
+  leagueRef,
+  type LeagueRef,
+} from '#services/pro_leagues'
+import proLadderService, { placesBefore, rankScore } from '#services/pro_ladder_service'
 
 /**
  * Professional players, their teams and their accounts (`pro_*` tables), and what their games
@@ -90,8 +98,24 @@ export interface ProGame {
   secondaryStyle: number
   durationSec: number
   opponent: number | null
+  /** The lane opponent's account (never sent to a page: `opponentPro` / `opponentName` are). */
+  opponentPuuid?: string
+  /** The lane opponent's Riot ID name, when they are not a pro. */
+  opponentName?: string
+  /** The lane opponent, when they are a pro. */
+  opponentPro?: ProTag | null
+  /** The other pros of the game: their tag, champion and side. */
+  pros?: { pro: ProTag; champion: number; ally: boolean }[]
+  /** Skill points in order (1 Q, 2 W, 3 E, 4 R), only read for a pro's own builds. */
+  skillOrder?: number[]
   /** Set on a champion's pro games: who played it. */
   pro?: ProTag
+}
+
+/** The league of a team, by its slug. */
+const leagueOf = (teamSlug: string | null | undefined): LeagueRef | null => {
+  const l = leagueOfTeam(teamSlug)
+  return l ? leagueRef(l) : null
 }
 
 const escapeLike = (s: string) => s.replace(/[\\%_]/g, (c) => `\\${c}`)
@@ -158,6 +182,7 @@ export class ProService {
   #tags = new AnswerCache(4096)
   #pages = new StatsCache('pro-pages', PRO_CACHE)
   #games = new StatsCache('pro-games', PRO_CACHE)
+  #boards = new StatsCache('pro-boards', { freshMs: 86_400_000, keepMs: 7 * 86_400_000 })
 
   /** The pro behind a Riot ID, or null. Never throws: a profile renders without its tag. */
   async byRiotId(gameName: string, tagLine: string): Promise<ProTag | null> {
@@ -265,9 +290,11 @@ export class ProService {
         ...tagOf(row),
         id: row.id as string,
         socials: (row.socials ?? {}) as Record<string, string>,
+        league: leagueOf(row.team_slug),
         accounts: accounts.rows.map(accountOf),
         teams: history.rows.map((r: Record<string, any>) => ({
           team: teamOf(r)!,
+          league: leagueOf(r.team_slug),
           title: r.title,
           role: r.role,
           current: r.current,
@@ -319,6 +346,14 @@ export class ProService {
         (m: { current: boolean; playerId: string | null }) => m.current && m.playerId
       )
       const games = await this.games(current.map((m: { playerId: string }) => m.playerId))
+      // Where former players play now.
+      const formerIds = roster
+        .filter((m: { current: boolean; playerId: string | null }) => !m.current && m.playerId)
+        .map((m: { playerId: string }) => m.playerId)
+      const now = await this.tags([...new Set(formerIds)] as string[])
+      const league = leagueOfTeam(team.slug)
+      const standing = league ? await this.league(league.slug) : null
+      const place = standing?.teams.findIndex((t) => t.id === team.id) ?? -1
       return {
         id: team.id as string,
         slug: team.slug as string,
@@ -327,7 +362,14 @@ export class ProService {
         region: team.region as string | null,
         active: team.active as boolean,
         socials: (team.socials ?? {}) as Record<string, string>,
-        roster,
+        league: league ? leagueRef(league) : null,
+        /** Average LP of the starters in Master and above, and the team's place in its league by it. */
+        lp: place >= 0 ? (standing!.teams[place].lp ?? null) : null,
+        place: place >= 0 && standing!.teams[place].lp !== null ? place + 1 : null,
+        roster: roster.map((m: Record<string, any>) => ({
+          ...m,
+          now: !m.current && m.playerId ? (now.get(m.playerId)?.team ?? null) : null,
+        })),
         ...games,
       }
     })
@@ -443,11 +485,22 @@ export class ProService {
             if (tag) g.pro = tag
           }
         }
-        return { games: games.slice(0, 20), ...(await summarizeGames(games)) }
+        const recent = games.slice(0, 20)
+        await this.whoPlayed(recent, new Set(playerIds)).catch((error) =>
+          logger.warn({ err: error }, 'pro game players failed')
+        )
+        const summary = await summarizeGames(games)
+        const kinds = playerIds.length === 1 ? await itemKinds() : null
+        return {
+          games: recent.map(publicGame),
+          ...summary,
+          builds: kinds ? buildsOf(games, kinds, summary.champions.slice(0, 8)) : [],
+          pools: playerIds.length > 1 ? poolsOf(games) : {},
+        }
       })
       .catch((error) => {
         logger.warn({ err: error }, 'pro games failed')
-        return { games: [] as ProGame[], ...emptySummary() }
+        return { games: [] as ProGame[], ...emptySummary(), builds: [] as ProBuild[], pools: {} }
       })
   }
 
@@ -502,6 +555,282 @@ export class ProService {
       })
   }
 
+  /**
+   * A league's page: its teams (logo, players, average LP of the starters in Master and above) and
+   * its current players, ranked by their best account, with their last 24 hours on that ranking,
+   * their ranked record of the last 30 days and the champions they play most.
+   */
+  async league(slug: string) {
+    const league = leagueBySlug(slug)
+    if (!league) return null
+    return this.#pages.get(`league:${league.slug}`, async () => {
+      const { rows: found } = await db.rawQuery(
+        `SELECT t.id AS team_id, t.slug AS team_slug, t.name AS team_name, t.short_name AS team_short,
+                t.region AS team_region, m.title, m.role AS member_role,
+                p.id AS player_id, p.slug, p.name, p.role, p.country,
+                a.id AS account_id, a.platform, a.tier AS best_tier, a.division AS best_division,
+                a.lp AS best_lp,
+                (SELECT count(*)::int FROM pro_account x WHERE x.player_id = p.id) AS accounts
+         FROM pro_team t
+         JOIN pro_team_member m ON m.team_id = t.id AND m.current AND m.title IN ('player', 'sub')
+         JOIN pro_player p ON p.id = m.player_id
+         LEFT JOIN LATERAL (
+           SELECT a.id, a.platform, a.tier, a.division, a.lp FROM pro_account a
+           WHERE a.player_id = p.id AND a.tier IS NOT NULL
+           ORDER BY ${TIER_SQL} NULLS LAST, a.division NULLS LAST, a.lp DESC NULLS LAST LIMIT 1
+         ) a ON true
+         WHERE t.slug = ANY(?)`,
+        [league.teams]
+      )
+      const players = found.map((r: Record<string, any>) => ({
+        ...tagOf(r),
+        playerId: r.player_id as string,
+        starter: r.title === 'player',
+        role: r.member_role ?? r.role ?? null,
+        accounts: r.accounts as number,
+        best: r.account_id
+          ? {
+              id: r.account_id as string,
+              platform: r.platform as string,
+              tier: r.best_tier as string,
+              division: r.best_division as number | null,
+              lp: (r.best_lp ?? 0) as number,
+            }
+          : null,
+      }))
+      const [records, moves] = await Promise.all([
+        this.records(players.map((p: { playerId: string }) => p.playerId)),
+        proLadderService
+          .movement(
+            players.flatMap((p: { best: { id: string } | null }) => (p.best ? [p.best.id] : []))
+          )
+          .catch(() => new Map()),
+      ])
+      const score = (p: (typeof players)[number]) =>
+        p.best ? (rankScore(p.best.tier, p.best.division, p.best.lp) ?? -1) : -1
+      players.sort(
+        (a: (typeof players)[number], b: (typeof players)[number]) => score(b) - score(a)
+      )
+      const before = placesBefore(
+        players.map((p: (typeof players)[number]) => ({
+          score: score(p),
+          lp: p.best ? moves.get(p.best.id)?.lp : null,
+        }))
+      )
+      const rowsOut = players.map((p: (typeof players)[number], i: number) => {
+        const move = p.best ? moves.get(p.best.id) : undefined
+        const rec = records.get(p.playerId)
+        return {
+          slug: p.slug,
+          name: p.name,
+          role: p.role,
+          country: p.country,
+          starter: p.starter,
+          team: p.team,
+          best: p.best
+            ? {
+                platform: p.best.platform,
+                tier: p.best.tier,
+                division: p.best.division,
+                lp: p.best.lp,
+              }
+            : null,
+          move: move && p.best ? { places: before[i] - (i + 1), lp: move.lp } : null,
+          record: rec ? { games: rec.games, wins: rec.wins } : null,
+          champions: rec?.champions.slice(0, 3) ?? [],
+        }
+      })
+      const teams = new Map<string, { team: TeamRef; players: number; apex: number[] }>()
+      for (const p of players) {
+        if (!p.team) continue
+        const t = teams.get(p.team.id) ?? { team: p.team, players: 0, apex: [] as number[] }
+        t.players++
+        if (p.starter && p.best && rankScore(p.best.tier, p.best.division, p.best.lp)! >= 2800) {
+          t.apex.push(p.best.lp)
+        }
+        teams.set(p.team.id, t)
+      }
+      return {
+        league: leagueRef(league),
+        teams: [...teams.values()]
+          .map((t) => ({
+            ...t.team,
+            players: t.players,
+            lp: t.apex.length
+              ? Math.round(t.apex.reduce((n, x) => n + x, 0) / t.apex.length)
+              : null,
+          }))
+          .sort((a, b) => (b.lp ?? -1) - (a.lp ?? -1) || a.name.localeCompare(b.name)),
+        players: rowsOut,
+        counts: {
+          teams: teams.size,
+          players: players.length,
+          accounts: players.reduce((n: number, p: (typeof players)[number]) => n + p.accounts, 0),
+        },
+      }
+    })
+  }
+
+  /** Every league with its teams (logo, players, average LP of the starters in Master and above). */
+  async leagueTeams() {
+    const all = await Promise.all(LEAGUES.map((l) => this.league(l.slug)))
+    return all
+      .filter((l): l is NonNullable<typeof l> => Boolean(l))
+      .map((l) => ({ league: l.league, teams: l.teams }))
+  }
+
+  /**
+   * Each player's ranked record of the last 30 days and the champions they played most, from one
+   * read of their accounts' games (`participants` is keyed by player).
+   */
+  async records(playerIds: string[]) {
+    const out = new Map<
+      string,
+      { games: number; wins: number; champions: { champion: number; games: number }[] }
+    >()
+    if (!playerIds.length) return out
+    const found = await this.puuids(playerIds).catch(() => [])
+    if (!found.length) return out
+    const playerOf = new Map(found.map((f) => [f.puuid, f.player_id]))
+    const counted = await rows(
+      `SELECT puuid, champion_id, count(), sum(win) FROM (
+         SELECT match_id, puuid, champion_id, win FROM participants
+         WHERE puuid IN {puuids:Array(String)} AND queue_id = ${RANKED_SOLO}
+           AND game_start_ms >= {since:UInt64}
+         LIMIT 1 BY match_id, puuid
+       )
+       GROUP BY puuid, champion_id`,
+      { puuids: [...playerOf.keys()], since: Date.now() - GAMES_DAYS * 86_400_000 }
+    ).catch((error) => {
+      logger.warn({ err: error }, 'pro records failed')
+      return []
+    })
+    const champs = new Map<string, Map<number, number>>()
+    for (const [puuid, champion, games, wins] of counted) {
+      const player = playerOf.get(String(puuid))
+      if (!player) continue
+      const rec = out.get(player) ?? { games: 0, wins: 0, champions: [] }
+      rec.games += Number(games)
+      rec.wins += Number(wins)
+      out.set(player, rec)
+      const c = champs.get(player) ?? new Map<number, number>()
+      c.set(Number(champion), (c.get(Number(champion)) ?? 0) + Number(games))
+      champs.set(player, c)
+    }
+    for (const [player, rec] of out) {
+      rec.champions = [...(champs.get(player) ?? [])]
+        .map(([champion, games]) => ({ champion, games }))
+        .sort((a, b) => b.games - a.games)
+    }
+    return out
+  }
+
+  /**
+   * Who played some games: for each, the lane opponent when a pro, and every other pro in it with
+   * their champion and side. One read of the games' players and their pro accounts.
+   */
+  private async whoPlayed(games: ProGame[], self: Set<string>) {
+    if (!games.length) return
+    const found = await rows(
+      `SELECT p.match_id, p.team_id, p.champion_id, p.puuid, toString(k.player_id)
+       FROM (
+         SELECT match_id, team_id, champion_id, puuid FROM participants
+         WHERE match_id IN {ids:Array(String)} AND queue_id = ${RANKED_SOLO}
+         LIMIT 1 BY match_id, puuid
+       ) AS p
+       INNER JOIN (
+         SELECT puuid, any(player_id) AS player_id FROM pro_puuids FINAL
+         WHERE puuid IN (
+           SELECT puuid FROM participants WHERE match_id IN {ids:Array(String)}
+         )
+         GROUP BY puuid
+       ) AS k USING (puuid)`,
+      { ids: games.map((g) => g.matchId) }
+    )
+    const tags = await this.tags([...new Set(found.map((r) => String(r[4])))])
+    const byMatch = new Map<
+      string,
+      { team: number; champion: number; puuid: string; player: string }[]
+    >()
+    for (const [m, team, champion, puuid, player] of found) {
+      const list = byMatch.get(String(m)) ?? []
+      list.push({
+        team: Number(team),
+        champion: Number(champion),
+        puuid: String(puuid),
+        player: String(player),
+      })
+      byMatch.set(String(m), list)
+    }
+    for (const g of games) {
+      const list = byMatch.get(g.matchId) ?? []
+      const mine = list.find((x) => x.champion === g.champion && self.has(x.player))
+      const myTeam = mine?.team
+      g.pros = list
+        .filter((x) => x !== mine && tags.has(x.player))
+        .map((x) => ({ pro: tags.get(x.player)!, champion: x.champion, ally: x.team === myTeam }))
+      const opp = list.find((x) => x.puuid === g.opponentPuuid)
+      g.opponentPro = opp ? (tags.get(opp.player) ?? null) : null
+    }
+  }
+
+  /**
+   * One game's ten players for a pro's page, as two teams: champion, name (the pro's, or the Riot
+   * ID name), score, items. Stored games never change, so it is kept for a day.
+   */
+  async board(matchId: string) {
+    if (!/^[A-Z0-9]{2,5}_\d{5,14}$/.test(matchId)) return null
+    return this.#boards.get(matchId, async () => {
+      const found = await rows(
+        `SELECT p.team_id, p.team_position, p.champion_id, p.riot_id_game_name, p.kills, p.deaths,
+                p.assists, p.item0, p.item1, p.item2, p.item3, p.item4, p.item5, p.win, p.gold_earned,
+                toString(k.player_id)
+         FROM (
+           SELECT * FROM participants
+           WHERE match_id = {id:String} AND queue_id = ${RANKED_SOLO}
+           LIMIT 1 BY puuid
+         ) AS p
+         LEFT JOIN (
+           SELECT puuid, any(player_id) AS player_id FROM pro_puuids FINAL
+           WHERE puuid IN (SELECT puuid FROM participants WHERE match_id = {id:String})
+           GROUP BY puuid
+         ) AS k USING (puuid)`,
+        { id: matchId }
+      )
+      if (!found.length) return null
+      const ids = found.map((r) => String(r[15])).filter((x) => x && !x.startsWith('00000000'))
+      const tags = await this.tags([...new Set(ids)])
+      const ORDER = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
+      const side = (team: number) => {
+        const list = found
+          .filter((r) => Number(r[0]) === team)
+          .map((r) => {
+            const tag = tags.get(String(r[15]))
+            return {
+              position: String(r[1]),
+              champion: Number(r[2]),
+              name: tag?.name ?? String(r[3] ?? ''),
+              pro: tag ? { slug: tag.slug, team: tag.team } : null,
+              kills: Number(r[4]),
+              deaths: Number(r[5]),
+              assists: Number(r[6]),
+              items: r.slice(7, 13).map(Number).filter(Boolean),
+              win: Number(r[13]) === 1,
+              gold: Number(r[14]),
+            }
+          })
+          .sort((a, b) => ORDER.indexOf(a.position) - ORDER.indexOf(b.position))
+        return {
+          win: list[0]?.win ?? false,
+          kills: list.reduce((n, p) => n + p.kills, 0),
+          gold: list.reduce((n, p) => n + p.gold, 0),
+          players: list,
+        }
+      }
+      return { blue: side(100), red: side(200) }
+    })
+  }
+
   /** Tags of players by id. */
   private async tags(ids: string[]) {
     const out = new Map<string, ProTag>()
@@ -528,7 +857,7 @@ export class ProService {
       `WITH me AS (
          SELECT match_id, puuid, platform, game_start_ms, champion_id, team_position, team_id, win,
                 kills, deaths, assists, total_cs, item0, item1, item2, item3, item4, item5,
-                spell1, spell2, keystone, secondary_style
+                spell1, spell2, keystone, secondary_style, skill_order
          FROM participants
          WHERE queue_id = ${RANKED_SOLO} AND platform IN ('EUW1','NA1','BR1')
            AND puuid IN {puuids:Array(String)} AND game_start_ms >= {since:UInt64}
@@ -538,14 +867,16 @@ export class ProService {
          LIMIT 1 BY match_id
          LIMIT {limit:UInt32}
        )
-       SELECT me.*, m.duration_sec, arrayFirst(s -> s.1 != me.team_id, o.sides).2
+       SELECT me.*, m.duration_sec, arrayFirst(s -> s.1 != me.team_id, o.sides) AS opp
        FROM me
        LEFT JOIN (
          SELECT match_id, any(duration_sec) AS duration_sec FROM matches
          WHERE match_id IN (SELECT match_id FROM me) GROUP BY match_id
        ) AS m ON m.match_id = me.match_id
        LEFT JOIN (
-         SELECT match_id, team_position, groupArray((team_id, champion_id)) AS sides FROM participants
+         SELECT match_id, team_position,
+                groupArray((team_id, champion_id, puuid, riot_id_game_name)) AS sides
+         FROM participants
          WHERE match_id IN (SELECT match_id FROM me) AND team_position != ''
          GROUP BY match_id, team_position
        ) AS o ON o.match_id = me.match_id AND o.team_position = me.team_position
@@ -561,7 +892,11 @@ export class ProService {
     return found.map((r) => {
       const [matchId, puuid, platform, start, champion, position, , win, k, d, a, cs, ...rest] = r
       const items = rest.slice(0, 6).map(Number)
-      const [s1, s2, keystone, secondary, duration, opponent] = rest.slice(6).map(Number)
+      const [s1, s2, keystone, secondary] = rest.slice(6, 10).map(Number)
+      const skills = (rest[10] as unknown[] | null) ?? []
+      const duration = Number(rest[11])
+      const opp = (rest[12] as unknown[] | null) ?? []
+      const opponent = Number(opp[1] ?? 0)
       return {
         matchId: String(matchId),
         account: opts.account(String(puuid)) || String(puuid),
@@ -580,9 +915,141 @@ export class ProService {
         secondaryStyle: secondary,
         durationSec: duration || 0,
         opponent: opponent || null,
+        opponentPuuid: opponent ? String(opp[2] ?? '') : '',
+        opponentName: opponent ? String(opp[3] ?? '') : '',
+        skillOrder: skills.slice(0, 18).map(Number),
       }
     })
   }
+}
+
+/** What a page shows of a game: no account identifier of the lane opponent, no skill order. */
+function publicGame(g: ProGame): ProGame {
+  const { opponentPuuid, skillOrder, ...rest } = g
+  return rest
+}
+
+/** Which item ids are boots and which are finished items, on the newest patch. */
+async function itemKinds() {
+  const patch = await latestPatch()
+  const kinds = patch ? await buildStatsService.kinds(patch).catch(() => null) : null
+  return { legendary: new Set(kinds?.legendary ?? []), boots: new Set(kinds?.boots ?? []) }
+}
+
+/** A pro's build on one champion, from their own games of the last 30 days. */
+export interface ProBuild {
+  champion: number
+  games: number
+  wins: number
+  kda: number
+  /** The boots they buy most, or null. */
+  boots: number | null
+  /** Their three most bought finished items, most bought first, and the games holding all of them. */
+  core: number[]
+  coreGames: number
+  keystone: number | null
+  secondaryStyle: number | null
+  spells: [number, number] | null
+  /** The order they max Q, W and E (`['Q', 'W', 'E']`), when their games have a skill order. */
+  max: string[]
+  /** Their last games on it, newest first (true for a win). */
+  form: boolean[]
+}
+
+const top = <K>(counts: Map<K, number>): K | null => {
+  let best: K | null = null
+  let n = 0
+  for (const [k, c] of counts) if (c > n) [best, n] = [k, c]
+  return best
+}
+const bump = <K>(m: Map<K, number>, k: K) => m.set(k, (m.get(k) ?? 0) + 1)
+
+/** The order Q, W and E reach five points in one game's skill order (1 Q, 2 W, 3 E, 4 R). */
+export function maxOrder(order: number[]): string[] {
+  const points = [0, 0, 0, 0, 0]
+  const done: string[] = []
+  for (const k of order) {
+    if (k < 1 || k > 3) continue
+    points[k]++
+    if (points[k] === 5) done.push(['', 'Q', 'W', 'E'][k])
+  }
+  for (const k of [1, 2, 3])
+    if (!done.includes(['', 'Q', 'W', 'E'][k])) done.push(['', 'Q', 'W', 'E'][k])
+  return order.length >= 13 ? done : []
+}
+
+/** A pro's builds on their most played champions. */
+export function buildsOf(
+  games: ProGame[],
+  kinds: { legendary: Set<number>; boots: Set<number> },
+  champions: { champion: number; games: number; wins: number; kda: number }[]
+): ProBuild[] {
+  return champions.map((c) => {
+    const mine = games.filter((g) => g.champion === c.champion)
+    const items = new Map<number, number>()
+    const boots = new Map<number, number>()
+    const keystones = new Map<number, number>()
+    const spells = new Map<string, number>()
+    const orders = new Map<string, number>()
+    for (const g of mine) {
+      for (const id of new Set(g.items)) {
+        if (kinds.boots.has(id)) bump(boots, id)
+        else if (!kinds.legendary.size || kinds.legendary.has(id)) bump(items, id)
+      }
+      if (g.keystone) bump(keystones, g.keystone)
+      if (g.spells[0] && g.spells[1]) bump(spells, [...g.spells].sort((a, b) => a - b).join(','))
+      const max = maxOrder(g.skillOrder ?? [])
+      if (max.length) bump(orders, max.join(','))
+    }
+    const core = [...items]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([id]) => id)
+    const keystone = top(keystones)
+    const secondary = new Map<number, number>()
+    for (const g of mine)
+      if (g.keystone === keystone && g.secondaryStyle) bump(secondary, g.secondaryStyle)
+    const pair = top(spells)
+    const order = top(orders)
+    return {
+      champion: c.champion,
+      games: c.games,
+      wins: c.wins,
+      kda: c.kda,
+      boots: top(boots),
+      core,
+      coreGames: core.length
+        ? mine.filter((g) => core.every((id) => g.items.includes(id))).length
+        : 0,
+      keystone,
+      secondaryStyle: top(secondary),
+      spells: pair ? (pair.split(',').map(Number) as [number, number]) : null,
+      max: order ? order.split(',') : [],
+      form: mine.slice(0, 10).map((g) => g.win),
+    }
+  })
+}
+
+/** Each player's most played champions in a team's games (`pro.slug` → champions). */
+function poolsOf(games: ProGame[]) {
+  const by = new Map<string, Map<number, { games: number; wins: number }>>()
+  for (const g of games) {
+    if (!g.pro) continue
+    const m = by.get(g.pro.slug) ?? new Map()
+    const c = m.get(g.champion) ?? { games: 0, wins: 0 }
+    c.games++
+    c.wins += g.win ? 1 : 0
+    m.set(g.champion, c)
+    by.set(g.pro.slug, m)
+  }
+  const out: Record<string, { champion: number; games: number; wins: number }[]> = {}
+  for (const [slug, m] of by) {
+    out[slug] = [...m]
+      .map(([champion, c]) => ({ champion, ...c }))
+      .sort((a, b) => b.games - a.games)
+      .slice(0, 6)
+  }
+  return out
 }
 
 function emptySummary() {

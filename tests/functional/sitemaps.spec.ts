@@ -16,13 +16,40 @@ test.group('Player sitemap', (group) => {
       { game_name: 'Sable Fox', tag_line: 'SLY' },
       { game_name: "A&B's 玩家", tag_line: 'EUW' },
     ]
-    const response = await client.get('/sitemap.xml')
+    const response = await client.get('/sitemap.xml?page=1')
     response.assertStatus(200)
     response.assertHeader('content-type', 'application/xml; charset=utf-8')
     response.assertHeader('cache-control', 'public, max-age=300')
     response.assertTextIncludes('<loc>https://invade.lol/Mirelight-727</loc>')
     response.assertTextIncludes('<loc>https://invade.lol/Sable%20Fox-SLY</loc>')
     response.assertTextIncludes('A%26B&apos;s%20%E7%8E%A9%E5%AE%B6-EUW')
+  })
+
+  test('the index lists the site sections and every page of players', async ({ client }) => {
+    sitemapPlayers.count = async () => 3
+    const index = await client.get('/sitemap.xml')
+    index.assertStatus(200)
+    index.assertTextIncludes('<sitemapindex')
+    for (const section of ['pages', 'champions', 'pros', 'teams']) {
+      index.assertTextIncludes(`https://invade.lol/sitemap.xml?section=${section}`)
+    }
+    index.assertTextIncludes('https://invade.lol/sitemap.xml?page=1')
+  })
+
+  test('the site section lists the champion, stats and pro pages', async ({ client }) => {
+    const response = await client.get('/sitemap.xml?section=pages')
+    response.assertStatus(200)
+    for (const path of [
+      '/champions',
+      '/tier-list?role=mid',
+      '/stats',
+      '/stats?view=early',
+      '/pros?view=ladder',
+    ]) {
+      response.assertTextIncludes(`<loc>https://invade.lol${path.replace('&', '&amp;')}</loc>`)
+    }
+    const unknown = await client.get('/sitemap.xml?section=nope')
+    unknown.assertStatus(404)
   })
 
   test('large directories use an index and expose the final page', async ({ client, assert }) => {
@@ -47,7 +74,7 @@ test.group('Player sitemap', (group) => {
   test('an empty database still includes the homepage', async ({ client }) => {
     sitemapPlayers.count = async () => 0
     sitemapPlayers.page = async () => []
-    const response = await client.get('/sitemap.xml')
+    const response = await client.get('/sitemap.xml?page=1')
     response.assertStatus(200)
     response.assertTextIncludes('<loc>https://invade.lol/</loc>')
   })
