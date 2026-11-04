@@ -1,5 +1,95 @@
 # Changelog
 
+## 0.3.7 - 2026-11-04
+
+### New
+
+- **A light theme.** The sun at the top of the window turns Invade light: a soft grey window with white panels. The moon brings the dark theme back, and Invade keeps your choice. <!-- image light.webp -->
+- **Recordings, redesigned.** Search your games and clips, filter them by result, mode, date or champion, sort them and star the ones you keep. File games in folders and subfolders by dragging them, double-click a game to rename it, and select several to move or delete them at once. A delete, move or rename can be undone with Ctrl Z. The player goes on to the next clip, opens the full game at the clip's moment and copies the video so you can paste it anywhere. Auto-record shows next to the title, with its settings one click away. Nothing moves on your disk. <!-- image recordings.webp -->
+- **Christmas in the main window.** From 15 November to 31 December, snow falls in the sidebar and the top bar, frost settles in a corner of the page and lights hang along its top, in light and dark. Nothing moves during a game or with reduced motion. Settings → General → Appearance turns it off until next year.
+- **How your team played, on every game.** Match history and the scoreboard rate your four teammates from great to poor, against games with the same result, so a loss can still have a good team. invade.lol gives the same game the same rating.
+- **Pick your lane opponent in champ select.** When two enemies could be in your lane, Counters shows both in its title: click the one you face, and Counters, Runes & build and the Live tab follow. A second click goes back to Invade's guess.
+- **Copy a build as a League item set.** In the build editor, Import into League copies the build with each row's win rate and pick rate, and the skill order in its title. Paste it in League: Collection, Items, Import.
+- **Build path and Next skill in ARAM** and ARAM: Mayhem, from the champion's ARAM build and skill order.
+- **Resize an overlay in game** by pulling one of its bottom corners, from 70% to 250%.
+- **Objectives: Soon or All.** Soon shows only the objectives that spawn within 1:30, those up now and the buffs a team holds. All, the default, keeps every timer. Overlays → Objectives.
+
+### Changed
+
+- **The Live tab, redesigned.** In champ select, both teams face each other lane by lane around the clock, with each lane's win rate between the two players. The picks into your opponent sit below and your build beside them, Import runes on top, and the draft estimate shows what it is made of when you hover it. In game, each pair of laners faces off with the gold between them, then what you buy next, your pace and the gold lead. The last draft stays until the game loads, and the board stays once the game ends. <!-- highlight --> <!-- image live.webp -->
+- **Champ select overlays, redesigned and next to the client.** Runes & build, Draft odds and Counters now sit beside the League client's window instead of at the edges of a large screen, in one calmer look. Runes & build says in one line what is not in the client yet. Overlays you had moved in champ select start from their new place. <!-- highlight --> <!-- image champselect.webp -->
+- **Matchups from Invade's own games.** The Matchups page and each champion's Matchups tab count invade.lol's ranked games, for any patch it holds, with patch and rank menus and a pick rate column. Your pool on Matchups → Draft helper is no longer capped at 10 champions.
+- **The tier list and champion pages follow invade.lol,** for every patch it offers, so a new patch shows without an app update. The tier list has no KDA column any more, and asks you to retry when invade.lol can't be reached.
+- **Scoreboard gold, cleaner.** On Tab the figures sit straight on League's scoreboard, without plates, and the team line sits below the team scores. Dragging the scoreboard by its dragon band moves the gold with it.
+- **League's own stat icons in match details,** on the scoreboard, team totals and Breakdown. In a narrow window only the icons stay, named when you hover them.
+- **Settings → invade.lol is now part of General.**
+- **Lighter on your computer.** While League is in front, the main window holds its clocks and animations; out of the game with Alt+Tab, the overlays stop drawing; and Invade waits for the League client before it watches your account and Discord. Dual-GPU Macs are no longer switched to their discrete graphics by Invade.
+- **A clearer log.** Each line has its time, level and source, and each step of a game is written down, so a bug report says what happened.
+
+### Removed
+
+- **Invade no longer sends anything from the League client to invade.lol:** not your games, your LP, the players in your games or your accounts. Settings → General → What Invade reads lists what it reads.
+- **No win estimate during a game.** The Live tab no longer shows a win chance once the game runs. Draft odds in champ select stay.
+- **No Smurf, Hot streak or Tilted tags** on other players. The threat ranking shows in champ select and on the loading screen only; Autofill, One-trick, First time and Veteran stay.
+- **Invade no longer looks at the game's picture.** ARAM: Mayhem's Augments panel follows the game's data alone and lists every rarity, and Next skill and the minimap timers are placed from League's layout and settings. Clip recording is unchanged.
+
+### Fixed
+
+- **Windows games are saved, even when the video encoder stops answering.** Games no longer stay "Recording" forever: what Invade writes stays readable, and the game is saved even when the encoder never finishes the file. <!-- highlight -->
+- **Windows: an encoder that records nothing is replaced.** When a graphics card's encoder takes the game and gives back no video, Invade switches to another one, then to the processor at 720p as a last resort, and remembers what works on your PC. When nothing can record, Invade says so instead of losing the game.
+- **Windows: an auto-hidden taskbar** shows again from the screen edge with the champ select overlay up.
+- **Windows: a left click on the tray icon brings the window back,** and a minimized window comes back on its monitor, at its size.
+- **Loading screen plates stay on the right card,** in ARAM and ARAM: Mayhem too. A streamer-mode player's card gets a grey cell, and when Invade can't tell whose card is whose, the row is greyed instead of shifted.
+- **Update shows your new games** without reopening the profile, client open or closed.
+- **A game you just played** now says it just ended and shows up a moment later, instead of saying invade.lol can't be reached.
+- **Runes and builds load faster** for any pick.
+- **The Build path no longer asks for boots again** once the bot lane role quest moves them.
+- **The overlay comes back on Windows** after WebView2 errors that could keep it away for a whole evening.
+- **Played with shows each teammate's own icon.**
+- **Recordings hold up better.** A save retried after a disk error leaves no stray clips, the Recordings page and the recording settings stay usable when the capture check fails, and one unreadable setting no longer resets the others.
+- **A switch Invade could not save goes back** and says so.
+- **The Live tab drops the lobby** once the draft is over, and Home never shows the previous account's LP after a switch.
+- **Champion search finds kaisa, drmundo and leesin.**
+- **Russian and Polish plurals are right,** and labels fit in German, Polish and Russian.
+- **Your computer's account name stays hidden** in crash reports and Copy diagnostics, however a path spells it.
+
+## 0.3.6 - 2026-10-23
+
+### Fixed
+
+- **Overlay hotfix: move and fold your overlays again.** A few minutes into a game, Windows could send the clicks on an overlay's title to the game instead, so the overlay could be neither moved nor folded with its minus. <!-- highlight -->
+- **No more white screen in champ select or in game.** Grabbing an overlay's title could turn the whole screen white until you pressed Alt+Tab. <!-- highlight -->
+
+## 0.3.5 - 2026-10-22
+
+### New
+
+- **Scout the loading screen.** Each player's rank, recent form and record on their champion, right on their card of League's loading screen, for as long as it lasts. <!-- highlight -->
+- **Inhibitor timers on the minimap.** When an inhibitor falls, the time until it stands again shows right on it, on League's own minimap, at any minimap size and side.
+- **ARAM: Mayhem augments follow the offer.** On Windows the Augments panel opens when the three cards are on screen, lists the most picked augments of the offered rarity, and closes with them. <!-- highlight -->
+- **The build editor does more.** Drag items within and between rows (Alt copies), rows of any size, several starting sets, early buys, situational items, elixirs, the trinket and the max order of Q, W and E. In game, the Build path offers the early buys, the trinket and the elixirs when they're due.
+- **Builds from Invade's own ranked games.** Rune pages, starting items, boots, core, situational items and summoner spells now come from invade.lol, so picks the bundled data left out (Seraphine mid, Poppy jungle) get a full build instead of a lone rune page.
+
+### Changed
+
+- **Scoreboard gold you can read.** Hold Tab in any mode with a scoreboard, the Practice Tool too: each team's gold above the board with the lead between them, then each lane on its row, on Invade's own panels whatever the Background setting. <!-- highlight -->
+- **Overlays get out of the way.** Another app in front of League hides them at once, and they're back on top the moment League is in front again.
+- **Starting Invade during a game** opens it minimized in the taskbar, so the game keeps the keyboard.
+- **Next skill** is a chevron and a frame on the ability to level, with your keyboard's letters (A Z E R on AZERTY), in the size and colour you choose, at the HUD scale League really uses, and off Kha'Zix's evolution buttons.
+- **The Build path follows the item you're building,** once its components are worth 1,000 gold and fit it better than the planned item.
+- **Your Invade activity on Discord turns off at once.** Settings → In game → Discord → Show my Invade activity on Discord clears it and closes the connection right away, and nothing shows until you turn it back on.
+- **Champ select panels stay opaque,** whatever the Background setting: there's no game behind them.
+- **Nobody in the fights counts as AFK.** A player in at least three of their team's kills and a quarter of them never loses their score as AFK.
+- **The Overlays page previews the minimap timers on League's own minimap.**
+
+### Fixed
+
+- **Grabbing an overlay no longer makes it vanish** on Windows, and a grab that missed works again without leaving the title.
+- **No flicker when an overlay's title takes the mouse,** and no flash of the overlays as the game starts.
+- **Overlays sit right on screens with different display scaling,** placed in one step without taking the focus.
+- **Windows game recordings never freeze,** and Invade's log says why one doesn't save.
+- **Invade logs what its overlays do,** so a bug report says why one didn't show.
+
 ## 0.3.4 - 2026-10-20
 
 ### New
