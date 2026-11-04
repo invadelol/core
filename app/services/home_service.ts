@@ -837,8 +837,14 @@ export class HomeService {
     return filter && { ...filter, region: null }
   }
 
+  /**
+   * Every champion's name and address. No champion at all means game data could not be read, not
+   * an empty game: it throws, so a section keeps its last copy (its grace) instead of caching a
+   * board with every champion missing, as the home and the menus did on patch day 16.22.
+   */
   private async names(): Promise<Map<number, ChampionInfo>> {
     const list = await championStatsService.champions()
+    if (!list.length) throw new Error('champion list unavailable')
     return new Map(list.map((c) => [c.id, { id: c.id, name: c.name, slug: c.slug }]))
   }
 
