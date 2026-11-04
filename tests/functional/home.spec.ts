@@ -1,7 +1,9 @@
 import { test } from '@japa/runner'
 import db from '@adonisjs/lucid/services/db'
 import redis from '@adonisjs/redis/services/main'
+import cache from '@adonisjs/cache/services/main'
 import homeService, { viewBucketKeys } from '#services/home_service'
+import riotAssets, { RiotAssetsService } from '#services/riot/assets'
 
 /** Fictional players only: the repository is public. A PUUID is 78 characters. */
 const CLIMBER = 'test-home-climber-'.padEnd(78, 'x')
@@ -119,5 +121,22 @@ test.group('Home page', (group) => {
     assert.equal(trending.players[0].gameName, 'Test Viewed')
     assert.equal(trending.players[0].views, 1_000_001)
     assert.notProperty(trending.players[0], 'puuid')
+  })
+
+  test('keeps the last tier board while the champion list cannot be read', async ({ assert }) => {
+    const key = 'home:v1:picks'
+    const board = { patch: '16.21', previousPatch: null, games: 1, champions: 1, best: [{}] }
+    await cache.set({ key, value: board, ttl: '1ms', grace: '1m' })
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    // Game data unreachable: no champion list, so a fresh board would name no champion.
+    const original = globalThis.fetch
+    globalThis.fetch = (async () => new Response('not found', { status: 404 })) as typeof fetch
+    Object.assign(riotAssets, new RiotAssetsService())
+    try {
+      assert.deepEqual(await homeService.picks(), board)
+    } finally {
+      globalThis.fetch = original
+      await cache.delete({ key })
+    }
   })
 })
