@@ -155,7 +155,7 @@ const zs = { class: "iv-sb-wrap" }, Es = { class: "iv-table iv-sb" }, Gs = { col
                   }, [
                     u(Ds, {
                       name: t.id,
-                      size: 14
+                      size: 16
                     }, null, 8, ["name"]),
                     _(i(t.n), 1)
                   ], 10, Ws))), 128))

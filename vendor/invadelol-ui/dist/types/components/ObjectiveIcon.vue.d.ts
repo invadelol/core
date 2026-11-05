@@ -1,5 +1,9 @@
 import '../styles/base.css';
-/** Map objectives as line glyphs (24 × 24, 1.8 stroke, same family as Icon). */
+/**
+ * Map objectives as the League client's own glyphs, from its match history
+ * (`rcp-fe-lol-match-history/right_icons_grub.png`), traced from their light fill and inlined in
+ * `currentColor`. Each view box is cropped around its glyph so the six read at one optical size.
+ */
 export type ObjectiveIconName = 'tower' | 'inhib' | 'dragon' | 'grubs' | 'herald' | 'baron';
 type __VLS_Props = {
     name: ObjectiveIconName;

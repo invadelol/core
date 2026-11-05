@@ -4,13 +4,13 @@ import '../styles/detail.css';
 import { defineComponent as Q, computed as B, ref as X, watch as A, openBlock as l, createElementBlock as s, createVNode as H, createElementVNode as r, toDisplayString as u, unref as t, Fragment as k, renderList as b, normalizeClass as h, createCommentVNode as _, createTextVNode as f } from "vue";
 import { useInvadeUi as J, useFormat as Y, useNames as Z } from "../context.js";
 import { hideBroken as c } from "../dom.js";
-import { RUNE_SLOTS as j } from "../logic/detail.js";
 import { shopVisits as x } from "../logic/shop.js";
 import { tk as E } from "../logic/i18n.js";
 import ee from "./PlayerPicker.vue.js";
 /* empty css                 */
 /* empty css                       */
 /* empty css                   */
+import { RUNE_SLOTS as j } from "../logic/runes.js";
 const te = { class: "iv-bd" }, le = {
   key: 0,
   class: "iv-bd-path"
