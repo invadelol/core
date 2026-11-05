@@ -16,7 +16,7 @@ export declare function teamsOf(d: MatchDetail, me: PlayerView | undefined): {
     placement: number;
 }[];
 /** Slots of each rune tree (keystones first), to show a page with the runes not taken dimmed. */
-export declare const RUNE_SLOTS: Record<number, number[][]>;
+export { RUNE_SLOTS } from './runes.js';
 /** Whether the timeline carries any event to tell (stored games from before events were kept do not). */
 export declare const hasEvents: (d: MatchDetail) => boolean;
 /** The parts of a score, in the order they are read, with their names. */
@@ -42,4 +42,3 @@ export declare function laneLead(t: TimelineView, i: number, j: number, minute: 
  * (12xx), not the support's ward stand-in (2055). A bot laner's finished boots move there.
  */
 export declare const roleSlot: (id: number | undefined) => id is number;
-export {};

@@ -43,8 +43,8 @@ declare const __VLS_export: import("vue").DefineComponent<__VLS_Props, {}, {}, {
     kp: number | null;
     opponent: number | null;
     badges: Badge[];
-    open: boolean;
     compact: boolean;
+    open: boolean;
 }, {}, {}, {}, string, import("vue").ComponentProvideOptions, false, {}, any>;
 declare const _default: typeof __VLS_export;
 export default _default;
