@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.8 - 2026-11-05
+
+### Fixed
+
+- **Recording hotfix: games are recorded on every PC again.** On some PCs, AMD graphics in particular, a game could stay empty or be saved as a green video that would not play. Invade now moves to another encoder within seconds when one stops or writes no picture, and never plays a damaged video. <!-- highlight -->
+- **The sound of clips stays in sync with the picture.** On Windows, the sound could fall behind the picture, more and more over a game. Clips cut from a 0.3.7 recording not saved yet come out in sync too. <!-- highlight -->
+
 ## 0.3.7 - 2026-11-04
 
 ### New
