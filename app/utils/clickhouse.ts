@@ -242,7 +242,7 @@ export function buildParticipantRows(
         vision_wards_bought: toInt(p.visionWardsBoughtInGame ?? 0, 0),
 
         all_in_pings: toInt(p.allInPings ?? 0, 0),
-        assist_pings: toInt(p.assistPings ?? 0, 0),
+        assist_pings: toInt(p.assistMePings ?? p.assistPings ?? 0, 0),
         command_pings: toInt(p.commandPings ?? 0, 0),
         danger_pings: toInt(p.dangerPings ?? 0, 0),
         enemy_missing_pings: toInt(p.enemyMissingPings ?? 0, 0),
