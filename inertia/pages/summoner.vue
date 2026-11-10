@@ -831,6 +831,7 @@ async function sync() {
           :profile="profile"
           :loading="friendsLoading"
           :error="friendsError"
+          :matches="matches"
           @retry="loadFriends(true)"
         />
 
