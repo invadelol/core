@@ -236,6 +236,8 @@ export interface ChampionMastery {
   lastPlayTime: number
   /** Riot only: the League client's top-ten snapshot does not carry them. */
   championPointsUntilNextLevel?: number
+  /** Riot only: points earned since the current level began. */
+  championPointsSinceLastLevel?: number
   tokensEarned?: number
   source?: 'riot' | 'desktop'
   observedAt?: number | null
