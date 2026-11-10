@@ -351,7 +351,8 @@
   }
 
   @container (max-width: 820px) {
-    .g2 {
+    .g2,
+    .g2.pro {
       grid-template-columns:
         104px 84px minmax(92px, 0.9fr) minmax(84px, 0.8fr) minmax(0, 1.5fr)
         48px;
@@ -362,7 +363,8 @@
     }
   }
   @container (max-width: 680px) {
-    .g2 {
+    .g2,
+    .g2.pro {
       grid-template-columns: 104px minmax(0, 1fr) minmax(0, 1fr) 48px;
       height: auto;
       padding: 12px 14px 12px 17px;
@@ -376,7 +378,8 @@
     }
   }
   @container (max-width: 420px) {
-    .g2 {
+    .g2,
+    .g2.pro {
       grid-template-columns: 104px minmax(0, 1fr) 48px;
     }
     .g2 .gk {

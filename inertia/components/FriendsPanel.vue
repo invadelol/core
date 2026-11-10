@@ -1136,6 +1136,10 @@ button.wc.on {
     width: 64px;
     height: 64px;
   }
+  .nd:not(.me) img {
+    max-width: 56px;
+    max-height: 56px;
+  }
   .lg3 {
     grid-template-columns: 40px 52px minmax(0, 1fr);
   }
