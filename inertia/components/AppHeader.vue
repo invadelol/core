@@ -16,6 +16,7 @@ import ThemeToggle from './ui/ThemeToggle.vue'
 import { SECTIONS, type SectionKey } from './header/sections.js'
 import { loadSiteNav, siteNav } from '../lib/site_nav.js'
 import { season, startSeason } from '../lib/season.js'
+import { patchName } from '../lib/patch.js'
 
 /**
  * The site's header, on every page: the mark, the four sections with their menus, the search
@@ -60,6 +61,15 @@ const onApp = computed(() => path.value === '/app')
 /** Pages with a main action of their own keep the header's download quiet: one violet button a page. */
 const QUIET_DOWNLOAD = new Set(['summoner', 'contact', 'desktop/build', 'errors/server_error'])
 const loudDownload = computed(() => !QUIET_DOWNLOAD.has(page.component))
+/** The newest patch the stats show (a shared prop), as players name it. */
+const patch = computed(() => {
+  const version = (page.props as { patch?: string | null }).patch
+  return version ? patchName(version) : null
+})
+/** The tier list has its own place in the bar, so Champions is not lit there. */
+const onTierList = computed(() => path.value.startsWith('/tier-list'))
+const isHere = (key: SectionKey, here: (p: string) => boolean) =>
+  here(path.value) && !(key === 'champions' && onTierList.value)
 
 /* ── Section menus ─────────────────────────────────────────────────── */
 
@@ -300,39 +310,56 @@ function skip(event: MouseEvent) {
       </Link>
 
       <nav class="sh-nav" aria-label="Sections">
-        <div
-          v-for="s in SECTIONS"
-          :key="s.key"
-          class="sh-item"
-          @pointerenter="onEnter(s.key, $event)"
-          @pointerleave="onLeave(s.key, $event)"
-          @focusout="onFocusOut(s.key, $event)"
+        <Link
+          href="/"
+          class="sh-trig sh-plain"
+          :class="{ on: path === '/' }"
+          :aria-current="path === '/' ? 'page' : undefined"
+          prefetch
+          >Home</Link
         >
-          <button
-            :ref="(el) => (triggers[s.key] = el as HTMLElement | null)"
-            type="button"
-            class="sh-trig"
-            :class="{ on: s.here(path), open: open === s.key }"
-            :aria-expanded="open === s.key"
-            :aria-controls="`sh-menu-${s.key}`"
-            @click="onTrigger(s.key)"
-            @focus="warmMenus"
-            @touchstart.passive="warmMenus"
-            @keydown="onTriggerKey(s.key, $event)"
+        <template v-for="s in SECTIONS" :key="s.key">
+          <div
+            class="sh-item"
+            @pointerenter="onEnter(s.key, $event)"
+            @pointerleave="onLeave(s.key, $event)"
+            @focusout="onFocusOut(s.key, $event)"
           >
-            {{ s.label
-            }}<span class="chev"
-              ><ChevronDown :size="13" :stroke-width="1.8" aria-hidden="true"
-            /></span>
-          </button>
-          <MegaMenu
-            v-if="open === s.key"
-            :id="`sh-menu-${s.key}`"
-            :section="s"
-            :nav="siteNav"
-            @close="close"
-          />
-        </div>
+            <button
+              :ref="(el) => (triggers[s.key] = el as HTMLElement | null)"
+              type="button"
+              class="sh-trig"
+              :class="{ on: isHere(s.key, s.here), open: open === s.key }"
+              :aria-expanded="open === s.key"
+              :aria-controls="`sh-menu-${s.key}`"
+              @click="onTrigger(s.key)"
+              @focus="warmMenus"
+              @touchstart.passive="warmMenus"
+              @keydown="onTriggerKey(s.key, $event)"
+            >
+              {{ s.label
+              }}<span class="chev"
+                ><ChevronDown :size="13" :stroke-width="1.8" aria-hidden="true"
+              /></span>
+            </button>
+            <MegaMenu
+              v-if="open === s.key"
+              :id="`sh-menu-${s.key}`"
+              :section="s"
+              :nav="siteNav"
+              @close="close"
+            />
+          </div>
+          <Link
+            v-if="s.key === 'champions'"
+            href="/tier-list"
+            class="sh-trig sh-plain"
+            :class="{ on: onTierList }"
+            :aria-current="onTierList ? 'page' : undefined"
+            prefetch
+            >Tier list</Link
+          >
+        </template>
       </nav>
 
       <nav v-if="crumbs?.length" class="sh-crumbs" aria-label="Breadcrumb">
@@ -357,7 +384,8 @@ function skip(event: MouseEvent) {
           @click="openSearch"
         >
           <Search :size="15" :stroke-width="1.8" aria-hidden="true" />
-          <span class="ph">Search a player, champion or pro</span>
+          <span class="ph">Search</span>
+          <span class="sr-only">a player, a champion or a pro</span>
           <kbd>⌘ K</kbd>
         </button>
         <div
@@ -378,6 +406,14 @@ function skip(event: MouseEvent) {
       </div>
 
       <div class="sh-end" :class="{ alone: !search }">
+        <Link
+          v-if="patch"
+          href="/stats?view=patch"
+          prefetch
+          class="sh-patch num"
+          data-track="header_patch"
+          >Patch {{ patch }}</Link
+        >
         <Link
           v-if="!onApp"
           href="/app"

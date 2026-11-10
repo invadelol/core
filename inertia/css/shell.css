@@ -26,7 +26,14 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    height: 56px;
+    height: 60px;
+  }
+
+  /* The bar: night ink, one hairline under it. */
+  .sh-head.chrome {
+    background: color-mix(in srgb, var(--ink-0) 92%, transparent);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
   }
 
   .sh-logo {
@@ -34,7 +41,7 @@
     flex: none;
     align-items: center;
     height: 40px;
-    margin-right: 18px;
+    margin-right: 22px;
     border-radius: var(--r-sm);
   }
 
@@ -66,7 +73,13 @@
   .sh-nav {
     display: none;
     align-items: center;
-    gap: 2px;
+    gap: 4px;
+    height: 60px;
+  }
+
+  .sh-item {
+    display: flex;
+    height: 100%;
   }
 
   .sh-trig {
@@ -90,9 +103,16 @@
     background: var(--glint);
   }
 
+  .sh-trig.on,
+  .sh-trig.open {
+    color: var(--text-1);
+  }
+
   .sh-trig .chev {
     display: inline-flex;
-    color: var(--text-4);
+    margin-left: -1px;
+    color: var(--text-3);
+    opacity: 0.7;
     transition: transform var(--t-base) var(--ease);
   }
 
@@ -154,7 +174,7 @@
     min-width: 0;
     max-width: 340px;
     margin-left: auto;
-    margin-right: 8px;
+    margin-right: 10px;
   }
 
   /* The header's search: a field that opens the palette. */
@@ -163,11 +183,11 @@
     align-items: center;
     gap: 10px;
     width: 100%;
-    height: 34px;
-    padding: 0 6px 0 10px;
+    height: 36px;
+    padding: 0 6px 0 12px;
     color: var(--sh-quiet);
     background: var(--inset);
-    border-radius: var(--r-sm);
+    border-radius: 5px;
     box-shadow: var(--inset-shadow);
     cursor: text;
     transition: box-shadow var(--t-fast) var(--ease);
@@ -196,6 +216,14 @@
     border-radius: 4px;
   }
 
+  .sh-field kbd {
+    height: 21px;
+    padding: 0 7px;
+    color: var(--rd-violet-hi);
+    background: var(--rd-violet-a);
+    border-radius: 5px;
+  }
+
   .sh-field.focus,
   .sh-field:focus-visible {
     box-shadow: var(--inset-shadow), var(--focus);
@@ -216,8 +244,48 @@
     margin-left: auto;
   }
 
-  .sh-get {
-    gap: 6px;
+  /* The patch the stats show: violet, Invade's own read. */
+  .sh-patch {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    height: 24px;
+    margin-right: 6px;
+    padding: 0 8px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--rd-violet-hi);
+    background: var(--rd-violet-a);
+    border-radius: 5px;
+  }
+
+  .sh-patch:hover {
+    color: var(--text-1);
+  }
+
+  .sh-patch:focus-visible {
+    box-shadow: var(--focus);
+  }
+
+  /* Get the app: flat violet, the bar's one main action. */
+  .sh-head .sh-get {
+    gap: 8px;
+    height: 36px;
+    padding: 0 16px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 5px;
+  }
+
+  .sh-head .sh-get.primary {
+    color: #fff;
+    background: var(--rd-violet);
+    box-shadow: var(--primary-shadow);
+  }
+
+  .sh-head .sh-get.primary:hover {
+    background: var(--primary-hover);
   }
 
   .sh-ib {
@@ -265,6 +333,7 @@
 
     .sh-field,
     .sh-get,
+    .sh-patch,
     .sh-theme {
       display: none !important;
     }
@@ -286,6 +355,35 @@
     }
   }
 
+  @media (min-width: 40rem) and (max-width: 47.99rem) {
+    .sh-patch {
+      display: none;
+    }
+  }
+
+  /* A narrow desktop: the sections take the room, the search is a button. */
+  @media (min-width: 64rem) and (max-width: 79.99rem) {
+    .sh-search-zone {
+      position: static;
+      flex: 1 1 0;
+      margin: 0;
+    }
+
+    .sh-field {
+      display: none !important;
+    }
+
+    .sh-search-zone .sh-palette {
+      position: fixed;
+      top: 64px;
+      right: 24px;
+    }
+
+    .sh-only-phone {
+      display: inline-grid;
+    }
+  }
+
   /* Wide: the sections open as menus. */
   @media (min-width: 64rem) {
     .sh-nav {
@@ -295,13 +393,16 @@
     .sh-burger {
       display: none;
     }
-
-    .sh-search-zone {
-      flex: 0 1 300px;
-    }
   }
 
   @media (min-width: 80rem) {
+    .sh-search-zone {
+      flex: 0 1 240px;
+    }
+  }
+
+  /* A breadcrumb in the bar (a match) once there is room beside the sections. */
+  @media (min-width: 90rem) {
     .sh-crumbs {
       display: flex;
     }
@@ -1023,23 +1124,16 @@
   /* ── Footer ─────────────────────────────────────────────── */
   .sh-foot {
     position: relative;
-    margin-top: 64px;
-    background: var(--ink-0);
-  }
-
-  .sh-foot::before {
-    content: '';
-    position: absolute;
-    inset: 0 0 auto;
-    height: 1px;
-    background: var(--edge);
+    margin-top: 72px;
+    background: color-mix(in srgb, var(--ink-0) 50%, transparent);
+    box-shadow: inset 0 1px 0 var(--rd-line);
   }
 
   .sh-foot-top {
     display: grid;
-    grid-template-columns: minmax(0, 1.6fr) repeat(4, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 2fr) repeat(4, minmax(0, 1fr));
     gap: 32px;
-    padding: 56px 0 44px;
+    padding: 44px 0 36px;
   }
 
   .sh-brand > a {
@@ -1099,9 +1193,9 @@
     max-width: 360px;
     margin-top: 22px;
     padding: 12px 14px;
-    background: var(--surface-1);
-    border-radius: var(--r-md);
-    box-shadow: var(--row);
+    background: var(--rd-card);
+    border-radius: 10px;
+    box-shadow: inset 0 0 0 1px var(--rd-line);
   }
 
   .sh-app b {
@@ -1130,14 +1224,13 @@
   .sh-col ul {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    margin-top: 12px;
+    margin-top: 10px;
   }
 
   .sh-col a {
     display: inline-flex;
     align-items: center;
-    min-height: 30px;
+    min-height: 26px;
     font-size: 13px;
     color: var(--text-2);
     border-radius: var(--r-xs);
@@ -1153,10 +1246,10 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 10px 22px;
-    padding: 18px 0 26px;
+    padding: 18px 0 22px;
     font-size: 12px;
     color: var(--sh-quiet);
-    box-shadow: inset 0 1px 0 var(--line);
+    box-shadow: inset 0 1px 0 var(--rd-line);
   }
 
   .sh-foot-bot a {
