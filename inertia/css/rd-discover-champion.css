@@ -1,0 +1,697 @@
+/* ──────────────────────────────────────────────────────────────
+   Violet line, a champion's page (`/champions/:slug`), scoped to
+   `.cp`. The banner with the champion's art and its figures, the
+   sticky role and section bar, the recommended build beside the
+   matchups, and the lower sections (champions.css) brought onto
+   the flat sheets with one hairline. Unlayered, like champions.css,
+   so it wins over it.
+   ────────────────────────────────────────────────────────────── */
+
+/* ── Banner ──────────────────────────────────────────────── */
+.cp-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 320px;
+  overflow: hidden;
+  isolation: isolate;
+  color: #ececf3;
+  background: #08090c;
+  border-radius: 12px;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.08);
+}
+
+.cp-hero .art {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -2;
+  width: 70%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 60% 30%;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 45%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 45%);
+}
+
+.cp-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgb(8 9 12 / 0) 45%, rgb(9 9 16 / 0.94) 100%);
+  pointer-events: none;
+}
+
+.cp-hero .top {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 32px 32px 24px;
+}
+
+.cp-hero .face {
+  display: inline-flex;
+  flex: none;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.12),
+    0 8px 20px rgb(0 0 0 / 0.6);
+}
+
+.cp-hero h1 {
+  margin: 0;
+  font-size: 44px;
+  font-weight: 650;
+  line-height: 1;
+  letter-spacing: -0.025em;
+  color: #fff;
+}
+
+.cp-hero .sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  font-size: 14px;
+  color: #a9aabc;
+}
+
+.cp-hero .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: rgb(123 109 255 / 0.32);
+  border-radius: 5px;
+  box-shadow: inset 0 0 0 1px rgb(169 159 255 / 0.4);
+}
+
+.cp-hero .kit {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.cp-hero .ab {
+  position: relative;
+  display: inline-flex;
+}
+
+.cp-hero .ab .nb-img {
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.12);
+}
+
+/* The ability's key, a small violet key on its corner. */
+.cp-hero .ab i {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  display: grid;
+  place-items: center;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 700;
+  color: #fff;
+  background: #7667ff;
+  border-radius: 4px;
+  box-shadow: 0 0 0 2px #08090c;
+}
+
+.cp-hero .strip {
+  display: grid;
+  grid-template-columns: 1.3fr repeat(4, minmax(0, 1fr));
+  margin: 0 12px 12px;
+  background: rgb(8 9 12 / 0.72);
+  border-radius: 8px;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.06),
+    0 0 0 1px rgb(255 255 255 / 0.04);
+}
+
+.cp-hero .st {
+  min-width: 0;
+  padding: 14px 18px;
+}
+
+.cp-hero .st + .st {
+  box-shadow: inset 1px 0 0 rgb(255 255 255 / 0.06);
+}
+
+.cp-hero .lbl {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: #80819a;
+}
+
+.cp-hero .st .rd-fig {
+  display: block;
+  font-size: 28px;
+  line-height: 1.15;
+  white-space: nowrap;
+  color: #fff;
+}
+
+.cp-hero .st small {
+  display: block;
+  overflow: hidden;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #80819a;
+}
+
+.cp-hero .rd-up {
+  color: #4c9bff;
+}
+
+.cp-hero .rd-dn {
+  color: #ff5d6e;
+}
+
+.cp-hero .tierbox {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.cp-hero .tierbox b {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.cp-hero .tbig {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  font-size: 22px;
+  font-weight: 700;
+  font-stretch: 92%;
+  color: #fff;
+  background: #7667ff;
+  border-radius: 8px;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18);
+}
+
+.cp-hero .tbig.t1 {
+  color: #a99fff;
+  background: rgb(123 109 255 / 0.18);
+  box-shadow: inset 0 0 0 1px rgb(123 109 255 / 0.4);
+}
+
+.cp-hero .tbig.t2,
+.cp-hero .tbig.t3,
+.cp-hero .tbig.t4,
+.cp-hero .tbig.t5 {
+  color: #ececf3;
+  background: rgb(255 255 255 / 0.08);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08);
+}
+
+/* ── Role, sections and filters: one sticky bar ─────────── */
+.cp-ctrl {
+  position: sticky;
+  top: 60px;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 20px;
+  margin: 6px 0 12px;
+  padding: 12px 0;
+  background: var(--ink-1);
+  box-shadow: 0 1px 0 var(--rd-line);
+}
+
+.cp-ctrl .grow {
+  flex: 1;
+}
+
+.cp-roles svg {
+  flex: none;
+}
+
+.cp-tabs {
+  height: 34px;
+  box-shadow: none;
+}
+
+.cp-tabs > a {
+  height: 34px;
+}
+
+.cp-tabs > a:hover {
+  color: var(--text-1);
+}
+
+/* ── The overview ───────────────────────────────────────── */
+.cp-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+  align-items: start;
+  scroll-margin-top: 140px;
+}
+
+.cp-col {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.cp-big {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.cp-big .rd-fig {
+  font-size: 28px;
+}
+
+.cp-big small {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.cp-rec-in {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cp-rec-in .half {
+  min-width: 0;
+  padding: 16px 18px;
+}
+
+.cp-rec-in .half + .half {
+  box-shadow: inset 1px 0 0 var(--rd-line);
+}
+
+.cp .k {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+.cp .k .q,
+.cp .rw .q {
+  color: var(--text-3);
+}
+
+.cp-rec .ks {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.cp-rec .ksi {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: var(--rd-violet-a);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rd-violet) 45%, transparent);
+}
+
+.cp-rec .ks b {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.cp-rec .ks small {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.cp-rec .rp {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.cp-rec .rp .gap {
+  width: 8px;
+}
+
+.cp-rec .kss {
+  margin-top: 14px;
+  box-shadow: inset 0 1px 0 var(--rd-line);
+}
+
+.cp .rw {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 13px;
+}
+
+.cp .rw + .rw {
+  box-shadow: inset 0 1px 0 var(--rd-line);
+}
+
+.cp .rw .i {
+  display: inline-flex;
+  flex: none;
+  gap: 4px;
+}
+
+.cp .rw .n {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-1);
+}
+
+.cp .rw .n.quiet {
+  font-weight: 400;
+  color: var(--text-2);
+}
+
+.cp .rw .q {
+  width: 40px;
+  text-align: right;
+}
+
+.cp .rw b {
+  width: 52px;
+  font-weight: 650;
+  text-align: right;
+  color: var(--text-1);
+}
+
+.cp-core {
+  padding: 16px 18px 18px;
+  box-shadow: inset 0 1px 0 var(--rd-line);
+}
+
+.cp-core .row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 18px 28px;
+}
+
+.cp-core .items {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cp-core .items .nb-img {
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.1);
+}
+
+.cp-core .ar {
+  display: inline-flex;
+  color: var(--text-4);
+}
+
+.cp-core .slot {
+  min-width: 88px;
+}
+
+.cp-core .sk {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.cp-core .so {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+}
+
+.cp-core .so b {
+  display: block;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--text-1);
+}
+
+.cp-core .so small {
+  display: block;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.cp-every {
+  margin-top: 12px;
+}
+
+.cp-skills {
+  padding: 16px 18px;
+}
+
+.cp .nb-skills {
+  gap: 3px;
+}
+
+.cp .nb-skills .l {
+  height: 26px;
+}
+
+.cp .nb-skills i {
+  height: 26px;
+  font-size: 11px;
+  background: var(--inset);
+  border-radius: 4px;
+}
+
+.cp .nb-skills i.on {
+  color: #fff;
+  background: var(--rd-violet);
+  box-shadow: var(--primary-shadow);
+}
+
+.cp .nb-skills i.on.ult {
+  color: #1a1408;
+  background: var(--gold-c);
+  box-shadow: none;
+}
+
+.cp-segrow {
+  padding: 12px 18px 6px;
+}
+
+.cp-row {
+  min-height: 52px;
+}
+
+.cp-row .dv-val {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.cp-row .gp {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.cp-pad {
+  padding: 16px 18px;
+}
+
+.cp-kv {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 14px 18px 16px;
+}
+
+.cp-kv span {
+  display: block;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.cp-kv .rd-fig {
+  font-size: 21px;
+}
+
+/* ── The lower sections on the flat sheets ──────────────── */
+.cp .nb-panel {
+  background: var(--rd-card);
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px var(--rd-line);
+}
+
+.cp .nb-ph {
+  min-height: 52px;
+  padding: 10px 18px;
+  border-bottom: 0;
+  box-shadow: inset 0 -1px 0 var(--rd-line);
+}
+
+.cp .nb-ph h2,
+.cp .nb-ph h3,
+.cp .nb-h3 {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-1);
+}
+
+.cp .nb-sec {
+  margin-top: 48px;
+  scroll-margin-top: 140px;
+}
+
+.cp .nb-sec > h2 {
+  margin-bottom: 16px;
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.cp .nb-sec > h2 .nb-meta {
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.cp .nb-seg .on {
+  color: #fff;
+  background: var(--rd-violet);
+  box-shadow: var(--primary-shadow);
+}
+
+.cp .nb-bar {
+  background: var(--rd-track);
+}
+
+.cp .nb-tr.th {
+  background: none;
+}
+
+.cp .nb-tile .f {
+  color: var(--text-1);
+}
+
+.cp .nb-strip {
+  margin-top: 16px !important;
+}
+
+/* ── Narrower screens ───────────────────────────────────── */
+@media (max-width: 68.75rem) {
+  .cp-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cp-hero .strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .cp-hero .strip .tierbox {
+    grid-column: 1 / -1;
+    box-shadow: inset 0 -1px 0 rgb(255 255 255 / 0.06);
+  }
+
+  .cp-hero .st:nth-child(2) {
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 47.99rem) {
+  .cp-hero {
+    min-height: 0;
+  }
+
+  .cp-hero .art {
+    width: 100%;
+    opacity: 0.55;
+  }
+
+  .cp-hero .top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 20px 18px;
+  }
+
+  .cp-hero .face .iv-champ {
+    width: 64px !important;
+    height: 64px !important;
+  }
+
+  .cp-hero h1 {
+    font-size: 32px;
+  }
+
+  .cp-hero .strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cp-hero .st:nth-child(odd):not(.tierbox) {
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+  }
+
+  .cp-hero .st:nth-child(even) {
+    box-shadow:
+      inset 1px 0 0 rgb(255 255 255 / 0.06),
+      inset 0 1px 0 rgb(255 255 255 / 0.06);
+  }
+
+  .cp-hero .st .rd-fig {
+    font-size: 22px;
+  }
+
+  .cp-ctrl {
+    position: static;
+  }
+
+  .cp-roles,
+  .cp-tabs {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .cp-rec-in {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cp-rec-in .half + .half {
+    box-shadow: inset 0 1px 0 var(--rd-line);
+  }
+
+  .cp .nb-skills {
+    gap: 2px;
+  }
+
+  .cp .nb-skills i {
+    font-size: 9px;
+  }
+}
