@@ -46,6 +46,9 @@ export interface LobbyGame {
   /** Riot's `teamPosition` ("UTILITY"…), empty outside Summoner's Rift. */
   position: string
   win: boolean
+  /** The stored game and the side the player was on: teammates seen together are a premade. */
+  matchId?: string
+  teamId?: number
 }
 
 export interface LiveParticipant {
@@ -61,6 +64,14 @@ export interface LiveParticipant {
   championStats: { games: number; winrate: number } | null
   /** Their newest stored games: how they are doing lately. */
   recent: { games: number; wins: number } | null
+  /** Their run of results, newest first: 3 for three wins in a row, -2 for two losses. */
+  streak: number
+  /** The lane they play most in their stored games, when they have enough laned games. */
+  mainPosition: Position | null
+  /** Share of their stored games on this champion, 0 to 1. */
+  championShare: number | null
+  /** Teammates in this game they were on the same team with in two or more stored games. */
+  premade: string[]
   rank: {
     tier: string
     division: string
@@ -99,6 +110,9 @@ function playerContext(games: LobbyGame[], championId: number) {
     return {
       championStats: null,
       recent: null,
+      streak: 0,
+      mainPosition: null,
+      championShare: null,
       history: null,
       championHistory: null,
     }
@@ -118,11 +132,22 @@ function playerContext(games: LobbyGame[], championId: number) {
     if (onChampion) championHistory[lane]++
   }
   const recent = games.slice(0, RECENT_FORM_GAMES)
+  let streak = 0
+  for (const game of games) {
+    if (streak === 0) streak = game.win ? 1 : -1
+    else if (game.win === streak > 0) streak += streak > 0 ? 1 : -1
+    else break
+  }
+  const laned = history.reduce((a, b) => a + b, 0)
+  const top = history.indexOf(Math.max(...history))
   return {
     championStats: championGames
       ? { games: championGames, winrate: Math.round((championWins / championGames) * 1e4) / 1e4 }
       : null,
     recent: { games: recent.length, wins: recent.filter((game) => game.win).length },
+    streak,
+    mainPosition: laned >= 5 ? POSITION_ORDER[top] : null,
+    championShare: Math.round((championGames / games.length) * 1e3) / 1e3,
     history: history.some(Boolean) ? history : null,
     championHistory: championHistory.some(Boolean) ? championHistory : null,
   }
@@ -168,6 +193,10 @@ export function buildLiveGame(
         perks: p.perks,
         championStats: context.championStats,
         recent: context.recent,
+        streak: context.streak,
+        mainPosition: context.mainPosition,
+        championShare: context.championShare,
+        premade: [],
         rankStatus:
           (tracked && rankStatuses.get(p.puuid!)) || (rank?.tier ? 'ranked' : 'unavailable'),
         rank:
@@ -201,6 +230,29 @@ export function buildLiveGame(
       }))
       .sort((a, b) => POSITION_ORDER.indexOf(a.position!) - POSITION_ORDER.indexOf(b.position!))
   })
+
+  /* Teammates of this game who shared a side in two or more of each other's stored games. */
+  const sides = new Map<string, Map<string, number>>()
+  for (const game of games)
+    if (game.matchId && game.teamId !== undefined) {
+      const key = `${game.matchId}:${game.teamId}`
+      const list = sides.get(key) ?? new Map<string, number>()
+      list.set(game.puuid, 1)
+      sides.set(key, list)
+    }
+  if (sides.size)
+    for (const p of participants) {
+      if (!isPuuid(p.puuid)) continue
+      p.premade = participants
+        .filter((o) => o !== p && o.teamId === p.teamId && isPuuid(o.puuid))
+        .filter((o) => {
+          let together = 0
+          for (const side of sides.values())
+            if (side.has(p.puuid!) && side.has(o.puuid!)) together++
+          return together >= 2
+        })
+        .map((o) => o.puuid!)
+    }
 
   return {
     gameId: data.gameId,
