@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
-import { RefreshCw, X } from 'lucide-vue-next'
+import { ChevronDown, RefreshCw, X } from 'lucide-vue-next'
 import { ChampIcon, PerfDial, RankCrest, RoleIcon } from '@invadelol/ui'
 import {
   positionName,
@@ -12,6 +12,8 @@ import {
   type Position,
 } from '@invadelol/ui/logic'
 import { championName, profileIcon, regionLabel } from '../../lib/assets.js'
+import FormStrip from '../ui/FormStrip.vue'
+import WinLoss from '../ui/WinLoss.vue'
 import { profilePath, timeAgo } from '../../lib/format.js'
 import { scoutTags, type Scout, type Season } from '../../lib/scout.js'
 import type { RiotIdentity } from '../../lib/multisearch.js'
@@ -55,6 +57,8 @@ const solo = computed(() => {
     tier: rank.tier,
     label: rankLabel(rankFromCore(rank), false),
     lp: rank.leaguePoints,
+    wins: rank.wins,
+    losses: rank.losses ?? null,
     record: [
       total === null ? `${rank.wins}W` : `${rank.wins}W ${rank.losses}L`,
       total ? `${Math.round((rank.wins / total) * 100)}%` : '',
@@ -110,45 +114,42 @@ const failure = computed(() => {
 })
 
 const score = (value: number | undefined) => (value === undefined ? null : Math.round(value * 10))
+
+/** The two roles played most, with their share of the season's games. */
+const mainRoles = computed(() => {
+  const total = roles.value.reduce((n, r) => n + r.games, 0)
+  return [...roles.value]
+    .sort((a, b) => b.games - a.games)
+    .slice(0, 2)
+    .map((r) => ({ ...r, part: total ? Math.round((r.games / total) * 100) : 0 }))
+})
+/** The last games as a strip, oldest on the left. */
+const form = computed(() => [...(props.entry.scout?.results ?? [])].slice(0, 10).reverse())
+const formLine = computed(() => {
+  const f = props.entry.scout
+  if (!f || !f.results.length) return ''
+  const last = f.results.slice(0, 10)
+  if (f.streak >= 3) return `${f.streak} wins in a row`
+  if (f.streak <= -3) return `${-f.streak} losses in a row`
+  return `Won ${last.filter(Boolean).length} of ${last.length}`
+})
+const seasonGames = computed(() =>
+  solo.value && solo.value.losses !== null ? solo.value.wins + solo.value.losses : null
+)
+const wrClass = (games: number, rate: number) =>
+  games < 3 ? 'quiet' : rate >= 55 ? 'up' : rate < 48 ? 'dn' : ''
 </script>
 
 <template>
   <article
-    class="scout iv-panel"
-    :class="{ row: layout === 'row' }"
+    class="scout rd-card"
+    :class="{
+      row: layout === 'row',
+      hot: entry.status === 'ready' && tags.some((t) => t.label.startsWith('<3')),
+    }"
     :aria-busy="entry.status === 'loading' || entry.syncing"
   >
     <header class="head">
-      <component
-        :is="entry.status === 'ready' ? Link : 'div'"
-        :href="entry.status === 'ready' ? href : undefined"
-        class="identity"
-        :class="{ linked: entry.status === 'ready' }"
-        :title="entry.status === 'ready' ? `Open ${name}#${tag}'s profile` : undefined"
-      >
-        <img
-          v-if="entry.summoner"
-          :src="profileIcon(entry.summoner.profileIconId)"
-          alt=""
-          width="40"
-          height="40"
-          class="portrait"
-        />
-        <span v-else class="portrait iv-skel" :class="{ still: entry.status !== 'loading' }" />
-        <span class="who">
-          <span class="name">{{ name }}<span class="tag">#{{ tag }}</span></span>
-          <span class="meta num">
-            <template v-if="entry.summoner">
-              {{ regionLabel(entry.summoner.platform)
-              }}<template v-if="entry.summoner.summonerLevel"
-                >, Lv {{ entry.summoner.summonerLevel }}</template
-              >
-            </template>
-            <template v-else-if="failure">{{ failure }}</template>
-            <template v-else>&nbsp;</template>
-          </span>
-        </span>
-      </component>
       <div class="actions">
         <button
           v-if="entry.status === 'ready'"
@@ -171,128 +172,173 @@ const score = (value: number | undefined) => (value === undefined ? null : Math.
           <X :size="14" />
         </button>
       </div>
+      <component
+        :is="entry.status === 'ready' ? Link : 'div'"
+        :href="entry.status === 'ready' ? href : undefined"
+        class="identity"
+        :class="{ linked: entry.status === 'ready' }"
+        :title="entry.status === 'ready' ? `Open ${name}#${tag}'s profile` : undefined"
+      >
+        <img
+          v-if="entry.summoner"
+          :src="profileIcon(entry.summoner.profileIconId)"
+          alt=""
+          width="64"
+          height="64"
+          class="portrait"
+        />
+        <span v-else class="portrait iv-skel" :class="{ still: entry.status !== 'loading' }" />
+        <b class="name"
+          >{{ name }} <span class="tag">#{{ tag }}</span></b
+        >
+      </component>
+      <span v-if="entry.status === 'ready' && solo" class="rk">
+        <RankCrest :tier="solo.tier" :size="18" />
+        <span :style="{ color: tierColor(solo.tier) }">{{ solo.label }}</span>
+        <span class="lp num">{{ solo.lp }} LP</span>
+      </span>
+      <span v-else-if="entry.status === 'ready'" class="rk quiet">Unranked</span>
+      <span v-else class="meta num">
+        <template v-if="failure">{{ failure }}</template>
+        <template v-else-if="entry.status === 'loading'">Loading</template>
+      </span>
+      <span v-if="entry.summoner" class="meta num"
+        >{{ regionLabel(entry.summoner.platform)
+        }}<template v-if="entry.summoner.summonerLevel"
+          >, level {{ entry.summoner.summonerLevel }}</template
+        ></span
+      >
+      <ul v-if="entry.status === 'ready' && tags.length" class="tags" aria-label="Notes">
+        <li
+          v-for="t in tags"
+          :key="t.label"
+          class="rd-tag"
+          :class="
+            t.tone === 'win' ? 'b' : t.tone === 'loss' ? 'r' : t.label.startsWith('<3') ? 'v' : ''
+          "
+          :title="t.detail"
+          tabindex="0"
+        >
+          {{ t.label.startsWith('<3') ? `${t.label.slice(3)} main` : t.label }}
+        </li>
+      </ul>
     </header>
 
     <template v-if="entry.status === 'loading'">
-      <div class="block rank">
-        <div class="iv-skel h-[34px] w-3/4" />
-      </div>
-      <div class="block roles">
-        <div class="iv-skel h-[96px]" />
-      </div>
-      <div class="block champs space-y-1.5">
-        <div v-for="i in 6" :key="i" class="iv-skel h-[26px]" />
+      <div class="block"><div class="iv-skel h-[30px]" /></div>
+      <div class="block"><div class="iv-skel h-[40px]" /></div>
+      <div class="block space-y-1.5">
+        <div v-for="i in 3" :key="i" class="iv-skel h-[32px]" />
       </div>
     </template>
 
     <template v-else-if="entry.status === 'ready'">
-      <div class="block rank">
-        <RankCrest :tier="solo?.tier ?? null" :size="34" />
-        <div v-if="solo" class="min-w-0">
-          <div class="tier" :style="{ color: tierColor(solo.tier) }">
-            {{ solo.label }}&nbsp;<span class="lp num">{{ solo.lp }} LP</span>
-          </div>
-          <div class="meta num">{{ solo.record }}</div>
-        </div>
-        <div v-else>
-          <div class="tier text-ink-3">Unranked</div>
-          <div class="meta">Solo/Duo</div>
-        </div>
+      <div v-if="solo && solo.losses !== null" class="block season">
+        <h3 class="label">
+          <span>Season</span><span class="num">{{ seasonGames }} games</span>
+        </h3>
+        <WinLoss :wins="solo.wins" :losses="solo.losses" />
       </div>
 
-      <ul v-if="tags.length" class="block tags" aria-label="Notes">
-        <li
-          v-for="t in tags"
-          :key="t.label"
-          class="note"
-          :class="t.tone"
-          :title="t.detail"
-          tabindex="0"
-        >
-          {{ t.label }}
-        </li>
-      </ul>
-
-      <div v-if="empty" class="block roles empty">
-        {{ entry.syncing ? 'Fetching their games…' : 'No games stored yet' }}
+      <div v-if="empty" class="block empty">
+        {{ entry.syncing ? 'Fetching their games' : 'No games stored yet' }}
       </div>
 
-      <section v-if="roles.length" class="block roles">
-        <h3 class="label">{{ sample }}</h3>
-        <ul class="role-list">
-          <li v-for="role in roles" :key="role.lane" class="role">
-            <RoleIcon :lane="role.lane" :size="15" class="role-icon" />
-            <span class="role-name">{{ positionName(role.lane) }}</span>
-            <span class="meter"><span :style="{ width: `${role.share}%` }" /></span>
-            <span class="num role-games">{{ role.games }}</span>
-            <span class="num role-wr" :class="{ quiet: role.games < 5 }">{{ role.winrate }}%</span>
-          </li>
-        </ul>
+      <section v-if="mainRoles.length" class="block plays">
+        <h3 class="label">
+          <span>Plays</span><span>{{ sample }}</span>
+        </h3>
+        <div class="rol">
+          <span
+            v-for="r in mainRoles"
+            :key="r.lane"
+            :title="`${r.games} games, ${r.winrate}% win rate`"
+            ><RoleIcon :lane="r.lane" :size="15" />{{ positionName(r.lane) }}
+            <span class="num">{{ r.part }}%</span></span
+          >
+        </div>
+        <details v-if="roles.length > 2" class="more">
+          <summary>Every role<ChevronDown :size="12" aria-hidden="true" /></summary>
+          <ul class="role-list">
+            <li v-for="role in roles" :key="role.lane" class="role">
+              <RoleIcon :lane="role.lane" :size="14" />
+              <span class="role-name">{{ positionName(role.lane) }}</span>
+              <span class="rd-bar quiet meter"><i :style="{ width: `${role.share}%` }" /></span>
+              <span class="num role-games">{{ role.games }}</span>
+              <span class="num role-wr" :class="{ quiet: role.games < 5 }"
+                >{{ role.winrate }}%</span
+              >
+            </li>
+          </ul>
+        </details>
       </section>
 
       <section v-if="champions.length" class="block champs">
-        <!-- A wide row has room for columns; a card stacks the figures under the name. -->
-        <template v-if="layout === 'row'">
-          <div class="cols label">
-            <span>Champions</span>
-            <span class="num">Games</span>
-            <span class="num">KDA</span>
-            <span class="num">Win</span>
+        <h3 class="label"><span>Most played</span><span>Win rate</span></h3>
+        <div v-for="champ in champions.slice(0, 3)" :key="champ.championId" class="cpr">
+          <ChampIcon :id="champ.championId" :size="30" />
+          <span class="min-w-0"
+            ><b>{{ championName(champ.championId) }}</b
+            ><small class="num"
+              >{{ champ.games }} {{ champ.games === 1 ? 'game' : 'games' }},
+              {{ champ.kda }} KDA</small
+            ></span
+          >
+          <em class="num" :class="wrClass(champ.games, champ.winrate)">{{ champ.winrate }}%</em>
+        </div>
+        <details v-if="champions.length > 3" class="more">
+          <summary>
+            {{ champions.length - 3 }} more<ChevronDown :size="12" aria-hidden="true" />
+          </summary>
+          <div v-for="champ in champions.slice(3)" :key="champ.championId" class="cpr">
+            <ChampIcon :id="champ.championId" :size="30" />
+            <span class="min-w-0"
+              ><b>{{ championName(champ.championId) }}</b
+              ><small class="num"
+                >{{ champ.games }} {{ champ.games === 1 ? 'game' : 'games' }},
+                {{ champ.kda }} KDA</small
+              ></span
+            >
+            <em class="num" :class="wrClass(champ.games, champ.winrate)">{{ champ.winrate }}%</em>
           </div>
-          <ul>
-            <li v-for="champ in champions" :key="champ.championId" class="cols champ">
-              <span class="champ-who">
-                <ChampIcon :id="champ.championId" :size="22" />
-                <span class="champ-name">{{ championName(champ.championId) }}</span>
-              </span>
-              <span class="num">{{ champ.games }}</span>
-              <span class="num">{{ champ.kda }}</span>
-              <span class="num champ-wr" :class="{ quiet: champ.games < 3 }">{{ champ.winrate }}%</span>
-            </li>
-          </ul>
-        </template>
-        <template v-else>
-          <h3 class="label">Champions this season</h3>
-          <ul>
-            <li v-for="champ in champions" :key="champ.championId" class="stack">
-              <ChampIcon :id="champ.championId" :size="26" />
-              <span class="stack-text">
-                <span class="champ-name">{{ championName(champ.championId) }}</span>
-                <span class="stack-meta num">
-                  {{ champ.games }} {{ champ.games === 1 ? 'game' : 'games' }}, {{ champ.kda }} KDA
-                </span>
-              </span>
-              <span class="num champ-wr" :class="{ quiet: champ.games < 3 }">{{ champ.winrate }}%</span>
-            </li>
-          </ul>
-        </template>
+        </details>
       </section>
 
       <section v-if="games.length" class="block games">
-        <h3 class="label">Last {{ games.length }} games</h3>
-        <ul>
-          <li v-for="game in games" :key="game.gameId">
-            <Link
-              :href="`${href}/match/${game.matchId}`"
-              class="game"
-              :aria-label="`${championName(game.championId)}, ${game.win ? 'win' : 'loss'}, ${game.kills}/${game.deaths}/${game.assists}`"
-            >
-              <span class="result" :class="game.win ? 'win' : 'loss'">{{ game.win ? 'W' : 'L' }}</span>
-              <ChampIcon :id="game.championId" :size="22" />
-              <span class="num game-kda">
-                {{ game.kills }}<span class="slash">/</span>{{ game.deaths }}<span class="slash">/</span>{{ game.assists }}
-              </span>
-              <span class="num game-ago">{{ timeAgo(game.creation) }}</span>
-              <PerfDial :score="score(game.score?.score)" size="sm" />
-            </Link>
-          </li>
-        </ul>
+        <h3 class="label">
+          <span>Last {{ form.length }}</span
+          ><span class="num">{{ formLine }}</span>
+        </h3>
+        <FormStrip :results="form" tall />
+        <details class="more">
+          <summary>The games<ChevronDown :size="12" aria-hidden="true" /></summary>
+          <ul>
+            <li v-for="game in games" :key="game.gameId">
+              <Link
+                :href="`${href}/match/${game.matchId}`"
+                class="game"
+                :aria-label="`${championName(game.championId)}, ${game.win ? 'win' : 'loss'}, ${game.kills}/${game.deaths}/${game.assists}`"
+              >
+                <span class="result" :class="game.win ? 'win' : 'loss'">{{
+                  game.win ? 'W' : 'L'
+                }}</span>
+                <ChampIcon :id="game.championId" :size="22" />
+                <span class="num game-kda">
+                  {{ game.kills }}<span class="slash">/</span>{{ game.deaths
+                  }}<span class="slash">/</span>{{ game.assists }}
+                </span>
+                <span class="num game-ago">{{ timeAgo(game.creation) }}</span>
+                <PerfDial :score="score(game.score?.score)" size="sm" />
+              </Link>
+            </li>
+          </ul>
+        </details>
       </section>
 
       <footer v-if="mates.length || entry.note" class="block foot">
         <p v-for="mate in mates" :key="`${mate.gameName}#${mate.tagLine}`" class="mate">
-          Played with <span class="text-ink">{{ mate.gameName }}</span>
-          <span class="num text-ink-3">, {{ mate.games }} {{ mate.games === 1 ? 'game' : 'games' }}</span>
+          Played with <b>{{ mate.gameName }}</b
+          ><span class="num">, {{ mate.games }} {{ mate.games === 1 ? 'game' : 'games' }}</span>
         </p>
         <p v-if="entry.note" class="meta">{{ entry.note }}</p>
       </footer>
@@ -302,33 +348,50 @@ const score = (value: number | undefined) => (value === undefined ? null : Math.
 
 <style scoped>
 .scout {
+  position: relative;
   display: flex;
-  min-width: 0;
   flex-direction: column;
-  padding: 0;
+  min-width: 0;
+}
+
+.scout.hot {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--rd-violet) 45%, transparent);
 }
 
 .head {
+  position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 8px 8px 8px 6px;
+  gap: 2px;
+  padding: 18px 16px 14px;
+  text-align: center;
+  background: linear-gradient(180deg, var(--surface-1), transparent);
 }
 
-/* The whole identity opens the profile: a wash on hover, a chevron that brightens. */
+.actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+}
+
+.actions .iv-btn {
+  color: var(--text-3);
+}
+
 .identity {
   display: flex;
-  min-width: 0;
-  flex: 1;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 6px 8px;
-  border-radius: var(--r-sm);
-  transition: background-color var(--t-base) var(--ease);
+  min-width: 0;
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 8px;
 }
 
-.identity.linked:hover {
-  background: var(--glint);
+.identity.linked:hover .name {
+  color: var(--rd-violet-hi);
 }
 
 .identity.linked:focus-visible {
@@ -337,259 +400,247 @@ const score = (value: number | undefined) => (value === undefined ? null : Math.
 }
 
 .portrait {
-  width: 40px;
-  height: 40px;
-  flex-shrink: 0;
-  border-radius: var(--r-sm);
-  box-shadow: var(--portrait-sm);
+  display: block;
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.12);
 }
 
 .portrait.still {
   animation: none;
 }
 
-.who {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  flex-direction: column;
-  gap: 2px;
-}
-
 .name {
+  display: block;
+  max-width: 100%;
+  margin-top: 10px;
   overflow: hidden;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 18px;
-  color: var(--text-1);
-  text-overflow: ellipsis;
+  font-size: 15px;
+  font-weight: 650;
   white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-1);
 }
 
 .tag {
+  font-size: 13px;
   font-weight: 400;
   color: var(--text-3);
 }
 
-.meta {
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--text-3);
-}
-
-.actions {
-  display: flex;
-  align-self: flex-start;
-  margin-top: 4px;
-}
-
-.actions .iv-btn {
-  color: var(--text-3);
-}
-
-.block {
-  padding: 12px 14px;
-  border-top: 1px solid var(--line);
-}
-
-.label {
-  margin-bottom: 8px;
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--text-3);
-}
-
-.rank {
-  display: flex;
+.rk {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 650;
 }
 
-.tier {
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 18px;
+.rk.quiet {
+  color: var(--text-3);
 }
 
 .lp {
   font-weight: 500;
-  color: var(--text-2);
+  color: var(--text-3);
 }
 
-/* Notes: quiet chips; only a streak takes the result's colour. */
+.meta {
+  min-height: 16px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+
 .tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  padding-block: 10px;
+  justify-content: center;
+  gap: 4px;
+  min-height: 20px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
 }
 
-.note {
-  height: 24px;
-  padding: 0 8px;
-  border-radius: var(--r-sm);
-  background: var(--surface-2);
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 24px;
-  color: var(--text-1);
-  white-space: nowrap;
+.tags li {
   cursor: default;
 }
 
-.note:focus-visible {
+.tags li:focus-visible {
   outline: none;
   box-shadow: var(--focus);
 }
 
-.note.win {
-  color: var(--win);
-  background: rgb(var(--win-rgb) / 0.12);
+.block {
+  padding: 14px 16px;
+  box-shadow: inset 0 1px 0 var(--rd-line);
 }
 
-.note.loss {
-  color: var(--loss);
-  background: rgb(var(--loss-rgb) / 0.12);
+.label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
 }
 
 .empty {
-  font-size: 13px;
-  color: var(--text-3);
-}
-
-.role-list {
-  display: grid;
-  gap: 4px;
-}
-
-.role {
-  display: grid;
-  grid-template-columns: 16px 58px minmax(0, 1fr) 30px 40px;
-  align-items: center;
-  gap: 8px;
-  height: 26px;
-}
-
-.role-icon {
-  color: var(--text-3);
-}
-
-.role-name {
-  font-size: 13px;
-  color: var(--text-2);
-}
-
-.role-games {
-  text-align: right;
   font-size: 12px;
   color: var(--text-3);
 }
 
-.role-wr {
-  text-align: right;
-  font-size: 14px;
+.rol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.rol > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.rol > span + span {
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+.rol .num {
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+.cpr {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+}
+
+.cpr :deep(.iv-champ) {
+  border-radius: 7px;
+}
+
+.cpr b {
+  display: block;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-1);
+}
+
+.cpr small {
+  display: block;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.cpr em {
+  font-size: 13px;
+  font-style: normal;
   font-weight: 650;
   color: var(--text-1);
 }
 
-.quiet {
-  color: var(--text-3) !important;
+.cpr em.up {
+  color: var(--win);
 }
 
-.cols {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 40px 44px 40px;
+.cpr em.dn {
+  color: var(--loss);
+}
+
+.cpr em.quiet {
+  color: var(--text-3);
+}
+
+.more {
+  margin-top: 6px;
+}
+
+.more summary {
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--rd-violet-hi);
+  list-style: none;
+  cursor: pointer;
+  border-radius: 4px;
 }
 
-.cols > :not(:first-child) {
-  text-align: right;
+.more summary::-webkit-details-marker {
+  display: none;
 }
 
-.champs ul {
+.more summary:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+.more[open] summary svg {
+  transform: rotate(180deg);
+}
+
+.role-list {
   display: grid;
-  gap: 2px;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
 }
 
-.champ {
-  height: 30px;
-  font-size: 12.5px;
+.role {
+  display: grid;
+  grid-template-columns: 14px 56px minmax(0, 1fr) 28px 34px;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
   color: var(--text-2);
 }
 
-.stack {
-  display: grid;
-  grid-template-columns: 26px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  height: 36px;
-  font-size: 12.5px;
+.role-games,
+.role-wr {
+  text-align: right;
 }
 
-.stack-text {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  line-height: 16px;
-}
-
-.stack-meta {
-  overflow: hidden;
-  font-size: 11.5px;
-  line-height: 15px;
+.role-wr.quiet {
   color: var(--text-3);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.champ-who {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  gap: 8px;
-}
-
-.champ-name {
-  overflow: hidden;
-  font-weight: 600;
-  color: var(--text-1);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.champ-wr {
-  font-weight: 650;
-  color: var(--text-1);
-}
-
-.games {
-  padding-inline: 8px;
-}
-
-.games .label {
-  padding-inline: 6px;
 }
 
 .games ul {
   display: grid;
-  gap: 1px;
+  gap: 2px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
 }
 
 .game {
   display: grid;
-  grid-template-columns: 12px 22px minmax(0, 1fr) auto 30px;
+  grid-template-columns: 16px 22px minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 8px;
-  height: 34px;
-  padding: 0 2px 0 6px;
-  border-radius: var(--r-sm);
-  font-size: 12.5px;
-  transition: background-color var(--t-base) var(--ease);
+  min-height: 34px;
+  padding: 0 4px;
+  font-size: 12px;
+  color: var(--text-2);
+  border-radius: 6px;
 }
 
 .game:hover {
-  background: var(--glint);
+  background: var(--surface-1);
 }
 
 .game:focus-visible {
@@ -598,7 +649,6 @@ const score = (value: number | undefined) => (value === undefined ? null : Math.
 }
 
 .result {
-  font-size: 11px;
   font-weight: 700;
 }
 
@@ -613,94 +663,51 @@ const score = (value: number | undefined) => (value === undefined ? null : Math.
 .game-kda {
   font-weight: 600;
   color: var(--text-1);
-  white-space: nowrap;
 }
 
 .slash {
-  margin-inline: 2px;
+  margin: 0 2px;
   color: var(--text-4);
 }
 
 .game-ago {
-  font-size: 11.5px;
   color: var(--text-3);
-  white-space: nowrap;
 }
 
 .foot {
   display: grid;
   gap: 4px;
-  margin-top: auto;
   font-size: 12px;
-  color: var(--text-2);
+  color: var(--text-3);
 }
 
-.mate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.mate b {
+  font-weight: 600;
+  color: var(--text-1);
 }
 
-/* More than five players: one wide line each, read across like a scoreboard. */
+/* More than five players, from 64rem: each player one wide row. */
 @media (min-width: 64rem) {
-  .row {
+  .scout.row {
     display: grid;
-    grid-template-columns: 250px minmax(0, 0.85fr) minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-rows: auto auto auto 1fr;
-    grid-template-areas:
-      'head roles champs games'
-      'rank roles champs games'
-      'tags roles champs games'
-      'foot roles champs games';
+    grid-template-columns: 220px repeat(4, minmax(0, 1fr));
+    align-items: stretch;
   }
 
-  .row .head {
-    grid-area: head;
+  .scout.row .head {
+    grid-row: span 2;
+    justify-content: center;
   }
 
-  .row .rank {
-    grid-area: rank;
-    border-top: 0;
-    padding-top: 2px;
+  .scout.row .block {
+    box-shadow: inset 1px 0 0 var(--rd-line);
   }
 
-  .row .tags {
-    grid-area: tags;
-    border-top: 0;
-    padding-top: 0;
-  }
-
-  .row .foot {
-    grid-area: foot;
-    align-self: end;
-    margin-top: 0;
-  }
-
-  .row .roles {
-    grid-area: roles;
-  }
-
-  .row .champs {
-    grid-area: champs;
-  }
-
-  .row .games {
-    grid-area: games;
-  }
-
-  .row .roles,
-  .row .champs,
-  .row .games {
-    border-top: 0;
-    border-left: 1px solid var(--line);
-    padding-top: 14px;
-  }
-}
-
-@media (pointer: coarse) {
-  .actions .iv-btn {
-    width: 40px;
-    height: 40px;
+  .scout.row .foot {
+    grid-column: 2 / -1;
+    box-shadow:
+      inset 1px 0 0 var(--rd-line),
+      inset 0 1px 0 var(--rd-line);
   }
 }
 </style>
