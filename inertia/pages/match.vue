@@ -1,16 +1,17 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3'
-import { ChevronLeft } from 'lucide-vue-next'
+import { Head } from '@inertiajs/vue3'
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
-import { Breakdown, BuildTab, GoldChart, Scoreboard, Timeline } from '@invadelol/ui'
+import { Breakdown, BuildTab, GoldChart, Timeline } from '@invadelol/ui'
 import { hasEvents, type MatchDetail } from '@invadelol/ui/logic'
 import AppHeader from '../components/AppHeader.vue'
 import DamageChart from '../components/DamageChart.vue'
+import MatchBoard from '../components/MatchBoard.vue'
+import MatchGold from '../components/MatchGold.vue'
 import MatchHeader from '../components/MatchHeader.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import { decodeSlug, parseSlug, profilePath } from '../lib/format.js'
 import { detailOf } from '../lib/match.js'
-import { patchName } from '../lib/patch.js'
+import '../css/rd-players.css'
 import type { Match } from '../lib/types.js'
 
 const props = defineProps<{ summoner: string; matchId: string }>()
@@ -37,10 +38,30 @@ const me = computed(() => detail.value?.players.find((p) => p.puuid === ownerPuu
 /** Gold needs the per-minute frames; Timeline also needs events (old stored games have none). */
 const SECTIONS = computed(() => [
   { id: 'scoreboard', label: 'Scoreboard' },
-  { id: 'analysis', label: 'Analysis' },
-  ...(detail.value && hasEvents(detail.value) ? [{ id: 'timeline', label: 'Timeline' }] : []),
-  { id: 'build', label: 'Build' },
+  { id: 'breakdown', label: 'Breakdown' },
+  ...(detail.value?.timeline ? [{ id: 'gold', label: 'Gold' }] : []),
+  ...(detail.value?.timeline && hasEvents(detail.value)
+    ? [{ id: 'timeline', label: 'Timeline' }]
+    : []),
+  { id: 'builds', label: 'Builds' },
 ])
+
+/** The open tab, kept in the address's hash (older links said `#analysis` and `#build`). */
+const tab = ref('scoreboard')
+const ALIASES: Record<string, string> = { analysis: 'breakdown', build: 'builds' }
+function readHash() {
+  const id = location.hash.slice(1)
+  const wanted = ALIASES[id] ?? id
+  if (SECTIONS.value.some((s) => s.id === wanted)) tab.value = wanted
+}
+function show(id: string) {
+  tab.value = id
+  history.replaceState(
+    history.state,
+    '',
+    id === 'scoreboard' ? location.pathname + location.search : `#${id}`
+  )
+}
 
 /**
  * A game that just ended is not stored yet: the API answers 202 while it fetches it from Riot,
@@ -93,6 +114,7 @@ async function load() {
       0,
       detail.value.players.findIndex((p) => p.puuid === ownerPuuid.value)
     )
+    readHash()
   } catch {
     pending.value = false
     error.value = 'Something broke while loading this match.'
@@ -124,8 +146,8 @@ onBeforeUnmount(() => {
       ]"
     />
 
-    <main class="page flex-1 pt-6">
-      <div v-if="isLoading" class="space-y-6" aria-busy="true">
+    <main class="page flex-1">
+      <div v-if="isLoading" class="space-y-6 pt-6" aria-busy="true">
         <div class="iv-skel h-[168px]" />
         <div class="iv-skel h-[480px]" />
         <div class="iv-skel h-[260px]" />
@@ -146,46 +168,43 @@ onBeforeUnmount(() => {
         <a :href="`/${encodeURIComponent(slug)}`" class="iv-btn mt-5">Back to profile</a>
       </div>
 
-      <!-- The game read top to bottom: the scoreboard, then what the numbers mean, the story, the
-           builds. Each section is the desktop app's view of it. -->
+      <!-- The game: the scoreline, then one tab at a time: the scoreboard with the gold lead and the
+           damage, what the numbers mean, the gold race, the story and the builds. -->
       <template v-else-if="match && detail">
-        <!-- The header's breadcrumb is hidden on a phone: the way back to the player, here. -->
-        <Link
-          :href="profilePath(parsed.gameName, parsed.tagLine)"
-          class="-ml-1 mb-2 inline-flex h-10 max-w-full items-center gap-1 text-[13px] font-medium text-ink-2 md:hidden"
-        >
-          <ChevronLeft :size="16" class="shrink-0 text-ink-3" />
-          <span class="truncate">{{ parsed.gameName }}</span>
-          <span class="shrink-0 text-ink-3">#{{ parsed.tagLine }}</span>
-        </Link>
-        <MatchHeader :detail="detail" :match="match" :puuid="ownerPuuid" />
+        <h1 class="sr-only">{{ parsed.gameName }}'s match</h1>
+        <MatchHeader
+          :detail="detail"
+          :match="match"
+          :puuid="ownerPuuid"
+          :back="{
+            label: `${parsed.gameName}#${parsed.tagLine}`,
+            href: profilePath(parsed.gameName, parsed.tagLine),
+          }"
+        />
 
-        <nav
-          class="match-nav iv-tabs sticky top-[57px] z-20 mt-4 [@media(max-height:31rem)]:static"
-          aria-label="Sections"
-        >
-          <a v-for="item in SECTIONS" :key="item.id" :href="`#${item.id}`">{{ item.label }}</a>
+        <nav class="match-nav rd-tabs" aria-label="Sections">
+          <a
+            v-for="item in SECTIONS"
+            :key="item.id"
+            :href="`#${item.id}`"
+            :class="{ on: tab === item.id }"
+            :aria-current="tab === item.id ? 'page' : undefined"
+            @click.prevent="show(item.id)"
+            >{{ item.label }}</a
+          >
         </nav>
 
-        <section id="scoreboard" class="scroll-mt-28 pt-6">
-          <div class="section">
-            <h2>Scoreboard</h2>
-            <span class="meta">Patch {{ patchName(detail.version) }}</span>
-          </div>
-          <div class="iv-panel iv-md match-part">
-            <Scoreboard :detail="detail" :puuid="ownerPuuid" />
-          </div>
+        <section v-if="tab === 'scoreboard'" id="scoreboard">
+          <MatchBoard :detail="detail" :puuid="ownerPuuid" />
+          <MatchGold :detail="detail" :puuid="ownerPuuid" />
         </section>
 
-        <section id="analysis" class="scroll-mt-28 pt-8">
-          <div class="section">
-            <h2>Analysis</h2>
-            <span class="meta">Select a player to read their game</span>
-          </div>
-          <div class="iv-panel iv-md match-part">
+        <section v-else-if="tab === 'breakdown'" id="breakdown" class="pt-6">
+          <p class="hint">Select a player to read their game</p>
+          <div class="rd-card iv-md match-part">
             <Breakdown :detail="detail" :selected="selected" :me="me" @select="selected = $event" />
           </div>
-          <div class="iv-panel match-part mt-3">
+          <div class="rd-card match-part mt-3">
             <DamageChart
               :detail="detail"
               :selected="selected"
@@ -193,20 +212,20 @@ onBeforeUnmount(() => {
               @select="selected = $event"
             />
           </div>
-          <div v-if="detail.timeline" class="iv-panel iv-md match-part mt-3">
+        </section>
+
+        <section v-else-if="tab === 'gold' && detail.timeline" id="gold" class="pt-6">
+          <div class="rd-card iv-md match-part">
             <GoldChart :detail="detail" :timeline="detail.timeline" :selected="selected" :me="me" />
           </div>
         </section>
 
         <section
-          v-if="detail.timeline && hasEvents(detail)"
+          v-else-if="tab === 'timeline' && detail.timeline && hasEvents(detail)"
           id="timeline"
-          class="scroll-mt-28 pt-8"
+          class="pt-6"
         >
-          <div class="section">
-            <h2>Timeline</h2>
-          </div>
-          <div class="iv-panel iv-md match-part">
+          <div class="rd-card iv-md match-part">
             <Timeline
               :detail="detail"
               :timeline="detail.timeline"
@@ -217,11 +236,8 @@ onBeforeUnmount(() => {
           </div>
         </section>
 
-        <section id="build" class="scroll-mt-28 pt-8">
-          <div class="section">
-            <h2>Build</h2>
-          </div>
-          <div class="iv-panel iv-md match-part">
+        <section v-else-if="tab === 'builds'" id="builds" class="pt-6">
+          <div class="rd-card iv-md match-part">
             <BuildTab :detail="detail" :selected="selected" :me="me" @select="selected = $event" />
           </div>
         </section>
@@ -233,21 +249,29 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* The section links: a lit bar that stays under the header, opaque so the page scrolls under it. */
+/* The tabs stay under the header while the page scrolls under them. */
 .match-nav {
-  padding: 0 16px;
-  background: var(--sheen), var(--solid-1);
-  border-bottom: 0;
-  border-radius: var(--r-md);
-  box-shadow: var(--lit);
+  position: sticky;
+  top: 60px;
+  z-index: 20;
+  margin-top: 14px;
+  background: var(--ink-1);
+}
+@media (max-height: 31rem) {
+  .match-nav {
+    position: static;
+  }
+}
+.hint {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--text-3);
 }
 
-/* A section of the detail as its own panel (the shared views size themselves on `.iv-md`). The
-   build's player strip is wider than a phone: it scrolls in its panel, not the page. */
+/* A section of the detail as its own sheet (the shared views size themselves on `.iv-md`). The
+   build's player strip is wider than a phone: it scrolls in its sheet, not the page. */
 .match-part {
   padding: 16px;
   overflow-x: auto;
-  background: var(--sheen), var(--surface-1);
-  border-radius: var(--r-md);
 }
 </style>

@@ -110,7 +110,7 @@ function open(key: string) {
 
     <!-- Role first: every figure is read against that role's pace. -->
     <div class="lv-filters" :class="{ busy: loading && lens }">
-      <div class="iv-seg lv-seg" role="group" aria-label="Role">
+      <div class="rd-seg lv-seg" role="group" aria-label="Role">
         <button
           v-for="r in LENS_ROLES"
           :key="r"
@@ -126,7 +126,7 @@ function open(key: string) {
         </button>
       </div>
 
-      <div class="iv-seg lv-seg" role="group" aria-label="Queue">
+      <div class="rd-seg lv-seg" role="group" aria-label="Queue">
         <button
           v-for="[value, label] in QUEUES"
           :key="value"
@@ -138,7 +138,7 @@ function open(key: string) {
         </button>
       </div>
 
-      <div class="iv-seg lv-seg lv-seg-window" role="group" aria-label="Games read">
+      <div class="rd-seg lv-seg lv-seg-window" role="group" aria-label="Games read">
         <button
           v-for="n in WINDOWS"
           :key="n"
