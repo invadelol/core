@@ -41,7 +41,7 @@ const layout = computed(() => {
     {
       width: w,
       aspect: w >= 720 ? 2.1 : wide ? 1.5 : 1.05,
-      gap: wide ? 3 : 2,
+      gap: wide ? 7 : 5,
       minRadius: wide ? 9 : 7,
     }
   )
@@ -168,7 +168,10 @@ onBeforeUnmount(() => {
         v-for="(bubble, index) in layout.bubbles"
         :key="bubble.id"
         class="ms-bubble"
-        :class="{ 'is-on': active?.id === bubble.id }"
+        :class="{
+          'is-on': active?.id === bubble.id,
+          'hi': (entries.get(bubble.id)?.championLevel ?? 0) >= 10,
+        }"
         :style="{
           'left': `${bubble.x - bubble.r}px`,
           'top': `${bubble.y - bubble.r}px`,
@@ -233,7 +236,9 @@ onBeforeUnmount(() => {
   overflow: hidden;
   border-radius: 50%;
   background: var(--well);
-  box-shadow: var(--portrait-sm);
+  box-shadow:
+    0 0 0 2px var(--rd-card),
+    0 0 0 3px rgb(255 255 255 / 0.14);
   transition: opacity var(--t-base) var(--ease);
 }
 
@@ -253,6 +258,12 @@ onBeforeUnmount(() => {
 /* A hovered circle: the others step back, it keeps a neutral rim. */
 .ms-map.is-focus .ms-bubble:not(.is-on) {
   opacity: 0.4;
+}
+
+.ms-bubble.hi {
+  box-shadow:
+    0 0 0 2px var(--rd-card),
+    0 0 0 4px var(--rd-violet);
 }
 
 .ms-bubble.is-on {

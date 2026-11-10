@@ -34,6 +34,8 @@ export interface ChampionMastery {
   lastPlayTime: number
   /** Riot only; the League client's mastery list does not carry them. */
   championPointsUntilNextLevel?: number
+  /** Riot only: points earned since the current level began (the progress bar's filled part). */
+  championPointsSinceLastLevel?: number
   tokensEarned?: number
   /** Provenance (docs/desktop-sync.md §6.5): `riot`, or `desktop` for the Invade app. */
   source: 'riot' | 'desktop'
@@ -94,6 +96,7 @@ class PlayerInsightsService {
               championPoints: entry.championPoints,
               lastPlayTime: entry.lastPlayTime,
               championPointsUntilNextLevel: entry.championPointsUntilNextLevel,
+              championPointsSinceLastLevel: entry.championPointsSinceLastLevel,
               tokensEarned: entry.tokensEarned,
               source: 'riot',
               observedAt,
