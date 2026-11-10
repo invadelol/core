@@ -8,6 +8,8 @@
 @import './components.css';
 @import './shell.css';
 @import './season.css';
+/* Violet line, the 2026-11 redesign: loads last. */
+@import './redesign.css';
 
 /* Every class used by the app lives under inertia/. */
 @source '../';
