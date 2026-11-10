@@ -655,6 +655,80 @@ export function trendGamesSql(filter: Filter) {
   `
 }
 
+/**
+ * Every champion of one role (`{position:String}`), a day at a time from `{since:UInt64}` to
+ * `{until:UInt64}` (any patch): day, champion, games, wins. The tier list's trend lines.
+ */
+export function roleTrendSql(filter: Filter) {
+  return `
+    SELECT toString(${DAY_SQL}) AS d, champion_id, count(), sum(win)
+    FROM participant_items FINAL
+    WHERE queue_id = ${RANKED_SOLO} AND team_position = {position:String}
+      AND game_start_ms >= {since:UInt64} AND game_start_ms < {until:UInt64}
+      AND match_id IN (${trendSeedsSql(filter)})
+    GROUP BY d, champion_id
+  `
+}
+
+/** Every lane pair of one role from the counted cells (`{position:String}`): champion, opponent, games, wins. */
+export function roleLanePairsSql(filter: Filter) {
+  return `
+    SELECT champion, opponent, sum(games), sum(wins) FROM stats_lane_pairs
+    WHERE patch = {patch:String} AND position = {position:String} ${cellsSql(filter)}
+    GROUP BY champion, opponent
+  `
+}
+
+/**
+ * Per champion, its daily win rates over `days` (oldest first), null on a day with fewer than
+ * `minGames` of its games: the trend line of a tier list row.
+ */
+export function roleTrends(
+  rows: [string, number, number, number][],
+  days: string[],
+  minGames = 10
+): Record<number, (number | null)[]> {
+  const at = new Map(days.map((d, i) => [d, i]))
+  const out: Record<number, (number | null)[]> = {}
+  for (const [day, champion, games, wins] of rows) {
+    const i = at.get(day)
+    if (i === undefined) continue
+    const line = (out[champion] ??= days.map(() => null))
+    line[i] = games >= minGames ? round(wins / games) : null
+  }
+  return out
+}
+
+/**
+ * Per champion, the lane opponents it does worst against (lowest win rate first), among those it
+ * met in at least `share` of its lane games and `minGames` games: a tier list row's counters.
+ */
+export function counters(
+  pairs: [number, number, number, number][],
+  limit = 3,
+  minGames = 20,
+  share = 0.02
+): Record<number, number[]> {
+  const byChampion = new Map<number, [number, number, number][]>()
+  for (const [champion, opponent, games, wins] of pairs) {
+    const list = byChampion.get(champion) ?? []
+    list.push([opponent, games, wins])
+    byChampion.set(champion, list)
+  }
+  const out: Record<number, number[]> = {}
+  for (const [champion, list] of byChampion) {
+    const total = list.reduce((n, [, g]) => n + g, 0)
+    const gate = Math.max(minGames, total * share)
+    const worst = list
+      .filter(([, g]) => g >= gate)
+      .sort((a, b) => a[2] / a[1] - b[2] / b[1] || b[1] - a[1])
+      .slice(0, limit)
+      .map(([o]) => o)
+    if (worst.length) out[champion] = worst
+  }
+  return out
+}
+
 /* ── Counting ─────────────────────────────────────────────────── */
 
 /** One champion in one role. */

@@ -187,6 +187,21 @@ export default class ChampionsController {
     const top = rows[0] ? byId.get(rows[0].champion) : null
     const path = asked ? `/tier-list?role=${role.slug}` : '/tier-list'
     return inertia.render('champions/tier_list', {
+      // The trend lines and the counters come after the page, in one request.
+      trends: inertia.defer(
+        () =>
+          filter
+            ? championStatsService.roleTrend(filter, position).catch(() => null)
+            : Promise.resolve(null),
+        'extras'
+      ),
+      counters: inertia.defer(
+        () =>
+          filter
+            ? championStatsService.roleCounters(filter, position).catch(() => null)
+            : Promise.resolve(null),
+        'extras'
+      ),
       champions: rows.flatMap((r) => {
         const c = byId.get(r.champion)
         return c ? [{ id: c.id, name: c.name, slug: c.slug }] : []

@@ -13,6 +13,7 @@ import {
   averages,
   byLength,
   byRank,
+  counters,
   detailSql,
   details,
   early,
@@ -29,6 +30,9 @@ import {
   objectives,
   opponentsOf,
   profileSql,
+  roleLanePairsSql,
+  roleTrendSql,
+  roleTrends,
   skillOrderSql,
   skillOrders,
   summarize,
@@ -54,6 +58,8 @@ import { championSlug } from '../../inertia/lib/champions.js'
 /** The bracket a page shows unless the address names another. */
 export const DEFAULT_BRACKET: Bracket = 'emerald_plus'
 const TREND_DAYS = 30
+/** Days of the tier list's trend lines. */
+const ROLE_TREND_DAYS = 14
 /**
  * The timeline and event blocks read a sample, but stay bounded on a busy server: ClickHouse
  * stops them past this, and stops them too if the request that asked has gone.
@@ -78,6 +84,8 @@ export class ChampionStatsService {
   #byRank = statsCache('by-rank', 16)
   #champion = statsCache('champion')
   #trendDays = statsCache('trend-days', 16)
+  #roleTrends = statsCache('role-trend', 16)
+  #roleCounters = statsCache('role-counters', 16)
   // Every lane pair of a patch (~1.5 MB each): few kept in this process, all of them in Redis.
   #pairs = statsCache('lane-pairs', 4)
   /** One champion's opponents from the counted cells: a burst of asks reads them once. */
@@ -317,6 +325,51 @@ export class ChampionStatsService {
           champion
         )
       )
+    })
+  }
+
+  /**
+   * The tier list's trend lines: every champion of a role, its win rate each day of the
+   * `ROLE_TREND_DAYS` before today (UTC), any patch, at the filter's ranks and region.
+   */
+  roleTrend(filter: Filter, position: Position) {
+    const until = Math.floor(Date.now() / DAY_MS) * DAY_MS
+    const since = until - ROLE_TREND_DAYS * DAY_MS
+    const at = `${filter.bracket}:${filter.region ?? ''}:${position}:${since}`
+    return this.#roleTrends.get(at, async () => {
+      const found = await rows(roleTrendSql(filter), { position, since, until })
+      const days = Array.from({ length: ROLE_TREND_DAYS }, (_, i) =>
+        new Date(since + i * DAY_MS).toISOString().slice(0, 10)
+      )
+      return {
+        days,
+        lines: roleTrends(
+          found.map(([d, c, g, w]) => [String(d), num(c), num(g), num(w)]),
+          days
+        ),
+      }
+    })
+  }
+
+  /**
+   * The tier list's counters: for every champion of a role, the lane opponents it does worst
+   * against on the filter (the counted cells, else every lane pair of the filter).
+   */
+  roleCounters(filter: Filter, position: Position) {
+    return this.#roleCounters.get(`${key(filter)}:${position}`, async () => {
+      if (await isCounted(filter.patch)) {
+        const found = await rows(roleLanePairsSql(filter), { patch: filter.patch, position })
+        return counters(found.map(([c, o, g, w]) => [num(c), num(o), num(g), num(w)]))
+      }
+      const pairs = await this.lanePairs(filter)
+      const flat: [number, number, number, number][] = []
+      for (const [k, list] of Object.entries(pairs)) {
+        const [pos, champion] = k.split(':')
+        if (pos !== position) continue
+        for (let i = 0; i + 2 < list.length; i += 3)
+          flat.push([Number(champion), list[i], list[i + 1], list[i + 2]])
+      }
+      return counters(flat)
     })
   }
 
