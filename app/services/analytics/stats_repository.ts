@@ -259,10 +259,19 @@ export class StatsRepository {
   async getRecentGames(
     puuids: string[],
     count: number
-  ): Promise<Array<{ puuid: string; championId: number; position: string; win: boolean }>> {
+  ): Promise<
+    Array<{
+      puuid: string
+      championId: number
+      position: string
+      win: boolean
+      matchId: string
+      teamId: number
+    }>
+  > {
     if (!puuids.length) return []
     const result = await rows(`
-      SELECT puuid, champion_id, team_position, win
+      SELECT puuid, champion_id, team_position, win, match_id, team_id
       FROM participants
       PREWHERE puuid IN (${puuids.map((puuid) => `'${escapeClickhouseString(puuid)}'`).join(',')})
       WHERE ${VISIBLE_QUEUES_SQL}
@@ -274,6 +283,8 @@ export class StatsRepository {
       championId: number(row[1]),
       position: asString(row[2]),
       win: number(row[3]) === 1,
+      matchId: asString(row[4]),
+      teamId: number(row[5]),
     }))
   }
 

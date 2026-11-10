@@ -1,21 +1,26 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { Link } from '@inertiajs/vue3'
 import { Icon, ObjectiveIcon, useFormat, type ObjectiveIconName } from '@invadelol/ui'
 import { queueName, type MatchDetail } from '@invadelol/ui/logic'
-import { regionLabel } from '../lib/assets.js'
+import { champIcon, championName, regionLabel } from '../lib/assets.js'
+import { patchName } from '../lib/patch.js'
 import type { Match } from '../lib/types.js'
 
 /**
- * The top of a match page, which has no row above its detail: the queue and when, then the
- * scorebug (each team's result and kills, the clock and the gold race). The viewed player's team
- * is on the left; blue side when nobody is viewed.
+ * The top of a match page (Violet line): the way back to the player and the game's links, then
+ * the scoreline: each side with its result, objectives and bans, the kills in the middle with the
+ * queue, length and patch. Blue side on the left; each side's name says its result, blue for a
+ * win and red for a loss.
  */
 const props = defineProps<{
   detail: MatchDetail
-  match: Pick<Match, 'matchId' | 'platform' | 'source' | 'verification'>
+  match: Pick<Match, 'matchId' | 'platform' | 'source' | 'verification' | 't1Bans' | 't2Bans'>
   puuid?: string
+  /** The player whose profile led here, for the way back. */
+  back?: { label: string; href: string } | null
 }>()
-const { ago, compact, date, mmss, signedGold } = useFormat()
+const { ago, date, mmss } = useFormat()
 
 /** One quiet line for games the desktop app recorded; Riot's own games need none. */
 const provenance = computed(() => {
@@ -25,130 +30,328 @@ const provenance = computed(() => {
     : 'Recorded by the Invade app'
 })
 
-const mine = computed(() => props.detail.players.find((p) => p.puuid === props.puuid)?.teamId)
 const sides = computed(() =>
   [...props.detail.teams]
-    .sort((a, b) =>
-      a.teamId === mine.value ? -1 : b.teamId === mine.value ? 1 : a.teamId - b.teamId
-    )
-    .map((team) => ({ ...team, side: team.teamId === 100 ? 'Blue side' : 'Red side' }))
+    .sort((a, b) => a.teamId - b.teamId)
+    .map((team) => ({
+      ...team,
+      side: team.teamId === 100 ? 'Blue side' : team.teamId === 200 ? 'Red side' : 'Team',
+      bans: (team.bans?.length
+        ? team.bans
+        : team.teamId === 100
+          ? props.match.t1Bans
+          : props.match.t2Bans
+      )?.filter((id) => id > 0),
+    }))
 )
 
 /** What each team took, on Summoner's Rift (the other maps have none of these). */
 const OBJECTIVES: Array<{
   id: ObjectiveIconName
-  key: 'towers' | 'inhibitors' | 'dragons' | 'barons' | 'heralds'
+  key: 'towers' | 'dragons' | 'barons' | 'heralds'
   label: string
 }> = [
-  { id: 'tower', key: 'towers', label: 'Turrets' },
-  { id: 'inhib', key: 'inhibitors', label: 'Inhibitors' },
-  { id: 'dragon', key: 'dragons', label: 'Dragons' },
-  { id: 'baron', key: 'barons', label: 'Barons' },
-  { id: 'herald', key: 'heralds', label: 'Rift Heralds' },
+  { id: 'tower', key: 'towers', label: 'towers' },
+  { id: 'dragon', key: 'dragons', label: 'dragons' },
+  { id: 'baron', key: 'barons', label: 'barons' },
 ]
+const rift = computed(() => props.detail.mapId === 11)
 
-/** Gold lead of the left team: blue when ahead, red when behind (good or bad for you). */
-const lead = computed(() => sides.value[0].gold - (sides.value[1]?.gold ?? 0))
-const split = computed(() => {
-  const sum = sides.value[0].gold + (sides.value[1]?.gold ?? 0)
-  return sum ? (sides.value[0].gold / sum) * 100 : 50
-})
-
-const copied = ref(false)
-async function copyId() {
+const copied = ref<'' | 'link' | 'id'>('')
+async function copy(what: 'link' | 'id') {
   try {
-    await navigator.clipboard.writeText(props.match.matchId)
-    copied.value = true
-    setTimeout(() => (copied.value = false), 1600)
+    await navigator.clipboard.writeText(what === 'id' ? props.match.matchId : location.href)
+    copied.value = what
+    setTimeout(() => (copied.value = ''), 1600)
   } catch {
-    /* the id is selectable either way */
+    /* the address bar and the id stay selectable */
   }
+}
+async function share() {
+  const data = { title: document.title, url: location.href }
+  if (navigator.share) await navigator.share(data).catch(() => {})
+  else void copy('link')
 }
 </script>
 
 <template>
-  <header class="iv-panel match-head">
-    <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-1">
-      <div class="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h1 class="text-[20px] font-semibold leading-6 tracking-[-0.01em] text-ink">
-          {{ queueName(detail.queueId) }}
-        </h1>
-        <p class="num text-[12.5px] text-ink-3">
-          {{ date(detail.creation, { day: 'numeric', month: 'short', year: 'numeric' }) }},
-          {{ ago(detail.creation) }}, {{ regionLabel(match.platform)
-          }}<template v-if="provenance">, {{ provenance }}</template>
-        </p>
-      </div>
-
-      <button
-        type="button"
-        class="num flex shrink-0 items-center gap-1.5 text-[12px] text-ink-4 transition-colors hover:text-ink-2 pointer-coarse:h-9"
-        title="Copy match id"
-        @click="copyId"
+  <div class="crumbs">
+    <nav aria-label="Breadcrumb">
+      <template v-if="back">
+        <Link :href="back.href">{{ back.label }}</Link>
+        <span aria-hidden="true">/</span>
+      </template>
+      <b
+        >{{ queueName(detail.queueId) }},
+        <span class="num">{{
+          date(detail.creation, { day: 'numeric', month: 'short', year: 'numeric' })
+        }}</span></b
       >
-        {{ copied ? 'Copied' : match.matchId }}
-        <Icon name="copy" :size="12" />
+    </nav>
+    <div class="acts">
+      <button type="button" class="iv-btn sm" @click="copy('link')">
+        <Icon :name="copied === 'link' ? 'check' : 'copy'" :size="13" />
+        {{ copied === 'link' ? 'Copied' : 'Copy link' }}
       </button>
+      <button type="button" class="iv-btn sm" @click="share">Share</button>
     </div>
+  </div>
 
+  <header class="mh">
     <div
-      class="mt-5 grid grid-cols-2 items-center gap-x-4 gap-y-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1fr)] sm:gap-10"
+      v-for="(team, i) in sides"
+      :key="team.teamId"
+      class="ms"
+      :class="[i ? 'r' : '', team.win ? 'won' : 'lost']"
     >
-      <div
-        v-for="(team, index) in sides"
-        :key="team.teamId"
-        :class="index ? 'text-right sm:order-3' : ''"
-      >
-        <div class="text-[13px] font-semibold">
-          <span :class="team.win ? 'text-win' : 'text-loss'">{{
-            team.win ? 'Victory' : 'Defeat'
-          }}</span>
-          <span class="font-medium text-ink-3">, {{ team.side }}</span>
-        </div>
-        <div class="iv-fig mt-2 text-[40px] sm:text-[44px]">{{ team.kills }}</div>
-        <div
-          class="mt-2 flex flex-wrap items-center gap-x-2.5 gap-y-1 sm:gap-x-3"
-          :class="index ? 'justify-end' : ''"
-        >
-          <span
-            v-for="o in OBJECTIVES"
-            :key="o.id"
-            class="num flex items-center gap-1 text-[13px] font-semibold"
-            :class="team[o.key] ? 'text-ink' : 'text-ink-4'"
-            :title="`${team[o.key]} ${o.label}`"
+      <span>
+        <h2>{{ team.side }}</h2>
+        <small>{{ detail.remake ? 'Remake' : team.win ? 'Victory' : 'Defeat' }}</small>
+        <span v-if="rift" class="ob num">
+          <span v-for="o in OBJECTIVES" :key="o.id" :title="`${team[o.key]} ${o.label}`"
+            ><ObjectiveIcon :name="o.id" :size="13" /><b>{{ team[o.key] }}</b
+            >{{ o.label }}</span
           >
-            <ObjectiveIcon :name="o.id" :size="14" :class="{ 'text-ink-3': team[o.key] }" />
-            {{ team[o.key] }}
-          </span>
-        </div>
-      </div>
-
-      <div class="col-span-2 min-w-0 sm:order-2 sm:col-span-1">
-        <div class="iv-fig text-center text-[24px]">{{ mmss(detail.duration) }}</div>
-        <div class="num mb-2 mt-2 text-center text-[12px] font-medium">
-          <span v-if="lead === 0" class="text-ink-3">Even gold</span>
-          <span v-else :class="lead > 0 ? 'text-win' : 'text-loss'">
-            {{ signedGold(lead) }} gold
-            <span class="text-ink-3">{{
-              mine ? 'for your team' : `for ${sides[0].side.toLowerCase()}`
-            }}</span>
-          </span>
-        </div>
-        <div class="flex h-[4px] gap-[2px]">
-          <span class="rounded-l-[2px] bg-win" :style="{ width: `${split}%` }" />
-          <span class="flex-1 rounded-r-[2px] bg-loss" />
-        </div>
-        <div class="num mt-1.5 flex justify-between text-[12px] text-ink-3">
-          <span>{{ compact(sides[0].gold) }}</span>
-          <span>{{ compact(sides[1]?.gold ?? 0) }}</span>
-        </div>
-      </div>
+        </span>
+        <span v-if="team.bans?.length" class="bans" :aria-label="`${team.side} bans`">
+          <img
+            v-for="(id, b) in team.bans"
+            :key="b"
+            :src="champIcon(id)"
+            :alt="`Banned: ${championName(id)}`"
+            :title="`Banned: ${championName(id)}`"
+            width="24"
+            height="24"
+          />
+        </span>
+      </span>
+    </div>
+    <div class="mc2">
+      <div class="rd-fig num">{{ sides[0]?.kills ?? 0 }}<i>:</i>{{ sides[1]?.kills ?? 0 }}</div>
+      <small class="num"
+        >{{ queueName(detail.queueId) }}, {{ mmss(detail.duration) }}, patch
+        {{ patchName(detail.version) }}</small
+      >
+      <small class="num quiet"
+        >{{ ago(detail.creation) }}, {{ regionLabel(match.platform)
+        }}<template v-if="provenance">, {{ provenance }}</template></small
+      >
+      <button type="button" class="mid num" title="Copy match id" @click="copy('id')">
+        {{ copied === 'id' ? 'Copied' : match.matchId }}
+        <Icon name="copy" :size="11" />
+      </button>
     </div>
   </header>
 </template>
 
 <style scoped>
-.match-head {
-  padding: 16px 20px 20px;
+.crumbs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  margin-top: 8px;
+}
+.crumbs nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--text-4);
+}
+.crumbs nav a {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-2);
+  text-decoration: none;
+}
+.crumbs nav a:hover {
+  color: var(--text-1);
+}
+.crumbs nav b {
+  overflow: hidden;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-1);
+}
+.acts {
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+.mh {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 28px;
+  padding: 26px 28px;
+  margin-top: 12px;
+  border-radius: 12px;
+  background:
+    linear-gradient(90deg, var(--l), var(--rd-card) 38%, var(--rd-card) 62%, var(--r)),
+    var(--rd-card);
+  box-shadow: inset 0 0 0 1px var(--rd-line);
+  --l: transparent;
+  --r: transparent;
+}
+.mh:has(.ms:first-child.won) {
+  --l: rgb(var(--win-rgb) / 0.13);
+}
+.mh:has(.ms:first-child.lost) {
+  --l: rgb(var(--loss-rgb) / 0.1);
+}
+.mh:has(.ms.r.won) {
+  --r: rgb(var(--win-rgb) / 0.13);
+}
+.mh:has(.ms.r.lost) {
+  --r: rgb(var(--loss-rgb) / 0.1);
+}
+.ms {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+.ms.r {
+  grid-column: 3;
+  grid-row: 1;
+  justify-content: flex-end;
+  text-align: right;
+}
+.ms h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 650;
+}
+.ms.won h2 {
+  color: var(--win);
+}
+.ms.lost h2 {
+  color: var(--loss);
+}
+.ms small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.ob {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.ob > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.ob :deep(svg) {
+  color: var(--text-3);
+}
+.ms.r .ob {
+  justify-content: flex-end;
+}
+.ob b {
+  margin-right: 1px;
+  font-weight: 650;
+  color: var(--text-1);
+}
+.bans {
+  display: flex;
+  gap: 4px;
+  margin-top: 10px;
+}
+.ms.r .bans {
+  justify-content: flex-end;
+}
+.bans img {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  filter: grayscale(1) brightness(0.65);
+}
+.mc2 {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+.mc2 .rd-fig {
+  font-size: 52px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.mc2 .rd-fig i {
+  margin: 0 12px;
+  font-style: normal;
+  font-weight: 400;
+  color: var(--text-4);
+}
+.mc2 small {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.mc2 small.quiet {
+  margin-top: 2px;
+  color: var(--text-4);
+}
+.mc2 .mid {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  padding: 2px 4px;
+  border: 0;
+  font: 400 11px var(--font);
+  color: var(--text-4);
+  background: none;
+  cursor: pointer;
+}
+.mc2 .mid:hover {
+  color: var(--text-2);
+}
+
+@media (max-width: 900px) {
+  .mh {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 18px 12px;
+    padding: 20px 16px;
+  }
+  .mc2 {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  .ms {
+    grid-row: 2;
+  }
+  .ms.r {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .mc2 .rd-fig {
+    font-size: 40px;
+  }
+  .ms h2 {
+    font-size: 18px;
+  }
+  .ob {
+    gap: 4px 10px;
+    font-size: 12px;
+  }
+}
+@media (max-width: 520px) {
+  .crumbs {
+    flex-wrap: wrap;
+  }
 }
 </style>

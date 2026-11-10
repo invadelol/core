@@ -4,6 +4,7 @@ import { Link } from '@inertiajs/vue3'
 import { ChampIcon } from '@invadelol/ui'
 import { championName } from '../lib/assets.js'
 import ShowMore from './ShowMore.vue'
+import WinLoss from './ui/WinLoss.vue'
 import type { ChampionStats } from '../lib/types.js'
 
 const props = defineProps<{
@@ -29,51 +30,41 @@ const rows = computed(() =>
 </script>
 
 <template>
-  <section v-if="rows.length" class="iv-panel">
-    <div class="section">
+  <section v-if="rows.length" class="rd-card">
+    <div class="rd-head">
       <h3>Champions</h3>
-      <Link
-        :href="`/${encodeURIComponent(slug)}/champions`"
-        class="meta ml-auto transition-colors hover:text-ink pointer-coarse:-my-3 pointer-coarse:py-3 pointer-coarse:pl-4"
-      >
+      <Link :href="`/${encodeURIComponent(slug)}/champions`" class="rd-more">
         All {{ champions.length }}
       </Link>
     </div>
 
-    <ul class="-mx-2">
+    <ul class="rd-plist">
       <li v-for="champ in rows" :key="champ.championId">
         <button
           type="button"
-          class="flex h-[48px] w-full items-center gap-3 rounded-[5px] px-2 text-left transition-colors hover:bg-panel"
-          :class="active === champ.championId ? '!bg-raised' : ''"
+          class="prow"
+          :class="{ on: active === champ.championId }"
           :aria-pressed="active === champ.championId"
           :title="`Show ${championName(champ.championId)} games`"
           @click="emit('pick', champ.championId)"
         >
-          <ChampIcon :id="champ.championId" :size="32" />
-          <span class="min-w-0 flex-1">
-            <span class="block truncate text-[13px] font-semibold leading-[17px] text-ink">
-              {{ championName(champ.championId) }}
-            </span>
-            <span class="num block text-[12px] leading-4 text-ink-3">
-              {{ champ.games }} {{ champ.games === 1 ? 'game' : 'games' }},
-              {{ champ.kda.toFixed(1) }} KDA
-            </span>
-          </span>
-          <span class="num shrink-0 text-right">
-            <span
-              class="block text-[13px] font-semibold leading-[17px]"
-              :class="champ.thin ? 'text-ink-3' : 'text-ink'"
+          <ChampIcon :id="champ.championId" :size="36" />
+          <span class="min-w-0">
+            <b class="truncate">{{ championName(champ.championId) }}</b>
+            <small class="num"
+              >{{ champ.kda.toFixed(2) }} KDA, {{ champ.csMin.toFixed(1) }} CS/min</small
             >
-              {{ Math.round(champ.winrate * 100) }}%
-            </span>
-            <span class="block text-[12px] leading-4 text-ink-3">
-              {{ champ.wins }}W {{ champ.games - champ.wins }}L
-            </span>
           </span>
+          <WinLoss
+            :class="{ thin: champ.thin }"
+            :wins="champ.wins"
+            :losses="champ.games - champ.wins"
+          />
         </button>
       </li>
     </ul>
-    <ShowMore v-model="open" class="mt-1" :total="champions.length" :limit="limit ?? 5" />
+    <div v-if="champions.length > (limit ?? 5)" class="rd-foot">
+      <ShowMore v-model="open" :total="champions.length" :limit="limit ?? 5" />
+    </div>
   </section>
 </template>

@@ -8,13 +8,23 @@ const UPDATE_AGAIN_MS = 5 * 60_000
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { X } from 'lucide-vue-next'
 import { RoleIcon } from '@invadelol/ui'
-import { positionOf, queueName } from '@invadelol/ui/logic'
+import {
+  positionName,
+  positionOf,
+  queueName,
+  rankFromCore,
+  rankLabel,
+  rankValue,
+  tierColor,
+  type Position,
+} from '@invadelol/ui/logic'
 import MatchFilters, { type Filters } from './MatchFilters.vue'
 import PlayerLink from './PlayerLink.vue'
 import PlayerSearchField from './PlayerSearchField.vue'
 import ShowMore from './ShowMore.vue'
-import Sparkline from './ui/Sparkline.vue'
-import { champIcon, championName, profileIcon, regionLabel } from '../lib/assets.js'
+import FormStrip from './ui/FormStrip.vue'
+import { champIcon, championName, profileIcon } from '../lib/assets.js'
+import { monotone } from '../lib/rd_curve.js'
 import { compact, duration, timeAgo } from '../lib/format.js'
 import { killParticipation, matchMinutes, teamTotals } from '../lib/match.js'
 import {
@@ -26,7 +36,14 @@ import {
   type Side,
 } from '../lib/compare.js'
 import { teammatesFrom } from '../lib/synergy.js'
-import type { ChampionStats, GlobalStats, Match, Summoner } from '../lib/types.js'
+import type {
+  ChampionStats,
+  GlobalStats,
+  Match,
+  Rank,
+  RanksPayload,
+  Summoner,
+} from '../lib/types.js'
 
 const props = defineProps<{
   profile: Summoner
@@ -178,6 +195,88 @@ onBeforeUnmount(() => {
   analytics?.abort()
 })
 
+/* ── Ranks, for the header and the LP chart ───────────────────── */
+const ranks = ref<Array<RanksPayload | null>>([])
+let rankController: AbortController | undefined
+watch(
+  players,
+  async (list) => {
+    rankController?.abort()
+    rankController = new AbortController()
+    const signal = rankController.signal
+    ranks.value = []
+    const got = await Promise.all(
+      list.map((p) =>
+        fetch(`/api/summoners/puuid/${p.puuid}/ranks`, { signal })
+          .then((r) => (r.ok ? (r.json() as Promise<RanksPayload>) : null))
+          .catch(() => null)
+      )
+    )
+    if (!signal.aborted) ranks.value = got
+  },
+  { immediate: true }
+)
+onBeforeUnmount(() => rankController?.abort())
+
+const soloOf = (i: number) =>
+  ranks.value[i]?.current?.find((r) => r.queueType === 'RANKED_SOLO_5x5' && r.tier) ?? null
+
+/** Each player's most played lane in the sample. */
+function mainRole(i: number): Position | null {
+  const counts = new Map<Position, number>()
+  for (const m of datasets.value[i]?.matches ?? []) {
+    const me = m.participants.find((x) => x.puuid === players.value[i]?.puuid)
+    const lane = positionOf(me?.position)
+    if (lane) counts.set(lane, (counts.get(lane) ?? 0) + 1)
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null
+}
+
+/** LP won or lost over the last 30 days, both from the same start line. */
+const lp = computed(() => {
+  const time = (r: Rank) => new Date(r.fetchedAt ?? 0).getTime()
+  const series = players.value.map((_, i) => {
+    const rows = (ranks.value[i]?.history ?? [])
+      .filter((r) => r.queueType === 'RANKED_SOLO_5x5' && r.tier && r.fetchedAt)
+      .map((r) => ({ t: time(r), v: rankValue(rankFromCore(r)) }))
+      .filter((p): p is { t: number; v: number } => p.v !== null)
+      .sort((a, b) => a.t - b.t)
+    return rows
+  })
+  const end = Math.max(0, ...series.flatMap((s) => s.map((p) => p.t)))
+  if (!end) return null
+  const start = end - 30 * 864e5
+  const lines = series.map((rows) => {
+    const inside = rows.filter((p) => p.t >= start)
+    const before = rows.filter((p) => p.t < start).pop()
+    const list = before ? [{ t: start, v: before.v }, ...inside] : inside
+    if (list.length < 2) return null
+    const base = list[0].v
+    return list.map((p) => ({ t: p.t, d: Math.round((p.v - base) * 100) }))
+  })
+  if (!lines.some(Boolean)) return null
+  const all = lines.flatMap((l) => (l ?? []).map((p) => p.d))
+  const lo = Math.min(0, ...all) - 10
+  const hi = Math.max(0, ...all) + 10
+  const W = 400
+  const H = 170
+  const x = (t: number) => ((t - start) / (end - start)) * W
+  const y = (d: number) => 8 + (1 - (d - lo) / (hi - lo)) * (H - 16)
+  return {
+    paths: lines.map((l) => (l ? monotone(l.map((p) => [x(p.t), y(p.d)] as const)) : '')),
+    deltas: lines.map((l) => (l ? l[l.length - 1].d : null)),
+    zero: y(0),
+    from: new Date(start).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+    mid: new Date(start + (end - start) / 2).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+    }),
+    W,
+    H,
+  }
+})
+const signedLp = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : '±'}${Math.abs(n)}`
+
 /** The two match samples, the shape every derivation in lib/compare works on. */
 const sides = computed<Side[]>(() =>
   players.value.map((p, index) => ({
@@ -236,30 +335,6 @@ function gap(key: MetricKey, factor: number, decimals: number) {
   const diff = Math.abs(a[key] - b[key]) * factor
   if (diff < Number(`1e-${decimals}`)) return null
   return `+${diff.toFixed(decimals)}`
-}
-
-/* ── Per-game series, for the trend beside each metric ─────────── */
-function series(index: number, key: MetricKey) {
-  return (datasets.value[index]?.matches ?? [])
-    .slice(0, 20)
-    .reverse()
-    .flatMap((m) => {
-      const p = m.participants.find((x) => x.puuid === players.value[index]?.puuid)
-      if (!p) return []
-      const minutes = matchMinutes(m)
-      const totals = teamTotals(m)
-      const teamDamage = totals[p.teamId]?.damage || 1
-      const teamGold = totals[p.teamId]?.gold || 1
-      if (key === 'winrate') return [Number(p.win) * 100]
-      if (key === 'kda') return [(p.kills + p.assists) / Math.max(1, p.deaths)]
-      if (key === 'killParticipation') return [killParticipation(p, totals)]
-      if (key === 'damageShare') return [(p.totalDamageDealtToChampions / teamDamage) * 100]
-      if (key === 'goldShare') return [(p.goldEarned / teamGold) * 100]
-      if (key === 'csMin') return [p.cs / minutes]
-      if (key === 'goldPerMinute') return [p.goldEarned / minutes]
-      if (key === 'damagePerMinute') return [p.totalDamageDealtToChampions / minutes]
-      return [p.visionScore / minutes]
-    })
 }
 
 /** Last 20 results per player, oldest first. */
@@ -402,248 +477,226 @@ const pools = computed(() =>
     : { both: [], only: [[], []] }
 )
 
-/** Rows per group before "Show all": the most played first. */
-const BOTH_ROWS = 8
-const ONLY_ROWS = 5
 const poolsOpen = ref(false)
-const overlap = computed(() =>
-  poolsOpen.value ? pools.value.both : pools.value.both.slice(0, BOTH_ROWS)
-)
-const only = computed(() =>
-  pools.value.only.map((list) => (poolsOpen.value ? list : list.slice(0, ONLY_ROWS)))
-)
-const poolRows = computed(() => ({
-  total: pools.value.both.length + pools.value.only[0].length + pools.value.only[1].length,
-  limit:
-    Math.min(pools.value.both.length, BOTH_ROWS) +
-    Math.min(pools.value.only[0].length, ONLY_ROWS) +
-    Math.min(pools.value.only[1].length, ONLY_ROWS),
-}))
 
-/** Same emphasis rule as the role table, on the pick they share. */
-function poolInk(stats: Array<ChampionStats | null>, index: number) {
-  const [a, b] = stats
-  if (!a || !b || a.winrate === b.winrate) return 'font-medium text-ink-2'
-  return (a.winrate > b.winrate ? 0 : 1) === index
-    ? 'font-semibold text-ink'
-    : 'font-medium text-ink-4'
-}
+/** Each side's champions, most played first; a pick both play is highlighted. */
+const POOL_ROWS = 6
+const sharedIds = computed(() => new Set(pools.value.both.map((row) => row.championId)))
+const columns = computed(() =>
+  [0, 1].map((i) =>
+    [...(datasets.value[i]?.champions ?? [])]
+      .sort((a, b) => b.games - a.games)
+      .slice(0, poolsOpen.value ? undefined : POOL_ROWS)
+  )
+)
+const poolMore = computed(() =>
+  Math.max(datasets.value[0]?.champions.length ?? 0, datasets.value[1]?.champions.length ?? 0)
+)
 </script>
 
 <template>
-  <section>
-    <div class="section">
-      <h2>Compare</h2>
-      <span class="meta">Up to 100 games each, on the same filters</span>
-    </div>
-
-    <div class="mb-5 flex flex-wrap items-center gap-2">
-      <PlayerSearchField
-        :busy="busy"
-        placeholder="Search a Riot ID to compare against"
-        @select="pick"
-      />
-      <button v-if="other" class="iv-btn" @click="clear">
-        <X :size="13" />
-        Clear
-      </button>
-    </div>
-
-    <p v-if="error" class="notice mb-5" role="alert">{{ error }}</p>
-    <p v-else-if="note && other" class="mb-5 text-[12.5px] text-ink-3" role="status">{{ note }}</p>
-
-    <MatchFilters v-model="filters" :champions="champions" class="mb-6" />
-
-    <div v-if="fetching" class="grid gap-2" aria-busy="true">
-      <p class="py-2 text-[13px] text-ink-2" role="status">
-        Fetching {{ fetching }}’s latest games…
-      </p>
-      <div class="grid grid-cols-2 gap-2">
-        <div class="iv-skel h-[168px]" />
-        <div class="iv-skel h-[168px]" />
-      </div>
-    </div>
-
-    <p v-else-if="!other" class="py-2 text-[13px] text-ink-2">
-      Search a player above to put their last games next to these.
-    </p>
-
-    <template v-else-if="ready">
-      <!-- Who is being compared, and who is ahead overall -->
-      <div
-        class="mb-2 grid grid-cols-2 items-stretch gap-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"
-      >
-        <div
-          v-for="(p, i) in players"
-          :key="p.puuid"
-          class="iv-panel min-w-0 p-4"
-          :class="i === 1 ? 'order-2 text-right sm:order-3' : 'order-1'"
-        >
-          <div class="flex items-center gap-3" :class="i === 1 ? 'flex-row-reverse' : ''">
-            <img
-              :src="profileIcon(p.profileIconId)"
-              alt=""
-              width="48"
-              height="48"
-              class="thumb h-10 w-10 rounded-[8px] sm:h-12 sm:w-12"
+  <section class="cmp">
+    <!-- Who against whom, and every metric on one mirrored axis -->
+    <section class="rd-card">
+      <div v-if="other" class="vsh">
+        <div v-for="(p, i) in players" :key="p.puuid" class="vp" :class="{ r: i === 1 }">
+          <img :src="profileIcon(p.profileIconId)" alt="" width="72" height="72" />
+          <span class="min-w-0">
+            <PlayerLink
+              :game-name="p.gameName"
+              :tag-line="p.tagLine"
+              show-tag
+              bold
+              class="vp-name"
             />
-            <div class="min-w-0" :class="i === 1 ? 'text-right' : ''">
-              <PlayerLink
-                :game-name="p.gameName"
-                :tag-line="p.tagLine"
-                show-tag
-                bold
-                class="max-w-full text-[15px] sm:text-[17px]"
-              />
-              <div class="num mt-0.5 truncate text-[12px] text-ink-3">
-                {{ regionLabel(p.platform) }}, Level {{ p.summonerLevel }}
-              </div>
-            </div>
-          </div>
-
-          <!-- The headline figures, the better of the two in full ink -->
-          <div
-            class="mt-4 flex flex-wrap items-end gap-x-5 gap-y-3"
-            :class="i === 1 ? 'justify-end' : ''"
-          >
-            <div>
-              <div class="label">Win rate</div>
-              <div
-                class="fig mt-1.5 text-[24px] sm:text-[28px]"
-                :class="leader('winrate') === 1 - i ? 'text-ink-3' : 'text-ink'"
-              >
-                {{ value(i, 'winrate', 100, 0) ?? '-' }}%
-              </div>
-            </div>
-            <div>
-              <div class="label">KDA</div>
-              <div
-                class="fig mt-1.5 text-[24px] sm:text-[28px]"
-                :class="leader('kda') === 1 - i ? 'text-ink-3' : 'text-ink'"
-              >
-                {{ value(i, 'kda', 1, 2) ?? '-' }}
-              </div>
-            </div>
-            <div>
-              <div class="label">Games</div>
-              <div class="fig mt-1.5 text-[24px] text-ink-2 sm:text-[28px]">
-                {{ datasets[i]?.stats.total ?? 0 }}
-              </div>
-            </div>
-          </div>
-
-          <div class="iv-form mt-4" :class="i === 1 ? 'justify-end' : ''">
-            <i v-for="(win, index) in form[i]" :key="index" :class="{ w: win }" />
-          </div>
+            <small class="num"
+              ><template v-if="soloOf(i)"
+                ><em :style="{ color: tierColor(soloOf(i)!.tier) }">{{
+                  rankLabel(rankFromCore(soloOf(i)!), false)
+                }}</em
+                >, {{ soloOf(i)!.leaguePoints }} LP</template
+              ><template v-else>Unranked</template
+              ><template v-if="mainRole(i)"
+                >, {{ positionName(mainRole(i)).toLowerCase() }}</template
+              ></small
+            >
+          </span>
         </div>
-
-        <div
-          class="order-3 col-span-2 flex flex-col items-center justify-center py-2 text-center sm:order-2 sm:col-span-1 sm:px-4"
-        >
-          <div class="fig text-[32px] sm:text-[36px]">
-            <span :class="wins[0] >= wins[1] ? 'text-ink' : 'text-ink-3'">{{ wins[0] }}</span>
-            <span class="px-1 text-ink-4">-</span>
-            <span :class="wins[1] >= wins[0] ? 'text-ink' : 'text-ink-3'">{{ wins[1] }}</span>
-          </div>
-          <div class="label mt-1.5">Metrics ahead</div>
+        <div class="vsm">
+          against
+          <span v-if="ready" class="num" :title="'Metrics ahead'"
+            >{{ wins[0] }} to {{ wins[1] }}</span
+          >
+        </div>
+      </div>
+      <div v-else class="vsh one">
+        <div class="vp">
+          <img :src="profileIcon(profile.profileIconId)" alt="" width="72" height="72" />
+          <span class="min-w-0">
+            <b
+              >{{ profile.gameName }} <span>#{{ profile.tagLine }}</span></b
+            >
+            <small>Pick a player to put their last games next to these.</small>
+          </span>
         </div>
       </div>
 
-      <!-- Every metric on one axis -->
-      <div class="iv-panel mb-8">
-        <table class="dt num w-full">
-          <tbody>
-            <tr v-for="metric in METRICS" :key="metric.key">
-              <td class="w-[24%] !py-3 !pl-4 text-right">
-                <div class="flex items-baseline justify-end gap-1.5">
-                  <span v-if="leader(metric.key) === 0" class="text-[11px] font-medium text-ink-3">
-                    {{ gap(metric.key, metric.factor, metric.decimals) }}
-                  </span>
-                  <span
-                    class="text-[15px] font-semibold sm:text-[16px]"
-                    :class="leader(metric.key) === 0 ? 'text-ink' : 'text-ink-3'"
-                  >
-                    {{ value(0, metric.key, metric.factor, metric.decimals) ?? '-'
-                    }}{{ metric.unit }}
-                  </span>
-                </div>
-                <Sparkline
-                  :values="series(0, metric.key)"
-                  :label="`${metric.name}, last 20 games`"
-                  :width="72"
-                  :height="18"
-                  class="ml-auto mt-1.5 hidden lg:block"
-                  :class="leader(metric.key) === 0 ? 'text-brand' : 'text-ink-4'"
-                />
-              </td>
+      <div class="chg">
+        <PlayerSearchField
+          class="chg-field"
+          :busy="busy"
+          :placeholder="other ? 'Compare with someone else' : 'Search a Riot ID to compare against'"
+          @select="pick"
+        />
+        <button v-if="other" type="button" class="iv-btn sm" @click="clear">
+          <X :size="13" />
+          Clear
+        </button>
+      </div>
 
-              <td class="!py-3">
-                <div class="label mb-2 text-center">
-                  {{ metric.name }}
-                </div>
-                <div class="flex h-[4px] items-stretch gap-[3px]">
-                  <span class="flex flex-1 justify-end overflow-hidden rounded-l-[2px] bg-control">
-                    <span
-                      class="block h-full rounded-l-[2px]"
-                      :style="{
-                        width: `${weights(metric.key)[0]}%`,
-                        background: leader(metric.key) === 0 ? 'var(--text-1)' : 'var(--text-4)',
-                      }"
-                    />
-                  </span>
-                  <span class="flex-1 overflow-hidden rounded-r-[2px] bg-control">
-                    <span
-                      class="block h-full rounded-r-[2px]"
-                      :style="{
-                        width: `${weights(metric.key)[1]}%`,
-                        background: leader(metric.key) === 1 ? 'var(--text-1)' : 'var(--text-4)',
-                      }"
-                    />
-                  </span>
-                </div>
-              </td>
+      <p v-if="error" class="notice mx-6 mb-4" role="alert">{{ error }}</p>
+      <p v-else-if="note && other" class="mx-6 mb-4 text-[12.5px] text-ink-3" role="status">
+        {{ note }}
+      </p>
 
-              <td class="w-[24%] !py-3 !pr-4">
-                <div class="flex items-baseline gap-1.5">
-                  <span
-                    class="text-[15px] font-semibold sm:text-[16px]"
-                    :class="leader(metric.key) === 1 ? 'text-ink' : 'text-ink-3'"
-                  >
-                    {{ value(1, metric.key, metric.factor, metric.decimals) ?? '-'
-                    }}{{ metric.unit }}
-                  </span>
-                  <span v-if="leader(metric.key) === 1" class="text-[11px] font-medium text-ink-3">
-                    {{ gap(metric.key, metric.factor, metric.decimals) }}
-                  </span>
-                </div>
-                <Sparkline
-                  :values="series(1, metric.key)"
-                  :label="`${metric.name}, last 20 games`"
-                  :width="72"
-                  :height="18"
-                  class="mt-1.5 hidden lg:block"
-                  :class="leader(metric.key) === 1 ? 'text-ink-2' : 'text-ink-4'"
+      <MatchFilters v-model="filters" :champions="champions" class="cmp-f" />
+
+      <div v-if="fetching" class="px-6 pb-6" aria-busy="true">
+        <p class="py-2 text-[13px] text-ink-2" role="status">
+          Fetching {{ fetching }}’s latest games…
+        </p>
+        <div class="iv-skel h-[320px]" />
+      </div>
+
+      <div v-else-if="other && !ready" class="px-6 pb-6">
+        <div class="iv-skel h-[420px]" />
+      </div>
+
+      <div v-else-if="ready" class="mrs">
+        <div
+          v-for="metric in METRICS"
+          :key="metric.key"
+          class="mr2"
+          :title="
+            gap(metric.key, metric.factor, metric.decimals)
+              ? `${metric.name}: ${players[leader(metric.key)]?.gameName} ahead by ${gap(metric.key, metric.factor, metric.decimals)}${metric.unit}`
+              : metric.name
+          "
+        >
+          <b class="num" :class="{ win: leader(metric.key) !== 1 }"
+            >{{ value(0, metric.key, metric.factor, metric.decimals) ?? '-' }}{{ metric.unit }}</b
+          >
+          <span class="bl2 l"
+            ><i
+              :class="{ lo: leader(metric.key) === 1 }"
+              :style="{ width: `${weights(metric.key)[0]}%` }"
+          /></span>
+          <span class="lb">{{ metric.name }}</span>
+          <span class="bl2 r"
+            ><i
+              :class="{ lo: leader(metric.key) === 0 }"
+              :style="{ width: `${weights(metric.key)[1]}%` }"
+          /></span>
+          <b class="num" :class="{ win: leader(metric.key) !== 0 }"
+            >{{ value(1, metric.key, metric.factor, metric.decimals) ?? '-' }}{{ metric.unit }}</b
+          >
+        </div>
+        <div class="mr2 frm">
+          <span />
+          <span class="fl"><FormStrip :results="form[0]" /></span>
+          <span class="lb">Last {{ Math.max(form[0].length, form[1].length) }} games</span>
+          <span><FormStrip :results="form[1]" /></span>
+          <span />
+        </div>
+      </div>
+    </section>
+
+    <template v-if="ready">
+      <div class="two">
+        <section class="rd-card">
+          <div class="rd-head">
+            <h3>LP, last 30 days</h3>
+            <span v-if="lp" class="lgn num">
+              <span v-for="(p, i) in players" :key="p.puuid"
+                ><i :class="i ? 'b' : 'a'" />{{ p.gameName }}
+                {{ lp.deltas[i] === null ? 'no data' : signedLp(lp.deltas[i]!) }}</span
+              >
+            </span>
+          </div>
+          <template v-if="lp">
+            <div class="lpg">
+              <span class="gd" :style="{ top: `${lp.zero}px` }"><span>Start</span></span>
+              <svg :viewBox="`0 0 ${lp.W} ${lp.H}`" preserveAspectRatio="none" aria-hidden="true">
+                <path
+                  v-if="lp.paths[1]"
+                  class="b"
+                  :d="lp.paths[1]"
+                  vector-effect="non-scaling-stroke"
                 />
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                <path
+                  v-if="lp.paths[0]"
+                  class="a"
+                  :d="lp.paths[0]"
+                  vector-effect="non-scaling-stroke"
+                />
+              </svg>
+            </div>
+            <div class="lpx num">
+              <span>{{ lp.from }}</span
+              ><span>{{ lp.mid }}</span
+              ><span>Latest</span>
+            </div>
+          </template>
+          <p v-else class="cmp-note">No stored rank changes for either player in 30 days.</p>
+        </section>
+
+        <section class="rd-card">
+          <div class="rd-head">
+            <h3>Champion pools</h3>
+            <span class="rd-hm num"
+              >{{ sharedIds.size }} shared
+              {{ sharedIds.size === 1 ? 'pick' : 'picks' }} highlighted</span
+            >
+          </div>
+          <div class="pl2">
+            <div v-for="(list, i) in columns" :key="i">
+              <h4>{{ players[i].gameName }}</h4>
+              <div
+                v-for="c in list"
+                :key="c.championId"
+                class="prow pp"
+                :class="{ sh: sharedIds.has(c.championId) }"
+              >
+                <img :src="champIcon(c.championId)" alt="" width="32" height="32" loading="lazy" />
+                <span class="min-w-0">
+                  <b class="truncate">{{ championName(c.championId) }}</b>
+                  <small class="num">{{ c.games }} games, {{ c.kda.toFixed(2) }} KDA</small>
+                </span>
+                <em class="num">{{ Math.round(c.winrate * 100) }}%</em>
+              </div>
+            </div>
+          </div>
+          <div v-if="poolMore > POOL_ROWS" class="rd-foot">
+            <ShowMore v-model="poolsOpen" :total="poolMore" :limit="POOL_ROWS" />
+          </div>
+        </section>
       </div>
 
       <!-- The games they shared -->
       <template v-if="shared.length">
-        <div class="section">
-          <h3>Together</h3>
-          <span v-if="pairing" class="meta">{{ pairing }}</span>
+        <div class="cmp-h">
+          <h2>
+            Together<span v-if="pairing">{{ pairing }}</span>
+          </h2>
         </div>
 
-        <div class="iv-panel mb-2 flex flex-wrap items-start gap-x-10 gap-y-4 px-4 py-3.5">
+        <div class="rd-card mb-3 flex flex-wrap items-start gap-x-10 gap-y-4 px-5 py-4">
           <div v-if="record.played">
             <div class="label">Record</div>
             <div class="fig mt-1.5 text-[24px]">
-              <span class="text-win">{{ record.won }}</span>
+              <span class="rd-up">{{ record.won }}</span>
               <span class="text-ink-4">-</span>
-              <span class="text-loss">{{ record.lost }}</span>
+              <span class="rd-dn">{{ record.lost }}</span>
               <span class="num ml-1.5 text-[12px] font-semibold text-ink-3">
                 {{ Math.round((record.won / record.played) * 100) }}%
               </span>
@@ -666,7 +719,7 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
           </div>
         </div>
 
-        <div class="iv-panel mb-8">
+        <div class="rd-card mb-2">
           <div class="scroll-x">
             <table class="dt dt-hover num min-w-[330px]">
               <thead>
@@ -800,10 +853,10 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
 
       <!-- The same metrics, one position at a time -->
       <template v-if="roles.length">
-        <div class="section">
-          <h3>By role</h3>
+        <div class="cmp-h">
+          <h2>By role</h2>
         </div>
-        <div class="iv-panel mb-8">
+        <div class="rd-card mb-2">
           <table class="dt num w-full">
             <thead>
               <tr>
@@ -858,116 +911,354 @@ function poolInk(stats: Array<ChampionStats | null>, index: number) {
           </table>
         </div>
       </template>
-
-      <!-- Champion pools, overlapping and not -->
-      <template v-if="overlap.length || pools.only[0].length || pools.only[1].length">
-        <div class="section">
-          <h3>Champions</h3>
-        </div>
-        <div class="iv-panel">
-          <table class="dt num w-full">
-            <thead>
-              <tr>
-                <th class="!pl-4">Champion</th>
-                <th v-for="p in players" :key="p.puuid" class="!pr-4 text-right">
-                  <PlayerLink
-                    :game-name="p.gameName"
-                    :tag-line="p.tagLine"
-                    class="!font-semibold"
-                  />
-                </th>
-              </tr>
-            </thead>
-
-            <tbody v-if="overlap.length">
-              <tr class="band">
-                <td class="!pl-4" colspan="3">
-                  <span class="text-[12px] font-semibold text-ink-2">Both play</span>
-                </td>
-              </tr>
-              <tr v-for="row in overlap" :key="row.championId">
-                <td class="!pl-4">
-                  <span class="flex items-center gap-2.5">
-                    <img
-                      :src="champIcon(row.championId)"
-                      :alt="championName(row.championId)"
-                      width="30"
-                      height="30"
-                      loading="lazy"
-                      class="thumb h-[30px] w-[30px] rounded-sm"
-                    />
-                    <span class="truncate font-semibold text-ink">
-                      {{ championName(row.championId) }}
-                    </span>
-                  </span>
-                </td>
-                <td v-for="(stat, i) in row.stats" :key="i" class="!pr-4 text-right align-middle">
-                  <template v-if="stat">
-                    <div class="stat text-[15px]" :class="poolInk(row.stats, i)">
-                      {{ Math.round(stat.winrate * 100) }}%
-                    </div>
-                    <div class="mt-0.5 text-[11px] text-ink-3">
-                      {{ stat.games }}g, {{ stat.kda.toFixed(2) }}
-                    </div>
-                  </template>
-                  <span v-else class="text-ink-4">-</span>
-                </td>
-              </tr>
-            </tbody>
-
-            <tbody v-for="(list, side) in only" :key="side">
-              <template v-if="list.length">
-                <tr class="band">
-                  <td class="!pl-4" colspan="3">
-                    <span class="text-[12px] font-semibold text-ink-2"
-                      >Only {{ players[side].gameName }}</span
-                    >
-                  </td>
-                </tr>
-                <tr v-for="row in list" :key="row.championId">
-                  <td class="!pl-4">
-                    <span class="flex items-center gap-2.5">
-                      <img
-                        :src="champIcon(row.championId)"
-                        :alt="championName(row.championId)"
-                        width="30"
-                        height="30"
-                        loading="lazy"
-                        class="thumb h-[30px] w-[30px] rounded-sm"
-                      />
-                      <span class="truncate font-semibold text-ink">
-                        {{ championName(row.championId) }}
-                      </span>
-                    </span>
-                  </td>
-                  <td v-for="(stat, i) in row.stats" :key="i" class="!pr-4 text-right align-middle">
-                    <template v-if="stat">
-                      <div class="stat text-[15px] text-ink">
-                        {{ Math.round(stat.winrate * 100) }}%
-                      </div>
-                      <div class="mt-0.5 text-[11px] text-ink-3">
-                        {{ stat.games }}g, {{ stat.kda.toFixed(2) }}
-                      </div>
-                    </template>
-                    <span v-else class="text-ink-4">-</span>
-                  </td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
-          <div v-if="poolRows.total > poolRows.limit" class="border-t border-line p-1.5">
-            <ShowMore v-model="poolsOpen" :total="poolRows.total" :limit="poolRows.limit" />
-          </div>
-        </div>
-      </template>
     </template>
-
-    <div v-else class="grid gap-2">
-      <div class="grid grid-cols-2 gap-2">
-        <div class="iv-skel h-[168px]" />
-        <div class="iv-skel h-[168px]" />
-      </div>
-      <div class="iv-skel h-[420px]" />
-    </div>
   </section>
 </template>
+
+<style scoped>
+.vsh {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px minmax(0, 1fr);
+  align-items: center;
+  padding: 24px;
+}
+.vsh .vp:nth-child(2) {
+  grid-column: 3;
+  grid-row: 1;
+}
+.vsh .vsm {
+  grid-column: 2;
+  grid-row: 1;
+}
+.vsh.one {
+  grid-template-columns: minmax(0, 1fr);
+}
+.vp {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+.vp.r {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+.vp img {
+  flex: none;
+  width: 72px;
+  height: 72px;
+  border-radius: 14px;
+  box-shadow: 0 0 0 2px var(--rd-violet-hi);
+}
+.vp.r img {
+  box-shadow: 0 0 0 2px #e6e6f0;
+}
+.vp :deep(.vp-name),
+.vp b {
+  display: block;
+  max-width: 100%;
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--text-1);
+}
+.vp b span {
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+.vp small {
+  display: block;
+  margin-top: 3px;
+  font-size: 13px;
+  color: var(--text-3);
+}
+.vp small em {
+  font-style: normal;
+  font-weight: 650;
+}
+.vsm {
+  display: grid;
+  gap: 2px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-3);
+}
+.vsm span {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-4);
+}
+.chg {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 24px 14px;
+}
+.chg-field {
+  flex: 1;
+  min-width: 0;
+}
+.cmp-f {
+  margin: 0 24px 16px;
+}
+.mrs {
+  box-shadow: inset 0 1px 0 var(--rd-line);
+}
+.mr2 {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) 150px minmax(0, 1fr) 76px;
+  gap: 14px;
+  align-items: center;
+  height: 52px;
+  padding: 0 24px;
+}
+.mr2 + .mr2 {
+  box-shadow: inset 0 1px 0 var(--rd-line);
+}
+.mr2 b {
+  font-size: 17px;
+  font-weight: 650;
+  color: var(--text-3);
+}
+.mr2 b.win {
+  color: var(--text-1);
+}
+.mr2 b:last-child {
+  text-align: right;
+}
+.mr2 .lb {
+  font-size: 13px;
+  text-align: center;
+  color: var(--text-2);
+}
+.mr2 .fl {
+  display: flex;
+  justify-content: flex-end;
+}
+.bl2 {
+  display: flex;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 9px;
+  background: var(--rd-track);
+}
+.bl2.l {
+  justify-content: flex-end;
+}
+.bl2 i {
+  display: block;
+  height: 100%;
+  border-radius: 9px;
+  background: var(--rd-violet-hi);
+}
+.bl2.r i {
+  background: #e6e6f0;
+}
+.bl2 i.lo {
+  opacity: 0.45;
+}
+.two {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+  align-items: start;
+}
+.lgn {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.lgn span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.lgn i {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+}
+.lgn i.a,
+.lpg path.a {
+  background: var(--rd-violet-hi);
+  stroke: var(--rd-violet-hi);
+}
+.lgn i.b {
+  background: #e6e6f0;
+}
+.lpg {
+  position: relative;
+  height: 170px;
+  margin: 12px 22px 0;
+}
+.lpg svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.lpg path {
+  fill: none;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.lpg path.a {
+  stroke-width: 2.25;
+}
+.lpg path.b {
+  stroke: #e6e6f0;
+  stroke-width: 1.75;
+  opacity: 0.8;
+}
+.lpg .gd {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed var(--line-3, rgb(255 255 255 / 0.14));
+}
+.lpg .gd span {
+  position: absolute;
+  right: 0;
+  top: 4px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+.lpx {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 22px 14px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+.pl2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.pl2 > div + div {
+  box-shadow: inset 1px 0 0 var(--rd-line);
+}
+.pl2 h4 {
+  margin: 0;
+  padding: 12px 16px 4px;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-3);
+}
+.pl2 .pp {
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  height: 48px;
+  cursor: default;
+}
+.pl2 .pp img {
+  width: 32px;
+  height: 32px;
+}
+.pl2 .pp:hover {
+  background: none;
+}
+.pl2 .pp.sh {
+  background: var(--rd-violet-a);
+}
+.pl2 .pp em {
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 650;
+  color: var(--text-1);
+}
+.cmp-h {
+  margin: 28px 0 12px;
+}
+.cmp-h h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+  color: var(--text-1);
+}
+.cmp-h h2 span {
+  margin-left: 8px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+.cmp-note {
+  margin: 0;
+  padding: 18px;
+  font-size: 13px;
+  color: var(--text-3);
+}
+.cmp :deep(.dt) {
+  width: 100%;
+}
+
+@media (max-width: 1000px) {
+  .two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mr2 {
+    grid-template-columns: 56px minmax(0, 1fr) 96px minmax(0, 1fr) 56px;
+    gap: 10px;
+    padding: 0 14px;
+  }
+}
+@media (max-width: 640px) {
+  .vsh {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 14px 12px;
+    padding: 18px 16px;
+  }
+  .vsh .vsm {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .vsh .vp:nth-child(2) {
+    grid-column: 2;
+  }
+  .vp,
+  .vp.r {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .vp.r {
+    align-items: flex-end;
+  }
+  .vp img {
+    width: 52px;
+    height: 52px;
+  }
+  .vp :deep(.vp-name),
+  .vp b {
+    font-size: 16px;
+  }
+  .chg,
+  .cmp-f {
+    margin-inline: 16px;
+  }
+  .mr2 {
+    grid-template-columns: 50px minmax(0, 1fr) 74px minmax(0, 1fr) 50px;
+    gap: 8px;
+    padding: 0 12px;
+  }
+  .mr2 b {
+    font-size: 14px;
+  }
+  .mr2 .lb {
+    font-size: 11px;
+  }
+  .pl2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pl2 > div + div {
+    box-shadow: inset 0 1px 0 var(--rd-line);
+  }
+}
+</style>

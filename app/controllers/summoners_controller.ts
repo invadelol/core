@@ -5,6 +5,7 @@ import logger from '@adonisjs/core/services/logger'
 import riotApiService from '#services/riot/api'
 import summonerService from '#services/summoner_service'
 import matchService from '#services/matches_service'
+import { playerBuild } from '#services/player_build_service'
 import {
   syncSummonerValidator,
   getStatsValidator,
@@ -176,6 +177,20 @@ export default class SummonersController {
     const { puuid } = params
     const friends = await summonerService.getFriends(puuid)
     return response.ok(friends)
+  }
+
+  /**
+   * How the player builds one champion, from their stored games on it
+   * @paramPath puuid - Summoner PUUID
+   * @paramPath champion - Champion id
+   * @responseBody 200 - <ProBuild> or null
+   */
+  async build({ request, params, response }: HttpContext) {
+    await request.validateUsing(puuidParamsValidator, { data: { puuid: params.puuid } })
+    const champion = Number(params.champion)
+    if (!Number.isInteger(champion) || champion <= 0 || champion > 65535)
+      return response.badRequest({ error: 'Invalid champion' })
+    return response.ok(await playerBuild(params.puuid, champion))
   }
 
   /**

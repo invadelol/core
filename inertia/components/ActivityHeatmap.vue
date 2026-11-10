@@ -108,18 +108,19 @@ function tooltip(cell: Cell) {
 </script>
 
 <template>
-  <section class="iv-panel">
-    <div class="section">
-      <h3>Activity</h3>
-      <span class="meta">Last {{ WEEKS }} weeks</span>
-      <span v-if="activity.length" class="num meta ml-auto">
+  <section class="rd-card">
+    <div class="rd-head">
+      <h3>
+        Activity<span class="rd-meta">Last {{ WEEKS }} weeks</span>
+      </h3>
+      <span v-if="activity.length" class="num rd-hm">
         {{ totals.games }} games, {{ totals.winrate }}%
       </span>
     </div>
 
-    <p v-if="!activity.length" class="text-[13px] text-ink-2">No games recorded yet.</p>
+    <p v-if="!activity.length" class="px-4 py-4 text-[13px] text-ink-2">No games recorded yet.</p>
 
-    <div v-else>
+    <div v-else class="px-4 pb-4 pt-3">
       <div class="scroll-x pb-1">
         <div class="flex gap-[3px]">
           <div class="mr-1 flex flex-col gap-[3px] pt-[13px]">
@@ -133,7 +134,9 @@ function tooltip(cell: Cell) {
           </div>
 
           <div v-for="(column, index) in weeks" :key="index" class="flex flex-1 flex-col gap-[3px]">
-            <span class="h-[10px] text-[10px] leading-[10px] text-ink-4 max-lg:text-[11px]">{{ column.month }}</span>
+            <span class="h-[10px] text-[10px] leading-[10px] text-ink-4 max-lg:text-[11px]">{{
+              column.month
+            }}</span>
             <template v-for="(cell, dayIndex) in column.days" :key="dayIndex">
               <span
                 v-if="cell"

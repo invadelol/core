@@ -236,6 +236,8 @@ export interface ChampionMastery {
   lastPlayTime: number
   /** Riot only: the League client's top-ten snapshot does not carry them. */
   championPointsUntilNextLevel?: number
+  /** Riot only: points earned since the current level began. */
+  championPointsSinceLastLevel?: number
   tokensEarned?: number
   source?: 'riot' | 'desktop'
   observedAt?: number | null
@@ -260,6 +262,14 @@ export interface LiveGame {
     championStats?: { games: number; winrate: number } | null
     /** The player's newest stored games. */
     recent?: { games: number; wins: number } | null
+    /** Their run of results, newest first: 3 for three wins in a row, -2 for two losses. */
+    streak?: number
+    /** The lane they play most in their stored games. */
+    mainPosition?: Position | null
+    /** Share of their stored games on this champion, 0 to 1. */
+    championShare?: number | null
+    /** Teammates (puuids) they shared a side with in two or more stored games. */
+    premade?: string[]
     rank?: {
       tier: string
       division: string
