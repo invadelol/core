@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { RoleIcon } from '@invadelol/ui'
+import { UserRound } from 'lucide-vue-next'
 import ProPhoto from '../champions/ProPhoto.vue'
 import { proRole } from '../../lib/board.js'
 
 /**
  * A pro's face (Violet line): their photo when they have one, else their role's glyph on a quiet
- * square, never initials.
+ * square (a person's outline for staff, who have no lane), never initials.
  */
 const props = withDefaults(
   defineProps<{
@@ -36,7 +37,10 @@ const lane = computed(() => proRole(props.role)?.lane ?? null)
     class="rd-face e"
     :style="{ width: `${size}px`, height: `${size}px` }"
     aria-hidden="true"
-    ><RoleIcon v-if="lane" :lane="lane" :size="Math.round(size * 0.44)"
+    ><RoleIcon v-if="lane" :lane="lane" :size="Math.round(size * 0.44)" /><UserRound
+      v-else
+      :size="Math.round(size * 0.46)"
+      :stroke-width="1.6"
   /></span>
 </template>
 
