@@ -6,7 +6,6 @@ import { ChampIcon, RoleIcon } from '@invadelol/ui'
 import AppHeader from '../../components/AppHeader.vue'
 import SiteFooter from '../../components/SiteFooter.vue'
 import Crumbs from '../../components/champions/Crumbs.vue'
-import TierMark from '../../components/champions/TierMark.vue'
 import SortHead from '../../components/champions/SortHead.vue'
 import GameImg from '../../components/champions/GameImg.vue'
 import DataLine from '../../components/champions/DataLine.vue'
@@ -33,7 +32,10 @@ import {
   type Sort,
 } from '../../lib/board.js'
 import { afterPaint } from '../../lib/after_paint.js'
+import { patchName } from '../../lib/patch.js'
 import '../../css/champions.css'
+import '../../css/rd-discover.css'
+import '../../css/rd-discover-stats.css'
 
 type View = 'overview' | 'early' | 'length' | 'firstblood' | 'items' | 'regions' | 'patch'
 interface Row {
@@ -164,7 +166,7 @@ const patchModel = computed({
 const rankOptions = BRACKETS.map((b) => ({ value: b.value, label: b.label }))
 const regionOptions = computed(() => [{ value: '', label: 'All regions' }, ...props.regions])
 const patchOptions = computed(() =>
-  props.patches.map((p) => ({ value: p.patch, label: `Patch ${p.patch}` }))
+  props.patches.map((p) => ({ value: p.patch, label: `Patch ${patchName(p.patch)}` }))
 )
 const SAMPLES = [
   { value: 0, label: 'Any sample' },
@@ -186,6 +188,8 @@ interface Col<T> {
   /** Hidden on phones. */
   hm?: boolean
   width?: string
+  /** A win rate drawn as a heat cell: blue above even, red below. */
+  heat?: (r: T) => number | null
 }
 type Champ = Row & { id: number }
 
@@ -194,6 +198,13 @@ const ev = (r: Row) => props.events?.[r.champion]
 const ea = (r: Row) => props.early?.[r.champion]
 const fb = (r: Row) => props.firstBlood?.[r.champion]
 const rg = (r: Row, region: string) => props.byRegion?.[r.champion]?.[region] ?? null
+/** "under 20 minutes", "after 35 minutes": a length bucket in a sentence. */
+const lenPhrase = (from: number, to: number) =>
+  from === 0
+    ? `under ${to} minutes`
+    : to >= 999
+      ? `after ${from} minutes`
+      : `${from} to ${to} minutes`
 const lenLabel = (from: number, to: number) =>
   from === 0 ? `Under ${to}` : to >= 999 ? `${from} and up` : `${from} to ${to}`
 
@@ -322,9 +333,29 @@ const columns = computed<Col<Row>[]>(() => {
             group: 'Win rate by length, minutes',
             value: (r) => av(r)?.byLength?.[i] ?? null,
             text: (r) => pct(av(r)?.byLength?.[i]),
+            heat: (r) => av(r)?.byLength?.[i] ?? null,
             width: '76px',
           })
         ),
+        {
+          key: 'gold10',
+          label: 'Gold at 10',
+          title: 'Gold gap to the lane opponent at 10 minutes',
+          group: 'Lane',
+          value: (r) => ev(r)?.gold ?? null,
+          text: (r) => (ev(r)?.ahead ? signed(ev(r)!.gold) : '-'),
+          cls: (r) => (ev(r)?.ahead && ev(r)!.gold! > 0 ? 'gold' : 'q'),
+          width: '80px',
+        },
+        {
+          key: 'aheadWin',
+          label: 'Wins when ahead',
+          title: 'Win rate of the games ahead at 10 minutes',
+          group: 'Lane',
+          value: (r) => ev(r)?.aheadWin ?? null,
+          text: (r) => pct(ev(r)?.aheadWin),
+          width: '110px',
+        },
       ]
     case 'firstblood':
       return [
@@ -395,6 +426,10 @@ const columns = computed<Col<Row>[]>(() => {
               const x = rg(r, rgn.value)
               return x && x[0] >= 30 ? pct(x[1] / x[0]) : '-'
             },
+            heat: (r) => {
+              const x = rg(r, rgn.value)
+              return x && x[0] >= 30 ? x[1] / x[0] : null
+            },
             width: '64px',
           })
         ),
@@ -405,7 +440,7 @@ const columns = computed<Col<Row>[]>(() => {
         {
           key: 'win',
           label: 'Win',
-          group: `Now, ${patch.value}`,
+          group: `Now, ${patchName(patch.value)}`,
           value: (r) => r.win,
           text: (r) => pct(r.win),
           cls: () => 'b',
@@ -414,7 +449,7 @@ const columns = computed<Col<Row>[]>(() => {
         {
           key: 'dwin',
           label: 'Change',
-          group: `Since ${props.previousPatch ?? ''}`,
+          group: `Since ${patchName(props.previousPatch)}`,
           value: (r) => (r.before ? r.win - r.before.win : null),
           text: (r) => (r.before ? points(r.win - r.before.win) : 'New'),
           cls: (r) => (r.before ? gapClass(r.win - r.before.win) : 'q'),
@@ -423,7 +458,7 @@ const columns = computed<Col<Row>[]>(() => {
         {
           key: 'pick',
           label: 'Pick',
-          group: `Now, ${patch.value}`,
+          group: `Now, ${patchName(patch.value)}`,
           value: (r) => r.pick,
           text: (r) => pct(r.pick),
           width: '56px',
@@ -431,7 +466,7 @@ const columns = computed<Col<Row>[]>(() => {
         {
           key: 'dpick',
           label: 'Change',
-          group: `Since ${props.previousPatch ?? ''}`,
+          group: `Since ${patchName(props.previousPatch)}`,
           value: (r) => (r.before ? r.pick - r.before.pick : null),
           text: (r) => (r.before ? points(r.pick - r.before.pick) : '-'),
           width: '64px',
@@ -439,7 +474,7 @@ const columns = computed<Col<Row>[]>(() => {
         {
           key: 'dban',
           label: 'Ban change',
-          group: `Since ${props.previousPatch ?? ''}`,
+          group: `Since ${patchName(props.previousPatch)}`,
           value: (r) => (r.before ? r.ban - r.before.ban : null),
           text: (r) => (r.before ? points(r.ban - r.before.ban) : '-'),
           hm: true,
@@ -449,7 +484,7 @@ const columns = computed<Col<Row>[]>(() => {
           key: 'move',
           label: 'Places',
           title: 'Places gained in the role since the previous patch',
-          group: `Since ${props.previousPatch ?? ''}`,
+          group: `Since ${patchName(props.previousPatch)}`,
           value: (r) => (r.before?.rank && r.rank ? r.before.rank - r.rank : null),
           text: (r) => {
             const d = r.before?.rank && r.rank ? r.before.rank - r.rank : null
@@ -496,7 +531,7 @@ const columns = computed<Col<Row>[]>(() => {
           group: 'Lane at 10 min',
           value: (r) => ev(r)?.gold ?? null,
           text: (r) => (ev(r)?.ahead ? signed(ev(r)!.gold) : '-'),
-          cls: (r) => (ev(r)?.ahead ? gapClass(ev(r)!.gold) : 'q'),
+          cls: (r) => (ev(r)?.ahead && ev(r)!.gold! > 0 ? 'gold' : 'q'),
           width: '56px',
         },
         {
@@ -564,7 +599,7 @@ const sourceOf = (key: string): string | null => {
     if (['gold10', 'cs10', 'ahead', 'aheadWin', 'fb'].includes(key)) return 'events'
     return null
   }
-  if (props.view === 'length') return 'averages'
+  if (props.view === 'length') return ['gold10', 'aheadWin'].includes(key) ? 'events' : 'averages'
   if (props.view === 'early') return 'early'
   if (props.view === 'firstblood') return 'firstBlood'
   if (props.view === 'regions') return key.startsWith('r-') ? 'byRegion' : null
@@ -673,6 +708,262 @@ function csv() {
   URL.revokeObjectURL(a.href)
 }
 
+/* ── Highlights: the three short lists over the table ───────────── */
+interface Spot {
+  key: number
+  kind: 'champion' | 'item'
+  id: number
+  name: string
+  href: string | null
+  value: string
+  sub: string
+  cls: string
+}
+interface Highlight {
+  title: string
+  spots: Spot[]
+}
+const champSpot = (r: Row, value: string, sub: string, cls = 'rd-up'): Spot => ({
+  key: r.champion,
+  kind: 'champion',
+  id: r.champion,
+  name: name(r.champion),
+  href: champHref(r.champion),
+  value,
+  sub,
+  cls,
+})
+/** The first three of `list` by `of` (highest first unless `low`), skipping unknown values. */
+function top3<T>(list: T[], of: (x: T) => number | null | undefined, low = false) {
+  return list
+    .filter((x) => {
+      const v = of(x)
+      return v !== null && v !== undefined && Number.isFinite(v)
+    })
+    .sort((a, b) => (low ? of(a)! - of(b)! : of(b)! - of(a)!))
+    .slice(0, 3)
+}
+/** Rows with enough games to be listed in a highlight. */
+const solid = computed(() => props.rows.filter((r) => r.games >= Math.max(sample.value, 30)))
+const highlights = computed<Highlight[]>(() => {
+  const rows = solid.value
+  const ahead = (r: Row) => ev(r)?.ahead
+  switch (props.view) {
+    case 'early': {
+      if (!props.early) return []
+      const laned = rows.filter((r) => (ea(r)?.games ?? 0) >= 20)
+      return [
+        {
+          title: 'Gold ahead at 10 minutes',
+          spots: top3(laned, (r) => ea(r)?.at10.goldDiff).map((r) =>
+            champSpot(
+              r,
+              signed(ea(r)!.at10.goldDiff),
+              `ahead in ${pct(ea(r)!.ahead, 0)} of lanes`,
+              'rd-gold'
+            )
+          ),
+        },
+        {
+          title: 'CS ahead at 10 minutes',
+          spots: top3(laned, (r) => ea(r)?.at10.csDiff).map((r) =>
+            champSpot(r, signed(ea(r)!.at10.csDiff, 1), `${ea(r)!.at10.cs.toFixed(1)} CS at 10`, '')
+          ),
+        },
+        {
+          title: 'Wins when ahead',
+          spots: top3(laned, (r) => ea(r)?.aheadWin).map((r) =>
+            champSpot(r, pct(ea(r)!.aheadWin), `ahead in ${pct(ea(r)!.ahead, 0)} of lanes`)
+          ),
+        },
+      ]
+    }
+    case 'length': {
+      if (!props.averages) return []
+      const last = props.lengths.length - 1
+      const len = (r: Row, i: number) => av(r)?.byLength?.[i] as number | null | undefined
+      const first = lenPhrase(...props.lengths[0])
+      const end = lenPhrase(...props.lengths[last])
+      /** The other end of the game when it has games there, else the games behind the row. */
+      const other = (v: number | null | undefined, when: string, r: Row) =>
+        v === null || v === undefined ? `${thousands(r.games)} games` : `${pct(v)} ${when}`
+      return [
+        {
+          title: `Best ${first}`,
+          spots: top3(rows, (r) => len(r, 0)).map((r) =>
+            champSpot(r, pct(len(r, 0)), other(len(r, last), end, r))
+          ),
+        },
+        {
+          title: `Best ${end}`,
+          spots: top3(rows, (r) => len(r, last)).map((r) =>
+            champSpot(r, pct(len(r, last)), other(len(r, 0), first, r))
+          ),
+        },
+        ...(props.events
+          ? [
+              {
+                title: 'Ahead at 10 minutes',
+                spots: top3(
+                  rows.filter((r) => ahead(r)),
+                  (r) => ev(r)?.gold
+                ).map((r) =>
+                  champSpot(
+                    r,
+                    signed(ev(r)!.gold),
+                    `ahead in ${pct(ahead(r), 0)} of lanes`,
+                    'rd-gold'
+                  )
+                ),
+              },
+            ]
+          : []),
+      ]
+    }
+    case 'firstblood':
+      if (!props.firstBlood) return []
+      return [
+        {
+          title: 'In on first blood',
+          spots: top3(rows, (r) => fb(r)?.involved).map((r) =>
+            champSpot(r, pct(fb(r)!.involved), `wins ${pct(fb(r)!.involvedWin)} of those games`)
+          ),
+        },
+        {
+          title: 'Takes it most',
+          spots: top3(rows, (r) => fb(r)?.kill).map((r) =>
+            champSpot(r, pct(fb(r)!.kill), `helps in ${pct(fb(r)!.assist)}`, '')
+          ),
+        },
+        {
+          title: 'Gives it most',
+          spots: top3(rows, (r) => fb(r)?.victim).map((r) =>
+            champSpot(r, pct(fb(r)!.victim), `${pct(r.win)} win rate`, 'rd-dn')
+          ),
+        },
+      ]
+    case 'items': {
+      if (!props.items?.length) return []
+      const total = props.roleGames || 1
+      const common = props.items.filter((i) => i.games / total >= 0.05)
+      const spot = (i: (typeof common)[number], value: string, sub: string, cls: string): Spot => ({
+        key: i.item,
+        kind: 'item',
+        id: i.item,
+        name: i.name ?? String(i.item),
+        href: null,
+        value,
+        sub,
+        cls,
+      })
+      return [
+        {
+          title: 'Most bought',
+          spots: top3(props.items, (i) => i.games).map((i) =>
+            spot(i, pct(i.games / total), `${pct(i.wins / i.games)} win rate`, '')
+          ),
+        },
+        {
+          title: 'Best win rate',
+          spots: top3(common, (i) => i.wins / i.games).map((i) =>
+            spot(i, pct(i.wins / i.games), `bought in ${pct(i.games / total, 0)} of games`, 'rd-up')
+          ),
+        },
+        {
+          title: 'Worst win rate',
+          spots: top3(common, (i) => i.wins / i.games, true).map((i) =>
+            spot(i, pct(i.wins / i.games), `bought in ${pct(i.games / total, 0)} of games`, 'rd-dn')
+          ),
+        },
+      ]
+    }
+    case 'regions': {
+      if (!props.byRegion) return []
+      return regionCols.value.slice(0, 3).map((rgn) => {
+        const of = (r: Row) => {
+          const x = rg(r, rgn.value)
+          return x && x[0] >= 100 ? x[1] / x[0] : null
+        }
+        return {
+          title: `Best on ${rgn.label}`,
+          spots: top3(rows, of).map((r) =>
+            champSpot(r, pct(of(r)), `${pct(r.win)} on every server`)
+          ),
+        }
+      })
+    }
+    case 'patch': {
+      if (!props.previousPatch) return []
+      const moved = (r: Row) => (r.before?.rank && r.rank ? r.before.rank - r.rank : null)
+      const was = (r: Row) => `${pct(r.before!.win)} on ${patchName(props.previousPatch)}`
+      return [
+        {
+          title: 'Climbed the most',
+          spots: top3(rows, moved)
+            .filter((r) => moved(r)! > 0)
+            .map((r) =>
+              champSpot(r, `▲ ${moved(r)}`, `${r.before!.rank} to ${r.rank}, ${pct(r.win)}`)
+            ),
+        },
+        {
+          title: 'Fell the most',
+          spots: top3(rows, moved, true)
+            .filter((r) => moved(r)! < 0)
+            .map((r) =>
+              champSpot(
+                r,
+                `▼ ${-moved(r)!}`,
+                `${r.before!.rank} to ${r.rank}, ${pct(r.win)}`,
+                'rd-dn'
+              )
+            ),
+        },
+        {
+          title: 'Biggest win rate gain',
+          spots: top3(
+            rows.filter((r) => r.before),
+            (r) => r.win - r.before!.win
+          ).map((r) => champSpot(r, points(r.win - r.before!.win), was(r))),
+        },
+      ]
+    }
+    default:
+      return [
+        {
+          title: 'Highest win rate',
+          spots: top3(rows, (r) => r.win).map((r) =>
+            champSpot(r, pct(r.win), `${pct(r.pick)} pick rate`)
+          ),
+        },
+        {
+          title: 'Most picked',
+          spots: top3(rows, (r) => r.pick).map((r) =>
+            champSpot(r, pct(r.pick), `${pct(r.win)} win rate`, '')
+          ),
+        },
+        {
+          title: 'Most banned',
+          spots: top3(rows, (r) => r.ban).map((r) =>
+            champSpot(r, pct(r.ban), `${pct(r.win)} win rate`, '')
+          ),
+        },
+      ]
+  }
+})
+/** A win rate as a heat cell's colour: blue above even, red below, stronger further out. */
+function heat(v: number | null) {
+  if (v === null || v === undefined) return undefined
+  const d = Math.max(-7, Math.min(8, v * 100 - 50))
+  return d >= 0
+    ? `rgb(var(--win-rgb) / ${(0.08 + (d / 8) * 0.72).toFixed(2)})`
+    : `rgb(var(--loss-rgb) / ${(0.08 + (-d / 7) * 0.7).toFixed(2)})`
+}
+const hasHeat = computed(() => columns.value.some((c) => c.heat))
+const LANE_WORD = new Set(['TOP', 'MIDDLE', 'BOTTOM'])
+const roleText = computed(
+  () => `${role.value.label}${LANE_WORD.has(props.position) ? ' lane' : ''}`
+)
+
 const title = computed(
   () => (page.props.social as { title?: string } | undefined)?.title ?? TITLES[props.view]
 )
@@ -687,58 +978,25 @@ const crumbs = computed(() =>
   <Head :title="title" />
   <div class="flex min-h-screen flex-col">
     <AppHeader />
-    <main class="nb nb-page flex-1">
+    <main id="main" class="nb page sx flex-1">
       <Crumbs :items="crumbs">
         <template v-if="filter" #end>
           <DataLine :updated-at="updatedAt" :now="now" />
         </template>
       </Crumbs>
 
-      <div class="nb-title">
+      <div class="rd-ph sx-ph">
         <div>
-          <h1>{{ TITLES[view] }}</h1>
-          <p class="nb-meta num">
-            {{ role.label
+          <h1>Stats</h1>
+          <p class="num">
+            {{ roleText
             }}<template v-if="filter"
-              >, patch {{ filter.patch }}, {{ bracketOf(rank).label }},
-              {{ thousands(games ?? 0) }} games</template
+              >, patch {{ patchName(filter.patch) }}, <b>{{ thousands(games ?? 0) }} games</b> in
+              {{ bracketOf(rank).label }}</template
             >
           </p>
         </div>
-        <div class="end">
-          <button type="button" class="iv-btn" :disabled="!rows.length" @click="csv">
-            <Download :size="14" aria-hidden="true" />CSV
-          </button>
-        </div>
-      </div>
-
-      <nav class="nb-sections" aria-label="Views" style="position: static; margin-bottom: 4px">
-        <Link
-          v-for="v in VIEWS"
-          :key="v.id"
-          :href="href({ view: v.id })"
-          :class="{ on: view === v.id }"
-          :aria-current="view === v.id ? 'page' : undefined"
-          preserve-scroll
-          prefetch="hover"
-          >{{ v.label }}</Link
-        >
-      </nav>
-
-      <div class="nb-filters">
-        <nav class="nb-seg" aria-label="Role">
-          <Link
-            v-for="r in ROLES"
-            :key="r.position"
-            :href="href({ role: r.slug })"
-            :class="{ on: r.position === position }"
-            :aria-current="r.position === position ? 'page' : undefined"
-            preserve-scroll
-            prefetch="hover"
-            ><RoleIcon :lane="r.lane" :size="13" />{{ r.label }}</Link
-          >
-        </nav>
-        <div class="end">
+        <div class="dv-sels dv-sel">
           <Select
             v-model="rankModel"
             :options="rankOptions"
@@ -770,134 +1028,218 @@ const crumbs = computed(() =>
             width="12rem"
             align="right"
           />
+          <button type="button" class="iv-btn sx-csv" :disabled="!rows.length" @click="csv">
+            <Download :size="14" aria-hidden="true" />CSV
+          </button>
         </div>
       </div>
 
-      <p v-if="!rows.length" class="nb-panel nb-empty">
+      <nav class="rd-tabs dv-tabs" aria-label="Views">
+        <Link
+          v-for="v in VIEWS"
+          :key="v.id"
+          :href="href({ view: v.id })"
+          :class="{ on: view === v.id }"
+          :aria-current="view === v.id ? 'page' : undefined"
+          preserve-scroll
+          prefetch="hover"
+          >{{ v.label }}</Link
+        >
+      </nav>
+
+      <div class="sx-bar">
+        <nav class="rd-seg sx-roles" aria-label="Role">
+          <Link
+            v-for="r in ROLES"
+            :key="r.position"
+            :href="href({ role: r.slug })"
+            :class="{ on: r.position === position }"
+            :aria-current="r.position === position ? 'page' : undefined"
+            preserve-scroll
+            prefetch="hover"
+            ><RoleIcon :lane="r.lane" :size="15" />{{ r.label }}</Link
+          >
+        </nav>
+        <span class="grow" />
+        <span v-if="hasHeat && view !== 'items'" class="sx-lgd num" aria-hidden="true"
+          >43%<i />58% win rate</span
+        >
+      </div>
+
+      <p v-if="!rows.length" class="rd-card dv-empty">
         Not enough games for this role with these filters yet.
       </p>
-      <p v-else-if="view === 'patch' && !previousPatch" class="nb-panel nb-empty">
-        No earlier patch has enough games to compare with {{ patch }} yet.
+      <p v-else-if="view === 'patch' && !previousPatch" class="rd-card dv-empty">
+        No earlier patch has enough games to compare with {{ patchName(patch) }} yet.
       </p>
 
-      <!-- Items: one row per finished item -->
-      <section
-        v-else-if="view === 'items'"
-        class="nb-panel nb-table"
-        role="table"
-        :aria-label="`Items bought in ${role.label.toLowerCase()}`"
-      >
-        <div class="nb-tr th it-cols" role="row">
-          <span role="columnheader">#</span>
-          <span role="columnheader">Item</span>
-          <span role="columnheader" class="r" :aria-sort="ariaSort(itemSort, 'games')"
-            ><SortHead
-              label="Bought in"
-              title="Share of the role's games that bought it"
-              :active="itemSort.key === 'games'"
-              :dir="itemSort.dir"
-              @sort="byItem('games')"
-          /></span>
-          <span role="columnheader" class="hm" />
-          <span role="columnheader" class="r hm">Games</span>
-          <span role="columnheader" class="r" :aria-sort="ariaSort(itemSort, 'win')"
-            ><SortHead
-              label="Win rate"
-              :active="itemSort.key === 'win'"
-              :dir="itemSort.dir"
-              @sort="byItem('win')"
-          /></span>
-        </div>
-        <span
-          v-if="$props.items === undefined"
-          class="nb-skel"
-          style="height: 480px; margin: 12px 14px"
-          aria-busy="true"
-        />
-        <p v-else-if="!items.length" class="nb-empty">No item data for this patch yet.</p>
-        <div v-for="(i, k) in items" :key="i.item" class="nb-tr it-cols" role="row">
-          <span class="rk num" role="cell">{{ k + 1 }}</span>
-          <span class="c" role="cell"
-            ><GameImg kind="item" :id="i.item" :size="24" :name="i.name" /><b>{{
-              i.name ?? i.item
-            }}</b></span
-          >
-          <span class="r num" role="cell">{{ pct(i.games / (roleGames || 1)) }}</span>
-          <span class="hm" role="cell"
-            ><span class="nb-bar"
-              ><i
-                :style="{ width: `${Math.min(100, (i.games / (roleGames || 1)) * 100)}%` }" /></span
-          ></span>
-          <span class="r num hm" role="cell">{{ thousands(i.games) }}</span>
-          <span class="r b num" role="cell">{{ pct(i.wins / i.games) }}</span>
-        </div>
-      </section>
-
-      <!-- Every other view: one row per champion -->
-      <section v-else class="nb-panel nb-scroll" :aria-label="`${TITLES[view]}, ${role.label}`">
-        <div
-          class="nb-table st-table"
-          role="table"
-          :style="{ 'minWidth': `${minWidth}px`, '--st-cols': template }"
-        >
-          <div v-if="groups.length" class="st-grp nb-tr th" role="row">
-            <span class="pin e" role="columnheader" />
-            <span
-              v-for="(g, i) in groups"
-              :key="i"
-              role="columnheader"
-              :class="{ e: !g.label }"
-              :style="{ gridColumn: `span ${g.span}` }"
-              >{{ g.label }}</span
-            >
-          </div>
-          <div class="nb-tr th" role="row">
-            <span class="pin" role="columnheader"> <span>#</span><span>Champion</span> </span>
-            <span
-              v-for="c in columns"
-              :key="c.key"
-              role="columnheader"
-              :class="{ r: c.key !== 'tier' }"
-              :aria-sort="ariaSort(sort, c.key)"
-            >
-              <SortHead
-                :label="c.label"
-                :title="c.title"
-                :active="sort.key === c.key"
-                :dir="sort.dir"
-                @sort="by(c.key)"
-              />
-            </span>
-          </div>
-          <div v-for="(r, i) in sorted" :key="r.champion" class="nb-tr link" role="row">
-            <span class="pin" role="cell">
-              <span class="rk num">{{ i + 1 }}</span>
-              <span class="c"
-                ><span class="pic"><ChampIcon :id="r.champion" :size="26" /></span
-                ><Link :href="champHref(r.champion)" class="stretch" prefetch="hover"
-                  ><b>{{ name(r.champion) }}</b></Link
-                ></span
+      <template v-else>
+        <div v-if="highlights.some((h) => h.spots.length)" class="sx-s3">
+          <section v-for="h in highlights" :key="h.title" class="rd-card" :aria-label="h.title">
+            <div class="rd-head">
+              <h3>{{ h.title }}</h3>
+            </div>
+            <template v-if="h.spots.length">
+              <component
+                :is="sp.href ? Link : 'div'"
+                v-for="(sp, i) in h.spots"
+                :key="sp.key"
+                :href="sp.href ?? undefined"
+                class="sx-sr"
+                v-bind="sp.href ? { prefetch: 'hover' } : {}"
               >
-            </span>
-            <span
-              v-for="c in columns"
-              :key="c.key"
-              role="cell"
-              class="num"
-              :class="[c.key === 'tier' ? '' : 'r', c.cls?.(r)]"
-            >
-              <TierMark v-if="c.key === 'tier'" :tier="r.tier" /><span
-                v-else-if="pending(c.key)"
-                class="nb-skel"
-                style="display: inline-block; width: 30px; height: 10px"
-              /><template v-else>{{ c.text(r) }}</template>
-            </span>
-          </div>
+                <span class="i num">{{ i + 1 }}</span>
+                <span class="dv-pic"
+                  ><ChampIcon v-if="sp.kind === 'champion'" :id="sp.id" :size="36" /><GameImg
+                    v-else
+                    kind="item"
+                    :id="sp.id"
+                    :size="36"
+                    :name="sp.name"
+                /></span>
+                <span class="dv-who"
+                  ><b>{{ sp.name }}</b
+                  ><small class="num">{{ sp.sub }}</small></span
+                >
+                <span class="rd-fig num" :class="sp.cls">{{ sp.value }}</span>
+              </component>
+            </template>
+            <p v-else class="dv-empty">Not enough games yet.</p>
+          </section>
         </div>
-      </section>
+
+        <!-- Items: one row per finished item -->
+        <section
+          v-if="view === 'items'"
+          class="nb-panel nb-table"
+          role="table"
+          :aria-label="`Items bought in ${role.label.toLowerCase()}`"
+        >
+          <div class="nb-tr th it-cols" role="row">
+            <span role="columnheader">#</span>
+            <span role="columnheader">Item</span>
+            <span role="columnheader" class="r" :aria-sort="ariaSort(itemSort, 'games')"
+              ><SortHead
+                label="Bought in"
+                title="Share of the role's games that bought it"
+                :active="itemSort.key === 'games'"
+                :dir="itemSort.dir"
+                @sort="byItem('games')"
+            /></span>
+            <span role="columnheader" class="hm" />
+            <span role="columnheader" class="r hm">Games</span>
+            <span role="columnheader" class="r" :aria-sort="ariaSort(itemSort, 'win')"
+              ><SortHead
+                label="Win rate"
+                :active="itemSort.key === 'win'"
+                :dir="itemSort.dir"
+                @sort="byItem('win')"
+            /></span>
+          </div>
+          <span
+            v-if="$props.items === undefined"
+            class="nb-skel"
+            style="height: 480px; margin: 12px 14px"
+            aria-busy="true"
+          />
+          <p v-else-if="!items.length" class="nb-empty">No item data for this patch yet.</p>
+          <div v-for="(i, k) in items" :key="i.item" class="nb-tr it-cols" role="row">
+            <span class="rk num" role="cell">{{ k + 1 }}</span>
+            <span class="c" role="cell"
+              ><GameImg kind="item" :id="i.item" :size="28" :name="i.name" /><b>{{
+                i.name ?? i.item
+              }}</b></span
+            >
+            <span class="r num" role="cell">{{ pct(i.games / (roleGames || 1)) }}</span>
+            <span class="hm" role="cell"
+              ><span class="rd-bar quiet"
+                ><i
+                  :style="{
+                    width: `${Math.min(100, (i.games / (roleGames || 1)) * 100)}%`,
+                  }" /></span
+            ></span>
+            <span class="r num hm" role="cell">{{ thousands(i.games) }}</span>
+            <span class="r b num" role="cell">{{ pct(i.wins / i.games) }}</span>
+          </div>
+        </section>
+
+        <!-- Every other view: one row per champion -->
+        <section v-else class="nb-panel nb-scroll" :aria-label="`${TITLES[view]}, ${role.label}`">
+          <div
+            class="nb-table st-table"
+            role="table"
+            :style="{ 'minWidth': `${minWidth}px`, '--st-cols': template }"
+          >
+            <div v-if="groups.length" class="st-grp nb-tr th" role="row">
+              <span class="pin e" role="columnheader" />
+              <span
+                v-for="(g, i) in groups"
+                :key="i"
+                role="columnheader"
+                :class="{ e: !g.label }"
+                :style="{ gridColumn: `span ${g.span}` }"
+                >{{ g.label }}</span
+              >
+            </div>
+            <div class="nb-tr th" role="row">
+              <span class="pin" role="columnheader"> <span>#</span><span>Champion</span> </span>
+              <span
+                v-for="c in columns"
+                :key="c.key"
+                role="columnheader"
+                :class="{ r: c.key !== 'tier' && !c.heat, hc: c.heat }"
+                :aria-sort="ariaSort(sort, c.key)"
+              >
+                <SortHead
+                  :label="c.label"
+                  :title="c.title"
+                  :active="sort.key === c.key"
+                  :dir="sort.dir"
+                  @sort="by(c.key)"
+                />
+              </span>
+            </div>
+            <div v-for="(r, i) in sorted" :key="r.champion" class="nb-tr link" role="row">
+              <span class="pin" role="cell">
+                <span class="rk num">{{ i + 1 }}</span>
+                <span class="c"
+                  ><span class="dv-pic"><ChampIcon :id="r.champion" :size="32" /></span
+                  ><Link :href="champHref(r.champion)" class="stretch" prefetch="hover"
+                    ><b>{{ name(r.champion) }}</b></Link
+                  ></span
+                >
+              </span>
+              <span
+                v-for="c in columns"
+                :key="c.key"
+                role="cell"
+                class="num"
+                :class="[c.key === 'tier' ? '' : c.heat ? 'hc' : 'r', c.cls?.(r)]"
+              >
+                <span
+                  v-if="c.key === 'tier'"
+                  class="rd-tier"
+                  :class="r.tier ? `t${Math.min(r.tier, 5)}` : ''"
+                  >{{ r.tier === null ? '-' : TIERS[r.tier] }}</span
+                ><span
+                  v-else-if="pending(c.key)"
+                  class="nb-skel"
+                  style="display: inline-block; width: 30px; height: 10px"
+                /><span
+                  v-else-if="c.heat"
+                  class="sx-heat"
+                  :class="{ none: c.heat(r) === null }"
+                  :style="{ background: heat(c.heat(r)) }"
+                  >{{ c.heat(r) === null ? '-' : (c.heat(r)! * 100).toFixed(1) }}</span
+                ><template v-else>{{ c.text(r) }}</template>
+              </span>
+            </div>
+          </div>
+        </section>
+      </template>
 
       <p v-if="filter && rows.length" class="nb-data">
-        <template v-if="view === 'overview' || view === 'early'"
+        <template v-if="view === 'overview' || view === 'early' || view === 'length'"
           >Gold and CS against the opposing {{ role.label.toLowerCase() }}.
         </template>
         <DataLine

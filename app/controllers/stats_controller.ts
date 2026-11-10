@@ -7,6 +7,7 @@ import { latestPatch } from '#services/ranked_games_service'
 import { REGIONS } from '#services/ranked_stats'
 import { BRACKET_TEXT, breadcrumbs, count, meta } from '#services/page_meta'
 import { onceEach, settle } from '#services/page_blocks'
+import { patchName } from '../../inertia/lib/patch.js'
 
 /** How long the page waits for its view's blocks before it is sent (see the champion page). */
 const READY_MS = 150
@@ -84,7 +85,7 @@ export default class StatsController {
         )
       }
     }
-    if (view === 'overview') {
+    if (view === 'overview' || view === 'length') {
       loads.events = async () => {
         const events = await statsExplorerService.events(filter, position)
         return Object.fromEntries(
@@ -155,8 +156,8 @@ export default class StatsController {
         return c ? [{ id: c.id, name: c.name, slug: c.slug }] : []
       }),
       ...meta({
-        title: `${VIEW_LABELS[view]}: ${label.toLowerCase()}, patch ${filter.patch}`,
-        description: `${rows.length} ${label.toLowerCase()} champions, ${VIEW_TEXT[view]}. ${BRACKET_TEXT[filter.bracket]}, patch ${filter.patch}, ${count(role?.summary.games ?? 0)} ranked games.`,
+        title: `${VIEW_LABELS[view]}: ${label.toLowerCase()}, patch ${patchName(filter.patch)}`,
+        description: `${rows.length} ${label.toLowerCase()} champions, ${VIEW_TEXT[view]}. ${BRACKET_TEXT[filter.bracket]}, patch ${patchName(filter.patch)}, ${count(role?.summary.games ?? 0)} ranked games.`,
         path,
         image: `/og/stats/${view === 'overview' ? 'all' : view}.jpg`,
         version: filter.patch,
