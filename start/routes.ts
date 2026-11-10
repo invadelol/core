@@ -100,6 +100,11 @@ router
       .use(middleware.httpCache())
 
     router
+      .get('/summoners/puuid/:puuid/builds/:champion', [SummonersController, 'build'])
+      .where('champion', /^\d+$/)
+      .use(middleware.httpCache())
+
+    router
       .get('/summoners/puuid/:puuid/season', [SummonersController, 'season'])
       .use(middleware.httpCache())
 

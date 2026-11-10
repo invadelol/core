@@ -1028,7 +1028,7 @@ function publicGame(g: ProGame): ProGame {
 }
 
 /** Which item ids are boots and which are finished items, on the newest patch. */
-async function itemKinds() {
+export async function itemKinds() {
   const patch = await latestPatch()
   const kinds = patch ? await buildStatsService.kinds(patch).catch(() => null) : null
   return { legendary: new Set(kinds?.legendary ?? []), boots: new Set(kinds?.boots ?? []) }
@@ -1078,7 +1078,10 @@ export function maxOrder(order: number[]): string[] {
 
 /** A pro's builds on their most played champions. */
 export function buildsOf(
-  games: ProGame[],
+  games: Pick<
+    ProGame,
+    'champion' | 'items' | 'keystone' | 'secondaryStyle' | 'spells' | 'skillOrder' | 'win'
+  >[],
   kinds: { legendary: Set<number>; boots: Set<number> },
   champions: { champion: number; games: number; wins: number; kda: number }[]
 ): ProBuild[] {

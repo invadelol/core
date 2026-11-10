@@ -23,7 +23,7 @@ import TeammatesPanel from '../components/TeammatesPanel.vue'
 import ActivityHeatmap from '../components/ActivityHeatmap.vue'
 import MatchFilters, { type Filters } from '../components/MatchFilters.vue'
 import MatchList from '../components/MatchList.vue'
-import ChampionExplorer from '../components/ChampionExplorer.vue'
+import ProfileChampions from '../components/ProfileChampions.vue'
 import MasteryPanel from '../components/MasteryPanel.vue'
 import FriendsPanel from '../components/FriendsPanel.vue'
 import LiveMatch from '../components/LiveMatch.vue'
@@ -798,18 +798,19 @@ async function sync() {
 
         <!-- ── Champions ────────────────────────────────────────── -->
         <div v-else-if="section === 'champions'">
-          <div class="mb-5 flex flex-wrap items-center gap-3">
-            <MatchFilters v-model="filters" hide-champion :busy="filterBusy" />
-          </div>
-
           <p v-if="filterError" class="notice mb-4" role="alert">
             <span>{{ filterError }}</span>
             <button type="button" class="iv-btn sm ml-auto" @click="applyFilters()">Retry</button>
           </p>
 
-          <ChampionExplorer
+          <ProfileChampions
             :champions="filteredChampions ?? champions"
             :busy="filterBusy || pending.champions"
+            :profile="profile"
+            :queue="filters.type"
+            :rank="soloNow"
+            :mastery="mastery"
+            @queue="(type) => (filters = { ...filters, type })"
             @matches="championMatches"
           />
         </div>
