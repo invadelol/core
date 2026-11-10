@@ -21,10 +21,9 @@ export default class MultisearchController {
       return response.redirect(multisearchPath(this.players(request), null), false, 302)
     }
 
-    // The players come from the site's search (Riot IDs separated by commas): with none, there
-    // is nothing to show here.
+    // The players come from the site's search or the page's own field (Riot IDs separated by
+    // commas): with none, the page opens on its empty field.
     const players = this.players(request)
-    if (!players.length) return response.redirect('/', false, 302)
 
     return inertia.render('multisearch', {
       players,

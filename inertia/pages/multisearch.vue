@@ -1,15 +1,27 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Head } from '@inertiajs/vue3'
+import { Head, router } from '@inertiajs/vue3'
+import { X } from 'lucide-vue-next'
+import { rankFromCore, rankLabel, rankValue, tierColor, TIERS } from '@invadelol/ui/logic'
 import AppHeader from '../components/AppHeader.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import ScoutCard, { type ScoutEntry } from '../components/multisearch/ScoutCard.vue'
 import { rememberPlayer } from '../lib/recent.js'
 import { scout, type Season } from '../lib/scout.js'
-import { multisearchPath, type RiotIdentity } from '../lib/multisearch.js'
+import {
+  MAX_PLAYERS,
+  multisearchPath,
+  parseRiotIds,
+  type RiotIdentity,
+} from '../lib/multisearch.js'
+import { profileIcon } from '../lib/assets.js'
+import '../css/rd-discover.css'
 import type { Match, RanksPayload, Summoner } from '../lib/types.js'
 
-/** `/multisearch/:region?summoners=…`: a lobby scouted side by side, one card per player. */
+/**
+ * `/multisearch/:region?summoners=…`: a lobby scouted side by side, one card per player, over a
+ * field to paste the champ select chat into and a few figures of the whole lobby.
+ */
 const props = defineProps<{ players: RiotIdentity[]; region: string | null }>()
 
 /** Enough stored games for a form line, the champions and the last few games. */
@@ -276,6 +288,111 @@ const title = computed(() => {
 const rows = computed(() => entries.value.length > 5)
 
 const columns = computed(() => Math.min(Math.max(entries.value.length, 1), 5))
+
+/* ── The field: the lobby's Riot IDs as chips, more pasted or typed after them ── */
+const draft = ref('')
+const drafted = computed(() => parseRiotIds(draft.value))
+const total = computed(() =>
+  Math.min(MAX_PLAYERS, entries.value.length + drafted.value.filter((p) => !has(p)).length)
+)
+const has = (p: RiotIdentity) => entries.value.some((e) => e.key === keyOf(p))
+
+/** Adds what the field holds to the lobby, and the address follows. */
+function search() {
+  const added = drafted.value.filter((p) => !has(p))
+  draft.value = ''
+  if (!added.length) return
+  const players = [...entries.value.map((e) => e.identity), ...added].slice(0, MAX_PLAYERS)
+  show(players)
+  writeAddress(players)
+}
+
+/** A paste is a lobby: it is searched as soon as it lands in the field. */
+function onPaste() {
+  setTimeout(search, 0)
+}
+
+/** A backspace in an empty field takes the last player out. */
+function onBack() {
+  if (draft.value || !entries.value.length) return
+  remove(entries.value[entries.value.length - 1])
+}
+
+/** The region of the lookups: a new address, so the cards load again on it. */
+const REGION_TABS = ['euw', 'eune', 'na', 'kr'] as const
+const regionTabs = computed(() =>
+  props.region && !(REGION_TABS as readonly string[]).includes(props.region)
+    ? [...REGION_TABS, props.region]
+    : [...REGION_TABS]
+)
+function pickRegion(next: string | null) {
+  if (next === props.region) return
+  router.visit(
+    multisearchPath(
+      entries.value.map((e) => e.identity),
+      next
+    )
+  )
+}
+
+/* ── The lobby at a glance ───────────────────────────────────────── */
+const soloOf = (e: ScoutEntry) =>
+  e.ranks?.current?.find((r) => r.queueType === 'RANKED_SOLO_5x5' && r.tier) ?? null
+const DIVISIONS = ['IV', 'III', 'II', 'I']
+const lobby = computed(() => {
+  const ready = entries.value.filter((e) => e.status === 'ready')
+  if (ready.length < 2) return null
+  const ranked = ready.flatMap((e) => {
+    const r = soloOf(e)
+    const core = r ? rankFromCore(r) : null
+    const value = core ? rankValue(core) : null
+    return r && core && value !== null ? [{ e, r, core, value }] : []
+  })
+  let average: { label: string; color: string } | null = null
+  let range = ''
+  if (ranked.length) {
+    const mean = ranked.reduce((n, x) => n + x.value, 0) / ranked.length
+    const sorted = [...ranked].sort((a, b) => a.value - b.value)
+    if (mean >= 28) average = { label: 'Master and above', color: tierColor('MASTER') }
+    else {
+      const v = Math.floor(mean)
+      const tier = TIERS[Math.floor(v / 4)]
+      average = {
+        label: `${tier.charAt(0)}${tier.slice(1).toLowerCase()} ${DIVISIONS[v % 4]}`,
+        color: tierColor(tier),
+      }
+    }
+    const lo = rankLabel(sorted[0].core, false)
+    const hi = rankLabel(sorted[sorted.length - 1].core, false)
+    range = lo === hi ? `all ${lo}` : `from ${lo} to ${hi}`
+  }
+  const records = ranked.filter((x) => x.r.losses !== null && x.r.losses !== undefined)
+  const wins = records.reduce((n, x) => n + x.r.wins, 0)
+  const losses = records.reduce((n, x) => n + (x.r.losses ?? 0), 0)
+  const mains = ready.filter((e) => {
+    const list = e.season?.champions ?? []
+    const all = list.reduce((n, c) => n + c.games, 0)
+    return list.slice(0, 2).some((c) => c.games >= 10 && c.games / all >= 0.2)
+  }).length
+  const pairs: string[] = []
+  for (const e of ready) {
+    for (const m of mates.value.get(e.key) ?? []) {
+      const other = `${m.gameName}#${m.tagLine}`.toLowerCase()
+      if (other > e.key)
+        pairs.push(`${e.summoner?.gameName ?? e.identity.gameName} and ${m.gameName}`)
+    }
+  }
+  return {
+    count: ready.length,
+    average,
+    range,
+    rate: wins + losses ? Math.round((wins / (wins + losses)) * 100) : null,
+    wins,
+    losses,
+    mains,
+    pairs,
+  }
+})
 </script>
 
 <template>
@@ -284,7 +401,97 @@ const columns = computed(() => Math.min(Math.max(entries.value.length, 1), 5))
   <div class="flex min-h-screen flex-col">
     <AppHeader />
 
-    <main class="page flex-1 pb-16 pt-6 sm:pt-8">
+    <main id="main" class="page ms flex-1">
+      <div class="rd-ph">
+        <div>
+          <h1>Multisearch</h1>
+          <p>Paste your champ select chat and read the whole lobby before the game starts</p>
+        </div>
+        <div class="rd-seg" role="group" aria-label="Region">
+          <button
+            type="button"
+            :class="{ on: !region }"
+            :aria-pressed="!region"
+            title="Each player's region is found for them"
+            @click="pickRegion(null)"
+          >
+            Any
+          </button>
+          <button
+            v-for="r in regionTabs"
+            :key="r"
+            type="button"
+            :class="{ on: region === r }"
+            :aria-pressed="region === r"
+            @click="pickRegion(r)"
+          >
+            {{ r.toUpperCase() }}
+          </button>
+        </div>
+      </div>
+
+      <form class="ms-inp dv-bigfield" role="search" @submit.prevent="search">
+        <span v-for="e in entries" :key="e.key" class="ms-chp">
+          <img
+            v-if="e.summoner"
+            :src="profileIcon(e.summoner.profileIconId)"
+            alt=""
+            width="26"
+            height="26"
+          />
+          <span v-else class="ph" aria-hidden="true" />
+          {{ e.identity.gameName }} <span class="t">#{{ e.identity.tagLine }}</span>
+          <button type="button" :aria-label="`Remove ${e.identity.gameName}`" @click="remove(e)">
+            <X :size="12" aria-hidden="true" />
+          </button>
+        </span>
+        <label class="dv-sr" for="ms-add">Riot IDs</label>
+        <input
+          id="ms-add"
+          v-model="draft"
+          type="text"
+          spellcheck="false"
+          autocomplete="off"
+          :placeholder="
+            entries.length ? 'Add a Riot ID' : 'Paste the lobby chat, or Riot IDs like Name#TAG'
+          "
+          @keydown.backspace="onBack"
+          @paste="onPaste"
+        />
+        <button type="submit" class="iv-btn primary" :disabled="!drafted.length">
+          Search {{ total }} {{ total === 1 ? 'player' : 'players' }}
+        </button>
+      </form>
+
+      <section v-if="lobby" class="rd-card ms-lob" aria-label="The lobby">
+        <div class="st">
+          <span class="lbl">Average rank</span>
+          <b class="rd-fig" :style="lobby.average ? { color: lobby.average.color } : undefined">{{
+            lobby.average?.label ?? 'Unranked'
+          }}</b>
+          <small>{{ lobby.range || 'No Solo/Duo rank' }}</small>
+        </div>
+        <div class="st">
+          <span class="lbl">Season win rate</span>
+          <b class="rd-fig num">{{ lobby.rate === null ? '-' : `${lobby.rate}%` }}</b>
+          <small class="num">{{ lobby.wins }}W {{ lobby.losses }}L together</small>
+        </div>
+        <div class="st">
+          <span class="lbl">On a main</span>
+          <b class="rd-fig rd-vio num">{{ lobby.mains }} of {{ lobby.count }}</b>
+          <small>a fifth of their games on one champion</small>
+        </div>
+        <div class="st">
+          <span class="lbl">Premade</span>
+          <b class="rd-fig num">{{
+            lobby.pairs.length
+              ? `${lobby.pairs.length} ${lobby.pairs.length === 1 ? 'pair' : 'pairs'}`
+              : 'None seen'
+          }}</b>
+          <small>{{ lobby.pairs.join(', ') || 'No two of them in the same games' }}</small>
+        </div>
+      </section>
+
       <section
         v-if="entries.length"
         class="grid"
@@ -302,6 +509,9 @@ const columns = computed(() => Math.min(Math.max(entries.value.length, 1), 5))
           @remove="remove(entry)"
         />
       </section>
+      <p v-else class="rd-card dv-empty ms-empty">
+        Paste the champ select chat above: every "joined the lobby" line becomes a player.
+      </p>
     </main>
 
     <SiteFooter />
@@ -309,11 +519,135 @@ const columns = computed(() => Math.min(Math.max(entries.value.length, 1), 5))
 </template>
 
 <style scoped>
+.ms {
+  padding-bottom: 16px;
+}
+
+.ms-inp {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+}
+
+.ms-inp input {
+  flex: 1 1 200px;
+  min-width: 0;
+  height: 34px;
+  font: 400 14px var(--font);
+  color: var(--text-1);
+  background: none;
+  border: 0;
+  outline: 0;
+}
+
+.ms-inp input::placeholder {
+  color: var(--text-3);
+}
+
+.ms-inp:focus-within {
+  box-shadow:
+    inset 0 0 0 1px var(--rd-violet),
+    0 0 0 4px rgb(123 109 255 / 0.18);
+}
+
+.ms-chp {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 4px 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+  background: var(--rd-card-2);
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px var(--rd-line);
+}
+
+.ms-chp img,
+.ms-chp .ph {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+}
+
+.ms-chp .ph {
+  background: var(--surface-2);
+}
+
+.ms-chp .t {
+  font-weight: 400;
+  color: var(--text-3);
+}
+
+.ms-chp button {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  color: var(--text-3);
+  border-radius: 5px;
+}
+
+.ms-chp button:hover {
+  color: var(--text-1);
+  background: var(--surface-2);
+}
+
+.ms-chp button:focus-visible {
+  box-shadow: var(--focus);
+}
+
+.ms-lob {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 16px 0;
+}
+
+.ms-lob .st {
+  min-width: 0;
+  padding: 14px 18px;
+}
+
+.ms-lob .st + .st {
+  box-shadow: inset 1px 0 0 var(--rd-line);
+}
+
+.ms-lob .lbl {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+
+.ms-lob .rd-fig {
+  display: block;
+  font-size: 24px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.ms-lob small {
+  display: block;
+  overflow: hidden;
+  font-size: 12px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-3);
+}
+
+.ms-empty {
+  margin-top: 16px;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
   align-items: start;
   gap: 12px;
+  margin-top: 16px;
 }
 
 @media (min-width: 64rem) {
@@ -329,6 +663,22 @@ const columns = computed(() => Math.min(Math.max(entries.value.length, 1), 5))
   }
 }
 
+@media (max-width: 68.75rem) {
+  .ms-lob {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ms-lob .st:nth-child(3) {
+    box-shadow: inset 0 1px 0 var(--rd-line);
+  }
+
+  .ms-lob .st:nth-child(4) {
+    box-shadow:
+      inset 1px 0 0 var(--rd-line),
+      inset 0 1px 0 var(--rd-line);
+  }
+}
+
 @media (max-width: 55.99rem) {
   .grid {
     grid-template-columns: repeat(min(var(--cols), 2), minmax(0, 1fr));
@@ -338,6 +688,10 @@ const columns = computed(() => Math.min(Math.max(entries.value.length, 1), 5))
 @media (max-width: 39.99rem) {
   .grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ms-inp .iv-btn {
+    width: 100%;
   }
 }
 </style>
