@@ -970,8 +970,8 @@
     font-size: 34px;
   }
 
-  .hm-go {
-    display: none;
+  .hm-tick {
+    margin-top: 28px;
   }
 
   .hm-mv {
