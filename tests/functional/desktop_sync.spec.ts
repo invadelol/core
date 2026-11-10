@@ -39,7 +39,7 @@ test.group('Desktop sync API', (group) => {
   group.each.setup(() => {
     seed = new DesktopSeed()
     // Core takes no desktop data by default (switches.ts): these tests exercise it switched on.
-    forceSwitches({ uploads: true, observed: true })
+    forceSwitches({ uploads: true, observed: true, players: true })
     // Fresh counters per test: the per-IP limits would otherwise carry across runs.
     rateLimiter.prefix = `desktop:rl:test:${randomUUID()}:`
     publicationService.championIds = async () => null
@@ -94,6 +94,7 @@ test.group('Desktop sync API', (group) => {
       uploads: true,
       resolve: true,
       observed: true,
+      players: true,
       encodings: ['gzip', 'deflate'],
       maxPayloadBytes: 2000000,
       minAppVersion: null,
@@ -109,7 +110,7 @@ test.group('Desktop sync API', (group) => {
     forceSwitches({})
     const config = await http.get('/api/desktop/config')
     config.assertStatus(200)
-    assert.include(config.body(), { uploads: false, resolve: true, observed: false })
+    assert.include(config.body(), { uploads: false, resolve: true, observed: false, players: false })
     const desktop = desktopClient(http, credentials)
     for (const [path, body] of [
       ['/api/desktop/matches', upload],
@@ -123,6 +124,27 @@ test.group('Desktop sync API', (group) => {
     }
     const stored = await db.from('match_source').where('match_id', upload.matchId).first()
     assert.notExists(stored, 'nothing is stored')
+  })
+
+  test('own games alone: observed games and player snapshots stay paused', async ({
+    client: http,
+    assert,
+  }) => {
+    const { upload, credentials } = await onboarded()
+    seed.matchIds.push(upload.matchId)
+    forceSwitches({ uploads: true })
+    const config = await http.get('/api/desktop/config')
+    config.assertStatus(200)
+    assert.include(config.body(), { uploads: true, resolve: true, observed: false, players: false })
+    const desktop = desktopClient(http, credentials)
+    for (const [path, body] of [
+      ['/api/desktop/matches/known', { matchIds: [upload.matchId] }],
+      ['/api/desktop/players', { schema: 1, platform: 'EUW1', app: '0.3.6', players: [] }],
+    ] as const) {
+      const response = await desktop.post(path, body)
+      response.assertStatus(503)
+      assert.equal(response.body().errors[0].code, 'E_UPLOADS_PAUSED', path)
+    }
   })
 
   test('an observed game: asked about first, sent deflated, published without LP (v1.3)', async ({
@@ -238,6 +260,8 @@ test.group('Desktop sync API', (group) => {
     assert,
   }) => {
     const { upload, puuids, credentials, identity, puuid } = await onboarded()
+    // What production runs: own games on, observed games and player snapshots off.
+    forceSwitches({ uploads: true })
     const app = desktopClient(http, credentials)
 
     const link = await app.post('/api/desktop/link', {
