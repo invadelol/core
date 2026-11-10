@@ -92,7 +92,7 @@ const big = computed(() => {
       <div v-if="duel" class="lv-duel">
         <div class="lv-duel-head">
           <span>First fifteen minutes, {{ duel.games }} games</span>
-          <div class="iv-seg lv-duel-seg" role="group" aria-label="Race">
+          <div class="rd-seg lv-duel-seg" role="group" aria-label="Race">
             <button type="button" :class="{ on: metric === 'cs' }" @click="metric = 'cs'">
               CS
             </button>
