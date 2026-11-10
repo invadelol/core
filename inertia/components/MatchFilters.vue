@@ -17,6 +17,8 @@ const props = defineProps<{
   modelValue: Filters
   champions?: ChampionStats[]
   hideChampion?: boolean
+  /** The queue is chosen elsewhere (the Performance card). */
+  hideQueue?: boolean
   busy?: boolean
   /** What the current filters actually returned, printed on the right. */
   summary?: string
@@ -77,7 +79,12 @@ const championModel = computed({
     :aria-busy="busy"
   >
     <!-- On a phone each control takes the line, its segments sharing it. -->
-    <div class="iv-seg max-sm:flex max-sm:w-full max-sm:flex-nowrap" role="group" aria-label="Queue">
+    <div
+      v-if="!hideQueue"
+      class="rd-seg max-sm:flex max-sm:w-full max-sm:flex-nowrap"
+      role="group"
+      aria-label="Queue"
+    >
       <button
         v-for="[value, label] in QUEUES"
         :key="value"
@@ -90,7 +97,7 @@ const championModel = computed({
       </button>
     </div>
 
-    <div class="iv-seg max-sm:flex max-sm:w-full max-sm:flex-nowrap" role="group" aria-label="Role">
+    <div class="rd-seg max-sm:flex max-sm:w-full max-sm:flex-nowrap" role="group" aria-label="Role">
       <button
         type="button"
         class="!px-2.5 max-sm:flex-1"

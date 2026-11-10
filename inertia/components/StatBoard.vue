@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { PerfDial, TrendLine } from '@invadelol/ui'
+import { PerfDial } from '@invadelol/ui'
+import FormStrip from './ui/FormStrip.vue'
+import VioletLine from './ui/VioletLine.vue'
 import {
   isRemake,
   killParticipation,
@@ -28,7 +30,19 @@ const props = defineProps<{
   puuid: string
   /** How many games the window asks for. */
   window: number
+  /** The queue the board and the games below are filtered to. */
+  queue?: string
 }>()
+
+const emit = defineEmits<{ queue: [value: string] }>()
+
+const QUEUES = [
+  ['all', 'All'],
+  ['ranked', 'Solo/Duo'],
+  ['flex', 'Flex'],
+  ['normal', 'Normals'],
+  ['aram', 'ARAM'],
+] as const
 
 const CATEGORY_LABEL: Record<ScoreCategory, string> = {
   fighting: 'Fighting',
@@ -58,6 +72,7 @@ const games = computed(() =>
         csMin: me.cs / minutes,
         visionMin: (me.visionScore || 0) / minutes,
         goldMin: me.goldEarned / minutes,
+        dmgMin: (me.totalDamageDealtToChampions || 0) / minutes,
       }
     })
     .filter((row): row is NonNullable<typeof row> => Boolean(row))
@@ -117,7 +132,7 @@ interface Figure {
   tone: '' | 'up' | 'down'
 }
 
-/** The app's five key figures, in its order. Kill participation is in percent throughout. */
+/** The five key figures. Kill participation is in percent throughout. */
 const FIGURES = [
   {
     id: 'csm',
@@ -130,22 +145,13 @@ const FIGURES = [
   },
   {
     id: 'kp',
-    label: 'KP',
+    label: 'Kill part.',
     name: 'Kill participation',
     of: (s: GlobalStats) => s.killParticipation * 100,
     game: (g: Game) => g.kp,
     digits: 0,
     percent: true,
     span: 40,
-  },
-  {
-    id: 'vpm',
-    label: 'Vision/min',
-    name: 'Vision score per minute',
-    of: (s: GlobalStats) => s.visionMin,
-    game: (g: Game) => g.visionMin,
-    digits: 2,
-    span: 1,
   },
   {
     id: 'kda',
@@ -157,13 +163,22 @@ const FIGURES = [
     span: 6,
   },
   {
-    id: 'gpm',
-    label: 'Gold/min',
-    name: 'Gold per minute',
-    of: (s: GlobalStats) => s.goldPerMinute,
-    game: (g: Game) => g.goldMin,
+    id: 'dpm',
+    label: 'Damage/min',
+    name: 'Damage to champions per minute',
+    of: (s: GlobalStats) => s.damagePerMinute,
+    game: (g: Game) => g.dmgMin,
     digits: 0,
-    span: 200,
+    span: 400,
+  },
+  {
+    id: 'vpm',
+    label: 'Vision/min',
+    name: 'Vision score per minute',
+    of: (s: GlobalStats) => s.visionMin,
+    game: (g: Game) => g.visionMin,
+    digits: 2,
+    span: 1,
   },
 ] as const
 
@@ -195,7 +210,24 @@ const figures = computed<Figure[]>(() => {
 
 /** A figure as shown: a percentage, or the number with its digits; '-' when there is none. */
 const fmt = (f: Figure, v: number) =>
-  !Number.isFinite(v) ? '-' : f.percent ? `${Math.round(v)}%` : v.toFixed(f.digits)
+  !Number.isFinite(v)
+    ? '-'
+    : f.percent
+      ? `${Math.round(v)}%`
+      : f.digits === 0
+        ? Math.round(v).toLocaleString('en-US')
+        : v.toFixed(f.digits)
+
+/** A sparkline's range: at least the figure's ordinary span, so noise stays gentle. */
+function sparkRange(f: Figure) {
+  const lo = Math.min(...f.values)
+  const hi = Math.max(...f.values)
+  const mid = (lo + hi) / 2
+  const half = Math.max(hi - lo, f.span * 0.5) / 2
+  return { min: mid - half, max: mid + half }
+}
+
+const form = computed(() => games.value.filter((g) => !g.remake).map((g) => g.win))
 
 /** Signed gap to the base; percentages in points. A gap that rounds to nothing shows as 0. */
 function gap(f: Figure) {
@@ -204,327 +236,245 @@ function gap(f: Figure) {
   if (Math.abs(d) < 0.5 / 10 ** f.digits) return (0).toFixed(f.digits)
   return `${d > 0 ? '+' : '−'}${Math.abs(d).toFixed(f.digits)}`
 }
-
-const winrate = computed(() => Math.round((props.stats?.winrate ?? 0) * 100))
 </script>
 
 <template>
-  <!-- Performance: the desktop app's strip (score, record, the key figures over the games), then
-       the form and the parts of the score on the same columns. -->
-  <section>
-    <div class="section">
-      <h2>Performance</h2>
-      <span v-if="stats?.total" class="meta num">Last {{ stats.total }} games</span>
-      <span v-if="previous?.total" class="meta num hidden sm:inline">
-        against the {{ previous.total }} before
-      </span>
+  <!-- Performance: the featured sheet of the profile. The Invade score on the dial with the record
+       and the form, then the five key figures with their gap to the games before and a line of
+       each game. The queue filter here also filters the games below. -->
+  <section class="rd-card rd-lit perf-card">
+    <div class="rd-head">
+      <h2>
+        Performance<span v-if="stats?.total" class="rd-meta num"
+          >Last {{ stats.total }} games<template v-if="previous?.total"
+            >, against the {{ previous.total }} before</template
+          ></span
+        >
+      </h2>
+      <div class="rd-seg" role="group" aria-label="Queue">
+        <button
+          v-for="[value, label] in QUEUES"
+          :key="value"
+          type="button"
+          :class="{ on: (queue ?? 'all') === value }"
+          :aria-pressed="(queue ?? 'all') === value"
+          @click="emit('queue', value)"
+        >
+          {{ label }}
+        </button>
+      </div>
     </div>
 
-    <p v-if="!stats || !stats.total" class="py-6 text-[13px] text-ink-2">
-      No games in this window.
-    </p>
+    <p v-if="!stats || !stats.total" class="perf-empty">No games in this window.</p>
 
-    <div v-else class="iv-panel lit-sheet sb">
-      <div class="sb-grid">
+    <template v-else>
+      <div class="perf">
         <div
-          class="sb-head"
+          class="perf-s"
           :title="
             score
               ? `Average Invade score ${score.average} of 100 over ${score.count} scored games, each rated against the other nine players`
               : undefined
           "
         >
-          <PerfDial :score="score?.average ?? null" />
-          <p>
+          <PerfDial class="perf-dial" :score="score?.average ?? null" />
+          <span class="min-w-0">
             <small>Invade score</small>
-            <span>{{ record.wins }}W {{ record.losses }}L, {{ winrate }}%</span>
-            <small v-if="score">
+            <b class="num">{{ record.wins }}W {{ record.losses }}L</b>
+            <FormStrip v-if="form.length" class="perf-form" :results="form" />
+            <small v-if="score" class="num perf-best">
               Best {{ score.best
               }}<template v-if="score.trend"
                 >,
-                <em :class="Math.abs(score.trend) >= 5 ? (score.trend > 0 ? 'up' : 'down') : ''"
+                <em :class="Math.abs(score.trend) >= 5 ? (score.trend > 0 ? 'rd-up' : 'rd-dn') : ''"
                   >{{ score.trend > 0 ? '+' : '−' }}{{ Math.abs(score.trend) }}</em
                 >
-                in later games
-              </template>
+                in later games</template
+              >
             </small>
-          </p>
+          </span>
         </div>
 
-        <ul class="sb-figs">
-          <li
-            v-for="f in figures"
-            :key="f.id"
-            :title="
-              Number.isFinite(f.base)
-                ? `${f.name}: ${fmt(f, f.value)}, ${fmt(f, f.base)} over the ${previous?.total} games before`
-                : f.name
-            "
+        <div
+          v-for="f in figures"
+          :key="f.id"
+          class="st"
+          :title="
+            Number.isFinite(f.base)
+              ? `${f.name}: ${fmt(f, f.value)}, ${fmt(f, f.base)} over the ${previous?.total} games before`
+              : f.name
+          "
+        >
+          <label>{{ f.label }}</label>
+          <div class="rd-fig">{{ fmt(f, f.value) }}</div>
+          <small
+            class="num"
+            :class="f.tone === 'up' ? 'rd-up' : f.tone === 'down' ? 'rd-dn' : 'rd-flat'"
+            >{{ gap(f) || '&nbsp;' }}</small
           >
-            <span>{{ f.label }}</span>
-            <p>
-              <b>{{ fmt(f, f.value) }}</b
-              ><em :class="f.tone">{{ gap(f) }}</em>
-            </p>
-            <div
-              class="sb-spark"
-              role="img"
-              :aria-label="`${f.name} over the last ${f.values.length} games`"
-            >
-              <TrendLine
-                :values="f.values"
-                :baseline="Number.isFinite(f.base) ? f.base : null"
-                :span="f.span"
-                :height="32"
-                area
-              />
-            </div>
-            <small>{{ Number.isFinite(f.base) ? `Before ${fmt(f, f.base)}` : '' }}</small>
-          </li>
-        </ul>
-
-        <template v-if="games.length || score?.categories.length">
-          <div class="sb-rule" />
-
-          <div v-if="games.length" class="sb-form">
-            <small>Form</small>
-            <span class="iv-form" :title="`Last ${games.length} games, oldest first`">
-              <i
-                v-for="game in games"
-                :key="game.id"
-                :class="game.remake ? 'r' : game.win ? 'w' : 'l'"
-                :title="game.remake ? 'Remake' : game.win ? 'Win' : 'Loss'"
-              />
-            </span>
-          </div>
-
-          <ul v-if="score?.categories.length" class="sb-parts">
-            <li
-              v-for="category in score.categories"
-              :key="category.key"
-              :title="`${category.label}: ${category.value} of 100, part of the Invade score`"
-            >
-              <span>{{ category.label }}</span>
-              <b>{{ category.value }}</b>
-              <div class="meter">
-                <span :style="{ width: `${category.value}%` }" />
-              </div>
-            </li>
-          </ul>
-        </template>
+          <VioletLine
+            v-if="f.values.length > 1"
+            class="spark"
+            :values="f.values"
+            :min="sparkRange(f).min"
+            :max="sparkRange(f).max"
+            :height="26"
+            :pad="3"
+            :area="false"
+            thin
+          />
+        </div>
       </div>
-    </div>
+
+      <ul v-if="score?.categories.length" class="parts">
+        <li
+          v-for="category in score.categories"
+          :key="category.key"
+          :title="`${category.label}: ${category.value} of 100, part of the Invade score`"
+        >
+          <span>{{ category.label }}</span>
+          <b class="num">{{ category.value }}</b>
+          <span class="rd-bar"><i :style="{ width: `${category.value}%` }" /></span>
+        </li>
+      </ul>
+    </template>
   </section>
 </template>
 
 <style scoped>
-/* One wide strip, as the app's profile: the dial and the record on the left, then the five figures
-   side by side, each with its value and gap, a short line over the dashed window before, and that
-   value in small type. A narrow strip puts the record on top and the figures 3 + 2. */
-.sb {
-  padding: 16px 20px;
+.perf-card {
   container-type: inline-size;
 }
-.sb-grid {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 0 24px;
+.perf-empty {
+  margin: 0;
+  padding: 24px 20px;
+  font-size: 13px;
+  color: var(--text-2);
 }
-.sb-head {
+.perf {
+  display: grid;
+  grid-template-columns: auto repeat(5, minmax(0, 1fr));
+  align-items: center;
+  padding: 20px;
+}
+.perf-s {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-width: 0;
-  padding-right: 24px;
-  border-right: 1px solid var(--line);
+  gap: 16px;
+  padding-right: 22px;
 }
-.sb-head :deep(.iv-dial) {
-  width: 56px;
-  height: 56px;
-}
-.sb-head :deep(.iv-dial b) {
-  font-size: 18px;
-}
-.sb-head p {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-  margin: 0;
-}
-.sb-head span {
-  font-size: 14px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  color: var(--text-1);
-}
-.sb-head small {
-  font-size: 11.5px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+.perf-s small {
+  display: block;
+  font-size: 12px;
   color: var(--text-3);
 }
-.sb em {
+.perf-s b {
+  display: block;
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--text-1);
+}
+.perf-s em {
   font-style: normal;
 }
-.sb em.up {
-  color: var(--win);
+.perf-form {
+  margin-top: 6px;
 }
-.sb em.down {
-  color: var(--loss);
+.perf-best {
+  margin-top: 4px;
 }
-
-.sb-figs,
-.sb-parts {
+.perf-dial:deep(svg),
+.perf-dial {
+  width: 96px;
+  height: 96px;
+}
+.perf-dial:deep(.iv-dial-track),
+.perf-dial:deep(.iv-dial-arc) {
+  stroke-width: 2.4;
+}
+.perf-dial:deep(b) {
+  font-size: 34px;
+  font-weight: 700;
+}
+.st {
+  min-width: 0;
+  padding: 0 0 0 20px;
+}
+.st label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+.st .rd-fig {
+  font-size: 24px;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+.st small {
+  display: block;
+  font-size: 12px;
+}
+.spark {
+  margin-top: 6px;
+}
+.parts {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px 20px;
-  min-width: 0;
+  gap: 10px 20px;
   margin: 0;
-  padding: 0;
+  padding: 14px 20px 16px;
   list-style: none;
+  box-shadow: inset 0 1px 0 var(--rd-line);
 }
-.sb-figs li,
-.sb-parts li {
+.parts li {
   display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-.sb-figs li > span,
-.sb-figs li > small,
-.sb-parts li > span {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.sb-figs li > span,
-.sb-parts li > span {
-  font-size: 12px;
-  color: var(--text-2);
-}
-.sb-figs p {
-  display: flex;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 8px;
   align-items: baseline;
-  gap: 8px;
-  margin: 0;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.sb-figs b,
-.sb-parts b {
-  font-size: 15px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-1);
-}
-.sb-figs em {
+  min-width: 0;
   font-size: 12px;
   color: var(--text-3);
 }
-/* The line in a box of a fixed height with the SVG pinned to it. */
-.sb-spark {
-  position: relative;
-  height: 32px;
-  margin-top: 4px;
-  overflow: hidden;
+.parts b {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
 }
-.sb-spark :deep(.iv-trend) {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-.sb-spark :deep(.iv-trend-base) {
-  opacity: 0.5;
-}
-.sb-figs li > small {
-  min-height: 1.3em;
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  color: var(--text-4);
-}
-
-/* The second row: a hairline across, then the form under the record and the parts of the score
-   under the figures. */
-.sb-rule {
+.parts .rd-bar {
   grid-column: 1 / -1;
-  height: 1px;
-  margin: 14px 0;
-  background: var(--line);
-}
-.sb-form {
-  display: grid;
-  gap: 6px;
-  min-width: 0;
-  align-self: start;
-}
-.sb-form small {
-  font-size: 12px;
-  color: var(--text-2);
-}
-/* The games as one row of ticks that fills the column, however many there are. */
-.sb-form .iv-form {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 2px;
-  width: 100%;
-}
-.sb-form .iv-form i {
-  flex: 1 1 0;
-  min-width: 2px;
-  max-width: 8px;
-  height: 12px;
-}
-.sb-parts {
-  grid-column: 2;
-  align-self: start;
-}
-.sb-parts li {
-  gap: 4px;
-}
-.sb-parts .meter {
   height: 3px;
-  margin-top: 2px;
 }
 
-/* Narrow: the record above, the figures and the parts 3 + 2. */
-@container (max-width: 760px) {
-  .sb-grid {
-    grid-template-columns: minmax(0, 1fr);
-    row-gap: 12px;
-  }
-  .sb-head {
-    padding: 0 0 12px;
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-  }
-  .sb-head :deep(.iv-dial) {
-    width: 44px;
-    height: 44px;
-  }
-  .sb-head :deep(.iv-dial b) {
-    font-size: 15px;
-  }
-  .sb-head p {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 2px 10px;
-  }
-  .sb-figs,
-  .sb-parts {
+@container (max-width: 860px) {
+  .perf {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    row-gap: 10px;
+    row-gap: 18px;
   }
-  .sb-spark {
-    height: 28px;
+  .perf-s {
+    grid-column: 1 / -1;
+    padding: 0;
   }
-  .sb-rule {
-    margin: 2px 0;
+  .st {
+    padding: 0 12px 0 0;
   }
-  .sb-parts {
-    grid-column: 1;
+  .perf-dial,
+  .perf-dial:deep(svg) {
+    width: 72px;
+    height: 72px;
+  }
+  .perf-dial:deep(b) {
+    font-size: 26px;
+  }
+}
+@container (max-width: 520px) {
+  .perf {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 16px;
+  }
+  .parts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    padding: 12px 16px 14px;
   }
 }
 </style>

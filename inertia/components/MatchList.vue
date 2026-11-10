@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, shallowRef } from 'vue'
-import { MatchRow, useFormat } from '@invadelol/ui'
+import { useFormat } from '@invadelol/ui'
+import GameRow from './GameRow.vue'
 import { summaryOf, type MatchSummary } from '@invadelol/ui/logic'
 import GameDetail from './GameDetail.vue'
 import { afterPaint } from '../lib/after_paint.js'
@@ -18,6 +19,8 @@ const props = defineProps<{
    * Never on anyone else's profile.
    */
   ownProfile?: boolean
+  /** Rows show the lane opponent instead of the team rating. */
+  versus?: boolean
 }>()
 
 defineEmits<{ clear: [] }>()
@@ -80,9 +83,9 @@ function toggle(id: string) {
   </p>
 
   <div v-else>
-    <section v-for="day in days" :key="day.label" class="iv-pf-day">
-      <h3 class="iv-mr-day mb-2">
-        {{ day.label }}
+    <section v-for="day in days" :key="day.label">
+      <h3 class="rd-day">
+        <b>{{ day.label }}</b>
         <span class="num">
           {{ day.wins }}W {{ day.losses }}L<template v-if="day.lp !== null"
             >, {{ signedLp(day.lp) }} LP</template
@@ -90,19 +93,18 @@ function toggle(id: string) {
         </span>
       </h3>
 
-      <ul class="iv-mr-list">
+      <ul class="rd-games">
         <li
           v-for="{ match, game, tag } in day.rows"
           :key="match.matchId"
-          class="iv-pf-match"
           :class="{ open: open === match.matchId }"
         >
-          <MatchRow
+          <GameRow
+            :match="match"
             :game="game"
-            :score="game.score"
-            :lp="match.lpChange ?? null"
-            :open="open === match.matchId"
             :puuid="puuid"
+            :open="open === match.matchId"
+            :versus="versus"
             @toggle="toggle(match.matchId)"
           />
           <p v-if="tag" class="self-tag">
@@ -110,6 +112,7 @@ function toggle(id: string) {
           </p>
           <GameDetail
             v-if="shown === match.matchId"
+            class="rd-detail"
             :match="match"
             :puuid="puuid"
             :game-name="gameName"
@@ -135,5 +138,11 @@ function toggle(id: string) {
   padding: 1px 7px;
   background: var(--surface-1);
   border-radius: var(--r-xs);
+}
+
+.rd-detail {
+  background: var(--rd-card);
+  box-shadow: inset 0 0 0 1px var(--rd-line);
+  border-radius: 0 0 8px 8px;
 }
 </style>
