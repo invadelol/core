@@ -322,11 +322,41 @@ export default class ProsController {
     if (pro.league) crumbs.push({ name: pro.league.code, path: `/pros?league=${pro.league.slug}` })
     if (pro.team) crumbs.push({ name: pro.team.name, path: `/team/${pro.team.slug}` })
     crumbs.push({ name: pro.name, path: `/pro/${pro.slug}` })
-    // Its games as stored matches, drawn and opened like a profile's.
-    const games = await proService.recentMatches(pro.games)
+    // Its games as stored matches, drawn and opened like a profile's; their team's roster and
+    // where they stand on the pro ladder.
+    const [games, team, ladder] = await Promise.all([
+      proService.recentMatches(pro.games),
+      pro.team ? proService.team(pro.team.slug).catch(() => null) : null,
+      proLadderService.ladder().catch(() => ({ total: 0, rows: [] })),
+    ])
+    const onLadder = ladder.rows.find((r) => r.pro.slug === pro.slug)
+    const roster = team
+      ? {
+          team: {
+            id: team.id,
+            slug: team.slug,
+            name: team.name,
+            shortName: team.shortName,
+            league: team.league,
+            lp: team.lp,
+            place: team.place,
+          },
+          members: team.roster
+            .filter((m: { current: boolean }) => m.current)
+            .map(({ playerId: _, ...m }: Record<string, unknown>) => m),
+          pools: Object.fromEntries(
+            Object.entries(team.pools ?? {}).map(([slug, list]) => [
+              slug,
+              (list as { champion: number }[]).slice(0, 3).map((c) => c.champion),
+            ])
+          ),
+        }
+      : null
     return inertia.render('pros/show', {
       pro: shown,
       games,
+      roster,
+      ladder: onLadder ? { place: onLadder.place, total: ladder.total } : null,
       matches: { next: matches?.next[0] ?? null, last: matches?.results[0] ?? null },
       now: Date.now(),
       names: await championNames(),
