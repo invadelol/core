@@ -155,6 +155,36 @@
     gap: 8px;
   }
 
+  /* The site's menus (ui/Select) drawn as the page's filter buttons: the value alone, the label
+     kept for screen readers. */
+  .dv-sel .control {
+    height: 34px;
+    padding: 0 10px 0 12px;
+    font-size: 13px;
+    font-weight: 500;
+    background: var(--btn);
+    border-radius: 5px;
+    box-shadow: var(--btn-shadow);
+  }
+
+  .dv-sel .control > span.shrink-0 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .dv-sel .control:focus-visible {
+    box-shadow: var(--btn-shadow), var(--focus);
+  }
+
+  /* A champion square keeps its corners inside a sheet. */
+  .dv-pic > .iv-champ {
+    border-radius: inherit;
+  }
+
   /* Underline tabs used as links (`.rd-tabs` holds the look). */
   .dv-tabs {
     margin-bottom: 18px;
