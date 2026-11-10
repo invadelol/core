@@ -28,7 +28,10 @@ import type {
   HomeChampions,
   HomeClimber,
   HomeData,
+  HomeBracketPicks,
   HomeLaneRow,
+  HomeMover,
+  HomeMoves,
   HomePage,
   HomePick,
   HomePlayer,
@@ -89,6 +92,8 @@ export const HOME_ROWS = 5
 export const NAV_CLIMBERS = 4
 /** Pros in the header's Pros menu. */
 export const NAV_PROS = 5
+/** Best scored games on the home. */
+export const HOME_SCORED = 3
 /** Next pro games on the home. */
 export const HOME_GAMES = 4
 /** Leagues in the header's Pros menu, by priority (every league is on `/pros`). */
@@ -130,7 +135,15 @@ export interface TierBoard {
   best: HomePick[]
   bans: HomeBan[]
   climbers: HomeClimber[]
+  /** The home's rank switch: the best picks at each of `HOME_BRACKETS`. */
+  brackets: HomeBracketPicks[]
+  moves: HomeMoves | null
 }
+
+/** The rank groups of the home's best picks, the default first. */
+export const HOME_BRACKETS = ['emerald_plus', 'diamond_plus', 'master_plus'] as const
+/** A move counts when the champion is in the role's first `MOVE_TOP` places on one side of it. */
+export const MOVE_TOP = 30
 
 export interface ProBoard {
   top: HomePro[]
@@ -228,6 +241,45 @@ export function climbersOf(
       return champion ? [{ ...champion, from, to: r.rank! }] : []
     })
     .slice(0, limit)
+}
+
+/**
+ * Per role, the champions that gained and lost the most places since the patch before. A climb
+ * counts when the champion is now in the role's first `MOVE_TOP`, a fall when it was there before.
+ */
+export function movesOf(
+  summary: Summary,
+  previous: Summary | null,
+  names: Map<number, ChampionInfo>,
+  limit = HOME_ROWS
+): HomeMoves | null {
+  if (!previous) return null
+  const before = new Map<string, number>()
+  for (const r of previous.roles) if (r.rank) before.set(`${r.position}:${r.champion}`, r.rank)
+  const roles = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY'].map((position) => {
+    const moved = summary.roles.flatMap((r) => {
+      const from = r.position === position ? before.get(`${position}:${r.champion}`) : undefined
+      return r.rank && from && from !== r.rank ? [{ r, from, to: r.rank }] : []
+    })
+    const line = ({ r, from, to }: (typeof moved)[number]): HomeMover[] => {
+      const champion = championOf(names, r.champion, position)
+      return champion ? [{ ...champion, from, to, winRate: r.win }] : []
+    }
+    const up = moved
+      .filter((m) => m.to < m.from && m.to <= MOVE_TOP)
+      .sort((a, b) => b.from - b.to - (a.from - a.to) || a.to - b.to)
+      .flatMap(line)
+      .slice(0, limit)
+    const down = moved
+      .filter((m) => m.to > m.from && m.from <= MOVE_TOP)
+      .sort((a, b) => b.to - b.from - (a.to - a.from) || a.from - b.from)
+      .flatMap(line)
+      .slice(0, limit)
+    return { position, up, down }
+  })
+  return roles.some((r) => r.up.length || r.down.length)
+    ? { previousPatch: previous.patch, roles }
+    : null
 }
 
 /**
@@ -784,16 +836,24 @@ export class HomeService {
    * and keeps computing into the cache for the next one.
    */
   async page(): Promise<HomePage> {
-    const [picks, pros, lanes, discord, games] = await Promise.all([
+    const [picks, pros, lanes, discord, games, scored] = await Promise.all([
       capped(this.picks()),
       capped(this.pros()),
       capped(this.lanes()),
       this.discord(),
       capped(proMatchService.headline(HOME_GAMES)),
+      capped(this.section('best', TTL.best, () => this.bestGames())),
     ])
     return {
-      picks: picks && { patch: picks.patch, best: picks.best, bans: picks.bans },
+      picks: picks && {
+        patch: picks.patch,
+        best: picks.best,
+        bans: picks.bans,
+        brackets: picks.brackets,
+        moves: picks.moves,
+      },
       pros: pros?.top.length ? pros.top.map(({ tier, ...p }) => (void tier, p)) : null,
+      scored: scored?.length ? scored.slice(0, HOME_SCORED) : null,
       lanes,
       discord,
       games: games?.length ? games : null,
@@ -815,8 +875,14 @@ export class HomeService {
       capped(this.pros()),
       leagueCatalog(),
     ])
-    const { bans, ...tierList } = picks ?? { bans: null }
+    const { bans, brackets, moves, ...tierList } = picks ?? {
+      bans: null,
+      brackets: null,
+      moves: null,
+    }
     void bans
+    void brackets
+    void moves
     return {
       tierList: picks ? (tierList as SiteNav['tierList']) : null,
       pros: pros && { top: pros.top.slice(0, NAV_PROS), counts: pros.counts },
@@ -850,23 +916,41 @@ export class HomeService {
 
   /** The tier list's best pick per role, the most banned and the climbers since last patch. */
   picks(): Promise<TierBoard | null> {
-    return this.section('picks', TTL.picks, async () => {
+    return this.section('picks:v2', TTL.picks, async () => {
       const filter = await this.filter()
       if (!filter) return null
-      const [summary, previous, names] = await Promise.all([
+      const [summary, previous, names, others] = await Promise.all([
         championStatsService.summary(filter),
         championStatsService.previous(filter).catch(() => null),
         this.names(),
+        Promise.all(
+          HOME_BRACKETS.filter((b) => b !== filter.bracket).map((bracket) =>
+            championStatsService
+              .summary({ ...filter, bracket })
+              .then((s) => ({ bracket, summary: s }))
+              .catch(() => null)
+          )
+        ),
       ])
       if (!summary.games) return null
+      const brackets: HomeBracketPicks[] = [
+        { bracket: filter.bracket, games: summary.games, best: bestPicks(summary, names) },
+        ...others.flatMap((o) =>
+          o && o.summary.games
+            ? [{ bracket: o.bracket, games: o.summary.games, best: bestPicks(o.summary, names) }]
+            : []
+        ),
+      ]
       return {
         patch: summary.patch,
         previousPatch: previous?.patch ?? null,
         games: summary.games,
         champions: names.size,
-        best: bestPicks(summary, names),
+        best: brackets[0].best,
         bans: mostBanned(summary, names),
         climbers: climbersOf(summary, previous, names),
+        brackets,
+        moves: movesOf(summary, previous, names),
       }
     })
   }

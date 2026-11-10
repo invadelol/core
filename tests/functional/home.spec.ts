@@ -124,7 +124,7 @@ test.group('Home page', (group) => {
   })
 
   test('keeps the last tier board while the champion list cannot be read', async ({ assert }) => {
-    const key = 'home:v1:picks'
+    const key = 'home:v1:picks:v2'
     const board = { patch: '16.21', previousPatch: null, games: 1, champions: 1, best: [{}] }
     await cache.set({ key, value: board, ttl: '1ms', grace: '1m' })
     await new Promise((resolve) => setTimeout(resolve, 10))

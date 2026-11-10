@@ -1,0 +1,372 @@
+/* ──────────────────────────────────────────────────────────────
+   Violet line, the discovery pages (home, tier list, champions,
+   a champion, stats, multisearch): the pieces they share beside
+   the `rd-` primitives (redesign.css). Prefixed `dv-`. Flat sheets,
+   one hairline, violet only for what is active or Invade's own.
+   ────────────────────────────────────────────────────────────── */
+@layer components {
+  /* ── Sections ───────────────────────────────────────────── */
+  .dv-sec {
+    margin-top: 64px;
+  }
+
+  .dv-sh {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px 16px;
+    margin-bottom: 16px;
+  }
+
+  .dv-sh h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 650;
+    letter-spacing: -0.015em;
+    line-height: 1.2;
+    color: var(--text-1);
+  }
+
+  .dv-sh .meta {
+    display: block;
+    margin-top: 2px;
+    font-size: 13px;
+    color: var(--text-3);
+  }
+
+  .dv-sh .end {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 16px;
+  }
+
+  /* A link onward ("Full tier list", "All pros"). */
+  .dv-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    color: var(--rd-violet-hi);
+    border-radius: 4px;
+  }
+
+  .dv-more:hover {
+    color: var(--text-1);
+  }
+
+  /* ── Rows inside a sheet ────────────────────────────────── */
+  .dv-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 52px;
+    padding: 0 18px;
+    color: var(--text-1);
+  }
+
+  .dv-row + .dv-row {
+    box-shadow: inset 0 1px 0 var(--rd-line);
+  }
+
+  a.dv-row:hover,
+  .dv-row.link:hover {
+    background: var(--surface-1);
+  }
+
+  .dv-row .rk {
+    width: 18px;
+    flex: none;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--rd-violet-hi);
+  }
+
+  .dv-who {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .dv-who b {
+    display: block;
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--text-1);
+  }
+
+  .dv-who small {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 12px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: var(--text-3);
+  }
+
+  .dv-val {
+    flex: none;
+    text-align: right;
+  }
+
+  .dv-val .rd-fig {
+    font-size: 17px;
+  }
+
+  .dv-val .u {
+    margin-left: 3px;
+    font-size: 12px;
+    color: var(--text-3);
+  }
+
+  /* A champion square in a row, sized by the row. */
+  .dv-pic {
+    flex: none;
+    display: inline-flex;
+    overflow: hidden;
+    border-radius: 7px;
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 0.1);
+  }
+
+  [data-theme='light'] .dv-pic {
+    box-shadow: 0 0 0 1px rgb(20 20 40 / 0.1);
+  }
+
+  /* Role glyph in a line of text. */
+  .dv-role {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ── Controls ───────────────────────────────────────────── */
+  /* A filter button opening a menu (rank, region, patch). */
+  .dv-sels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Underline tabs used as links (`.rd-tabs` holds the look). */
+  .dv-tabs {
+    margin-bottom: 18px;
+  }
+
+  /* A labelled check box. */
+  .dv-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-2);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  .dv-check input {
+    width: 15px;
+    height: 15px;
+    margin: 0;
+    accent-color: var(--rd-violet);
+  }
+
+  /* A quiet search field inside a page (filters a list). */
+  .dv-find {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 36px;
+    width: 220px;
+    max-width: 100%;
+    padding: 0 12px;
+    color: var(--text-3);
+    background: var(--inset);
+    border-radius: 5px;
+    box-shadow: var(--inset-shadow);
+  }
+
+  .dv-find input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    font: 400 13px var(--font);
+    color: var(--text-1);
+    background: none;
+    border: 0;
+    outline: 0;
+  }
+
+  .dv-find input::placeholder {
+    color: var(--text-3);
+  }
+
+  .dv-find:focus-within {
+    box-shadow: var(--inset-shadow), var(--focus);
+  }
+
+  /* The big violet-edged search of a page (home, champions, multisearch). */
+  .dv-bigfield {
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--ink-0) 62%, transparent);
+    box-shadow:
+      inset 0 0 0 1px rgb(123 109 255 / 0.55),
+      0 0 0 4px rgb(123 109 255 / 0.1);
+  }
+
+  [data-theme='light'] .dv-bigfield {
+    background: var(--rd-card);
+  }
+
+  /* ── Tables ─────────────────────────────────────────────── */
+  .dv-tb {
+    display: grid;
+  }
+
+  .dv-tr {
+    position: relative;
+    display: grid;
+    align-items: center;
+    gap: 12px;
+    min-height: 52px;
+    padding: 0 18px;
+    font-size: 13px;
+    color: var(--text-2);
+  }
+
+  .dv-tr + .dv-tr {
+    box-shadow: inset 0 1px 0 var(--rd-line);
+  }
+
+  .dv-tr.h {
+    min-height: 38px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-3);
+    box-shadow: inset 0 -1px 0 var(--rd-line);
+  }
+
+  .dv-tr.h + .dv-tr {
+    box-shadow: none;
+  }
+
+  .dv-tr.g {
+    min-height: 40px;
+    font-size: 12px;
+    color: var(--text-3);
+    background: var(--surface-1);
+  }
+
+  .dv-tr:not(.h):not(.g):hover {
+    background: var(--surface-1);
+  }
+
+  .dv-tr .r {
+    text-align: right;
+    justify-content: flex-end;
+  }
+
+  .dv-tr .c {
+    text-align: center;
+    justify-content: center;
+  }
+
+  .dv-tr b.num,
+  .dv-tr .strong {
+    font-size: 14px;
+    font-weight: 650;
+    color: var(--text-1);
+  }
+
+  .dv-nm {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-1);
+  }
+
+  .dv-nm > span:not(.dv-pic):not(.rd-tier) {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .dv-nm small {
+    display: block;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-3);
+  }
+
+  /* A whole row is one link: the name carries it, its box covers the row. */
+  .dv-stretch::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+
+  .dv-stretch:focus-visible {
+    outline: none;
+  }
+
+  .dv-stretch:focus-visible::after {
+    border-radius: 6px;
+    box-shadow: var(--focus);
+  }
+
+  /* A table too wide for a phone scrolls inside its sheet. */
+  .dv-scroll {
+    overflow-x: auto;
+  }
+
+  /* A share bar with its figure. */
+  .dv-share {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .dv-share .rd-bar {
+    flex: 1;
+  }
+
+  /* An empty state inside a sheet. */
+  .dv-empty {
+    padding: 28px 18px;
+    font-size: 13px;
+    text-align: center;
+    color: var(--text-3);
+  }
+
+  /* Visually hidden text for screen readers. */
+  .dv-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  /* Phones: section heads stack, sections sit closer. */
+  @media (max-width: 47.99rem) {
+    .dv-sec {
+      margin-top: 48px;
+    }
+
+    .dv-sh h2 {
+      font-size: 19px;
+    }
+  }
+}

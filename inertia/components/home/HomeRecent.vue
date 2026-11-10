@@ -6,12 +6,12 @@ import { profilePath } from '../../lib/format.js'
 import { forgetRecent, recentPlayers, type RecentPlayer } from '../../lib/recent.js'
 
 /**
- * The profiles this browser opened last, newest first, in one line under the search: a portrait
+ * The profiles this browser opened last, newest first, as chips under the search: a portrait
  * and the Riot ID. The list lives on this device only (lib/recent.ts), so it is read after
- * hydration and the server never renders it; its line keeps its height either way.
+ * hydration and the server never renders it; the line of chips keeps its height either way.
  */
 const recent = ref<RecentPlayer[]>([])
-onMounted(() => (recent.value = recentPlayers().slice(0, 5)))
+onMounted(() => (recent.value = recentPlayers().slice(0, 3)))
 
 function forget() {
   forgetRecent()
@@ -37,10 +37,11 @@ function forget() {
           height="22"
           decoding="async"
         />
-        <span class="nm">{{ player.gameName }}</span>
+        <b class="nm">{{ player.gameName }}</b>
         <small>#{{ player.tagLine }}</small>
       </Link>
       <button type="button" class="clear" @click="forget">Clear</button>
+      <span class="sep" aria-hidden="true" />
     </div>
   </div>
 </template>
