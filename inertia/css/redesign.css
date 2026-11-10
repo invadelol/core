@@ -1,0 +1,432 @@
+/* ──────────────────────────────────────────────────────────────
+   Violet line: the site's 2026-11 redesign.
+
+   Night ink made flatter and clearer. Violet marks what is active,
+   recommended or Invade's own (the place you are, a selected control,
+   the main action, S+, skill keys, score dials). Figures are crisp
+   white, surfaces are flat sheets with one hairline, no grain, no
+   glow, no decorative dots. Blue/red keep meaning good/bad for you,
+   gold gold and MVP, tier colours ranks.
+
+   This file loads last: the token overrides below restyle every page
+   at once, and the `rd-` primitives are the pieces new pages share.
+   ────────────────────────────────────────────────────────────── */
+
+/* ── Dark tokens ─────────────────────────────────────────────── */
+:root:not([data-theme='light']):not([data-theme='system']),
+[data-theme='dark'],
+.iv-dark {
+  --ink-0: #090a0e;
+  --ink-1: #0b0c11;
+  --surface-1: rgb(255 255 255 / 0.028);
+  --surface-2: rgb(255 255 255 / 0.05);
+  --surface-3: rgb(255 255 255 / 0.075);
+  --surface-4: rgb(255 255 255 / 0.11);
+  --solid-1: #11121a;
+  --solid-2: #181924;
+  --sheen: none;
+  --lit: inset 0 0 0 1px rgb(255 255 255 / 0.06);
+  --row: inset 0 0 0 1px rgb(255 255 255 / 0.05);
+  --grain: none;
+  --sheet-light: 0.05;
+  --text-2: #a9aabc;
+  --text-3: #80819a;
+  --text-4: #555670;
+  --primary: #7667ff;
+  --primary-hover: #8478ff;
+  --primary-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 1px 2px rgb(0 0 0 / 0.4);
+  --light: radial-gradient(60% 700px at 50% -260px, rgb(123 109 255 / 0.1), transparent 75%);
+  --lit-pill: rgb(123 109 255 / 0.16);
+  --lit-pill-edge: inset 0 0 0 1px rgb(123 109 255 / 0.4);
+  --rd-card: #11121a;
+  --rd-card-2: #161722;
+  --rd-line: rgb(255 255 255 / 0.06);
+  --rd-violet: #7667ff;
+  --rd-violet-hi: #a99fff;
+  --rd-violet-a: rgb(123 109 255 / 0.16);
+  --rd-track: rgb(255 255 255 / 0.07);
+  --rd-loss-track: rgb(255 93 110 / 0.55);
+  --rd-shade: rgb(9 9 16 / 0.94);
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme='system'] {
+    --ink-0: #090a0e;
+    --ink-1: #0b0c11;
+    --surface-1: rgb(255 255 255 / 0.028);
+    --surface-2: rgb(255 255 255 / 0.05);
+    --surface-3: rgb(255 255 255 / 0.075);
+    --surface-4: rgb(255 255 255 / 0.11);
+    --solid-1: #11121a;
+    --solid-2: #181924;
+    --sheen: none;
+    --lit: inset 0 0 0 1px rgb(255 255 255 / 0.06);
+    --row: inset 0 0 0 1px rgb(255 255 255 / 0.05);
+    --grain: none;
+    --sheet-light: 0.05;
+    --text-2: #a9aabc;
+    --text-3: #80819a;
+    --text-4: #555670;
+    --primary: #7667ff;
+    --primary-hover: #8478ff;
+    --primary-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18), 0 1px 2px rgb(0 0 0 / 0.4);
+    --light: radial-gradient(60% 700px at 50% -260px, rgb(123 109 255 / 0.1), transparent 75%);
+    --lit-pill: rgb(123 109 255 / 0.16);
+    --lit-pill-edge: inset 0 0 0 1px rgb(123 109 255 / 0.4);
+    --rd-card: #11121a;
+    --rd-card-2: #161722;
+    --rd-line: rgb(255 255 255 / 0.06);
+    --rd-violet: #7667ff;
+    --rd-violet-hi: #a99fff;
+    --rd-violet-a: rgb(123 109 255 / 0.16);
+    --rd-track: rgb(255 255 255 / 0.07);
+    --rd-loss-track: rgb(255 93 110 / 0.55);
+    --rd-shade: rgb(9 9 16 / 0.94);
+  }
+}
+
+/* ── Light tokens for the new pieces (the package's light theme stays as it is) ── */
+[data-theme='light'],
+.iv-light {
+  --rd-card: #ffffff;
+  --rd-card-2: #f4f4f9;
+  --rd-line: rgb(20 20 40 / 0.08);
+  --rd-violet: #6455f0;
+  --rd-violet-hi: #5546e0;
+  --rd-violet-a: rgb(100 85 240 / 0.12);
+  --rd-track: rgb(20 20 40 / 0.08);
+  --rd-loss-track: rgb(230 60 80 / 0.45);
+  --rd-shade: rgb(255 255 255 / 0.94);
+}
+@media (prefers-color-scheme: light) {
+  [data-theme='system'] {
+    --rd-card: #ffffff;
+    --rd-card-2: #f4f4f9;
+    --rd-line: rgb(20 20 40 / 0.08);
+    --rd-violet: #6455f0;
+    --rd-violet-hi: #5546e0;
+    --rd-violet-a: rgb(100 85 240 / 0.12);
+    --rd-track: rgb(20 20 40 / 0.08);
+    --rd-loss-track: rgb(230 60 80 / 0.45);
+    --rd-shade: rgb(255 255 255 / 0.94);
+  }
+}
+
+@layer components {
+  /* Figures are crisp: no engraved fade. */
+  .iv-fig {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  /* ── Header: underline on the current section, flat violet action ── */
+  .sh-in {
+    height: 60px;
+  }
+  .sh-trig {
+    position: relative;
+    height: 60px;
+    padding: 0 10px;
+    font-size: 14px;
+    border-radius: 0;
+  }
+  .sh-trig:hover {
+    background: none;
+  }
+  .sh-trig.on {
+    background: none;
+    box-shadow: none;
+  }
+  .sh-trig.on::after {
+    content: '';
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 0;
+    height: 2px;
+    background: var(--rd-violet);
+  }
+  .sh-trig.open {
+    background: none;
+  }
+  .sh-trig:focus-visible {
+    border-radius: var(--r-sm);
+  }
+
+  /* ── Primitives ─────────────────────────────────────────────── */
+
+  /* A sheet: flat card, one hairline. `.rd-lit` is the featured one of a page. */
+  .rd-card {
+    background: var(--rd-card);
+    box-shadow: inset 0 0 0 1px var(--rd-line);
+    border-radius: 10px;
+    overflow: hidden;
+    min-width: 0;
+  }
+  .rd-lit {
+    background: linear-gradient(180deg, var(--rd-violet-a), transparent 60%), var(--rd-card);
+    box-shadow: inset 0 0 0 1px rgb(123 109 255 / 0.3);
+  }
+  .rd-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    min-height: 52px;
+    padding: 10px 18px;
+    box-shadow: inset 0 -1px 0 var(--rd-line);
+  }
+  .rd-head h2,
+  .rd-head h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text-1);
+  }
+  .rd-meta {
+    margin-left: 8px;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text-3);
+  }
+
+  /* Page title row. */
+  .rd-ph {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 32px 0 20px;
+  }
+  .rd-ph h1 {
+    margin: 0;
+    font-size: 32px;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--text-1);
+  }
+  .rd-ph p {
+    margin: 6px 0 0;
+    font-size: 14px;
+    color: var(--text-3);
+  }
+  .rd-ph p b {
+    font-weight: 500;
+    color: var(--text-2);
+  }
+
+  /* A row inside a card. */
+  .rd-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 52px;
+    padding: 0 18px;
+  }
+  .rd-row + .rd-row {
+    box-shadow: inset 0 1px 0 var(--rd-line);
+  }
+
+  /* Tags: small labelled chips. Violet = Invade's read, blue/red = good/bad, gold = gold/MVP. */
+  .rd-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 20px;
+    padding: 0 7px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    background: var(--surface-3);
+    color: var(--text-2);
+  }
+  .rd-tag.v {
+    background: var(--rd-violet-a);
+    color: var(--rd-violet-hi);
+  }
+  .rd-tag.b {
+    background: rgb(var(--win-rgb) / 0.15);
+    color: var(--win);
+  }
+  .rd-tag.r {
+    background: rgb(var(--loss-rgb) / 0.14);
+    color: var(--loss);
+  }
+  .rd-tag.g {
+    background: rgb(var(--gold-rgb) / 0.14);
+    color: var(--gold-c);
+  }
+
+  /* Tier key: S+ solid violet, S lit, A plain, lower quieter. */
+  .rd-tier {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 30px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 700;
+    background: var(--rd-violet);
+    color: #fff;
+    box-shadow: var(--primary-shadow);
+  }
+  .rd-tier.t1 {
+    background: var(--key);
+    box-shadow: var(--key-shadow);
+    color: var(--rd-violet-hi);
+  }
+  .rd-tier.t2 {
+    background: var(--key);
+    box-shadow: var(--key-shadow);
+    color: var(--text-1);
+  }
+  .rd-tier.t3,
+  .rd-tier.t4,
+  .rd-tier.t5 {
+    background: var(--inset);
+    box-shadow: var(--inset-shadow);
+    color: var(--text-3);
+  }
+
+  /* A segmented control whose chosen key is violet. */
+  .rd-seg {
+    display: inline-flex;
+    gap: 2px;
+    padding: 2px;
+    background: var(--inset);
+    border-radius: 7px;
+    box-shadow: var(--inset-shadow);
+  }
+  .rd-seg > a,
+  .rd-seg > button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    font: 500 13px var(--font);
+    color: var(--text-3);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .rd-seg > .on {
+    background: var(--rd-violet);
+    color: #fff;
+    box-shadow: var(--primary-shadow);
+  }
+  .rd-seg > .on small {
+    color: rgb(255 255 255 / 0.72);
+  }
+  .rd-seg small {
+    font-size: 12px;
+    color: var(--text-4);
+  }
+
+  /* Underline tabs (views inside a page). */
+  .rd-tabs {
+    display: flex;
+    gap: 24px;
+    height: 40px;
+    overflow-x: auto;
+    box-shadow: inset 0 -1px 0 var(--rd-line);
+  }
+  .rd-tabs > a,
+  .rd-tabs > button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: 500 14px var(--font);
+    color: var(--text-3);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .rd-tabs > .on {
+    color: var(--text-1);
+  }
+  .rd-tabs > .on::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: var(--rd-violet);
+  }
+
+  /* Bars. */
+  .rd-bar {
+    display: block;
+    height: 4px;
+    border-radius: 9px;
+    background: var(--rd-track);
+    overflow: hidden;
+  }
+  .rd-bar > i {
+    display: block;
+    height: 100%;
+    border-radius: 9px;
+    background: var(--rd-violet);
+  }
+  .rd-bar.quiet > i {
+    background: var(--text-3);
+  }
+
+  /* Portraits: square with a hairline; `.round` for pros' photos. */
+  .rd-por {
+    flex: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 7px;
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 0.1);
+    object-fit: cover;
+  }
+  .rd-photo {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--rd-card-2);
+    object-fit: cover;
+    object-position: 50% 12%;
+    box-shadow: 0 0 0 1px rgb(255 255 255 / 0.08);
+  }
+
+  /* Crisp figure. */
+  .rd-fig {
+    font-weight: 700;
+    font-stretch: 92%;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-1);
+  }
+  .rd-up {
+    color: var(--win);
+  }
+  .rd-dn {
+    color: var(--loss);
+  }
+  .rd-flat {
+    color: var(--text-4);
+  }
+  .rd-gold {
+    color: var(--gold-c);
+  }
+  .rd-vio {
+    color: var(--rd-violet-hi);
+  }
+}
