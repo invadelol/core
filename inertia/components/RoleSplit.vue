@@ -36,33 +36,56 @@ const rows = computed(() => {
 </script>
 
 <template>
-  <section v-if="rows.length" class="iv-panel">
-    <div class="section">
+  <section v-if="rows.length" class="rd-card rs">
+    <div class="rd-head">
       <h3>Roles</h3>
-      <span class="meta num">{{ rows.reduce((n, row) => n + row.games, 0) }} laned games</span>
+      <span class="num rd-hm"
+        >Last {{ rows.reduce((n, row) => n + row.games, 0) }} laned games</span
+      >
     </div>
 
-    <ul class="space-y-2.5">
+    <ul>
       <li
         v-for="row in rows"
         :key="row.lane"
-        class="grid grid-cols-[16px_52px_minmax(0,1fr)_52px_36px] items-center gap-2.5"
+        class="rl"
+        :title="`${row.label}: ${row.games} ${row.games === 1 ? 'game' : 'games'}, ${row.winrate}% won`"
       >
         <RoleIcon :lane="row.lane" :size="16" class="text-ink-3" />
-        <span class="text-[13px] text-ink-2">{{ row.label }}</span>
-        <span class="meter">
-          <span :style="{ width: `${row.share}%` }" />
-        </span>
-        <span class="num text-right text-[12px] text-ink-3">
-          {{ row.games }} {{ row.games === 1 ? 'game' : 'games' }}
-        </span>
-        <span
-          class="num text-right text-[13px] font-semibold"
-          :class="row.games < 3 ? 'text-ink-3' : 'text-ink'"
-        >
-          {{ row.winrate }}%
-        </span>
+        <span>{{ row.label }}</span>
+        <span class="rd-bar"><i :style="{ width: `${row.share}%` }" /></span>
+        <span class="num">{{ Math.round(row.share) }}%</span>
+        <span class="num wr" :class="{ thin: row.games < 3 }">{{ row.winrate }}% won</span>
       </li>
     </ul>
   </section>
 </template>
+
+<style scoped>
+.rs ul {
+  margin: 0;
+  padding: 6px 0 8px;
+  list-style: none;
+}
+.rl {
+  display: grid;
+  grid-template-columns: 18px 58px minmax(0, 1fr) 36px 62px;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  padding: 0 16px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.rl > span:nth-child(4),
+.rl .wr {
+  text-align: right;
+  color: var(--text-3);
+}
+.rl .wr {
+  font-size: 12px;
+}
+.rl .wr.thin {
+  color: var(--text-4);
+}
+</style>

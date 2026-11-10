@@ -13,6 +13,8 @@ import { SERVERS, serverList } from '#constants/riot'
 const STRIP_GAMES = 4
 /** Rows of the ladder per page; "Show more" asks for the next ones. */
 const LADDER_PAGE = 50
+/** The roles the ladder names a best player for, in lane order. */
+const LADDER_ROLES = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'] as const
 const ROLE_SLUG: Record<string, string> = {
   top: 'TOP',
   jungle: 'JUNGLE',
@@ -114,57 +116,103 @@ export default class ProsController {
       )
       const platform = server?.platform ?? null
       const role = ROLE_SLUG[String(request.input('role', '')).toLowerCase()] ?? null
+      const asked = String(request.input('league', '')).toLowerCase()
+      const league = asked ? (catalog.bySlug(asked) ?? null) : null
       const page = Math.max(1, Math.min(50, Number.parseInt(String(request.input('page', 1))) || 1))
-      const [ladder, servers] = await Promise.all([
+      const scope = { platform, league: league?.slug ?? null }
+      const [ladder, servers, top, ...best] = await Promise.all([
         proLadderService
-          .ladder({ platform, role, limit: LADDER_PAGE, offset: (page - 1) * LADDER_PAGE })
+          .ladder({ ...scope, role, limit: LADDER_PAGE, offset: (page - 1) * LADDER_PAGE })
           .catch(() => ({ total: 0, rows: [] })),
         proLadderService.servers(role).catch(() => []),
+        // The first 50 of every role: who climbed today and how the roles share the top.
+        proLadderService.ladder({ ...scope, limit: 50 }).catch(() => ({ total: 0, rows: [] })),
+        ...LADDER_ROLES.map((r) =>
+          proLadderService
+            .ladder({ ...scope, role: r, limit: 1 })
+            .catch(() => ({ total: 0, rows: [] }))
+        ),
       ])
-      const top = ladder.rows[0]
-      const filtered = Boolean(platform || role || page > 1)
+      const ids = ladder.rows.map((r) => r.playerId)
+      const [records, form] = await Promise.all([
+        proService.records(ids).catch(() => new Map()),
+        proService.form(ids).catch(() => new Map<string, boolean[]>()),
+      ])
+      const first = ladder.rows[0]
+      const filtered = Boolean(platform || role || league || page > 1)
       const on = server ? server.label : serverList(servers.map((s) => s.platform))
+      const proOf = (r: (typeof ladder.rows)[number]) => ({
+        slug: r.pro.slug,
+        name: r.pro.name,
+        ...(r.pro.photo ? { photo: r.pro.photo } : {}),
+        role: r.pro.role,
+        country: r.pro.country,
+        team: r.pro.team
+          ? {
+              id: r.pro.team.id,
+              slug: r.pro.team.slug,
+              name: r.pro.team.name,
+              shortName: r.pro.team.shortName,
+            }
+          : null,
+      })
+      const roles = new Map<string, number>()
+      for (const r of top.rows)
+        if (r.pro.role) roles.set(r.pro.role, (roles.get(r.pro.role) ?? 0) + 1)
       return inertia.render('pros/index', {
         view: 'ladder',
         leagues,
-        filters: { server: server?.slug ?? null, role: request.input('role') ?? null },
+        filters: {
+          server: server?.slug ?? null,
+          role: request.input('role') ?? null,
+          league: league?.slug ?? null,
+        },
         servers: servers.map(({ slug, label, pros }) => ({ slug, label, pros })),
         on,
         ladder: inertia.merge(() =>
           ladder.rows.map((r) => ({
             place: r.place,
-            pro: {
-              slug: r.pro.slug,
-              name: r.pro.name,
-              ...(r.pro.photo ? { photo: r.pro.photo } : {}),
-              role: r.pro.role,
-              country: r.pro.country,
-              team: r.pro.team
-                ? {
-                    id: r.pro.team.id,
-                    slug: r.pro.team.slug,
-                    name: r.pro.team.name,
-                    shortName: r.pro.team.shortName,
-                  }
-                : null,
-            },
+            pro: proOf(r),
             league: r.league ? { slug: r.league.slug, code: r.league.code } : null,
             account: {
               platform: r.account.platform,
               tier: r.account.tier,
               division: r.account.division,
               lp: r.account.lp,
+              wins: r.account.wins,
+              losses: r.account.losses,
             },
             move: r.move,
+            form: form.get(r.playerId) ?? [],
+            champions: (records.get(r.playerId)?.champions ?? []).slice(0, 4),
           }))
         ),
+        best: best
+          .map((b, i) => {
+            const r = b.rows[0]
+            return r
+              ? {
+                  role: LADDER_ROLES[i],
+                  place: top.rows.find((t) => t.pro.slug === r.pro.slug)?.place ?? null,
+                  pro: proOf(r),
+                  account: { platform: r.account.platform, lp: r.account.lp, tier: r.account.tier },
+                }
+              : null
+          })
+          .filter(Boolean),
+        climbing: top.rows
+          .filter((r) => r.move && r.move.lp > 0)
+          .sort((a, b) => b.move!.lp - a.move!.lp)
+          .slice(0, 5)
+          .map((r) => ({ place: r.place, pro: proOf(r), move: r.move })),
+        split: LADDER_ROLES.map((r) => ({ role: r, pros: roles.get(r) ?? 0 })),
         total: ladder.total,
         page,
         pageSize: LADDER_PAGE,
         ...meta({
           title: 'Pro ladder: every pro ranked by LP',
-          description: top
-            ? `${count(ladder.total)} ${ladder.total === 1 ? 'pro' : 'pros'} in Master and above on ${on}, ranked by LP. ${top.pro.name} leads with ${count(top.account.lp)} LP.`
+          description: first
+            ? `${count(ladder.total)} ${ladder.total === 1 ? 'pro' : 'pros'} in Master and above on ${on}, ranked by LP. ${first.pro.name} leads with ${count(first.account.lp)} LP.`
             : `Every pro ranked by LP on ${on}, with their moves of the last 24 hours.`,
           path: '/pros?view=ladder',
           image: '/og/pros/all.jpg',
@@ -274,11 +322,41 @@ export default class ProsController {
     if (pro.league) crumbs.push({ name: pro.league.code, path: `/pros?league=${pro.league.slug}` })
     if (pro.team) crumbs.push({ name: pro.team.name, path: `/team/${pro.team.slug}` })
     crumbs.push({ name: pro.name, path: `/pro/${pro.slug}` })
-    // Its games as stored matches, drawn and opened like a profile's.
-    const games = await proService.recentMatches(pro.games)
+    // Its games as stored matches, drawn and opened like a profile's; their team's roster and
+    // where they stand on the pro ladder.
+    const [games, team, ladder] = await Promise.all([
+      proService.recentMatches(pro.games),
+      pro.team ? proService.team(pro.team.slug).catch(() => null) : null,
+      proLadderService.ladder().catch(() => ({ total: 0, rows: [] })),
+    ])
+    const onLadder = ladder.rows.find((r) => r.pro.slug === pro.slug)
+    const roster = team
+      ? {
+          team: {
+            id: team.id,
+            slug: team.slug,
+            name: team.name,
+            shortName: team.shortName,
+            league: team.league,
+            lp: team.lp,
+            place: team.place,
+          },
+          members: team.roster
+            .filter((m: { current: boolean }) => m.current)
+            .map(({ playerId: _, ...m }: Record<string, unknown>) => m),
+          pools: Object.fromEntries(
+            Object.entries(team.pools ?? {}).map(([slug, list]) => [
+              slug,
+              (list as { champion: number }[]).slice(0, 3).map((c) => c.champion),
+            ])
+          ),
+        }
+      : null
     return inertia.render('pros/show', {
       pro: shown,
       games,
+      roster,
+      ladder: onLadder ? { place: onLadder.place, total: ladder.total } : null,
       matches: { next: matches?.next[0] ?? null, last: matches?.results[0] ?? null },
       now: Date.now(),
       names: await championNames(),

@@ -3,253 +3,169 @@ import { computed } from 'vue'
 import { championName, championSplash } from '../../lib/assets.js'
 import { compact, timeAgo } from '../../lib/format.js'
 import type { ChampionMastery } from '../../lib/types.js'
-import MasteryCrest from './MasteryCrest.vue'
 
 /**
- * The three champions with the most points, as a podium: second on the left, first in the
- * middle and raised, third on the right. Each stands on a plain step of the sheet's material.
+ * The three champions with the most points, as a podium of splash cards: second on the left, first
+ * in the middle and taller with a violet edge, third on the right. Each says its level, points and
+ * how far the next level is.
  */
 const props = defineProps<{ top: ChampionMastery[] }>()
 
 const places = computed(() =>
   props.top.slice(0, 3).map((entry, index) => ({ entry, place: index + 1 }))
 )
+
+/** How far into the current level, when Riot said both the points earned and the points left. */
+function progress(entry: ChampionMastery) {
+  const since = entry.championPointsSinceLastLevel
+  const left = entry.championPointsUntilNextLevel
+  if (since === undefined || left === undefined || since + left <= 0) return null
+  return `${Math.round((since / (since + left)) * 100)}%`
+}
 </script>
 
 <template>
-  <ol class="ms-podium" aria-label="Most mastery">
+  <ol class="pod" aria-label="Most mastery">
     <li
       v-for="{ entry, place } in places"
       :key="entry.championId"
-      class="ms-place"
+      class="pc"
+      :class="{ first: place === 1 }"
       :data-place="place"
     >
-      <div class="ms-figure">
-        <div class="ms-art">
-          <img
-            :src="championSplash(entry.championId)"
-            :alt="`${championName(entry.championId)} splash art`"
-            decoding="async"
-          />
-        </div>
-        <MasteryCrest class="ms-place-crest" :level="entry.championLevel" :size="64" />
-      </div>
-
-      <div class="ms-who">
-        <h3 class="ms-name">{{ championName(entry.championId) }}</h3>
-        <p class="ms-points num">
-          <span class="iv-fig">{{ compact(entry.championPoints) }}</span>
-          <span class="iv-unit">points</span>
-        </p>
-        <p class="ms-meta num">
-          <span>Level {{ entry.championLevel }}</span>
-          <span class="ms-sep" aria-hidden="true">,</span>
-          <span>{{ timeAgo(entry.lastPlayTime) }}</span>
-        </p>
-      </div>
-
-      <div class="ms-step">
-        <span class="iv-fig" :aria-label="`Place ${place}`">{{ place }}</span>
-      </div>
+      <img
+        class="bg"
+        :src="championSplash(entry.championId)"
+        :alt="`${championName(entry.championId)} splash art`"
+        decoding="async"
+      />
+      <span class="pl num">#{{ place }}</span>
+      <span class="rd-tag v lvl">Level {{ entry.championLevel }}</span>
+      <b class="n">{{ championName(entry.championId) }}</b>
+      <span class="pts"
+        ><span class="rd-fig num">{{ compact(entry.championPoints) }}</span
+        ><span>points</span></span
+      >
+      <template v-if="entry.championPointsUntilNextLevel">
+        <span v-if="progress(entry)" class="rd-bar"
+          ><i :style="{ width: progress(entry) ?? undefined }"
+        /></span>
+        <small class="num"
+          >{{ entry.championPointsUntilNextLevel.toLocaleString('en-US') }} to level
+          {{ entry.championLevel + 1 }}, last played {{ timeAgo(entry.lastPlayTime) }}</small
+        >
+      </template>
+      <small v-else class="num">Last played {{ timeAgo(entry.lastPlayTime) }}</small>
     </li>
   </ol>
 </template>
 
 <style scoped>
-.ms-podium {
+.pod {
   display: grid;
-  grid-template-columns: 1fr 1.16fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 12px;
   align-items: end;
-  max-width: 760px;
-  margin-inline: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
-
-.ms-place {
-  --step: 34px;
-  --art: 168px;
-  --crest: 60px;
+.pc {
+  position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  justify-content: flex-end;
+  height: 260px;
+  padding: 16px 18px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--ink-0);
+  box-shadow: inset 0 0 0 1px var(--rd-line);
   grid-row: 1;
-  min-width: 0;
-  text-align: center;
 }
-
-.ms-place[data-place='1'] {
-  --step: 70px;
-  --art: 204px;
-  --crest: 72px;
+.pc[data-place='1'] {
   grid-column: 2;
 }
-
-.ms-place[data-place='2'] {
-  --step: 50px;
+.pc[data-place='2'] {
   grid-column: 1;
 }
-
-.ms-place[data-place='3'] {
+.pc[data-place='3'] {
   grid-column: 3;
 }
-
-.ms-figure {
-  position: relative;
-  width: min(var(--art), calc(100% - 20px));
+.pc.first {
+  height: 320px;
+  box-shadow: inset 0 0 0 1px rgb(123 109 255 / 0.45);
 }
-
-.ms-art {
-  aspect-ratio: 4 / 5;
-  overflow: hidden;
-  border-radius: var(--r-md);
-  background: var(--well);
-  box-shadow: var(--portrait);
-}
-
-.ms-art > img {
+.pc img.bg {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: 50% 28%;
+  object-position: 50% 22%;
 }
-
-.ms-figure :deep(.ms-place-crest) {
+.pc::after {
+  content: '';
   position: absolute;
-  left: 50%;
-  bottom: 0;
-  width: var(--crest) !important;
-  height: var(--crest) !important;
-  transform: translate(-50%, 46%);
-  filter: drop-shadow(var(--contact));
+  inset: 0;
+  background: linear-gradient(180deg, rgb(9 9 16 / 0) 30%, rgb(9 9 16 / 0.96) 86%);
 }
-
-.ms-who {
-  width: 100%;
-  min-width: 0;
-  padding: calc(var(--crest) * 0.5 + 6px) 10px 0;
+.pc > *:not(.bg) {
+  position: relative;
+  z-index: 1;
 }
-
-.ms-name {
-  overflow: hidden;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 18px;
-  letter-spacing: -0.005em;
-  color: var(--text-1);
-  white-space: nowrap;
-  text-overflow: ellipsis;
+.pc .pl {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 6px rgb(0 0 0 / 0.8);
 }
-
-.ms-points {
-  margin-top: 6px;
-  color: var(--text-1);
-  white-space: nowrap;
+.pc .lvl {
+  position: absolute;
+  top: 12px;
+  right: 14px;
 }
-
-.ms-points > .iv-fig {
+.pc .n {
   font-size: 22px;
+  font-weight: 650;
+  color: #fff;
 }
-
-.ms-meta {
+.pts {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.pts .rd-fig {
+  font-size: 30px;
+  color: #fff;
+}
+.pts span:last-child {
+  font-size: 12px;
+  color: rgb(255 255 255 / 0.72);
+}
+.pc .rd-bar {
+  margin-top: 10px;
+  background: rgb(255 255 255 / 0.14);
+}
+.pc small {
+  display: block;
   margin-top: 6px;
   font-size: 12px;
-  line-height: 16px;
-  color: var(--text-3);
+  color: rgb(255 255 255 / 0.72);
 }
-
-.ms-sep {
-  margin-inline: 0 5px;
-  color: var(--text-4);
-}
-
-.ms-place[data-place='1'] .ms-name {
-  font-size: 16px;
-  line-height: 20px;
-}
-
-.ms-place[data-place='1'] .ms-points > .iv-fig {
-  font-size: 30px;
-}
-
-/* The step: the sheet's material raised, lit along its top edge, rising from the sheet's floor. */
-.ms-step {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-  height: var(--step);
-  margin-top: 16px;
-  padding-top: 9px;
-  background: var(--sheen), var(--surface-2);
-  border-radius: var(--r-md) var(--r-md) 0 0;
-  box-shadow: var(--lit);
-}
-
-.ms-step > .iv-fig {
-  font-size: 18px;
-  color: var(--text-3);
-}
-
-.ms-place[data-place='1'] .ms-step > .iv-fig {
-  font-size: 22px;
-  color: var(--text-2);
-}
-
-@media (max-width: 30rem) {
-  .ms-place {
-    --step: 26px;
-    --crest: 44px;
+@media (max-width: 1000px) {
+  .pod {
+    grid-template-columns: minmax(0, 1fr);
   }
-
-  .ms-place[data-place='1'] {
-    --step: 52px;
-    --crest: 52px;
-  }
-
-  .ms-place[data-place='2'] {
-    --step: 38px;
-  }
-
-  .ms-figure {
-    width: calc(100% - 12px);
-  }
-
-  .ms-who {
-    padding-inline: 4px;
-  }
-
-  .ms-name,
-  .ms-place[data-place='1'] .ms-name {
-    font-size: 13px;
-    line-height: 17px;
-  }
-
-  .ms-points > .iv-fig {
-    font-size: 17px;
-  }
-
-  .ms-place[data-place='1'] .ms-points > .iv-fig {
-    font-size: 22px;
-  }
-
-  .ms-points .iv-unit {
-    display: none;
-  }
-
-  .ms-meta {
-    font-size: 11px;
-    line-height: 15px;
-  }
-
-  .ms-meta > span {
-    display: block;
-  }
-
-  .ms-meta > .ms-sep {
-    display: none;
-  }
-
-  .ms-step {
-    margin-top: 12px;
-    padding-top: 6px;
+  .pc,
+  .pc.first,
+  .pc[data-place] {
+    grid-column: 1;
+    grid-row: auto;
+    height: 220px;
   }
 }
 </style>

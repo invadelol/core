@@ -57,11 +57,16 @@ export interface LadderAccount {
   tier: string
   division: number | null
   lp: number
+  /** This account's ranked record this season, when the crawler read it. */
+  wins: number | null
+  losses: number | null
 }
 
 /** A pro on the ladder: their place, best account now, and how they moved in 24 hours. */
 export interface LadderRow {
   place: number
+  /** The pro's id (`pro_player`), for reading their games; never sent to a page. */
+  playerId: string
   pro: ProTag
   league: LeagueRef | null
   account: LadderAccount
@@ -253,7 +258,8 @@ export class ProLadderService {
     }
     const { rows } = await db.rawQuery(
       `SELECT DISTINCT ON (p.id) p.id AS player_id, p.slug, p.name, p.role, p.country, ct.*,
-              a.id AS account_id, a.game_name, a.tag_line, a.platform, a.tier, a.division, a.lp
+              a.id AS account_id, a.game_name, a.tag_line, a.platform, a.tier, a.division, a.lp,
+              a.wins, a.losses
        FROM pro_account a JOIN pro_player p ON p.id = a.player_id ${CURRENT_TEAM}
        WHERE ${where.join(' AND ')}
        ORDER BY p.id, ${RANK_SCORE_SQL} DESC NULLS LAST`,
@@ -290,6 +296,7 @@ export class ProLadderService {
       const photo = proPhotoService.of(r.slug)
       return {
         place: i + 1,
+        playerId: String(r.player_id),
         pro: {
           slug: r.slug,
           name: r.name,
@@ -308,6 +315,8 @@ export class ProLadderService {
           tier: r.tier,
           division: r.division ?? null,
           lp: r.lp ?? 0,
+          wins: r.wins ?? null,
+          losses: r.losses ?? null,
         },
         move: move ? { places: placeBefore[i] - (i + 1), lp: move.lp } : null,
       }

@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
-import { ChevronRight, ExternalLink } from 'lucide-vue-next'
-import { ChampIcon, RankCrest, RoleIcon } from '@invadelol/ui'
+import { ArrowRight, ExternalLink } from 'lucide-vue-next'
+import { ChampIcon, RoleIcon } from '@invadelol/ui'
 import AppHeader from '../../components/AppHeader.vue'
 import SiteFooter from '../../components/SiteFooter.vue'
-import Crumbs from '../../components/champions/Crumbs.vue'
 import Logo from '../../components/champions/Logo.vue'
-import Crest from '../../components/champions/Crest.vue'
 import ProPhoto from '../../components/champions/ProPhoto.vue'
 import GameImg from '../../components/champions/GameImg.vue'
 import ShareButton from '../../components/champions/ShareButton.vue'
@@ -26,7 +24,11 @@ import { proPage } from '../../lib/pro_pages.js'
 import { matchOrNull, type ProMatch } from '../../lib/pro_matches.js'
 import MatchCard from '../../components/pros/MatchCard.vue'
 import ProGameList, { type ProGameMatch } from '../../components/pros/ProGameList.vue'
+import ProFace from '../../components/pros/ProFace.vue'
+import FormStrip from '../../components/ui/FormStrip.vue'
+import WinLoss from '../../components/ui/WinLoss.vue'
 import '../../css/champions.css'
+import '../../css/rd-players.css'
 
 interface LeagueRef {
   slug: string
@@ -100,6 +102,31 @@ const props = defineProps<{
   games?: ProGameMatch[]
   now?: number
   names?: Record<number, [string, string]>
+  /** Their current team's roster and staff, with each player's most played champions. */
+  roster?: {
+    team: {
+      id: string
+      slug: string
+      name: string
+      shortName: string | null
+      league: LeagueRef | null
+      lp: number | null
+      place: number | null
+    }
+    members: {
+      name: string
+      slug: string | null
+      photo?: string
+      role: string | null
+      title: string
+      country: string | null
+      joinedAt: string | null
+      best: { tier: string; division: number | null; lp: number | null } | null
+    }[]
+    pools: Record<string, number[]>
+  } | null
+  /** Their place on the pro ladder. */
+  ladder?: { place: number; total: number } | null
 }>()
 
 const page = usePage()
@@ -201,323 +228,437 @@ const crumbs = computed(() => [
     : []),
   { label: player.value.name },
 ])
-const back = computed(() =>
-  player.value.team
-    ? { label: player.value.team.name, href: `/team/${player.value.team.slug}` }
-    : { label: 'Pros', href: '/pros' }
+
+/* ── Roster, people met, champions ───────────────────────────── */
+const ORDER = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT']
+const rosterPlayers = computed(() =>
+  (props.roster?.members ?? [])
+    .filter((m) => m.title !== 'staff')
+    .sort(
+      (a, b) =>
+        (a.title === 'sub' ? 1 : 0) - (b.title === 'sub' ? 1 : 0) ||
+        ORDER.indexOf(a.role ?? '') - ORDER.indexOf(b.role ?? '')
+    )
+    .slice(0, 6)
 )
+const staff = computed(() => (props.roster?.members ?? []).filter((m) => m.title === 'staff'))
+const staffRole = (r: string | null) => (r ? r.charAt(0) + r.slice(1).toLowerCase() : 'Staff')
+
+/** Other pros met in their games: how often with them and against them. */
+const met = computed(() => {
+  const by = new Map<string, { pro: ProTag; with: number; against: number }>()
+  for (const g of player.value.games)
+    for (const x of g.pros ?? []) {
+      const e = by.get(x.pro.slug) ?? { pro: x.pro, with: 0, against: 0 }
+      if (x.ally) e.with++
+      else e.against++
+      by.set(x.pro.slug, e)
+    }
+  return [...by.values()].sort((a, b) => b.with + b.against - (a.with + a.against)).slice(0, 8)
+})
+
+const mostPlayed = computed(() => player.value.builds[0] ?? null)
+const bestServer = computed(() => (best.value ? regionLabel(best.value.platform) : ''))
 </script>
 
 <template>
   <Head :title="title" />
   <div class="flex min-h-screen flex-col">
     <AppHeader />
-    <main class="nb nb-page flex-1">
-      <Crumbs :back="back" :items="crumbs">
-        <template #end><ShareButton :title="player.name" :url="canonical" /></template>
-      </Crumbs>
+    <main class="page pp flex-1">
+      <div class="crumbs">
+        <nav aria-label="Breadcrumb">
+          <template v-for="(c, i) in crumbs" :key="i">
+            <Link v-if="c.href" :href="c.href">{{ c.label }}</Link>
+            <b v-else>{{ c.label }}</b>
+            <span v-if="i < crumbs.length - 1" aria-hidden="true">/</span>
+          </template>
+        </nav>
+        <ShareButton :title="player.name" :url="canonical" />
+      </div>
 
-      <section class="nb-panel nb-prohead" :aria-label="player.name">
+      <!-- Who: photo, name, the facts as tags, and the key figures -->
+      <section class="pb" :aria-label="player.name">
+        <img
+          v-if="player.team"
+          class="wm"
+          :src="`/cdn/team/${player.team.id}?s=96`"
+          alt=""
+          aria-hidden="true"
+        />
         <ProPhoto
+          v-if="player.photo"
+          class="pb-ph"
           :slug="player.slug"
           :photo="player.photo"
-          :width="128"
-          :height="144"
+          :width="200"
+          :height="220"
           eager
           fluid
         />
-        <div class="min-w-0">
+        <span v-else class="pb-ph e" aria-hidden="true"
+          ><RoleIcon v-if="lane" :lane="lane.lane" :size="72"
+        /></span>
+        <div class="pb-m">
           <h1>{{ player.name }}</h1>
-          <p v-if="realName" class="real">{{ realName }}</p>
+          <p v-if="realName || age" class="pb-rn">
+            {{ realName }}<template v-if="realName && age">, </template
+            ><template v-if="age">{{ age }} years old</template>
+          </p>
           <div class="tags">
-            <Link v-if="player.team" :href="`/team/${player.team.slug}`"
-              ><Logo :team="player.team" :size="20" eager />{{ player.team.name }}</Link
+            <Link v-if="player.team" :href="`/team/${player.team.slug}`" class="rd-tag"
+              ><Logo :team="player.team" :size="16" eager />{{ player.team.name }}</Link
             >
-            <span v-else class="q">No team now</span>
-            <Link v-if="player.league" :href="`/pros?league=${player.league.slug}`"
-              ><Logo :league="player.league" :size="20" eager />{{ player.league.code }}</Link
+            <span v-else class="rd-tag">No team now</span>
+            <Link
+              v-if="player.league"
+              :href="`/pros?league=${player.league.slug}`"
+              class="rd-tag"
+              >{{ player.league.code }}</Link
             >
-            <span v-if="lane"><RoleIcon :lane="lane.lane" :size="14" />{{ lane.label }}</span>
-            <span v-else-if="player.staff">{{
-              (player.role ?? '').charAt(0) + (player.role ?? '').slice(1).toLowerCase()
-            }}</span>
-            <span v-if="nationality">{{ countryName(nationality) }}</span>
-            <span v-if="age" class="num">{{ age }} years old</span>
+            <span v-if="lane" class="rd-tag"
+              ><RoleIcon :lane="lane.lane" :size="14" />{{ lane.label }}</span
+            >
+            <span v-else-if="player.staff" class="rd-tag">{{ staffRole(player.role) }}</span>
+            <span v-if="nationality" class="rd-tag">{{ countryName(nationality) }}</span>
+            <span v-if="best" class="rd-tag g">{{ tierName(best.tier) }}</span>
+            <span v-if="mostPlayed" class="rd-tag v"
+              >Most played: {{ championName(mostPlayed.champion) }}</span
+            >
           </div>
           <div v-if="socials.length" class="links">
             <a
-              v-for="s in socials"
-              :key="s.k"
-              :href="s.href"
+              v-for="x in socials"
+              :key="x.k"
+              :href="x.href"
               target="_blank"
               rel="noreferrer"
               class="iv-btn ghost sm"
-              >{{ s.label }}<ExternalLink :size="12" aria-hidden="true" /><span class="nb-sr">
+              >{{ x.label }}<ExternalLink :size="12" aria-hidden="true" /><span class="nb-sr">
                 (opens a new tab)</span
               ></a
             >
           </div>
         </div>
-        <div class="side">
-          <div class="nb-figs" style="gap: 24px; margin-right: 8px">
-            <div>
-              <span>Games, 30 days</span><b class="iv-fig num">{{ record.games }}</b>
-            </div>
-            <div>
-              <span>Win rate</span
-              ><b class="iv-fig num">{{ record.games ? pct(record.wins / record.games) : '-' }}</b>
-            </div>
-            <div>
-              <span>KDA</span><b class="iv-fig num">{{ kda }}</b>
-            </div>
+        <div class="pb-k">
+          <div v-if="ladder">
+            <label>Pro ladder</label>
+            <div class="rd-fig num">#{{ thousands(ladder.place) }}</div>
+            <small class="num">of {{ thousands(ladder.total) }} pros</small>
           </div>
-          <div class="nb-rank">
-            <RankCrest :tier="best?.tier ?? null" :size="56" emblem />
-            <div>
-              <span :style="tierColor(best?.tier)">{{
-                best ? tierName(best.tier) : 'Unranked'
-              }}</span>
-              <b class="iv-fig num">{{
-                best && best.lp !== null ? `${thousands(best.lp)} LP` : '-'
-              }}</b>
-              <small v-if="best" class="num"
-                >{{ regionLabel(best.platform)
-                }}<template v-if="best.peakTier"
-                  >, peak {{ rankText(best.peakTier, best.peakDivision, best.peakLp) }}</template
-                ></small
-              >
+          <div>
+            <label>{{ best ? `${tierName(best.tier)}, ${bestServer}` : 'Best account' }}</label>
+            <div class="rd-fig num" :class="{ 'rd-gold': best }">
+              {{ best && best.lp !== null ? thousands(best.lp) : '-' }}
             </div>
+            <small class="num"
+              >LP<template v-if="best?.peakTier"
+                >, peak {{ rankText(best.peakTier, best.peakDivision, best.peakLp) }}</template
+              ></small
+            >
+          </div>
+          <div>
+            <label>Last 30 days</label>
+            <div class="rd-fig num">{{ record.games ? pct(record.wins / record.games) : '-' }}</div>
+            <small class="num">{{ record.wins }}W {{ record.games - record.wins }}L</small>
+          </div>
+          <div>
+            <label>KDA</label>
+            <div class="rd-fig num">{{ kda }}</div>
+            <small v-if="record.games" class="num"
+              >{{ (record.kills / record.games).toFixed(1) }} /
+              {{ (record.deaths / record.games).toFixed(1) }} /
+              {{ (record.assists / record.games).toFixed(1) }}</small
+            >
           </div>
         </div>
       </section>
 
-      <div class="pp-cols">
-        <div class="nb-stack aside">
-          <section v-if="player.team && (nextMatch || lastMatch)" class="nb-panel">
-            <div class="nb-ph">
-              <h2>Matches</h2>
-              <span class="end nb-meta">{{ player.team.name }}</span>
+      <!-- Their team now -->
+      <section v-if="roster && rosterPlayers.length" class="rd-card team">
+        <div class="rd-head">
+          <h3>
+            {{ roster.team.name
+            }}<span class="rd-meta num"
+              ><template v-if="roster.team.league">{{ roster.team.league.code }}</template
+              ><template v-if="roster.team.place"
+                >, #{{ roster.team.place }} on the team ladder</template
+              ><template v-if="roster.team.lp">, {{ thousands(roster.team.lp) }} LP</template></span
+            >
+          </h3>
+          <Link :href="`/team/${roster.team.slug}`" class="rd-more"
+            >Team page<ArrowRight :size="14" aria-hidden="true"
+          /></Link>
+        </div>
+        <div class="ros" :class="{ nostaff: !staff.length }">
+          <component
+            :is="m.slug ? Link : 'div'"
+            v-for="m in rosterPlayers"
+            :key="m.slug ?? m.name"
+            :href="m.slug ? `/pro/${m.slug}` : undefined"
+            class="rp"
+            :class="{ me: m.slug === player.slug }"
+          >
+            <ProPhoto
+              v-if="m.photo && m.slug"
+              class="ph2"
+              :slug="m.slug"
+              :photo="m.photo"
+              :width="132"
+              :height="132"
+              fluid
+            />
+            <span class="ro"
+              ><RoleIcon v-if="proRole(m.role)" :lane="proRole(m.role)!.lane" :size="14" />{{
+                proRole(m.role)?.label ?? ''
+              }}<template v-if="m.title === 'sub'">, sub</template></span
+            >
+            <b>{{ m.name }}</b>
+            <small class="num">{{
+              m.best
+                ? rankText(m.best.tier, m.best.division, m.best.lp).replace(
+                    / (\d[\d,]*)$/,
+                    ', $1 LP'
+                  )
+                : m.joinedAt
+                  ? `Since ${new Date(m.joinedAt).getUTCFullYear()}`
+                  : ''
+            }}</small>
+            <span class="cps"
+              ><ChampIcon
+                v-for="c in (m.slug && roster.pools[m.slug]) || []"
+                :key="c"
+                :id="c"
+                :size="24"
+            /></span>
+          </component>
+          <div v-if="staff.length" class="staff">
+            <h4>Staff</h4>
+            <component
+              :is="m.slug ? Link : 'div'"
+              v-for="m in staff"
+              :key="m.slug ?? m.name"
+              :href="m.slug ? `/pro/${m.slug}` : undefined"
+              class="sf"
+            >
+              <ProFace :slug="m.slug ?? ''" :photo="m.slug ? m.photo : null" :size="32" />
+              <span
+                >{{ m.name
+                }}<small
+                  >{{ staffRole(m.role)
+                  }}<template v-if="m.joinedAt"
+                    >, since {{ new Date(m.joinedAt).getUTCFullYear() }}</template
+                  ></small
+                ></span
+              >
+            </component>
+          </div>
+        </div>
+      </section>
+
+      <div class="pp-main">
+        <div class="min-w-0">
+          <section class="games" aria-labelledby="h-games">
+            <div class="fil">
+              <h2 id="h-games">Recent games<span>Solo queue, every account</span></h2>
+              <div class="fil-r">
+                <span class="lgd"
+                  >Pros in the game<span class="rd-tag b">With</span
+                  ><span class="rd-tag r">Against</span></span
+                >
+                <span class="rd-seg" role="group" aria-label="Show">
+                  <button
+                    v-for="f in ['all', 'wins', 'losses'] as const"
+                    :key="f"
+                    type="button"
+                    :class="{ on: filter === f }"
+                    :aria-pressed="filter === f"
+                    @click="filter = f"
+                  >
+                    {{ f.charAt(0).toUpperCase() + f.slice(1) }}
+                  </button>
+                </span>
+              </div>
+            </div>
+            <p v-if="!player.games.length" class="rd-card nb-empty">
+              No ranked game of {{ player.name }} is stored for the last 30 days.
+            </p>
+            <ProGameList
+              v-if="player.games.length"
+              :items="props.games ?? []"
+              :filter="filter"
+              :pros="prosByMatch"
+              :champion-name="championName"
+            />
+          </section>
+
+          <template v-if="player.builds.length">
+            <div class="fil mt">
+              <h2>Champions<span>Last 30 days</span></h2>
+            </div>
+            <section class="rd-card">
+              <ul class="rd-plist">
+                <li v-for="c in player.builds" :key="c.champion">
+                  <button
+                    type="button"
+                    class="prow ch"
+                    :class="{ on: picked === c.champion }"
+                    :aria-pressed="picked === c.champion"
+                    @click="picked = c.champion"
+                  >
+                    <ChampIcon :id="c.champion" :size="36" />
+                    <span class="min-w-0"
+                      ><b class="truncate">{{ championName(c.champion) }}</b
+                      ><small class="num"
+                        >{{ c.games }} {{ c.games === 1 ? 'game' : 'games' }},
+                        {{ c.kda }} KDA</small
+                      ></span
+                    >
+                    <FormStrip :results="[...c.form].reverse()" />
+                    <WinLoss :wins="c.wins" :losses="c.games - c.wins" />
+                  </button>
+                </li>
+              </ul>
+            </section>
+          </template>
+        </div>
+
+        <div class="rd-col">
+          <section v-if="met.length" class="rd-card">
+            <div class="rd-head">
+              <h3>Meets in solo queue</h3>
+              <span class="rd-hm num">Last {{ player.games.length }} games</span>
+            </div>
+            <Link v-for="m in met" :key="m.pro.slug" :href="`/pro/${m.pro.slug}`" class="met">
+              <ProFace :slug="m.pro.slug" :photo="m.pro.photo" :role="m.pro.role" />
+              <span class="min-w-0"
+                ><b class="truncate">{{ m.pro.name }}</b
+                ><small
+                  ><RoleIcon
+                    v-if="proRole(m.pro.role)"
+                    :lane="proRole(m.pro.role)!.lane"
+                    :size="13"
+                  />{{ m.pro.team?.name ?? 'Free agent' }}</small
+                ></span
+              >
+              <span class="tg"
+                ><span v-if="m.with" class="rd-tag b">With {{ m.with }}</span
+                ><span v-if="m.against" class="rd-tag r">Against {{ m.against }}</span></span
+              >
+            </Link>
+          </section>
+
+          <section
+            v-if="build"
+            class="rd-card"
+            :aria-label="`${player.name} on ${championName(build.champion)}`"
+            aria-live="polite"
+          >
+            <div class="rd-head">
+              <h3>{{ player.name }} on {{ championName(build.champion) }}</h3>
+              <span class="rd-hm num">{{ build.wins }}W {{ build.games - build.wins }}L</span>
+            </div>
+            <div class="bld">
+              <div v-if="build.core.length || build.boots" class="bl">
+                <span class="l">Core</span>
+                <GameImg v-for="id in build.core" :key="id" kind="item" :id="id" :size="32" />
+                <GameImg v-if="build.boots" kind="item" :id="build.boots" :size="32" />
+                <span class="x num">{{ build.coreGames }} of {{ build.games }}</span>
+              </div>
+              <div v-if="build.keystone || build.spells" class="bl">
+                <span class="l">Runes</span>
+                <template v-if="build.keystone"
+                  ><GameImg kind="rune" :id="build.keystone" :size="32" round /><GameImg
+                    v-if="build.secondaryStyle"
+                    kind="runeStyle"
+                    :id="build.secondaryStyle"
+                    :size="22"
+                /></template>
+                <span class="w-1" />
+                <template v-if="build.spells"
+                  ><GameImg v-for="sp in build.spells" :key="sp" kind="spell" :id="sp" :size="32"
+                /></template>
+              </div>
+              <div v-if="build.max.length" class="bl">
+                <span class="l">Skills</span>
+                <template v-for="(k, i) in build.max" :key="k">
+                  <ArrowRight v-if="i" :size="13" aria-hidden="true" /><span class="key">{{
+                    k
+                  }}</span>
+                </template>
+              </div>
+              <Link :href="champHref(build.champion)" class="iv-btn sm w-full justify-center"
+                >Open the {{ championName(build.champion) }} page</Link
+              >
+            </div>
+          </section>
+
+          <section v-if="player.team && (nextMatch || lastMatch)" class="rd-card">
+            <div class="rd-head">
+              <h3>Matches</h3>
+              <span class="rd-hm">{{ player.team.name }}</span>
             </div>
             <div class="pp-matches">
               <MatchCard v-if="nextMatch" :match="nextMatch" show-league :team="player.team?.id" />
               <MatchCard v-if="lastMatch" :match="lastMatch" show-league :team="player.team?.id" />
             </div>
           </section>
-          <section class="nb-panel">
-            <div class="nb-ph">
-              <h2>Accounts</h2>
-              <span class="end nb-meta num">{{ player.accounts.length }}</span>
+
+          <section class="rd-card">
+            <div class="rd-head">
+              <h3>Accounts</h3>
+              <span class="rd-hm num">{{ player.accounts.length }}</span>
             </div>
-            <div class="nb-pb rows">
-              <p v-if="!player.accounts.length" class="nb-empty" style="padding-inline: 0">
-                No ranked account known.
-              </p>
-              <Link
-                v-for="a in player.accounts"
-                :key="a.id"
-                :href="profile(a)"
-                class="nb-row"
-                style="min-height: 48px"
+            <p v-if="!player.accounts.length" class="nb-empty">No ranked account known.</p>
+            <Link v-for="a in player.accounts" :key="a.id" :href="profile(a)" class="acc">
+              <span class="min-w-0"
+                ><b class="truncate"
+                  >{{ a.gameName }} <span>#{{ a.tagLine }}</span></b
+                ><small class="num"
+                  >{{ regionLabel(a.platform)
+                  }}<template v-if="a.wins !== null && (a.wins || a.losses)"
+                    >, {{ a.wins }}W {{ a.losses }}L</template
+                  ></small
+                ></span
               >
-                <Crest :tier="a.tier" :size="20" />
-                <span class="n"
-                  >{{ a.gameName }}<span class="q">#{{ a.tagLine }}</span
-                  ><small class="num"
-                    >{{ regionLabel(a.platform)
-                    }}<template v-if="a.wins !== null && (a.wins || a.losses)"
-                      >, {{ a.wins }}W {{ a.losses }}L</template
-                    ></small
-                  ></span
-                >
-                <span
-                  class="num"
-                  style="flex: none; font-size: 12.5px; font-weight: 600"
-                  :style="tierColor(a.tier)"
-                  >{{ rankText(a.tier, a.division, a.lp) }}</span
-                >
-              </Link>
-              <p v-if="credited.length" class="pp-credit">
-                {{ creditedLabel }} from
-                <a :href="leaguepedia" rel="noopener" target="_blank">Leaguepedia</a>,
-                <a
-                  href="https://creativecommons.org/licenses/by-sa/3.0/"
-                  rel="license noopener"
-                  target="_blank"
-                  >CC BY-SA 3.0</a
-                >
-              </p>
-            </div>
+              <span class="rkx num" :style="tierColor(a.tier)">{{
+                rankText(a.tier, a.division, a.lp)
+              }}</span>
+            </Link>
+            <p v-if="credited.length" class="pp-credit">
+              {{ creditedLabel }} from
+              <a :href="leaguepedia" rel="noopener" target="_blank">Leaguepedia</a>,
+              <a
+                href="https://creativecommons.org/licenses/by-sa/3.0/"
+                rel="license noopener"
+                target="_blank"
+                >CC BY-SA 3.0</a
+              >
+            </p>
           </section>
-          <section v-if="player.teams.length" class="nb-panel">
-            <div class="nb-ph"><h2>Career</h2></div>
-            <div class="nb-pb rows">
+
+          <section v-if="player.teams.length" class="rd-card">
+            <div class="rd-head"><h3>Career</h3></div>
+            <div class="tl">
               <Link
                 v-for="t in player.teams"
                 :key="`${t.team.id}-${t.joinedAt}`"
                 :href="`/team/${t.team.slug}`"
-                class="nb-row"
-                style="min-height: 48px"
+                class="tli"
+                :class="{ now: t.current }"
               >
                 <Logo :team="t.team" :size="32" />
-                <span class="n"
-                  >{{ t.team.name
-                  }}<small>{{
-                    [
-                      t.league?.code,
-                      t.title === 'sub'
-                        ? 'Sub'
-                        : t.title === 'staff'
-                          ? t.role
-                            ? t.role.charAt(0) + t.role.slice(1).toLowerCase()
-                            : 'Staff'
-                          : null,
-                      years(t),
-                    ]
-                      .filter(Boolean)
-                      .join(', ')
+                <span class="min-w-0"
+                  ><b class="truncate">{{ t.team.name }}</b
+                  ><small v-if="t.title === 'sub' || t.title === 'staff'">{{
+                    t.title === 'sub' ? 'Sub' : staffRole(t.role)
                   }}</small></span
                 >
-                <span v-if="t.current" class="iv-badge brand">Now</span>
+                <span class="yr"
+                  ><span v-if="t.league" class="rd-tag">{{ t.league.code }}</span>
+                  <small class="num">{{ years(t) }}</small></span
+                >
               </Link>
-            </div>
-          </section>
-        </div>
-
-        <section class="games" aria-labelledby="h-games">
-          <div class="nb-h">
-            <h2 id="h-games">Recent games</h2>
-            <span class="nb-meta">Solo queue, every account</span>
-            <span class="end nb-seg" role="group" aria-label="Show">
-              <button
-                v-for="f in ['all', 'wins', 'losses'] as const"
-                :key="f"
-                type="button"
-                :class="{ on: filter === f }"
-                :aria-pressed="filter === f"
-                @click="filter = f"
-              >
-                {{ f.charAt(0).toUpperCase() + f.slice(1) }}
-              </button>
-            </span>
-          </div>
-          <p v-if="!player.games.length" class="nb-panel nb-empty">
-            No ranked game of {{ player.name }} is stored for the last 30 days.
-          </p>
-          <ProGameList
-            v-if="player.games.length"
-            :items="props.games ?? []"
-            :filter="filter"
-            :pros="prosByMatch"
-            :champion-name="championName"
-          />
-        </section>
-
-        <div class="nb-stack build">
-          <section v-if="player.builds.length" class="nb-panel">
-            <div class="nb-ph">
-              <h2>Champions</h2>
-              <span class="end nb-meta">30 days</span>
-            </div>
-            <div class="pp-picks" role="group" :aria-label="`${player.name}'s champions`">
-              <button
-                v-for="c in player.builds"
-                :key="c.champion"
-                type="button"
-                class="pp-pick"
-                :aria-pressed="picked === c.champion"
-                @click="picked = c.champion"
-              >
-                <span class="nb-pic"><ChampIcon :id="c.champion" :size="26" /></span>
-                <span class="n"
-                  >{{ championName(c.champion)
-                  }}<small class="num"
-                    >{{ c.games }} {{ c.games === 1 ? 'game' : 'games' }}, {{ c.kda }} KDA</small
-                  ></span
-                >
-                <span class="v num"
-                  >{{ pct(c.wins / c.games, 0)
-                  }}<small>{{ c.wins }}W {{ c.games - c.wins }}L</small></span
-                >
-              </button>
-            </div>
-          </section>
-          <section
-            v-if="build"
-            class="nb-panel lit-sheet"
-            :aria-label="`${player.name} on ${championName(build.champion)}`"
-            aria-live="polite"
-          >
-            <div class="nb-ph">
-              <span class="nb-pic"><ChampIcon :id="build.champion" :size="24" /></span>
-              <h2>{{ player.name }} on {{ championName(build.champion) }}</h2>
-              <span v-if="build.champion === player.builds[0].champion" class="end iv-badge"
-                >Most played</span
-              >
-            </div>
-            <div class="nb-pb">
-              <span class="nb-k"
-                >Core, in {{ build.coreGames }} of {{ build.games }}
-                {{ build.games === 1 ? 'game' : 'games' }}</span
-              >
-              <div class="nb-core" style="margin-top: 8px">
-                <template v-if="build.boots"
-                  ><GameImg kind="item" :id="build.boots" :size="30" /><span
-                    class="ar"
-                    aria-hidden="true"
-                    ><ChevronRight :size="12" /></span
-                ></template>
-                <GameImg v-for="id in build.core" :key="id" kind="item" :id="id" :size="38" />
-              </div>
-              <div class="nb-hl" />
-              <div class="pp-kv">
-                <span>Runes</span
-                ><span class="i"
-                  ><template v-if="build.keystone"
-                    ><GameImg kind="rune" :id="build.keystone" :size="24" round /><GameImg
-                      v-if="build.secondaryStyle"
-                      kind="runeStyle"
-                      :id="build.secondaryStyle"
-                      :size="18" /></template
-                  ><b v-else>-</b></span
-                >
-              </div>
-              <div class="pp-kv">
-                <span>Spells</span
-                ><span class="i"
-                  ><template v-if="build.spells"
-                    ><GameImg
-                      v-for="s in build.spells"
-                      :key="s"
-                      kind="spell"
-                      :id="s"
-                      :size="22" /></template
-                  ><b v-else>-</b></span
-                >
-              </div>
-              <div class="pp-kv">
-                <span>Skills</span
-                ><b class="num">{{ build.max.length ? `Max ${build.max.join(', ')}` : '-' }}</b>
-              </div>
-              <div class="pp-kv">
-                <span>Last games</span>
-                <span
-                  class="nb-form"
-                  :aria-label="`${build.form.filter(Boolean).length} wins in the last ${build.form.length}`"
-                  ><i
-                    v-for="(w, i) in build.form"
-                    :key="i"
-                    :class="w ? 'w' : 'l'"
-                    aria-hidden="true"
-                    >{{ w ? 'W' : 'L' }}</i
-                  ></span
-                >
-              </div>
-              <Link
-                :href="champHref(build.champion)"
-                class="iv-btn sm"
-                style="width: 100%; justify-content: center; margin-top: 12px"
-                >Open the {{ championName(build.champion) }} page</Link
-              >
             </div>
           </section>
         </div>
@@ -526,3 +667,545 @@ const back = computed(() =>
     <SiteFooter />
   </div>
 </template>
+
+<style scoped>
+.crumbs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  margin-top: 8px;
+}
+.crumbs nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--text-4);
+}
+.crumbs nav a {
+  color: var(--text-2);
+  text-decoration: none;
+}
+.crumbs nav a:hover {
+  color: var(--text-1);
+}
+.crumbs nav b {
+  font-weight: 500;
+  color: var(--text-1);
+}
+.pb {
+  position: relative;
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr) auto;
+  gap: 28px;
+  align-items: end;
+  min-height: 240px;
+  margin-top: 8px;
+  padding: 0 28px 0 12px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: linear-gradient(
+    110deg,
+    rgb(var(--gold-rgb) / 0.1) 0%,
+    var(--rd-card) 42%,
+    var(--rd-card) 100%
+  );
+  box-shadow: inset 0 0 0 1px var(--rd-line);
+}
+.pb .wm {
+  position: absolute;
+  right: -30px;
+  top: -40px;
+  width: 320px;
+  height: 320px;
+  object-fit: contain;
+  opacity: 0.06;
+  pointer-events: none;
+}
+.pb > *:not(.wm) {
+  position: relative;
+  z-index: 1;
+}
+.pb-ph {
+  align-self: end;
+  width: 200px !important;
+  height: 220px !important;
+  background: none !important;
+  box-shadow: none !important;
+}
+.pb-ph :deep(img) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 0;
+}
+.pb-ph.e {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-4);
+}
+.pb-m {
+  align-self: center;
+  min-width: 0;
+  padding: 20px 0;
+}
+.pb h1 {
+  margin: 0;
+  font-size: 44px;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1;
+  color: var(--text-1);
+}
+.pb-rn {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--text-2);
+}
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+.tags .rd-tag {
+  height: 26px;
+  padding: 0 9px;
+  border-radius: 6px;
+  font-size: 12px;
+  text-decoration: none;
+}
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 10px;
+}
+.pb-k {
+  align-self: center;
+  display: grid;
+  grid-auto-flow: column;
+}
+.pb-k > div {
+  padding: 0 22px;
+}
+.pb-k > div + div {
+  box-shadow: inset 1px 0 0 var(--rd-line);
+}
+.pb-k label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--text-3);
+}
+.pb-k .rd-fig {
+  font-size: 28px;
+  line-height: 1.2;
+}
+.pb-k small {
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--text-3);
+}
+.team {
+  margin-top: 16px;
+}
+.ros {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) 220px;
+}
+.ros.nostaff {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.rp {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 212px;
+  padding: 14px 14px 12px;
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+}
+.rp + .rp,
+.staff {
+  box-shadow: inset 1px 0 0 var(--rd-line);
+}
+a.rp:hover {
+  background: var(--surface-1);
+}
+.rp :deep(.ph2) {
+  position: absolute;
+  right: -22px;
+  top: 6px;
+  width: 132px;
+  height: 132px;
+  background: none;
+  box-shadow: none;
+  -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent);
+  mask-image: linear-gradient(180deg, #000 70%, transparent);
+}
+.rp :deep(.ph2 img) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 0;
+}
+.rp > *:not(.ph2) {
+  position: relative;
+  z-index: 1;
+}
+.rp .ro {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+.rp b {
+  display: block;
+  margin-top: auto;
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 650;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-1);
+}
+.rp small {
+  font-size: 12px;
+  color: var(--text-3);
+}
+.rp .cps {
+  display: flex;
+  gap: 4px;
+  min-height: 24px;
+  margin-top: 8px;
+}
+.rp.me {
+  background: linear-gradient(180deg, var(--rd-violet-a), transparent);
+}
+.rp.me::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: var(--rd-violet);
+}
+.staff {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 14px 16px;
+}
+.staff h4 {
+  margin: 0 0 2px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+.sf {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+  text-decoration: none;
+}
+.sf small {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+.pp-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+  align-items: start;
+  margin-top: 24px;
+}
+.fil {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0 0 12px;
+}
+.fil.mt {
+  margin-top: 32px;
+}
+.fil h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+  color: var(--text-1);
+}
+.fil h2 span {
+  margin-left: 8px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-3);
+}
+.fil-r {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.lgd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.prow.ch {
+  grid-template-columns: 36px minmax(0, 1fr) auto 120px;
+}
+.met {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 58px;
+  padding: 8px 16px;
+  color: inherit;
+  text-decoration: none;
+}
+.met + .met {
+  box-shadow: inset 0 1px 0 var(--rd-line);
+}
+.met:hover,
+.acc:hover,
+.tli:hover {
+  background: var(--surface-1);
+}
+.met b {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.met small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.met .tg {
+  display: flex;
+  gap: 4px;
+}
+.bld {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+.bl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.bl .l {
+  width: 48px;
+}
+.bl .x {
+  margin-left: auto;
+}
+.key {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--rd-violet);
+}
+.pp-matches {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+.acc {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 54px;
+  padding: 8px 16px;
+  color: inherit;
+  text-decoration: none;
+}
+.acc + .acc {
+  box-shadow: inset 0 1px 0 var(--rd-line);
+}
+.acc b {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+.acc b span {
+  font-weight: 400;
+  color: var(--text-3);
+}
+.acc small {
+  display: block;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.acc .rkx {
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+}
+.pp-credit {
+  margin: 0;
+  padding: 10px 16px 14px;
+  font-size: 11px;
+  color: var(--text-4);
+  box-shadow: inset 0 1px 0 var(--rd-line);
+}
+.pp-credit a {
+  color: var(--text-3);
+}
+.tl {
+  padding: 14px 16px 16px;
+}
+.tli {
+  position: relative;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-height: 50px;
+  color: inherit;
+  text-decoration: none;
+}
+.tli::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: -10px;
+  bottom: -10px;
+  width: 1px;
+  background: var(--rd-line);
+}
+.tli:first-child::before {
+  top: 25px;
+}
+.tli:last-child::before {
+  bottom: 25px;
+}
+.tli:only-child::before {
+  display: none;
+}
+.tli > :first-child {
+  position: relative;
+  z-index: 1;
+  background: var(--rd-card);
+}
+.tli b {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+.tli.now b {
+  color: var(--text-1);
+}
+.tli small {
+  font-size: 12px;
+  color: var(--text-3);
+}
+.tli .yr {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+@media (max-width: 1100px) {
+  .pp-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ros,
+  .ros.nostaff {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .ros .staff {
+    grid-column: 1 / -1;
+    box-shadow: inset 0 1px 0 var(--rd-line);
+  }
+  .rp:nth-child(4) {
+    box-shadow: inset 0 1px 0 var(--rd-line);
+  }
+  .rp:nth-child(n + 4) {
+    border-top: 1px solid var(--rd-line);
+  }
+  .pb {
+    grid-template-columns: 140px minmax(0, 1fr);
+    gap: 16px;
+    padding: 16px 16px 0 0;
+  }
+  .pb-ph {
+    width: 140px !important;
+    height: 150px !important;
+  }
+  .pb-k {
+    grid-column: 1 / -1;
+    grid-auto-flow: row;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 14px;
+    padding: 0 0 16px 16px;
+  }
+  .pb-k > div {
+    padding: 0 12px 0 0;
+  }
+  .pb-k > div + div {
+    box-shadow: none;
+  }
+}
+@media (max-width: 560px) {
+  .pb h1 {
+    font-size: 30px;
+  }
+  .pb {
+    grid-template-columns: 96px minmax(0, 1fr);
+  }
+  .pb-ph {
+    width: 96px !important;
+    height: 110px !important;
+  }
+  .ros,
+  .ros.nostaff {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rp {
+    height: 180px;
+  }
+  .prow.ch {
+    grid-template-columns: 36px minmax(0, 1fr) 96px;
+  }
+  .prow.ch .rd-form {
+    display: none;
+  }
+}
+</style>
