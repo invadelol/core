@@ -1,6 +1,15 @@
 import { defineConfig } from '@adonisjs/inertia'
 import type { InferSharedProps } from '@adonisjs/inertia/types'
 import { webAnalytics } from '#services/openpanel'
+import { latestPatch } from '#services/ranked_games_service'
+
+/** The header's patch badge: the newest patch the stats show, or none when it is slow to come. */
+async function currentPatch(): Promise<string | null> {
+  let timer: NodeJS.Timeout | undefined
+  const late = new Promise<null>((resolve) => (timer = setTimeout(() => resolve(null), 300)))
+  const patch = latestPatch().catch(() => null)
+  return Promise.race([patch, late]).finally(() => clearTimeout(timer))
+}
 
 const inertiaConfig = defineConfig({
   /**
@@ -15,6 +24,8 @@ const inertiaConfig = defineConfig({
     // user: (ctx) => ctx.inertia.always(() => ctx.auth.user),
     /** OpenPanel's web script, written by the layout (resources/views/inertia_layout.edge). */
     analytics: () => webAnalytics(),
+    /** The newest patch with stats (game version, `patchName()` prints it), for the header. */
+    patch: () => currentPatch(),
   },
 
   /**
