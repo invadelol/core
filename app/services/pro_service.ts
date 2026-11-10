@@ -799,6 +799,54 @@ export class ProService {
     return out
   }
 
+  #form = new AnswerCache(128, 5 * 60_000)
+
+  /**
+   * Each player's ten newest ranked solo results across their accounts, newest first (true for a
+   * win): the ladder's form column. Cached a few minutes per set of players.
+   */
+  async form(playerIds: string[]): Promise<Map<string, boolean[]>> {
+    const ids = [...new Set(playerIds)].sort()
+    return this.#form.get(ids.join(), async () => {
+      const out = new Map<string, boolean[]>()
+      if (!ids.length) return out
+      const found = await this.puuids(ids).catch(() => [])
+      if (!found.length) return out
+      const playerOf = new Map(found.map((f) => [f.puuid, f.player_id]))
+      const games = await rows(
+        `SELECT puuid, game_start_ms, win FROM (
+           SELECT match_id, puuid, game_start_ms, win FROM participants
+           WHERE puuid IN {puuids:Array(String)} AND queue_id = ${RANKED_SOLO}
+             AND game_start_ms >= {since:UInt64}
+           LIMIT 1 BY match_id, puuid
+         )
+         ORDER BY game_start_ms DESC
+         LIMIT 10 BY puuid`,
+        { puuids: [...playerOf.keys()], since: Date.now() - GAMES_DAYS * 86_400_000 }
+      ).catch((error) => {
+        logger.warn({ err: error }, 'pro form failed')
+        return []
+      })
+      const byPlayer = new Map<string, { t: number; win: boolean }[]>()
+      for (const [puuid, t, win] of games) {
+        const player = playerOf.get(String(puuid))
+        if (!player) continue
+        const list = byPlayer.get(player) ?? []
+        list.push({ t: Number(t), win: Number(win) === 1 })
+        byPlayer.set(player, list)
+      }
+      for (const [player, list] of byPlayer)
+        out.set(
+          player,
+          list
+            .sort((a, b) => b.t - a.t)
+            .slice(0, 10)
+            .map((g) => g.win)
+        )
+      return out
+    })
+  }
+
   /**
    * Who played some games: for each, the lane opponent when a pro, and every other pro in it with
    * their champion and side. One read of the games' players and their pro accounts.
