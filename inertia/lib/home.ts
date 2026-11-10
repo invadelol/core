@@ -113,6 +113,28 @@ export interface HomeClimber extends HomeChampion {
   to: number
 }
 
+/** A champion whose place in its role moved since the patch before. */
+export interface HomeMover extends HomeChampion {
+  from: number
+  to: number
+  /** 0‥1, on the patch shown. */
+  winRate: number
+}
+
+/** The places won and lost in each role since the patch before. */
+export interface HomeMoves {
+  previousPatch: string
+  roles: Array<{ position: string; up: HomeMover[]; down: HomeMover[] }>
+}
+
+/** The best pick of each role at one rank group (`emerald_plus`, `diamond_plus`, `master_plus`). */
+export interface HomeBracketPicks {
+  bracket: string
+  /** Ranked games behind it. */
+  games: number
+  best: HomePick[]
+}
+
 /** A pro's place on the solo queue ladder. */
 export interface HomePro {
   slug: string
@@ -135,8 +157,17 @@ export interface HomeLaneRow extends HomeChampion {
 /** The home page's sections, each null when it could not be read. */
 export interface HomePage {
   /** The default tier list (newest patch, Emerald and above, every region). */
-  picks: { patch: string; best: HomePick[]; bans: HomeBan[] } | null
+  picks: {
+    patch: string
+    best: HomePick[]
+    bans: HomeBan[]
+    /** The best picks again at each rank group of the home's switch, the default first. */
+    brackets?: HomeBracketPicks[]
+    moves?: HomeMoves | null
+  } | null
   pros: HomePro[] | null
+  /** The best scored games of the last day, one per player. */
+  scored?: BestGame[] | null
   lanes: {
     /** Average gold ahead of the lane opponent at 10 minutes, laners only. */
     bullies: HomeLaneRow[]

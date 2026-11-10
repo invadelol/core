@@ -5,6 +5,7 @@ import {
   climbersOf,
   laneRows,
   mostBanned,
+  movesOf,
   type ChampionInfo,
 } from '#services/home_service'
 import type { RoleStat, Summary } from '#services/champion_stats'
@@ -89,6 +90,33 @@ test.group('Home lists', () => {
       ]
     )
     assert.deepEqual(climbersOf(now, null, names), [])
+  })
+
+  test("lists each role's climbs and falls since the patch before", ({ assert }) => {
+    const before = summary([
+      { champion: 1, position: 'TOP', rank: 12 },
+      { champion: 2, position: 'TOP', rank: 2 },
+      { champion: 3, position: 'TOP', rank: 40 },
+      { champion: 4, position: 'TOP', rank: 5 },
+    ])
+    const now = summary([
+      { champion: 1, position: 'TOP', rank: 3, win: 0.53 },
+      { champion: 2, position: 'TOP', rank: 9 },
+      { champion: 3, position: 'TOP', rank: 35 },
+      { champion: 4, position: 'TOP', rank: 5 },
+    ])
+    const moves = movesOf(now, { ...before, patch: '16.19' }, names)!
+    const top = moves.roles.find((r) => r.position === 'TOP')!
+    assert.equal(moves.previousPatch, '16.19')
+    assert.deepEqual(
+      top.up.map((m) => [m.championId, m.from, m.to, m.winRate]),
+      [[1, 12, 3, 0.53]]
+    )
+    assert.deepEqual(
+      top.down.map((m) => [m.championId, m.from, m.to]),
+      [[2, 2, 9]]
+    )
+    assert.isNull(movesOf(now, null, names))
   })
 
   test('reads a lane figure per game, gated by games and by the listed roles', ({ assert }) => {
