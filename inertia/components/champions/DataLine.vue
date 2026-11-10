@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { bracketOf } from '../../lib/champions.js'
 import { ago, thousands } from '../../lib/board.js'
+import { patchName } from '../../lib/patch.js'
 
 /** The sample a page's figures stand on: "12,408 games, Emerald+, patch 16.20, updated 2 h ago". */
 const props = defineProps<{
@@ -18,7 +19,7 @@ const text = computed(() =>
     props.games ? `${thousands(props.games)} games` : null,
     props.bracket ? bracketOf(props.bracket).label : null,
     props.patch ? (props.region ? props.region.toUpperCase() : 'all regions') : null,
-    props.patch ? `patch ${props.patch}` : null,
+    props.patch ? `patch ${patchName(props.patch)}` : null,
     props.updatedAt
       ? `updated ${ago(props.updatedAt, props.now ?? Date.now()).replace('Yesterday', 'yesterday')}`
       : null,

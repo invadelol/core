@@ -63,7 +63,10 @@ import {
   type Sort,
 } from '../../lib/board.js'
 import { afterPaint } from '../../lib/after_paint.js'
+import { patchName } from '../../lib/patch.js'
 import '../../css/champions.css'
+import '../../css/rd-discover.css'
+import '../../css/rd-discover-champion.css'
 
 type Labels = Record<'item' | 'rune' | 'spell', Record<string, string>>
 interface Early {
@@ -252,7 +255,7 @@ const regionModel = computed({
 })
 const rankOptions = BRACKETS.map((b) => ({ value: b.value, label: b.label }))
 const patchOptions = computed(() =>
-  props.patches.map((p) => ({ value: p.patch, label: `Patch ${p.patch}` }))
+  props.patches.map((p) => ({ value: p.patch, label: `Patch ${patchName(p.patch)}` }))
 )
 const regionOptions = REGIONS.map((r) => ({ value: r.value, label: r.label }))
 
@@ -264,6 +267,30 @@ const moved = computed(() =>
   props.stat?.rank && props.before?.rank ? props.before.rank - props.stat.rank : null
 )
 const share = computed(() => props.roles.find((r) => r.position === props.position)?.roleShare)
+const tierClass = (tier: number | null | undefined) => (tier ? `t${Math.min(tier, 5)}` : '')
+/** Blue up, red down: a change read for the champion. */
+const deltaClass = (x: number) => (Math.abs(x) < 0.0005 ? 'rd-flat' : x > 0 ? 'rd-up' : 'rd-dn')
+const ordinal = (n: number) => {
+  const t = n % 100
+  const s = t >= 11 && t <= 13 ? 'th' : (['th', 'st', 'nd', 'rd'][n % 10] ?? 'th')
+  return `${n}${s}`
+}
+/** The tier box's two lines: "Best top pick", "1st of 67, up from 2nd". */
+const tierTitle = computed(() => {
+  const r = role.value.label.toLowerCase()
+  if (!props.stat?.rank) return `Not ranked in ${r}`
+  return props.stat.rank === 1
+    ? `Best ${r} pick`
+    : `${TIERS[props.stat.tier ?? 5] ?? ''} tier ${r} pick`
+})
+const tierLine = computed(() => {
+  const rk = props.stat?.rank
+  if (!rk) return props.stat ? `${thousands(props.stat.games)} games` : ''
+  const of = props.ranked ? ` of ${props.ranked}` : ''
+  const was = props.before?.rank
+  const from = was && was !== rk ? `, ${was > rk ? 'up' : 'down'} from ${ordinal(was)}` : ''
+  return `${ordinal(rk)}${of}${from}`
+})
 
 /* ── Build ───────────────────────────────────────────────────── */
 const starter = computed(() => build.value?.starters[0] ?? null)
@@ -435,7 +462,7 @@ onBeforeUnmount(() => {
   />
   <div class="flex min-h-screen flex-col">
     <AppHeader />
-    <main class="nb nb-page flex-1">
+    <main id="main" class="nb page cp flex-1">
       <Crumbs
         :back="{ label: `${role.label} tier list`, href: tierHref }"
         :items="[
@@ -449,88 +476,90 @@ onBeforeUnmount(() => {
         /></template>
       </Crumbs>
 
-      <section class="nb-panel nb-id" :aria-label="champion.name">
-        <span class="face"><ChampIcon :id="champion.id" :size="72" :title="champion.name" /></span>
-        <div class="min-w-0">
-          <h1>
-            {{ champion.name }}<span class="mtier"><TierMark :tier="stat?.tier" large /></span>
-          </h1>
-          <div class="sub">
-            <RoleIcon :lane="role.lane" :size="13" />{{ role.label
-            }}<template v-if="classes"
-              ><span class="qq" aria-hidden="true">|</span>{{ classes }}</template
-            >
-          </div>
-          <div class="kit">
-            <GameImg
-              v-for="k in ['p', 'q', 'w', 'e', 'r']"
-              :key="k"
-              kind="ability"
-              :id="`${champion.id}-${k}`"
-              :size="24"
-              :name="k === 'p' ? 'Passive' : k.toUpperCase()"
-              eager
-            />
-          </div>
-        </div>
-        <div class="nb-figs">
-          <div class="ftier">
-            <span>Tier</span><b><TierMark :tier="stat?.tier" large /></b
-            ><em class="num"
-              ><template v-if="stat?.rank"
-                >#{{ stat.rank }} in {{ role.label.toLowerCase()
-                }}<template v-if="moved"
-                  >,
-                  <span :class="moved > 0 ? 'up' : 'down'"
-                    >{{ moved > 0 ? 'up' : 'down' }} {{ Math.abs(moved) }}</span
-                  ></template
-                ></template
-              ><template v-else>Not ranked</template></em
-            >
-          </div>
-          <div>
-            <span>Win rate</span
-            ><b class="iv-fig num"
-              >{{ pct(stat?.win)
-              }}<small v-if="before && stat" :class="gapClass(stat.win - before.win)">{{
-                points(stat.win - before.win)
-              }}</small></b
-            ><em>{{
-              before && previousPatch
-                ? `vs ${previousPatch}`
-                : stat
-                  ? `${thousands(stat.games)} games`
-                  : ''
-            }}</em>
-          </div>
-          <div>
-            <span>Pick rate</span><b class="iv-fig num">{{ pct(stat?.pick) }}</b
-            ><em>of {{ role.label.toLowerCase() }} games</em>
-          </div>
-          <div>
-            <span>Ban rate</span><b class="iv-fig num">{{ pct(stat?.ban) }}</b
-            ><em>of games</em>
-          </div>
-          <div>
-            <span>Games</span><b class="iv-fig num">{{ stat ? thousands(stat.games) : '-' }}</b
-            ><em v-if="share !== undefined"
-              >{{ pct(share, 0) }} in {{ role.label.toLowerCase() }}</em
-            >
+      <section class="cp-hero" :aria-label="champion.name">
+        <img
+          class="art"
+          :src="`/cdn/centered/${champion.id}.jpg`"
+          alt=""
+          width="1280"
+          height="720"
+          decoding="async"
+          fetchpriority="high"
+        />
+        <div class="top">
+          <span class="face"
+            ><ChampIcon :id="champion.id" :size="88" :title="champion.name"
+          /></span>
+          <div class="min-w-0">
+            <h1>{{ champion.name }}</h1>
+            <div class="sub">
+              <span class="pill"><RoleIcon :lane="role.lane" :size="13" />{{ role.label }}</span
+              ><span v-if="classes">{{ classes }}</span>
+            </div>
+            <div class="kit">
+              <span v-for="k in ['p', 'q', 'w', 'e', 'r']" :key="k" class="ab"
+                ><GameImg
+                  kind="ability"
+                  :id="`${champion.id}-${k}`"
+                  :size="30"
+                  :name="k === 'p' ? 'Passive' : k.toUpperCase()"
+                  eager
+                /><i aria-hidden="true">{{ k.toUpperCase() }}</i></span
+              >
+            </div>
           </div>
         </div>
-        <div class="nb-art">
-          <img
-            :src="`/cdn/centered/${champion.id}.jpg`"
-            alt=""
-            width="280"
-            height="112"
-            decoding="async"
-          />
+        <div class="strip">
+          <div class="st tierbox">
+            <span class="tbig" :class="tierClass(stat?.tier)">{{
+              stat?.tier !== null && stat?.tier !== undefined ? TIERS[stat.tier] : '-'
+            }}</span>
+            <span class="min-w-0"
+              ><b>{{ tierTitle }}</b
+              ><small class="num">{{ tierLine }}</small></span
+            >
+          </div>
+          <div class="st">
+            <span class="lbl">Win rate</span>
+            <b class="rd-fig num">{{ pct(stat?.win) }}</b>
+            <small class="num"
+              ><template v-if="before && stat && previousPatch"
+                ><span :class="deltaClass(stat.win - before.win)">{{
+                  points(stat.win - before.win)
+                }}</span>
+                since {{ patchName(previousPatch) }}</template
+              ><template v-else-if="stat">{{ thousands(stat.games) }} games</template></small
+            >
+          </div>
+          <div class="st">
+            <span class="lbl">Pick rate</span>
+            <b class="rd-fig num">{{ pct(stat?.pick) }}</b>
+            <small class="num"
+              ><template v-if="before && stat && previousPatch"
+                ><span :class="deltaClass(stat.pick - before.pick)">{{
+                  points(stat.pick - before.pick)
+                }}</span>
+                since {{ patchName(previousPatch) }}</template
+              ><template v-else>of {{ role.label.toLowerCase() }} games</template></small
+            >
+          </div>
+          <div class="st">
+            <span class="lbl">Ban rate</span>
+            <b class="rd-fig num">{{ pct(stat?.ban) }}</b>
+            <small>of games</small>
+          </div>
+          <div class="st">
+            <span class="lbl">Games</span>
+            <b class="rd-fig num">{{ stat ? thousands(stat.games) : '-' }}</b>
+            <small v-if="share !== undefined" class="num"
+              >{{ pct(share, 0) }} of {{ champion.name }} games</small
+            >
+          </div>
         </div>
       </section>
 
-      <div class="nb-filters">
-        <nav v-if="roleChoices.length" class="nb-seg" aria-label="Role">
+      <div class="cp-ctrl">
+        <nav v-if="roleChoices.length" class="rd-seg cp-roles" aria-label="Role">
           <Link
             v-for="r in roleChoices"
             :key="r.position"
@@ -544,7 +573,18 @@ onBeforeUnmount(() => {
             }}<small class="num">{{ r.share }}</small></Link
           >
         </nav>
-        <div class="end">
+        <nav class="rd-tabs cp-tabs" aria-label="Sections">
+          <a
+            v-for="s in SECTIONS"
+            :key="s.id"
+            :href="`#${s.id}`"
+            :class="{ on: current === s.id }"
+            :aria-current="current === s.id ? 'true' : undefined"
+            >{{ s.label }}</a
+          >
+        </nav>
+        <span class="grow" />
+        <div class="dv-sels dv-sel">
           <Select
             v-model="rankModel"
             :options="rankOptions"
@@ -570,406 +610,376 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <nav class="nb-sections" aria-label="Sections">
-        <a
-          v-for="s in SECTIONS"
-          :key="s.id"
-          :href="`#${s.id}`"
-          :class="{ on: current === s.id }"
-          :aria-current="current === s.id ? 'true' : undefined"
-          >{{ s.label }}</a
-        >
-      </nav>
-
       <p v-if="!filter || !stat" class="nb-panel nb-empty">
         Not enough games for {{ champion.name }} {{ role.label.toLowerCase() }} with these filters
         yet.
       </p>
 
       <template v-else>
-        <!-- Overview: the build board -->
-        <div id="build" class="nb-grid3 nb-sec" style="margin-top: 0">
-          <div class="nb-stack left">
-            <section class="nb-panel">
-              <div class="nb-ph">
-                <h2>Runes</h2>
-                <span v-if="topPage" class="end nb-meta num"
-                  >{{ pct(topPage.win) }}, {{ pct(topPage.share, 0) }}</span
+        <!-- Overview: the recommended build, then the matchups and the lane beside it. -->
+        <div id="build" class="cp-main nb-sec" style="margin-top: 0">
+          <div class="cp-col">
+            <section class="rd-card rd-lit cp-rec" aria-labelledby="h-rec">
+              <div class="rd-head">
+                <h2 id="h-rec">
+                  Recommended build<span v-if="build" class="rd-meta num"
+                    >Most played core, {{ thousands(build.games) }} games</span
+                  >
+                </h2>
+                <span v-if="core" class="cp-big num"
+                  ><b class="rd-fig">{{ pct(core.win) }}</b
+                  ><small>win rate</small></span
                 >
               </div>
-              <div v-if="topPage" class="nb-pb">
-                <div class="nb-runepage">
-                  <div class="r">
-                    <GameImg
-                      kind="runeStyle"
-                      :id="topPage.page.primaryStyle"
-                      :size="20"
-                      :name="styleName(topPage.page.primaryStyle)"
-                    />
-                    <GameImg
-                      kind="rune"
-                      :id="topPage.page.keystone"
-                      :size="34"
-                      round
-                      :name="label('rune', topPage.page.keystone)"
-                    />
-                    <GameImg
-                      v-for="id in topPage.page.primary"
-                      :key="id"
-                      kind="rune"
-                      :id="id"
-                      :size="26"
-                      round
-                      :name="label('rune', id)"
-                    />
+              <div class="cp-rec-in">
+                <div class="half">
+                  <div class="k">
+                    <span>Runes</span
+                    ><span v-if="topPage" class="rd-vio num"
+                      >{{ pct(topPage.win) }} win, {{ pct(topPage.share, 0) }} of games</span
+                    >
                   </div>
-                  <div class="r">
-                    <GameImg
-                      kind="runeStyle"
-                      :id="topPage.page.secondaryStyle"
-                      :size="20"
-                      :name="styleName(topPage.page.secondaryStyle)"
-                    />
-                    <GameImg
-                      v-for="id in topPage.page.secondary"
-                      :key="id"
-                      kind="rune"
-                      :id="id"
-                      :size="26"
-                      round
-                      :name="label('rune', id)"
-                    />
-                    <span class="sh"
-                      ><GameImg
+                  <template v-if="topPage">
+                    <div class="ks">
+                      <span class="ksi"
+                        ><GameImg
+                          kind="rune"
+                          :id="topPage.page.keystone"
+                          :size="56"
+                          round
+                          eager
+                          :name="label('rune', topPage.page.keystone)"
+                      /></span>
+                      <span class="min-w-0"
+                        ><b>{{ label('rune', topPage.page.keystone) }}</b
+                        ><small
+                          >{{ styleName(topPage.page.primaryStyle) }}, then
+                          {{ styleName(topPage.page.secondaryStyle) }}</small
+                        ></span
+                      >
+                    </div>
+                    <div class="rp">
+                      <GameImg
+                        v-for="id in topPage.page.primary"
+                        :key="id"
+                        kind="rune"
+                        :id="id"
+                        :size="28"
+                        round
+                        :name="label('rune', id)"
+                      />
+                      <span class="gap" />
+                      <GameImg
+                        v-for="id in topPage.page.secondary"
+                        :key="id"
+                        kind="rune"
+                        :id="id"
+                        :size="28"
+                        round
+                        :name="label('rune', id)"
+                      />
+                      <span class="gap" />
+                      <GameImg
                         v-for="(id, i) in topPage.page.shards"
-                        :key="i"
+                        :key="`s${i}`"
                         kind="rune"
                         :id="id"
                         :size="18"
                         round
                         :name="label('rune', id)"
+                      />
+                    </div>
+                    <div class="kss">
+                      <div v-for="k in runes!.keystones.slice(0, 3)" :key="k.keystone" class="rw">
+                        <GameImg
+                          kind="rune"
+                          :id="k.keystone"
+                          :size="22"
+                          round
+                          :name="label('rune', k.keystone)"
+                        />
+                        <span class="n">{{ label('rune', k.keystone) }}</span>
+                        <span class="q num">{{ pct(k.share, 0) }}</span
+                        ><b class="num">{{ pct(k.win) }}</b>
+                      </div>
+                    </div>
+                  </template>
+                  <span v-else-if="waiting('runes')" class="nb-skel" style="height: 190px" />
+                  <p v-else class="dv-empty">Not enough games yet.</p>
+                </div>
+                <div class="half">
+                  <div class="k">
+                    <span>Spells and start</span
+                    ><span v-if="spells && (spells as any).flashOnD !== undefined" class="q num"
+                      >Flash on D {{ pct((spells as any).flashOnD, 0) }}</span
+                    >
+                  </div>
+                  <div
+                    v-for="p in spells?.pairs.slice(0, 2) ?? []"
+                    :key="p.spells.join()"
+                    class="rw"
+                  >
+                    <span class="i"
+                      ><GameImg
+                        v-for="s in p.spells"
+                        :key="s"
+                        kind="spell"
+                        :id="s"
+                        :size="30"
+                        :name="label('spell', s)"
                     /></span>
+                    <span class="n">{{ p.spells.map((s) => label('spell', s)).join(', ') }}</span>
+                    <span class="q num">{{ pct(p.share, 0) }}</span
+                    ><b class="num">{{ pct(p.win) }}</b>
+                  </div>
+                  <span
+                    v-if="!spells?.pairs.length && waiting('spells')"
+                    class="nb-skel"
+                    style="height: 70px"
+                  />
+                  <div v-if="starter" class="rw">
+                    <span class="i"
+                      ><GameImg
+                        v-for="(id, i) in starter.items"
+                        :key="`s${i}`"
+                        kind="item"
+                        :id="id"
+                        :size="30"
+                        :name="label('item', id)"
+                    /></span>
+                    <span class="n">{{
+                      starter.items.map((i) => label('item', i)).join(', ')
+                    }}</span>
+                    <span class="q num">{{ pct(starter.share, 0) }}</span
+                    ><b class="num">{{ pct(starter.win) }}</b>
+                  </div>
+                  <div v-for="o in boots.slice(0, 2)" :key="o.items.join()" class="rw">
+                    <span class="i"
+                      ><GameImg
+                        kind="item"
+                        :id="o.items[0]"
+                        :size="30"
+                        :name="label('item', o.items[0])"
+                    /></span>
+                    <span class="n">{{ label('item', o.items[0]) }}</span>
+                    <span class="q num">{{ pct(o.share, 0) }}</span
+                    ><b class="num">{{ pct(o.win) }}</b>
+                  </div>
+                  <span v-if="!build && waiting('build')" class="nb-skel" style="height: 100px" />
+                </div>
+              </div>
+              <div v-if="core" class="cp-core">
+                <div class="k">
+                  <span>Core, then</span
+                  ><span class="rd-vio num">{{ pct(core.share, 0) }} of games build it</span>
+                </div>
+                <div class="row">
+                  <span class="items">
+                    <template v-for="(id, i) in core.items" :key="id">
+                      <span v-if="i" class="ar" aria-hidden="true"
+                        ><ChevronRight :size="14"
+                      /></span>
+                      <GameImg kind="item" :id="id" :size="48" :name="label('item', id)" eager />
+                    </template>
+                  </span>
+                  <div v-for="(slot, i) in build!.slots.slice(0, 3)" :key="i" class="slot">
+                    <span class="sk">{{ SLOT[i] }}</span>
+                    <div v-for="o in slot.slice(0, 3)" :key="o.item" class="so">
+                      <GameImg kind="item" :id="o.item" :size="26" :name="label('item', o.item)" />
+                      <span class="num"
+                        ><b>{{ pct(o.win) }}</b
+                        ><small>{{ pct(o.share, 0) }}</small></span
+                      >
+                    </div>
                   </div>
                 </div>
-                <div class="nb-hl" />
-                <div
-                  v-for="k in runes!.keystones.slice(0, 3)"
-                  :key="k.keystone"
-                  class="nb-row"
-                  style="min-height: 36px"
-                >
-                  <GameImg
-                    kind="rune"
-                    :id="k.keystone"
-                    :size="22"
-                    round
-                    :name="label('rune', k.keystone)"
-                  />
-                  <span class="n">{{ label('rune', k.keystone) }}</span>
-                  <span class="v q num">{{ pct(k.share, 0) }}</span
-                  ><span class="v num">{{ pct(k.win) }}</span>
-                </div>
-              </div>
-              <div v-else-if="waiting('runes')" class="nb-pb" aria-busy="true">
-                <span class="nb-skel" style="height: 210px" />
-              </div>
-              <p v-else class="nb-empty">Not enough games yet.</p>
-            </section>
-            <section class="nb-panel">
-              <div class="nb-ph">
-                <h2>Summoner spells</h2>
-                <span v-if="spells && spells.flashOnD !== undefined" class="end nb-meta num"
-                  >Flash on D {{ pct((spells as any).flashOnD, 0) }}</span
-                >
-              </div>
-              <div v-if="spells?.pairs.length" class="nb-pb rows">
-                <div v-for="p in spells.pairs.slice(0, 2)" :key="p.spells.join()" class="nb-row">
-                  <span class="i"
-                    ><GameImg
-                      v-for="s in p.spells"
-                      :key="s"
-                      kind="spell"
-                      :id="s"
-                      :size="24"
-                      :name="label('spell', s)"
-                  /></span>
-                  <span class="n">{{ p.spells.map((s) => label('spell', s)).join(', ') }}</span>
-                  <span class="v q num">{{ pct(p.share, 0) }}</span
-                  ><span class="v num">{{ pct(p.win) }}</span>
-                </div>
-              </div>
-              <div v-else-if="waiting('spells')" class="nb-pb" aria-busy="true">
-                <span class="nb-skel" style="height: 80px" />
-              </div>
-              <p v-else class="nb-empty">Not enough games yet.</p>
-            </section>
-            <section class="nb-panel">
-              <div class="nb-ph">
-                <h2>Boots</h2>
-                <span v-if="build && boots.length" class="end nb-meta num"
-                  >Bought in
-                  {{
-                    pct(
-                      boots.reduce((n, b) => n + b.share, 0),
-                      0
-                    )
-                  }}
-                  of games</span
-                >
-              </div>
-              <div v-if="boots.length" class="nb-pb rows">
-                <div v-for="o in boots.slice(0, 3)" :key="o.items.join()" class="nb-row">
-                  <GameImg
-                    kind="item"
-                    :id="o.items[0]"
-                    :size="24"
-                    :name="label('item', o.items[0])"
-                  />
-                  <span class="n">{{ label('item', o.items[0]) }}</span>
-                  <span class="v q num">{{ pct(o.share, 0) }}</span
-                  ><span class="v num">{{ pct(o.win) }}</span>
-                </div>
-              </div>
-              <div v-else-if="waiting('build')" class="nb-pb" aria-busy="true">
-                <span class="nb-skel" style="height: 116px" />
-              </div>
-              <p v-else class="nb-empty">Not enough games yet.</p>
-            </section>
-          </div>
-
-          <div class="nb-stack centre">
-            <section class="nb-panel">
-              <div class="nb-ph">
-                <h2>Build</h2>
-                <span v-if="build" class="nb-meta num"
-                  >Most played, {{ thousands(build.games) }} games</span
-                >
-                <span class="end"
-                  ><a href="#items">Every item<ChevronRight :size="12" aria-hidden="true" /></a
-                ></span>
-              </div>
-              <div v-if="core" class="nb-pb">
-                <div class="nb-core">
-                  <template v-if="starter">
-                    <GameImg
-                      v-for="(id, i) in starter.items"
-                      :key="`s${i}`"
-                      kind="item"
-                      :id="id"
-                      :size="34"
-                      :name="label('item', id)"
-                      eager
-                    />
-                    <span class="ar" aria-hidden="true"><ChevronRight :size="13" /></span>
-                  </template>
-                  <template v-if="boots[0]">
-                    <GameImg
-                      kind="item"
-                      :id="boots[0].items[0]"
-                      :size="34"
-                      :name="label('item', boots[0].items[0])"
-                      eager
-                    />
-                    <span class="ar" aria-hidden="true"><ChevronRight :size="13" /></span>
-                  </template>
-                  <GameImg
-                    v-for="id in core.items"
-                    :key="id"
-                    kind="item"
-                    :id="id"
-                    :size="46"
-                    :name="label('item', id)"
-                    eager
-                  />
-                  <span class="lbl num"
-                    >{{ pct(core.win) }} win<small>{{ pct(core.share, 0) }} of games</small></span
-                  >
-                </div>
                 <template v-if="otherCores.length">
-                  <div class="nb-hl" />
-                  <span class="nb-k">Other cores</span>
-                  <div
-                    v-for="c in otherCores"
-                    :key="c.items.join()"
-                    class="nb-row"
-                    style="min-height: 38px"
-                  >
+                  <div class="k" style="margin-top: 18px">
+                    <span>Other cores</span><span class="q">Share of games, win rate</span>
+                  </div>
+                  <div v-for="c in otherCores" :key="c.items.join()" class="rw">
                     <span class="i"
                       ><GameImg
                         v-for="id in c.items"
                         :key="id"
                         kind="item"
                         :id="id"
-                        :size="24"
+                        :size="26"
                         :name="label('item', id)"
                     /></span>
-                    <span class="n" style="color: var(--text-2); font-weight: 400">{{
+                    <span class="n quiet">{{
                       c.items.map((i) => label('item', i)).join(', ')
                     }}</span>
-                    <span class="v q num">{{ pct(c.share, 0) }}</span
-                    ><span class="v num">{{ pct(c.win) }}</span>
+                    <span class="q num">{{ pct(c.share, 0) }}</span
+                    ><b class="num">{{ pct(c.win) }}</b>
                   </div>
                 </template>
-                <template v-if="build!.slots.some((s) => s.length)">
-                  <div class="nb-hl" />
-                  <div class="nb-slots">
-                    <div v-for="(slot, i) in build!.slots.slice(0, 3)" :key="i">
-                      <span class="nb-k" style="margin-bottom: 2px">{{ SLOT[i] }}</span>
-                      <div v-for="o in slot.slice(0, 3)" :key="o.item" class="nb-slot">
-                        <GameImg
-                          kind="item"
-                          :id="o.item"
-                          :size="24"
-                          :name="label('item', o.item)"
-                        />
-                        <span class="n">{{ label('item', o.item) }}</span>
-                        <span class="v num"
-                          >{{ pct(o.win) }}<small>{{ pct(o.share, 0) }}</small></span
-                        >
-                      </div>
-                    </div>
-                  </div>
-                </template>
+                <a href="#items" class="dv-more cp-every"
+                  >Every item<ChevronRight :size="13" aria-hidden="true"
+                /></a>
               </div>
-              <div v-else-if="waiting('build')" class="nb-pb" aria-busy="true">
-                <span class="nb-skel" style="height: 290px" />
+              <div v-else-if="waiting('build')" class="cp-core">
+                <span class="nb-skel" style="height: 120px" />
               </div>
-              <p v-else class="nb-empty">Not enough games yet.</p>
+              <p v-else class="dv-empty">Not enough games with a full build yet.</p>
             </section>
-            <section class="nb-panel">
-              <div class="nb-ph">
-                <h2>Skill order</h2>
-                <span v-if="skills?.max.length" class="nb-meta"
-                  >Max {{ skills.max.join(', then ') }}</span
-                >
-                <span v-if="order" class="end nb-meta num"
-                  >{{ pct(order.win) }}, {{ pct(order.share, 0) }}</span
+
+            <section class="rd-card" aria-labelledby="h-skills">
+              <div class="rd-head">
+                <h2 id="h-skills">
+                  Skill order<span v-if="skills?.max.length" class="rd-meta"
+                    >Max {{ skills.max.join(', then ') }}</span
+                  >
+                </h2>
+                <span v-if="order" class="rd-meta num"
+                  >{{ pct(order.win) }} win, {{ pct(order.share, 0) }} of games</span
                 >
               </div>
-              <div v-if="order" class="nb-pb">
-                <div class="nb-skills" role="table" :aria-label="`Skill order of ${champion.name}`">
+              <div v-if="order" class="cp-skills">
+                <div
+                  class="nb-skills"
+                  role="table"
+                  :aria-label="`Skill order of ${champion.name}`"
+                  :style="{
+                    gridTemplateColumns: `30px repeat(${order.order.length}, minmax(0, 1fr))`,
+                  }"
+                >
                   <template v-for="k in KEYS" :key="k">
-                    <span class="l" role="rowheader">{{ k }}</span>
-                    <i v-for="(o, i) in order.order" :key="i" :class="{ on: o === k }">{{
-                      o === k ? i + 1 : ''
-                    }}</i>
+                    <span class="l" role="rowheader"
+                      ><GameImg
+                        kind="ability"
+                        :id="`${champion.id}-${k.toLowerCase()}`"
+                        :size="22"
+                        :name="k"
+                    /></span>
+                    <i
+                      v-for="(o, i) in order.order"
+                      :key="i"
+                      :class="{ on: o === k, ult: o === k && k === 'R' }"
+                      >{{ o === k ? i + 1 : '' }}</i
+                    >
                   </template>
                 </div>
               </div>
-              <div v-else-if="waiting('skills')" class="nb-pb" aria-busy="true">
+              <div v-else-if="waiting('skills')" class="cp-skills" aria-busy="true">
                 <span class="nb-skel" style="height: 100px" />
               </div>
-              <p v-else class="nb-empty">Not enough games with a skill order yet.</p>
+              <p v-else class="dv-empty">Not enough games with a skill order yet.</p>
             </section>
           </div>
 
-          <div class="nb-stack right">
-            <section class="nb-panel">
-              <div class="nb-ph">
-                <h2>Matchups</h2>
-                <span class="end">
-                  <span class="nb-seg" role="group" aria-label="Matchups">
-                    <button
-                      type="button"
-                      :class="{ on: matchTab === 'hard' }"
-                      :aria-pressed="matchTab === 'hard'"
-                      @click="matchTab = 'hard'"
-                    >
-                      Hardest
-                    </button>
-                    <button
-                      type="button"
-                      :class="{ on: matchTab === 'easy' }"
-                      :aria-pressed="matchTab === 'easy'"
-                      @click="matchTab = 'easy'"
-                    >
-                      Easiest
-                    </button>
-                  </span>
+          <aside class="cp-col">
+            <section class="rd-card" aria-labelledby="h-mu">
+              <div class="rd-head">
+                <h2 id="h-mu">
+                  Matchups<span class="rd-meta">{{ champion.name }}'s win rate</span>
+                </h2>
+              </div>
+              <div class="cp-segrow">
+                <span class="rd-seg" role="group" aria-label="Matchups">
+                  <button
+                    type="button"
+                    :class="{ on: matchTab === 'hard' }"
+                    :aria-pressed="matchTab === 'hard'"
+                    @click="matchTab = 'hard'"
+                  >
+                    Hardest
+                  </button>
+                  <button
+                    type="button"
+                    :class="{ on: matchTab === 'easy' }"
+                    :aria-pressed="matchTab === 'easy'"
+                    @click="matchTab = 'easy'"
+                  >
+                    Easiest
+                  </button>
                 </span>
               </div>
-              <div v-if="matchList.length" class="nb-pb rows">
+              <template v-if="matchList.length">
                 <Link
                   v-for="m in matchList"
                   :key="m.champion"
                   :href="championHref(m.champion, position)"
-                  class="nb-row"
+                  class="dv-row cp-row"
                   prefetch="hover"
                   cache-for="30s"
                 >
-                  <span class="pic"><ChampIcon :id="m.champion" :size="28" /></span>
-                  <span class="n"
-                    >{{ champName(m.champion)
-                    }}<small class="num">{{ thousands(m.games) }} games</small></span
+                  <span class="dv-pic"><ChampIcon :id="m.champion" :size="30" /></span>
+                  <span class="dv-who"
+                    ><b>{{ champName(m.champion) }}</b
+                    ><small class="num">{{ thousands(m.games) }} games</small></span
                   >
-                  <span class="v num" :class="gapClass(m.win - ownWin)" style="font-weight: 500">{{
-                    points(m.win - ownWin)
-                  }}</span
-                  ><span class="v num">{{ pct(m.win) }}</span>
+                  <span class="dv-val"
+                    ><span class="rd-fig num" :class="deltaClass(m.win - ownWin)">{{
+                      pct(m.win)
+                    }}</span
+                    ><small class="gp num">{{ points(m.win - ownWin) }}</small></span
+                  >
                 </Link>
-              </div>
-              <div v-else-if="waiting('matchups')" class="nb-pb" aria-busy="true">
+              </template>
+              <div v-else-if="waiting('matchups')" class="cp-pad" aria-busy="true">
                 <span class="nb-skel" style="height: 250px" />
               </div>
-              <p v-else class="nb-empty">Not enough games against one opponent yet.</p>
+              <p v-else class="dv-empty">Not enough games against one opponent yet.</p>
             </section>
-            <section class="nb-panel">
-              <div class="nb-ph">
-                <h2>Lane at 10 min</h2>
-                <span class="end nb-meta">vs the other {{ role.label.toLowerCase() }}</span>
+
+            <section class="rd-card" aria-labelledby="h-mates">
+              <div class="rd-head">
+                <h2 id="h-mates">Best with</h2>
+                <span class="rd-meta">Win rate together</span>
               </div>
-              <div v-if="at10" class="nb-pb nb-kv">
-                <div>
-                  <span>Gold</span
-                  ><b class="iv-fig num" :class="gapClass(at10.goldDiff)">{{
-                    signed(at10.goldDiff)
-                  }}</b>
-                </div>
-                <div>
-                  <span>Ahead in</span><b class="iv-fig num">{{ pct(at10.ahead, 0) }}</b>
-                </div>
-                <div>
-                  <span>Then wins</span><b class="iv-fig num">{{ pct(at10.aheadWin) }}</b>
-                </div>
-              </div>
-              <div v-else-if="waiting('early')" class="nb-pb" aria-busy="true">
-                <span class="nb-skel" style="height: 40px" />
-              </div>
-              <p v-else class="nb-empty">Not enough games with a timeline yet.</p>
-            </section>
-            <section class="nb-panel">
-              <div class="nb-ph">
-                <h2>Best teammates</h2>
-                <span class="end nb-meta">Win rate together</span>
-              </div>
-              <div v-if="mates.length" class="nb-pb rows">
+              <template v-if="mates.length">
                 <Link
                   v-for="m in mates"
                   :key="m.position"
                   :href="championHref(m.champion, m.position)"
-                  class="nb-row"
+                  class="dv-row cp-row"
                   prefetch="hover"
                   cache-for="30s"
                 >
-                  <span
-                    style="display: inline-flex; width: 16px; color: var(--text-3)"
-                    :title="roleOf(m.position).label"
-                    ><RoleIcon :lane="roleOf(m.position).lane" :size="13"
-                  /></span>
-                  <span class="pic"><ChampIcon :id="m.champion" :size="26" /></span>
-                  <span class="n"
-                    >{{ champName(m.champion)
-                    }}<small class="num">{{ thousands(m.games) }} games</small></span
+                  <span class="dv-pic"><ChampIcon :id="m.champion" :size="30" /></span>
+                  <span class="dv-who"
+                    ><b>{{ champName(m.champion) }}</b
+                    ><small class="num"
+                      >{{ roleOf(m.position).label }}, {{ thousands(m.games) }} games</small
+                    ></span
                   >
-                  <span class="v num">{{ pct(m.win) }}</span>
+                  <span class="dv-val"
+                    ><span class="rd-fig num">{{ pct(m.win) }}</span></span
+                  >
                 </Link>
-              </div>
-              <div v-else-if="waiting('teammates')" class="nb-pb" aria-busy="true">
+              </template>
+              <div v-else-if="waiting('teammates')" class="cp-pad" aria-busy="true">
                 <span class="nb-skel" style="height: 170px" />
               </div>
-              <p v-else class="nb-empty">Not enough games together yet.</p>
+              <p v-else class="dv-empty">Not enough games together yet.</p>
             </section>
-          </div>
+
+            <section class="rd-card" aria-labelledby="h-lane">
+              <div class="rd-head">
+                <h2 id="h-lane">Lane at 10 min</h2>
+                <span class="rd-meta">Against the other {{ role.label.toLowerCase() }}</span>
+              </div>
+              <div v-if="at10" class="cp-kv">
+                <div>
+                  <span>Gold</span
+                  ><b class="rd-fig num" :class="at10.goldDiff > 0 ? 'rd-gold' : ''">{{
+                    signed(at10.goldDiff)
+                  }}</b>
+                </div>
+                <div>
+                  <span>Ahead in</span><b class="rd-fig num">{{ pct(at10.ahead, 0) }}</b>
+                </div>
+                <div>
+                  <span>Then wins</span><b class="rd-fig num">{{ pct(at10.aheadWin) }}</b>
+                </div>
+              </div>
+              <div v-else-if="waiting('early')" class="cp-pad" aria-busy="true">
+                <span class="nb-skel" style="height: 40px" />
+              </div>
+              <p v-else class="dv-empty">Not enough games with a timeline yet.</p>
+            </section>
+          </aside>
         </div>
 
         <section class="nb-strip" style="margin-top: 12px" aria-label="Figures">
@@ -1488,7 +1498,7 @@ onBeforeUnmount(() => {
         <!-- Statistics -->
         <section id="statistics" class="nb-sec" aria-labelledby="h-stats">
           <h2 id="h-stats">
-            Statistics<span class="nb-meta num">Patch {{ patch }}</span>
+            Statistics<span class="nb-meta num">Patch {{ patchName(patch) }}</span>
           </h2>
           <section class="nb-panel">
             <div class="nb-ph">
