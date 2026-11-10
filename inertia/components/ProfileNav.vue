@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
-import { ArrowLeftRight, Crown, LayoutGrid, Radio, ScanEye, Swords, Users } from 'lucide-vue-next'
 
 const props = defineProps<{ slug: string; section: string }>()
 
@@ -40,15 +39,15 @@ watch(
 )
 
 const TABS = [
-  { key: 'overview', label: 'Overview', icon: LayoutGrid },
+  { key: 'overview', label: 'Overview' },
   // Hidden from the list for the launch (Oct 2026): /<player>/lens still opens, and the tab
   // shows only while it is the open section. Remove `hidden` to list it again.
-  { key: 'lens', label: 'Lens', icon: ScanEye, hidden: true },
-  { key: 'champions', label: 'Champions', icon: Swords },
-  { key: 'mastery', label: 'Mastery', icon: Crown },
-  { key: 'friends', label: 'Friends', icon: Users },
-  { key: 'compare', label: 'Compare', icon: ArrowLeftRight },
-  { key: 'live', label: 'Live', icon: Radio },
+  { key: 'lens', label: 'Lens', hidden: true },
+  { key: 'champions', label: 'Champions' },
+  { key: 'mastery', label: 'Mastery' },
+  { key: 'friends', label: 'Friends' },
+  { key: 'compare', label: 'Compare' },
+  { key: 'live', label: 'Live game' },
 ] as const
 
 const tabs = computed(() =>
@@ -57,11 +56,10 @@ const tabs = computed(() =>
 </script>
 
 <template>
-  <!-- Sections of the profile: the shared tabs on narrow screens, a vertical list in the rail on
-       wide ones, like the desktop app's sidebar. -->
+  <!-- Sections of the profile: underline tabs under the header, scrolling sideways on a phone. -->
   <nav
     ref="nav"
-    class="profile-nav iv-tabs"
+    class="profile-nav rd-tabs"
     :class="{ 'fade-l': before, 'fade-r': more, 'fade-x': before && more }"
     aria-label="Player sections"
     @scroll.passive="measure"
@@ -75,7 +73,6 @@ const tabs = computed(() =>
       preserve-state
       preserve-scroll
     >
-      <component :is="item.icon" :size="16" />
       {{ item.label }}
     </Link>
   </nav>
@@ -83,73 +80,22 @@ const tabs = computed(() =>
 
 <style scoped>
 .profile-nav {
-  overflow-x: auto;
+  margin-bottom: 20px;
   scrollbar-width: none;
 }
-
 .profile-nav::-webkit-scrollbar {
   display: none;
 }
-
 .profile-nav a {
   flex: none;
-  height: 40px;
-  white-space: nowrap;
+  text-decoration: none;
 }
-
-.profile-nav a :deep(svg) {
-  display: none;
+.profile-nav a:hover {
+  color: var(--text-1);
 }
-
-@media (min-width: 64rem) {
-  .profile-nav {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 2px;
-    overflow: visible;
-    border-bottom: 0;
-  }
-
-  .profile-nav a {
-    gap: 10px;
-    height: 34px;
-    padding: 0 10px;
-    color: var(--text-2);
-    border-radius: var(--r-sm);
-    transition:
-      color var(--t-fast),
-      background-color var(--t-fast);
-  }
-
-  .profile-nav a :deep(svg) {
-    display: block;
-    flex: none;
-    color: var(--text-3);
-    transition: color var(--t-fast);
-  }
-
-  .profile-nav a:hover {
-    background: var(--surface-1);
-  }
-
-  .profile-nav a:hover :deep(svg) {
-    color: var(--text-2);
-  }
-
-  /* The current section: the violet-lit pill of the app's sidebar. */
-  .profile-nav a.on {
-    color: var(--text-1);
-    background: var(--lit-pill);
-    box-shadow: var(--lit-pill-edge);
-  }
-
-  .profile-nav a.on :deep(svg) {
-    color: var(--brand-hi);
-    filter: drop-shadow(0 0 6px rgb(var(--brand-rgb) / 0.5));
-  }
-
-  .profile-nav a.on::after {
-    display: none;
-  }
+.profile-nav a:focus-visible {
+  outline: 2px solid var(--rd-violet);
+  outline-offset: -2px;
+  border-radius: 4px;
 }
 </style>

@@ -5,6 +5,7 @@ import { profileIcon } from '../lib/assets.js'
 import { profilePath } from '../lib/format.js'
 import type { Teammate } from '../lib/types.js'
 import ShowMore from './ShowMore.vue'
+import WinLoss from './ui/WinLoss.vue'
 
 const props = defineProps<{ teammates: Teammate[] }>()
 
@@ -20,45 +21,32 @@ const rows = computed(() =>
 </script>
 
 <template>
-  <section v-if="rows.length" class="iv-panel">
-    <div class="section">
+  <section v-if="rows.length" class="rd-card">
+    <div class="rd-head">
       <h3>Played with</h3>
     </div>
 
-    <ul class="-mx-2">
+    <ul class="rd-plist">
       <li v-for="mate in rows" :key="mate.puuid">
-        <Link
-          :href="profilePath(mate.gameName, mate.tagLine)"
-          class="flex h-[48px] items-center gap-3 rounded-[5px] px-2 transition-colors hover:bg-panel"
-        >
+        <Link :href="profilePath(mate.gameName, mate.tagLine)" class="prow">
           <img
             :src="profileIcon(mate.profileIconId)"
             alt=""
-            width="32"
-            height="32"
+            width="36"
+            height="36"
             loading="lazy"
-            class="thumb h-8 w-8 rounded-[5px]"
+            class="rd-por"
           />
-          <span class="min-w-0 flex-1">
-            <span class="block truncate text-[13px] leading-[17px]">
-              <span class="font-semibold text-ink">{{ mate.gameName }}</span>
-              <span class="text-ink-3">#{{ mate.tagLine }}</span>
-            </span>
-            <span class="num block text-[12px] leading-4 text-ink-3">
-              {{ mate.games }} games together
-            </span>
+          <span class="min-w-0">
+            <b class="truncate">{{ mate.gameName }}</b>
+            <small class="num">{{ mate.games }} games together</small>
           </span>
-          <span class="num shrink-0 text-right">
-            <span class="block text-[13px] font-semibold leading-[17px] text-ink">
-              {{ mate.winrate }}%
-            </span>
-            <span class="block text-[12px] leading-4 text-ink-3">
-              {{ mate.wins }}W {{ mate.games - mate.wins }}L
-            </span>
-          </span>
+          <WinLoss :wins="mate.wins" :losses="mate.games - mate.wins" />
         </Link>
       </li>
     </ul>
-    <ShowMore v-model="open" class="mt-1" :total="teammates.length" :limit="LIST" />
+    <div v-if="teammates.length > LIST" class="rd-foot">
+      <ShowMore v-model="open" :total="teammates.length" :limit="LIST" />
+    </div>
   </section>
 </template>
