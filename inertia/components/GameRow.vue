@@ -23,7 +23,22 @@ const props = defineProps<{
   open?: boolean
   /** Show the lane opponent instead of the team rating (a champion's own list). */
   versus?: boolean
+  /** Instead of both teams: the other pros of the game, ringed blue (with) or red (against). */
+  pros?: Array<{
+    pro: { slug: string; name: string; photo?: string; role?: string | null }
+    champion: number
+    ally: boolean
+  }> | null
+  /** Instead of the team rating: kill participation (pro games, where it is the read). */
+  kp?: boolean
 }>()
+
+const PROS_SHOWN = 4
+const shownPros = computed(() =>
+  [...(props.pros ?? [])].sort((a, b) => Number(b.ally) - Number(a.ally)).slice(0, PROS_SHOWN)
+)
+const photoUrl = (slug: string, photo: string) =>
+  `/cdn/pro/${encodeURIComponent(slug)}?s=32&v=${encodeURIComponent(photo)}`
 
 defineEmits<{ toggle: [] }>()
 
@@ -65,7 +80,7 @@ const opponent = computed(() => props.game.score?.opponent ?? null)
   <button
     type="button"
     class="g2"
-    :class="[game.remake ? 'rm' : game.win ? 'w' : 'l', { open, nd: score === null }]"
+    :class="[game.remake ? 'rm' : game.win ? 'w' : 'l', { open, nd: score === null, pro: !!pros }]"
     :aria-expanded="open"
     :aria-label="`${champName(game.championId)}, ${result}, ${game.kills}/${game.deaths}/${game.assists}, ${queueName(game.queueId, t)}`"
     @click="$emit('toggle')"
@@ -125,6 +140,9 @@ const opponent = computed(() => props.game.score?.opponent ?? null)
         ><b>{{ game.csMin.toFixed(1) }}</b> CS/min</span
       >
       <span v-if="versus && opponent" class="vs">vs {{ champName(opponent) }}</span>
+      <span v-else-if="kp && game.score?.kp != null" class="vs"
+        ><b>{{ Math.round(game.score.kp * 100) }}%</b> kill part.</span
+      >
       <span
         v-else-if="verdict"
         class="rd-tag"
@@ -142,7 +160,32 @@ const opponent = computed(() => props.game.score?.opponent ?? null)
       <img v-if="trinket" class="tk" :src="itemIcon(trinket)" alt="" width="24" height="24" />
     </span>
 
-    <span v-if="fiveByFive" class="gt">
+    <span v-if="pros" class="pg">
+      <template v-for="x in shownPros" :key="x.pro.slug">
+        <img
+          v-if="x.pro.photo"
+          :class="x.ally ? 'a' : 'e'"
+          :src="photoUrl(x.pro.slug, x.pro.photo)"
+          :alt="x.pro.name"
+          :title="`${x.ally ? 'With' : 'Against'} ${x.pro.name} on ${champName(x.champion)}`"
+          width="28"
+          height="28"
+          loading="lazy"
+        />
+        <img
+          v-else
+          :class="x.ally ? 'a' : 'e'"
+          :src="champIcon(x.champion)"
+          :alt="x.pro.name"
+          :title="`${x.ally ? 'With' : 'Against'} ${x.pro.name} on ${champName(x.champion)}`"
+          width="28"
+          height="28"
+          loading="lazy"
+        />
+      </template>
+      <em v-if="(pros?.length ?? 0) > PROS_SHOWN" class="num">+{{ pros!.length - PROS_SHOWN }}</em>
+    </span>
+    <span v-else-if="fiveByFive" class="gt">
       <img
         v-for="(p, i) in teams"
         :key="i"

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, shallowRef } from 'vue'
 import { Link } from '@inertiajs/vue3'
-import { MatchRow } from '@invadelol/ui'
 import { summaryOf, type MatchSummary } from '@invadelol/ui/logic'
 import GameDetail from '../GameDetail.vue'
+import GameRow from '../GameRow.vue'
+import '../../css/rd-players.css'
 import Logo from '../champions/Logo.vue'
 import { afterPaint } from '../../lib/after_paint.js'
 import { detailOf } from '../../lib/match.js'
@@ -22,6 +23,8 @@ export interface OtherPro {
   pro: {
     slug: string
     name: string
+    photo?: string
+    role?: string | null
     team?: { id: string; name: string; shortName?: string | null } | null
   }
   champion: number
@@ -84,64 +87,65 @@ const sides = (id: string) =>
 </script>
 
 <template>
-  <ul v-if="!mounted" class="iv-mr-list" aria-busy="true">
+  <ul v-if="!mounted" class="rd-games" aria-busy="true">
     <li v-for="n in placeholders" :key="n" class="pg-skel"><span class="nb-skel" /></li>
   </ul>
-  <p v-else-if="!rows.length" class="nb-panel nb-empty">No game matches this filter.</p>
-  <ul v-else class="iv-mr-list">
+  <p v-else-if="!rows.length" class="rd-card nb-empty">No game matches this filter.</p>
+  <ul v-else class="rd-games">
     <li
       v-for="{ item, game } in rows"
       :key="item.match.matchId"
-      class="iv-pf-match"
       :class="{ open: open === item.match.matchId }"
     >
-      <MatchRow
+      <GameRow
+        :match="item.match"
         :game="game"
-        :score="game.score"
-        :lp="null"
-        :open="open === item.match.matchId"
         :puuid="item.puuid"
+        :open="open === item.match.matchId"
+        :pros="pros[item.match.matchId] ?? []"
+        kp
         @toggle="toggle(item.match.matchId)"
       />
       <template v-if="shown === item.match.matchId">
-        <p v-if="sides(item.match.matchId).length" class="pg-pros">
-          <span v-for="s in sides(item.match.matchId)" :key="String(s.ally)"
-            ><span class="q">{{ s.ally ? 'With' : 'Against' }}</span
-            ><span v-for="x in s.list" :key="x.pro.slug" class="it"
-              ><Link
-                :href="`/pro/${x.pro.slug}`"
-                :title="`${x.pro.name} on ${championName(x.champion)}`"
-                ><Logo v-if="x.pro.team" :team="x.pro.team" :size="16" />{{ x.pro.name }}</Link
+        <div class="pg-open">
+          <p v-if="sides(item.match.matchId).length" class="pg-pros">
+            <span v-for="s in sides(item.match.matchId)" :key="String(s.ally)"
+              ><span class="q">{{ s.ally ? 'With' : 'Against' }}</span
+              ><span v-for="x in s.list" :key="x.pro.slug" class="it"
+                ><Link
+                  :href="`/pro/${x.pro.slug}`"
+                  :title="`${x.pro.name} on ${championName(x.champion)}`"
+                  ><Logo v-if="x.pro.team" :team="x.pro.team" :size="16" />{{ x.pro.name }}</Link
+                ></span
               ></span
-            ></span
-          >
-        </p>
-        <GameDetail
-          :match="item.match"
-          :puuid="item.puuid"
-          :game-name="item.gameName"
-          :tag-line="item.tagLine"
-        />
+            >
+          </p>
+          <GameDetail
+            :match="item.match"
+            :puuid="item.puuid"
+            :game-name="item.gameName"
+            :tag-line="item.tagLine"
+          />
+        </div>
       </template>
     </li>
   </ul>
 </template>
 
 <style scoped>
-/* A row's placeholder, the shared row's size: 64px, two lines (100px) in a narrow column. */
+/* A row's placeholder, the row's size: 76px. */
 .pg-skel {
   display: block;
-  container: mr / inline-size;
 }
 .pg-skel > span {
   display: block;
-  height: 64px;
-  border-radius: var(--r-sm);
+  height: 76px;
+  border-radius: 8px;
 }
-@container mr (max-width: 520px) {
-  .pg-skel > span {
-    height: 100px;
-  }
+.pg-open {
+  background: var(--rd-card);
+  box-shadow: inset 0 0 0 1px var(--rd-line);
+  border-radius: 0 0 8px 8px;
 }
 
 /* The other pros of the opened game, one quiet line between the row and its detail. */
