@@ -389,6 +389,18 @@
     white-space: nowrap;
   }
 
+  /* Switches and tabs that scroll sideways on a phone keep no scroll bar under them. */
+  .tl-roles,
+  .cx-roles,
+  .cx-cls,
+  .cx-end,
+  .cp-roles,
+  .cp-tabs,
+  .sx-roles,
+  .dv-tabs {
+    scrollbar-width: none;
+  }
+
   /* Phones: section heads stack, sections sit closer. */
   @media (max-width: 47.99rem) {
     .dv-sec {
@@ -399,4 +411,12 @@
       font-size: 19px;
     }
   }
+}
+
+/* Keyboard focus on the discovery pages: the site's ring (app.css) is a box-shadow in the base
+   layer, so any sheet, chip or tile drawing its own edge would hide it. Outside the layers, and
+   above the pages' own edges, the ring always shows. */
+:is(.hm, .tl, .cx, .cp, .sx, .ms) :is(a, button, summary, [tabindex]):focus-visible {
+  outline: none;
+  box-shadow: var(--focus) !important;
 }
