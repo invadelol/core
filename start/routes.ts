@@ -55,6 +55,12 @@ router
     router.get('/pros/search', [ProsController, 'search'])
     /** One stored game's ten players, for a pro's recent games. */
     router.get('/pros/games/:matchId', [ProsController, 'board'])
+    /** The ladder of every pro by LP, a page at a time, as on `/pros?view=ladder`. */
+    router.get('/pros/ladder', [ProsController, 'ladder'])
+    /** The next pro games, of every league or of one. */
+    router.get('/pros/matches', [ProsController, 'matches'])
+    /** A pro's accounts, teams, games and builds, as on `/pro/:slug`. */
+    router.get('/pros/player/:slug', [ProsController, 'player'])
     router.post('/summoners/sync', [SummonersController, 'sync'])
     /**
      * Summoner spells from our own ranked games, for any champion in any role. Before the

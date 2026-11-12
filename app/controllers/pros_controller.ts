@@ -1,7 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import proService from '#services/pro_service'
 import championStatsService from '#services/champion_stats_service'
-import proLadderService from '#services/pro_ladder_service'
+import proLadderService, { type LadderRow } from '#services/pro_ladder_service'
 import teamLogoService, { logoSize } from '#services/team_logo_service'
 import proPhotoService, { photoSize } from '#services/pro_photo_service'
 import proMatchService, { split, type ProMatch } from '#services/pro_match_service'
@@ -13,6 +13,8 @@ import { SERVERS, serverList } from '#constants/riot'
 const STRIP_GAMES = 4
 /** Rows of the ladder per page; "Show more" asks for the next ones. */
 const LADDER_PAGE = 50
+/** Games in the list of next games `/api/pros/matches` answers. */
+const UPCOMING_GAMES = 12
 const ROLE_SLUG: Record<string, string> = {
   top: 'TOP',
   jungle: 'JUNGLE',
@@ -91,6 +93,86 @@ function sportsEvent(m: ProMatch, pageUrl: string) {
   }
 }
 
+/**
+ * What a ladder is asked for (`?server=kr&role=mid&page=2`): a server and a role, each left out
+ * when unknown, and a page between 1 and 50.
+ */
+function ladderQuery(request: HttpContext['request']) {
+  const slug = String(request.input('server', '')).toLowerCase()
+  return {
+    server: SERVERS.find((s) => s.slug === slug) ?? null,
+    role: ROLE_SLUG[String(request.input('role', '')).toLowerCase()] ?? null,
+    page: Math.max(1, Math.min(50, Number.parseInt(String(request.input('page', 1))) || 1)),
+  }
+}
+
+/** A page of the ladder and the servers it can be narrowed to, each empty while unreadable. */
+async function readLadder({ server, role, page }: ReturnType<typeof ladderQuery>) {
+  const [ladder, servers] = await Promise.all([
+    proLadderService
+      .ladder({
+        platform: server?.platform ?? null,
+        role,
+        limit: LADDER_PAGE,
+        offset: (page - 1) * LADDER_PAGE,
+      })
+      .catch(() => ({ total: 0, rows: [] as LadderRow[] })),
+    proLadderService.servers(role).catch(() => []),
+  ])
+  return { ladder, servers }
+}
+
+/** A server of the ladder's filter: its address, its label and how many pros it has. */
+const ladderServer = ({ slug, label, pros }: { slug: string; label: string; pros: number }) => ({
+  slug,
+  label,
+  pros,
+})
+
+/** A row of the ladder as it is sent: the pro, their league, their best account's rank, their move. */
+const ladderRow = (r: LadderRow) => ({
+  place: r.place,
+  pro: {
+    slug: r.pro.slug,
+    name: r.pro.name,
+    ...(r.pro.photo ? { photo: r.pro.photo } : {}),
+    role: r.pro.role,
+    country: r.pro.country,
+    team: r.pro.team
+      ? {
+          id: r.pro.team.id,
+          slug: r.pro.team.slug,
+          name: r.pro.team.name,
+          shortName: r.pro.team.shortName,
+        }
+      : null,
+  },
+  league: r.league ? { slug: r.league.slug, code: r.league.code } : null,
+  account: {
+    platform: r.account.platform,
+    tier: r.account.tier,
+    division: r.account.division,
+    lp: r.account.lp,
+  },
+  move: r.move,
+})
+
+/**
+ * A pro as their page shows them, with their team's next match and last result; null for an
+ * unknown slug. `pro` is everything read, `shown` what is sent: their builds, not the summaries
+ * the share card and the team page use.
+ */
+async function readPro(slug: string) {
+  const pro = await proService.player(slug)
+  if (!pro) return null
+  const matches = pro.team ? split(await proMatchService.forTeam(pro.team.id)) : null
+  return {
+    pro,
+    shown: without(pro, 'id', 'champions', 'roles', 'items', 'pools'),
+    matches: { next: matches?.next[0] ?? null, last: matches?.results[0] ?? null },
+  }
+}
+
 /** Every champion's name and address, so a page is sent with them. */
 async function championNames() {
   const list = await championStatsService.champions().catch(() => [])
@@ -109,55 +191,19 @@ export default class ProsController {
     const leagues = catalog.listed.map(leagueRef)
     const version = today()
     if (view === 'ladder') {
-      const server = SERVERS.find(
-        (s) => s.slug === String(request.input('server', '')).toLowerCase()
-      )
-      const platform = server?.platform ?? null
-      const role = ROLE_SLUG[String(request.input('role', '')).toLowerCase()] ?? null
-      const page = Math.max(1, Math.min(50, Number.parseInt(String(request.input('page', 1))) || 1))
-      const [ladder, servers] = await Promise.all([
-        proLadderService
-          .ladder({ platform, role, limit: LADDER_PAGE, offset: (page - 1) * LADDER_PAGE })
-          .catch(() => ({ total: 0, rows: [] })),
-        proLadderService.servers(role).catch(() => []),
-      ])
+      const query = ladderQuery(request)
+      const { server, role, page } = query
+      const { ladder, servers } = await readLadder(query)
       const top = ladder.rows[0]
-      const filtered = Boolean(platform || role || page > 1)
+      const filtered = Boolean(server || role || page > 1)
       const on = server ? server.label : serverList(servers.map((s) => s.platform))
       return inertia.render('pros/index', {
         view: 'ladder',
         leagues,
         filters: { server: server?.slug ?? null, role: request.input('role') ?? null },
-        servers: servers.map(({ slug, label, pros }) => ({ slug, label, pros })),
+        servers: servers.map(ladderServer),
         on,
-        ladder: inertia.merge(() =>
-          ladder.rows.map((r) => ({
-            place: r.place,
-            pro: {
-              slug: r.pro.slug,
-              name: r.pro.name,
-              ...(r.pro.photo ? { photo: r.pro.photo } : {}),
-              role: r.pro.role,
-              country: r.pro.country,
-              team: r.pro.team
-                ? {
-                    id: r.pro.team.id,
-                    slug: r.pro.team.slug,
-                    name: r.pro.team.name,
-                    shortName: r.pro.team.shortName,
-                  }
-                : null,
-            },
-            league: r.league ? { slug: r.league.slug, code: r.league.code } : null,
-            account: {
-              platform: r.account.platform,
-              tier: r.account.tier,
-              division: r.account.division,
-              lp: r.account.lp,
-            },
-            move: r.move,
-          }))
-        ),
+        ladder: inertia.merge(() => ladder.rows.map(ladderRow)),
         total: ladder.total,
         page,
         pageSize: LADDER_PAGE,
@@ -251,11 +297,9 @@ export default class ProsController {
 
   /** `/pro/:slug`: a pro, every account they play on, their teams, games and builds. */
   async show({ inertia, params, response }: HttpContext) {
-    const pro = await proService.player(String(params.slug))
-    if (!pro) return notFoundPage({ inertia, response })
-    // What the page draws: its builds, not the summaries the share card and the team page use.
-    const shown = without(pro, 'id', 'champions', 'roles', 'items', 'pools')
-    const matches = pro.team ? split(await proMatchService.forTeam(pro.team.id)) : null
+    const found = await readPro(String(params.slug))
+    if (!found) return notFoundPage({ inertia, response })
+    const { pro, shown, matches } = found
     const about = pro.about ?? null
     const best = pro.accounts.find((a: { tier: string | null }) => a.tier) ?? null
     const played = pro.record.games
@@ -279,7 +323,7 @@ export default class ProsController {
     return inertia.render('pros/show', {
       pro: shown,
       games,
-      matches: { next: matches?.next[0] ?? null, last: matches?.results[0] ?? null },
+      matches,
       now: Date.now(),
       names: await championNames(),
       ...meta({
@@ -400,6 +444,66 @@ export default class ProsController {
     const found = await proService.search(q, 5).catch(() => ({ pros: [], teams: [], accounts: [] }))
     response.header('Cache-Control', 'public, max-age=300')
     return response.ok(found)
+  }
+
+  /**
+   * The ladder of every pro by LP as data: the rows of `/pros?view=ladder`, a page of 50, with
+   * how many pros it ranks and the servers it can be narrowed to. A server or a role that is not
+   * known is left out, as on the page.
+   * @paramQuery server - euw, eune, na, br, lan, las, kr, jp, oce, tr, vn, tw, sea, me or ru (default: every server)
+   * @paramQuery role - top, jungle, mid, bot or support (default: every role)
+   * @paramQuery page - 1 to 50 (default: 1)
+   * @responseBody 200 - {"total": 1, "page": 1, "pageSize": 50, "servers": [{"slug": "euw", "label": "EUW", "pros": 1}], "rows": [{"place": 1, "pro": {"slug": "mirelight", "name": "Mirelight", "photo": "a1b2c3d4", "role": "MID", "country": "FR", "team": {"id": "uuid", "slug": "ember-wolves", "name": "Ember Wolves", "shortName": "EW"}}, "league": {"slug": "lec", "code": "LEC"}, "account": {"platform": "EUW1", "tier": "CHALLENGER", "division": 1, "lp": 1500}, "move": {"places": 2, "lp": 87}}]}
+   */
+  async ladder({ request, response }: HttpContext) {
+    const query = ladderQuery(request)
+    const { ladder, servers } = await readLadder(query)
+    // The ladder is worked out again every five minutes.
+    response.header('Cache-Control', 'public, max-age=300')
+    return response.ok({
+      total: ladder.total,
+      page: query.page,
+      pageSize: LADDER_PAGE,
+      servers: servers.map(ladderServer),
+      rows: ladder.rows.map(ladderRow),
+    })
+  }
+
+  /**
+   * The next pro games (and the running ones), soonest first, 12 at most: those of every league
+   * and international event `/pros` lists them for, or of one league. A league that moved to
+   * another address answers with where its teams play now.
+   * @paramQuery league - A league's slug such as lec (default: every league)
+   * @responseBody 200 - {"upcoming": [{"id": 1, "league": {"slug": "lec", "code": "LEC", "name": "League of Legends EMEA Championship"}, "tournament": "Playoffs", "name": "Final: EW vs NH", "at": "2026-11-06T22:00:00.000Z", "status": "not_started", "bestOf": 5, "teams": [{"id": "uuid", "slug": "ember-wolves", "name": "Ember Wolves", "code": "EW", "score": 0}, {"id": null, "slug": null, "name": "Night Herons", "code": "NH", "score": 0}], "winner": null, "stream": "https://example.com/stream"}]}
+   * @responseBody 404 - {"error": "Unknown league"}
+   */
+  async matches({ request, response }: HttpContext) {
+    const catalog = await leagueCatalog()
+    const asked = request.input('league')
+    const league = asked ? (catalog.bySlug(asked) ?? catalog.successor(asked)) : null
+    if (asked && !league) return response.notFound({ error: 'Unknown league' })
+    const upcoming = await proMatchService.upcoming(
+      league ? [league.slug] : catalog.all.map((l) => l.slug),
+      UPCOMING_GAMES
+    )
+    // Scores are read once a minute.
+    response.header('Cache-Control', 'public, max-age=60')
+    return response.ok({ upcoming })
+  }
+
+  /**
+   * A pro as `/pro/:slug` shows them: who they are, their league, every account with its rank,
+   * the teams they played for, their games, record and builds of the last 30 days, and their
+   * team's next match and last result. One of their games opens with `/api/pros/games/:matchId`.
+   * @paramPath slug - The pro's slug, as in `/pro/:slug`
+   * @responseBody 200 - {"pro": {"slug": "mirelight", "name": "Mirelight", "role": "MID", "country": "FR", "staff": false, "team": {"id": "uuid", "slug": "ember-wolves", "name": "Ember Wolves", "shortName": "EW", "region": "EMEA"}, "photo": "a1b2c3d4", "socials": {}, "league": {"slug": "lec", "code": "LEC", "name": "League of Legends EMEA Championship", "region": "EMEA"}, "about": null, "accounts": [{"id": "uuid", "platform": "EUW1", "gameName": "Mirelight", "tagLine": "727", "tier": "CHALLENGER", "division": 1, "lp": 1500, "wins": 210, "losses": 150, "peakTier": "CHALLENGER", "peakDivision": 1, "peakLp": 1720}], "teams": [], "games": [], "record": {"games": 0, "wins": 0, "kills": 0, "deaths": 0, "assists": 0}, "builds": []}, "matches": {"next": null, "last": null}}
+   * @responseBody 404 - {"error": "Pro not found"}
+   */
+  async player({ params, response }: HttpContext) {
+    const found = await readPro(String(params.slug))
+    if (!found) return response.notFound({ error: 'Pro not found' })
+    response.header('Cache-Control', 'public, max-age=300')
+    return response.ok({ pro: found.shown, matches: found.matches })
   }
 
   /** `/cdn/team/:id?s=40`: a team's logo, from our own origin, at a served size or as stored. */
