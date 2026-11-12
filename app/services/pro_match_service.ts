@@ -134,14 +134,22 @@ class ProMatchService {
 
   /** A league's next games (and running ones), soonest first. */
   forLeague(slug: string, limit = 8): Promise<ProMatch[]> {
-    return this.read(`league:${slug}:${limit}`, async () =>
+    return this.upcoming([slug], limit)
+  }
+
+  /** The next games (and running ones) of some leagues together, soonest first. */
+  upcoming(slugs: string[], limit = 8): Promise<ProMatch[]> {
+    const leagues = [...new Set(slugs)].sort()
+    if (!leagues.length) return Promise.resolve([])
+    return this.read(`leagues:${leagues.join(',')}:${limit}`, async () =>
       db.rawQuery(
         `${SELECT}
-         WHERE m.league_slug = ? AND m.status IN ('not_started', 'running', 'postponed')
+         WHERE m.league_slug = ANY(?) AND m.status IN ('not_started', 'running', 'postponed')
            AND m.begin_at BETWEEN now() - interval '${LIVE_HOURS} hours' AND now() + interval '22 days'
          ORDER BY m.begin_at, m.external_id
          LIMIT ?`,
-        [slug, limit + 4]
+        // A few more than asked: a game long past its start time is read, then left out.
+        [leagues, limit + 4 * leagues.length]
       )
     ).then((list) => list.filter((m) => isNext(m)).slice(0, limit))
   }

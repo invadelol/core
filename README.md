@@ -151,6 +151,18 @@ All routes require a valid PUUID and are cached.
 | `GET` | `/matches/:id` | One match in full, with its timeline. Not stored yet (a game that just ended): `202 { status: "pending", retryAfter }` with `Retry-After` while it is fetched from Riot in the background (at once, then 1, 3, 6 and 15 min later; 12 new games per 10 min per IP), `404` once Riot did not give it. Neither is cached |
 | `PUT` | `/summoners/puuid/:puuid/increment` | Increment profile view count |
 
+### Pros
+
+Read-only and public, the same data as the `/pros` and `/pro/:slug` pages.
+
+| Method | Endpoint | Description |
+| --- | --- | --- |
+| `GET` | `/pros/search?q=` | Pros and teams whose name starts with `q` |
+| `GET` | `/pros/ladder?server=&role=&page=` | The ladder of every pro by LP, 50 rows a page, with the total and the servers it can be narrowed to |
+| `GET` | `/pros/matches?league=` | The next pro games, soonest first (12 at most), of every league or of one; `404` for an unknown league |
+| `GET` | `/pros/player/:slug` | A pro's accounts, teams, recent games, record and builds, and their team's next match and last result; `404` for an unknown slug |
+| `GET` | `/pros/games/:matchId` | One of a pro's games: its ten players, as two teams |
+
 ### Desktop sync
 
 The Invade desktop app onboards players, uploads the games they finish, and
