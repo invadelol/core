@@ -24,9 +24,30 @@ const byDay = computed(() => {
   return map
 })
 
-const busiest = computed(() =>
-  props.activity.reduce<number>((max, day) => Math.max(max, Number(day.games)), 0)
-)
+/**
+ * Shade steps by games played that day, the same for every player so two heatmaps compare.
+ * Step 0 is a day without games; each other step covers `min` to `max` games (null = no top).
+ */
+const STEPS: Array<{ min: number; max: number | null }> = [
+  { min: 0, max: 0 },
+  { min: 1, max: 1 },
+  { min: 2, max: 2 },
+  { min: 3, max: 4 },
+  { min: 5, max: null },
+]
+
+function levelOf(games: number) {
+  const index = STEPS.findIndex((step) => step.max === null || games <= step.max)
+  return index === -1 ? STEPS.length - 1 : index
+}
+
+function stepRange(index: number) {
+  const step = STEPS[index]
+  if (step.max === 0) return 'No games'
+  if (step.max === null) return `${step.min}+ games a day`
+  if (step.min === step.max) return `${step.min} game${step.min > 1 ? 's' : ''} a day`
+  return `${step.min} to ${step.max} games a day`
+}
 
 /** Columns of seven days, ending on today, aligned so each column is a week. */
 const weeks = computed(() => {
@@ -55,7 +76,7 @@ const weeks = computed(() => {
           date: key,
           games,
           wins: Number(entry?.wins ?? 0),
-          level: games === 0 ? 0 : Math.min(4, Math.ceil((games / Math.max(busiest.value, 1)) * 4)),
+          level: levelOf(games),
         })
         // Label the column where a new month begins.
         if (cursor.getDate() <= 7 && weekday === 0) {
@@ -68,7 +89,7 @@ const weeks = computed(() => {
     if (days.some(Boolean)) columns.push({ month, days })
   }
 
-  // A label on the final column would run off the edge of the panel.
+  // Labels overflow their column to the right: one on the final column would run off the panel.
   if (columns.length) columns[columns.length - 1].month = null
 
   return columns
@@ -83,8 +104,14 @@ const totals = computed(() => {
     activeDays,
     winrate: games ? Math.round((wins / games) * 100) : 0,
     perActiveDay: activeDays ? (games / activeDays).toFixed(1) : '0',
+    averageLevel: activeDays ? Math.max(1, levelOf(Math.round(games / activeDays))) : -1,
   }
 })
+
+function legendTitle(index: number) {
+  const range = stepRange(index)
+  return index === totals.value.averageLevel ? `${range}, your average per active day` : range
+}
 
 /* The player's own activity: the brand violet, from empty to full. */
 const SHADES = [
@@ -132,8 +159,20 @@ function tooltip(cell: Cell) {
             </span>
           </div>
 
-          <div v-for="(column, index) in weeks" :key="index" class="flex flex-1 flex-col gap-[3px]">
-            <span class="h-[10px] text-[10px] leading-[10px] text-ink-4 max-lg:text-[11px]">{{ column.month }}</span>
+          <div
+            v-for="(column, index) in weeks"
+            :key="index"
+            class="flex min-w-[10px] flex-1 flex-col gap-[3px]"
+          >
+            <!-- The month label overflows to the right instead of widening its column. -->
+            <span class="relative h-[10px]">
+              <span
+                v-if="column.month"
+                class="absolute top-0 left-0 whitespace-nowrap text-[10px] leading-[10px] text-ink-4 max-lg:text-[11px]"
+              >
+                {{ column.month }}
+              </span>
+            </span>
             <template v-for="(cell, dayIndex) in column.days" :key="dayIndex">
               <span
                 v-if="cell"
@@ -149,15 +188,33 @@ function tooltip(cell: Cell) {
 
       <div class="mt-2.5 flex items-center justify-between text-[12px] text-ink-3">
         <span class="num">{{ totals.perActiveDay }} games per active day</span>
-        <span class="flex items-center gap-1.5">
+        <span
+          class="flex items-center gap-1.5 text-[11px] text-ink-4"
+          role="group"
+          aria-label="Games a day, from none to 5 or more"
+        >
+          <span class="num mr-0.5">0</span>
           <span
             v-for="(shade, index) in SHADES"
             :key="index"
+            role="img"
             class="h-[9px] w-[9px] rounded-[2px]"
+            :class="{ 'legend-average': index === totals.averageLevel }"
             :style="{ background: shade }"
+            :title="legendTitle(index)"
+            :aria-label="legendTitle(index)"
           />
+          <span class="num ml-0.5">5+ games</span>
         </span>
       </div>
     </div>
   </section>
 </template>
+
+<style scoped>
+/* The step the player's average per active day falls on: a hairline ring, no new colour. */
+.legend-average {
+  outline: 1px solid var(--line-3);
+  outline-offset: 1px;
+}
+</style>
