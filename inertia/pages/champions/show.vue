@@ -49,6 +49,7 @@ import {
   type SpellStats,
   type Teammates,
 } from '../../lib/champions.js'
+import { patchHeading, patchName, patchOptions as patchOptions_ } from '../../lib/patches.js'
 import {
   ago,
   ariaSort,
@@ -252,7 +253,10 @@ const regionModel = computed({
 })
 const rankOptions = BRACKETS.map((b) => ({ value: b.value, label: b.label }))
 const patchOptions = computed(() =>
-  props.patches.map((p) => ({ value: p.patch, label: `Patch ${p.patch}` }))
+  patchOptions_(
+    props.patches.map((p) => p.patch),
+    patch.value
+  )
 )
 const regionOptions = REGIONS.map((r) => ({ value: r.value, label: r.label }))
 
@@ -497,7 +501,7 @@ onBeforeUnmount(() => {
               }}</small></b
             ><em>{{
               before && previousPatch
-                ? `vs ${previousPatch}`
+                ? `vs ${patchName(previousPatch)}`
                 : stat
                   ? `${thousands(stat.games)} games`
                   : ''
@@ -1488,7 +1492,7 @@ onBeforeUnmount(() => {
         <!-- Statistics -->
         <section id="statistics" class="nb-sec" aria-labelledby="h-stats">
           <h2 id="h-stats">
-            Statistics<span class="nb-meta num">Patch {{ patch }}</span>
+            Statistics<span class="nb-meta num">{{ patchHeading(patch) }}</span>
           </h2>
           <section class="nb-panel">
             <div class="nb-ph">

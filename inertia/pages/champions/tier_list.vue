@@ -20,6 +20,7 @@ import {
   roleOf,
   type Filter,
 } from '../../lib/champions.js'
+import { patchName, patchOptions as patchOptions_, patchText } from '../../lib/patches.js'
 import { ariaSort, pct, sortRows, thousands, type Sort } from '../../lib/board.js'
 import { afterPaint } from '../../lib/after_paint.js'
 import '../../css/champions.css'
@@ -144,7 +145,10 @@ const patchModel = computed({
 })
 const regionOptions = REGIONS.map((r) => ({ value: r.value, label: r.label }))
 const patchOptions = computed(() =>
-  props.patches.map((p) => ({ value: p.patch, label: `Patch ${p.patch}` }))
+  patchOptions_(
+    props.patches.map((p) => p.patch),
+    patch.value
+  )
 )
 const RANK_TEXT: Record<string, string> = {
   all: 'All ranks',
@@ -181,7 +185,7 @@ const title = computed(
         <template #end
           ><span class="num"
             >{{ thousands(games) }} games<template v-if="filter"
-              >, patch {{ filter.patch }}</template
+              >, {{ patchText(filter.patch) }}</template
             ></span
           ></template
         >
@@ -276,7 +280,7 @@ const title = computed(
               <h1>{{ role.label }} tier list</h1>
               <p class="nb-meta num">
                 {{ rankText }}, {{ regionText
-                }}<template v-if="filter">, patch {{ filter.patch }}</template>
+                }}<template v-if="filter">, {{ patchText(filter.patch) }}</template>
               </p>
             </div>
             <div class="end">
@@ -383,7 +387,7 @@ const title = computed(
                 /></span>
                 <span role="columnheader" class="r" :aria-sort="ariaSort(sort, 'moved')"
                   ><SortHead
-                    :label="previousPatch ? `Since ${previousPatch}` : 'Move'"
+                    :label="previousPatch ? `Since ${patchName(previousPatch)}` : 'Move'"
                     :active="sort.key === 'moved'"
                     :dir="sort.dir"
                     @sort="by('moved')"

@@ -10,6 +10,7 @@ import TierMark from '../../components/champions/TierMark.vue'
 import SortHead from '../../components/champions/SortHead.vue'
 import Select from '../../components/ui/Select.vue'
 import { BRACKETS, ROLES, filterQuery, roleOf, type Filter } from '../../lib/champions.js'
+import { patchOptions as patchOptions_, patchText } from '../../lib/patches.js'
 import { ariaSort, pct, sortRows, thousands, type Sort } from '../../lib/board.js'
 import { afterPaint } from '../../lib/after_paint.js'
 import '../../css/champions.css'
@@ -165,7 +166,10 @@ const rankModel = computed({ get: () => rank.value, set: (v: string) => go({ ran
 const patchModel = computed({ get: () => patch.value, set: (v: string) => go({ patch: v }) })
 const rankOptions = BRACKETS.map((b) => ({ value: b.value, label: b.label }))
 const patchOptions = computed(() =>
-  props.patches.map((p) => ({ value: p.patch, label: `Patch ${p.patch}` }))
+  patchOptions_(
+    props.patches.map((p) => p.patch),
+    patch.value
+  )
 )
 
 const href = (slug: string, position?: string | null) =>
@@ -189,7 +193,7 @@ const roleName = (position?: string | null) => (position ? roleOf(position).labe
         <template #end
           ><span class="num"
             >{{ champions.length }} champions<template v-if="filter"
-              >, patch {{ filter.patch }}</template
+              >, {{ patchText(filter.patch) }}</template
             ></span
           ></template
         >
