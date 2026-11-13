@@ -20,6 +20,7 @@ import {
   roleOf,
   type Filter,
 } from '../../lib/champions.js'
+import { isRange, patchName, patchOptions as patchOptions_, patchText } from '../../lib/patches.js'
 import {
   ariaSort,
   gapClass,
@@ -164,7 +165,10 @@ const patchModel = computed({
 const rankOptions = BRACKETS.map((b) => ({ value: b.value, label: b.label }))
 const regionOptions = computed(() => [{ value: '', label: 'All regions' }, ...props.regions])
 const patchOptions = computed(() =>
-  props.patches.map((p) => ({ value: p.patch, label: `Patch ${p.patch}` }))
+  patchOptions_(
+    props.patches.map((p) => p.patch),
+    patch.value
+  )
 )
 const SAMPLES = [
   { value: 0, label: 'Any sample' },
@@ -405,7 +409,7 @@ const columns = computed<Col<Row>[]>(() => {
         {
           key: 'win',
           label: 'Win',
-          group: `Now, ${patch.value}`,
+          group: `Now, ${patchName(patch.value)}`,
           value: (r) => r.win,
           text: (r) => pct(r.win),
           cls: () => 'b',
@@ -414,7 +418,7 @@ const columns = computed<Col<Row>[]>(() => {
         {
           key: 'dwin',
           label: 'Change',
-          group: `Since ${props.previousPatch ?? ''}`,
+          group: `Since ${patchName(props.previousPatch ?? '')}`,
           value: (r) => (r.before ? r.win - r.before.win : null),
           text: (r) => (r.before ? points(r.win - r.before.win) : 'New'),
           cls: (r) => (r.before ? gapClass(r.win - r.before.win) : 'q'),
@@ -423,7 +427,7 @@ const columns = computed<Col<Row>[]>(() => {
         {
           key: 'pick',
           label: 'Pick',
-          group: `Now, ${patch.value}`,
+          group: `Now, ${patchName(patch.value)}`,
           value: (r) => r.pick,
           text: (r) => pct(r.pick),
           width: '56px',
@@ -431,7 +435,7 @@ const columns = computed<Col<Row>[]>(() => {
         {
           key: 'dpick',
           label: 'Change',
-          group: `Since ${props.previousPatch ?? ''}`,
+          group: `Since ${patchName(props.previousPatch ?? '')}`,
           value: (r) => (r.before ? r.pick - r.before.pick : null),
           text: (r) => (r.before ? points(r.pick - r.before.pick) : '-'),
           width: '64px',
@@ -439,7 +443,7 @@ const columns = computed<Col<Row>[]>(() => {
         {
           key: 'dban',
           label: 'Ban change',
-          group: `Since ${props.previousPatch ?? ''}`,
+          group: `Since ${patchName(props.previousPatch ?? '')}`,
           value: (r) => (r.before ? r.ban - r.before.ban : null),
           text: (r) => (r.before ? points(r.ban - r.before.ban) : '-'),
           hm: true,
@@ -448,8 +452,10 @@ const columns = computed<Col<Row>[]>(() => {
         {
           key: 'move',
           label: 'Places',
-          title: 'Places gained in the role since the previous patch',
-          group: `Since ${props.previousPatch ?? ''}`,
+          title: isRange(patch.value)
+            ? 'Places gained in the role since the patches before'
+            : 'Places gained in the role since the previous patch',
+          group: `Since ${patchName(props.previousPatch ?? '')}`,
           value: (r) => (r.before?.rank && r.rank ? r.before.rank - r.rank : null),
           text: (r) => {
             const d = r.before?.rank && r.rank ? r.before.rank - r.rank : null
@@ -700,7 +706,7 @@ const crumbs = computed(() =>
           <p class="nb-meta num">
             {{ role.label
             }}<template v-if="filter"
-              >, patch {{ filter.patch }}, {{ bracketOf(rank).label }},
+              >, {{ patchText(filter.patch) }}, {{ bracketOf(rank).label }},
               {{ thousands(games ?? 0) }} games</template
             >
           </p>
@@ -777,7 +783,8 @@ const crumbs = computed(() =>
         Not enough games for this role with these filters yet.
       </p>
       <p v-else-if="view === 'patch' && !previousPatch" class="nb-panel nb-empty">
-        No earlier patch has enough games to compare with {{ patch }} yet.
+        No earlier {{ isRange(patch) ? 'patches have' : 'patch has' }} enough games to compare with
+        {{ patchName(patch) }} yet.
       </p>
 
       <!-- Items: one row per finished item -->
