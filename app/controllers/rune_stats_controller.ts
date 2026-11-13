@@ -11,7 +11,7 @@ export default class RuneStatsController {
    * @paramPath champion - Numeric champion id
    * @paramPath role - top, jungle, mid, adc or support
    * @paramQuery bracket - all (default), iron, bronze, silver, gold, platinum, emerald, diamond, emerald_plus, diamond_plus or master_plus
-   * @paramQuery patch - Patch such as 16.20 (default: the newest with enough games)
+   * @paramQuery patch - Patch such as 16.20, or a range of offered patches such as 16.20-16.22 (default: the newest with enough games)
    * @responseBody 200 - <RuneStats>
    */
   async show({ request, params, response }: HttpContext) {

@@ -12,7 +12,7 @@ export default class PickStatsController {
    * @paramPath champion - Numeric champion id
    * @paramPath role - top, jungle, mid, adc or support
    * @paramQuery brackets - Up to 5 brackets, comma-separated, such as emerald_plus,emerald,all (default: all)
-   * @paramQuery patch - Patch such as 16.20 (default: the newest with enough games)
+   * @paramQuery patch - Patch such as 16.20, or a range of offered patches such as 16.20-16.22 (default: the newest with enough games)
    * @responseBody 200 - {"champion":103,"role":"MIDDLE","brackets":{"emerald_plus":{"runes":"<RuneStats>","builds":"<BuildStats>","summoners":"<SpellStats>"}}}
    */
   async show({ request, params, response }: HttpContext) {

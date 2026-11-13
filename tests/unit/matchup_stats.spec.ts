@@ -18,7 +18,7 @@ import {
 } from '#services/champion_stats'
 import { matchupReport } from '#services/matchup_stats'
 
-const FILTER: Filter = { patch: '16.21', bracket: 'all', region: null }
+const FILTER: Filter = { patch: '16.21', patches: ['16.21'], bracket: 'all', region: null }
 const PATCHES = [
   { patch: '16.21', games: 2_700_000 },
   { patch: '16.20', games: 1_000_000 },
@@ -39,7 +39,12 @@ const stat = (games: number, win: number): RoleStat => ({
 
 test.group('Matchup stats', () => {
   test('reads every lane pair of the crawled games in one pass', ({ assert }) => {
-    const sql = lanePairsSql({ patch: '16.20', bracket: 'emerald_plus', region: 'euw' })
+    const sql = lanePairsSql({
+      patch: '16.20',
+      patches: ['16.20'],
+      bracket: 'emerald_plus',
+      region: 'euw',
+    })
     assert.include(sql, 'FROM match_lineups FINAL')
     assert.include(sql, "seed_tier IN ('EMERALD','DIAMOND','MASTER','GRANDMASTER','CHALLENGER')")
     assert.include(sql, "platform IN ('EUW1')")
@@ -69,14 +74,24 @@ test.group('Matchup stats', () => {
   })
 
   test('reads a filter as a sum of its cells', ({ assert }) => {
-    const all = summaryCellsSql({ patch: '16.21', bracket: 'all', region: null })
+    const all = summaryCellsSql({
+      patch: '16.21',
+      patches: ['16.21'],
+      bracket: 'all',
+      region: null,
+    })
     assert.notInclude(all, 'seed_tier IN')
     assert.notInclude(all, 'platform IN')
-    const narrow: Filter = { patch: '16.21', bracket: 'master_plus', region: 'kr' }
+    const narrow: Filter = {
+      patch: '16.21',
+      patches: ['16.21'],
+      bracket: 'master_plus',
+      region: 'kr',
+    }
     for (const sql of [summaryCellsSql(narrow), totalsCellsSql(narrow), laneOpponentsSql(narrow)]) {
       assert.include(sql, "seed_tier IN ('MASTER','GRANDMASTER','CHALLENGER')")
       assert.include(sql, "platform IN ('KR')")
-      assert.include(sql, 'patch = {patch:String}')
+      assert.include(sql, 'patch IN {patches:Array(String)}')
     }
     assert.include(
       laneOpponentsSql(narrow),
@@ -105,7 +120,12 @@ test.group('Matchup stats', () => {
   })
 
   test('reads the early game and first blood of a filter as sums of their cells', ({ assert }) => {
-    const narrow: Filter = { patch: '16.21', bracket: 'master_plus', region: 'kr' }
+    const narrow: Filter = {
+      patch: '16.21',
+      patches: ['16.21'],
+      bracket: 'master_plus',
+      region: 'kr',
+    }
     for (const sql of [earlyFromCellsSql(narrow), firstBloodFromCellsSql(narrow)]) {
       assert.include(sql, "seed_tier IN ('MASTER','GRANDMASTER','CHALLENGER')")
       assert.include(sql, "platform IN ('KR')")

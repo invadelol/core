@@ -70,7 +70,7 @@ export default class ChampionStatisticsController {
    * @paramPath champion - Numeric champion id
    * @paramPath role - top, jungle, mid, adc or support
    * @paramQuery bracket - all (default), iron, bronze, silver, gold, platinum, emerald, diamond, emerald_plus, diamond_plus or master_plus
-   * @paramQuery patch - Patch such as 16.20 (default: the newest with enough games)
+   * @paramQuery patch - Patch such as 16.20, or a range of offered patches such as 16.20-16.22 (default: the newest with enough games)
    * @paramQuery region - euw, eune, na, kr, br, lan, las, tr, jp, oce or vn (default: every region)
    * @responseBody 200 - {"patch":"16.21","bracket":"all","region":null,"stat":"<RoleStat>","previous":"<RoleStat>","roles":[],"trend":[],"length":[],"averages":{},"objectives":{},"details":{},"early":[],"firstBlood":{},"matchups":[],"teammates":{},"skills":{},"spells":{},"runes":{},"items":{},"patches":[],"pending":[]}
    */
@@ -113,9 +113,9 @@ export default class ChampionStatisticsController {
       .map(([name]) => name)
     const mine = (s: typeof summary | null) => s?.roles.filter((r) => r.champion === champion) ?? []
     const row = (s: typeof summary | null) => mine(s).find((r) => r.position === position) ?? null
-    const before = patches[patches.findIndex((p) => p.patch === filter.patch) + 1]?.patch
+    const before = previous?.patch
     const last = row(previous)
-    const current = filter.patch === patches[0]?.patch
+    const current = filter.patches[0] === patches[0]?.patch
     // An answer still missing a block must not be kept by a cache on the way.
     response.header(
       'Cache-Control',

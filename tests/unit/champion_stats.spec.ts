@@ -28,7 +28,7 @@ import { championSlug } from '../../inertia/lib/champions.js'
 
 const round2 = (n: number) => Math.round(n * 100) / 100
 
-const FILTER: Filter = { patch: '16.20', bracket: 'emerald_plus', region: null }
+const FILTER: Filter = { patch: '16.20', patches: ['16.20'], bracket: 'emerald_plus', region: null }
 
 test.group('Champion stats', () => {
   test('gives tiers by place in the role, best first', ({ assert }) => {
@@ -101,7 +101,7 @@ test.group('Champion stats', () => {
     assert.notInclude(skills, 'match_timeline')
     const lane = laneSql(FILTER)
     assert.include(lane, 'FROM match_lineups')
-    assert.include(lane, 'WHERE patch = {patch:String}')
+    assert.include(lane, 'WHERE patch IN {patches:Array(String)}')
     // The champion's games, then the crawled games looked up among them only.
     assert.equal(lane.match(/FROM participant_items/g)?.length, 2)
     const runes = pageRowsSql('emerald_plus', { champion: 21, position: 'BOTTOM' })

@@ -27,6 +27,7 @@ import {
 } from '#services/page_meta'
 import statsExplorerService from '#services/stats_explorer_service'
 import { CHAMPION_TABS, type ChampionTab } from '../../inertia/lib/champions.js'
+import { patchText } from '../../inertia/lib/patches.js'
 
 /**
  * How long a page waits for its first screen's blocks before it is sent: an answer the stats
@@ -137,7 +138,7 @@ export default class ChampionsController {
         title: tab
           ? `Champion ${tab === 'pros' ? 'pro builds' : tab}: pick a champion`
           : 'Every champion: builds, runes, counters and tiers',
-        description: `${list.length} League of Legends champions with their tier, win rate, builds, runes and counters in each role${filter ? `, from ${count(summary?.games ?? 0)} ranked games on patch ${filter.patch}, ${BRACKET_TEXT[filter.bracket]}` : ''}.`,
+        description: `${list.length} League of Legends champions with their tier, win rate, builds, runes and counters in each role${filter ? `, from ${count(summary?.games ?? 0)} ranked games on ${patchText(filter.patch)}, ${BRACKET_TEXT[filter.bracket]}` : ''}.`,
         path: '/champions',
         image: '/og/tier-list/all.jpg',
         version: filter?.patch ?? 'none',
@@ -154,7 +155,7 @@ export default class ChampionsController {
     })
   }
 
-  /** `/tier-list?role=bot`: one role's champions ranked, with how each moved since last patch. */
+  /** `/tier-list?role=bot`: one role's champions ranked, with how each moved since last patch (or range). */
   async tierList({ inertia, request }: HttpContext) {
     const asked = positionOf(request.input('role'))
     const position = asked ?? 'TOP'
@@ -200,9 +201,9 @@ export default class ChampionsController {
       patches,
       filter,
       ...meta({
-        title: `${role.label} tier list, patch ${filter?.patch ?? ''}`.trim(),
+        title: `${role.label} tier list${filter ? `, ${patchText(filter.patch)}` : ''}`,
         description: top
-          ? `${rows.length} ${role.label.toLowerCase()} champions ranked from ${count(summary!.games)} ranked games, ${BRACKET_TEXT[filter!.bracket]}, patch ${filter!.patch}. ${top.name} leads at ${percent(rows[0].win)} win rate.`
+          ? `${rows.length} ${role.label.toLowerCase()} champions ranked from ${count(summary!.games)} ranked games, ${BRACKET_TEXT[filter!.bracket]}, ${patchText(filter!.patch)}. ${top.name} leads at ${percent(rows[0].win)} win rate.`
           : `${role.label} champions ranked from our own ranked games.`,
         path,
         image: `/og/tier-list/${asked ? role.slug : 'all'}.jpg`,
@@ -300,7 +301,7 @@ export default class ChampionsController {
       ...meta({
         title: `${champion.name} ${role.label.toLowerCase()} build, runes and counters${stat ? `, ${percent(stat.win)} win rate` : ''}`,
         description: stat
-          ? `${champion.name} ${role.label.toLowerCase()} on patch ${filter!.patch}, ${BRACKET_TEXT[filter!.bracket]}: ${percent(stat.win)} win rate, ${percent(stat.pick)} pick rate, ${percent(stat.ban)} ban rate over ${sample}. Build, runes, skill order, counters and pro games.`
+          ? `${champion.name} ${role.label.toLowerCase()} on ${patchText(filter!.patch)}, ${BRACKET_TEXT[filter!.bracket]}: ${percent(stat.win)} win rate, ${percent(stat.pick)} pick rate, ${percent(stat.ban)} ban rate over ${sample}. Build, runes, skill order, counters and pro games.`
           : `${champion.name}'s build, runes, matchups and statistics from our own ranked games.`,
         path,
         image: `/og/champion/${champion.slug}/${role.slug}.jpg`,

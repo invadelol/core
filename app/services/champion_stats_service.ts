@@ -2,7 +2,7 @@ import riotAssetsService from '#services/riot/assets'
 import { AnswerCache, BRACKETS, type Bracket } from '#services/ranked_stats'
 import {
   latestPatch,
-  patchStart,
+  rangeStart,
   rows,
   shownPatches,
   statsCache,
@@ -32,6 +32,7 @@ import {
   skillOrderSql,
   skillOrders,
   summarize,
+  summaryByRankCellsSql,
   summaryByRankSql,
   summaryCellsSql,
   summarySql,
@@ -50,6 +51,7 @@ import { matchupReport } from '#services/matchup_stats'
 import { tierListReport } from '#services/tier_list_stats'
 import { areEventsCounted, isCounted } from '#services/stats_cells'
 import { championSlug } from '../../inertia/lib/champions.js'
+import { patchRange, patchValue, previousRange } from '../../inertia/lib/patches.js'
 
 /** The bracket a page shows unless the address names another. */
 export const DEFAULT_BRACKET: Bracket = 'emerald_plus'
@@ -83,7 +85,11 @@ export class ChampionStatsService {
   /** One champion's opponents from the counted cells: a burst of asks reads them once. */
   #opponents = new AnswerCache(2048, 10 * 60_000)
 
-  /** The filters of an address: `?rank=emerald_plus&patch=16.20&region=euw`, defaults filled. */
+  /**
+   * The filters of an address: `?rank=emerald_plus&patch=16.20&region=euw`, defaults filled. The
+   * patch is one offered patch or a range of them (`16.20-16.22`, `patchRange`); anything else
+   * reads the newest.
+   */
   async filter(input: {
     rank?: unknown
     patch?: unknown
@@ -92,11 +98,17 @@ export class ChampionStatsService {
     const rank = String(input.rank ?? '')
     const bracket = (rank in BRACKETS ? rank : DEFAULT_BRACKET) as Bracket
     const region = String(input.region ?? '').toLowerCase()
-    const patches = await this.patches()
-    const wanted = String(input.patch ?? '')
-    const patch = patches.some((p) => p.patch === wanted) ? wanted : await latestPatch()
-    if (!patch) return null
-    return { patch, bracket, region: region in REGIONS ? region : null }
+    const shown = await this.patches()
+    const offered = shown.map((p) => p.patch)
+    const latest = await latestPatch()
+    const patches = patchRange(input.patch, offered) ?? (latest ? [latest] : null)
+    if (!patches) return null
+    return {
+      patch: patchValue(patches),
+      patches,
+      bracket,
+      region: region in REGIONS ? region : null,
+    }
   }
 
   /** The patch menu: patches with enough crawled games, newest first (`shownPatches`). */
@@ -107,8 +119,8 @@ export class ChampionStatsService {
   /** Every champion in every role, ranked within each role (from the counted cells once the patch is counted). */
   summary(filter: Filter): Promise<Summary> {
     return this.#summaries.get(key(filter), async () => {
-      const params = { patch: filter.patch }
-      const cells = await isCounted(filter.patch)
+      const params = { patches: filter.patches }
+      const cells = await isCounted(filter.patches)
       const [found, totals] = await Promise.all([
         rows(cells ? summaryCellsSql(filter) : summarySql(filter), params),
         rows(cells ? totalsCellsSql(filter) : totalsSql(filter), params),
@@ -121,13 +133,17 @@ export class ChampionStatsService {
     })
   }
 
-  /** The previous patch's summary (it is in the menu: it has enough games), to show how each rank moved. */
+  /**
+   * The previous patch's summary (it is in the menu: it has enough games), to show how each rank
+   * moved; for a range, the same number of patches just before it (`previousRange`), null when
+   * the menu does not hold that many.
+   */
   async previous(filter: Filter): Promise<Summary | null> {
-    const patches = await this.patches()
-    const at = patches.findIndex((p) => p.patch === filter.patch)
-    const before = at >= 0 ? patches[at + 1] : undefined
+    const shown = await this.patches()
+    const offered = shown.map((p) => p.patch)
+    const before = previousRange(filter.patches, offered)
     if (!before) return null
-    return this.summary({ ...filter, patch: before.patch })
+    return this.summary({ ...filter, patch: patchValue(before), patches: before })
   }
 
   /**
@@ -146,7 +162,10 @@ export class ChampionStatsService {
   /** One champion's record at each rank group. */
   async byRank(filter: Filter, champion: number, position: Position) {
     const all = await this.#byRank.get(`${filter.patch}:${filter.region ?? ''}`, async () => {
-      const found = await rows(summaryByRankSql(filter), { patch: filter.patch })
+      const cells = await isCounted(filter.patches)
+      const found = await rows(cells ? summaryByRankCellsSql(filter) : summaryByRankSql(filter), {
+        patches: filter.patches,
+      })
       return found.map(
         ([grp, c, p, g, w]) =>
           [String(grp), num(c), String(p), num(g), num(w)] as [
@@ -191,12 +210,12 @@ export class ChampionStatsService {
     champion: number,
     position: Position
   ): Promise<[number, number, number][]> {
-    if (!(await isCounted(filter.patch))) {
+    if (!(await isCounted(filter.patches))) {
       return opponentsOf(await this.lanePairs(filter), champion, position)
     }
     return this.#opponents.get(`${key(filter)}:${champion}:${position}`, async () => {
       const found = await rows(laneOpponentsSql(filter), {
-        patch: filter.patch,
+        patches: filter.patches,
         champion,
         position,
       })
@@ -207,7 +226,7 @@ export class ChampionStatsService {
   /** Every lane pair of the filter, read in one pass (~10 s for a whole patch at all ranks). */
   lanePairs(filter: Filter): Promise<Record<string, number[]>> {
     return this.#pairs.get(key(filter), async () => {
-      const found = await rows(lanePairsSql(filter), { patch: filter.patch })
+      const found = await rows(lanePairsSql(filter), { patches: filter.patches })
       return lanePairs(
         found.map(
           ([p, c, o, g, w]) =>
@@ -276,7 +295,7 @@ export class ChampionStatsService {
    * counted cells once the patch's events are counted (every game), else a sample of the games.
    */
   async early(filter: Filter, champion: number, position: Position) {
-    const cells = await areEventsCounted(filter.patch)
+    const cells = await areEventsCounted(filter.patches)
     return this.one(cells ? 'early-cells' : 'early', filter, champion, position, async (params) => {
       const found = cells
         ? await rows(earlyFromCellsSql(filter), params)
@@ -287,7 +306,7 @@ export class ChampionStatsService {
 
   /** How often the champion takes first blood, helps it or gives it (counted cells, else a sample). */
   async firstBlood(filter: Filter, champion: number, position: Position) {
-    const cells = await areEventsCounted(filter.patch)
+    const cells = await areEventsCounted(filter.patches)
     const kind = cells ? 'first-blood-cells' : 'first-blood'
     return this.one(kind, filter, champion, position, async (params) => {
       const [row] = cells
@@ -358,7 +377,12 @@ export class ChampionStatsService {
     load: (params: Record<string, unknown>) => Promise<T>
   ): Promise<T> {
     return this.#champion.get(`${kind}:${key(filter)}:${champion}:${position}`, async () =>
-      load({ patch: filter.patch, champion, position, patchStart: await patchStart(filter.patch) })
+      load({
+        patches: filter.patches,
+        champion,
+        position,
+        patchStart: await rangeStart(filter.patches),
+      })
     )
   }
 }
