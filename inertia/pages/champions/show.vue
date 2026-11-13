@@ -64,6 +64,7 @@ import {
   type Sort,
 } from '../../lib/board.js'
 import { afterPaint } from '../../lib/after_paint.js'
+import { rememberChampion } from '../../lib/recent.js'
 import '../../css/champions.css'
 
 type Labels = Record<'item' | 'rune' | 'spell', Record<string, string>>
@@ -161,6 +162,15 @@ const props = defineProps<{
   details?: Details | null
   pros?: ProGames | null
 }>()
+
+/* Listed in the home's Recent with the players opened (on this device only). */
+onMounted(() =>
+  watch(
+    () => props.champion.slug,
+    () => rememberChampion(props.champion),
+    { immediate: true }
+  )
+)
 
 type Block =
   | 'build'

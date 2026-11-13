@@ -3,6 +3,7 @@ import {
   forgetRecent,
   recentHref,
   recentPlayers,
+  rememberChampion,
   rememberPlayer,
   rememberPro,
   updateRecent,
@@ -51,5 +52,19 @@ test.group('Recent searches', (group) => {
     assert.equal(pro.pro?.slug, 'name')
     forgetRecent()
     assert.deepEqual(recentPlayers(), [])
+  })
+
+  test('a champion page is listed once, apart from a pro or player of its name', ({ assert }) => {
+    rememberChampion({ id: 103, slug: 'ahri', name: 'Ahri' })
+    rememberPro({ slug: 'ahri', name: 'Ahri' })
+    rememberPlayer({ gameName: 'Ahri', tagLine: 'EUW', profileIconId: 1 })
+    rememberChampion({ id: 103, slug: 'ahri', name: 'Ahri' })
+
+    const list = recentPlayers()
+    assert.deepEqual(
+      list.map((p) => recentHref(p)),
+      ['/champions/ahri', `/${encodeURIComponent('Ahri-EUW')}`, '/pro/ahri']
+    )
+    assert.deepEqual(list[0].champion, { id: 103, slug: 'ahri' })
   })
 })

@@ -268,25 +268,36 @@ const groups = computed(() => {
         section: 'recent' as Section,
         entries: recent.value.slice(0, 5).map(
           (r): Entry =>
-            r.pro
+            r.champion
               ? {
                   gameName: r.gameName,
                   tagLine: '',
                   direct: false,
-                  kind: 'pro',
+                  kind: 'champion',
                   href: recentHref(r),
                   title: r.gameName,
-                  ...(r.pro.photo ? { photo: { slug: r.pro.slug, v: r.pro.photo } } : {}),
-                  badge: r.pro.staff ? 'Staff' : 'Pro',
+                  detail: 'Champion',
+                  champion: r.champion.id,
                 }
-              : {
-                  gameName: r.gameName,
-                  tagLine: r.tagLine,
-                  direct: false,
-                  icon: r.profileIconId,
-                  region: r.platform ? regionLabel(r.platform) : undefined,
-                  level: r.level,
-                }
+              : r.pro
+                ? {
+                    gameName: r.gameName,
+                    tagLine: '',
+                    direct: false,
+                    kind: 'pro',
+                    href: recentHref(r),
+                    title: r.gameName,
+                    ...(r.pro.photo ? { photo: { slug: r.pro.slug, v: r.pro.photo } } : {}),
+                    badge: r.pro.staff ? 'Staff' : 'Pro',
+                  }
+                : {
+                    gameName: r.gameName,
+                    tagLine: r.tagLine,
+                    direct: false,
+                    icon: r.profileIconId,
+                    region: r.platform ? regionLabel(r.platform) : undefined,
+                    level: r.level,
+                  }
         ),
       },
     ]
