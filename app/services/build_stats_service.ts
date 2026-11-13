@@ -1,6 +1,6 @@
 import { DDRAGON, FETCH_TIMEOUT_MS } from '#constants/assets'
 import { AnswerCache, ROLES, type Bracket, type Role } from '#services/ranked_stats'
-import { latestPatch, rows, statsCache } from '#services/ranked_games_service'
+import { readPatches, rows, statsCache } from '#services/ranked_games_service'
 import {
   buildRowsSql,
   itemKinds,
@@ -30,17 +30,19 @@ export class BuildStatsService {
     patch?: string,
     region: string | null = null
   ): Promise<BuildStats | null> {
-    const resolvedPatch = patch ?? (await latestPatch())
-    if (!resolvedPatch) return null
+    const read = await readPatches(patch)
+    if (!read) return null
+    const resolvedPatch = read.patch
     const position = ROLES[role]
     // Every region keeps the key it always had.
     const key = `${champion}:${position}:${bracket}:${resolvedPatch}${region ? `:${region}` : ''}`
     return this.#cache.get(key, async () => {
-      const kinds = await this.kinds(resolvedPatch)
+      // A range reads its newest patch's items.
+      const kinds = await this.kinds(read.patches[0])
       const found = await rows(buildRowsSql(bracket, { champion, position }, kinds, region), {
         champion,
         position,
-        patch: resolvedPatch,
+        patches: read.patches,
       })
       const parsed = found.map(
         ([kind, items, slot, games, wins]) =>

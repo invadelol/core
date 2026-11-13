@@ -1,4 +1,5 @@
 import vine from '@vinejs/vine'
+import { PATCH_PATTERN } from '../../inertia/lib/patches.js'
 import { BRACKETS, MAX_PICK_BRACKETS, ROLES } from '#services/ranked_stats'
 
 /**
@@ -16,11 +17,7 @@ export const runeParamsValidator = vine.compile(
 export const runeQueryValidator = vine.compile(
   vine.object({
     bracket: vine.enum(Object.keys(BRACKETS) as (keyof typeof BRACKETS)[]).optional(),
-    patch: vine
-      .string()
-      .trim()
-      .regex(/^\d{1,2}\.\d{1,2}$/)
-      .optional(),
+    patch: vine.string().trim().regex(PATCH_PATTERN).optional(),
   })
 )
 
@@ -34,10 +31,6 @@ export const pickQueryValidator = vine.compile(
       .trim()
       .regex(new RegExp(`^${BRACKET}(,${BRACKET}){0,${MAX_PICK_BRACKETS - 1}}$`))
       .optional(),
-    patch: vine
-      .string()
-      .trim()
-      .regex(/^\d{1,2}\.\d{1,2}$/)
-      .optional(),
+    patch: vine.string().trim().regex(PATCH_PATTERN).optional(),
   })
 )

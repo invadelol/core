@@ -152,12 +152,12 @@ export function seedTiers(bracket: Bracket) {
 }
 
 /**
- * The ranked games of the patch (`{patch:String}`) in the bracket: every ranked game of the
- * patch for all ranks (`matches`), the games the crawler found at the bracket's tiers otherwise
- * (`match_seed`, as the builds and the champion pages count them). A `region` keeps its
- * platforms' games only (every region by default).
+ * The ranked games of the patches (`{patches:Array(String)}`, one or a range) in the bracket:
+ * every ranked game of the patches for all ranks (`matches`), the games the crawler found at the
+ * bracket's tiers otherwise (`match_seed`, as the builds and the champion pages count them). A
+ * `region` keeps its platforms' games only (every region by default).
  *
- * With a `scope`, only that champion's games from the patch's start (`{patchStart:UInt64}`) on are
+ * With a `scope`, only that champion's games from the oldest patch's start (`{patchStart:UInt64}`) on are
  * looked up. ClickHouse builds the set of an `IN` before reading, and the patch holds millions of
  * games against a champion's thousands: the champion's set is built and the patch's games are
  * read against it, instead of hashing every game of the patch for each champion asked.
@@ -169,8 +169,8 @@ export function gamesSql(bracket: Bracket, scope: Scope = null, region: string |
     : ''
   const where = platformSql(region)
   return tiers
-    ? `SELECT match_id FROM match_seed WHERE patch = {patch:String} AND seed_tier IN (${tiers}) ${where}${mine}`
-    : `SELECT match_id FROM matches WHERE queue_id = ${RANKED_SOLO} AND patch = {patch:String} ${where}${mine}`
+    ? `SELECT match_id FROM match_seed WHERE patch IN {patches:Array(String)} AND seed_tier IN (${tiers}) ${where}${mine}`
+    : `SELECT match_id FROM matches WHERE queue_id = ${RANKED_SOLO} AND patch IN {patches:Array(String)} ${where}${mine}`
 }
 
 /**

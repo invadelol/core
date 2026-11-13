@@ -2,6 +2,7 @@ import type { ClickHouseSettings } from '@clickhouse/client'
 import clickhouse from 'adonisjs-clickhouse/services/main'
 import { AnswerCache, PATCH_START_SQL, readyPatches } from '#services/ranked_stats'
 import { StatsCache } from '#services/stats_cache'
+import { patchRange, patchValue } from '../../inertia/lib/patches.js'
 
 /**
  * The ranked games of our own ClickHouse (the crawler fills the same tables as the site), as
@@ -56,6 +57,37 @@ export function patchStart(patch: string): Promise<number> {
     const [row] = await rows(`SELECT ${PATCH_START_SQL}`, { patch })
     return Number(row?.[0] ?? 0)
   })
+}
+
+/** When the oldest of `patches` started, in ms (`patchStart`, each patch asked once). */
+export async function rangeStart(read: readonly string[]): Promise<number> {
+  const found = await Promise.all(read.map((p) => patchStart(p)))
+  return found.length ? Math.min(...found) : 0
+}
+
+/** The patches a statistic reads (newest first) and their address value (`16.20-16.22`). */
+export interface PatchRead {
+  patch: string
+  patches: string[]
+}
+
+/**
+ * The patches the API's `patch` asks for: one patch as it is (any stored patch, as always), a
+ * range of the offered ones (`16.20-16.22`, `patchRange`), the newest offered patch without one
+ * or when the range is not offered. Null while no patch is stored.
+ */
+export async function readPatches(value?: string | null): Promise<PatchRead | null> {
+  if (value && !value.includes('-')) return { patch: value, patches: [value] }
+  if (value) {
+    const shown = await shownPatches()
+    const range = patchRange(
+      value,
+      shown.map((p) => p.patch)
+    )
+    if (range) return { patch: patchValue(range), patches: range }
+  }
+  const latest = await latestPatch()
+  return latest ? { patch: latest, patches: [latest] } : null
 }
 
 /**

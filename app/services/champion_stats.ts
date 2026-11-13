@@ -44,9 +44,15 @@ export function positionOf(slug: unknown): Position | null {
 /** Regions a page can be narrowed to (`match_seed.platform`). */
 export { REGIONS } from '#services/ranked_stats'
 
-/** The filters every query shares: a patch, a rank bracket, maybe a region. */
+/**
+ * The filters every query shares: one patch or several in a row, a rank bracket, maybe a region.
+ * The queries take the patches as `{patches:Array(String)}`.
+ */
 export interface Filter {
+  /** The address value: `16.22`, or `16.20-16.22` for a range (`inertia/lib/patches.ts`). */
   patch: string
+  /** The patches read, newest first. */
+  patches: string[]
   bracket: Bracket
   region: string | null
 }
@@ -76,15 +82,15 @@ export const TIERS = ['S+', 'S', 'A', 'B', 'C', 'D'] as const
 
 const regionSql = (filter: Filter) => platformSql(filter.region).trimEnd()
 
-/** The crawled games of the filter (`{patch:String}` is a parameter). */
+/** The crawled games of the filter (`{patches:Array(String)}` is a parameter). */
 export function seedGamesSql(filter: Filter, bracket: Bracket = filter.bracket) {
   const tiers = seedTiers(bracket)
-  return `SELECT match_id FROM match_seed WHERE patch = {patch:String}
+  return `SELECT match_id FROM match_seed WHERE patch IN {patches:Array(String)}
       ${tiers ? `AND seed_tier IN (${tiers})` : ''} ${regionSql(filter)}`
 }
 
 const itemsWhere = (filter: Filter) =>
-  `patch = {patch:String} AND queue_id = ${RANKED_SOLO} AND match_id IN (${seedGamesSql(filter)})`
+  `patch IN {patches:Array(String)} AND queue_id = ${RANKED_SOLO} AND match_id IN (${seedGamesSql(filter)})`
 
 /** Every champion in every role: champion, position, games, wins. */
 export function summarySql(filter: Filter) {
@@ -104,7 +110,7 @@ export function totalsSql(filter: Filter) {
     UNION ALL
     SELECT 'ban', ban, count() FROM matches
     ARRAY JOIN arrayDistinct(arrayConcat(t1_bans, t2_bans)) AS ban
-    WHERE queue_id = ${RANKED_SOLO} AND patch = {patch:String} AND ban != 0
+    WHERE queue_id = ${RANKED_SOLO} AND patch IN {patches:Array(String)} AND ban != 0
       AND match_id IN (${seedGamesSql(filter)})
     GROUP BY ban
   `
@@ -112,20 +118,16 @@ export function totalsSql(filter: Filter) {
 
 /** Every champion in every role at every rank group: tier, champion, position, games, wins. */
 export function summaryByRankSql(filter: Filter) {
-  const groups = RANK_GROUPS.map((g) => {
-    const tiers = BRACKETS[g]!
-    return `WHEN seed_tier IN (${tiers.map((t) => `'${t}'`).join(',')}) THEN '${g}'`
-  }).join(' ')
   return `
     WITH s AS (
-      SELECT match_id, CASE ${groups} ELSE '' END AS grp FROM match_seed
-      WHERE patch = {patch:String} ${regionSql(filter)}
+      SELECT match_id, ${rankGroupSql()} AS grp FROM match_seed
+      WHERE patch IN {patches:Array(String)} ${regionSql(filter)}
       LIMIT 1 BY match_id
     )
     SELECT s.grp, p.champion_id, p.team_position, count(), sum(p.win)
     FROM (
       SELECT match_id, champion_id, team_position, win FROM participant_items FINAL
-      WHERE patch = {patch:String} AND queue_id = ${RANKED_SOLO} AND team_position != ''
+      WHERE patch IN {patches:Array(String)} AND queue_id = ${RANKED_SOLO} AND team_position != ''
     ) AS p
     INNER JOIN s USING (match_id)
     WHERE s.grp != ''
@@ -133,6 +135,15 @@ export function summaryByRankSql(filter: Filter) {
     UNION ALL
     SELECT grp, 0, '', count(), 0 FROM s WHERE grp != '' GROUP BY grp
   `
+}
+
+/** The rank group (`RANK_GROUPS`) of a `seed_tier`, '' for none. */
+const rankGroupSql = () => {
+  const groups = RANK_GROUPS.map((g) => {
+    const tiers = BRACKETS[g]!
+    return `WHEN seed_tier IN (${tiers.map((t) => `'${t}'`).join(',')}) THEN '${g}'`
+  }).join(' ')
+  return `CASE ${groups} ELSE '' END`
 }
 
 /** One champion in one role (`{champion:UInt16}`, `{position:String}`). */
@@ -145,10 +156,10 @@ const ONE_SQL = 'champion_id = {champion:UInt16} AND team_position = {position:S
  */
 const mineSql = (filter: Filter) => `
     SELECT match_id, participant_id, team_id, win FROM participant_items FINAL
-    WHERE patch = {patch:String} AND queue_id = ${RANKED_SOLO} AND ${ONE_SQL}
+    WHERE patch IN {patches:Array(String)} AND queue_id = ${RANKED_SOLO} AND ${ONE_SQL}
       AND match_id IN (${seedGamesSql(filter)}
         AND match_id IN (SELECT match_id FROM participant_items
-          WHERE patch = {patch:String} AND queue_id = ${RANKED_SOLO} AND ${ONE_SQL}))
+          WHERE patch IN {patches:Array(String)} AND queue_id = ${RANKED_SOLO} AND ${ONE_SQL}))
   `
 
 /**
@@ -164,7 +175,7 @@ export function laneSql(filter: Filter) {
     FROM me
     INNER JOIN (
       SELECT match_id, groupUniqArrayArray(players) AS players FROM match_lineups
-      WHERE patch = {patch:String} AND match_id IN (SELECT match_id FROM me)
+      WHERE patch IN {patches:Array(String)} AND match_id IN (SELECT match_id FROM me)
       GROUP BY match_id
     ) AS l USING (match_id)
     ARRAY JOIN l.players AS o
@@ -187,11 +198,11 @@ export function lanePairsSql(filter: Filter) {
            sum(if(a.2 = 100, m.t1_win, m.t2_win))
     FROM (
       SELECT match_id, players FROM match_lineups FINAL
-      WHERE patch = {patch:String} AND match_id IN (${seedGamesSql(filter)})
+      WHERE patch IN {patches:Array(String)} AND match_id IN (${seedGamesSql(filter)})
     ) AS l
     INNER JOIN (
       SELECT match_id, t1_win, t2_win FROM matches
-      WHERE patch = {patch:String} AND queue_id = ${RANKED_SOLO}
+      WHERE patch IN {patches:Array(String)} AND queue_id = ${RANKED_SOLO}
     ) AS m USING (match_id)
     ARRAY JOIN l.players AS a
     ARRAY JOIN arrayFilter(x -> x.3 = a.3 AND x.2 != a.2, l.players) AS b
@@ -285,7 +296,7 @@ export function cellCountsSql() {
 export function summaryCellsSql(filter: Filter) {
   return `
     SELECT champion, position, sum(games), sum(wins) FROM stats_champion_roles
-    WHERE patch = {patch:String} ${cellsSql(filter)}
+    WHERE patch IN {patches:Array(String)} ${cellsSql(filter)}
     GROUP BY champion, position
   `
 }
@@ -294,7 +305,7 @@ export function summaryCellsSql(filter: Filter) {
 export function totalsCellsSql(filter: Filter) {
   return `
     SELECT if(champion = 0, 'games', 'ban'), champion, sum(games) FROM stats_cell_counts
-    WHERE patch = {patch:String} ${cellsSql(filter)}
+    WHERE patch IN {patches:Array(String)} ${cellsSql(filter)}
     GROUP BY champion
   `
 }
@@ -303,9 +314,25 @@ export function totalsCellsSql(filter: Filter) {
 export function laneOpponentsSql(filter: Filter) {
   return `
     SELECT opponent, sum(games), sum(wins) FROM stats_lane_pairs
-    WHERE patch = {patch:String} AND position = {position:String} AND champion = {champion:UInt16}
+    WHERE patch IN {patches:Array(String)} AND position = {position:String} AND champion = {champion:UInt16}
       ${cellsSql(filter)}
     GROUP BY opponent
+  `
+}
+
+/** `summaryByRankSql` from the counted cells: the same rows. */
+export function summaryByRankCellsSql(filter: Filter) {
+  return `
+    SELECT ${rankGroupSql()} AS grp, champion, position, sum(games), sum(wins)
+    FROM stats_champion_roles
+    WHERE patch IN {patches:Array(String)} ${regionSql(filter)}
+    GROUP BY grp, champion, position
+    HAVING grp != ''
+    UNION ALL
+    SELECT ${rankGroupSql()} AS grp, 0, '', sum(games), 0 FROM stats_cell_counts
+    WHERE patch IN {patches:Array(String)} AND champion = 0 ${regionSql(filter)}
+    GROUP BY grp
+    HAVING grp != ''
   `
 }
 
@@ -404,7 +431,7 @@ export function earlyFromCellsSql(filter: Filter) {
     SELECT minute, sum(games), sum(cs), sum(gold), sum(xp), sum(cs_diff), sum(gold_diff),
            sum(xp_diff), sum(ahead), sum(ahead_wins), sum(behind), sum(behind_wins)
     FROM stats_early
-    WHERE patch = {patch:String} AND position = {position:String} AND champion = {champion:UInt16}
+    WHERE patch IN {patches:Array(String)} AND position = {position:String} AND champion = {champion:UInt16}
       ${cellsSql(filter)}
     GROUP BY minute ORDER BY minute
   `
@@ -415,7 +442,7 @@ export function firstBloodFromCellsSql(filter: Filter) {
   return `
     SELECT sum(games), sum(kills), sum(assists), sum(victims), sum(involved_wins)
     FROM stats_first_blood
-    WHERE patch = {patch:String} AND position = {position:String} AND champion = {champion:UInt16}
+    WHERE patch IN {patches:Array(String)} AND position = {position:String} AND champion = {champion:UInt16}
       ${cellsSql(filter)}
   `
 }
@@ -476,7 +503,7 @@ export function profileSql(filter: Filter) {
            ${side(false)}
     FROM (
       SELECT match_id, duration_sec, ${OBJECTIVES.map((o) => `t1_${o}, t2_${o}`).join(', ')}
-      FROM matches WHERE queue_id = ${RANKED_SOLO} AND patch = {patch:String}
+      FROM matches WHERE queue_id = ${RANKED_SOLO} AND patch IN {patches:Array(String)}
     ) AS m
     INNER JOIN (${mineSql(filter)}) AS me USING (match_id)
     LEFT JOIN (
@@ -573,7 +600,7 @@ export function earlySql(filter: Filter) {
         FROM me
         INNER JOIN (
           SELECT match_id, groupUniqArrayArray(players) AS players FROM match_lineups
-          WHERE patch = {patch:String} AND match_id IN (SELECT match_id FROM me)
+          WHERE patch IN {patches:Array(String)} AND match_id IN (SELECT match_id FROM me)
           GROUP BY match_id
         ) AS l USING (match_id)
         ARRAY JOIN l.players AS o
@@ -765,7 +792,7 @@ export function byRank(
   return RANK_GROUPS.map((group) => {
     const inGroup = rows.filter((r) => r[0] === group)
     const games = inGroup.find((r) => r[1] === 0 && r[2] === '')?.[3] ?? 0
-    const filter = { patch: '', bracket: group, region: null }
+    const filter = { patch: '', patches: [], bracket: group, region: null }
     const summary = summarize(
       filter,
       inGroup.filter((r) => r[1] !== 0).map((r) => [r[1], r[2], r[3], r[4]]),

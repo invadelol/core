@@ -77,16 +77,16 @@ export function eventCountedPatches(): Promise<Map<string, number>> {
   })
 }
 
-/** Whether `patch`'s early game and first blood are read from the counted cells. */
-export async function areEventsCounted(patch: string) {
+/** Whether the early game and first blood of `patch` (or of every one of a range) are read from the counted cells. */
+export async function areEventsCounted(patch: string | readonly string[]) {
   const done = await eventCountedPatches()
-  return done.has(patch)
+  return (typeof patch === 'string' ? [patch] : patch).every((p) => done.has(p))
 }
 
-/** Whether `patch` is read from the counted cells. */
-export async function isCounted(patch: string) {
+/** Whether `patch` (or every one of a range) is read from the counted cells. */
+export async function isCounted(patch: string | readonly string[]) {
   const done = await countedPatches()
-  return done.has(patch)
+  return (typeof patch === 'string' ? [patch] : patch).every((p) => done.has(p))
 }
 
 const command = (query: string, params?: Record<string, unknown>) =>

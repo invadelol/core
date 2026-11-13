@@ -1,5 +1,5 @@
 import { ROLES, type Bracket, type Role } from '#services/ranked_stats'
-import { latestPatch, patchStart, rows, statsCache } from '#services/ranked_games_service'
+import { rangeStart, readPatches, rows, statsCache } from '#services/ranked_games_service'
 import {
   spellRowsSql,
   summarizeSpells,
@@ -22,8 +22,9 @@ export class SpellStatsService {
     patch?: string,
     region: string | null = null
   ): Promise<SpellStats | null> {
-    const resolvedPatch = patch ?? (await latestPatch())
-    if (!resolvedPatch) return null
+    const read = await readPatches(patch)
+    if (!read) return null
+    const resolvedPatch = read.patch
     const position = ROLES[role]
     // Every region keeps the key it always had.
     const key = `${champion}:${position}:${bracket}:${resolvedPatch}${region ? `:${region}` : ''}`
@@ -31,8 +32,8 @@ export class SpellStatsService {
       const found = await rows(spellRowsSql(bracket, { champion, position }, region), {
         champion,
         position,
-        patch: resolvedPatch,
-        patchStart: await patchStart(resolvedPatch),
+        patches: read.patches,
+        patchStart: await rangeStart(read.patches),
       })
       const result = summarizeSpells(found.map((row) => row.map(Number)) as SpellRow[])
       return { champion, role: position, patch: resolvedPatch, bracket, ...result }

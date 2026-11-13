@@ -139,7 +139,7 @@ test.group('Build stats', () => {
     // The bracket's crawled games are looked up among the champion's own only.
     assert.include(
       one,
-      "seed_tier IN ('EMERALD','DIAMOND','MASTER','GRANDMASTER','CHALLENGER') AND match_id IN (SELECT match_id FROM participant_items WHERE patch = {patch:String} AND queue_id = 420 AND champion_id = {champion:UInt16}"
+      "seed_tier IN ('EMERALD','DIAMOND','MASTER','GRANDMASTER','CHALLENGER') AND match_id IN (SELECT match_id FROM participant_items WHERE patch IN {patches:Array(String)} AND queue_id = 420 AND champion_id = {champion:UInt16}"
     )
     assert.notInclude(
       buildRowsSql('emerald_plus', null, kinds),
@@ -167,7 +167,7 @@ test.group('Build stats', () => {
     const all = buildRowsSql('all', scope, kinds, 'kr')
     assert.include(
       all,
-      "FROM match_seed WHERE patch = {patch:String} AND platform IN ('KR') AND match_id IN"
+      "FROM match_seed WHERE patch IN {patches:Array(String)} AND platform IN ('KR') AND match_id IN"
     )
     assert.notInclude(all, 'seed_tier')
   })

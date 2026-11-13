@@ -117,7 +117,7 @@ export function buildRowsSql(
   const where = platformSql(region)
   const by = scope ? '' : 'champion_id, team_position, '
   const mine = scope
-    ? `AND match_id IN (SELECT match_id FROM participant_items WHERE patch = {patch:String} AND queue_id = ${RANKED_SOLO} ${scopeSql(scope)})`
+    ? `AND match_id IN (SELECT match_id FROM participant_items WHERE patch IN {patches:Array(String)} AND queue_id = ${RANKED_SOLO} ${scopeSql(scope)})`
     : ''
   // Per player: starting items (a multiset), the legendary items in the order first bought,
   // the first finished boots (0 without).
@@ -128,8 +128,8 @@ export function buildRowsSql(
         arrayFilter((i, n) -> indexOf(bought, i) = n, bought, arrayEnumerate(bought)) AS legs,
         arrayFilter(i -> ${isOneOf(kinds.boots)}, purchases)[1] AS boots
       FROM participant_items FINAL
-      WHERE patch = {patch:String} AND queue_id = ${RANKED_SOLO} ${scopeSql(scope)}
-      ${tiers || where ? `AND match_id IN (SELECT match_id FROM match_seed WHERE patch = {patch:String} ${tiers ? `AND seed_tier IN (${tiers}) ` : ''}${where}${mine})` : ''}
+      WHERE patch IN {patches:Array(String)} AND queue_id = ${RANKED_SOLO} ${scopeSql(scope)}
+      ${tiers || where ? `AND match_id IN (SELECT match_id FROM match_seed WHERE patch IN {patches:Array(String)} ${tiers ? `AND seed_tier IN (${tiers}) ` : ''}${where}${mine})` : ''}
     `
   const none = 'CAST([] AS Array(UInt16))'
   return `
