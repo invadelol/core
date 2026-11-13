@@ -263,6 +263,52 @@ test.group('Riot asset paths', () => {
     assert.isNull(parseChampion(null))
   })
 
+  test('skin art: a skin number picks that skin, base first in the list', ({ assert }) => {
+    const art = parseChampion({
+      alias: 'Aatrox',
+      skins: [
+        {
+          id: 266007,
+          name: 'Blood Moon Aatrox',
+          isBase: false,
+          splashPath: '/lol-game-data/assets/v1/champion-splashes/266/266007.jpg',
+        },
+        {
+          id: 266000,
+          name: 'Aatrox',
+          isBase: true,
+          splashPath: '/lol-game-data/assets/v1/champion-splashes/266/266000.jpg',
+        },
+        // A chroma: no splash of its own, never offered.
+        { id: 266008, name: 'Chroma' },
+      ],
+    })
+    assert.deepEqual(
+      art?.skins?.map(({ num, name }) => ({ num, name })),
+      [
+        { num: 0, name: 'Aatrox' },
+        { num: 7, name: 'Blood Moon Aatrox' },
+      ]
+    )
+    assert.deepEqual(championSources('centered', '266-7', art), [
+      `${CDRAGON_GAME_DATA}/v1/champion-splashes/266/266007.jpg`,
+      `${DDRAGON}/cdn/img/champion/centered/Aatrox_7.jpg`,
+      'https://cdn.communitydragon.org/latest/champion/266/splash-art/centered/skin/7',
+    ])
+    // A skin the file does not list still has the conventional paths.
+    assert.deepEqual(championSources('splash', '266-9', null), [
+      'https://cdn.communitydragon.org/latest/champion/266/splash-art/skin/9',
+    ])
+    // Skin 0 is the base art, under the same sources as the bare id.
+    assert.deepEqual(
+      championSources('centered', '266-0', art),
+      championSources('centered', '266', art)
+    )
+    assert.deepEqual(parseAssetRequest('centered', '266-7.jpg'), { kind: 'centered', id: '266-7' })
+    assert.isNull(parseAssetRequest('centered', '266-1000.jpg'))
+    assert.isNull(parseAssetRequest('champion', '266-7.png'))
+  })
+
   test('an unknown profile icon falls back to the generic portrait', ({ assert }) => {
     const sources = fallbackSources('profile-icon', '999999')
     assert.isTrue(sources.some((url) => url.endsWith('/29.jpg')))

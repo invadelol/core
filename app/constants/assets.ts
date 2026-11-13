@@ -56,6 +56,8 @@ export const MASTERY_CREST_MAX = 10
 export const ABILITY_KEYS = ['p', 'q', 'w', 'e', 'r'] as const
 
 const NUMERIC = /^\d{1,7}$/
+/** A champion id, or `<champion id>-<skin number>` for one of its skins (`266-7`). */
+const CHAMPION_SKIN = /^\d{1,7}(?:-\d{1,3})?$/
 const TIER = new RegExp(`^(${TIERS.join('|')}|unranked)$`)
 
 /**
@@ -64,9 +66,9 @@ const TIER = new RegExp(`^(${TIERS.join('|')}|unranked)$`)
  */
 export const ASSET_IDS: Record<AssetKind, RegExp> = {
   'champion': NUMERIC,
-  'splash': NUMERIC,
-  'centered': NUMERIC,
-  'loading': NUMERIC,
+  'splash': CHAMPION_SKIN,
+  'centered': CHAMPION_SKIN,
+  'loading': CHAMPION_SKIN,
   'ability': new RegExp(`^\\d{1,4}-[${ABILITY_KEYS.join('')}]$`),
   'item': NUMERIC,
   'spell': NUMERIC,

@@ -194,6 +194,12 @@ export class RiotAssetsService {
     return trees ?? { styles: {}, shards: [] }
   }
 
+  /** A champion's skins on the live patch, base first: number and name. Empty when unknown. */
+  async skins(championId: string): Promise<Array<{ num: number; name: string }>> {
+    const art = await this.champion(championId, await this.live())
+    return (art?.skins ?? []).map(({ num, name }) => ({ num, name }))
+  }
+
   /** Every id of a kind on the live patch, used by the warming command. */
   async ids(kind: AssetKind): Promise<string[]> {
     if (kind === 'rank' || kind === 'emblem') return [...TIERS]
@@ -303,7 +309,8 @@ export class RiotAssetsService {
 
   /** The art paths in one champion's own file, shared by its splashes and abilities. */
   private champion(id: string, release: Release): Promise<ChampionArt | null> {
-    const key = `riot:champion:${release.cdragon}:${id}`
+    // v2: the file's skins are kept too (a skin's splash, the share card's skin list).
+    const key = `riot:champion:v2:${release.cdragon}:${id}`
     return this.cached(key, release, `v1/champions/${id}.json`, parseChampion)
   }
 

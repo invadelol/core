@@ -214,6 +214,15 @@ export function masterySources(level: string, release: Release = LATEST): string
   ]
 }
 
+/** One skin of a champion: its number (`id % 1000`, 0 for the base), name and art paths. */
+export interface SkinArt {
+  num: number
+  name: string
+  splash?: string
+  centered?: string
+  loading?: string
+}
+
 /** What one champion's own file (`v1/champions/<id>.json`) says about its art. */
 export interface ChampionArt {
   /** Data Dragon's name for the champion (`MonkeyKing`). */
@@ -223,6 +232,8 @@ export interface ChampionArt {
   centered?: string
   loading?: string
   abilities: Partial<Record<(typeof ABILITY_KEYS)[number], string>>
+  /** Every skin with art, base first; chromas are left out (they have no splash of their own). */
+  skins?: SkinArt[]
 }
 
 /** The fields of a champion file the proxy needs, so only those are cached. */
@@ -238,12 +249,26 @@ export function parseChampion(raw: any): ChampionArt | null {
       abilities[key] = spell.abilityIconPath
     }
   }
+  const list: SkinArt[] = []
+  for (const skin of skins) {
+    const id = Number(skin?.id)
+    if (!Number.isInteger(id) || id < 0 || typeof skin.splashPath !== 'string') continue
+    list.push({
+      num: skin === base ? 0 : id % 1000,
+      name: typeof skin.name === 'string' && skin.name ? skin.name : String(id % 1000),
+      splash: skin.uncenteredSplashPath,
+      centered: skin.splashPath,
+      loading: skin.loadScreenPath,
+    })
+  }
+  list.sort((a, b) => a.num - b.num)
   return {
     alias: typeof raw.alias === 'string' ? raw.alias : undefined,
     splash: base?.uncenteredSplashPath,
     centered: base?.splashPath,
     loading: base?.loadScreenPath,
     abilities,
+    skins: list,
   }
 }
 
@@ -257,7 +282,8 @@ const ART = {
 /**
  * Splash, centred splash, loading art and ability icons, from the champion's
  * own file, then the unversioned copies both CDNs keep. `id` is the champion
- * id, or `<champion id>-<p|q|w|e|r>` for an ability.
+ * id, `<champion id>-<skin number>` for a skin's art, or
+ * `<champion id>-<p|q|w|e|r>` for an ability.
  */
 export function championSources(
   kind: 'splash' | 'centered' | 'loading' | 'ability',
@@ -273,11 +299,23 @@ export function championSources(
       `${CDRAGON_CDN}/champion/${champion}/ability-icon/${key}`,
     ]
   }
+  const [champion, skin] = id.split('-')
+  const num = Number(skin ?? 0)
+  if (num) {
+    const path = art?.skins?.find((entry) => entry.num === num)?.[kind]
+    return [
+      ...(path ? [gameDataUrl(path, release)] : []),
+      ...(art?.alias
+        ? [`${DDRAGON}/cdn/img/champion/${ART[kind].ddragon}/${art.alias}_${num}.jpg`]
+        : []),
+      `${CDRAGON_CDN}/champion/${champion}/${ART[kind].cdn}/skin/${num}`,
+    ]
+  }
   const path = art?.[kind]
   return [
     ...(path ? [gameDataUrl(path, release)] : []),
     ...(art?.alias ? [`${DDRAGON}/cdn/img/champion/${ART[kind].ddragon}/${art.alias}_0.jpg`] : []),
-    `${CDRAGON_CDN}/champion/${id}/${ART[kind].cdn}`,
+    `${CDRAGON_CDN}/champion/${champion}/${ART[kind].cdn}`,
   ]
 }
 
