@@ -8,6 +8,7 @@ import type {
 } from '#types/summoner'
 import { DEFAULT_STATS_COUNT, DEFAULT_FRIENDS_LIMIT, TOP_CHAMPIONS_COUNT } from '#config/constants'
 import { VISIBLE_QUEUES_SQL } from '#constants/riot'
+import { notRemake } from './remakes.js'
 
 /** Positional rows: see `columns.ts` for why these queries avoid key names. */
 async function rows(query: string): Promise<unknown[][]> {
@@ -52,7 +53,7 @@ export class StatsRepository {
         sum(win) as wins
       FROM participants
       PREWHERE puuid = '${escapeClickhouseString(puuid)}'
-      WHERE ${VISIBLE_QUEUES_SQL}
+      WHERE ${VISIBLE_QUEUES_SQL} AND ${notRemake(puuid)}
       GROUP BY day
       ORDER BY day ASC
     `)
@@ -77,7 +78,7 @@ export class StatsRepository {
         SELECT match_id, team_id
         FROM participants
         PREWHERE puuid = '${escapedPuuid}'
-        WHERE ${VISIBLE_QUEUES_SQL}
+        WHERE ${VISIBLE_QUEUES_SQL} AND ${notRemake(puuid)}
       )
       SELECT
         puuid,
@@ -128,7 +129,8 @@ export class StatsRepository {
     const offset = Math.max(0, Math.trunc(Number(filters.offset)) || 0)
 
     // Brawl and League Classic never count (EXCLUDED_QUEUE_IDS).
-    const whereClauses: string[] = [VISIBLE_QUEUES_SQL]
+    // Remakes are no result: left out before the window, so N games are N played.
+    const whereClauses: string[] = [VISIBLE_QUEUES_SQL, notRemake(puuid)]
     if (filters.queueIds?.length) {
       whereClauses.push(`queue_id IN (${filters.queueIds.map(Number).join(',')})`)
     }
@@ -265,7 +267,7 @@ export class StatsRepository {
       SELECT puuid, champion_id, team_position, win
       FROM participants
       PREWHERE puuid IN (${puuids.map((puuid) => `'${escapeClickhouseString(puuid)}'`).join(',')})
-      WHERE ${VISIBLE_QUEUES_SQL}
+      WHERE ${VISIBLE_QUEUES_SQL} AND ${notRemake(puuids)}
       ORDER BY game_start_ms DESC, match_id DESC
       LIMIT ${integer(count, DEFAULT_STATS_COUNT)} BY puuid
     `)
@@ -300,6 +302,7 @@ export class StatsRepository {
       FROM participants
       PREWHERE puuid = '${escapeClickhouseString(puuid)}'
       WHERE ${VISIBLE_QUEUES_SQL}
+        AND ${notRemake(puuid)}
         AND game_start_ms >= ${Math.trunc(filters.sinceMs)}
         AND queue_id IN (${filters.queueIds.map(Number).join(',')})
     `
@@ -344,7 +347,7 @@ export class StatsRepository {
     filters: { queueIds?: readonly number[]; role?: string } = {}
   ): Promise<SummonerChampionStats[]> {
     const escapedPuuid = escapeClickhouseString(puuid)
-    const conditions = [VISIBLE_QUEUES_SQL]
+    const conditions = [VISIBLE_QUEUES_SQL, notRemake(puuid)]
     if (filters.queueIds?.length)
       conditions.push(`queue_id IN (${filters.queueIds.map(Number).join(',')})`)
     if (filters.role && filters.role !== 'all')

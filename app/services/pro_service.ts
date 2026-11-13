@@ -14,6 +14,7 @@ import proLadderService, {
 } from '#services/pro_ladder_service'
 import { PLATFORMS } from '#constants/riot'
 import proPhotoService from '#services/pro_photo_service'
+import { notRemake } from '#services/analytics/remakes'
 
 /**
  * Professional players, their teams and their accounts (`pro_*` tables), and what their games
@@ -771,6 +772,7 @@ export class ProService {
          SELECT match_id, puuid, champion_id, win FROM participants
          WHERE puuid IN {puuids:Array(String)} AND queue_id = ${RANKED_SOLO}
            AND game_start_ms >= {since:UInt64}
+           AND ${notRemake([...playerOf.keys()])}
          LIMIT 1 BY match_id, puuid
        )
        GROUP BY puuid, champion_id`,

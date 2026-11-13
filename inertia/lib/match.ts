@@ -179,12 +179,16 @@ export const SCORE_SCALE = {
   curve,
 } as const
 
-/** Below this a game is a remake, and a score would only be noise. */
-const MIN_SCORED_SECONDS = 300
+/**
+ * Below this a game is a remake (Riot's early surrender ends it around three to four minutes),
+ * and a score would only be noise. Remakes are no result: never a win, a loss or part of an
+ * average. The ClickHouse summaries use the same line (app/services/analytics/remakes.ts).
+ */
+export const REMAKE_SECONDS = 300
 
 /** A game that ended before five minutes: no result worth reading, no score. */
 export function isRemake(match: Pick<Match, 'duration'>) {
-  return (match.duration || 0) < MIN_SCORED_SECONDS
+  return (match.duration || 0) < REMAKE_SECONDS
 }
 
 export interface PlayerScore {

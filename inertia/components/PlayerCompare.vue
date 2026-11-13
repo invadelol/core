@@ -16,7 +16,7 @@ import ShowMore from './ShowMore.vue'
 import Sparkline from './ui/Sparkline.vue'
 import { champIcon, championName, profileIcon, regionLabel } from '../lib/assets.js'
 import { compact, duration, timeAgo } from '../lib/format.js'
-import { killParticipation, matchMinutes, teamTotals } from '../lib/match.js'
+import { isRemake, killParticipation, matchMinutes, teamTotals } from '../lib/match.js'
 import {
   championSplit,
   lineOf,
@@ -241,6 +241,7 @@ function gap(key: MetricKey, factor: number, decimals: number) {
 /* ── Per-game series, for the trend beside each metric ─────────── */
 function series(index: number, key: MetricKey) {
   return (datasets.value[index]?.matches ?? [])
+    .filter((m) => !isRemake(m))
     .slice(0, 20)
     .reverse()
     .flatMap((m) => {
@@ -262,10 +263,11 @@ function series(index: number, key: MetricKey) {
     })
 }
 
-/** Last 20 results per player, oldest first. */
+/** Last 20 results per player (remakes are no result), oldest first. */
 const form = computed(() =>
   players.value.map((p, index) =>
     (datasets.value[index]?.matches ?? [])
+      .filter((m) => !isRemake(m))
       .slice(0, 20)
       .map((m) => m.participants.find((x) => x.puuid === p.puuid)?.win)
       .filter((w): w is boolean => w !== undefined)

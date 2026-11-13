@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { RoleIcon } from '@invadelol/ui'
 import { positionName, positionOf, type Position } from '@invadelol/ui/logic'
+import { isRemake } from '../lib/match.js'
 import type { Match } from '../lib/types.js'
 
 const props = defineProps<{ matches: Match[]; puuid: string }>()
@@ -14,7 +15,8 @@ const rows = computed(() => {
   for (const match of props.matches) {
     const me = match.participants.find((p) => p.puuid === props.puuid)
     const lane = positionOf(me?.position)
-    if (!me || !lane) continue
+    // A remake is no result: not a game in the split, not a loss in its win rate.
+    if (!me || !lane || isRemake(match)) continue
     const entry = counts.get(lane) ?? { games: 0, wins: 0 }
     entry.games++
     if (me.win) entry.wins++
