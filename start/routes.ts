@@ -169,6 +169,7 @@ router.get('/cdn/pro/:slug', [ProsController, 'photo'])
 router
   .group(() => {
     router.get('/names/:kind', [AssetsController, 'names'])
+    router.get('/skins/:champion', [AssetsController, 'skins'])
     router.get('/:patch/:kind/:id', [AssetsController, 'show'])
     router.get('/:kind/:id', [AssetsController, 'show'])
   })

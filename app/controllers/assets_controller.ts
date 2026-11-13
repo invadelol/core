@@ -50,6 +50,21 @@ export default class AssetsController {
     return response.send(Buffer.from(served.body))
   }
 
+  /**
+   * A champion's skins (number and name, base first), so a page can offer them: the art itself
+   * is `/cdn/centered/<champion>-<number>`.
+   */
+  async skins({ params, response }: HttpContext) {
+    const id = String(params.champion ?? '').replace(/\.json$/i, '')
+    if (!/^\d{1,7}$/.test(id)) return response.notFound()
+    const skins = await riotAssetsService.skins(id)
+    response.header(
+      'Cache-Control',
+      skins.length ? `public, max-age=${NAMES_CACHE_SECONDS}` : 'no-store'
+    )
+    return response.ok(skins)
+  }
+
   /** Numeric id to display name, so the client stops fetching Riot's JSON. */
   async names({ params, request, response }: HttpContext) {
     // Only the kinds with a manifest have names; anything else is not ours to answer.
