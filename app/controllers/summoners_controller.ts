@@ -22,6 +22,7 @@ import {
 } from '#utils/riot_errors'
 import matchPager from '#services/match_pager'
 import homeService from '#services/home_service'
+import { firstViewInWindow } from '#services/profile_views'
 import deviceService from '#services/desktop/device_service'
 import playerSnapshotService from '#services/desktop/player_snapshot_service'
 import type Summoner from '#models/summoner'
@@ -275,7 +276,9 @@ export default class SummonersController {
   }
 
   /**
-   * Increment summoner view count
+   * Count a profile view: once per visitor and profile a day (a keyed hash of address and
+   * browser, never stored in clear), so reloading a profile does not add to it. Returns the
+   * total either way.
    * @paramPath puuid - Summoner PUUID
    * @responseBody 200 - { viewCount: number }
    * @responseBody 404 - Summoner not found
@@ -283,13 +286,17 @@ export default class SummonersController {
   async incrementViews({ request, params, response }: HttpContext) {
     await request.validateUsing(puuidParamsValidator, { data: params })
     const { puuid } = params
-    const viewCount = await summonerService.incrementViewCount(puuid)
+    const visitor = { ip: request.ip(), userAgent: request.header('user-agent') ?? '' }
+    const counted = await firstViewInWindow(visitor, puuid)
+    const viewCount = counted
+      ? await summonerService.incrementViewCount(puuid)
+      : await summonerService.getViewCount(puuid)
 
     if (viewCount === null) {
       return response.notFound({ message: 'Summoner not found' })
     }
     // The home page's Trending reads views by day; counting one must never hold the answer.
-    void homeService.recordView(puuid)
+    if (counted) void homeService.recordView(puuid)
 
     return response.ok({ viewCount: viewCount.toString() })
   }
