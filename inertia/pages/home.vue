@@ -235,7 +235,7 @@ const gold = (n: number) => `+${Math.round(n)}`
 
       <section v-if="bans.length" class="hm-sec far hm-wrap" aria-labelledby="hm-bans">
         <div class="hm-head">
-          <span class="ico"><Icon name="x" :size="14" /></span>
+          <span class="ico"><Icon name="shield" :size="14" /></span>
           <h2 id="hm-bans">Most banned</h2>
           <span v-if="picks" class="meta">Patch {{ picks.patch }}</span>
           <Link href="/tier-list" prefetch class="end" data-track="home_bans_tier_list"

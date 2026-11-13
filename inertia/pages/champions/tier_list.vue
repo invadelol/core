@@ -122,7 +122,7 @@ const champHref = (id: number) =>
   `/champions/${byId.value.get(id)?.slug ?? id}${filterQuery({ role: role.value.slug, rank: rank.value, patch: patch.value }, latest.value)}`
 const name = (id: number) => byId.value.get(id)?.name ?? ''
 
-const RANKS = ['all', 'emerald_plus', 'diamond_plus', 'master_plus'] as const
+const RANKS = ['all', 'platinum_plus', 'emerald_plus', 'diamond_plus', 'master_plus'] as const
 const singleRanks = BRACKETS.filter((b) => !(RANKS as readonly string[]).includes(b.value)).map(
   (b) => ({
     value: b.value,
@@ -148,12 +148,14 @@ const patchOptions = computed(() =>
 )
 const RANK_TEXT: Record<string, string> = {
   all: 'All ranks',
-  emerald_plus: 'Emerald and above',
-  diamond_plus: 'Diamond and above',
-  master_plus: 'Master and above',
+  platinum_plus: 'Platinum+',
+  emerald_plus: 'Emerald+',
+  diamond_plus: 'Diamond+',
+  master_plus: 'Master+',
 }
 const CREST: Record<string, string | null> = {
   all: null,
+  platinum_plus: 'PLATINUM',
   emerald_plus: 'EMERALD',
   diamond_plus: 'DIAMOND',
   master_plus: 'MASTER',
@@ -337,7 +339,7 @@ const title = computed(
               <div class="nb-tr th tl-cols" role="row">
                 <span role="columnheader" :aria-sort="ariaSort(sort, 'rank')"
                   ><SortHead
-                    label="#"
+                    label="Rank"
                     :active="sort.key === 'rank'"
                     :dir="sort.dir"
                     title="Place in the role"
@@ -389,12 +391,14 @@ const title = computed(
               </div>
               <div v-if="!groups.length" class="nb-empty">No champion matches “{{ query }}”.</div>
               <div v-for="g in groups" :key="g.tier" role="rowgroup">
-                <div class="nb-tgroup" role="row">
+                <div class="nb-tgroup tl-cols" role="row">
                   <span role="cell"><TierMark :tier="g.tier" large /></span>
                   <span class="nb-meta num" role="cell"
                     >{{ g.rows.length }} {{ g.rows.length === 1 ? 'champion' : 'champions' }}</span
                   >
-                  <span class="avg num hm" role="cell">Average win rate {{ pct(g.avg) }}</span>
+                  <span class="avg tl-avg num" role="cell" title="Average win rate of the tier"
+                    >Av. {{ pct(g.avg) }}</span
+                  >
                 </div>
                 <div
                   v-for="r in g.rows"

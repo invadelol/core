@@ -42,12 +42,17 @@ export const BRACKETS = [
   { value: 'platinum', label: 'Platinum', crest: 'platinum' },
   { value: 'emerald', label: 'Emerald', crest: 'emerald' },
   { value: 'diamond', label: 'Diamond', crest: 'diamond' },
+  { value: 'master', label: 'Master', crest: 'master' },
+  { value: 'grandmaster', label: 'Grandmaster', crest: 'grandmaster' },
+  { value: 'challenger', label: 'Challenger', crest: 'challenger' },
+  { value: 'platinum_plus', label: 'Platinum+', crest: 'platinum' },
   { value: 'emerald_plus', label: 'Emerald+', crest: 'emerald' },
   { value: 'diamond_plus', label: 'Diamond+', crest: 'diamond' },
   { value: 'master_plus', label: 'Master+', crest: 'master' },
 ] as const
 
-export const bracketOf = (value: string) => BRACKETS.find((b) => b.value === value) ?? BRACKETS[8]
+export const bracketOf = (value: string) =>
+  BRACKETS.find((b) => b.value === value) ?? BRACKETS.find((b) => b.value === 'emerald_plus')!
 
 /** The region menu (`match_seed.platform` groups on the server). */
 export const REGIONS = [
