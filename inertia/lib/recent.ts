@@ -1,5 +1,7 @@
+import { profilePath } from './format.js'
+
 /**
- * The handful of profiles this browser has opened.
+ * The handful of profiles and pro pages this browser has opened.
  *
  * Kept entirely on the device: nothing about who you looked up is sent
  * anywhere. It exists so the landing page has something useful on it for a
@@ -17,6 +19,11 @@ export interface RecentPlayer {
   level?: number | null
   /** Solo/Duo rank as last seen, when the player had one. */
   rank?: { tier: string; division: string; leaguePoints: number } | null
+  /**
+   * A pro's page rather than a Riot ID: `gameName` is their name, `tagLine` is empty, and the
+   * entry opens `/pro/:slug` with their photo (its version, when they have one).
+   */
+  pro?: { slug: string; photo?: string | null; staff?: boolean }
   at: number
 }
 
@@ -31,12 +38,40 @@ export function recentPlayers(): RecentPlayer[] {
   }
 }
 
-function keyOf(player: Pick<RecentPlayer, 'gameName' | 'tagLine'>) {
+function keyOf(player: Pick<RecentPlayer, 'gameName' | 'tagLine' | 'pro'>) {
+  if (player.pro) return `pro:${player.pro.slug}`
   return `${player.gameName}#${player.tagLine}`.toLowerCase()
 }
 
-export function rememberPlayer(player: Omit<RecentPlayer, 'at'>) {
+/** Where an entry leads: the pro's page, or the player's profile. */
+export function recentHref(player: RecentPlayer) {
+  return player.pro
+    ? `/pro/${encodeURIComponent(player.pro.slug)}`
+    : profilePath(player.gameName, player.tagLine)
+}
+
+export function rememberPlayer(player: Omit<RecentPlayer, 'at' | 'pro'>) {
   if (!player.gameName || !player.tagLine) return
+  remember(player)
+}
+
+/** A pro's page, listed beside the players with their name and photo. */
+export function rememberPro(pro: {
+  slug: string
+  name: string
+  photo?: string | null
+  staff?: boolean
+}) {
+  if (!pro.slug || !pro.name) return
+  remember({
+    gameName: pro.name,
+    tagLine: '',
+    profileIconId: null,
+    pro: { slug: pro.slug, photo: pro.photo ?? null, staff: pro.staff || undefined },
+  })
+}
+
+function remember(player: Omit<RecentPlayer, 'at'>) {
   try {
     const key = keyOf(player)
     const previous = recentPlayers().find((p) => keyOf(p) === key)

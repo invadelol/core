@@ -4,7 +4,7 @@ import { router } from '@inertiajs/vue3'
 import { CornerDownLeft, Plus, Search, Users, X } from 'lucide-vue-next'
 import { champIcon, profileIcon, regionLabel } from '../lib/assets.js'
 import { championSlug } from '../lib/champions.js'
-import { recentPlayers, type RecentPlayer } from '../lib/recent.js'
+import { recentHref, recentPlayers, type RecentPlayer } from '../lib/recent.js'
 import ProPhoto from './champions/ProPhoto.vue'
 import TeamLogo from './champions/TeamLogo.vue'
 import {
@@ -267,14 +267,26 @@ const groups = computed(() => {
       {
         section: 'recent' as Section,
         entries: recent.value.slice(0, 5).map(
-          (r): Entry => ({
-            gameName: r.gameName,
-            tagLine: r.tagLine,
-            direct: false,
-            icon: r.profileIconId,
-            region: r.platform ? regionLabel(r.platform) : undefined,
-            level: r.level,
-          })
+          (r): Entry =>
+            r.pro
+              ? {
+                  gameName: r.gameName,
+                  tagLine: '',
+                  direct: false,
+                  kind: 'pro',
+                  href: recentHref(r),
+                  title: r.gameName,
+                  ...(r.pro.photo ? { photo: { slug: r.pro.slug, v: r.pro.photo } } : {}),
+                  badge: r.pro.staff ? 'Staff' : 'Pro',
+                }
+              : {
+                  gameName: r.gameName,
+                  tagLine: r.tagLine,
+                  direct: false,
+                  icon: r.profileIconId,
+                  region: r.platform ? regionLabel(r.platform) : undefined,
+                  level: r.level,
+                }
         ),
       },
     ]
