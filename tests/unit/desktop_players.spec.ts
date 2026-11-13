@@ -37,7 +37,7 @@ test.group('Desktop player snapshots', (group) => {
   group.each.setup(() => {
     seed = new DesktopSeed()
     // Core takes no desktop data by default (switches.ts): these tests exercise it switched on.
-    forceSwitches({ uploads: true, observed: true })
+    forceSwitches({ uploads: true, observed: true, players: true })
     leagueCalls = []
     playerSnapshotService.championIds = async () => null
     playerSnapshotService.sample = () => false
