@@ -834,7 +834,9 @@ async function sync() {
       <ShareProfile
         v-if="profile && shareOpen"
         :profile="profile"
-        :stats="stats?.global ?? null"
+        :stats="stats"
+        :ranks="ranks"
+        :queue="filters.type"
         :champion="mainChampion"
         @close="shareOpen = false"
       />
