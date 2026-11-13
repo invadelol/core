@@ -46,6 +46,7 @@ const MultisearchController = () => import('#controllers/multisearch_controller'
 const ChampionsController = () => import('#controllers/champions_controller')
 const ProsController = () => import('#controllers/pros_controller')
 const StatsController = () => import('#controllers/stats_controller')
+const LobbyGamesController = () => import('#controllers/lobby_games_controller')
 
 // API routes group
 router
@@ -130,6 +131,9 @@ router
     router.get('/picks/:champion/:role', [PickStatsController, 'show'])
 
     router.put('/summoners/puuid/:puuid/increment', [SummonersController, 'incrementViews'])
+
+    /** The stored games of a lobby's players, for the desktop app's scouting: no Riot request. */
+    router.post('/lobby/games', [LobbyGamesController, 'show'])
 
     router.get('/health', [HealthChecksController, 'handle'])
 
