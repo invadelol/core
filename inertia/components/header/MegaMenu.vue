@@ -183,7 +183,7 @@ function onKey(event: KeyboardEvent) {
           <span class="k">{{ tierList ? `Patch ${tierList.patch}` : 'Ranked games' }}</span>
           <h3>Champion stats</h3>
           <p v-if="tierList" class="p num">
-            {{ tierList.games.toLocaleString('en-US') }} ranked games, Emerald and above
+            {{ tierList.games.toLocaleString('en-US') }} ranked games, Emerald+
           </p>
           <Link href="/stats" prefetch class="more" data-track="menu_stats_all_more">
             All stats<Icon name="right" :size="13" />

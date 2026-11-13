@@ -5,7 +5,7 @@
  Outside the layers on purpose: it places the shared captures
  (Shot, AppWindow), whose own styles are unlayered too.
  ────────────────────────────────────────────────────────────── */
-.hm {
+main.hm {
   /* Quiet text that still reads (WCAG AA in both themes), as in the shell (shell.css). */
   --sh-quiet: color-mix(in srgb, var(--text-3) 65%, var(--text-2));
   font-size: 13px;
@@ -174,21 +174,22 @@
 /* ── Section heads ──────────────────────────────────────── */
 .hm-head {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  /* Title, note and link share one baseline, whatever their sizes; the glyph sits on it too. */
+  align-items: baseline;
+  gap: 10px;
   margin-bottom: 16px;
 }
 
+/* A plain glyph, not a tile: nothing here looks pressable unless it is. */
 .hm-head .ico {
-  display: inline-grid;
+  display: inline-flex;
   flex: none;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  color: var(--text-2);
-  background: var(--btn);
-  border-radius: var(--r-sm);
-  box-shadow: var(--btn-shadow);
+  align-self: baseline;
+  color: var(--text-3);
+}
+.hm-head .ico svg {
+  position: relative;
+  top: 2px;
 }
 
 .hm-head h2 {
@@ -361,11 +362,11 @@
   text-align: right;
 }
 
-.hm .up {
+main.hm .up {
   color: var(--win);
 }
 
-.hm .down {
+main.hm .down {
   color: var(--loss);
 }
 
@@ -853,12 +854,12 @@
 }
 
 /* Every control of the page shows the focus ring over its own shadow (rows draw a hairline). */
-.hm :is(a, button):focus-visible {
+main.hm :is(a, button):focus-visible {
   outline: none;
   box-shadow: var(--focus);
 }
 
-.hm .iv-btn:not(.ghost):focus-visible {
+main.hm .iv-btn:not(.ghost):focus-visible {
   box-shadow: var(--btn-shadow), var(--focus);
 }
 

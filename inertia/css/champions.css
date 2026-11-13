@@ -143,7 +143,9 @@
 .nb-ph {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  /* Title, note and links on one baseline whatever their sizes; the line stays centred. */
+  align-items: baseline;
+  align-content: center;
   gap: 4px 8px;
   min-height: 44px;
   padding: 6px 14px;
@@ -1374,7 +1376,8 @@ a.nb-tr:hover,
 .nb-h {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: baseline;
+  align-content: center;
   gap: 8px 10px;
   margin-bottom: 10px;
 }
@@ -1955,8 +1958,29 @@ a.nv-member:hover {
 }
 
 /* ── champions/tier_list.vue ── */
+/* The champion takes what a name needs; the room left is shared by the figures, so the gaps
+   between columns stay even at every width. Figures and their heads sit right, the share bar
+   reads from the left. */
 .tl-cols {
-  grid-template-columns: 26px minmax(0, 1fr) 76px 64px 64px 84px 140px 84px;
+  grid-template-columns:
+    40px minmax(150px, 1.5fr) repeat(4, minmax(60px, 1fr)) minmax(130px, 1.8fr)
+    minmax(64px, 1fr);
+}
+/* A tier's row on the same columns: its average under the win rates. */
+.nb-tgroup.tl-cols {
+  display: grid;
+  column-gap: 14px;
+}
+@media (max-width: 767px) {
+  .nb-tgroup.tl-cols {
+    column-gap: 10px;
+    padding: 0 12px;
+  }
+}
+.nb-tgroup .tl-avg {
+  grid-column: 3;
+  margin-left: 0;
+  text-align: right;
 }
 .tl-cards {
   display: grid;
@@ -1990,7 +2014,7 @@ a.nv-member:hover {
 }
 @media (max-width: 767px) {
   .tl-cols {
-    grid-template-columns: 22px minmax(0, 1fr) 60px 50px 52px;
+    grid-template-columns: 40px minmax(0, 1fr) 56px 46px 44px;
   }
 }
 
