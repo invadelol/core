@@ -134,6 +134,10 @@ main.hm {
   object-fit: cover;
 }
 
+.hm-chip .photo {
+  border-radius: var(--r-xs);
+}
+
 .hm-chip .nm {
   min-width: 0;
   overflow: hidden;

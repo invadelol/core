@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import { ChevronRight, ExternalLink } from 'lucide-vue-next'
 import { ChampIcon, RankCrest, RoleIcon } from '@invadelol/ui'
@@ -23,6 +23,7 @@ import {
   tierName,
 } from '../../lib/board.js'
 import { proPage } from '../../lib/pro_pages.js'
+import { rememberPro } from '../../lib/recent.js'
 import { matchOrNull, type ProMatch } from '../../lib/pro_matches.js'
 import MatchCard from '../../components/pros/MatchCard.vue'
 import ProGameList, { type ProGameMatch } from '../../components/pros/ProGameList.vue'
@@ -104,6 +105,14 @@ const props = defineProps<{
 
 const page = usePage()
 const player = computed(() => proPage(props.pro))
+/* Listed in the home's Recent with the players opened (on this device only). */
+onMounted(() =>
+  watch(
+    () => player.value.slug,
+    () => rememberPro(player.value),
+    { immediate: true }
+  )
+)
 const championName = (id: number) => props.names?.[id]?.[0] ?? loadedName(id)
 const canonical = computed(
   () => (page.props.social as { canonical?: string } | undefined)?.canonical ?? ''
