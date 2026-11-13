@@ -42,7 +42,7 @@ const FAQ = [
   },
   {
     q: 'What does Invade send, and where?',
-    a: 'Not your games, nor what the League client shows about other players: they stay on your computer, and invade.lol gets games from Riot. The app sends one anonymous ping when it starts and one per update, and anonymous crash reports, which you can switch off in Settings. invade.lol/privacy lists all of it.',
+    a: 'Each game you finish goes to invade.lol as it ends, with your LP change in ranked, so your profile there is up to date. What the League client shows about other players stays on your computer. The app also sends one anonymous ping when it starts and one per update, and anonymous crash reports, which you can switch off in Settings. invade.lol/privacy lists all of it.',
   },
   {
     q: 'Why does my computer warn me when I open it?',
