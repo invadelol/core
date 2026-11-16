@@ -71,7 +71,7 @@ const current = computed<SectionKey | null>(() => props.section ?? place.value?.
 const subRow = computed(() => {
   if (props.sub) return props.sub
   const section = SECTIONS.find((s) => s.key === current.value)
-  if (!section) return null
+  if (!section || section.noSubRow) return null
   return section.links.map((l) => ({
     label: l.short ?? l.label,
     href: l.href,
