@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Head } from '@inertiajs/vue3'
 import { Logo } from '@invadelol/ui'
-import { ArrowUpRight, Bug, Hash, Mail } from 'lucide-vue-next'
+import { ArrowUpRight, Bug, FlaskConical, Hash, Mail } from 'lucide-vue-next'
 import AppHeader from '../components/AppHeader.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import { DISCORD_URL, REPO_URL, X_URL } from '../lib/links.js'
@@ -134,6 +134,16 @@ const count = (n: number) => n.toLocaleString('en-US')
               <span class="row-text">
                 <span class="row-name">Report a bug</span>
                 <span class="row-meta">#bug-reports on Discord</span>
+              </span>
+              <ArrowUpRight class="row-go" :size="15" aria-hidden="true" />
+            </a>
+            <a href="/beta" target="_blank" rel="noreferrer" class="row" data-track="contact_beta">
+              <span class="row-icon" aria-hidden="true"
+                ><FlaskConical :size="16" :stroke-width="1.75"
+              /></span>
+              <span class="row-text">
+                <span class="row-name">Become a beta tester</span>
+                <span class="row-meta">New versions a few days early, on Discord</span>
               </span>
               <ArrowUpRight class="row-go" :size="15" aria-hidden="true" />
             </a>

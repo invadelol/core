@@ -53,6 +53,8 @@ const props = defineProps<{
   summoner: string
   section?: string
   initialProfile?: Summoner | null
+  /** The account holds a beta grant: its header says "Beta tester". */
+  betaTester?: boolean
   /** The professional player behind this account, when there is one. */
   pro?: {
     slug: string
@@ -680,6 +682,7 @@ async function sync() {
             :last-game-ms="lastGameMs"
             :main-champion="mainChampion"
             :pro="props.pro ?? null"
+            :beta-tester="!!props.betaTester"
             @sync="sync"
             @share="shareOpen = true"
           />

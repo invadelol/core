@@ -1,7 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
-
 import logger from '@adonisjs/core/services/logger'
 
+import betaService from '#services/desktop/beta_service'
 import riotApiService from '#services/riot/api'
 import summonerService from '#services/summoner_service'
 import matchService from '#services/matches_service'
@@ -141,6 +141,7 @@ export default class SummonersController {
       return response.ok({
         summoner: resolvedSummoner,
         freshness: await freshness(resolvedSummoner),
+        betaTester: await betaService.isTester(resolvedSummoner.puuid),
       })
     } catch (error) {
       // A profile we already hold is worth serving even when Riot is down;
@@ -148,7 +149,12 @@ export default class SummonersController {
       const stored = await summonerService.findStored(summoner, platform).catch(() => null)
       if (stored) {
         logger.warn({ err: error, summoner, platform }, 'Riot lookup failed, serving stored row')
-        return response.ok({ summoner: stored, stale: true, freshness: await freshness(stored) })
+        return response.ok({
+          summoner: stored,
+          stale: true,
+          freshness: await freshness(stored),
+          betaTester: await betaService.isTester(stored.puuid),
+        })
       }
 
       throw translateRiotError(error)

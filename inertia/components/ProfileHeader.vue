@@ -14,6 +14,8 @@ const props = defineProps<{
   syncMessage: string | null
   lastGameMs: number | null
   mainChampion?: number
+  /** The account is in the app's beta. */
+  betaTester?: boolean
   /** Set when the account belongs to a professional player. */
   pro?: {
     slug: string
@@ -105,6 +107,8 @@ onBeforeUnmount(() => clearTimeout(copiedTimer))
         >
       </Link>
 
+      <span v-if="betaTester" class="beta-tag mt-2">Beta tester</span>
+
       <p class="num mt-1 text-[12.5px] leading-5 text-ink-3">
         <span>{{ regionLabel(summoner.platform) }}</span>
         <span v-if="summoner.summonerLevel">, Level {{ summoner.summonerLevel }}</span>
@@ -143,6 +147,19 @@ onBeforeUnmount(() => clearTimeout(copiedTimer))
 </template>
 
 <style scoped>
+.beta-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  margin-right: 6px;
+  padding: 0 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-2);
+  background: var(--surface-3);
+  border-radius: var(--r-xs);
+}
+
 .pro-tag {
   display: inline-flex;
   align-items: center;
