@@ -72,11 +72,10 @@ const place = computed(() => placeOf(path.value))
 const current = computed<SectionKey | null>(() => props.section ?? place.value?.section.key ?? null)
 /**
  * The sub-row: the section's links, each with its small League picture (header/sub_art.ts), or a
- * page's own row (the patch notes' patches, the live one marked with a violet dot). Tools has none.
+ * page's own row (the patch notes' patches, the newest one marked with a violet dot). Tools has none.
  */
 const subRow = computed<SubLink[] | null>(() => {
-  if (props.sub)
-    return props.sub.map((l) => ({ ...l, dot: !!patch.value && l.label === patch.value }))
+  if (props.sub) return props.sub.map((l, i) => ({ ...l, dot: i === 0 }))
   if (current.value === 'tools') return null
   const section = SECTIONS.find((s) => s.key === current.value)
   if (!section) return null
