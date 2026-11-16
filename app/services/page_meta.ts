@@ -92,9 +92,13 @@ export const BRACKET_TEXT: Record<string, string> = {
   platinum: 'Platinum',
   emerald: 'Emerald',
   diamond: 'Diamond',
-  emerald_plus: 'Emerald and above',
-  diamond_plus: 'Diamond and above',
-  master_plus: 'Master and above',
+  master: 'Master',
+  grandmaster: 'Grandmaster',
+  challenger: 'Challenger',
+  platinum_plus: 'Platinum+',
+  emerald_plus: 'Emerald+',
+  diamond_plus: 'Diamond+',
+  master_plus: 'Master+',
 }
 
 /** A page's social tags and its meta description, to spread into its props. */

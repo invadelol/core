@@ -97,8 +97,8 @@ const shown = computed(() => {
     <svg :viewBox="`0 0 100 ${height}`" preserveAspectRatio="none" aria-hidden="true">
       <defs>
         <linearGradient :id="gradient" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stop-color="var(--brand)" stop-opacity="0.18" />
-          <stop offset="1" stop-color="var(--brand)" stop-opacity="0" />
+          <stop offset="0" stop-color="var(--v400)" stop-opacity="0.18" />
+          <stop offset="1" stop-color="var(--v400)" stop-opacity="0" />
         </linearGradient>
       </defs>
       <line
@@ -127,9 +127,9 @@ const shown = computed(() => {
         :class="{ end: shown.x > 70, start: shown.x < 30 }"
         :style="{ left: `${shown.x}%` }"
       >
-        <span class="text-ink-3">{{ shown.label }}</span>
+        <span class="t3">{{ shown.label }}</span>
         <b>{{ Math.round(shown.value) }}</b>
-        <span v-if="smooth > 1" class="text-ink-3">({{ Math.round(shown.line) }} avg)</span>
+        <span v-if="smooth > 1" class="t3">({{ Math.round(shown.line) }} avg)</span>
       </span>
     </template>
   </div>
@@ -152,7 +152,7 @@ const shown = computed(() => {
 
 .lv-trend-line {
   fill: none;
-  stroke: var(--brand);
+  stroke: var(--v400);
   stroke-width: 1.75;
   stroke-linejoin: round;
   stroke-linecap: round;
@@ -173,7 +173,7 @@ const shown = computed(() => {
   padding-bottom: 2px;
   font-size: 11px;
   line-height: 14px;
-  color: var(--text-4);
+  color: var(--t4);
   pointer-events: none;
 }
 
@@ -183,8 +183,8 @@ const shown = computed(() => {
   height: 7px;
   margin: -3.5px 0 0 -3.5px;
   border-radius: 50%;
-  background: var(--brand);
-  box-shadow: 0 0 0 2px var(--solid-1);
+  background: var(--v400);
+  box-shadow: 0 0 0 2px var(--s1);
   pointer-events: none;
 }
 
@@ -208,8 +208,8 @@ const shown = computed(() => {
   font-size: 12px;
   line-height: 16px;
   white-space: nowrap;
-  color: var(--text-1);
-  background: var(--solid-2);
+  color: var(--t1);
+  background: var(--s2);
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-2);
   transform: translateX(-50%);
@@ -231,6 +231,6 @@ const shown = computed(() => {
 
 .lv-trend-empty {
   font-size: 12px;
-  color: var(--text-4);
+  color: var(--t4);
 }
 </style>

@@ -1,0 +1,935 @@
+/* ──────────────────────────────────────────────────────────────
+   Facet chrome: what the header, its menus, the search, the phone's
+   sheet, the footer and the page frame add to facet.css, which drew
+   them once, at 1440 px, standing still. Components layer, scoped
+   under `.vb` like the rest.
+   ────────────────────────────────────────────────────────────── */
+
+/* ── The page frame (components/SiteLayout.vue) ──────────────── */
+.vb.site {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--ink-1);
+}
+.vb .site-main {
+  flex: 1 0 auto;
+  min-width: 0;
+}
+
+/* Gutters: 32 px from a laptop up, 24 px on a tablet, 16 px on a phone. */
+@media (max-width: 1023px) {
+  .vb .wrap {
+    padding: 0 24px;
+  }
+}
+@media (max-width: 639px) {
+  .vb .wrap {
+    padding: 0 16px;
+  }
+}
+
+/* The facet's cut corner is for large pictures only: small tiles stay plain rounded squares. */
+.vb .fr.s,
+.vb .fr.xs {
+  clip-path: none;
+}
+
+/* ── Header ──────────────────────────────────────────────────── */
+.vb.hx-root {
+  position: relative;
+  z-index: 30;
+  /* The season's snow is drawn a little wider than the bar. */
+  overflow-x: clip;
+}
+.vb .hx {
+  z-index: 30;
+}
+.vb .hx-skip {
+  position: absolute;
+  left: 12px;
+  top: -48px;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--r2);
+  background: var(--v600);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.vb .hx-skip:focus {
+  top: 14px;
+}
+.vb .hx-main .wrap {
+  position: relative;
+}
+.vb .hx .brand {
+  flex: none;
+}
+.vb .hx-nav > button {
+  cursor: pointer;
+}
+
+/* A section's menu: under its trigger, its left edge on the trigger's (set by the header). */
+.vb .hx-menu {
+  position: absolute;
+  top: calc(100% + 1px);
+  z-index: 6;
+  width: 352px;
+  max-width: calc(100vw - 32px);
+}
+.vb .hx-menu.dm {
+  animation: hx-in 140ms var(--ease);
+}
+@keyframes hx-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+.vb .dm-r:focus-visible,
+.vb .dm-f a:focus-visible {
+  outline-offset: -2px;
+}
+.vb .dm-live .r1 .ell {
+  min-width: 0;
+}
+.vb .dm-live .r2 img {
+  flex: none;
+}
+
+/* The end of the bar: the app, the account corner, the phone's buttons. */
+.vb .hx-end {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: 4px;
+}
+.vb .hx-end .hx-me {
+  margin-left: 0;
+}
+.vb .hx-me .av {
+  display: grid;
+  place-items: center;
+  background: var(--s2);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  color: var(--t2);
+}
+.vb .hx-me:hover .av,
+.vb .hx-me.open .av {
+  color: var(--t1);
+}
+.vb .hx-me.open > .i {
+  transform: rotate(180deg);
+  color: var(--v300);
+}
+.vb .hx-burger,
+.vb .hx-only-phone {
+  display: none;
+}
+
+/* The account corner's menu: the theme, then a few links. */
+.vb .hx-acc {
+  left: auto;
+  right: 32px;
+  width: 300px;
+  animation: hx-in 140ms var(--ease);
+}
+.vb .acc-theme {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.vb .acc-l {
+  padding: 8px 0;
+}
+.vb .theme-seg > * {
+  height: 26px;
+  padding: 0 9px;
+  gap: 6px;
+  font-size: 12.5px;
+}
+.vb .theme-seg .i {
+  width: 14px;
+  height: 14px;
+}
+
+/* The section's row: plain words, the current one on violet. */
+.vb .hx-sub .wrap {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.vb .hx-sub .wrap::-webkit-scrollbar {
+  display: none;
+}
+.vb .hx-sub a {
+  flex: none;
+}
+
+/* ── The search: the field in the bar, its results a panel under it ── */
+.vb .hx-search {
+  position: relative;
+  flex: 0 1 330px;
+  min-width: 0;
+  margin-left: auto;
+}
+.vb .hx-search .gsearch {
+  width: 100%;
+  margin-left: 0;
+  cursor: text;
+}
+.vb .hs {
+  position: relative;
+}
+.vb .gsearch input {
+  min-width: 0;
+  height: 100%;
+}
+.vb .gsearch .rg2 {
+  flex: none;
+  cursor: pointer;
+}
+.vb .gsearch .rg2:hover {
+  color: var(--t1);
+}
+.vb .gsearch .kbd {
+  flex: none;
+}
+.vb .hs-spin {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--line-2);
+  border-top-color: var(--t2);
+  animation: hs-spin 700ms linear infinite;
+}
+@keyframes hs-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.vb .hs-chips {
+  display: flex;
+  flex: none;
+  gap: 4px;
+  max-width: 45%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.vb .hs-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  height: 26px;
+  padding: 0 4px 0 4px;
+  border-radius: 6px;
+  background: var(--s3);
+  color: var(--t3);
+}
+.vb .hs-chip img {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+}
+.vb .hs-chip:hover {
+  color: var(--t1);
+}
+.vb .hs-panel {
+  left: 0;
+  top: calc(100% + 13px);
+  width: 560px;
+  max-height: min(600px, calc(100dvh - 96px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  animation: hx-in 140ms var(--ease);
+}
+.vb .hs-panel .panel-f {
+  position: sticky;
+  bottom: 0;
+  margin-top: 8px;
+}
+.vb .hs-panel .panel-f .end {
+  margin-left: auto;
+}
+.vb .hs-reg {
+  left: auto;
+  right: 0;
+  top: calc(100% + 13px);
+  width: 200px;
+  max-height: min(420px, calc(100dvh - 96px));
+  overflow-y: auto;
+  padding: 8px 0;
+}
+.vb .sg-r {
+  cursor: pointer;
+}
+.vb .sg-r .sg-t {
+  display: block;
+  flex: 1;
+  min-width: 0;
+}
+.vb .sg-r .sg-t b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vb .sg-r .sg-t > span {
+  overflow: hidden;
+  white-space: nowrap;
+}
+.vb .sg-r .sg-t .t3 {
+  display: inline;
+  font-weight: 600;
+}
+.vb .sg-r .sg-ic {
+  display: grid;
+  place-items: center;
+  background: var(--s2);
+  color: var(--t2);
+  font-size: 12px;
+  font-weight: 750;
+}
+.vb .sg-r .acts a:hover {
+  background: var(--s4);
+  color: var(--t1);
+}
+.vb .sg-r .acts-add {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--t3);
+}
+.vb .sg-r .acts-add:hover {
+  background: var(--s3);
+  color: var(--t1);
+}
+.vb .reg a .i {
+  flex: none;
+}
+
+/* ── Narrower screens ────────────────────────────────────────── */
+@media (max-width: 1399px) {
+  .vb .hs-panel {
+    left: auto;
+    right: 0;
+  }
+}
+@media (max-width: 1199px) {
+  .vb .hx-get {
+    width: 32px;
+    padding: 0;
+  }
+  .vb .hx-get span {
+    display: none;
+  }
+}
+@media (max-width: 1023px) {
+  .vb .hx-nav {
+    display: none;
+  }
+  .vb .hx-burger {
+    display: inline-flex;
+  }
+  .vb .hx-search {
+    flex: 1 1 auto;
+    margin-left: 12px;
+  }
+  .vb .hs-panel {
+    left: 0;
+    right: 0;
+    width: auto;
+  }
+  .vb .hx-acc {
+    right: 24px;
+  }
+}
+@media (max-width: 639px) {
+  .vb .hx-main .wrap {
+    height: 60px;
+  }
+  .vb .hx .brand {
+    margin-right: auto;
+  }
+  .vb .hx-search {
+    display: none;
+  }
+  .vb .hx-only-phone {
+    display: inline-flex;
+  }
+  .vb .hx-get {
+    display: none;
+  }
+  .vb .hx-end {
+    gap: 4px;
+  }
+  .vb .hx-acc {
+    right: 16px;
+  }
+  /* The search over the bar, from its button; the account and the menu make room. */
+  .vb.is-search .hx-search {
+    display: block;
+    position: absolute;
+    left: 16px;
+    right: 64px;
+    top: 10px;
+    z-index: 7;
+    margin: 0;
+  }
+  .vb.is-search .hx-me,
+  .vb.is-search .hx-burger {
+    display: none;
+  }
+  .vb.is-search .gsearch .kbd {
+    display: none;
+  }
+  .vb .hs-panel {
+    position: fixed;
+    left: 8px;
+    right: 8px;
+    top: 66px;
+    max-height: calc(100dvh - 80px);
+  }
+  .vb .hs-panel .panel-f {
+    display: none;
+  }
+  .vb .sg-r .acts {
+    display: none;
+  }
+}
+
+/* ── The phone's sheet ───────────────────────────────────────── */
+.vb .hx-phone {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  z-index: 8;
+  height: calc(100dvh - 60px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 8px 0 40px;
+  background: var(--ink-1);
+  border-top: 1px solid var(--line);
+  animation: hx-in 160ms var(--ease);
+}
+html.hx-locked {
+  overflow: hidden;
+}
+.vb .hx-phone .lab {
+  display: block;
+  margin: 0 4px 6px;
+}
+.vb .hx-phone-patch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  margin: 8px 4px 4px;
+  padding: 0 11px 0 9px;
+  border-radius: 8px;
+  background: var(--v600);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+.vb .hx-phone-patch .i {
+  transform: rotate(-45deg);
+}
+.vb .hx-phone-sec {
+  padding: 16px 0 12px;
+  border-bottom: 1px solid var(--line);
+}
+.vb .hx-phone-r {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px;
+  border-radius: var(--r2);
+}
+.vb .hx-phone-r.on {
+  background: rgb(var(--v-rgb) / 0.08);
+}
+.vb .hx-phone-r .dm-i {
+  width: 40px;
+  height: 40px;
+}
+.vb .hx-phone-theme {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 4px 0;
+}
+.vb .hx-phone-theme .lab {
+  margin: 0;
+}
+
+/* ── Footer ──────────────────────────────────────────────────── */
+.vb .ft-social .btn.ico {
+  width: 32px;
+}
+.vb .ft-bot a {
+  color: var(--t2);
+}
+.vb .ft-bot a:hover {
+  color: var(--t1);
+}
+.vb .ft-bot > span:first-child a {
+  text-decoration: underline;
+  text-decoration-color: var(--line-3);
+  text-underline-offset: 2px;
+}
+.vb .ft-meta {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+.vb .ft-legal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+}
+@media (max-width: 1023px) {
+  .vb .ft {
+    margin-top: 64px;
+  }
+  .vb .ft-top {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .vb .ft-brand {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 639px) {
+  .vb .ft-bot {
+    flex-direction: column;
+    gap: 20px;
+  }
+  .vb .ft-meta {
+    align-items: flex-start;
+  }
+}
+
+/* ── The menus' pictures (components/header/MenuArt.vue) ────────
+   Each composition is drawn on a 144 px stage, as the design made it
+   (gen/menu_art), and scaled to the box (`--ma`, in px). */
+.vb .dm-i {
+  position: relative;
+}
+.vb .ma {
+  position: relative;
+  display: block;
+  flex: none;
+  width: calc(var(--ma) * 1px);
+  height: calc(var(--ma) * 1px);
+  overflow: hidden;
+}
+.vb .ma-st {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 144px;
+  height: 144px;
+  font-size: 16px;
+  line-height: normal;
+  color: #000;
+  transform: scale(calc(var(--ma) / 144));
+  transform-origin: 0 0;
+}
+.vb .ma-st > *,
+.vb .ma-st .ma-ab {
+  position: absolute;
+}
+.vb .ma-st img {
+  display: inline;
+  max-width: none;
+}
+.vb .ma-st .ma-ab,
+.vb .ma-st > img {
+  display: block;
+}
+.vb .ma-st {
+  font-family: 'Sofia Sans', ui-sans-serif, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'kern' 1;
+}
+
+/* a portrait card: League art on a rounded slab with a lit rim, a violet edge under it and a soft drop */
+.vb .ma-pc {
+  border-radius: 16px;
+  background: #1b1842 no-repeat 50% 50%/118%;
+  box-shadow:
+    inset 0 0 0 1.5px rgba(226, 221, 255, 0.24),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.32),
+    0 3.5px 0 #3a3191,
+    0 13px 16px -6px rgba(2, 1, 8, 0.85),
+    0 3px 6px rgba(2, 1, 8, 0.35);
+}
+.vb .ma-pc::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(200deg, rgba(255, 255, 255, 0.17), rgba(255, 255, 255, 0) 40%);
+}
+/* a round portrait */
+.vb .ma-rp {
+  border-radius: 50%;
+  background: #1b1842 no-repeat 50% 45%/124%;
+  box-shadow:
+    inset 0 0 0 1.5px rgba(226, 221, 255, 0.22),
+    0 0 0 2.5px var(--ring, #2c2670),
+    0 8px 12px -4px rgba(2, 1, 8, 0.8);
+}
+/* Invade's flat tier tile, as a key: lit top, a darker edge under it */
+.vb .ma-tt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 13px;
+  color: #0d0c14;
+  background: linear-gradient(180deg, #f6f4ff, #d9d3ff);
+  box-shadow:
+    inset 0 1.5px 0 #fff,
+    inset 0 0 0 1px rgba(255, 255, 255, 0.55),
+    0 4px 0 #9a8ff2,
+    0 14px 18px -6px rgba(2, 1, 8, 0.85),
+    0 3px 6px rgba(2, 1, 8, 0.3);
+}
+.vb .ma-tt small {
+  font-size: 11.5px;
+  line-height: 1;
+  font-weight: 750;
+  color: #4a3fc2;
+  letter-spacing: 0.01em;
+}
+.vb .ma-tt b {
+  font-size: 35px;
+  line-height: 0.86;
+  font-weight: 860;
+  letter-spacing: -0.05em;
+  margin: 3px 0 4px;
+}
+.vb .ma-tt i {
+  font-style: normal;
+  font-size: 10.5px;
+  line-height: 1;
+  font-weight: 750;
+  color: #4a3fc2;
+  font-variant-numeric: tabular-nums;
+}
+.vb .ma-tt.ma-s {
+  background: linear-gradient(180deg, #a99fff, #8577ff);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+    0 3.5px 0 #5246cf,
+    0 10px 14px -5px rgba(2, 1, 8, 0.85);
+}
+.vb .ma-tt.ma-s b {
+  margin: 0;
+}
+/* LP chips: Invade's win blue and loss pink, the arrows in ink */
+.vb .ma-lp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2.5px;
+  width: 26px;
+  height: 58px;
+  border-radius: 8px;
+}
+.vb .ma-lp svg {
+  display: block;
+  width: 13px;
+  height: 9px;
+  fill: #0d0c14;
+}
+.vb .ma-lp.ma-up {
+  background: linear-gradient(180deg, #a3c0ff, #6c9bff);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.55),
+    0 3px 0 #4a72d4,
+    0 10px 14px -5px rgba(2, 1, 8, 0.8);
+}
+.vb .ma-lp.ma-dn {
+  background: linear-gradient(180deg, #ff9fb0, #f06a82);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.5),
+    0 3px 0 #c44660,
+    0 10px 14px -5px rgba(2, 1, 8, 0.8);
+}
+/* the live chip */
+.vb .ma-lv {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 27px;
+  padding: 0 10px 0 9px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 13.5px;
+  line-height: 1;
+  font-weight: 820;
+  letter-spacing: 0.07em;
+  background: linear-gradient(180deg, #9489ff, #6f61f6);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.42),
+    0 3px 0 #4a3fc2,
+    0 10px 14px -5px rgba(2, 1, 8, 0.85);
+}
+.vb .ma-lv::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.28);
+}
+/* round badges and keys */
+.vb .ma-bd {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 28%, #2a2640, #15131f 72%);
+  box-shadow:
+    inset 0 0 0 1.5px rgba(214, 208, 255, 0.2),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.18),
+    0 3px 0 #2c2670,
+    0 10px 14px -5px rgba(2, 1, 8, 0.85);
+}
+.vb .ma-bd img {
+  display: block;
+}
+.vb .ma-key {
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #9489ff, #6f61f6);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.42),
+    0 3.5px 0 #4a3fc2,
+    0 11px 15px -5px rgba(2, 1, 8, 0.85);
+}
+/* the score dial, on an ink disc */
+.vb .ma-dl {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 30%, #24203a, #121019 74%);
+  box-shadow:
+    inset 0 0 0 1.5px rgba(214, 208, 255, 0.18),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
+    0 3px 0 #2c2670,
+    0 11px 15px -5px rgba(2, 1, 8, 0.85);
+}
+.vb .ma-dl svg {
+  position: absolute;
+  inset: 3px;
+  width: calc(100% - 6px);
+  height: calc(100% - 6px);
+}
+.vb .ma-dl path {
+  fill: none;
+  stroke-width: 3.4;
+  stroke-linecap: round;
+}
+.vb .ma-dl .ma-tr {
+  stroke: #2f2b3e;
+}
+.vb .ma-dl b {
+  position: relative;
+  top: 1px;
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 820;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+/* a dark slab (charts, windows, lists) */
+.vb .ma-sl {
+  border-radius: 14px;
+  background: linear-gradient(180deg, #201d2e, #16141f);
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 0 1.5px rgba(214, 208, 255, 0.16),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.14),
+    0 3.5px 0 #2c2670,
+    0 13px 16px -6px rgba(2, 1, 8, 0.85),
+    0 3px 6px rgba(2, 1, 8, 0.3);
+}
+/* item slots */
+.vb .ma-it {
+  border-radius: 12px;
+  background: #0a0910 no-repeat 50% 50%/104%;
+  box-shadow:
+    inset 0 0 0 1.5px rgba(233, 196, 106, 0.5),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.28),
+    0 3px 0 #3a3191,
+    0 12px 15px -6px rgba(2, 1, 8, 0.85),
+    0 3px 6px rgba(2, 1, 8, 0.3);
+}
+.vb .ma-it::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(200deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0) 42%);
+}
+.vb .ma-sh {
+  filter: drop-shadow(0 3px 0 #2c2670) drop-shadow(0 10px 9px rgba(2, 1, 8, 0.6));
+}
+
+/* a solid letterform in the S+ tier colour, lit like a key: violet edge under it, soft drop */
+.vb .ma-lt {
+  font-weight: 900;
+  line-height: 0.78;
+  letter-spacing: -0.06em;
+  color: #e7e3ff;
+  white-space: nowrap;
+  text-shadow:
+    0 1.5px 0 #fff,
+    0 4.5px 0 #9a8ff2,
+    0 16px 16px rgba(2, 1, 8, 0.75);
+}
+/* podium / plinth blocks */
+.vb .ma-blk {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  border-radius: 10px 10px 6px 6px;
+  font-weight: 850;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.vb .ma-blk.ma-sp {
+  background: linear-gradient(180deg, #f6f4ff, #d9d3ff);
+  color: #0d0c14;
+  box-shadow:
+    inset 0 1.5px 0 #fff,
+    0 4px 0 #9a8ff2,
+    0 14px 16px -6px rgba(2, 1, 8, 0.85);
+}
+.vb .ma-blk.ma-s {
+  background: linear-gradient(180deg, #a99fff, #8577ff);
+  color: #0d0c14;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.5),
+    0 4px 0 #5246cf,
+    0 14px 16px -6px rgba(2, 1, 8, 0.85);
+}
+.vb .ma-blk.ma-a {
+  background: linear-gradient(180deg, #3a3391, #2c2670);
+  color: #dcd7ff;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.2),
+    inset 0 0 0 1px rgba(194, 186, 255, 0.14),
+    0 4px 0 #1b1842,
+    0 14px 16px -6px rgba(2, 1, 8, 0.85);
+}
+/* a ladder row: an ink bar with the place on a key */
+.vb .ma-rw {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 9px 0 5px;
+  border-radius: 9px;
+  background: linear-gradient(180deg, #25223a, #191726);
+  box-shadow:
+    inset 0 0 0 1.5px rgba(214, 208, 255, 0.14),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.12),
+    0 3px 0 #2c2670,
+    0 10px 12px -5px rgba(2, 1, 8, 0.85);
+}
+.vb .ma-rw b {
+  display: grid;
+  place-items: center;
+  flex: none;
+  border-radius: 6px;
+  font-weight: 850;
+  font-size: 14px;
+  line-height: 1;
+  color: #dcd7ff;
+  background: #2c2670;
+}
+.vb .ma-rw i {
+  display: block;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(194, 186, 255, 0.26);
+}
+.vb .ma-rw.ma-on {
+  background: linear-gradient(180deg, #9489ff, #6f61f6);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.42),
+    0 3px 0 #4a3fc2,
+    0 10px 12px -5px rgba(2, 1, 8, 0.85);
+}
+.vb .ma-rw.ma-on b {
+  background: #f3f1fb;
+  color: #2c2670;
+}
+.vb .ma-rw.ma-on i {
+  background: rgba(255, 255, 255, 0.6);
+}
+/* a plain plate for one number */
+.vb .ma-pl {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border-radius: 9px;
+  font-weight: 820;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  background: linear-gradient(180deg, #9489ff, #6f61f6);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.42),
+    0 3px 0 #4a3fc2,
+    0 10px 14px -5px rgba(2, 1, 8, 0.85);
+}
+.vb .ma-pl small {
+  font-size: 0.62em;
+  font-weight: 700;
+  opacity: 0.82;
+  letter-spacing: 0;
+}
+.vb .ma-pl.ma-ink {
+  color: #dcd7ff;
+  background: linear-gradient(180deg, #25223a, #16141f);
+  box-shadow:
+    inset 0 0 0 1.5px rgba(214, 208, 255, 0.16),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.14),
+    0 3px 0 #2c2670,
+    0 10px 14px -5px rgba(2, 1, 8, 0.85);
+}
+.vb .ma-drop {
+  filter: drop-shadow(0 4px 0 #2c2670) drop-shadow(0 12px 10px rgba(2, 1, 8, 0.6));
+}
+.vb .ma-em {
+  filter: drop-shadow(0 8px 10px rgba(2, 1, 8, 0.6));
+}
+
+/* The field's ring is the search box's own (`.gsearch.focus`), not the input's. */
+.vb .gsearch input:focus-visible {
+  outline: none;
+}

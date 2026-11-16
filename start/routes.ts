@@ -41,11 +41,14 @@ const PickStatsController = () => import('#controllers/pick_stats_controller')
 const SynergyController = () => import('#controllers/synergy_controller')
 const LegalController = () => import('#controllers/legal_controller')
 const ContactController = () => import('#controllers/contact_controller')
+const PatchNotesController = () => import('#controllers/patch_notes_controller')
 const ChangelogController = () => import('#controllers/changelog_controller')
 const MultisearchController = () => import('#controllers/multisearch_controller')
 const ChampionsController = () => import('#controllers/champions_controller')
 const ProsController = () => import('#controllers/pros_controller')
 const StatsController = () => import('#controllers/stats_controller')
+const LobbyGamesController = () => import('#controllers/lobby_games_controller')
+const TierListsController = () => import('#controllers/tier_lists_controller')
 
 // API routes group
 router
@@ -136,6 +139,9 @@ router
 
     router.put('/summoners/puuid/:puuid/increment', [SummonersController, 'incrementViews'])
 
+    /** The stored games of a lobby's players, for the desktop app's scouting: no Riot request. */
+    router.post('/lobby/games', [LobbyGamesController, 'show'])
+
     router.get('/health', [HealthChecksController, 'handle'])
 
     /** The desktop app's onboarding, match uploads, player snapshots and crash reports (docs/desktop-sync.md). */
@@ -174,6 +180,7 @@ router.get('/cdn/pro/:slug', [ProsController, 'photo'])
 router
   .group(() => {
     router.get('/names/:kind', [AssetsController, 'names'])
+    router.get('/skins/:champion', [AssetsController, 'skins'])
     router.get('/:patch/:kind/:id', [AssetsController, 'show'])
     router.get('/:kind/:id', [AssetsController, 'show'])
   })
@@ -191,20 +198,54 @@ router.get('/app/changelog/:version', [ChangelogController, 'show'])
 
 /** Champion statistics, before the summoner catch-all below. */
 router.get('/champions', [ChampionsController, 'index'])
+/** One lane matchup, two champions side by side (`?role=` as on a champion's page). */
+router.get('/champions/:slug/matchups/:opponent', [ChampionsController, 'matchup'])
 router
   .get('/champions/:slug/:tab?', [ChampionsController, 'show'])
   .where('tab', /^(build|runes|items|matchups|statistics|pros)$/)
 router.get('/tier-list', [ChampionsController, 'tierList'])
+/** The other tier lists: items, runes, duos and ARAM. */
+router.get('/tier-list/items', [TierListsController, 'items'])
+router.get('/tier-list/runes', [TierListsController, 'runes'])
+router.get('/tier-list/duos', [TierListsController, 'duos'])
+router.get('/tier-list/aram', [TierListsController, 'aram'])
 /** Every champion of a role in one table, and its views (`?view=early`). */
 router.get('/stats', [StatsController, 'index'])
 
 /** Professional players and teams, before the summoner catch-all below. */
 router.get('/pros', [ProsController, 'index'])
+router.get('/leagues', [ProsController, 'leagues'])
+router.get('/league/:slug', [ProsController, 'league'])
+router.get('/teams', [ProsController, 'teams'])
 router.get('/pro/:slug', [ProsController, 'show'])
 router.get('/team/:slug', [ProsController, 'team'])
 
+/** The ranked leaderboards and the esports overview, before the summoner catch-all below. */
+const LeaderboardsController = () => import('#controllers/leaderboards_controller')
+const EsportsController = () => import('#controllers/esports_controller')
+router.get('/leaderboards', ({ response }) => response.redirect('/leaderboards/solo', false, 302))
+router.get('/leaderboards/solo', [LeaderboardsController, 'solo'])
+router.get('/leaderboards/flex', [LeaderboardsController, 'flex'])
+router.get('/leaderboards/one-tricks', [LeaderboardsController, 'oneTricks'])
+router.get('/leaderboards/pros', [LeaderboardsController, 'pros'])
+router.get('/api/leaderboards/solo/place', [LeaderboardsController, 'place'])
+router.get('/esports', [EsportsController, 'index'])
+/** The live game tool: a Riot ID opens that player's live game (`/:summoner/live`). */
+router.get('/live', ({ inertia }) =>
+  inertia.render('tools/live', {
+    description:
+      'See the game a League player is in right now: both teams, their ranks and who wins each lane.',
+  })
+)
+/** A live game's lanes as the counted ranked games see them: tiers, win rates, the matchup. */
+router.get('/api/lanes', [() => import('#controllers/lanes_controller'), 'show'])
+
 /** Several players scouted side by side (a lobby), before the summoner catch-all below. */
 router.get('/multisearch/:region?', [MultisearchController, 'show'])
+
+/** A patch's notes (`/patch/26.22`), the newest at `/patch`, before the summoner catch-all below. */
+router.get('/patch', [PatchNotesController, 'latest'])
+router.get('/patch/:version', [PatchNotesController, 'show'])
 
 /** The privacy policy, the legal notice and its terms, before the summoner catch-all below. */
 router.get('/privacy', [LegalController, 'privacy'])
@@ -295,8 +336,12 @@ router.get('/:summoner/match/:matchId', async ({ inertia, params }) => {
 router.get('/:summoner/:section?', async ({ inertia, params, response }) => {
   const section = params.section ?? 'overview'
   if (section === 'history')
-    return response.redirect(`/${encodeURIComponent(params.summoner)}#matches`)
-  if (!['overview', 'lens', 'champions', 'mastery', 'friends', 'compare', 'live'].includes(section))
+    return response.redirect(`/${encodeURIComponent(params.summoner)}/matches`)
+  if (
+    !['overview', 'matches', 'lens', 'champions', 'mastery', 'friends', 'compare', 'live'].includes(
+      section
+    )
+  )
     return response.notFound()
   const { default: summonerService } = await import('#services/summoner_service')
   // A stored profile can render in the HTML and removes the client lookup waterfall.

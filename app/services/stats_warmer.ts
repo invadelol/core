@@ -6,6 +6,7 @@ import spellStatsService from '#services/spell_stats_service'
 import { latestPatch } from '#services/ranked_games_service'
 import statsExplorerService from '#services/stats_explorer_service'
 import proService from '#services/pro_service'
+import tierListsService from '#services/tier_lists_service'
 import { leagueCatalog } from '#services/pro_leagues'
 import { POSITIONS } from '#services/champion_stats'
 import type { Position, RoleStat } from '#services/champion_stats'
@@ -14,8 +15,8 @@ import type { Role } from '#services/ranked_stats'
 /**
  * Answers the default champion pages before anyone asks: the champion list and tier list, every
  * block of every champion's page in its main role (default rank, newest patch, every region), the
- * stats explorer's role tables, the pros' league pages, and the tier list at all ranks (the
- * desktop app's matchups).
+ * stats explorer's role tables, the item, rune, duo and ARAM tier lists, the pros' league pages,
+ * and the tier list at all ranks (the desktop app's matchups).
  * Runs at start, when a new patch becomes the default, and every few hours; an answer already
  * fresh in the stats cache costs nothing, so a run mostly refreshes what went stale.
  */
@@ -55,6 +56,23 @@ export async function warmStats() {
       statsExplorerService.regions(filter, position),
     ]).catch((error) => logger.warn({ err: error, position }, 'stats explorer warm-up failed'))
   }
+  // The item, rune and duo tier lists of the newest two patches, every rank and every region
+  // (each blob a read of a patch at every rank, through the background queue, one at a time),
+  // and the ARAM list.
+  const offered = await championStatsService.patches()
+  const shown = offered.map((p) => p.patch).slice(0, 2)
+  await tierListsService
+    .fill(tierListsService.warmWants(shown, [null]))
+    .catch((error) => logger.warn({ err: error }, 'tier list warm-up failed'))
+  // The champion tier list's two-week lines of each role.
+  for (const position of POSITIONS) {
+    await championStatsService
+      .roleTrend(filter, position)
+      .catch((error) => logger.warn({ err: error, position }, 'role trend warm-up failed'))
+  }
+  await tierListsService
+    .aramCounts({ ...filter, bracket: 'all' }, 'aram')
+    .catch((error) => logger.warn({ err: error }, 'ARAM tier list warm-up failed'))
   const { listed } = await leagueCatalog()
   for (const league of listed) {
     await proService.league(league.slug).catch(() => null)

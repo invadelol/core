@@ -110,6 +110,29 @@ export class StatsCache {
     return this.#load(full, load) as Promise<T>
   }
 
+  /**
+   * The answer for `key` if a tier holds it, without ever loading it: `fresh` says whether it
+   * is still within `freshMs`. For answers too heavy to compute while a visitor waits (the
+   * caller has them computed in the background, `fill`).
+   */
+  async peek<T>(key: string): Promise<{ value: T; fresh: boolean } | null> {
+    const { now, freshMs, keepMs } = this.#options
+    const full = `stats:v1:${this.namespace}:${await this.#generation()}:${key}`
+    const entry = this.#local.get(full) ?? (await this.#read(full))
+    if (!entry || now() - entry.at >= keepMs) return null
+    this.#remember(full, entry)
+    return { value: entry.value as T, fresh: now() - entry.at < freshMs }
+  }
+
+  /**
+   * Computes the answer for `key` now unless a fresh one is held (one load per key in this
+   * process, the Redis lock across processes), and keeps it: the background half of `peek`.
+   */
+  async fill<T>(key: string, load: () => Promise<T>): Promise<T> {
+    const full = `stats:v1:${this.namespace}:${await this.#generation()}:${key}`
+    return this.#load(full, load) as Promise<T>
+  }
+
   /** Drops this process's copies (the Redis ones expire on their own). */
   clear() {
     this.#local.clear()

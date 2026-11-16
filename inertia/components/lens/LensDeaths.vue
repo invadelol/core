@@ -72,15 +72,15 @@ const columns = computed(() =>
   z-index: 1;
   inset-inline: 8%;
   height: 0 !important;
-  border-top: 2px solid var(--text-3);
+  border-top: 2px solid var(--t3);
   border-radius: 1px;
 }
 
 .lv-deaths-col .you {
   inset-inline: 22%;
-  background: var(--brand);
+  background: var(--v400);
   transform-origin: bottom;
-  animation: lv-rise 800ms var(--ease-glide) both;
+  animation: lv-rise 800ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
 }
 
 @keyframes lv-rise {
@@ -95,14 +95,14 @@ const columns = computed(() =>
   gap: 8px;
   margin-top: 6px;
   font-size: 11px;
-  color: var(--text-4);
+  color: var(--t4);
 }
 
 .lv-deaths-key {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  color: var(--text-3);
+  color: var(--t3);
 }
 
 .lv-deaths-key i {
@@ -112,13 +112,13 @@ const columns = computed(() =>
 }
 
 .lv-deaths-key i.you {
-  background: var(--brand);
+  background: var(--v400);
 }
 
 .lv-deaths-key i.them {
   height: 2px;
   margin-left: 6px;
-  background: var(--text-3);
+  background: var(--t3);
 }
 
 @media (prefers-reduced-motion: reduce) {

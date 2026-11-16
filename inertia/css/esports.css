@@ -1,0 +1,512 @@
+/* ──────────────────────────────────────────────────────────────
+   The esports pages (overview, pros, leagues, a league, teams,
+   a team, a pro): what the boards' shared classes do not already
+   draw. Components layer, scoped under `.vb`.
+   ────────────────────────────────────────────────────────────── */
+@layer components {
+  /* A match on a line. */
+  .vb .es-ml {
+    display: grid;
+    grid-template-columns: 24px minmax(0, 1fr) 132px minmax(0, 1fr) auto;
+    gap: 12px;
+    min-height: 58px;
+  }
+  .vb .es-ml .es-lg {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+  }
+  .vb .es-ml:not(:has(.es-lg)) {
+    grid-template-columns: minmax(0, 1fr) 132px minmax(0, 1fr) auto;
+  }
+  .vb .es-t {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .vb .es-t.r {
+    justify-content: flex-end;
+    text-align: right;
+  }
+  .vb .es-t img,
+  .vb .es-t > i {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    flex: none;
+  }
+  .vb .es-sc {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    text-align: center;
+  }
+  .vb .es-sc b {
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .vb .es-sc .pm-time {
+    font-size: 13px;
+    font-weight: 650;
+    color: var(--t1);
+    white-space: nowrap;
+  }
+  .vb .es-sc .meta {
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 132px;
+  }
+  .vb .es-w {
+    justify-self: end;
+  }
+
+  /* The headline match. */
+  .vb .es-hd {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 32px;
+    padding: 28px 32px;
+  }
+  .vb .es-hd .tm {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-width: 0;
+  }
+  .vb .es-hd .tm.r {
+    justify-content: flex-end;
+    text-align: right;
+  }
+  .vb .es-hd .tm img {
+    width: 84px;
+    height: 84px;
+    object-fit: contain;
+    flex: none;
+  }
+  .vb .es-hd .mid {
+    text-align: center;
+  }
+  .vb .es-lgs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    padding: 0 10px 10px;
+  }
+  .vb .es-lgs .lrow {
+    min-height: 58px;
+    border: 0;
+    border-radius: 10px;
+  }
+  .vb .es-lgs img {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+  }
+  .vb .es-pp {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--v900);
+    flex: none;
+  }
+  .vb .es-pp img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 8%;
+  }
+  .vb .es-tl {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+  }
+
+  @media (max-width: 1023px) {
+    .vb .es-lgs {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (max-width: 767px) {
+    .vb .es-hd {
+      grid-template-columns: 1fr;
+      gap: 16px;
+      padding: 20px;
+    }
+    .vb .es-hd .tm,
+    .vb .es-hd .tm.r {
+      justify-content: center;
+      text-align: center;
+      flex-direction: column;
+    }
+    .vb .es-hd .tm.r {
+      flex-direction: column-reverse;
+    }
+    .vb .es-hd .tm img {
+      width: 56px;
+      height: 56px;
+    }
+    .vb .es-ml,
+    .vb .es-ml:not(:has(.es-lg)) {
+      grid-template-columns: minmax(0, 1fr) 104px minmax(0, 1fr);
+      gap: 8px;
+    }
+    .vb .es-ml .es-lg,
+    .vb .es-ml .es-w {
+      display: none;
+    }
+    .vb .es-sc .meta {
+      max-width: 104px;
+    }
+  }
+}
+
+@layer components {
+  /* Leagues and teams indexes. */
+  .vb .es-lgc {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .vb .es-lgh {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 20px 14px;
+  }
+  .vb .es-lgh img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    flex: none;
+  }
+  .vb .es-kv {
+    display: flex;
+    align-items: flex-end;
+    gap: 28px;
+    padding: 0 20px 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .vb .es-kv > span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .vb .es-kv b {
+    font-size: 18px;
+    font-weight: 650;
+  }
+  .vb .es-kv .grow {
+    margin-left: auto;
+    align-items: flex-end;
+    text-align: right;
+  }
+  .vb .es-tg {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    padding: 4px 12px 16px;
+  }
+  .vb .es-tg a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 6px;
+    border-radius: 10px;
+    text-align: center;
+    transition: background 160ms var(--ease);
+  }
+  .vb .es-tg a:hover {
+    background: rgb(var(--v-rgb) / 0.05);
+  }
+  .vb .es-tg img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+  }
+  @media (max-width: 1023px) {
+    .vb .es-lgc {
+      grid-template-columns: 1fr;
+    }
+    .vb .es-tg {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 767px) {
+    .vb .es-kv {
+      flex-wrap: wrap;
+      gap: 14px 20px;
+    }
+    .vb .es-kv .grow {
+      margin-left: 0;
+      align-items: flex-start;
+      text-align: left;
+    }
+    .vb .es-tg {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+}
+
+@layer components {
+  .vb .es-ld {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    padding-top: 16px;
+  }
+  .vb .es-ld > div {
+    display: flex;
+    flex-direction: column;
+    padding: 0 20px 16px;
+    min-width: 0;
+  }
+  .vb .es-ld > div + div {
+    border-left: 1px solid var(--line);
+  }
+  .vb .es-ld .lab {
+    margin-bottom: 4px;
+  }
+  @media (max-width: 767px) {
+    .vb .es-ld {
+      grid-template-columns: 1fr;
+    }
+    .vb .es-ld > div + div {
+      border-left: 0;
+      border-top: 1px solid var(--line);
+      padding-top: 14px;
+    }
+    .vb .lq3-hd .row {
+      flex-wrap: wrap;
+    }
+    .vb .lq3-hd .row > .row {
+      margin-left: 0 !important;
+    }
+    .vb .lq3-hd .tabs {
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+  }
+}
+
+/* The boards are drawn at 1440: what a tablet and a phone need of their shared grids, on these
+   pages only (`.pg-es` on the page's `.wrap`). */
+@layer components {
+  @media (max-width: 1199px) {
+    .vb .pg-es .side2 {
+      grid-template-columns: minmax(0, 1fr) 320px;
+    }
+    .vb .pg-es .lt3h,
+    .vb .pg-es .lt3 {
+      grid-template-columns: 30px minmax(0, 1fr) 80px 150px 90px 140px;
+    }
+    .vb .pg-es .lt3h > :nth-child(4),
+    .vb .pg-es .lt3 > :nth-child(4),
+    .vb .pg-es .lt3h > :nth-child(8),
+    .vb .pg-es .lt3 > :nth-child(8) {
+      display: none;
+    }
+  }
+  @media (max-width: 1023px) {
+    .vb .pg-es .side2 {
+      grid-template-columns: 1fr;
+    }
+    .vb .pg-es .grid3 {
+      grid-template-columns: 1fr;
+    }
+    .vb .pg-es .pod3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .vb .pg-es .pod3 > .card {
+      grid-column: 1 / -1;
+    }
+    .vb .pg-es .five2 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .vb .pg-es .pp-hero {
+      grid-template-columns: 220px minmax(0, 1fr);
+    }
+    .vb .pg-es .pp-hero > :nth-child(3) {
+      grid-column: 1 / -1;
+    }
+  }
+  @media (max-width: 767px) {
+    .vb .pg-es .bar-f {
+      flex-wrap: wrap;
+    }
+    .vb .pg-es .bar-f .seg {
+      width: 100%;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .vb .pg-es .bar-f .field {
+      max-width: none !important;
+      margin-left: 0 !important;
+      width: 100%;
+    }
+    .vb .pg-es .lt3h,
+    .vb .pg-es .lt3 {
+      grid-template-columns: 24px minmax(0, 1fr) 104px;
+      gap: 10px;
+      padding: 0 12px;
+    }
+    .vb .pg-es .lt3h > :nth-child(n + 3):not(:nth-child(5)),
+    .vb .pg-es .lt3 > :nth-child(n + 3):not(:nth-child(5)) {
+      display: none;
+    }
+    .vb .pg-es .pod3 {
+      grid-template-columns: 1fr;
+    }
+    .vb .pg-es .podc {
+      height: 150px;
+    }
+    .vb .pg-es .five2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .vb .pg-es .pp-hero {
+      grid-template-columns: 1fr;
+      padding: 16px;
+      gap: 18px;
+    }
+    .vb .pg-es .pp-hero .ph5 {
+      height: 220px;
+    }
+    .vb .pg-es .tgrid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .vb .pg-es .rsrow {
+      overflow-x: auto;
+    }
+    .vb .pg-es .alum {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+}
+
+@layer components {
+  /* A pro's builds. */
+  .vb .es-bd {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 150px 170px 120px 110px;
+    align-items: center;
+    gap: 16px;
+    min-height: 66px;
+    padding: 10px 20px;
+    border-top: 1px solid var(--line);
+  }
+  .vb .es-ic {
+    width: 28px;
+    height: 28px;
+    border-radius: 5px;
+    background: var(--ink-0);
+  }
+  .vb .es-ic.r {
+    border-radius: 50%;
+  }
+  .vb .es-ic.sm {
+    width: 20px;
+    height: 20px;
+  }
+  @media (max-width: 767px) {
+    .vb .es-bd {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .vb .es-bd > :nth-child(n + 3) {
+      display: none;
+    }
+    .vb .pg-es .sq {
+      grid-template-columns: 40px minmax(0, 1fr) 90px;
+      gap: 10px;
+      padding: 10px 12px 10px 16px;
+    }
+    .vb .pg-es .sq > :nth-child(n + 4) {
+      display: none;
+    }
+    .vb .pg-es .sq .fr {
+      width: 40px;
+      height: 40px;
+    }
+    .vb .pg-es .pp-g {
+      grid-template-columns: 1fr;
+    }
+    .vb .pg-es .pp-name {
+      font-size: 44px;
+    }
+    .vb .pg-es .tbl-scroll {
+      overflow-x: auto;
+    }
+  }
+  @media (max-width: 1023px) {
+    .vb .pg-es .pp-g {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+@layer components {
+  .vb .es-lgc > .card {
+    min-width: 0;
+  }
+  .vb .es-lgh .meta {
+    white-space: nowrap;
+  }
+  @media (max-width: 767px) {
+    .vb .pg-es .tabs {
+      overflow-x: auto;
+      scrollbar-width: none;
+      gap: 20px;
+    }
+    .vb .pg-es .pp-hero .btn {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .vb .pg-es .pp-kv {
+      border-left: 0;
+      padding-left: 0;
+      border-top: 1px solid var(--line);
+    }
+    .vb .pg-es .pp-kv > div {
+      grid-template-columns: 90px minmax(0, 1fr);
+    }
+    .vb .pg-es .es-lgh {
+      flex-wrap: wrap;
+    }
+    .vb .pg-es .es-lgh .meta {
+      white-space: normal;
+    }
+    .vb .pg-es .card-h {
+      flex-wrap: wrap;
+    }
+  }
+}
+
+@layer components {
+  .vb .pp-hero.tm {
+    grid-template-columns: 220px minmax(0, 1fr) 360px;
+  }
+  @media (max-width: 1023px) {
+    .vb .pg-es .pp-hero.tm {
+      grid-template-columns: 180px minmax(0, 1fr);
+    }
+  }
+  @media (max-width: 767px) {
+    .vb .pg-es .pp-hero.tm {
+      grid-template-columns: 1fr;
+    }
+    .vb .pg-es .pp-hero.tm > .fr {
+      height: 160px !important;
+    }
+    .vb .pg-es .pp-kv span {
+      white-space: normal;
+      min-width: 0;
+    }
+  }
+}

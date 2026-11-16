@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { X } from 'lucide-vue-next'
 import { RoleIcon } from '@invadelol/ui'
 import { positionOf } from '@invadelol/ui/logic'
+import Icon from './ui/Icon.vue'
 import Select from './ui/Select.vue'
 import { champIcon, championName } from '../lib/assets.js'
 import type { ChampionStats } from '../lib/types.js'
@@ -73,35 +73,25 @@ const championModel = computed({
 </script>
 
 <template>
-  <div
-    class="flex flex-wrap items-center gap-x-4 gap-y-2.5 transition-opacity"
-    :class="busy ? 'opacity-55' : ''"
-    :aria-busy="busy"
-  >
-    <!-- On a phone each control takes the line, its segments sharing it. -->
-    <div
-      v-if="!hideQueue"
-      class="rd-seg max-sm:flex max-sm:w-full max-sm:flex-nowrap"
-      role="group"
-      aria-label="Queue"
-    >
+  <div class="mf" :class="{ busy }" :aria-busy="busy">
+    <div v-if="!hideQueue" class="seg mf-seg" role="group" aria-label="Queue">
       <button
         v-for="[value, label] in QUEUES"
         :key="value"
         type="button"
-        class="max-sm:min-w-0 max-sm:flex-auto max-sm:!px-1.5"
         :class="{ on: modelValue.type === value }"
+        :aria-pressed="modelValue.type === value"
         @click="set('type', value)"
       >
         {{ label }}
       </button>
     </div>
 
-    <div class="rd-seg max-sm:flex max-sm:w-full max-sm:flex-nowrap" role="group" aria-label="Role">
+    <div class="seg mf-seg" role="group" aria-label="Role">
       <button
         type="button"
-        class="!px-2.5 max-sm:flex-1"
         :class="{ on: modelValue.role === 'all' }"
+        :aria-pressed="modelValue.role === 'all'"
         @click="set('role', 'all')"
       >
         All
@@ -110,10 +100,11 @@ const championModel = computed({
         v-for="[value, label] in ROLES"
         :key="value"
         type="button"
-        class="!px-2.5 max-sm:flex-1"
+        class="mf-role"
         :title="label"
         :aria-label="label"
         :class="{ on: modelValue.role === value }"
+        :aria-pressed="modelValue.role === value"
         @click="set('role', value)"
       >
         <RoleIcon :lane="positionOf(value === 'SUPPORT' ? 'UTILITY' : value)" :size="15" />
@@ -128,18 +119,55 @@ const championModel = computed({
       search-placeholder="Find a champion"
       placeholder="All champions"
       width="16rem"
-      class="w-[160px] max-sm:w-full"
+      class="mf-sel"
     />
 
     <button
       v-if="dirty"
-      class="iv-btn ghost sm"
+      type="button"
+      class="btn ghost sm"
       @click="emit('update:modelValue', { type: 'all', champion: 0, role: 'all' })"
     >
-      <X :size="12" />
-      Clear
+      <Icon name="x" />Clear
     </button>
 
-    <span v-if="summary" class="num ml-auto shrink-0 text-[11.5px] text-ink-3">{{ summary }}</span>
+    <span v-if="summary" class="meta num mf-sum">{{ summary }}</span>
   </div>
 </template>
+
+<style scoped>
+.mf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  transition: opacity 160ms var(--ease);
+}
+.mf.busy {
+  opacity: 0.55;
+}
+.mf-role {
+  padding: 0 10px !important;
+}
+.mf-sel {
+  width: 180px;
+}
+.mf-sum {
+  margin-left: auto;
+}
+@media (max-width: 640px) {
+  .mf-seg {
+    display: flex;
+    width: 100%;
+  }
+  .mf-seg > * {
+    flex: 1 1 0;
+    justify-content: center;
+    min-width: 0;
+    padding: 0 6px;
+  }
+  .mf-sel {
+    width: 100%;
+  }
+}
+</style>

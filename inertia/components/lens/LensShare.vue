@@ -79,11 +79,20 @@ const round = (v: number | null) => (v === null ? '-' : `${Math.round(v)}%`)
         </p>
       </div>
     </dl>
-    <span v-if="champion" class="sr-only">{{ championName(champion) }}</span>
+    <span v-if="champion" class="vh">{{ championName(champion) }}</span>
   </div>
 </template>
 
 <style scoped>
+.vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .lv-share {
   display: flex;
   align-items: center;
@@ -107,15 +116,15 @@ const round = (v: number | null) => (v === null ? '-' : `${Math.round(v)}%`)
   fill: none;
   stroke-width: 12;
   stroke-linecap: round;
-  animation: lv-sweep 1300ms 200ms var(--ease-glide) both;
+  animation: lv-sweep 1300ms 200ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
 }
 
 .arc.outer {
-  stroke: var(--brand);
+  stroke: var(--v400);
 }
 
 .arc.inner {
-  stroke: color-mix(in oklab, var(--brand) 55%, var(--text-3));
+  stroke: color-mix(in oklab, var(--v400) 55%, var(--t3));
   animation-delay: 380ms;
 }
 
@@ -126,7 +135,7 @@ const round = (v: number | null) => (v === null ? '-' : `${Math.round(v)}%`)
 }
 
 .pace {
-  stroke: var(--text-1);
+  stroke: var(--t1);
   stroke-width: 1.5;
   stroke-dasharray: 2 2;
 }
@@ -148,7 +157,7 @@ const round = (v: number | null) => (v === null ? '-' : `${Math.round(v)}%`)
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: var(--text-3);
+  color: var(--t3);
 }
 
 .lv-share-legend dt i {
@@ -158,11 +167,11 @@ const round = (v: number | null) => (v === null ? '-' : `${Math.round(v)}%`)
 }
 
 .lv-share-legend dt i.outer {
-  background: var(--brand);
+  background: var(--v400);
 }
 
 .lv-share-legend dt i.inner {
-  background: color-mix(in oklab, var(--brand) 55%, var(--text-3));
+  background: color-mix(in oklab, var(--v400) 55%, var(--t3));
 }
 
 .lv-share-legend dd {
@@ -171,12 +180,12 @@ const round = (v: number | null) => (v === null ? '-' : `${Math.round(v)}%`)
   font-stretch: var(--fig);
   line-height: 1.1;
   letter-spacing: -0.01em;
-  color: var(--text-1);
+  color: var(--t1);
 }
 
 .lv-share-legend p {
   font-size: 12px;
-  color: var(--text-3);
+  color: var(--t3);
 }
 
 @media (max-width: 26rem) {

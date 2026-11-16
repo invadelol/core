@@ -11,8 +11,10 @@ import {
   gameDataUrl,
   initials,
   masterySources,
+  statSources,
   parseAssetRequest,
   parseChampion,
+  parseChampionText,
   parseManifest,
   placeholderSvg,
   rankSources,
@@ -137,11 +139,25 @@ test.group('Riot asset paths', () => {
   })
 
   test('every kind but augments resolves to at least one candidate url', ({ assert }) => {
-    const ids: Record<string, string> = { rank: 'emerald', emblem: 'emerald', ability: '266-q' }
+    const ids: Record<string, string> = {
+      rank: 'emerald',
+      emblem: 'emerald',
+      ability: '266-q',
+      stat: 'ad',
+    }
     for (const kind of ASSET_KINDS.filter((k) => k !== 'augment')) {
       const sources = fallbackSources(kind, ids[kind] ?? '1')
       assert.isAbove(sources.length, 0, `${kind} has no fallback source`)
     }
+  })
+
+  test('stat icons resolve by their short name, nothing else', ({ assert }) => {
+    assert.deepEqual(statSources('ap', PATCH_16_20), [
+      `${CDRAGON}/16.20/game/assets/perks/statmods/statmodsabilitypowericon.png`,
+    ])
+    assert.deepEqual(statSources('nope', PATCH_16_20), [])
+    assert.isNull(parseAssetRequest('stat', '../x'))
+    assert.equal(parseAssetRequest('stat', 'ad.png')?.id, 'ad')
   })
 
   test('mastery crests resolve by level, the game crest first where it has one', ({ assert }) => {
@@ -261,6 +277,73 @@ test.group('Riot asset paths', () => {
       'https://cdn.communitydragon.org/latest/champion/266/ability-icon/r',
     ])
     assert.isNull(parseChampion(null))
+  })
+
+  test('champion text: the title and the names of the passive and abilities', ({ assert }) => {
+    assert.deepEqual(
+      parseChampionText({
+        title: 'the Darkin Blade',
+        passive: { name: 'Deathbringer Stance' },
+        spells: [
+          { spellKey: 'q', name: 'The Darkin Blade' },
+          { spellKey: 'R', name: 'World Ender' },
+          { spellKey: 'x', name: 'Not an ability' },
+          { spellKey: 'w' },
+        ],
+      }),
+      {
+        title: 'the Darkin Blade',
+        abilities: { p: 'Deathbringer Stance', q: 'The Darkin Blade', r: 'World Ender' },
+      }
+    )
+    assert.isNull(parseChampionText(null))
+    assert.isNull(parseChampionText({ spells: [] }))
+  })
+
+  test('skin art: a skin number picks that skin, base first in the list', ({ assert }) => {
+    const art = parseChampion({
+      alias: 'Aatrox',
+      skins: [
+        {
+          id: 266007,
+          name: 'Blood Moon Aatrox',
+          isBase: false,
+          splashPath: '/lol-game-data/assets/v1/champion-splashes/266/266007.jpg',
+        },
+        {
+          id: 266000,
+          name: 'Aatrox',
+          isBase: true,
+          splashPath: '/lol-game-data/assets/v1/champion-splashes/266/266000.jpg',
+        },
+        // A chroma: no splash of its own, never offered.
+        { id: 266008, name: 'Chroma' },
+      ],
+    })
+    assert.deepEqual(
+      art?.skins?.map(({ num, name }) => ({ num, name })),
+      [
+        { num: 0, name: 'Aatrox' },
+        { num: 7, name: 'Blood Moon Aatrox' },
+      ]
+    )
+    assert.deepEqual(championSources('centered', '266-7', art), [
+      `${CDRAGON_GAME_DATA}/v1/champion-splashes/266/266007.jpg`,
+      `${DDRAGON}/cdn/img/champion/centered/Aatrox_7.jpg`,
+      'https://cdn.communitydragon.org/latest/champion/266/splash-art/centered/skin/7',
+    ])
+    // A skin the file does not list still has the conventional paths.
+    assert.deepEqual(championSources('splash', '266-9', null), [
+      'https://cdn.communitydragon.org/latest/champion/266/splash-art/skin/9',
+    ])
+    // Skin 0 is the base art, under the same sources as the bare id.
+    assert.deepEqual(
+      championSources('centered', '266-0', art),
+      championSources('centered', '266', art)
+    )
+    assert.deepEqual(parseAssetRequest('centered', '266-7.jpg'), { kind: 'centered', id: '266-7' })
+    assert.isNull(parseAssetRequest('centered', '266-1000.jpg'))
+    assert.isNull(parseAssetRequest('champion', '266-7.png'))
   })
 
   test('an unknown profile icon falls back to the generic portrait', ({ assert }) => {

@@ -44,7 +44,7 @@ defineProps<{
   border-radius: var(--r-md);
   background: var(--well);
   box-shadow: var(--inset-shadow);
-  animation: lv-rise 800ms var(--ease-glide) both;
+  animation: lv-rise 800ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
 }
 
 @keyframes lv-rise {
@@ -67,18 +67,18 @@ defineProps<{
   font-weight: 700;
   font-stretch: var(--fig);
   line-height: 1.1;
-  color: var(--text-1);
+  color: var(--t1);
 }
 
 .lv-wards-label {
   font-size: 12px;
-  color: var(--text-2);
+  color: var(--t2);
 }
 
 .lv-wards-opp {
   margin-top: 4px;
   font-size: 11.5px;
-  color: var(--text-3);
+  color: var(--t3);
 }
 
 @media (max-width: 26rem) {

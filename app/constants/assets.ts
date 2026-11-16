@@ -29,6 +29,7 @@ export const ASSET_KINDS = [
   'emblem',
   'map',
   'mastery',
+  'stat',
 ] as const
 
 export type AssetKind = (typeof ASSET_KINDS)[number]
@@ -52,10 +53,30 @@ export const TIERS = [
  */
 export const MASTERY_CREST_MAX = 10
 
+/**
+ * The stat icons a tooltip draws beside a number (the game's stat-shard art), by the short name a
+ * URL uses: `/cdn/stat/ad`. The value is the file's name in the game's statmods folder.
+ */
+export const STAT_ICONS = {
+  ad: 'attackdamage',
+  ap: 'abilitypower',
+  health: 'healthplus',
+  hp: 'healthscaling',
+  armor: 'armor',
+  mr: 'magicres',
+  as: 'attackspeed',
+  ms: 'movementspeed',
+  haste: 'cdrscaling',
+  adaptive: 'adaptiveforce',
+  tenacity: 'tenacity',
+} as const
+
 /** Ability slots, `p` being the passive. */
 export const ABILITY_KEYS = ['p', 'q', 'w', 'e', 'r'] as const
 
 const NUMERIC = /^\d{1,7}$/
+/** A champion id, or `<champion id>-<skin number>` for one of its skins (`266-7`). */
+const CHAMPION_SKIN = /^\d{1,7}(?:-\d{1,3})?$/
 const TIER = new RegExp(`^(${TIERS.join('|')}|unranked)$`)
 
 /**
@@ -64,9 +85,9 @@ const TIER = new RegExp(`^(${TIERS.join('|')}|unranked)$`)
  */
 export const ASSET_IDS: Record<AssetKind, RegExp> = {
   'champion': NUMERIC,
-  'splash': NUMERIC,
-  'centered': NUMERIC,
-  'loading': NUMERIC,
+  'splash': CHAMPION_SKIN,
+  'centered': CHAMPION_SKIN,
+  'loading': CHAMPION_SKIN,
   'ability': new RegExp(`^\\d{1,4}-[${ABILITY_KEYS.join('')}]$`),
   'item': NUMERIC,
   'spell': NUMERIC,
@@ -78,6 +99,7 @@ export const ASSET_IDS: Record<AssetKind, RegExp> = {
   'emblem': TIER,
   'map': NUMERIC,
   'mastery': /^(?:\d|10)$/,
+  'stat': new RegExp(`^(${Object.keys(STAT_ICONS).join('|')})$`),
 }
 
 /** A patch in a URL: `16.20`, Community Dragon's granularity. */

@@ -3,6 +3,7 @@ import {
   POSITIONS,
   damageShare,
   goldShare,
+  isRemake,
   killParticipation,
   matchMinutes,
   teamTotals,
@@ -137,7 +138,8 @@ export interface SharedGame {
  *
  * Both players are in the same match row, so one sample is usually enough,
  * but the two windows do not always line up: merging them by match id keeps a
- * game that fell off the end of one list and not the other.
+ * game that fell off the end of one list and not the other. Remakes are no
+ * result, so they are not a shared game either.
  */
 export function sharedGames(sides: Side[]): SharedGame[] {
   const [a, b] = sides
@@ -150,7 +152,7 @@ export function sharedGames(sides: Side[]): SharedGame[] {
   for (const match of byId.values()) {
     const mine = match.participants.find((p) => p.puuid === a.puuid)
     const theirs = match.participants.find((p) => p.puuid === b.puuid)
-    if (!mine || !theirs) continue
+    if (!mine || !theirs || isRemake(match)) continue
     games.push({ match, players: [mine, theirs], together: mine.teamId === theirs.teamId })
   }
   return games.sort((x, y) => y.match.gameStartMs - x.match.gameStartMs)

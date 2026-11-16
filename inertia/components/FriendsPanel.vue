@@ -1,20 +1,25 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { ArrowRight, Users } from 'lucide-vue-next'
-import { ChampIcon, RoleIcon, useFormat } from '@invadelol/ui'
+import { RoleIcon, useFormat } from '@invadelol/ui'
 import { positionOf, queueShort } from '@invadelol/ui/logic'
 import DuoDetail from './DuoDetail.vue'
 import PlayerLink from './PlayerLink.vue'
+import CardHead from './ui/CardHead.vue'
+import EmptyState from './ui/EmptyState.vue'
 import FormStrip from './ui/FormStrip.vue'
+import Frame from './ui/Frame.vue'
+import Icon from './ui/Icon.vue'
+import SectionHead from './ui/SectionHead.vue'
+import Skeleton from './ui/Skeleton.vue'
 import WinLoss from './ui/WinLoss.vue'
-import { championName, profileIcon } from '../lib/assets.js'
+import { champIcon, championName, profileIcon } from '../lib/assets.js'
 import { shortDate, timeAgo } from '../lib/format.js'
 import { isRemake } from '../lib/match.js'
 import { roleLabel, type Partner, type SynergyReport } from '../lib/synergy.js'
 import type { Match, Summoner } from '../lib/types.js'
 
 /**
- * The Friends tab (Violet line): who the player queues with, drawn as a map (the player in the
+ * The Friends tab: who the player queues with, drawn as a map (the player in the
  * middle, each friend sized by games together, the link blue when they win together and red when
  * they lose), whether friends help, how they queue, the main duos, the premade groups, the latest
  * games with friends, then one duo opened in full. Everything is read by the server from the
@@ -112,10 +117,10 @@ const party = computed(() => {
   for (const n of at.values()) counts[Math.min(3, n)]++
   counts[0] = Math.max(0, r.games - counts[1] - counts[2] - counts[3])
   const rows = [
-    { label: 'Solo', n: counts[0], tone: 'rgb(166 167 184 / 0.45)' },
-    { label: 'Duo', n: counts[1], tone: 'var(--rd-violet)' },
-    { label: 'Three', n: counts[2], tone: 'var(--rd-violet-hi)' },
-    { label: 'Four or five', n: counts[3], tone: '#d9d4ff' },
+    { label: 'Solo', n: counts[0], tone: 'var(--s4)' },
+    { label: 'Duo', n: counts[1], tone: 'var(--v600)' },
+    { label: 'Three', n: counts[2], tone: 'var(--v400)' },
+    { label: 'Four or five', n: counts[3], tone: 'var(--v200)' },
   ]
   return rows
     .filter((row, i) => i < 2 || row.n > 0)
@@ -212,444 +217,422 @@ function pick(partner: Partner, scroll = true) {
 
 const pairRole = (p: Partner) => p.roles[0] ?? null
 const lastTen = (p: Partner) => p.series.slice(-10).map((s) => s.win)
+/** A synergy worth colouring: enough games and at least two points either way. */
+const lean = (p: Partner) =>
+  p.confidence === 'low' || Math.abs(p.synergy) < 2 ? '' : p.synergy > 0 ? 'wn' : 'ls'
 </script>
 
 <template>
-  <section class="fr">
+  <div class="fp">
     <!-- Loading: the shape of what is coming -->
-    <div v-if="!report && !error" class="grid gap-4" aria-busy="true">
-      <div class="iv-skel h-[440px]" />
-      <div class="iv-skel h-[280px]" />
+    <div v-if="!report && !error" class="fp" aria-busy="true">
+      <article class="card"><Skeleton :height="440" /></article>
+      <article class="card"><Skeleton :rows="5" pic /></article>
     </div>
 
-    <p v-else-if="error && !report" class="notice" role="alert">
-      <span>Friends could not be loaded.</span>
-      <button type="button" class="iv-btn sm ml-auto" @click="$emit('retry')">Retry</button>
-    </p>
+    <article v-else-if="error && !report" class="card" role="alert">
+      <EmptyState icon="users" title="Friends could not be loaded">
+        <button type="button" class="btn sm" @click="$emit('retry')">Retry</button>
+      </EmptyState>
+    </article>
 
     <!-- Nothing stored yet -->
-    <div v-else-if="report && !report.games" class="rd-card fr-empty">
-      <Users :size="20" class="text-ink-3" />
-      <h3>No games yet</h3>
-      <p>Once this player's games are stored, the people they play with show up here.</p>
-    </div>
+    <article v-else-if="report && !report.games" class="card">
+      <EmptyState
+        icon="users"
+        title="No games yet"
+        line="Once this player's games are stored, the people they play with show up here."
+      />
+    </article>
 
     <template v-else-if="report">
       <!-- The map, and what friends do to their games -->
-      <section class="rd-card net">
-        <div v-if="nodes.length" class="map">
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-            <line
-              v-for="pair in pairs"
-              :key="`${pair.a.p.puuid}${pair.b.p.puuid}`"
-              :x1="pair.a.x"
-              :y1="pair.a.y"
-              :x2="pair.b.x"
-              :y2="pair.b.y"
-              class="dash"
-              vector-effect="non-scaling-stroke"
-            />
-            <line
+      <article class="card">
+        <CardHead
+          title="Friends"
+          icon="users"
+          :meta="`Last ${report.games} games, ${shortDate(report.firstMs)} to ${shortDate(report.lastMs)}`"
+        />
+        <div class="fp-net">
+          <div v-if="nodes.length" class="fp-map">
+            <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              <line
+                v-for="pair in pairs"
+                :key="`${pair.a.p.puuid}${pair.b.p.puuid}`"
+                :x1="pair.a.x"
+                :y1="pair.a.y"
+                :x2="pair.b.x"
+                :y2="pair.b.y"
+                class="fp-dash"
+                vector-effect="non-scaling-stroke"
+              />
+              <line
+                v-for="n in nodes"
+                :key="n.p.puuid"
+                x1="50"
+                y1="47"
+                :x2="n.x"
+                :y2="n.y"
+                :stroke="n.tone"
+                :stroke-width="n.width"
+                stroke-linecap="round"
+                vector-effect="non-scaling-stroke"
+                opacity="0.6"
+              />
+            </svg>
+            <div class="fp-nd me" style="left: 50%; top: 47%">
+              <img :src="profileIcon(profile.profileIconId)" alt="" width="84" height="84" />
+              <b>{{ profile.gameName }}</b>
+            </div>
+            <button
               v-for="n in nodes"
               :key="n.p.puuid"
-              x1="50"
-              y1="47"
-              :x2="n.x"
-              :y2="n.y"
-              :stroke="n.tone"
-              :stroke-width="n.width"
-              stroke-linecap="round"
-              vector-effect="non-scaling-stroke"
-              opacity="0.55"
-            />
-          </svg>
-          <div class="nd me" style="left: 50%; top: 47%">
-            <img :src="profileIcon(profile.profileIconId)" alt="" width="84" height="84" />
-            <b>{{ profile.gameName }}</b>
-          </div>
-          <button
-            v-for="n in nodes"
-            :key="n.p.puuid"
-            type="button"
-            class="nd"
-            :class="{ on: selected === n.p.puuid }"
-            :style="{ 'left': `${n.x}%`, 'top': `${n.y}%`, '--rc': n.tone }"
-            :aria-pressed="selected === n.p.puuid"
-            :title="`${n.p.gameName}#${n.p.tagLine}: ${n.p.games} games together, ${n.rate}% won`"
-            @click="pick(n.p)"
-          >
-            <img
-              :src="profileIcon(n.p.profileIconId)"
-              alt=""
-              :width="n.size"
-              :height="n.size"
-              loading="lazy"
-            />
-            <b>{{ n.p.gameName }}</b>
-            <small class="num"
-              >{{ n.p.games }} games, <em :style="{ color: n.tone }">{{ n.rate }}%</em></small
+              type="button"
+              class="fp-nd"
+              :class="{ on: selected === n.p.puuid }"
+              :style="{ 'left': `${n.x}%`, 'top': `${n.y}%`, '--rc': n.tone }"
+              :aria-pressed="selected === n.p.puuid"
+              :title="`${n.p.gameName}#${n.p.tagLine}: ${n.p.games} games together, ${n.rate}% won`"
+              @click="pick(n.p)"
             >
-          </button>
-          <div class="lgd">
-            <span><i style="background: var(--win)" />Winning together</span>
-            <span><i style="background: var(--loss)" />Losing together</span>
-            <span class="max-sm:hidden">Bigger and thicker: more games</span>
-          </div>
-        </div>
-        <div v-else class="map solo">
-          <div class="nd me" style="left: 50%; top: 44%">
-            <img :src="profileIcon(profile.profileIconId)" alt="" width="84" height="84" />
-            <b>{{ profile.gameName }}</b>
-            <small class="num">Plays solo in the last {{ report.games }} games</small>
-          </div>
-        </div>
-
-        <aside class="nside">
-          <div>
-            <label class="num">Win rate, last {{ report.games }} games</label>
-            <div class="vs2">
-              <div>
-                <span
-                  class="rd-fig"
-                  :class="
-                    summary && summary.aloneRate !== null
-                      ? summary.withRate - summary.aloneRate >= 3
-                        ? 'rd-up'
-                        : summary.withRate - summary.aloneRate <= -3
-                          ? 'rd-dn'
-                          : ''
-                      : ''
-                  "
-                  >{{ summary ? `${summary.withRate}%` : '-' }}</span
-                >
-                <small class="num">with friends, {{ report.friends.games }} games</small>
-              </div>
-              <div>
-                <span class="rd-fig">{{
-                  report.alone.games ? `${rate(report.alone.wins, report.alone.games)}%` : '-'
-                }}</span>
-                <small class="num">alone, {{ report.alone.games }} games</small>
-              </div>
-            </div>
-          </div>
-          <div v-if="party.length">
-            <label>How they queue</label>
-            <div class="party">
-              <i
-                v-for="row in party"
-                v-show="row.n"
-                :key="row.label"
-                :style="{ width: `${row.share}%`, background: row.tone }"
+              <img
+                :src="profileIcon(n.p.profileIconId)"
+                alt=""
+                :width="n.size"
+                :height="n.size"
+                loading="lazy"
               />
-            </div>
-            <div class="pleg">
-              <span v-for="row in party" :key="row.label" :style="{ '--c': row.tone }"
-                >{{ row.label }} <b class="num">{{ row.n }}</b></span
+              <b>{{ n.p.gameName }}</b>
+              <small class="num"
+                >{{ n.p.games }} games,
+                <em :class="n.rate >= 50 ? 'wn' : 'ls'">{{ n.rate }}%</em></small
               >
+            </button>
+            <div class="fp-lgd">
+              <span><i style="background: var(--win)" />Winning together</span>
+              <span><i style="background: var(--loss)" />Losing together</span>
+              <span class="fp-hm">Bigger and thicker: more games</span>
             </div>
           </div>
-          <div v-if="best">
-            <label>Best with</label>
-            <button type="button" class="bw" @click="pick(best)">
-              <span class="avs">
-                <img :src="profileIcon(profile.profileIconId)" alt="" />
-                <img :src="profileIcon(best.profileIconId)" alt="" />
-              </span>
-              <span class="min-w-0">
-                <b class="truncate">{{ best.gameName }}</b>
-                <small class="num"
-                  >{{ signed(best.synergy) }} points over their usual win rate</small
-                >
-              </span>
-            </button>
+          <div v-else class="fp-map solo">
+            <div class="fp-nd me" style="left: 50%; top: 44%">
+              <img :src="profileIcon(profile.profileIconId)" alt="" width="84" height="84" />
+              <b>{{ profile.gameName }}</b>
+              <small class="num">Plays solo in the last {{ report.games }} games</small>
+            </div>
           </div>
-          <p class="nnote num">
-            From {{ shortDate(report.firstMs) }} to {{ shortDate(report.lastMs) }}
-          </p>
-        </aside>
-      </section>
+
+          <aside class="fp-side">
+            <div>
+              <span class="lab">Win rate</span>
+              <div class="fp-vs">
+                <div>
+                  <span
+                    class="fg-l"
+                    :class="
+                      summary && summary.aloneRate !== null
+                        ? summary.withRate - summary.aloneRate >= 3
+                          ? 'wn'
+                          : summary.withRate - summary.aloneRate <= -3
+                            ? 'ls'
+                            : ''
+                        : ''
+                    "
+                    >{{ summary ? `${summary.withRate}%` : '-' }}</span
+                  >
+                  <span class="meta num">with friends, {{ report.friends.games }} games</span>
+                </div>
+                <div>
+                  <span class="fg-l">{{
+                    report.alone.games ? `${rate(report.alone.wins, report.alone.games)}%` : '-'
+                  }}</span>
+                  <span class="meta num">alone, {{ report.alone.games }} games</span>
+                </div>
+              </div>
+            </div>
+            <div v-if="party.length">
+              <span class="lab">How they queue</span>
+              <div class="fp-party">
+                <i
+                  v-for="row in party"
+                  v-show="row.n"
+                  :key="row.label"
+                  :style="{ width: `${row.share}%`, background: row.tone }"
+                />
+              </div>
+              <div class="fp-pleg">
+                <span v-for="row in party" :key="row.label" :style="{ '--c': row.tone }"
+                  >{{ row.label }} <b class="num">{{ row.n }}</b></span
+                >
+              </div>
+            </div>
+            <div v-if="best">
+              <span class="lab">Best with</span>
+              <button type="button" class="fp-best" @click="pick(best)">
+                <span class="fp-avs">
+                  <img :src="profileIcon(profile.profileIconId)" alt="" />
+                  <img :src="profileIcon(best.profileIconId)" alt="" />
+                </span>
+                <span class="col" style="gap: 2px; min-width: 0">
+                  <b class="h5 ell">{{ best.gameName }}</b>
+                  <span class="meta num"
+                    >{{ signed(best.synergy) }} points over their usual win rate</span
+                  >
+                </span>
+              </button>
+            </div>
+          </aside>
+        </div>
+      </article>
 
       <!-- Duos -->
-      <template v-if="duos.length">
-        <div class="fil">
-          <h2>Duos<span>Most played first</span></h2>
+      <section v-if="duos.length">
+        <SectionHead title="Duos" icon="users" meta="Most played first">
           <button
             v-if="partners.length > duos.length"
             type="button"
-            class="rd-more"
+            class="more"
             :aria-expanded="everyone"
             @click="everyone = !everyone"
           >
-            {{ everyone ? 'Fewer' : `All ${partners.length} people` }}<ArrowRight :size="14" />
+            {{ everyone ? 'Fewer' : `All ${partners.length} people` }}<Icon name="chevr" />
           </button>
-        </div>
-        <div class="duos">
+        </SectionHead>
+        <div class="grid3 fp-duos">
           <button
             v-for="p in duos"
             :key="p.puuid"
             type="button"
-            class="rd-card du"
+            class="card fp-du"
             :class="{ on: selected === p.puuid }"
             :aria-pressed="selected === p.puuid"
             @click="pick(p)"
           >
-            <span class="du-h">
-              <span class="avs">
+            <span class="fp-du-h">
+              <span class="fp-avs">
                 <img :src="profileIcon(profile.profileIconId)" alt="" />
                 <img :src="profileIcon(p.profileIconId)" alt="" />
               </span>
-              <span class="min-w-0">
-                <b class="truncate"
-                  >{{ p.gameName }} <span>#{{ p.tagLine }}</span></b
+              <span class="col" style="gap: 4px; min-width: 0">
+                <b class="h4 ell"
+                  >{{ p.gameName }} <span class="t3">#{{ p.tagLine }}</span></b
                 >
-                <small
-                  ><span class="rd-tag" :class="{ v: p.tier === 'duo' }">{{ TIER[p.tier] }}</span
-                  ><span class="num">last {{ timeAgo(p.lastMs) }}</span></small
-                >
+                <span class="row" style="gap: 8px">
+                  <span :class="p.tier === 'duo' ? 'stat2' : 'tagx sm'">{{ TIER[p.tier] }}</span>
+                  <span class="meta num">last {{ timeAgo(p.lastMs) }}</span>
+                </span>
               </span>
             </span>
-            <span class="du-w">
-              <span class="rd-fig">{{ rate(p.wins, p.games) }}%</span>
-              <span class="dwl">
-                <WinLoss :wins="p.wins" :losses="p.games - p.wins" />
-                <small
-                  class="num"
-                  :class="
-                    p.confidence === 'low' || Math.abs(p.synergy) < 2
-                      ? ''
-                      : p.synergy > 0
-                        ? 'rd-up'
-                        : 'rd-dn'
-                  "
-                  :title="`${rate(p.wins, p.games)}% together, ${Math.round(p.baseline * 100)}% without`"
-                  >{{ signed(p.synergy) }} against their usual rate</small
-                >
+            <span class="fp-du-w">
+              <span class="fg-l">{{ rate(p.wins, p.games) }}%</span>
+              <span class="col grow" style="gap: 8px; min-width: 0">
+                <span class="row meta num" style="justify-content: space-between">
+                  <span>{{ p.wins }}W {{ p.games - p.wins }}L</span>
+                  <span
+                    :class="lean(p)"
+                    :title="`${rate(p.wins, p.games)}% together, ${Math.round(p.baseline * 100)}% without`"
+                    >{{ signed(p.synergy) }} vs usual</span
+                  >
+                </span>
+                <span class="split"
+                  ><i :style="{ width: `${rate(p.wins, p.games)}%` }" /><b
+                /></span>
               </span>
             </span>
-            <span v-if="pairRole(p)" class="dr">
-              <span>Lanes</span>
+            <span v-if="pairRole(p)" class="fp-dr">
+              <span class="lab">Lanes</span>
               <RoleIcon :lane="positionOf(pairRole(p)!.mine)" :size="16" />
               <i>+</i>
               <RoleIcon :lane="positionOf(pairRole(p)!.theirs)" :size="16" />
-              <span class="x num"
+              <span class="x meta num"
                 >{{ rate(pairRole(p)!.wins, pairRole(p)!.games) }}% over
                 {{ pairRole(p)!.games }}</span
               >
             </span>
-            <span v-else-if="p.theirRole" class="dr">
-              <span>Lanes</span><span class="x">{{ roleLabel(p.theirRole) }}</span>
+            <span v-else-if="p.theirRole" class="fp-dr">
+              <span class="lab">Lanes</span><span class="x meta">{{ roleLabel(p.theirRole) }}</span>
             </span>
-            <span v-if="p.champions[0]" class="dr">
-              <span>Best pair</span>
-              <ChampIcon :id="p.champions[0].mine" :size="26" />
+            <span v-if="p.champions[0]" class="fp-dr">
+              <span class="lab">Best pair</span>
+              <Frame :src="champIcon(p.champions[0].mine)" :width="26" size="xs" />
               <i>+</i>
-              <ChampIcon :id="p.champions[0].theirs" :size="26" />
-              <span class="x num"
+              <Frame :src="champIcon(p.champions[0].theirs)" :width="26" size="xs" />
+              <span class="x meta num"
                 >{{ p.champions[0].wins }}W {{ p.champions[0].games - p.champions[0].wins }}L</span
               >
             </span>
-            <span class="dr">
-              <span>Last {{ lastTen(p).length }}</span>
-              <FormStrip :results="lastTen(p)" />
-              <span class="x quiet num">{{ shortDate(p.lastMs) }}</span>
+            <span class="fp-dr">
+              <span class="lab">Last {{ lastTen(p).length }}</span>
+              <FormStrip :results="lastTen(p)" small />
+              <span class="x meta num">{{ shortDate(p.lastMs) }}</span>
             </span>
           </button>
         </div>
-      </template>
-
-      <!-- Everyone they played with -->
-      <section v-if="everyone || !duos.length" class="rd-card mt-4">
-        <div class="rd-head">
-          <h3>Played with</h3>
-          <span class="rd-hm">Pick someone to see the duo</span>
-        </div>
-        <ul class="rd-plist">
-          <li v-for="p in partners" :key="p.puuid">
-            <button
-              type="button"
-              class="prow"
-              :class="{ on: selected === p.puuid }"
-              :aria-pressed="selected === p.puuid"
-              @click="pick(p)"
-            >
-              <img
-                :src="profileIcon(p.profileIconId)"
-                alt=""
-                width="36"
-                height="36"
-                loading="lazy"
-              />
-              <span class="min-w-0">
-                <b class="truncate">{{ p.gameName }}</b>
-                <small class="num"
-                  >{{ TIER[p.tier] }}, {{ signed(p.synergy) }} synergy<template v-if="p.theirRole"
-                    >, {{ roleLabel(p.theirRole) }}</template
-                  ></small
-                >
-              </span>
-              <WinLoss :wins="p.wins" :losses="p.games - p.wins" />
-            </button>
-          </li>
-        </ul>
       </section>
 
-      <div v-if="report.groups.length || withFriends.length" class="two">
-        <!-- Premade groups -->
-        <section v-if="report.groups.length" class="rd-card">
-          <div class="rd-head">
-            <h3>Groups</h3>
-            <span class="rd-hm">Three or more</span>
-          </div>
-          <ul class="rd-plist">
-            <li v-for="group in report.groups" :key="groupKey(group)">
-              <button
-                type="button"
-                class="sq"
-                :aria-expanded="openGroup === groupKey(group)"
-                @click="openGroup = openGroup === groupKey(group) ? null : groupKey(group)"
-              >
-                <span class="avs">
-                  <img :src="profileIcon(profile.profileIconId)" alt="" />
-                  <img
-                    v-for="member in group.members.slice(0, 4)"
-                    :key="member.puuid"
-                    :src="profileIcon(member.profileIconId)"
-                    alt=""
-                    loading="lazy"
-                  />
-                </span>
-                <span class="min-w-0">
-                  <b class="truncate">{{ groupName(group) }}</b>
-                  <small class="num"
-                    >{{ group.games }} games as
-                    {{
-                      group.members.length >= 4
-                        ? 'five'
-                        : group.members.length === 3
-                          ? 'four'
-                          : 'three'
-                    }}, last {{ shortDate(group.lastMs) }}</small
-                  >
-                </span>
-                <WinLoss :wins="group.wins" :losses="group.games - group.wins" />
-              </button>
-              <ul v-if="openGroup === groupKey(group)" class="members">
-                <li v-for="member in group.members" :key="member.puuid">
-                  <img :src="profileIcon(member.profileIconId)" alt="" width="22" height="22" />
-                  <PlayerLink :game-name="member.gameName" :tag-line="member.tagLine" show-tag />
-                </li>
-              </ul>
-            </li>
-          </ul>
-        </section>
-
-        <!-- Latest games with friends -->
-        <section v-if="withFriends.length" class="rd-card">
-          <div class="rd-head">
-            <h3>Latest games with friends</h3>
-          </div>
-          <ul class="rd-plist">
-            <li
-              v-for="g in withFriends"
-              :key="g.match.matchId"
-              class="lg3"
-              :class="g.me.win ? 'w' : 'l'"
+      <!-- Everyone they played with -->
+      <article v-if="everyone || !duos.length" class="card">
+        <CardHead title="Played with" icon="users" meta="Pick someone to see the duo" />
+        <button
+          v-for="p in partners"
+          :key="p.puuid"
+          type="button"
+          class="lrow fp-row"
+          :class="{ on: selected === p.puuid }"
+          :aria-pressed="selected === p.puuid"
+          @click="pick(p)"
+        >
+          <Frame :src="profileIcon(p.profileIconId)" :width="36" size="xs" />
+          <span class="col grow" style="gap: 2px; min-width: 0">
+            <b class="h5 ell"
+              >{{ p.gameName }} <span class="t3">#{{ p.tagLine }}</span></b
             >
-              <ChampIcon :id="g.me.championId" :size="40" />
-              <span class="res"
-                >{{ g.me.win ? 'Win' : 'Loss'
-                }}<small class="num">{{ mmss(g.match.duration) }}</small></span
-              >
-              <span class="kk num"
-                >{{ g.me.kills }} / {{ g.me.deaths }} / {{ g.me.assists
-                }}<small>{{ ago(Number(g.match.gameStartMs)) }}</small></span
-              >
-              <span class="wth">
-                <span v-for="m in g.mates" :key="m.puuid" class="wc"
-                  ><img :src="profileIcon(m.profileIconId)" alt="" />{{ m.gameName }}</span
+            <span class="meta num ell"
+              >{{ TIER[p.tier] }}, {{ signed(p.synergy) }} synergy<template v-if="p.theirRole"
+                >, {{ roleLabel(p.theirRole) }}</template
+              ></span
+            >
+          </span>
+          <WinLoss :wins="p.wins" :losses="p.games - p.wins" />
+        </button>
+      </article>
+
+      <div v-if="report.groups.length || withFriends.length" class="grid2 fp-two">
+        <!-- Premade groups -->
+        <article v-if="report.groups.length" class="card">
+          <CardHead title="Groups" icon="layers" meta="Three or more" />
+          <div v-for="group in report.groups" :key="groupKey(group)">
+            <button
+              type="button"
+              class="lrow fp-row"
+              :aria-expanded="openGroup === groupKey(group)"
+              @click="openGroup = openGroup === groupKey(group) ? null : groupKey(group)"
+            >
+              <span class="fp-avs">
+                <img :src="profileIcon(profile.profileIconId)" alt="" />
+                <img
+                  v-for="member in group.members.slice(0, 4)"
+                  :key="member.puuid"
+                  :src="profileIcon(member.profileIconId)"
+                  alt=""
+                  loading="lazy"
+                />
+              </span>
+              <span class="col grow" style="gap: 2px; min-width: 0">
+                <b class="h5 ell">{{ groupName(group) }}</b>
+                <span class="meta num"
+                  >{{ group.games }} games as
+                  {{
+                    group.members.length >= 4
+                      ? 'five'
+                      : group.members.length === 3
+                        ? 'four'
+                        : 'three'
+                  }}, last {{ shortDate(group.lastMs) }}</span
                 >
               </span>
-              <span class="rd-tag" :title="championName(g.me.championId)">{{
-                queueShort(g.match.queueId)
-              }}</span>
-            </li>
-          </ul>
-        </section>
+              <WinLoss :wins="group.wins" :losses="group.games - group.wins" />
+            </button>
+            <ul v-if="openGroup === groupKey(group)" class="fp-members">
+              <li v-for="member in group.members" :key="member.puuid">
+                <Frame :src="profileIcon(member.profileIconId)" :width="22" size="xs" />
+                <PlayerLink :game-name="member.gameName" :tag-line="member.tagLine" show-tag />
+              </li>
+            </ul>
+          </div>
+        </article>
+
+        <!-- Latest games with friends -->
+        <article v-if="withFriends.length" class="card">
+          <CardHead title="Latest games with friends" icon="clock" />
+          <div v-for="g in withFriends" :key="g.match.matchId" class="lrow fp-game">
+            <Frame :src="champIcon(g.me.championId)" :width="40" size="xs" />
+            <span class="col" style="gap: 2px">
+              <b class="h5" :class="g.me.win ? 'wn' : 'ls'">{{ g.me.win ? 'Win' : 'Loss' }}</b>
+              <span class="meta num">{{ mmss(g.match.duration) }}</span>
+            </span>
+            <span class="col" style="gap: 2px">
+              <b class="fg-xs num">{{ g.me.kills }} / {{ g.me.deaths }} / {{ g.me.assists }}</b>
+              <span class="meta num">{{ ago(Number(g.match.gameStartMs)) }}</span>
+            </span>
+            <span class="fp-with">
+              <span v-for="m in g.mates" :key="m.puuid" class="tagx"
+                ><img :src="profileIcon(m.profileIconId)" alt="" />{{ m.gameName }}</span
+              >
+            </span>
+            <span class="meta fp-q" :title="championName(g.me.championId)">{{
+              queueShort(g.match.queueId)
+            }}</span>
+          </div>
+        </article>
       </div>
 
       <!-- Now and then: people seen a couple of times -->
-      <section v-if="occasional.length && !everyone" class="rd-card mt-4 occ">
-        <div class="rd-head">
-          <h3>Now and then</h3>
-          <span class="rd-hm num">{{ occasional.length }} people seen twice or more</span>
-        </div>
-        <ul>
+      <article v-if="occasional.length && !everyone" class="card">
+        <CardHead
+          title="Now and then"
+          icon="users"
+          :meta="`${occasional.length} people seen twice or more`"
+        />
+        <ul class="fp-occ">
           <li v-for="p in occasional.slice(0, 12)" :key="p.puuid">
-            <button type="button" class="wc" :class="{ on: selected === p.puuid }" @click="pick(p)">
+            <button
+              type="button"
+              class="tagx fp-chip"
+              :class="{ on: selected === p.puuid }"
+              @click="pick(p)"
+            >
               <img :src="profileIcon(p.profileIconId)" alt="" loading="lazy" />{{ p.gameName }}
-              <span class="num">{{ p.games }}</span>
+              <span class="t3 num">{{ p.games }}</span>
             </button>
           </li>
         </ul>
-      </section>
+      </article>
 
       <!-- One duo, opened -->
       <DuoDetail
         v-if="duo"
         id="duo"
         :key="duo.puuid"
-        class="mt-6 scroll-mt-20"
+        class="fp-duo"
         :partner="duo"
         :profile="profile"
       />
     </template>
-  </section>
+  </div>
 </template>
 
 <style scoped>
-.fr-empty {
-  display: grid;
-  justify-items: center;
-  gap: 6px;
-  padding: 40px 16px;
-  text-align: center;
+.fp {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
-.fr-empty h3 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-1);
-}
-.fr-empty p {
-  margin: 0;
-  font-size: 13px;
-  color: var(--text-3);
-}
-.net {
+.fp-net {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
+  border-top: 1px solid var(--line);
 }
-.map {
+.fp-map {
   position: relative;
   height: 460px;
-  background: radial-gradient(50% 60% at 50% 50%, rgb(123 109 255 / 0.1), transparent 75%);
 }
-.map.solo {
+.fp-map.solo {
   height: 300px;
 }
-.map svg {
+.fp-map svg {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
 }
-.map .dash {
-  stroke: var(--text-2);
+.fp-dash {
+  stroke: var(--t3);
   stroke-width: 1.5;
   stroke-dasharray: 3 5;
-  opacity: 0.45;
+  opacity: 0.5;
 }
-.nd {
+.fp-nd {
   position: absolute;
   padding: 0;
   border: 0;
@@ -660,494 +643,338 @@ const lastTen = (p: Partner) => p.series.slice(-10).map((s) => s.win)
   transform: translate(-50%, -50%);
   cursor: pointer;
 }
-.nd.me {
+.fp-nd.me {
   cursor: default;
 }
-.nd img {
+.fp-nd img {
   display: block;
   margin: 0 auto;
-  border-radius: 999px;
+  border-radius: var(--r2);
+  background: var(--s3);
   box-shadow:
-    0 0 0 3px var(--rd-card),
+    0 0 0 3px var(--s1),
     0 0 0 5px var(--rc);
 }
-.nd.me img {
+.fp-nd.me img {
   box-shadow:
-    0 0 0 3px var(--rd-card),
-    0 0 0 5px var(--rd-violet);
+    0 0 0 3px var(--s1),
+    0 0 0 5px var(--v400);
 }
-.nd.on img {
+.fp-nd.on img {
   box-shadow:
-    0 0 0 3px var(--rd-card),
+    0 0 0 3px var(--s1),
     0 0 0 5px var(--rc),
-    0 0 0 7px var(--text-1);
+    0 0 0 7px var(--t1);
 }
-.nd:focus-visible {
-  outline: 2px solid var(--rd-violet);
+.fp-nd:focus-visible {
+  outline: 2px solid var(--v400);
   outline-offset: 4px;
   border-radius: 8px;
 }
-.nd b {
+.fp-nd b {
   display: block;
   margin-top: 10px;
   font-size: 13px;
   font-weight: 650;
   white-space: nowrap;
-  color: var(--text-1);
+  color: var(--t1);
 }
-.nd small {
+.fp-nd small {
   display: block;
   font-size: 12px;
-  white-space: nowrap;
-  color: var(--text-3);
-}
-.nd small em {
-  font-style: normal;
   font-weight: 600;
+  white-space: nowrap;
+  color: var(--t3);
 }
-.lgd {
+.fp-nd small em {
+  font-style: normal;
+}
+.fp-lgd {
   position: absolute;
-  left: 18px;
-  bottom: 14px;
+  left: 20px;
+  bottom: 16px;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 14px;
-  font-size: 11px;
-  color: var(--text-3);
+  gap: 6px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--t3);
 }
-.lgd span {
+.fp-lgd span {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
-.lgd i {
+.fp-lgd i {
   width: 16px;
   height: 3px;
   border-radius: 2px;
 }
-.nside {
-  display: grid;
-  align-content: start;
-  gap: 22px;
-  padding: 22px;
-  box-shadow: inset 1px 0 0 var(--rd-line);
+.fp-side {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 20px;
+  border-left: 1px solid var(--line);
 }
-.nside label {
+.fp-side .lab {
   display: block;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-3);
+  margin-bottom: 10px;
 }
-.vs2 {
+.fp-vs {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
-  margin-top: 8px;
 }
-.vs2 .rd-fig {
-  display: block;
-  font-size: 34px;
-  line-height: 1.1;
+.fp-vs > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
-.vs2 small {
-  font-size: 12px;
-  color: var(--text-3);
-}
-.party {
+.fp-party {
   display: flex;
   gap: 2px;
-  height: 8px;
-  margin-top: 10px;
+  height: 6px;
   overflow: hidden;
-  border-radius: 9px;
+  border-radius: 2px;
 }
-.party i {
+.fp-party i {
   display: block;
   height: 100%;
 }
-.pleg {
+.fp-pleg {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px 14px;
+  gap: 8px 16px;
   margin-top: 12px;
-  font-size: 12px;
-  color: var(--text-3);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--t3);
 }
-.pleg span {
+.fp-pleg span {
   display: flex;
   align-items: center;
   gap: 6px;
 }
-.pleg span::before {
+.fp-pleg span::before {
   content: '';
   width: 8px;
   height: 8px;
   border-radius: 2px;
   background: var(--c);
 }
-.pleg b {
+.fp-pleg b {
   margin-left: auto;
-  font-weight: 600;
-  color: var(--text-1);
+  color: var(--t1);
 }
-.bw {
+.fp-best {
   display: flex;
   align-items: center;
   gap: 12px;
   width: 100%;
-  margin-top: 10px;
-  padding: 0;
+  padding: 10px;
   border: 0;
+  border-radius: var(--r2);
   font: inherit;
   text-align: left;
   color: inherit;
-  background: none;
+  background: var(--s2);
+  box-shadow: inset 0 0 0 1px var(--line);
   cursor: pointer;
 }
-.bw b {
-  display: block;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-1);
+.fp-best:hover {
+  background: var(--s3);
 }
-.bw small {
-  display: block;
-  font-size: 12px;
-  color: var(--text-3);
-}
-.nnote {
-  margin: 0;
-  font-size: 12px;
-  color: var(--text-4);
-}
-.avs {
+.fp-avs {
   display: flex;
   flex: none;
 }
-.avs img {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  box-shadow: 0 0 0 2px var(--rd-card);
+.fp-avs img {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--s3);
+  box-shadow: 0 0 0 2px var(--s1);
 }
-.avs img + img {
-  margin-left: -10px;
+.fp-avs img + img {
+  margin-left: -8px;
 }
-.fil {
+.fp-duos {
+  align-items: stretch;
+}
+.fp-du {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 28px 0 12px;
-}
-.fil h2 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 650;
-  color: var(--text-1);
-}
-.fil h2 span {
-  margin-left: 8px;
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--text-3);
-}
-.fil .rd-more {
-  border: 0;
-  background: none;
-  cursor: pointer;
-}
-.duos {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-}
-.du {
-  display: block;
+  flex-direction: column;
+  gap: 0;
   padding: 0;
-  border: 0;
   font: inherit;
   text-align: left;
   color: inherit;
   cursor: pointer;
+  transition: background 160ms var(--ease);
 }
-.du:hover {
-  background: var(--rd-card-2);
+.fp-du:hover {
+  background: var(--s2);
 }
-.du.on {
-  box-shadow: inset 0 0 0 1px rgb(123 109 255 / 0.5);
+.fp-du.on {
+  background: var(--v950);
+  border-color: rgb(var(--v-rgb) / 0.5);
 }
-.du:focus-visible {
-  outline: 2px solid var(--rd-violet);
-  outline-offset: 2px;
-}
-.du > span {
+.fp-du-h {
   display: flex;
-}
-.du-h {
   align-items: center;
-  gap: 14px;
-  padding: 18px 18px 14px;
+  gap: 12px;
+  padding: 18px 20px 16px;
 }
-.du-h .avs img {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+.fp-du-w {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 20px 16px;
 }
-.du-h .avs img + img {
-  margin-left: -12px;
-}
-.du-h b {
-  display: block;
-  font-size: 16px;
-  font-weight: 650;
-  color: var(--text-1);
-}
-.du-h b span {
-  font-size: 13px;
-  font-weight: 400;
-  color: var(--text-3);
-}
-.du-h small {
+.fp-dr {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 3px;
-  font-size: 12px;
-  color: var(--text-3);
+  min-height: 44px;
+  padding: 6px 20px;
+  border-top: 1px solid var(--line);
+  color: var(--t2);
 }
-.du-w {
-  align-items: flex-end;
-  gap: 16px;
-  padding: 0 18px 16px;
+.fp-dr .lab {
+  width: 72px;
+  flex: none;
 }
-.du-w .rd-fig {
-  font-size: 36px;
-  line-height: 1;
-}
-.dwl {
-  display: grid;
-  flex: 1;
-  gap: 4px;
-  min-width: 0;
-}
-.dwl small {
-  font-size: 12px;
-  color: var(--text-3);
-}
-.dr {
-  align-items: center;
-  gap: 10px;
-  height: 46px;
-  padding: 0 18px;
-  font-size: 12px;
-  color: var(--text-3);
-  box-shadow: inset 0 1px 0 var(--rd-line);
-}
-.dr > span:first-child {
-  width: 66px;
-}
-.dr i {
+.fp-dr i {
   font-style: normal;
-  color: var(--text-4);
+  font-size: 12px;
+  color: var(--t3);
 }
-.dr .x {
+.fp-dr .x {
   margin-left: auto;
-  font-weight: 600;
-  color: var(--text-1);
 }
-.dr .x.quiet {
-  font-weight: 400;
-  color: var(--text-3);
+.tagx.sm {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 12px;
 }
-.dr :deep(.iv-champ) {
-  border-radius: 6px;
-}
-.two {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
-  gap: 16px;
-  margin-top: 16px;
-  align-items: start;
-}
-.sq {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) 120px;
-  gap: 16px;
-  align-items: center;
+.fp-row {
   width: 100%;
-  height: 68px;
-  padding: 0 18px;
-  border: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
   font: inherit;
   text-align: left;
   color: inherit;
   background: none;
   cursor: pointer;
 }
-.sq:hover {
-  background: var(--surface-1);
+.fp-row.on {
+  background: rgb(var(--v-rgb) / 0.08);
 }
-.sq .avs img {
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
-}
-.sq b {
-  display: block;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-1);
-}
-.sq small {
-  font-size: 12px;
-  color: var(--text-3);
-}
-.members {
+.fp-members {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 16px;
+  gap: 8px 20px;
   margin: 0;
-  padding: 0 18px 14px;
+  padding: 4px 20px 16px 74px;
   list-style: none;
-  font-size: 13px;
 }
-.members li {
-  display: inline-flex;
+.fp-members li {
+  display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
 }
-.members img {
-  border-radius: 6px;
-}
-.lg3 {
-  position: relative;
+.fp-game {
   display: grid;
-  grid-template-columns: 40px 56px 92px minmax(0, 1fr) auto;
-  gap: 14px;
-  align-items: center;
-  min-height: 60px;
-  padding: 8px 18px 8px 21px;
+  grid-template-columns: 40px 56px 96px minmax(0, 1fr) auto;
 }
-.lg3::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 10px;
-  bottom: 10px;
-  width: 3px;
-  border-radius: 2px;
-  background: var(--edge);
-}
-.lg3.w {
-  --edge: var(--win);
-}
-.lg3.l {
-  --edge: var(--loss);
-}
-.lg3 :deep(.iv-champ) {
-  border-radius: 9px;
-}
-.lg3 .res {
-  font-size: 13px;
-  font-weight: 650;
-}
-.lg3.w .res {
-  color: var(--win);
-}
-.lg3.l .res {
-  color: var(--loss);
-}
-.lg3 small {
-  display: block;
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--text-3);
-}
-.lg3 .kk {
-  font-size: 14px;
-  font-weight: 650;
-  color: var(--text-1);
-}
-.wth {
+.fp-with {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   min-width: 0;
 }
-.wc {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 9px 0 3px;
-  border: 0;
-  border-radius: 999px;
-  font: 500 12px var(--font);
-  color: var(--text-2);
-  background: var(--surface-3);
+.fp-with .tagx {
+  height: 26px;
+  padding: 0 9px 0 4px;
+  font-size: 12px;
 }
-.wc img {
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
+.fp-with .tagx img {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
 }
-button.wc {
-  cursor: pointer;
-}
-button.wc:hover,
-button.wc.on {
-  color: var(--text-1);
-  background: var(--surface-4);
-}
-.wc .num {
-  color: var(--text-4);
-}
-.occ ul {
+.fp-occ {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
   margin: 0;
-  padding: 14px 18px;
+  padding: 0 20px 20px;
   list-style: none;
 }
-
+.fp-chip {
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+}
+.fp-chip img {
+  border-radius: 4px;
+}
+.fp-chip:hover,
+.fp-chip.on {
+  color: var(--t1);
+  background: var(--s3);
+}
+.fp-duo {
+  scroll-margin-top: 80px;
+}
+.fp-two {
+  align-items: start;
+}
 @media (max-width: 1100px) {
-  .net,
-  .duos,
-  .two {
+  .fp-net,
+  .fp-duos,
+  .fp-two {
     grid-template-columns: minmax(0, 1fr);
   }
-  .nside {
-    box-shadow: inset 0 1px 0 var(--rd-line);
+  .fp-side {
+    border-top: 1px solid var(--line);
+    border-left: 0;
   }
 }
 @media (max-width: 640px) {
-  .map {
-    height: 400px;
+  .fp-map {
+    height: 380px;
   }
-  .nd b {
+  .fp-nd b {
     font-size: 12px;
   }
-  .nd small {
+  .fp-nd small,
+  .fp-hm {
     display: none;
   }
-  .nd.me img {
-    width: 64px;
-    height: 64px;
+  .fp-nd.me img {
+    width: 60px;
+    height: 60px;
   }
-  .nd:not(.me) img {
-    max-width: 56px;
-    max-height: 56px;
+  .fp-nd:not(.me) img {
+    max-width: 52px;
+    max-height: 52px;
   }
-  .lg3 {
+  .fp-game {
     grid-template-columns: 40px 52px minmax(0, 1fr);
   }
-  .lg3 .wth {
+  .fp-game .fp-with {
     grid-column: 1 / -1;
   }
-  .lg3 > .rd-tag {
+  .fp-q {
     display: none;
+  }
+  .fp-members {
+    padding-left: 20px;
   }
 }
 </style>

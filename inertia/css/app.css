@@ -5,11 +5,12 @@
 @import '@invadelol/ui/tokens.css';
 @import '@invadelol/ui/tokens-light.css';
 @import '@invadelol/ui/style.css' layer(components);
-@import './components.css';
-@import './shell.css';
-@import './season.css';
-/* Violet line, the 2026-11 redesign: loads last. */
-@import './redesign.css';
+/* Facet: its tokens (after the package's, which they redefine), the canvas's stylesheet, then the
+   chrome and the shared pieces. Every page sits under `.vb`. */
+@import './tokens.css';
+@import './facet.css' layer(components);
+@import './chrome.css' layer(components);
+@import './ui.css' layer(components);
 
 /* Every class used by the app lives under inertia/. */
 @source '../';
@@ -80,78 +81,6 @@
   --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
 }
 
-/* ──────────────────────────────────────────────────────────────
-   Materials, as in the desktop app's window: the header is the
-   chrome, the page a sheet raised over it whose top edge catches
-   the one soft violet light, a fine static grain dithering that
-   light so it never bands. Static paint only: the light and the
-   grain are one fixed layer (no repaint on scroll), the edge one
-   hairline, the header opaque (no backdrop blur).
-   ────────────────────────────────────────────────────────────── */
-/* How a capture of the app sits on the page: its window's depth, resolved on <html> in the
-   page's theme, so a window drawn dark (.iv-dark) still casts the page's shadow. And the motion
-   of a page that moves as it scrolls (/app), beside the package's --ease and --t-* (controls). */
-:root {
-  --window-depth: var(--contact), var(--shadow-3);
-  /* Long reveals and scroll-scrubbed moves: a gentle glide in, and a settle for wipes. */
-  --ease-glide: cubic-bezier(0.25, 0.1, 0.25, 1);
-  --ease-settle: cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* `.iv-dark` (a capture's window, a dark stage on a light page) takes the dark materials too. */
-:root,
-[data-theme='dark'],
-.iv-dark {
-  --grain: url('./grain.png');
-  /* A featured sheet: how much of the window's violet light reaches it (.lit-sheet). */
-  --sheet-light: 0.07;
-  /* The sheet's top edge, brightest under the light. */
-  --edge: linear-gradient(
-    90deg,
-    rgb(255 255 255 / 0.03),
-    rgb(255 255 255 / 0.085) 72%,
-    rgb(255 255 255 / 0.045)
-  );
-  /* The current place: the app's violet-lit pill. */
-  --lit-pill: linear-gradient(
-    90deg,
-    rgb(var(--brand-rgb) / 0.18),
-    rgb(var(--brand-rgb) / 0.06) 70%,
-    rgb(var(--brand-rgb) / 0.03)
-  );
-  --lit-pill-edge:
-    inset 0 1px 0 rgb(255 255 255 / 0.07), inset 0 0 0 1px rgb(var(--brand-rgb) / 0.12);
-}
-
-/* Light: a dark grain at half the strength, the edge a plain hairline. */
-[data-theme='light'] {
-  --grain: url('./grain-light.png');
-  --sheet-light: 0.055;
-  --edge: linear-gradient(var(--line-2), var(--line-2));
-  --lit-pill: linear-gradient(
-    90deg,
-    rgb(var(--brand-rgb) / 0.11),
-    rgb(var(--brand-rgb) / 0.04) 70%,
-    rgb(var(--brand-rgb) / 0.02)
-  );
-  --lit-pill-edge: inset 0 0 0 1px rgb(var(--brand-rgb) / 0.1);
-}
-
-@media (prefers-color-scheme: light) {
-  [data-theme='system'] {
-    --grain: url('./grain-light.png');
-    --sheet-light: 0.055;
-    --edge: linear-gradient(var(--line-2), var(--line-2));
-    --lit-pill: linear-gradient(
-      90deg,
-      rgb(var(--brand-rgb) / 0.11),
-      rgb(var(--brand-rgb) / 0.04) 70%,
-      rgb(var(--brand-rgb) / 0.02)
-    );
-    --lit-pill-edge: inset 0 0 0 1px rgb(var(--brand-rgb) / 0.1);
-  }
-}
-
 @layer base {
   * {
     border-color: var(--line);
@@ -173,16 +102,6 @@
     html:has(dialog[open]) {
       overflow: hidden;
     }
-  }
-
-  /* The light and the grain over the page ink, behind the content only (never per panel). */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    background: var(--grain), var(--light);
-    pointer-events: none;
   }
 
   /* Every number in the app lines up in a column. */

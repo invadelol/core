@@ -1,9 +1,10 @@
 import buildStatsService from '#services/build_stats_service'
 import championStatsService from '#services/champion_stats_service'
 import { RANKED_SOLO, REGIONS, platformSql, seedTiers } from '#services/ranked_stats'
-import { patchStart, rows, statsCache } from '#services/ranked_games_service'
+import { rangeStart, rows, statsCache } from '#services/ranked_games_service'
 import { seedGamesSql, type Filter, type Position, type RoleStat } from '#services/champion_stats'
 import { areEventsCounted, countedPatches, isCounted } from '#services/stats_cells'
+import { newestOf } from '../../inertia/lib/patches.js'
 
 /**
  * The stats explorer (`/stats`): every champion of a role in one table, from the same crawled
@@ -15,6 +16,7 @@ import { areEventsCounted, countedPatches, isCounted } from '#services/stats_cel
 
 export const VIEWS = [
   'overview',
+  'table',
   'early',
   'length',
   'firstblood',
@@ -52,6 +54,24 @@ export interface Averages {
   length: number
   /** Win rate by `LENGTHS` bucket, null under 30 games. */
   byLength: (number | null)[]
+  /** Games and wins by `LENGTHS` bucket, to read any span of them (`lengthWin`). */
+  buckets: [number, number][]
+}
+
+/**
+ * The win rate in games from `from` to `to` minutes (`LENGTHS`' bounds), from the buckets of
+ * `Averages`; null under 30 games.
+ */
+export function lengthWin(buckets: [number, number][], from: number, to: number) {
+  let games = 0
+  let wins = 0
+  LENGTHS.forEach(([a, b], i) => {
+    if (a >= from && b <= to) {
+      games += buckets[i]?.[0] ?? 0
+      wins += buckets[i]?.[1] ?? 0
+    }
+  })
+  return games >= 30 ? round4(wins / games) : null
 }
 
 export interface Early {
@@ -75,7 +95,8 @@ export interface FirstBlood {
 }
 
 export class StatsExplorerService {
-  #averages = statsCache('explorer-averages', 32)
+  // v2: the length buckets' games and wins are kept too.
+  #averages = statsCache('explorer-averages-v2', 32)
   #events = statsCache('explorer-events', 32)
   #regions = statsCache('explorer-regions', 32)
   #items = statsCache('explorer-items', 32)
@@ -83,7 +104,7 @@ export class StatsExplorerService {
   /** Each champion's averages in the role: KDA, CS a minute, damage, gold, vision, length. */
   averages(f: Filter, position: Position): Promise<Record<number, Averages>> {
     return this.#averages.get(key(f, position), async () => {
-      const start = await patchStart(f.patch)
+      const start = await rangeStart(f.patches)
       const found = await rows(
         `SELECT p.champion_id, intDiv(m.duration_sec, 60) AS minutes, count(), sum(p.win),
                 sum(p.kills), sum(p.deaths), sum(p.assists), sum(p.total_cs), sum(p.gold_earned),
@@ -99,12 +120,12 @@ export class StatsExplorerService {
          ) AS p
          INNER JOIN (
            SELECT match_id, any(duration_sec) AS duration_sec FROM matches
-           WHERE queue_id = ${RANKED_SOLO} AND patch = {patch:String}
+           WHERE queue_id = ${RANKED_SOLO} AND patch IN {patches:Array(String)}
            GROUP BY match_id
          ) AS m USING (match_id)
          WHERE m.duration_sec >= 300
          GROUP BY p.champion_id, minutes`,
-        { patch: f.patch, position, patchStart: start },
+        { patches: f.patches, position, patchStart: start },
         { max_execution_time: 30, max_threads: 2 }
       )
       const sums = new Map<number, number[]>()
@@ -133,6 +154,7 @@ export class StatsExplorerService {
           vision: round2(vis / g),
           length: Math.round(secs / g),
           byLength: buckets.get(c)!.map(([bg, bw]) => (bg >= 30 ? round4(bw / bg) : null)),
+          buckets: buckets.get(c)!.map(([bg, bw]) => [bg, bw] as [number, number]),
         }
       }
       return out
@@ -145,22 +167,22 @@ export class StatsExplorerService {
     position: Position
   ): Promise<{ early: Record<number, Early>; firstBlood: Record<number, FirstBlood> }> {
     return this.#events.get(key(f, position), async () => {
-      if (!(await areEventsCounted(f.patch))) return { early: {}, firstBlood: {} }
+      if (!(await areEventsCounted(f.patches))) return { early: {}, firstBlood: {} }
       const [early, fb] = await Promise.all([
         rows(
           `SELECT champion, minute, sum(games), sum(cs), sum(gold), sum(xp), sum(cs_diff),
                   sum(gold_diff), sum(xp_diff), sum(ahead), sum(ahead_wins)
            FROM stats_early
-           WHERE patch = {patch:String} AND position = {position:String} ${cellsWhere(f)}
+           WHERE patch IN {patches:Array(String)} AND position = {position:String} ${cellsWhere(f)}
            GROUP BY champion, minute`,
-          { patch: f.patch, position }
+          { patches: f.patches, position }
         ),
         rows(
           `SELECT champion, sum(games), sum(kills), sum(assists), sum(victims), sum(involved_wins)
            FROM stats_first_blood
-           WHERE patch = {patch:String} AND position = {position:String} ${cellsWhere(f)}
+           WHERE patch IN {patches:Array(String)} AND position = {position:String} ${cellsWhere(f)}
            GROUP BY champion`,
-          { patch: f.patch, position }
+          { patches: f.patches, position }
         ),
       ])
       const out: Record<number, Early> = {}
@@ -213,30 +235,30 @@ export class StatsExplorerService {
     position: Position
   ): Promise<Record<number, Record<string, [number, number]>>> {
     return this.#regions.get(key({ ...f, region: null }, position), async () => {
-      const cells = await isCounted(f.patch)
+      const cells = await isCounted(f.patches)
       const tiers = seedTiers(f.bracket)
       const found = cells
         ? await rows(
             `SELECT champion, platform, sum(games), sum(wins) FROM stats_champion_roles
-             WHERE patch = {patch:String} AND position = {position:String}
+             WHERE patch IN {patches:Array(String)} AND position = {position:String}
                ${tiers ? `AND seed_tier IN (${tiers})` : ''}
              GROUP BY champion, platform`,
-            { patch: f.patch, position }
+            { patches: f.patches, position }
           )
         : await rows(
             `SELECT p.champion_id, s.platform, count(), sum(p.win)
              FROM (
                SELECT match_id, champion_id, win FROM participant_items FINAL
-               WHERE patch = {patch:String} AND queue_id = ${RANKED_SOLO}
+               WHERE patch IN {patches:Array(String)} AND queue_id = ${RANKED_SOLO}
                  AND team_position = {position:String}
              ) AS p
              INNER JOIN (
                SELECT match_id, any(platform) AS platform FROM match_seed
-               WHERE patch = {patch:String} ${tiers ? `AND seed_tier IN (${tiers})` : ''}
+               WHERE patch IN {patches:Array(String)} ${tiers ? `AND seed_tier IN (${tiers})` : ''}
                GROUP BY match_id
              ) AS s USING (match_id)
              GROUP BY p.champion_id, s.platform`,
-            { patch: f.patch, position }
+            { patches: f.patches, position }
           )
       const regionOf = new Map(
         Object.entries(REGIONS).flatMap(([r, def]) => def.platforms.map((p) => [p, r]))
@@ -256,17 +278,17 @@ export class StatsExplorerService {
   /** Finished items bought in the role's games: games bought in and wins, most bought first. */
   items(f: Filter, position: Position) {
     return this.#items.get(key(f, position), async () => {
-      const kinds = await buildStatsService.kinds(f.patch)
+      const kinds = await buildStatsService.kinds(f.patches[0])
       const finished = new Set([...kinds.legendary, ...kinds.boots])
       const found = await rows(
         `SELECT i, count(), sum(win) FROM (
            SELECT match_id, win, purchases FROM participant_items FINAL
-           WHERE patch = {patch:String} AND queue_id = ${RANKED_SOLO}
+           WHERE patch IN {patches:Array(String)} AND queue_id = ${RANKED_SOLO}
              AND team_position = {position:String} AND match_id IN (${seedGamesSql(f)})
          )
          ARRAY JOIN arrayDistinct(purchases) AS i
          GROUP BY i`,
-        { patch: f.patch, position },
+        { patches: f.patches, position },
         { max_execution_time: 30, max_threads: 2 }
       )
       return found
@@ -276,13 +298,13 @@ export class StatsExplorerService {
     })
   }
 
-  /** When the patch's cells were last counted (ms), or null. */
+  /** When the patch's cells were last counted (ms), or null; for a range, its newest patch's. */
   async updatedAt(patch: string) {
     const counted = await countedPatches()
-    return counted.get(patch) ?? null
+    return counted.get(newestOf(patch)) ?? null
   }
 
-  /** The role's champions of the summary, with each one's place on the patch before. */
+  /** The role's champions of the summary, with each one's place on the patch (or range) before. */
   async roleRows(f: Filter, position: Position) {
     const [summary, previous] = await Promise.all([
       championStatsService.summary(f),

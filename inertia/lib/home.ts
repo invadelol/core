@@ -105,6 +105,8 @@ export interface HomePick extends HomeChampion {
 export interface HomeBan extends HomeChampion {
   /** Share of the patch's games it was banned in, 0‥1. */
   banRate: number
+  /** Its win rate in that role, 0‥1 (older cached answers lack it). */
+  winRate?: number
 }
 
 /** A champion that moved up its role's tier list since the patch before. */
@@ -209,4 +211,8 @@ export interface SiteNav {
     counts: { players: number; accounts: number; teams: number } | null
   } | null
   leagues: NavLeague[]
+  /** The pro game being played now (international events first), for the Esports menu. */
+  live?: ProMatch | null
+  /** Team ids the menus' pictures draw logos of (`/cdn/team/<id>`), by team slug. */
+  art?: { teams: Record<string, string> }
 }

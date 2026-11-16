@@ -1,0 +1,343 @@
+/* ──────────────────────────────────────────────────────────────
+   Facet: the site's tokens. Violet-black ink (never neutral, never
+   pure black), opaque surfaces s1–s4 one step apart, four text
+   greys, one violet ramp where intensity carries rank, blue/pink
+   for win/loss, gold for gold and the score from 80. Sofia Sans.
+
+   Dark is the reference. Light is the same system inverted where it
+   has to be (the ramp's ends swap, so a chip reads as strong on a pale
+   page as on ink). `data-theme` on <html> picks one; `system` follows
+   the device. `.iv-dark` / `.iv-light` put one theme inside the other.
+
+   The second half maps the older names (@invadelol/ui's tokens, and a
+   few `rd-` names some components still read) onto these, so the
+   shared views take the same ink, text and violet.
+
+   Loads after the package's tokens: the selectors repeat theirs, so
+   these win by order.
+   ────────────────────────────────────────────────────────────── */
+
+/* Sofia Sans, one variable file per script (weight 1–1000), fetched only for the characters of its
+   range. Self-hosted beside this file (OFL, fonts/sofia-sans/OFL.txt). */
+@font-face {
+  font-family: 'Sofia Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 1 1000;
+  src: url('./fonts/sofia-sans/sofia-sans-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Sofia Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 1 1000;
+  src: url('./fonts/sofia-sans/sofia-sans-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Sofia Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 1 1000;
+  src: url('./fonts/sofia-sans/sofia-sans-cyrillic-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Sofia Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 1 1000;
+  src: url('./fonts/sofia-sans/sofia-sans-cyrillic-ext-wght-normal.woff2')
+    format('woff2-variations');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Sofia Sans';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 1 1000;
+  src: url('./fonts/sofia-sans/sofia-sans-greek-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+
+/* ── What both themes share: shape, type, motion, the tier colours ── */
+:root {
+  --f: 'Sofia Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --r1: 4px;
+  --r2: 8px;
+  --r3: 12px;
+  --cut: 12px;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --v-rgb: 123 109 255;
+  /* Rank tiers: names and emblems only. */
+  --iron: #a29ea3;
+  --bronze: #c9946f;
+  --silver: #aebac8;
+  --gold-t: #e2b95f;
+  --plat: #4cc2b4;
+  --emerald: #3dc484;
+  --diamond: #7f9fff;
+  --master: #bf86ff;
+  --gm: #ff7a7a;
+  --chall: #f2d58a;
+  /* The older names of the same things. */
+  --font: var(--f);
+  --tier-iron: var(--iron);
+  --tier-bronze: var(--bronze);
+  --tier-silver: var(--silver);
+  --tier-gold: var(--gold-t);
+  --tier-platinum: var(--plat);
+  --tier-emerald: var(--emerald);
+  --tier-diamond: var(--diamond);
+  --tier-master: var(--master);
+  --tier-grandmaster: var(--gm);
+  --tier-challenger: var(--chall);
+  --r-xs: 3px;
+  --r-sm: 5px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-xl: 12px;
+}
+
+/* ── Dark: the reference ─────────────────────────────────────── */
+:root:not([data-theme='light']):not([data-theme='system']),
+[data-theme='dark'],
+.iv-dark {
+  color-scheme: dark;
+  --ink-0: #08070d;
+  --ink-1: #0d0c14;
+  --s1: #14121d;
+  --s2: #1a1825;
+  --s3: #24212f;
+  --s4: #2f2b3e;
+  --well: #0a0910;
+  --line: rgba(190, 180, 255, 0.075);
+  --line-2: rgba(190, 180, 255, 0.13);
+  --line-3: rgba(190, 180, 255, 0.22);
+  --t1: #f3f1fb;
+  --t2: #bebad3;
+  --t3: #938eae;
+  --t4: #605c78;
+  --v50: #eeebff;
+  --v100: #dcd7ff;
+  --v200: #c2baff;
+  --v300: #a398ff;
+  --v400: #8b7fff;
+  --v500: #7b6dff;
+  --v600: #6457ee;
+  --v700: #4a3fc2;
+  --v800: #2c2670;
+  --v900: #1b1842;
+  --v950: #131030;
+  --v-hover: #6e62f4;
+  --win: #6c9bff;
+  --win-rgb: 108 155 255;
+  --loss: #f06a82;
+  --loss-rgb: 240 106 130;
+  --gold: #e9c46a;
+  --gold-rgb: 233 196 106;
+  --drop: 0 24px 56px rgba(4, 3, 10, 0.6);
+  --scrim: rgba(8, 7, 13, 0.72);
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme='system'] {
+    color-scheme: dark;
+    --ink-0: #08070d;
+    --ink-1: #0d0c14;
+    --s1: #14121d;
+    --s2: #1a1825;
+    --s3: #24212f;
+    --s4: #2f2b3e;
+    --well: #0a0910;
+    --line: rgba(190, 180, 255, 0.075);
+    --line-2: rgba(190, 180, 255, 0.13);
+    --line-3: rgba(190, 180, 255, 0.22);
+    --t1: #f3f1fb;
+    --t2: #bebad3;
+    --t3: #938eae;
+    --t4: #605c78;
+    --v50: #eeebff;
+    --v100: #dcd7ff;
+    --v200: #c2baff;
+    --v300: #a398ff;
+    --v400: #8b7fff;
+    --v500: #7b6dff;
+    --v600: #6457ee;
+    --v700: #4a3fc2;
+    --v800: #2c2670;
+    --v900: #1b1842;
+    --v950: #131030;
+    --v-hover: #6e62f4;
+    --win: #6c9bff;
+    --win-rgb: 108 155 255;
+    --loss: #f06a82;
+    --loss-rgb: 240 106 130;
+    --gold: #e9c46a;
+    --gold-rgb: 233 196 106;
+    --drop: 0 24px 56px rgba(4, 3, 10, 0.6);
+    --scrim: rgba(8, 7, 13, 0.72);
+  }
+}
+
+/* ── Light: pale violet paper, white cards; the ramp's ends swap ── */
+[data-theme='light'],
+.iv-light {
+  color-scheme: light;
+  --ink-0: #ffffff;
+  --ink-1: #f6f5fa;
+  --s1: #ffffff;
+  --s2: #f4f3f9;
+  --s3: #ebe9f3;
+  --s4: #dfdcea;
+  --well: #f1f0f7;
+  --line: rgba(44, 38, 112, 0.085);
+  --line-2: rgba(44, 38, 112, 0.14);
+  --line-3: rgba(44, 38, 112, 0.24);
+  --t1: #16131f;
+  --t2: #45415a;
+  --t3: #6c6784;
+  --t4: #9d99b1;
+  --v50: #131030;
+  --v100: #1b1842;
+  --v200: #4a3fc2;
+  --v300: #5a4de6;
+  --v400: #6457ee;
+  --v500: #6457ee;
+  --v600: #6457ee;
+  --v700: #8b7fff;
+  --v800: #dcd7ff;
+  --v900: #ebe8ff;
+  --v950: #f5f3ff;
+  --v-hover: #574ae0;
+  --win: #3d7bf0;
+  --win-rgb: 61 123 240;
+  --loss: #e04864;
+  --loss-rgb: 224 72 100;
+  --gold: #b9861c;
+  --gold-rgb: 185 134 28;
+  --drop: 0 18px 44px rgba(44, 38, 112, 0.14);
+  --scrim: rgba(22, 19, 31, 0.36);
+}
+
+@media (prefers-color-scheme: light) {
+  [data-theme='system'] {
+    color-scheme: light;
+    --ink-0: #ffffff;
+    --ink-1: #f6f5fa;
+    --s1: #ffffff;
+    --s2: #f4f3f9;
+    --s3: #ebe9f3;
+    --s4: #dfdcea;
+    --well: #f1f0f7;
+    --line: rgba(44, 38, 112, 0.085);
+    --line-2: rgba(44, 38, 112, 0.14);
+    --line-3: rgba(44, 38, 112, 0.24);
+    --t1: #16131f;
+    --t2: #45415a;
+    --t3: #6c6784;
+    --t4: #9d99b1;
+    --v50: #131030;
+    --v100: #1b1842;
+    --v200: #4a3fc2;
+    --v300: #5a4de6;
+    --v400: #6457ee;
+    --v500: #6457ee;
+    --v600: #6457ee;
+    --v700: #8b7fff;
+    --v800: #dcd7ff;
+    --v900: #ebe8ff;
+    --v950: #f5f3ff;
+    --v-hover: #574ae0;
+    --win: #3d7bf0;
+    --win-rgb: 61 123 240;
+    --loss: #e04864;
+    --loss-rgb: 224 72 100;
+    --gold: #b9861c;
+    --gold-rgb: 185 134 28;
+    --drop: 0 18px 44px rgba(44, 38, 112, 0.14);
+    --scrim: rgba(22, 19, 31, 0.36);
+  }
+}
+
+/* ── The older names, read from the ones above in every theme ────
+   Declared on every element that declares a theme, so a nested
+   `.iv-dark` resolves them with its own values. Flat: no light from
+   above, no grain, no sheen, no glossy buttons. */
+:root,
+[data-theme],
+.iv-dark,
+.iv-light {
+  --surface-1: var(--s1);
+  --surface-2: var(--s2);
+  --surface-3: var(--s3);
+  --surface-4: var(--s4);
+  --solid-1: var(--s1);
+  --solid-2: var(--s2);
+  --glint: rgb(var(--v-rgb) / 0.04);
+  --text-1: var(--t1);
+  --text-2: var(--t2);
+  --text-3: var(--t3);
+  --text-4: var(--t4);
+  --brand: var(--v500);
+  --brand-hi: var(--v300);
+  --brand-rgb: var(--v-rgb);
+  --brand-a08: rgb(var(--v-rgb) / 0.08);
+  --brand-a16: rgb(var(--v-rgb) / 0.16);
+  --brand-a28: rgb(var(--v-rgb) / 0.28);
+  --on-brand: #ffffff;
+  --blue: var(--win);
+  --blue-rgb: var(--win-rgb);
+  --red: var(--loss);
+  --red-rgb: var(--loss-rgb);
+  --up: var(--win);
+  --down: var(--loss);
+  --gold-c: var(--gold);
+  --score-gold-rgb: var(--gold-rgb);
+  --bar: var(--t3);
+  --track: var(--s3);
+  --light: none;
+  --grain: none;
+  --backdrop: var(--ink-1);
+  --sheen: none;
+  --hi: none;
+  --lit: inset 0 0 0 1px var(--line);
+  --row: inset 0 0 0 1px var(--line);
+  --contact: none;
+  --ring: var(--line-2);
+  --portrait: 0 0 0 1px var(--line-2);
+  --portrait-sm: 0 0 0 1px var(--line);
+  --inset: var(--well);
+  --inset-shadow: inset 0 0 0 1px var(--line);
+  --key: var(--s3);
+  --key-shadow: inset 0 0 0 1px var(--line-2);
+  --btn: var(--s2);
+  --btn-hover: var(--s3);
+  --btn-shadow: inset 0 0 0 1px var(--line-2);
+  --primary: var(--v600);
+  --primary-hover: var(--v-hover);
+  --primary-shadow: none;
+  --knob: var(--t2);
+  --shadow-2: var(--drop);
+  --shadow-3: var(--drop);
+  --focus: 0 0 0 2px var(--v400);
+  --sheet-light: 0;
+  --edge: linear-gradient(var(--line), var(--line));
+  --lit-pill: rgb(var(--v-rgb) / 0.16);
+  --lit-pill-edge: inset 0 0 0 1px rgb(var(--v-rgb) / 0.4);
+  --rd-card: var(--s1);
+  --rd-card-2: var(--s2);
+  --rd-line: var(--line);
+  --rd-violet: var(--v600);
+  --rd-violet-hi: var(--v300);
+  --rd-violet-a: rgb(var(--v-rgb) / 0.16);
+  --rd-track: var(--s3);
+  --rd-loss-track: rgb(var(--loss-rgb) / 0.55);
+  --rd-shade: var(--scrim);
+}

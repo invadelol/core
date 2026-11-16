@@ -191,7 +191,7 @@ export default class SiteCardsController {
       view === 'early' || view === 'firstblood' ? homeService.lanes() : null,
     ])
     if (!picks) return this.missing(ctx)
-    const kicker = `Patch ${picks.patch}, Emerald and above`
+    const kicker = `Patch ${picks.patch}, Emerald+`
     let card = {
       kicker,
       title: STATS_VIEWS[view] as string,
@@ -221,7 +221,7 @@ export default class SiteCardsController {
         ? {
             ...card,
             title: `Patch ${picks.patch}`,
-            kicker: `Since ${picks.previousPatch}, Emerald and above`,
+            kicker: `Since ${picks.previousPatch}, Emerald+`,
             value: `#${climber.to}`,
             label: `${climber.name}, up from #${climber.from}`,
             champion: climber.championId,

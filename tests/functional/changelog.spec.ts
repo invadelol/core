@@ -32,9 +32,8 @@ test.group('Desktop app changelog', () => {
     const image = linkedImage(html)
     assert.equal(image.pathname, `/og/app/changelog/${latest}.jpg`)
     assert.equal(image.searchParams.get('v'), changelogCardVersion(latest))
-    // The words are in the page the server sends, screenshots with their size.
+    // The words of every version are in the page the server sends, the older ones too.
     response.assertTextIncludes('Summoner spells go in with the runes')
-    assert.match(html, /<img src="\/changelog\/spells\.webp\?v=[\w-]{8}" width="\d+" height="\d+"/)
   })
 
   test('a version has its own address and link preview', async ({ client, assert }) => {

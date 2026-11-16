@@ -5,6 +5,9 @@ import { positionOf } from '@invadelol/ui/logic'
 import LensStage from './LensStage.vue'
 import LensLaning from './LensLaning.vue'
 import LensDomainStory from './LensDomainStory.vue'
+import EmptyState from '../ui/EmptyState.vue'
+import SectionHead from '../ui/SectionHead.vue'
+import Skeleton from '../ui/Skeleton.vue'
 import { championName } from '../../lib/assets.js'
 import { LENS_ROLES, type LensPayload, type LensRole } from '../../lib/lens.js'
 
@@ -103,14 +106,11 @@ function open(key: string) {
 
 <template>
   <section class="lv" :aria-busy="loading">
-    <div class="section flex-wrap">
-      <h2>Lens</h2>
-      <span class="meta num">{{ summary }}</span>
-    </div>
+    <SectionHead title="Lens" icon="target" :meta="summary" />
 
     <!-- Role first: every figure is read against that role's pace. -->
     <div class="lv-filters" :class="{ busy: loading && lens }">
-      <div class="rd-seg lv-seg" role="group" aria-label="Role">
+      <div class="seg lv-seg" role="group" aria-label="Role">
         <button
           v-for="r in LENS_ROLES"
           :key="r"
@@ -126,7 +126,7 @@ function open(key: string) {
         </button>
       </div>
 
-      <div class="rd-seg lv-seg" role="group" aria-label="Queue">
+      <div class="seg lv-seg" role="group" aria-label="Queue">
         <button
           v-for="[value, label] in QUEUES"
           :key="value"
@@ -138,7 +138,7 @@ function open(key: string) {
         </button>
       </div>
 
-      <div class="rd-seg lv-seg lv-seg-window" role="group" aria-label="Games read">
+      <div class="seg lv-seg lv-seg-window" role="group" aria-label="Games read">
         <button
           v-for="n in WINDOWS"
           :key="n"
@@ -152,35 +152,32 @@ function open(key: string) {
     </div>
 
     <!-- First load: the shape of what is coming. -->
-    <div v-if="!lens && loading" class="mt-5 space-y-3">
-      <div class="iv-skel h-[300px]" />
-      <div class="grid gap-3 lg:grid-cols-2">
-        <div v-for="n in 4" :key="n" class="iv-skel h-[280px]" />
+    <div v-if="!lens && loading" class="lv-wait">
+      <article class="card"><Skeleton :height="300" /></article>
+      <div class="grid2">
+        <article v-for="n in 4" :key="n" class="card"><Skeleton :height="280" /></article>
       </div>
     </div>
 
-    <p v-else-if="failed" class="notice mt-5" role="alert">
-      <span>The Lens could not be loaded.</span>
-      <button type="button" class="iv-btn sm ml-auto" @click="load()">Retry</button>
-    </p>
+    <article v-else-if="failed" class="card lv-gap" role="alert">
+      <EmptyState icon="target" title="The Lens could not be loaded">
+        <button type="button" class="btn sm" @click="load()">Retry</button>
+      </EmptyState>
+    </article>
 
-    <div
-      v-else-if="lens && (!lens.role || !lens.games.length)"
-      class="iv-panel mt-5 px-5 py-8 text-center"
-    >
-      <p class="text-[14px] font-medium text-ink">
-        {{
-          lens.role ? `No ${ROLE_NAMES[lens.role]} games in this queue yet.` : 'No laned games yet.'
-        }}
-      </p>
-      <p class="mx-auto mt-1.5 max-w-[420px] text-[13px] text-ink-3">
-        The Lens reads Summoner's Rift games with a role. Try another queue or role.
-      </p>
-    </div>
+    <article v-else-if="lens && (!lens.role || !lens.games.length)" class="card lv-gap">
+      <EmptyState
+        icon="target"
+        :title="
+          lens.role ? `No ${ROLE_NAMES[lens.role]} games in this queue yet` : 'No laned games yet'
+        "
+        line="The Lens reads Summoner's Rift games with a role. Try another queue or role."
+      />
+    </article>
 
     <div v-else-if="lens" class="lv-body" :class="{ busy: loading }">
       <LensStage
-        class="mt-5"
+        class="lv-gap"
         :domains="lens.domains"
         :score="lens.score"
         :games="lens.games.length"
@@ -190,11 +187,11 @@ function open(key: string) {
         @open="open"
       />
 
-      <div class="mt-3 grid gap-3 lg:grid-cols-2">
+      <div class="lv-grid">
         <template v-for="domain in lens.domains" :key="domain.key">
           <LensLaning
             v-if="domain.key === 'laning'"
-            class="lg:col-span-2"
+            class="lv-wide"
             :domain="domain"
             :duel="lens.duel"
             :games="lens.games"
@@ -226,6 +223,33 @@ function open(key: string) {
 .lv-filters.busy,
 .lv-body.busy {
   opacity: 0.6;
+}
+
+.lv-wait {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.lv-gap {
+  margin-top: 20px;
+}
+
+.lv-grid {
+  display: grid;
+  gap: 24px;
+  margin-top: 24px;
+}
+
+@media (min-width: 64rem) {
+  .lv-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .lv-wide {
+    grid-column: 1 / -1;
+  }
 }
 
 .lv-body {

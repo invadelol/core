@@ -368,7 +368,7 @@ export async function tierListCard(card: TierListCard, art?: Uint8Array) {
         anchor: 'middle',
       }).svg
   }
-  const svg = frame(heading(`Patch ${card.patch}, Emerald and above`, card.title, W - 2 * M) + body)
+  const svg = frame(heading(`Patch ${card.patch}, Emerald+`, card.title, W - 2 * M) + body)
   return finish(art ? splashStage(art) : inkStage(), svg, [], layers)
 }
 

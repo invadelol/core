@@ -46,3 +46,10 @@ export interface ChangelogRelease {
   features: ChangelogFeature[]
   groups: ChangelogGroup[]
 }
+
+/** A line's runs as plain text. */
+export const runsText = (runs: Run[]) =>
+  runs
+    .map((r) => r.s)
+    .join('')
+    .trim()

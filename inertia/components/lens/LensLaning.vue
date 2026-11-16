@@ -78,11 +78,11 @@ const big = computed(() => {
       </div>
       <div class="lv-big">
         <div v-if="big.cs">
-          <span class="iv-fig">{{ big.cs }}</span>
+          <span class="fg-l">{{ big.cs }}</span>
           <span class="lv-big-unit">CS at 10</span>
         </div>
         <div v-if="big.gold">
-          <span class="iv-fig">{{ big.gold }}</span>
+          <span class="fg-l">{{ big.gold }}</span>
           <span class="lv-big-unit">gold at 15</span>
         </div>
       </div>
@@ -92,7 +92,7 @@ const big = computed(() => {
       <div v-if="duel" class="lv-duel">
         <div class="lv-duel-head">
           <span>First fifteen minutes, {{ duel.games }} games</span>
-          <div class="rd-seg lv-duel-seg" role="group" aria-label="Race">
+          <div class="seg lv-duel-seg" role="group" aria-label="Race">
             <button type="button" :class="{ on: metric === 'cs' }" @click="metric = 'cs'">
               CS
             </button>
@@ -132,14 +132,14 @@ const big = computed(() => {
   width: 56px;
   height: 56px;
   box-shadow: var(--portrait);
-  outline: 1.5px solid rgb(var(--brand-rgb) / 0.6);
+  outline: 1.5px solid rgb(var(--v-rgb) / 0.6);
   outline-offset: 2px;
 }
 
 .lv-vs {
   font-size: 12px;
   font-weight: 500;
-  color: var(--text-3);
+  color: var(--t3);
 }
 
 .lv-faces {
@@ -162,14 +162,14 @@ const big = computed(() => {
   gap: 4px;
 }
 
-.lv-big .iv-fig {
+.lv-big .fg-l {
   font-size: 40px;
   line-height: 1;
 }
 
 .lv-big-unit {
   font-size: 12px;
-  color: var(--text-3);
+  color: var(--t3);
 }
 
 .lv-duel-head {
@@ -179,7 +179,7 @@ const big = computed(() => {
   gap: 12px;
   margin-bottom: 10px;
   font-size: 12px;
-  color: var(--text-3);
+  color: var(--t3);
 }
 
 .lv-duel-seg button {

@@ -13,6 +13,7 @@ id, fetches it once per patch, keeps it, and answers from the copy.
 | `GET /cdn/:kind/:id` | the asset as of the live patch | `public, max-age=86400, stale-while-revalidate=604800` |
 | any of the above when every upstream source fails | a generated SVG tile with the id's initials (a mastery crest: an empty, transparent tile) | `public, max-age=60` |
 | `GET /cdn/names/:kind` | id → display name (kinds with a manifest) | `public, max-age=3600` |
+| `GET /cdn/skins/:champion` | the champion's skins on the live patch, base first: `[{ num, name }]` | `public, max-age=3600` (`no-store` when empty) |
 
 `:id` may end in `.png`, `.jpg`, `.svg` or `.webp` so browsers and CDNs treat
 the URL as an image; the extension is ignored, the `Content-Type` is the
@@ -32,6 +33,7 @@ live cache lifetime, which keeps the mirror bounded to six copies of the art.
 | `splash` | champion id | `v1/champions/<id>.json`, base skin `uncenteredSplashPath` (the classic full splash) | Data Dragon `cdn/img/champion/splash/<Alias>_0.jpg`, CDragon CDN `champion/<id>/splash-art` |
 | `centered` | champion id | base skin `splashPath` (the centred 1280×720 crop) | Data Dragon `…/centered/<Alias>_0.jpg`, CDragon CDN `…/splash-art/centered` |
 | `loading` | champion id | base skin `loadScreenPath` | Data Dragon `…/loading/<Alias>_0.jpg`, CDragon CDN `…/portrait` |
+| `splash`, `centered`, `loading` of a skin | `<champion id>-<skin number>` (`266-7`; the number is the skin id modulo 1000, `0` the base) | that skin's path in the same file | Data Dragon `…/<Alias>_<number>.jpg`, CDragon CDN `…/skin/<number>` |
 | `ability` | `<champion id>-<p\|q\|w\|e\|r>` (`266-q`, `p` = passive) | `v1/champions/<id>.json`, `passive` / `spells[spellKey]` `abilityIconPath` | CDragon CDN `champion/<id>/ability-icon/<key>` |
 | `item` | item id | `v1/items.json` → `iconPath` | `assets/items/icons2d/<id>.png`, Data Dragon `cdn/<version>/img/item/<id>.png` |
 | `spell` | summoner spell id (`4`) | `v1/summoner-spells.json` → `iconPath` | `v1/summoner-spell-icons/<id>.png` |
@@ -43,6 +45,7 @@ live cache lifetime, which keeps the mirror bounded to six copies of the art.
 | `emblem` | tier | `rcp-fe-lol-static-assets/…/images/ranked-emblem/emblem-<tier>.png` (1280×720, crest in the middle) | — |
 | `map` | map id (`11`) | Data Dragon `cdn/<version>/img/map/map<id>.png` first | `v1/map-assets/map<id>/2dlevelminimap.png` |
 | `mastery` | champion mastery level, `0` to `10` (levels past ten wear the tenth crest) | `game/assets/ux/mastery/legendarychampionmastery/masterycrest_level<n>.png` (256×256; 0 and 4 to 10 only) | `rcp-fe-lol-shared-components/global/default/mastery-<n>.png` (800×900, crest in the middle; 1 to 10) |
+| `stat` | a stat's short name: `ad`, `ap`, `health`, `hp`, `armor`, `mr`, `as`, `ms`, `haste`, `adaptive`, `tenacity` | `game/assets/perks/statmods/statmods<name>icon.png` (the stat-shard art tooltips draw beside a number) | — |
 
 Ids resolve through Community Dragon's manifests rather than hand-built paths,
 because the shape of the asset paths changes between patches while the

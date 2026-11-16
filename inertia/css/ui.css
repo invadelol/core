@@ -1,0 +1,387 @@
+/* ──────────────────────────────────────────────────────────────
+   The shared pieces of components/ui that facet.css does not draw:
+   the select's list, tables, empty and loading states, and the few
+   joints between the canvas's classes and the Vue components.
+   Components layer, scoped under `.vb`. README: components/ui.
+   ────────────────────────────────────────────────────────────── */
+
+/* ── Heads ───────────────────────────────────────────────────── */
+.vb .sec-h .h2,
+.vb .card-h .h3 {
+  margin: 0;
+}
+.vb .card-h-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.vb .mast-t {
+  gap: 8px;
+  min-width: 0;
+}
+.vb .mast .crumbs .i {
+  color: var(--t4);
+}
+@media (max-width: 767px) {
+  .vb .mast {
+    padding: 24px 0 16px;
+  }
+  .vb .mast .h1 {
+    font-size: 26px;
+  }
+  .vb .mast-r {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+  .vb .mast-r .ctl {
+    margin-left: 0;
+    flex-wrap: wrap;
+  }
+}
+
+/* ── Segmented filter: a grey figure after a label ───────────── */
+.vb .seg .seg-n {
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--t4);
+}
+.vb .seg > .on .seg-n {
+  color: var(--v300);
+}
+.vb .seg > * {
+  cursor: pointer;
+}
+.vb .seg > *:not(.on):hover {
+  color: var(--t2);
+}
+
+/* ── Select (components/ui/Select.vue): the trigger is `.sel` ── */
+.vb.sel-root {
+  font-size: 13px;
+  line-height: 1.3;
+}
+.vb .sel {
+  cursor: pointer;
+  transition: background 160ms var(--ease);
+}
+.vb .sel:hover,
+.vb .sel[aria-expanded='true'] {
+  background: var(--s3);
+}
+.vb .sel .t3 {
+  color: var(--t3);
+}
+.vb .sel-ic {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border-radius: 4px;
+  object-fit: contain;
+}
+.vb .sel-chev {
+  flex: none;
+  color: var(--t3);
+  transition: transform 160ms var(--ease);
+}
+.vb .sel-pop {
+  min-width: 100%;
+  border-radius: var(--r3);
+  background: var(--s1);
+  box-shadow:
+    inset 0 0 0 1px var(--line-2),
+    var(--drop);
+}
+.vb .sel-q {
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.vb .sel-q .field {
+  height: 34px;
+}
+.vb .sel-o {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--t2);
+  text-align: left;
+}
+.vb .sel-o[data-active='true'] {
+  background: var(--s2);
+  color: var(--t1);
+}
+.vb .sel-o[aria-selected='true'] {
+  color: var(--t1);
+}
+.vb .sel-m {
+  flex: none;
+  font-size: 12px;
+  color: var(--t3);
+}
+.vb .sel-ck {
+  flex: none;
+  color: var(--v300);
+}
+.vb .sel-none {
+  padding: 14px 12px;
+  font-size: 13px;
+  color: var(--t3);
+}
+
+/* ── Tables ──────────────────────────────────────────────────────
+   A table is a grid of rows inside a `.card`: `.tbl` sets the
+   columns once (`--cols`, a grid-template-columns), `.tbl-h` is the
+   head (12 px grey labels on a hairline), `.tbl-r` a row (a hairline
+   on top, 52 px, a faint violet wash on hover). `.n` right-aligns a
+   figure, `.hm` hides a column on a phone, `.me` marks your row,
+   `.sorted` the column the rows follow. A link row is an `<a>`. */
+.vb .tbl {
+  --cols: minmax(0, 1fr);
+  --row-h: 52px;
+  min-width: 0;
+}
+.vb .tbl-h,
+.vb .tbl-r {
+  display: grid;
+  grid-template-columns: var(--cols);
+  gap: 14px;
+  align-items: center;
+  padding: 0 20px;
+}
+.vb .tbl-h {
+  height: 40px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--t3);
+  border-bottom: 1px solid var(--line);
+}
+.vb .tbl-h > * {
+  white-space: nowrap;
+}
+.vb .tbl-h button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.vb .tbl-h button:hover,
+.vb .tbl-h .sorted {
+  color: var(--t1);
+}
+.vb .tbl-h .sorted .i {
+  color: var(--v300);
+}
+.vb .tbl-r {
+  min-height: var(--row-h);
+  font-size: 14px;
+  border-top: 1px solid var(--line);
+  transition: background 160ms var(--ease);
+}
+.vb .tbl-h + .tbl-r,
+.vb .tbl-r:first-child {
+  border-top: 0;
+}
+.vb a.tbl-r:hover,
+.vb .tbl-r.link:hover {
+  background: rgb(var(--v-rgb) / 0.04);
+}
+.vb .tbl-r.me {
+  background: rgb(var(--v-rgb) / 0.07);
+}
+.vb .tbl .n {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.vb .tbl .c {
+  text-align: center;
+}
+.vb .tbl .who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  font-weight: 650;
+}
+.vb .tbl .who > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vb .tbl-scroll {
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+@media (max-width: 767px) {
+  .vb .tbl-h,
+  .vb .tbl-r {
+    gap: 10px;
+    padding: 0 14px;
+  }
+  .vb .tbl .hm {
+    display: none;
+  }
+}
+
+/* ── Empty and loading ───────────────────────────────────────── */
+.vb .empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 44px 24px;
+  text-align: center;
+}
+.vb .empty > .i {
+  margin-bottom: 6px;
+  color: var(--t4);
+}
+.vb .empty .meta {
+  max-width: 420px;
+  text-wrap: balance;
+}
+.vb .empty-act {
+  margin-top: 10px;
+}
+.vb .empty.compact {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 16px 20px;
+  text-align: left;
+}
+.vb .empty.compact > .i {
+  margin: 0;
+}
+.vb .empty.compact .empty-act {
+  margin: 0 0 0 auto;
+}
+.vb .skel-wrap {
+  display: flex;
+  flex-direction: column;
+}
+.vb .skel {
+  display: block;
+  border-radius: 6px;
+  background: var(--s2);
+  animation: skel 1.6s ease-in-out infinite;
+}
+.vb .skel.block {
+  width: 100%;
+  border-radius: var(--r3);
+}
+.vb .skel-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 0 20px;
+  border-top: 1px solid var(--line);
+}
+.vb .skel-row:first-child {
+  border-top: 0;
+}
+@keyframes skel {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* ── Chips ───────────────────────────────────────────────────── */
+.vb a.tagx:hover,
+.vb a.stat2:hover {
+  box-shadow: inset 0 0 0 1px var(--line-3);
+}
+.vb .stat2 img,
+.vb .vtop img {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
+
+/* ── Tier chip: its hidden word stays inside it (a scroller of chips clips it) ── */
+.vb .tier {
+  position: relative;
+}
+
+/* ── Rank emblem, form strip ─────────────────────────────────── */
+.rk-emb {
+  display: inline-block;
+  flex: none;
+  vertical-align: middle;
+}
+.vb.form-box {
+  display: inline-flex;
+  font-size: 0;
+  line-height: 0;
+}
+
+/* ── The shared views (@invadelol/ui) on the site ────────────────
+   Their buttons and segments keep their shadow on focus, which hid the focus ring: the ring is
+   added to whatever lights them. Rank and tier inks lean toward the body ink on light sheets. */
+.iv-btn:focus-visible {
+  box-shadow: var(--btn-shadow), var(--focus);
+}
+.iv-btn.ghost:focus-visible,
+.iv-btn.danger:focus-visible {
+  box-shadow: var(--focus);
+}
+.iv-btn.primary:focus-visible {
+  box-shadow: var(--primary-shadow), var(--focus);
+}
+.iv-seg > button:focus-visible {
+  box-shadow: var(--focus);
+}
+.iv-seg > button:not(.on) {
+  color: color-mix(in srgb, var(--text-3) 65%, var(--text-2));
+}
+[data-theme='light'] {
+  --tier-ink: 62%;
+}
+@media (prefers-color-scheme: light) {
+  [data-theme='system'] {
+    --tier-ink: 62%;
+  }
+}
+
+/* Their figures are crisp: no engraved fade. */
+.iv-fig {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+/* The tip a tap shows for a titled element (an item, a rune, a champion) where there is no hover
+   to show the title (lib/touch_titles.ts). Appended to <body>, outside any `.vb`. */
+.touch-tip {
+  position: fixed;
+  z-index: 60;
+  max-width: min(260px, calc(100vw - 16px));
+  padding: 6px 9px;
+  font-family: var(--f);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--t1);
+  background: var(--s2);
+  border-radius: var(--r2);
+  box-shadow:
+    inset 0 0 0 1px var(--line-2),
+    var(--drop);
+  pointer-events: none;
+  animation: touch-tip-in 120ms var(--ease) both;
+}
+@keyframes touch-tip-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+}

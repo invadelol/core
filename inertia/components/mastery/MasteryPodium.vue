@@ -3,14 +3,16 @@ import { computed } from 'vue'
 import { championName, championSplash } from '../../lib/assets.js'
 import { compact, timeAgo } from '../../lib/format.js'
 import type { ChampionMastery } from '../../lib/types.js'
+import Frame from '../ui/Frame.vue'
+import MasteryCrest from './MasteryCrest.vue'
 
 /**
- * The three champions with the most points, as a podium of splash cards: second on the left, first
- * in the middle and taller with a violet edge, third on the right. Each says its level, points and
- * how far the next level is.
+ * The three champions with the most points, as art cards in a row, most points first. Each says its
+ * level, points and how far the next level is.
  */
 const props = defineProps<{ top: ChampionMastery[] }>()
 
+const PLACE = ['1st', '2nd', '3rd']
 const places = computed(() =>
   props.top.slice(0, 3).map((entry, index) => ({ entry, place: index + 1 }))
 )
@@ -25,147 +27,95 @@ function progress(entry: ChampionMastery) {
 </script>
 
 <template>
-  <ol class="pod" aria-label="Most mastery">
+  <ol class="grid3 ms-top" aria-label="Most mastery">
     <li
       v-for="{ entry, place } in places"
       :key="entry.championId"
-      class="pc"
+      class="ms-pc"
       :class="{ first: place === 1 }"
-      :data-place="place"
     >
-      <img
-        class="bg"
+      <Frame
         :src="championSplash(entry.championId)"
         :alt="`${championName(entry.championId)} splash art`"
-        decoding="async"
+        width="100%"
+        :height="180"
+        position="50% 22%"
+        eager
       />
-      <span class="pl num">#{{ place }}</span>
-      <span class="rd-tag v lvl">Level {{ entry.championLevel }}</span>
-      <b class="n">{{ championName(entry.championId) }}</b>
-      <span class="pts"
-        ><span class="rd-fig num">{{ compact(entry.championPoints) }}</span
-        ><span>points</span></span
-      >
+      <div class="row ms-pc-h">
+        <span class="col" style="gap: 2px; min-width: 0">
+          <span class="lab">{{ PLACE[place - 1] }}</span>
+          <b class="h3 ell">{{ championName(entry.championId) }}</b>
+        </span>
+        <span class="ms-pc-lv">
+          <MasteryCrest :level="entry.championLevel" :size="40" />
+          <span class="meta num">Level {{ entry.championLevel }}</span>
+        </span>
+      </div>
+      <div class="row ms-pc-pts">
+        <span class="fg-m">{{ compact(entry.championPoints) }}</span>
+        <span class="meta">points</span>
+      </div>
       <template v-if="entry.championPointsUntilNextLevel">
-        <span v-if="progress(entry)" class="rd-bar"
+        <span v-if="progress(entry)" class="bar"
           ><i :style="{ width: progress(entry) ?? undefined }"
         /></span>
-        <small class="num"
+        <small class="meta num"
           >{{ entry.championPointsUntilNextLevel.toLocaleString('en-US') }} to level
           {{ entry.championLevel + 1 }}, last played {{ timeAgo(entry.lastPlayTime) }}</small
         >
       </template>
-      <small v-else class="num">Last played {{ timeAgo(entry.lastPlayTime) }}</small>
+      <small v-else class="meta num">Last played {{ timeAgo(entry.lastPlayTime) }}</small>
     </li>
   </ol>
 </template>
 
 <style scoped>
-.pod {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1fr);
-  gap: 12px;
-  align-items: end;
+.ms-top {
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.pc {
-  position: relative;
+.ms-pc {
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  height: 260px;
-  padding: 16px 18px;
-  overflow: hidden;
-  border-radius: 10px;
-  background: var(--ink-0);
-  box-shadow: inset 0 0 0 1px var(--rd-line);
-  grid-row: 1;
+  gap: 12px;
+  min-width: 0;
+  padding: 8px 8px 18px;
+  border-radius: var(--r3);
+  background: var(--s1);
+  box-shadow: inset 0 0 0 1px var(--line);
 }
-.pc[data-place='1'] {
-  grid-column: 2;
+.ms-pc.first {
+  background: var(--v950);
+  box-shadow: inset 0 0 0 1px rgb(var(--v-rgb) / 0.4);
 }
-.pc[data-place='2'] {
-  grid-column: 1;
+.ms-pc > :not(.fr) {
+  margin: 0 8px;
 }
-.pc[data-place='3'] {
-  grid-column: 3;
+.ms-pc-h {
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px !important;
 }
-.pc.first {
-  height: 320px;
-  box-shadow: inset 0 0 0 1px rgb(123 109 255 / 0.45);
-}
-.pc img.bg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: 50% 22%;
-}
-.pc::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgb(9 9 16 / 0) 30%, rgb(9 9 16 / 0.96) 86%);
-}
-.pc > *:not(.bg) {
-  position: relative;
-  z-index: 1;
-}
-.pc .pl {
-  position: absolute;
-  top: 14px;
-  left: 16px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #fff;
-  text-shadow: 0 1px 6px rgb(0 0 0 / 0.8);
-}
-.pc .lvl {
-  position: absolute;
-  top: 12px;
-  right: 14px;
-}
-.pc .n {
-  font-size: 22px;
-  font-weight: 650;
-  color: #fff;
-}
-.pts {
+.ms-pc-lv {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+.ms-pc-pts {
   align-items: baseline;
-  gap: 6px;
+  gap: 8px;
 }
-.pts .rd-fig {
-  font-size: 30px;
-  color: #fff;
-}
-.pts span:last-child {
-  font-size: 12px;
-  color: rgb(255 255 255 / 0.72);
-}
-.pc .rd-bar {
-  margin-top: 10px;
-  background: rgb(255 255 255 / 0.14);
-}
-.pc small {
-  display: block;
-  margin-top: 6px;
-  font-size: 12px;
-  color: rgb(255 255 255 / 0.72);
-}
-@media (max-width: 1000px) {
-  .pod {
-    grid-template-columns: minmax(0, 1fr);
+@media (max-width: 860px) {
+  .ms-top {
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
-  .pc,
-  .pc.first,
-  .pc[data-place] {
-    grid-column: 1;
-    grid-row: auto;
-    height: 220px;
+  .ms-pc > .fr {
+    height: 132px !important;
   }
 }
 </style>

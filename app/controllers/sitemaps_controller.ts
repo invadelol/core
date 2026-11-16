@@ -29,15 +29,21 @@ async function section(name: SitemapSection): Promise<SitemapUrl[]> {
   if (name === 'pages') {
     const { listed } = await leagueCatalog()
     return [
-      { path: '/champions', lastmod },
       { path: '/tier-list', lastmod },
       ...Object.values(ROLE_OF).map((r) => ({ path: `/tier-list?role=${r.slug}`, lastmod })),
+      ...['items', 'runes', 'duos'].map((list) => ({ path: `/tier-list/${list}`, lastmod })),
       { path: '/stats', lastmod },
       ...VIEWS.filter((v) => v !== 'overview').map((v) => ({ path: `/stats?view=${v}`, lastmod })),
+      { path: '/esports', lastmod },
       { path: '/pros', lastmod },
       ...listed.slice(1).map((l) => ({ path: `/pros?league=${l.slug}`, lastmod })),
-      { path: '/pros?view=teams', lastmod },
-      { path: '/pros?view=ladder', lastmod },
+      { path: '/leagues', lastmod },
+      ...listed.map((l) => ({ path: `/league/${l.slug}`, lastmod })),
+      { path: '/teams', lastmod },
+      { path: '/leaderboards/solo', lastmod },
+      { path: '/leaderboards/flex', lastmod },
+      { path: '/leaderboards/one-tricks', lastmod },
+      { path: '/leaderboards/pros', lastmod },
     ]
   }
   if (name === 'champions') {

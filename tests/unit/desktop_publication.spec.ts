@@ -46,7 +46,7 @@ test.group('Desktop publication policy', (group) => {
   group.each.setup(() => {
     seed = new DesktopSeed()
     // Core takes no desktop data by default (switches.ts): these tests exercise it switched on.
-    forceSwitches({ uploads: true, observed: true })
+    forceSwitches({ uploads: true, observed: true, players: true })
     calls = { match: [], timeline: [] }
     ingested = { matches: [], timelines: [] }
     ingestionService.ingestMatch = async (_id, match) => {

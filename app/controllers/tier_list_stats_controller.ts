@@ -14,7 +14,7 @@ export default class TierListStatsController {
    * patch before, plus the patches that can be asked for. The same figures as the website's tier
    * list. A patch that is not offered answers with the newest one (`patch` says which).
    * @paramQuery bracket - all (default), iron, bronze, silver, gold, platinum, emerald, diamond, emerald_plus, diamond_plus or master_plus
-   * @paramQuery patch - Patch such as 16.20 (default: the newest with enough games)
+   * @paramQuery patch - Patch such as 16.20, or a range of offered patches such as 16.20-16.22 (default: the newest with enough games)
    * @paramQuery region - euw, eune, na, kr, br, lan, las, tr, jp, oce or vn (default: every region)
    * @responseBody 200 - <TierListReport>
    */
@@ -23,7 +23,7 @@ export default class TierListStatsController {
     const filter = await championStatsService.filter({ rank: bracket ?? 'all', patch, region })
     if (!filter) return response.notFound({ error: 'No ranked games stored yet' })
     const report = await championStatsService.tierList(filter)
-    const current = report.patch === report.patches[0]?.patch
+    const current = filter.patches[0] === report.patches[0]?.patch
     response.header('Cache-Control', `public, max-age=${current ? CURRENT_MAX_AGE : OLDER_MAX_AGE}`)
     return response.ok(report)
   }

@@ -49,6 +49,10 @@ export interface LobbyGame {
   /** The stored game and the side the player was on: teammates seen together are a premade. */
   matchId?: string
   teamId?: number
+  /** The player's score in it, for their KDA on a champion. */
+  kills?: number
+  deaths?: number
+  assists?: number
 }
 
 export interface LiveParticipant {
@@ -60,8 +64,8 @@ export interface LiveParticipant {
   spell2Id: number
   bot: boolean
   perks?: SpectatorParticipant['perks']
-  /** Games and win rate on this champion in the player's last stored games. */
-  championStats: { games: number; winrate: number } | null
+  /** Games, win rate and KDA (when the games carry it) on this champion in the player's last stored games. */
+  championStats: { games: number; winrate: number; kda?: number } | null
   /** Their newest stored games: how they are doing lately. */
   recent: { games: number; wins: number } | null
   /** Their run of results, newest first: 3 for three wins in a row, -2 for two losses. */
@@ -120,12 +124,19 @@ function playerContext(games: LobbyGame[], championId: number) {
   const championHistory = emptyCounts()
   let championGames = 0
   let championWins = 0
+  const score = { kills: 0, deaths: 0, assists: 0, games: 0 }
   for (const game of games) {
     const lane = POSITION_ORDER.indexOf(positionOf(game.position) as Position)
     const onChampion = game.championId === championId
     if (onChampion) {
       championGames++
       if (game.win) championWins++
+      if (game.kills !== undefined) {
+        score.games++
+        score.kills += game.kills
+        score.deaths += game.deaths ?? 0
+        score.assists += game.assists ?? 0
+      }
     }
     if (lane < 0) continue
     history[lane]++
@@ -142,7 +153,18 @@ function playerContext(games: LobbyGame[], championId: number) {
   const top = history.indexOf(Math.max(...history))
   return {
     championStats: championGames
-      ? { games: championGames, winrate: Math.round((championWins / championGames) * 1e4) / 1e4 }
+      ? {
+          games: championGames,
+          winrate: Math.round((championWins / championGames) * 1e4) / 1e4,
+          // Only when the games carry the score (the desktop's lobby reads do not).
+          ...(score.games
+            ? {
+                kda:
+                  Math.round(((score.kills + score.assists) / Math.max(1, score.deaths)) * 100) /
+                  100,
+              }
+            : {}),
+        }
       : null,
     recent: { games: recent.length, wins: recent.filter((game) => game.win).length },
     streak,

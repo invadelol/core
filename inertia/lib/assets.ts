@@ -27,6 +27,9 @@ export function assetUrl(kind: AssetKind, id: number | string) {
 
 export const profileIcon = (id: number | null | undefined) => assetUrl('profileIcon', id ?? 0)
 export const championSplash = (id: number) => assetUrl('splash', id)
+/** One of a champion's skins, by its number (`0` is the base art, the same URL as above). */
+export const skinSplash = (id: number, skin: number) =>
+  skin ? `/cdn/${PATHS.splash}/${id}-${skin}.jpg` : championSplash(id)
 export const champIcon = (id: number) => assetUrl('champion', id)
 
 /** A champion mastery crest: levels past ten wear the tenth (docs/cdn.md, `mastery`). */

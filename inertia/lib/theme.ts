@@ -9,7 +9,7 @@ export const THEME_KEY = 'invade-theme'
  * Module-level so every toggle on the page agrees, and so a theme
  * change costs one attribute write rather than a re-render.
  */
-const choice = ref<ThemeChoice>('system')
+const choice = ref<ThemeChoice>('dark')
 const systemDark = ref(false)
 let started = false
 
@@ -18,13 +18,14 @@ function read(): ThemeChoice {
     const stored = localStorage.getItem(THEME_KEY)
     if (stored === 'light' || stored === 'dark' || stored === 'system') return stored
   } catch {
-    /* private mode, blocked storage: the system preference still works */
+    /* private mode, blocked storage: the default theme still works */
   }
-  return 'system'
+  // Dark is the reference look: a visitor who never chose gets it, whatever their system says.
+  return 'dark'
 }
 
 /** The browser's own bars (a phone's status bar, Safari's toolbar) in the header's ink. */
-const BAR = { light: '#ffffff', dark: '#08090c' }
+const BAR = { light: '#ffffff', dark: '#08070d' }
 
 /** The package's tokens read `data-theme`: `system` follows the system's preference. */
 function paint(value: ThemeChoice) {
