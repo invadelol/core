@@ -12,6 +12,8 @@ import Frame from './ui/Frame.vue'
 import Icon from './ui/Icon.vue'
 import Segmented from './ui/Segmented.vue'
 import Skeleton from './ui/Skeleton.vue'
+import SortHead from './ui/SortHead.vue'
+import { useSort } from './ui/sort.js'
 
 /**
  * Lifetime mastery: the totals in a card, the three biggest champions as art cards, then the whole
@@ -77,8 +79,19 @@ const rest = computed(() => {
   )
 })
 
+/** Most points first; the heads sort by name, level or points. */
+const order = useSort(
+  rest,
+  {
+    name: ({ entry }) => championName(entry.championId),
+    level: ({ entry }) => entry.championLevel,
+    points: ({ entry }) => entry.championPoints,
+  },
+  { key: 'points', first: { name: 'asc' } }
+)
+
 const visible = computed(() =>
-  expanded.value || query.value.trim() ? rest.value : rest.value.slice(0, LIST_SIZE)
+  expanded.value || query.value.trim() ? order.rows : order.rows.slice(0, LIST_SIZE)
 )
 </script>
 
@@ -172,9 +185,9 @@ const visible = computed(() =>
           <div class="tbl ms-tbl" role="table" aria-label="Mastery by champion">
             <div class="tbl-h" role="row">
               <span class="n" role="columnheader">#</span>
-              <span role="columnheader">Champion</span>
-              <span role="columnheader">Level</span>
-              <span class="n" role="columnheader">Points</span>
+              <SortHead :sorter="order" col="name" label="Champion" />
+              <SortHead :sorter="order" col="level" label="Level" />
+              <SortHead :sorter="order" col="points" label="Points" class="n" />
             </div>
             <div
               v-for="{ entry, rank } in visible"

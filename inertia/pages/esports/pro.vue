@@ -10,9 +10,11 @@ import CardHead from '../../components/ui/CardHead.vue'
 import RankEmblem from '../../components/ui/RankEmblem.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import FormStrip from '../../components/ui/FormStrip.vue'
+import SortHead from '../../components/ui/SortHead.vue'
+import { useSort } from '../../components/ui/sort.js'
 import { champIcon, assetUrl } from '../../lib/assets.js'
 import { countryName, leagueLogo } from '../../lib/board.js'
-import { laneOf, n, rankWords, roleLabel, winPct } from '../../lib/ladders.js'
+import { laneOf, n, rankValue, rankWords, roleLabel, winPct } from '../../lib/ladders.js'
 import { profilePath } from '../../lib/format.js'
 import '../../css/esports.css'
 
@@ -211,6 +213,18 @@ function share() {
 }
 const photo = (slug: string | null, v: string | undefined, size: number) =>
   slug && v ? `/cdn/pro/${slug}?s=${size}&v=${v}` : null
+/** The accounts, best rank first as they come; the heads sort them. */
+const accountSort = useSort(
+  () => props.pro.accounts,
+  {
+    name: (a) => a.gameName,
+    server: (a) => PLATFORM[a.platform] ?? a.platform,
+    rank: (a) => rankValue(a.tier, a.division, a.lp),
+    peak: (a) => rankValue(a.peakTier, a.peakDivision, a.peakLp),
+    record: (a) => (a.wins !== null && a.losses !== null ? a.wins + a.losses : null),
+  },
+  { first: { name: 'asc', server: 'asc' } }
+)
 const PLATFORM: Record<string, string> = {
   EUW1: 'EUW',
   EUN1: 'EUNE',
@@ -592,14 +606,14 @@ const PLATFORM: Record<string, string> = {
       <section v-if="tab === 'accounts'" class="sec" style="padding-top: 32px">
         <div class="card tbl" style="--cols: minmax(0, 1fr) 70px 180px 160px 120px">
           <div class="tbl-h">
-            <span>Account</span>
-            <span>Server</span>
-            <span>Rank</span>
-            <span class="hm">Peak</span>
-            <span class="n hm">Record</span>
+            <SortHead :sorter="accountSort" col="name" label="Account" />
+            <SortHead :sorter="accountSort" col="server" label="Server" />
+            <SortHead :sorter="accountSort" col="rank" label="Rank" />
+            <SortHead :sorter="accountSort" col="peak" label="Peak" class="hm" />
+            <SortHead :sorter="accountSort" col="record" label="Record" class="n hm" title="Games this season" />
           </div>
           <Link
-            v-for="a in pro.accounts"
+            v-for="a in accountSort.rows"
             :key="a.id"
             class="tbl-r"
             :href="profilePath(a.gameName, a.tagLine)"
