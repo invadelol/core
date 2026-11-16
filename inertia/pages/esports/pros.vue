@@ -10,10 +10,12 @@ import Select from '../../components/ui/Select.vue'
 import RankEmblem from '../../components/ui/RankEmblem.vue'
 import CardHead from '../../components/ui/CardHead.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
+import SortHead from '../../components/ui/SortHead.vue'
+import { useSort } from '../../components/ui/sort.js'
 import MatchLine from '../../components/esports/MatchLine.vue'
 import { champIcon, championName } from '../../lib/assets.js'
 import { countryName, leagueLogo } from '../../lib/board.js'
-import { ROLES, laneOf, n, rankWords, roleLabel, signedN, winPct } from '../../lib/ladders.js'
+import { ROLES, laneOf, n, rankValue, rankWords, roleLabel, signedN, winPct } from '../../lib/ladders.js'
 import { matchList, type ProMatch } from '../../lib/pro_matches.js'
 import '../../css/esports.css'
 import '../../css/leaderboards.css'
@@ -63,6 +65,18 @@ const shown = computed(() => {
       (!q || p.name.toLowerCase().includes(q) || p.team?.name.toLowerCase().includes(q))
   )
 })
+/** Best account first, as the league's list comes; the heads sort it in the browser. */
+const sort = useSort(
+  shown,
+  {
+    name: (p) => p.name,
+    country: (p) => (p.country ? countryName(p.country) : null),
+    rank: (p) => (p.best ? rankValue(p.best.tier, p.best.division, p.best.lp) : null),
+    move: (p) => p.move?.lp ?? null,
+    recent: (p) => (p.record?.games ? p.record.wins / p.record.games : null),
+  },
+  { key: 'rank', first: { name: 'asc', country: 'asc' } }
+)
 const next = computed(() => matchList(props.matches.league))
 </script>
 
@@ -116,12 +130,12 @@ const next = computed(() => matchList(props.matches.league))
       <section class="card">
         <div class="lt3h">
           <span style="text-align: center">#</span>
-          <span>Pro</span>
+          <SortHead :sorter="sort" col="name" label="Pro" />
           <span>Role</span>
-          <span>Country</span>
-          <span>Rank</span>
-          <span>24 hours</span>
-          <span>Recent games</span>
+          <SortHead :sorter="sort" col="country" label="Country" />
+          <SortHead :sorter="sort" col="rank" label="Rank" />
+          <SortHead :sorter="sort" col="move" label="24 hours" title="LP won or lost in 24 hours" />
+          <SortHead :sorter="sort" col="recent" label="Recent games" title="Win rate of their ranked games of 30 days" />
           <span>Most played</span>
         </div>
         <EmptyState
@@ -130,7 +144,7 @@ const next = computed(() => matchList(props.matches.league))
           icon="search"
           title="No pro matches these filters"
         />
-        <Link v-for="(p, i) in shown" :key="p.slug" class="lt3" :href="`/pro/${p.slug}`">
+        <Link v-for="(p, i) in sort.rows" :key="p.slug" class="lt3" :href="`/pro/${p.slug}`">
           <span class="rk" style="text-align: center">{{ i + 1 }}</span>
           <span class="row" style="gap: 11px; min-width: 0">
             <span class="ppic"

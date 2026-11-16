@@ -69,6 +69,37 @@ export const rankWords = (tier: string, division?: string | number | null) => {
   return apex || !div ? tierWord(tier) : `${tierWord(tier)} ${div}`
 }
 
+const TIER_ORDER = [
+  'IRON',
+  'BRONZE',
+  'SILVER',
+  'GOLD',
+  'PLATINUM',
+  'EMERALD',
+  'DIAMOND',
+  'MASTER',
+  'GRANDMASTER',
+  'CHALLENGER',
+]
+/**
+ * A rank as one number that sorts like the ladder (tier, then division, then LP), for a sortable
+ * Rank column; null when unranked.
+ */
+export function rankValue(
+  tier: string | null | undefined,
+  division?: string | number | null,
+  lp?: number | null
+) {
+  const t = tier ? TIER_ORDER.indexOf(tier.toUpperCase()) : -1
+  if (t < 0) return null
+  const div =
+    typeof division === 'number'
+      ? division
+      : ({ I: 1, II: 2, III: 3, IV: 4 } as Record<string, number>)[String(division ?? '')] ?? 4
+  const apex = t >= TIER_ORDER.indexOf('MASTER')
+  return t * 10_000 + (apex ? 0 : (4 - Math.min(4, Math.max(1, div))) * 100) + (lp ?? 0)
+}
+
 export const n = (value: number) => Math.round(value).toLocaleString('en-US')
 /** "55%" of wins over games, "–" with none. */
 export const winPct = (wins: number, games: number) =>
