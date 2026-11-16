@@ -8,6 +8,8 @@ import Frame from '../../components/ui/Frame.vue'
 import Select from '../../components/ui/Select.vue'
 import RankEmblem from '../../components/ui/RankEmblem.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
+import SortHead from '../../components/ui/SortHead.vue'
+import { linkSort, type SortDir } from '../../components/ui/sort.js'
 import RoleFilter from '../../components/leaderboards/RoleFilter.vue'
 import LadderPager from '../../components/leaderboards/LadderPager.vue'
 import LadderPlayer from '../../components/leaderboards/LadderPlayer.vue'
@@ -72,7 +74,13 @@ const props = defineProps<{
   region: { slug: string; label: string; platform: string }
   regions: { slug: string; label: string }[]
   scope: { kind: 'tracked'; seenDays: number; listed: number }
-  filters: { role: string | null; group: Size | null; q: string | null }
+  filters: {
+    role: string | null
+    group: Size | null
+    q: string | null
+    sort: string | null
+    dir: SortDir | null
+  }
   tiers: { tier: string; players: number }[]
   groups: Group[]
   shares: Record<Size, number> | null
@@ -90,9 +98,19 @@ const query = computed(() => ({
   role: props.filters.role,
   group: props.filters.group,
   q: props.filters.q,
+  sort: props.filters.sort,
+  dir: props.filters.dir,
 }))
 const href = (changes: Record<string, string | number | boolean | null>) =>
   withQuery('/leaderboards/flex', query.value, changes)
+/** The heads sort the whole list on the server (`?sort=&dir=`), the first page again. */
+const sort = computed(() =>
+  linkSort(
+    { key: props.filters.sort, dir: props.filters.dir ?? 'desc' },
+    (key, dir) => href({ sort: key, dir }),
+    { key: 'rank' }
+  )
+)
 
 const regionSlug = ref(props.region.slug)
 watch(regionSlug, (slug) => router.visit(href({ region: slug === 'euw' ? null : slug })))
@@ -312,8 +330,8 @@ function groupLine(g: Group) {
             <span class="lb-n" style="font-weight: 650">#</span>
             <span>Player</span>
             <span>Role</span>
-            <span>Rank</span>
-            <span>Win rate, season</span>
+            <SortHead :sorter="sort" col="rank" label="Rank" />
+            <SortHead :sorter="sort" col="wr" label="Win rate, season" />
             <span>Queues with</span>
             <span>Most played</span>
           </div>
