@@ -1,0 +1,821 @@
+{
+  "patch": "26.20",
+  "version": "16.20",
+  "published": "2026-10-06",
+  "source": "https://www.leagueoflegends.com/en-us/news/game-updates/league-of-legends-patch-26-20-notes/",
+  "champions": [
+    {
+      "id": 799,
+      "name": "Ambessa",
+      "kind": "down",
+      "blocks": [
+        {
+          "key": "P",
+          "title": "Drakehound's Step",
+          "lines": [
+            {
+              "label": "Damage",
+              "old": "5 - 30 (+25% bonus AD)",
+              "new": "5 - 25 (+20% bonus AD)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "name": "Ashe",
+      "kind": "down",
+      "blocks": [
+        {
+          "key": "base",
+          "title": "Base stats",
+          "lines": [
+            {
+              "label": "Attack Damage per Level",
+              "old": "3.5",
+              "new": "3"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 69,
+      "name": "Cassiopeia",
+      "kind": "down",
+      "blocks": [
+        {
+          "key": "base",
+          "title": "Base stats",
+          "lines": [
+            {
+              "label": "Base Health",
+              "old": "630",
+              "new": "610"
+            },
+            {
+              "label": "Base Mana",
+              "old": "480",
+              "new": "450"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 131,
+      "name": "Diana",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "W",
+          "title": "Pale Cascade",
+          "lines": [
+            {
+              "label": "Shield Bonus Health Ratio",
+              "old": "11%",
+              "new": "14%"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 85,
+      "name": "Kennen",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "E",
+          "title": "Lightning Rush",
+          "lines": [
+            {
+              "label": "Bonus Attack Speed",
+              "old": "40 / 50 / 60 / 70 / 80%",
+              "new": "50 / 60 / 70 / 80 / 90%"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 203,
+      "name": "Kindred",
+      "kind": "mix",
+      "blocks": [
+        {
+          "key": "W",
+          "title": "Wolf's Frenzy",
+          "lines": [
+            {
+              "label": "Monster Mod",
+              "old": "150%",
+              "new": "165%",
+              "dir": "up"
+            }
+          ]
+        },
+        {
+          "key": "E",
+          "title": "Mounting Dread",
+          "lines": [
+            {
+              "label": "Slow Duration",
+              "old": "1s",
+              "new": "1.5s",
+              "dir": "up"
+            },
+            {
+              "label": "Small Monster Targeting",
+              "old": "Enabled",
+              "new": "Removed",
+              "dir": "down"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 897,
+      "name": "K'Sante",
+      "kind": "down",
+      "blocks": [
+        {
+          "key": "W",
+          "title": "Path Maker",
+          "lines": [
+            {
+              "label": "Mana Cost",
+              "old": "40 / 45 / 50 / 55 / 60",
+              "new": "45 / 50 / 55 / 60 / 65"
+            },
+            {
+              "label": "Base/All-Out Damage Reduction",
+              "old": "30 / 75%",
+              "new": "25 / 70%"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 876,
+      "name": "Lillia",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "R",
+          "title": "Lilting Lullaby",
+          "lines": [
+            {
+              "label": "Duration",
+              "old": "2.5s",
+              "new": "2.5 / 2.75 / 3s"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 236,
+      "name": "Lucian",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "base",
+          "title": "Base stats",
+          "lines": [
+            {
+              "label": "Attack Damage",
+              "old": "60 + 2.5/Level",
+              "new": "60 + 2.9/Level"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 82,
+      "name": "Mordekaiser",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "Q",
+          "title": "Obliterate",
+          "lines": [
+            {
+              "label": "Scaling Level 10-20",
+              "old": "(+5/lvl)",
+              "new": "(+7/lvl)"
+            }
+          ]
+        },
+        {
+          "key": "R",
+          "title": "Realm of Death",
+          "lines": [
+            {
+              "label": "Cooldown",
+              "old": "140 / 120 / 100s",
+              "new": "120 / 110 / 100s"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 518,
+      "name": "Neeko",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "E",
+          "title": "Tangle-Barbs",
+          "lines": [
+            {
+              "label": "Base Damage",
+              "old": "70 / 105 / 140 / 175 / 210 (+65% AP)",
+              "new": "80 / 115 / 150 / 185 / 220 (+65% AP)"
+            },
+            {
+              "label": "Empowered Root Duration",
+              "old": "1.8 / 2.1 / 2.4 / 2.7 / 3s",
+              "new": "2 / 2.25 / 2.5 / 2.75 / 3s"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 901,
+      "name": "Smolder",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "P",
+          "title": "Dragon Practice",
+          "lines": [
+            {
+              "label": "Super Scorcher Bonus Magic Damage",
+              "old": "25 - 55% (+0-9% with IE) of Dragon Practice Stacks, scaling with Crit Chance",
+              "new": "25 - 60% (+0-10.5% with IE) of Dragon Practice Stacks, scaling with Crit Chance"
+            },
+            {
+              "label": "Flap Flap Flap Bonus Magic Damage",
+              "old": "8 - 12.8% (+0-1.44% with IE) of Dragon Practice Stacks, scaling with Crit Chance",
+              "new": "8 - 14% (+0-1.8% with IE) of Dragon Practice Stacks, scaling with Crit Chance"
+            }
+          ]
+        },
+        {
+          "key": "R",
+          "title": "MMOOOMMMM!",
+          "lines": [
+            {
+              "label": "Self Heal",
+              "old": "100 / 135 / 170 (+50% bonus AD) (+75% AP)",
+              "new": "100 / 175 / 250 (+75% bonus AD) (+75% AP)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 50,
+      "name": "Swain",
+      "kind": "mix",
+      "blocks": [
+        {
+          "key": "base",
+          "title": "Base stats",
+          "lines": [
+            {
+              "label": "Base Magic Resistance",
+              "old": "31",
+              "new": "34",
+              "dir": "up"
+            },
+            {
+              "label": "Base Armor",
+              "old": "25",
+              "new": "23",
+              "dir": "down"
+            }
+          ]
+        },
+        {
+          "key": "W",
+          "title": "Vision of Empire",
+          "lines": [
+            {
+              "label": "Damage",
+              "old": "70 / 105 / 140 / 175 / 210 (+60%)",
+              "new": "70 / 115 / 160 / 205 / 250 (+60%)",
+              "dir": "up"
+            },
+            {
+              "label": "Cooldown",
+              "old": "22 / 21 / 20 / 19 / 18s",
+              "new": "20 / 19 / 18 / 17 / 16s",
+              "dir": "up"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 223,
+      "name": "Tahm Kench",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "Q",
+          "title": "Tongue Lash",
+          "lines": [
+            {
+              "label": "Base Healing",
+              "old": "10 / 13.75 / 17.5 / 21.25 / 25",
+              "new": "10 / 20 / 30 / 40 / 50"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 67,
+      "name": "Vayne",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "base",
+          "title": "Base stats",
+          "lines": [
+            {
+              "label": "Health per 5",
+              "old": "4 + 0.5/Level",
+              "new": "5.5 + 0.4/Level",
+              "dir": "mix"
+            }
+          ]
+        },
+        {
+          "key": "Q",
+          "title": "Tumble",
+          "lines": [
+            {
+              "label": "Mana Cost",
+              "old": "46 / 42 / 38 / 34 / 30",
+              "new": "30"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 804,
+      "name": "Yunara",
+      "kind": "down",
+      "blocks": [
+        {
+          "key": "Q",
+          "title": "Cultivation of Spirit",
+          "lines": [
+            {
+              "label": "Passive On Hit Damage",
+              "old": "5 / 10 / 15 / 20 / 25 (+20% AP)",
+              "new": "3 / 8 / 13 / 18 / 23 (+20% AP)"
+            },
+            {
+              "label": "Active On Hit Damage",
+              "old": "5 / 10 / 15 / 20 / 25 (+20% AP)",
+              "new": "3 / 8 / 13 / 18 / 23 (+20% AP)"
+            }
+          ]
+        },
+        {
+          "key": "W",
+          "title": "Arc of Judgment",
+          "lines": [
+            {
+              "label": "Slow Stacking",
+              "old": "Stacks with other slows",
+              "new": "No longer stacks with other slows"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "id": 3073,
+      "name": "Experimental Hexplate",
+      "kind": "down",
+      "lines": [
+        {
+          "label": "Ranged Mod",
+          "old": "70% of Value (35% Attack Speed, 14% Move Speed)",
+          "new": "50% of Value (25% Attack Speed, 10% Move Speed)"
+        }
+      ]
+    },
+    {
+      "id": 3152,
+      "name": "Hextech Rocketbelt",
+      "kind": "mix",
+      "lines": [
+        {
+          "label": "Ability Haste",
+          "old": "20",
+          "new": "10",
+          "dir": "down"
+        },
+        {
+          "label": "Active Damage",
+          "old": "100 (+10% AP)",
+          "new": "135 (+15% AP)",
+          "dir": "up"
+        }
+      ]
+    },
+    {
+      "id": 3085,
+      "name": "Runaan's Hurricane",
+      "kind": "down",
+      "lines": [
+        {
+          "label": "Attack Damage per Bolt",
+          "old": "65%",
+          "new": "60%"
+        }
+      ]
+    }
+  ],
+  "aram": {
+    "note": null,
+    "champions": [
+      {
+        "id": 432,
+        "name": "Bard",
+        "kind": "up",
+        "scope": "ARAM: Mayhem only",
+        "lines": [
+          {
+            "label": "Meep Ability Power Ratio",
+            "old": "50%",
+            "new": "67%"
+          },
+          {
+            "label": "Meep Recharge",
+            "old": "8s",
+            "new": "5s"
+          },
+          {
+            "label": "Meep Auto Damage per Chime Breakpoint",
+            "old": "6 per 3 chimes",
+            "new": "10 per 3 chimes"
+          }
+        ]
+      },
+      {
+        "id": 86,
+        "name": "Garen",
+        "kind": "up",
+        "scope": "ARAM: Mayhem only",
+        "lines": [
+          {
+            "label": "Passive Regen",
+            "old": "1.5%–1.01%",
+            "new": "2%–12%"
+          },
+          {
+            "label": "W Cooldown",
+            "old": "22–12",
+            "new": "18–12"
+          },
+          {
+            "label": "W Shield Strength",
+            "old": "18% Bonus Health",
+            "new": "20% Bonus Health"
+          },
+          {
+            "label": "W Passive Stacks",
+            "old": "0.4 per minion kill",
+            "new": "0.75 per minion kill"
+          }
+        ]
+      },
+      {
+        "id": 897,
+        "name": "K'Sante",
+        "kind": "up",
+        "scope": "ARAM: Mayhem only",
+        "lines": [
+          {
+            "label": "W Cooldown",
+            "old": "14–10",
+            "new": "10"
+          },
+          {
+            "label": "W Damage Reduction",
+            "old": "30%",
+            "new": "45%"
+          },
+          {
+            "label": "E Shield Strength",
+            "old": "13.5% bonus health",
+            "new": "15% bonus health"
+          }
+        ]
+      },
+      {
+        "id": 64,
+        "name": "Lee Sin",
+        "kind": "up",
+        "scope": "ARAM: Mayhem only",
+        "lines": [
+          {
+            "label": "Passive Attack Speed",
+            "old": "40% bonus Attack Speed",
+            "new": "50% bonus Attack Speed"
+          },
+          {
+            "label": "Passive Energy Restore",
+            "old": "20 / 30 / 40",
+            "new": "30 / 40 / 50"
+          },
+          {
+            "label": "W Shield",
+            "old": "60–240",
+            "new": "80–320"
+          },
+          {
+            "label": "Q2 Damage",
+            "old": "60–180",
+            "new": "80–240"
+          }
+        ]
+      },
+      {
+        "id": 50,
+        "name": "Swain",
+        "kind": "mix",
+        "scope": "ARAM: Mayhem only",
+        "lines": [
+          {
+            "label": "Damage Taken",
+            "old": "105%",
+            "new": "100%",
+            "dir": "up"
+          },
+          {
+            "label": "Healing",
+            "old": "95%",
+            "new": "100%",
+            "dir": "up"
+          },
+          {
+            "label": "Soul Fragments Restore",
+            "old": "6% flat",
+            "new": "3%–6% scaling with level",
+            "dir": "down"
+          }
+        ]
+      },
+      {
+        "id": 412,
+        "name": "Thresh",
+        "kind": "up",
+        "scope": "ARAM: Mayhem only",
+        "lines": [
+          {
+            "label": "Passive Soul Drop",
+            "old": "2",
+            "new": "3"
+          },
+          {
+            "label": "W Cooldown",
+            "old": "21 / 20 / 19 / 18 / 17s",
+            "new": "19 / 18 / 17 / 16 / 15s"
+          }
+        ]
+      },
+      {
+        "id": 200,
+        "name": "Bel'Veth",
+        "kind": "down",
+        "scope": "ARAM",
+        "lines": [
+          {
+            "label": "Damage Dealt",
+            "old": "105%",
+            "new": "100%"
+          },
+          {
+            "label": "Damage Taken",
+            "old": "95%",
+            "new": "100%"
+          },
+          {
+            "label": "Tenacity",
+            "old": "20%",
+            "new": "0%"
+          }
+        ]
+      },
+      {
+        "id": 805,
+        "name": "Locke",
+        "kind": "up",
+        "scope": "ARAM",
+        "lines": [
+          {
+            "label": "Damage Dealt",
+            "old": "105%",
+            "new": "115%"
+          }
+        ]
+      }
+    ],
+    "augments": [
+      {
+        "id": 2016,
+        "name": "Juiced",
+        "kind": "mix",
+        "lines": [
+          {
+            "type": "set",
+            "label": "Mana Drain",
+            "value": "Removed"
+          },
+          {
+            "label": "Damage-to-Mana Ratio",
+            "old": "4.5%",
+            "new": "7%",
+            "dir": "up"
+          },
+          {
+            "type": "new",
+            "text": "Ranged: 80% of the 7% ratio"
+          }
+        ]
+      },
+      {
+        "id": 1305,
+        "name": "Leg Day",
+        "kind": "up",
+        "lines": [
+          {
+            "label": "Slow Resist",
+            "old": "40%",
+            "new": "50%"
+          }
+        ]
+      },
+      {
+        "id": null,
+        "name": "Missile Split",
+        "kind": "mix",
+        "lines": [
+          {
+            "label": "Split Trigger",
+            "old": "On first unit hit",
+            "new": "On end or recast"
+          }
+        ]
+      },
+      {
+        "id": 2034,
+        "name": "Shark Tempest",
+        "kind": "up",
+        "lines": [
+          {
+            "label": "Slow",
+            "old": "30% for 3s",
+            "new": "40% for 3s"
+          },
+          {
+            "label": "Base Area of Effect Damage",
+            "old": "50–100",
+            "new": "100–200"
+          },
+          {
+            "label": "Attached Damage over 3s",
+            "old": "75–225 + 0.6 bonus AD + 0.36 AP",
+            "new": "90–270 + 0.75 bonus AD + 0.45 AP"
+          }
+        ]
+      },
+      {
+        "id": 2115,
+        "name": "Squishy Slappy Grab",
+        "kind": "up",
+        "lines": [
+          {
+            "label": "Cooldown",
+            "old": "35s",
+            "new": "30s"
+          },
+          {
+            "label": "Damage",
+            "old": "30–100 + 10% bonus Health",
+            "new": "50–150 + 15% bonus Health"
+          },
+          {
+            "label": "Shield per Target",
+            "old": "35–150 + 50% bonus Armor + 50% bonus Magic Resistance",
+            "new": "50–200 + 50% bonus Armor + 50% bonus Magic Resistance"
+          }
+        ]
+      },
+      {
+        "id": 2005,
+        "name": "Triggered Inferno",
+        "kind": "up",
+        "lines": [
+          {
+            "label": "Cooldown",
+            "old": "15s",
+            "new": "5s"
+          }
+        ]
+      }
+    ]
+  },
+  "skins": [
+    {
+      "champion": 875,
+      "skin": 76,
+      "name": "Prestige HEARTSTEEL Live My Life Sett",
+      "champions": "Sett"
+    },
+    {
+      "champion": 81,
+      "skin": 78,
+      "name": "HEARTSTEEL Live My Life Ezreal",
+      "champions": "Ezreal"
+    },
+    {
+      "champion": 141,
+      "skin": 32,
+      "name": "HEARTSTEEL Live My Life Kayn",
+      "champions": "Kayn"
+    },
+    {
+      "champion": 523,
+      "skin": 41,
+      "name": "HEARTSTEEL Live My Life Aphelios",
+      "champions": "Aphelios"
+    },
+    {
+      "champion": 777,
+      "skin": 77,
+      "name": "HEARTSTEEL Live My Life Yone",
+      "champions": "Yone"
+    },
+    {
+      "champion": 897,
+      "skin": 18,
+      "name": "HEARTSTEEL Live My Life K'Sante",
+      "champions": "K'Sante"
+    }
+  ],
+  "chromas": [
+    "SKT T1 Jax (Elite)",
+    "SKT T1 Lee Sin (Elite)",
+    "SKT T1 Vayne (Elite)",
+    "SKT T1 Zyra (Elite)",
+    "SKT T1 Zed (Elite)",
+    "Prestige HEARTSTEEL Live My Life Sett (Vivid)",
+    "HEARTSTEEL Live My Life Ezreal (Ruby, Sapphire, Catseye, Tanzanite, Rose Quartz, Obsidian, Pearl, Peridot)",
+    "HEARTSTEEL Live My Life Kayn (Ruby, Rose Quartz, Catseye, Tanzanite)",
+    "HEARTSTEEL Live My Life Aphelios (Ruby, Tanzanite, Pearl, Catseye, Peridot, Obsidian, Rose Quartz, Aquamarine)",
+    "HEARTSTEEL Live My Life Yone (Ruby, Rose Quartz, Catseye, Pearl, Tanzanite, Sapphire, Emerald, Obsidian)",
+    "HEARTSTEEL Live My Life K'Sante (Ruby, Sapphire, Turquoise, Tanzanite, Rose Quartz, Obsidian, Pearl, Catseye)"
+  ],
+  "bugs": [
+    "Orianna's ultimate effect and hitbox stay in place when she casts it before the ball reaches a fast-moving ally such as Nocturne.",
+    "A Depth Charge stolen from Nautilus by Sylas no longer fizzles when Sylas loses sight of the target.",
+    "Xin Zhao's Three Talon Strike no longer goes fully on cooldown when its first attack is dodged by spells such as Shen's Shadow Dash or Jax's Counter Strike.",
+    "Shyvana's Dragon's Descent cancels enemy teleports.",
+    "Kayle's Reckoning no longer applies the Spellblade on-hit of Sheen, Lich Bane, Trinity Force and Iceborne Gauntlet.",
+    "Large melee champions attacking large enemy champions are now inside the immolate radius.",
+    "Rune page tabs no longer overflow and clip the editor with more than 20 pages.",
+    "Sivir's Spell Shield blocks Leona's Zenith Blade.",
+    "The tab buttons of the champion overview window are aligned and usable again.",
+    "Several Classic summoner spell icons fill their whole square.",
+    "Malphite's Flash is no longer disabled after Unstoppable Force.",
+    "Buying the Royal Guard Fiora skin grants the Royal Guard Classic chroma.",
+    "Classic mode homepage images no longer load when logging into another tab.",
+    "The Release Date ascending and descending sorts give different orders in the Classic Collection portrait tab.",
+    "The Recommended sort option is back in the Classic store's Runes section.",
+    "The Release Date sort orders runes correctly in the Classic store.",
+    "Pressing Recall rapidly no longer builds Guinsoo's Rageblade stacks.",
+    "Xin Zhao's Imperial Classic chroma shows its name in champion select.",
+    "Runaan's Hurricane bolts no longer trigger minions' call for help.",
+    "Sivir's Spell Shield blocks damage from Miss Fortune's Q.",
+    "Sona's E description no longer says its effect only applies to champions.",
+    "Several Classic item icons fill their whole square."
+  ]
+}
