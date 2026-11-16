@@ -19,7 +19,7 @@ const AutoSwagger = ((AutoSwaggerModule as unknown as { default?: unknown }).def
 import swagger from '#config/swagger'
 import { middleware } from '#start/middleware'
 import { ANALYTICS_PANELS, analyticsUrls } from '#constants/analytics'
-import { BUGS_URL, DISCORD_URL, X_URL } from '../inertia/lib/links.js'
+import { BETA_URL, BUGS_URL, DISCORD_URL, X_URL } from '../inertia/lib/links.js'
 
 const SummonersController = () => import('#controllers/summoners_controller')
 const HealthChecksController = () => import('#controllers/health_checks_controller')
@@ -30,6 +30,7 @@ const DownloadsController = () => import('#controllers/downloads_controller')
 const AppPageController = () => import('#controllers/app_page_controller')
 const DesktopController = () => import('#controllers/desktop_controller')
 const DesktopBetaController = () => import('#controllers/desktop_beta_controller')
+const DesktopReportsController = () => import('#controllers/desktop_reports_controller')
 const HomeController = () => import('#controllers/home_controller')
 const LensController = () => import('#controllers/lens_controller')
 const RuneStatsController = () => import('#controllers/rune_stats_controller')
@@ -162,8 +163,17 @@ router
           .use(middleware.desktopAuth())
         // Signed by core itself (a short-lived link from the feed), not by the device.
         router.get('/beta/download/:token', [DesktopBetaController, 'download'])
+        router
+          .get('/reports/similar', [DesktopReportsController, 'similar'])
+          .use(middleware.desktopAuth({ optional: true }))
+        router
+          .post('/reports', [DesktopReportsController, 'store'])
+          .use(middleware.desktopAuth({ optional: true }))
       })
       .prefix('/desktop')
+
+    /** The beta build workflow uploads installers here (docs/desktop-sync.md §8.6). */
+    router.put('/beta/upload', [DesktopBetaController, 'upload'])
   })
   .prefix('/api')
 
@@ -232,6 +242,8 @@ router.get('/x', ({ response }) => response.redirect(X_URL, false, 302))
 
 /** The desktop app's "Report a bug" button, so its target can change without an app release. */
 router.get('/bugs', ({ response }) => response.redirect(BUGS_URL, false, 302))
+/** "Become a beta tester", from the footer and the contact page. */
+router.get('/beta', ({ response }) => response.redirect(BETA_URL, false, 302))
 
 router.get('/swagger', async () => {
   return AutoSwagger.docs(router.toJSON(), swagger)
@@ -325,6 +337,9 @@ router.get('/:summoner/:section?', async ({ inertia, params, response }) => {
   const identity = summonerService.normalize(params.summoner)
   const { default: proService } = await import('#services/pro_service')
   const pro = identity ? await proService.byRiotId(identity.gameName, identity.tagLine) : null
+  // A beta tester's profile says so.
+  const { default: betaService } = await import('#services/desktop/beta_service')
+  const betaTester = initialProfile ? await betaService.isTester(initialProfile.puuid) : false
 
   return inertia.render('summoner', {
     summoner: params.summoner,
@@ -334,6 +349,7 @@ router.get('/:summoner/:section?', async ({ inertia, params, response }) => {
     panels: ANALYTICS_PANELS,
     preload,
     pro,
+    betaTester,
   })
 })
 

@@ -23,6 +23,7 @@ const COLUMNS = [
       { label: 'Multisearch', href: '/multisearch' },
       { label: 'Discord', href: DISCORD_URL, out: true },
       { label: 'Report a bug', href: '/bugs', out: true },
+      { label: 'Become a beta tester', href: '/beta', out: true },
       { label: 'Source code', href: REPO_URL, out: true },
     ],
   },

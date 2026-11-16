@@ -2,7 +2,13 @@ import type { HttpContext } from '@adonisjs/core/http'
 import app from '@adonisjs/core/services/app'
 import { SITE_ORIGIN } from '#services/sitemap'
 import DesktopDevice from '#models/desktop_device'
-import betaService, { type BetaTarget, userAgentApp } from '#services/desktop/beta_service'
+import betaService, {
+  BETA_PACKAGE_NAME,
+  BETA_TARGETS,
+  BETA_VERSION,
+  type BetaTarget,
+  userAgentApp,
+} from '#services/desktop/beta_service'
 import rateLimiter, { DESKTOP_LIMITS } from '#services/desktop/rate_limiter'
 import { DesktopException } from '#exceptions/desktop_exception'
 import { betaFeedbackValidator, betaFeedValidator } from '#validators/desktop'
@@ -41,7 +47,9 @@ export default class DesktopBetaController {
     await limit(DESKTOP_LIMITS.betaDevice, current.id)
     ctx.response.header('Cache-Control', 'no-store')
     const tester = await betaService.testerOf(current.id)
-    if (!tester) return ctx.response.ok({ tester: false, label: null, builds: [], answers: [] })
+    if (!tester) {
+      return ctx.response.ok({ tester: false, label: null, builds: [], answers: [], ratings: [] })
+    }
 
     const running = userAgentApp(ctx.request.header('user-agent'))
     await betaService.seen(current, tester, running?.app ?? current.app, running?.os ?? current.os)
@@ -50,11 +58,12 @@ export default class DesktopBetaController {
       ...build,
       platforms: Object.keys(assets),
     }))
-    const answers = await betaService.answers(
-      current.id,
-      builds.map((build) => build.version)
-    )
-    return ctx.response.ok({ tester: true, label: tester.label, builds, answers })
+    const versions = builds.map((build) => build.version)
+    const [answers, ratings] = await Promise.all([
+      betaService.answers(current.id, versions),
+      betaService.ratings(current.id, versions),
+    ])
+    return ctx.response.ok({ tester: true, label: tester.label, builds, answers, ratings })
   }
 
   /**
@@ -101,10 +110,10 @@ export default class DesktopBetaController {
   }
 
   /**
-   * A tester's verdicts on a build's tests, and/or a free note
+   * A tester's verdicts on a build's tests, a free note and/or a rating
    * @tag Desktop
-   * @requestBody {"version": "0.3.5-beta.1", "results": [{"test": "k3f9", "verdict": "broken", "note": "..."}], "note": "..."}
-   * @responseBody 200 - {"results": 1, "note": true}
+   * @requestBody {"version": "0.3.5-beta.1", "results": [{"test": "k3f9", "verdict": "broken", "note": "..."}], "note": "...", "rating": 4, "comment": "..."}
+   * @responseBody 200 - {"results": 1, "note": true, "rating": true}
    */
   async feedback(ctx: HttpContext) {
     const current = device(ctx)
@@ -115,6 +124,45 @@ export default class DesktopBetaController {
     if (!build) throw DesktopException.noBetaBuild()
     const results = await betaService.results(current.id, build, payload.results ?? [])
     if (payload.note) await betaService.note(current.id, build.version, payload.note)
-    return ctx.response.ok({ results, note: !!payload.note })
+    if (payload.rating) {
+      await betaService.rate(current.id, build.version, payload.rating, payload.comment ?? '')
+    }
+    return ctx.response.ok({ results, note: !!payload.note, rating: !!payload.rating })
+  }
+
+  /**
+   * One installer from the build workflow (§8.6): the body is the package, the
+   * signature is its minisign `.sig` file
+   * @tag Desktop
+   * @responseBody 200 - {"version": "0.3.5-beta.1", "target": "windows-x86_64", "size": 15000000}
+   */
+  async upload(ctx: HttpContext) {
+    if (!betaService.uploadAllowed(ctx.request.header('authorization'))) {
+      throw DesktopException.unauthorized()
+    }
+    const version = String(ctx.request.qs().version ?? '')
+    const target = String(ctx.request.qs().target ?? '')
+    const name = String(ctx.request.qs().name ?? '')
+    const signature = String(ctx.request.header('x-invade-signature') ?? '').trim()
+    if (
+      version.length > 40 ||
+      !BETA_VERSION.test(version) ||
+      !BETA_TARGETS.includes(target as BetaTarget) ||
+      !BETA_PACKAGE_NAME.test(name) ||
+      !/^[A-Za-z0-9+/=]{40,2000}$/.test(signature)
+    ) {
+      return ctx.response.unprocessableEntity({ error: 'Bad version, target, name or signature' })
+    }
+    if (!(await betaService.available())) {
+      throw new DesktopException('Beta builds are unavailable', 503, 'E_BETA_UNAVAILABLE', 300)
+    }
+    const asset = await betaService.upload(
+      version,
+      target as BetaTarget,
+      name,
+      signature,
+      ctx.request.request
+    )
+    return ctx.response.ok({ version, target, size: asset.size })
   }
 }
