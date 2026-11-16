@@ -33,7 +33,7 @@ address there (`here`) if it should light up a section.
 | `Tabs.vue` | `items` (`{ key, label, href, count? }[]`), `active`, `label` (aria), `preserveScroll?` | A page's tabs (`.tabs`): real addresses, violet bar under the current one. |
 | `Segmented.vue` | `options` (`{ value, label, icon?, note?, href? }[]`), `label`, `v-model` | A segmented filter (`.seg`): roles, queues. Buttons with `v-model`, links when each option has an `href` (a filter that is an address). `icon` is a small picture (a role glyph), `note` a grey figure ("22%"). |
 | `Select.vue` | `options` (`{ value, label, icon?, meta? }[]`), `v-model`, `label?` (grey key before the value: "Rank"), `placeholder?`, `searchable?`, `width?` (list width), `align?` | A select (`.sel` trigger, a panel list). Works on old pages too. |
-| `header/ThemeChoice.vue` | none | Dark, Light, Auto. |
+| `header/ThemeChoice.vue` | none | One icon button turning Dark, Light, Auto. |
 
 ## Data marks
 
