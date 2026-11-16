@@ -120,6 +120,11 @@ export default defineConfig({
       reloadServer: false,
     },
     {
+      // The teams' logos (/cdn/team/:id), read at run time.
+      pattern: 'resources/teams/**',
+      reloadServer: false,
+    },
+    {
       // Each patch's notes (/patch/:version), read at run time.
       pattern: 'resources/patch_notes/**',
       reloadServer: false,

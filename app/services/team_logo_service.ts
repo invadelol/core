@@ -33,8 +33,12 @@ async function resized(logo: Logo, size: number): Promise<Logo> {
   return { body: new Uint8Array(body), contentType: 'image/webp' }
 }
 
+/** A team's id as stored (a uuid): the name of its logo file. */
+const TEAM_ID = /^[0-9a-f-]{36}$/i
+
 /**
- * Team logos from our own origin (`/cdn/team/:id`): the stored address is read server-side,
+ * Team logos from our own origin (`/cdn/team/:id`): a file of this repository
+ * (`resources/teams/<id>.webp`) when there is one, else the stored address, read server-side,
  * fetched once and kept in memory, so pages only ever name invade.lol. League logos
  * (`/cdn/league/:slug`) are files of this repository (`resources/leagues`) when there is one,
  * else the league's stored logo, fetched the same way.
@@ -96,7 +100,11 @@ class TeamLogoService {
   }
 
   private async load(teamId: string): Promise<Logo | null> {
-    return fetchImage(await proService.logoUrl(teamId), { teamId })
+    if (!TEAM_ID.test(teamId)) return null
+    const file = await readFile(app.makePath('resources/teams', `${teamId.toLowerCase()}.webp`))
+      .then((body) => ({ body: new Uint8Array(body), contentType: 'image/webp' }))
+      .catch(() => null)
+    return file ?? fetchImage(await proService.logoUrl(teamId), { teamId })
   }
 }
 
