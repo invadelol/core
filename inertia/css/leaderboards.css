@@ -596,49 +596,91 @@
   .vb .lb-pgr a.lo {
     opacity: 0.55;
   }
-  .vb .lb-sp {
-    display: grid;
-    grid-template-columns: 118px minmax(0, 1fr) auto;
-    gap: 22px;
-    padding: 0 24px 0 0;
+  /* one-tricks: the chosen champion's header, its splash fading in from the right, the apex
+     counts on a frosted plate over the art */
+  .vb .oa {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    gap: 24px;
+    min-height: 236px;
+    padding: 26px 28px;
     border-bottom: 1px solid var(--line);
+    border-radius: var(--r3) var(--r3) 0 0;
+    overflow: hidden;
   }
-  .vb .lb-sp > .fr {
-    height: 170px;
-    --cut: 16px;
-    border-radius: 12px 0 0 0;
+  .vb .oa-art {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 64%;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 50%);
+    mask-image: linear-gradient(90deg, transparent 0%, #000 50%);
   }
-  .vb .lb-sp > .fr img {
-    object-position: 50% 14%;
+  .vb .oa-art img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 55% 30%;
+    filter: saturate(0.85) brightness(0.8);
   }
-  .vb .lb-sp .bd {
+  .vb .oa-art::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      0deg,
+      color-mix(in srgb, var(--s1) 85%, transparent),
+      transparent 55%
+    );
+  }
+  .vb .oa-in {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    gap: 10px;
+    gap: 14px;
     min-width: 0;
   }
-  .vb .lb-at {
-    display: flex;
-    align-self: center;
-    gap: 18px;
+  .vb .oa-nm:hover {
+    color: var(--v200);
   }
-  .vb .lb-at > span {
+  .vb .oa-hs {
+    gap: 30px;
+    margin-top: 4px;
+  }
+  .vb .oa-hs .col {
+    gap: 2px;
+  }
+  .vb .oa-ct {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+    padding: 6px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--ink-0) 66%, transparent);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    box-shadow: inset 0 0 0 1px var(--line-2);
+  }
+  .vb .oa-ct > span {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
-    min-width: 62px;
+    gap: 3px;
+    min-width: 84px;
+    padding: 8px 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--t3);
   }
-  .vb .lb-at > span b {
-    font-size: 20px;
+  .vb .oa-ct b {
+    font-size: 18px;
     font-weight: 650;
-    letter-spacing: -0.01em;
-    font-variant-numeric: tabular-nums;
-  }
-  .vb .lb-at > span.tt {
-    padding-left: 18px;
-    border-left: 1px solid var(--line-2);
+    color: var(--t1);
   }
   .vb .lb-o1 {
     grid-template-columns: 28px minmax(0, 1fr) 128px 124px 100px 72px 66px;
@@ -925,17 +967,42 @@
       margin-left: 0;
       flex-basis: 100%;
     }
-    .vb .lb-sp {
-      grid-template-columns: 84px minmax(0, 1fr);
-      padding-right: 14px;
+    /* The header: the art over its top, fading down; the plate a line of three. */
+    .vb .oa {
+      flex-direction: column;
+      align-items: stretch;
+      min-height: 0;
+      padding: 150px 16px 16px;
+      gap: 14px;
     }
-    .vb .lb-sp > .fr {
-      height: 120px;
+    .vb .oa-art {
+      width: 100%;
+      height: 210px;
+      bottom: auto;
+      -webkit-mask-image: linear-gradient(180deg, #000 40%, transparent 100%);
+      mask-image: linear-gradient(180deg, #000 40%, transparent 100%);
     }
-    .vb .lb-sp .lb-at {
-      grid-column: 1 / -1;
-      padding: 0 14px 14px;
-      flex-wrap: wrap;
+    .vb .oa-art::after {
+      display: none;
+    }
+    .vb .oa .d1 {
+      font-size: 30px;
+    }
+    .vb .oa-hs {
+      gap: 22px;
+    }
+    .vb .oa-ct {
+      margin-left: 0;
+      justify-content: space-between;
+    }
+    .vb .oa-ct > span {
+      flex-direction: row;
+      min-width: 0;
+      gap: 6px;
+      padding: 4px 8px;
+    }
+    .vb .oa-tn {
+      display: none;
     }
     .vb .lb-pg {
       flex-wrap: wrap;
