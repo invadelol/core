@@ -26,6 +26,7 @@ import {
   tierWord,
   withQuery,
 } from '../../lib/ladders.js'
+import { regionFlag } from '../../lib/flags.js'
 import '../../css/leaderboards.css'
 
 type Tier = 'CHALLENGER' | 'GRANDMASTER' | 'MASTER'
@@ -193,7 +194,7 @@ const updated = computed(() => since(props.updatedAt))
             <Select
               v-model="regionSlug"
               label="Region"
-              :options="regions.map((r) => ({ value: r.slug, label: r.label }))"
+              :options="regions.map((r) => ({ value: r.slug, label: r.label, icon: regionFlag(r.slug) }))"
               width="11rem"
               align="right"
             />
