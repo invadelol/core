@@ -1,0 +1,1399 @@
+{
+  "patch": "26.21",
+  "version": "16.21",
+  "published": "2026-10-20",
+  "source": "https://www.leagueoflegends.com/en-us/news/game-updates/league-of-legends-patch-26-21-notes/",
+  "champions": [
+    {
+      "id": 268,
+      "name": "Azir",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "base",
+          "title": "Base stats",
+          "lines": [
+            {
+              "label": "Mana Growth",
+              "old": "40/Level",
+              "new": "50/Level"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 51,
+      "name": "Caitlyn",
+      "kind": "mix",
+      "blocks": [
+        {
+          "key": "P",
+          "title": "Headshot",
+          "lines": [
+            {
+              "label": "Damage",
+              "old": "60 - 100% AD (+1% AD per 1% per Crit Chance) (+1% AD per 1% Bonus Crit Damage)",
+              "new": "60 - 80% AD (+0.8% AD per 1% per Crit Chance) (+0.8% AD per 1% Bonus Crit Damage)",
+              "dir": "down"
+            }
+          ]
+        },
+        {
+          "key": "Q",
+          "title": "Piltover Peacemaker",
+          "lines": [
+            {
+              "label": "Base Damage",
+              "old": "50 / 90 / 130 / 170 / 210",
+              "new": "50 / 95 / 140 / 185 / 230",
+              "dir": "up"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 122,
+      "name": "Darius",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "Q",
+          "title": "Decimate",
+          "lines": [
+            {
+              "label": "Cooldown",
+              "old": "9 / 8 / 7 / 6 / 5s",
+              "new": "9 / 8 / 7 / 6 / 4s"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 222,
+      "name": "Jinx",
+      "kind": "down",
+      "blocks": [
+        {
+          "key": "base",
+          "title": "Base stats",
+          "lines": [
+            {
+              "label": "Attack Damage",
+              "old": "59 + 3.25/Level",
+              "new": "59 + 3/Level"
+            },
+            {
+              "label": "Health",
+              "old": "630 + 105/Level",
+              "new": "610 + 105/Level"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 64,
+      "name": "Lee Sin",
+      "kind": "down",
+      "blocks": [
+        {
+          "key": "W",
+          "title": "Safeguard",
+          "lines": [
+            {
+              "label": "Cooldown",
+              "old": "7s",
+              "new": "8s"
+            }
+          ]
+        },
+        {
+          "key": "E",
+          "title": "Tempest",
+          "lines": [
+            {
+              "type": "desc",
+              "text": "Bug fix: no longer reveals invisible enemies that stealth after being hit by Tempest."
+            }
+          ]
+        },
+        {
+          "key": "R",
+          "title": "Dragon's Rage",
+          "lines": [
+            {
+              "label": "Kick Damage",
+              "old": "175 / 400 / 625 (+200% bonus AD)",
+              "new": "150 / 350 / 550 (+200% bonus AD)"
+            },
+            {
+              "label": "Collision Damage",
+              "old": "175 / 400 / 625 (+200% bonus AD) (+12 / 15 / 18% Kicked Champion's Health)",
+              "new": "150 / 350 / 550 (+200% bonus AD) (+12 / 15 / 18% Kicked Champion's Health)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 805,
+      "name": "Locke",
+      "kind": "mix",
+      "blocks": [
+        {
+          "key": "Q",
+          "title": "Ritual Nails",
+          "lines": [
+            {
+              "label": "Unused Charge Refund",
+              "old": "20 - 35% mana and cooldown refund",
+              "new": "10 - 40% mana and cooldown refund",
+              "dir": "mix"
+            }
+          ]
+        },
+        {
+          "key": "base",
+          "title": "Base stats",
+          "lines": [
+            {
+              "label": "Mana Growth",
+              "old": "70",
+              "new": "60",
+              "dir": "down"
+            }
+          ]
+        },
+        {
+          "key": "W",
+          "title": "Soul Ignition",
+          "lines": [
+            {
+              "label": "Mana Cost",
+              "old": "50 / 55 / 60 / 65 / 70",
+              "new": "60 / 65 / 70 / 75 / 80",
+              "dir": "down"
+            },
+            {
+              "label": "Grey Health Store Based on Current Health",
+              "old": "40 - 200 (both level based)",
+              "new": "20 - 200",
+              "dir": "down"
+            },
+            {
+              "label": "Current Health Store",
+              "old": "150 - 450 (both level based)",
+              "new": "100 - 500 (+60% AP)",
+              "dir": "mix"
+            }
+          ]
+        },
+        {
+          "key": "E",
+          "title": "Ashen Pursuit",
+          "lines": [
+            {
+              "label": "Blink Damage",
+              "old": "40 / 50 / 60 / 70 / 80 (+40% AP)",
+              "new": "40 / 55 / 70 / 85 / 100 (+50% AP)",
+              "dir": "up"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "name": "Miss Fortune",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "E",
+          "title": "Make It Rain",
+          "lines": [
+            {
+              "label": "Damage",
+              "old": "70 / 100 / 130 / 160 / 190 (+120% AP)",
+              "new": "90 / 120 / 150 / 180 / 210 (+120% AP)"
+            }
+          ]
+        },
+        {
+          "key": "R",
+          "title": "Bullet Time",
+          "lines": [
+            {
+              "label": "Critical Strike Damage",
+              "old": "130% (+0.3% per 1% Bonus Crit Damage)",
+              "new": "145% (+0.45% per 1% Bonus Crit Damage)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 76,
+      "name": "Nidalee",
+      "kind": "down",
+      "blocks": [
+        {
+          "key": "W",
+          "title": "Pounce",
+          "lines": [
+            {
+              "label": "Damage",
+              "old": "55 / 88.75 / 122.5 / 156.25 / 190 (+50% bonus AD) (+30% AP)",
+              "new": "50 / 80 / 110 / 140 / 170 (+50% bonus AD) (+30% AP)"
+            }
+          ]
+        },
+        {
+          "key": "E",
+          "title": "Primal Surge",
+          "lines": [
+            {
+              "label": "Attack Speed",
+              "old": "30 / 40 / 50 / 60 / 70%",
+              "new": "20 / 30 / 40 / 50 / 60%"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "name": "Nunu & Willump",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "R",
+          "title": "Absolute Zero",
+          "lines": [
+            {
+              "label": "Maximum Damage",
+              "old": "625 / 925 / 1275 (+300% AP)",
+              "new": "750 / 1100 / 1450 (+300% AP)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 61,
+      "name": "Orianna",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "Q",
+          "title": "Command: Attack",
+          "lines": [
+            {
+              "label": "Damage",
+              "old": "60 / 90 / 120 / 150 / 180 (+55% AP)",
+              "new": "60 / 90 / 120 / 150 / 180 (+60% AP)"
+            }
+          ]
+        },
+        {
+          "key": "W",
+          "title": "Command: Dissonance",
+          "lines": [
+            {
+              "label": "Damage",
+              "old": "70 / 110 / 150 / 190 / 230 (+80% AP)",
+              "new": "70 / 110 / 150 / 190 / 230 (+85% AP)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 246,
+      "name": "Qiyana",
+      "kind": "down",
+      "blocks": [
+        {
+          "key": "Q",
+          "title": "Elemental Wrath / Edge of Ixtal",
+          "lines": [
+            {
+              "label": "Damage",
+              "old": "80 / 110 / 140 / 170 / 200 (+90% bonus AD)",
+              "new": "70 / 100 / 130 / 160 / 190 (+90% bonus AD)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 33,
+      "name": "Rammus",
+      "kind": "down",
+      "blocks": [
+        {
+          "key": "W",
+          "title": "Defensive Ball Curl",
+          "lines": [
+            {
+              "label": "Bonus Armor",
+              "old": "27 / 32 / 37 / 42 / 47 (+30 - 60% Armor)",
+              "new": "25 / 30 / 35 / 40 / 45 (+30 - 50% Armor)"
+            },
+            {
+              "label": "Bonus Magic Resistance",
+              "old": "20 / 25 / 30 / 35 / 40 (+30 - 60% Magic Resistance)",
+              "new": "20 / 25 / 30 / 35 / 40 (+30 - 50% Magic Resistance)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "name": "Ryze",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "Q",
+          "title": "Overload",
+          "lines": [
+            {
+              "label": "Flux Bonus Damage",
+              "old": "15% / 40% / 65% / 90% increased damage",
+              "new": "10% / 40% / 70% / 100% increased damage",
+              "dir": "mix"
+            },
+            {
+              "label": "Bonus Move Speed",
+              "old": "28% / 32% / 36% / 40% / 44%",
+              "new": "30% / 35% / 40% / 45% / 50%"
+            }
+          ]
+        },
+        {
+          "key": "W",
+          "title": "Rune Prison",
+          "lines": [
+            {
+              "label": "Damage",
+              "old": "60 / 90 / 120 / 150 / 180 (+60% AP) (+3% bonus mana)",
+              "new": "60 / 90 / 120 / 150 / 180 (+70% AP) (+3% bonus mana)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "name": "Sion",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "base",
+          "title": "Base stats",
+          "lines": [
+            {
+              "label": "Health",
+              "old": "655 + 87/Level",
+              "new": "655 + 95/Level"
+            }
+          ]
+        },
+        {
+          "key": "R",
+          "title": "Unstoppable Onslaught",
+          "lines": [
+            {
+              "label": "Damage Increase over the First 3s of Channeling",
+              "old": "+0 - 166.67% Base Damage, 0 - 100% Ratio Damage",
+              "new": "+0 - 200%"
+            },
+            {
+              "type": "desc",
+              "text": "Bug fix: the tooltip now shows the correct bonus AD ratio (40 - 120%) instead of 60 - 120%; the actual ratio was unchanged."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 163,
+      "name": "Taliyah",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "E",
+          "title": "Unraveled Earth",
+          "lines": [
+            {
+              "label": "Damage",
+              "old": "60 / 105 / 150 / 195 / 240 (+60% AP)",
+              "new": "70 / 115 / 160 / 205 / 250 (+70% AP)"
+            },
+            {
+              "label": "Detonation Damage",
+              "old": "25 / 40 / 55 / 70 / 85 (+30% AP)",
+              "new": "30 / 45 / 60 / 75 / 90 (+30% AP)"
+            },
+            {
+              "type": "set",
+              "label": "Monster Damage",
+              "value": "225%"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 44,
+      "name": "Taric",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "Q",
+          "title": "Starlight's Touch",
+          "lines": [
+            {
+              "type": "new",
+              "text": "Now fires when cast while the bound ally is untargetable."
+            }
+          ]
+        },
+        {
+          "key": "E",
+          "title": "Dazzle",
+          "lines": [
+            {
+              "type": "new",
+              "text": "Now fires when cast while the bound ally is untargetable."
+            },
+            {
+              "type": "desc",
+              "text": "Still does not cast from Vanished allies; the tooltip now says so."
+            }
+          ]
+        },
+        {
+          "key": "R",
+          "title": "Cosmic Radiance",
+          "lines": [
+            {
+              "type": "new",
+              "text": "Now fires when cast while the bound ally is untargetable."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "name": "Tristana",
+      "kind": "down",
+      "blocks": [
+        {
+          "key": "Q",
+          "title": "Rapid Fire",
+          "lines": [
+            {
+              "label": "Attack Speed",
+              "old": "60 / 75 / 90 / 105 / 120%",
+              "new": "40 / 60 / 80 / 100 / 120%"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Twisted Fate",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "R",
+          "title": "Destiny",
+          "lines": [
+            {
+              "type": "new",
+              "text": "Now reveals untargetable units."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 110,
+      "name": "Varus",
+      "kind": "mix",
+      "blocks": [
+        {
+          "key": "P",
+          "title": "Living Vengeance",
+          "lines": [
+            {
+              "label": "Bonus AD and AP on Kill/Takedown (October 22 update)",
+              "old": "(1.1 per 10% AS) as bonus AD and AP",
+              "new": "1.4 per 10% AS",
+              "dir": "up"
+            }
+          ]
+        },
+        {
+          "key": "Q",
+          "title": "Piercing Arrow",
+          "lines": [
+            {
+              "label": "Damage Calculation",
+              "old": "Max Damage scaling, 53.33 - 240 (+80% bonus AD) to 80 - 360 (+120% bonus AD)",
+              "new": "Min Damage scaling, 50 - 230 (+80% bonus AD) to 85 - 391 (+136% bonus AD)",
+              "dir": "mix"
+            },
+            {
+              "label": "Damage Increase over Channel Time",
+              "old": "Up to 50%",
+              "new": "Up to 70%",
+              "dir": "up"
+            },
+            {
+              "label": "Minimum Damage (October 22 update)",
+              "old": "50 - 230",
+              "new": "50 - 250",
+              "dir": "up"
+            },
+            {
+              "type": "desc",
+              "text": "October 22 update: fixed a bug from this patch where Piercing Arrow no longer dealt reduced damage to subsequent targets."
+            }
+          ]
+        },
+        {
+          "key": "W",
+          "title": "Blighted Quiver",
+          "lines": [
+            {
+              "label": "On-Hit Damage",
+              "old": "4 / 13 / 22 / 31 / 40 (+15% bonus AD) (+25% AP)",
+              "new": "4 / 10 / 16 / 22 / 28 (+20% bonus AD) (+30% AP)",
+              "dir": "mix"
+            },
+            {
+              "label": "Per Stack Damage",
+              "old": "3 - 5% (+1.3% per 100 AP) Target Maximum Health",
+              "new": "2.5 - 4.5% (+1.4% per 100 AP) Target Maximum Health",
+              "dir": "mix"
+            },
+            {
+              "label": "Active Missing Health Damage",
+              "old": "6 - 14%, increased by up to 50% based on Q Channel",
+              "new": "6 - 10%, increased by up to 70% based on Q Channel",
+              "dir": "mix"
+            },
+            {
+              "label": "Basic Ability Cooldown Refund",
+              "old": "13% per stack, increased by up to 50% based on Q Channel",
+              "new": "11%, increased by up to 70% based on Q Channel",
+              "dir": "mix"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 161,
+      "name": "Vel'Koz",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "P",
+          "title": "Organic Deconstruction",
+          "lines": [
+            {
+              "label": "Damage",
+              "old": "35 - 180 (+60% AP)",
+              "new": "35 - 205 (+65% AP)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 112,
+      "name": "Viktor",
+      "kind": "down",
+      "blocks": [
+        {
+          "key": "base",
+          "title": "Base stats",
+          "lines": [
+            {
+              "label": "Move Speed",
+              "old": "335",
+              "new": "330"
+            }
+          ]
+        },
+        {
+          "key": "Q",
+          "title": "Siphon Power",
+          "lines": [
+            {
+              "label": "Shield",
+              "old": "40 - 140 (based on level) (+25% AP)",
+              "new": "30 - 130 (+20% AP)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 62,
+      "name": "Wukong",
+      "kind": "mix",
+      "blocks": [
+        {
+          "key": "base",
+          "title": "Base stats",
+          "lines": [
+            {
+              "label": "Health Regeneration",
+              "old": "3.5 + 0.65/Level",
+              "new": "5.5 + 0.65/Level",
+              "dir": "up"
+            }
+          ]
+        },
+        {
+          "key": "P",
+          "title": "Stone Skin",
+          "lines": [
+            {
+              "label": "Armor per Stack",
+              "old": "6 - 10 (based on Champion Level)",
+              "new": "4.5 - 10 (based on Champion Level)",
+              "dir": "down"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Xin Zhao",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "Q",
+          "title": "Three Talon Strike",
+          "lines": [
+            {
+              "label": "Damage per Strike",
+              "old": "15 / 30 / 45 / 60 / 75 (+40% bonus AD)",
+              "new": "15 / 30 / 45 / 60 / 75 (+45% bonus AD)"
+            }
+          ]
+        },
+        {
+          "key": "E",
+          "title": "Audacious Charge",
+          "lines": [
+            {
+              "label": "Attack Speed Scaling",
+              "old": "1% per 5% bonus Attack Speed from permanent sources",
+              "new": "1% per 4% bonus Attack Speed from permanent sources"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 777,
+      "name": "Yone",
+      "kind": "down",
+      "blocks": [
+        {
+          "key": "Q",
+          "title": "Mortal Steel",
+          "lines": [
+            {
+              "label": "Damage",
+              "old": "25 / 50 / 75 / 100 / 125 (+110% AD)",
+              "new": "25 / 50 / 75 / 100 / 125 (+105% AD)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 143,
+      "name": "Zyra",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "W",
+          "title": "Rampant Growth",
+          "lines": [
+            {
+              "label": "Seed Ammo Cooldown",
+              "old": "18 / 16 / 14 / 12 / 10s",
+              "new": "16 / 14.5 / 13 / 11.5 / 10s"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "id": 2520,
+      "name": "Bastion Breaker",
+      "kind": "mix",
+      "lines": [
+        {
+          "label": "Lethality",
+          "old": "22",
+          "new": "18",
+          "dir": "down"
+        },
+        {
+          "label": "Shaped Charge Damage",
+          "old": "50 Melee + 1.5/Lethality / 25 Ranged + 0.75/Lethality",
+          "new": "40 Melee + 1.5/Lethality / 20 Ranged + 0.75/Lethality",
+          "dir": "down"
+        },
+        {
+          "label": "Sabotage Duration",
+          "old": "90s",
+          "new": "Infinite",
+          "dir": "up"
+        }
+      ]
+    },
+    {
+      "id": 6621,
+      "name": "Dawncore",
+      "kind": "up",
+      "lines": [
+        {
+          "label": "Ability Power per 100% Base Mana Regeneration",
+          "old": "10",
+          "new": "15"
+        }
+      ]
+    },
+    {
+      "id": 3008,
+      "name": "Gluttonous Greaves",
+      "kind": "down",
+      "lines": [
+        {
+          "label": "Total Cost",
+          "old": "1000g",
+          "new": "1100g"
+        }
+      ]
+    },
+    {
+      "id": 6697,
+      "name": "Hubris",
+      "kind": "mix",
+      "lines": [
+        {
+          "label": "Base Bonus Attack Damage",
+          "old": "12",
+          "new": "15 Melee / 10 Ranged",
+          "dir": "mix"
+        },
+        {
+          "label": "Bonus Attack Damage per Stack",
+          "old": "3",
+          "new": "3 Melee / 2 Ranged",
+          "dir": "down"
+        }
+      ]
+    }
+  ],
+  "aram": {
+    "note": "Journey to Stardom: every game has a Headliner (K/DA, HEARTSTEEL, True Damage, Pentakill, Disco, Cafe Cuties, Bees, Command Line); Butcher's Bridge and Koeshin's Crossing are out of the rotation this patch",
+    "champions": [],
+    "augments": [
+      {
+        "id": 3051,
+        "name": "Blue Barrier",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Silver augment: casting an ability grants a shield based on its mana cost."
+          }
+        ]
+      },
+      {
+        "id": 3085,
+        "name": "Flow of Spirit",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Silver augment: one specific ability grants stacking attack speed when used."
+          }
+        ]
+      },
+      {
+        "id": 3121,
+        "name": "Fruitify",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Silver augment: enemy champion takedowns drop Fruit that heals you or allies who pick it up."
+          }
+        ]
+      },
+      {
+        "id": 3063,
+        "name": "Gift of the Drowned",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Silver augment: bonus health from items is converted into Lethality."
+          }
+        ]
+      },
+      {
+        "id": 3052,
+        "name": "Hands Off The Talent",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Silver augment: attacks deal extra damage when fired from maximum range."
+          }
+        ]
+      },
+      {
+        "id": 3094,
+        "name": "Lich Brain",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Silver augment: gain ability power based on bonus health."
+          }
+        ]
+      },
+      {
+        "id": 3134,
+        "name": "Lonely Warrior",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Silver augment: gain armor, magic resistance and attack speed per nearby enemy champion."
+          }
+        ]
+      },
+      {
+        "id": 3059,
+        "name": "No Mana, No Problem",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Silver augment: mana from items is converted into ability power."
+          }
+        ]
+      },
+      {
+        "id": 3025,
+        "name": "Sound Barrier",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Silver augment: your shields grant move speed."
+          }
+        ]
+      },
+      {
+        "id": 3055,
+        "name": "Ultimate Recursion",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Silver augment: 50 Ultimate Ability Haste."
+          }
+        ]
+      },
+      {
+        "id": 3118,
+        "name": "Arcane Axiom",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Gold augment: takedowns refund part of your ultimate's cooldown."
+          }
+        ]
+      },
+      {
+        "id": 3049,
+        "name": "Armored Impact",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Gold augment: after an ability, your next attack deals bonus damage based on armor."
+          }
+        ]
+      },
+      {
+        "id": 3086,
+        "name": "BEES!!!",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Gold augment: abilities sometimes throw an exploding beehive that damages, slows and applies on-hit effects."
+          }
+        ]
+      },
+      {
+        "id": 3071,
+        "name": "Brass Blast",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Gold augment: a summoner spell that charges a horn blast which damages and knocks back enemies."
+          }
+        ]
+      },
+      {
+        "id": 3088,
+        "name": "CRIMSON COBALT",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Gold augment: one ability marks enemy champions; consuming the mark deals extra damage and lowers that ability's cooldown."
+          }
+        ]
+      },
+      {
+        "id": 3036,
+        "name": "Double Time",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Gold augment: hitting an enemy champion with two different abilities in quick succession deals extra damage and grants permanent mana."
+          }
+        ]
+      },
+      {
+        "id": 3163,
+        "name": "Enchanting Butterflies",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Gold augment: healing and shielding allies summons butterflies that, once enough gather, strike enemies you damage."
+          }
+        ]
+      },
+      {
+        "id": 3004,
+        "name": "Get Jinxed",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Gold augment: a summoner spell that rides a rocket into enemies."
+          }
+        ]
+      },
+      {
+        "id": 3132,
+        "name": "Heavy Is The Crown",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Gold augment: gain attack damage, ability power and attack speed for less move speed; takedowns grow the effect, deaths shrink it."
+          }
+        ]
+      },
+      {
+        "id": 3123,
+        "name": "Jeweled Bracelet",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Gold augment: your ultimate can critically strike."
+          }
+        ]
+      },
+      {
+        "id": 3075,
+        "name": "Recoil",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Gold augment: one ability knocks you backwards when cast."
+          }
+        ]
+      },
+      {
+        "id": 3039,
+        "name": "Salvation",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Gold augment: dropping to low health pushes enemies back and heals allies."
+          }
+        ]
+      },
+      {
+        "id": 3129,
+        "name": "Sap Magic",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Gold augment: every 10 seconds, your next attack deals bonus damage and heals you."
+          }
+        ]
+      },
+      {
+        "id": 3131,
+        "name": "Still Here",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Gold augment: gain attack damage, ability power and lifesteal the lower your health."
+          }
+        ]
+      },
+      {
+        "id": 3116,
+        "name": "Take'em Down Down Down",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Gold augment: hitting an enemy champion five times with attacks and abilities heals you and deals extra damage."
+          }
+        ]
+      },
+      {
+        "id": 3078,
+        "name": "The Boom and the Bass",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Gold augment: after an ability, your next attack deals bonus damage and grants a burst of move speed."
+          }
+        ]
+      },
+      {
+        "id": 3058,
+        "name": "Tickle Monster",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Gold augment: attack damage from items is converted into attack speed."
+          }
+        ]
+      },
+      {
+        "id": 3150,
+        "name": "Upgrade: Stormsurge",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Gold augment: Stormsurge's Squall detonates in an area for extra damage and marks enemies with a second Squall."
+          }
+        ]
+      },
+      {
+        "id": 3081,
+        "name": "Weapon Of Destiny",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Gold augment: your first Legendary item gains stats with every takedown."
+          }
+        ]
+      },
+      {
+        "id": 3018,
+        "name": "Big Shot",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Prismatic augment: a large share of attack speed is converted into critical strike damage."
+          }
+        ]
+      },
+      {
+        "id": 3048,
+        "name": "Bouncing Bees",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Prismatic augment: after an ability, your next attack bounces to nearby enemies, champions first; a quest grants more bounces and attack damage."
+          }
+        ]
+      },
+      {
+        "id": 3149,
+        "name": "Group Hug",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Prismatic augment: one healing or shielding ability also affects nearby allies."
+          }
+        ]
+      },
+      {
+        "id": 3053,
+        "name": "Mosh Monster",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Prismatic augment: your ultimate grants health and a zone that slows enemy champions; takedowns grow both."
+          }
+        ]
+      },
+      {
+        "id": 3016,
+        "name": "Third Times The Harm",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Prismatic augment: every third attack on an enemy champion deals burst damage and grants attack speed."
+          }
+        ]
+      },
+      {
+        "id": 3079,
+        "name": "Totentanz",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Prismatic augment: a summoner spell that makes you immortal for 5 seconds; without a takedown in that time, you die."
+          }
+        ]
+      },
+      {
+        "id": 2128,
+        "name": "Combusting Interest",
+        "kind": "down",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "Removed from ARAM: Mayhem."
+          }
+        ]
+      },
+      {
+        "id": 2024,
+        "name": "Crit 'n Cast",
+        "kind": "down",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "Removed from ARAM: Mayhem."
+          }
+        ]
+      },
+      {
+        "id": 1356,
+        "name": "Critical Missile",
+        "kind": "down",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "Removed from ARAM: Mayhem."
+          }
+        ]
+      },
+      {
+        "id": 2063,
+        "name": "Dimension Shift",
+        "kind": "down",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "Removed from ARAM: Mayhem."
+          }
+        ]
+      },
+      {
+        "id": 2031,
+        "name": "DropBear",
+        "kind": "down",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "Removed from ARAM: Mayhem."
+          }
+        ]
+      },
+      {
+        "id": 2006,
+        "name": "Dropkick",
+        "kind": "down",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "Removed from ARAM: Mayhem."
+          }
+        ]
+      },
+      {
+        "id": 1220,
+        "name": "Fan the Hammer",
+        "kind": "down",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "Removed from ARAM: Mayhem."
+          }
+        ]
+      },
+      {
+        "id": 2042,
+        "name": "Hide on Bush",
+        "kind": "down",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "Removed from ARAM: Mayhem."
+          }
+        ]
+      },
+      {
+        "id": 2095,
+        "name": "High Roller",
+        "kind": "down",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "Removed from ARAM: Mayhem."
+          }
+        ]
+      },
+      {
+        "id": 2082,
+        "name": "Our Healing",
+        "kind": "down",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "Removed from ARAM: Mayhem."
+          }
+        ]
+      },
+      {
+        "id": 2046,
+        "name": "Poro Stampede",
+        "kind": "down",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "Removed from ARAM: Mayhem."
+          }
+        ]
+      },
+      {
+        "id": 1345,
+        "name": "Spiritual Purification",
+        "kind": "down",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "Removed from ARAM: Mayhem."
+          }
+        ]
+      },
+      {
+        "id": 2118,
+        "name": "Ult Bot",
+        "kind": "down",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "Removed from ARAM: Mayhem."
+          }
+        ]
+      }
+    ]
+  },
+  "skins": [
+    {
+      "champion": 245,
+      "skin": 59,
+      "name": "Prestige True Damage Know My Name Ekko",
+      "champions": "Ekko"
+    },
+    {
+      "champion": 84,
+      "skin": 103,
+      "name": "True Damage Know My Name Akali",
+      "champions": "Akali"
+    },
+    {
+      "champion": 246,
+      "skin": 51,
+      "name": "True Damage Know My Name Qiyana",
+      "champions": "Qiyana"
+    },
+    {
+      "champion": 235,
+      "skin": 81,
+      "name": "True Damage Know My Name Senna",
+      "champions": "Senna"
+    },
+    {
+      "champion": 157,
+      "skin": 97,
+      "name": "True Damage Know My Name Yasuo",
+      "champions": "Yasuo"
+    }
+  ],
+  "chromas": [
+    "Prestige True Damage Know My Name Ekko (Vivid)",
+    "True Damage Know My Name Akali (Ruby, Rose Quartz, Sapphire, Catseye, Pearl, Obsidian)",
+    "True Damage Know My Name Qiyana (Ruby, Tanzanite, Pearl, Catseye, Turquoise, Obsidian, Rose Quartz, Sapphire)",
+    "True Damage Know My Name Senna (Ruby, Rose Quartz, Sapphire, Catseye, Turquoise, Tanzanite, Pearl, Obsidian)",
+    "True Damage Know My Name Yasuo (Unlocked, Momentous, Ruby, Rose Quartz, Obsidian)"
+  ],
+  "bugs": [
+    "Zaahen's Q no longer fails to finish when his revive triggers in the middle of an attack.",
+    "Teleport's channel effect is no longer visible to enemies when cast from a brush.",
+    "Titanic Hydra shows its cooldown timer after use.",
+    "Zoe can no longer get a 1000 damage Smite from a minion drop earlier than intended.",
+    "Hail of Blades triggers on attack resets even when the first attack was cancelled.",
+    "Nidalee's Q spear no longer goes through spell shields at maximum range.",
+    "Opponents now hear the base skin's ultimate sounds for Briar, Kled and Sion, for clarity."
+  ]
+}
