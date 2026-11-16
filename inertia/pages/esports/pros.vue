@@ -8,6 +8,7 @@ import Icon from '../../components/ui/Icon.vue'
 import Frame from '../../components/ui/Frame.vue'
 import Select from '../../components/ui/Select.vue'
 import RankEmblem from '../../components/ui/RankEmblem.vue'
+import WinRate from '../../components/ui/WinRate.vue'
 import CardHead from '../../components/ui/CardHead.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import SortHead from '../../components/ui/SortHead.vue'
@@ -15,7 +16,7 @@ import { useSort } from '../../components/ui/sort.js'
 import MatchLine from '../../components/esports/MatchLine.vue'
 import { champIcon, championName } from '../../lib/assets.js'
 import { countryName, leagueLogo } from '../../lib/board.js'
-import { ROLES, laneOf, n, rankValue, rankWords, roleLabel, signedN, winPct } from '../../lib/ladders.js'
+import { ROLES, laneOf, n, rankValue, rankWords, roleLabel, signedN } from '../../lib/ladders.js'
 import { matchList, type ProMatch } from '../../lib/pro_matches.js'
 import '../../css/esports.css'
 import '../../css/leaderboards.css'
@@ -196,17 +197,12 @@ const next = computed(() => matchList(props.matches.league))
             </template>
             <span v-else class="t3">–</span>
           </span>
-          <span v-if="p.record && p.record.games" class="col" style="gap: 5px">
-            <span class="h5"
-              >{{ winPct(p.record.wins, p.record.games) }}
-              <span class="meta"
-                >{{ p.record.wins }}W {{ p.record.games - p.record.wins }}L</span
-              ></span
-            >
-            <span class="split"
-              ><i :style="{ width: winPct(p.record.wins, p.record.games) }"></i><b></b
-            ></span>
-          </span>
+          <WinRate
+            v-if="p.record && p.record.games"
+            :wins="p.record.wins"
+            :games="p.record.games"
+            :width="150"
+          />
           <span v-else class="t3">–</span>
           <span class="row" style="gap: 4px">
             <Frame
