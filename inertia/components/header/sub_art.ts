@@ -1,0 +1,37 @@
+/**
+ * The small League picture beside each link of a section's sub-row (`SubArt.vue`): grey at rest,
+ * in colour on hover and on the current page. Keyed by the links' keys in lib/site_nav.ts; a link
+ * without one shows its words alone.
+ */
+export type SubPicture =
+  /** A square picture, cropped to fill (a champion, an item, an augment). */
+  | { kind: 'square'; src: string }
+  /** A picture drawn whole on no tile (a rune, a league or team logo). */
+  | { kind: 'logo'; src: string }
+  /** A team's logo, once the menus' data names the team's id (`siteNav.art.teams`). */
+  | { kind: 'team'; slug: string }
+  /** A pro's photo in a round violet well. */
+  | { kind: 'pro'; slug: string }
+  /** A rank's crest, cropped to its square. */
+  | { kind: 'emblem'; tier: string }
+  /** Two champions overlapping (a bot lane pair). */
+  | { kind: 'duo'; ids: [number, number] }
+
+export const SUB_ART: Record<string, SubPicture> = {
+  // Tier list: Gwen, Rabadon's Deathcap, Electrocute, Kai'Sa and Nautilus, a Mayhem augment.
+  'champions': { kind: 'square', src: '/cdn/champion/887.png' },
+  'items': { kind: 'square', src: '/cdn/item/3089.png' },
+  'runes': { kind: 'logo', src: '/cdn/perk/8112.png' },
+  'duos': { kind: 'duo', ids: [145, 111] },
+  'aram': { kind: 'square', src: '/menu-art/poroking.webp' },
+  // Esports: the Worlds and LEC logos, a pro, Fnatic.
+  'overview': { kind: 'logo', src: '/cdn/league/worlds?s=40' },
+  'pros': { kind: 'pro', slug: 'vladi' },
+  'leagues': { kind: 'logo', src: '/cdn/league/lec?s=40' },
+  'teams': { kind: 'team', slug: 'fnatic' },
+  // Leaderboards: the apex crests, Yasuo, the same pro.
+  'solo': { kind: 'emblem', tier: 'challenger' },
+  'flex': { kind: 'emblem', tier: 'grandmaster' },
+  'one-tricks': { kind: 'square', src: '/cdn/champion/157.png' },
+  'pro-ladder': { kind: 'pro', slug: 'vladi' },
+}
