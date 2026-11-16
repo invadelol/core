@@ -355,3 +355,8 @@
 .vb .du-lanes > * { gap: 3px; padding: 0 10px; }
 .vb .du-lanes svg { width: 18px; height: 18px; opacity: 0.55; flex: none; }
 .vb .du-lanes > .on svg, .vb .du-lanes > :hover svg { opacity: 1; }
+@media (max-width: 767px) {
+  /* On a phone the sorted rows' chip sits on the picture's corner, so the name keeps its room. */
+  .vb .tl-champ:has(.tl-tc), .vb .tx-name:has(.tx-tc) { position: relative; }
+  .vb .tl-tc, .vb .tx-tc { position: absolute; z-index: 1; left: -6px; top: -4px; min-width: 24px; height: 18px; padding: 0 5px; border-radius: 5px; font-size: 11px; outline: 2px solid var(--s1); }
+}
