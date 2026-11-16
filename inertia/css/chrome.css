@@ -163,11 +163,15 @@
   color: var(--v100);
 }
 
-/* The end of the bar: the app, the account corner, the phone's buttons. */
+/* The end of the bar: the app, the account corner, the phone's buttons. On the right edge even
+   when the page holds the search itself (the home), the field no longer pushing them there. */
 .vb .hx-end {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-left: auto;
+}
+.vb .hx-search + .hx-end {
   margin-left: 4px;
 }
 .vb .hx-end .hx-me {
