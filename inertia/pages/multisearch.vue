@@ -24,6 +24,7 @@ import {
 } from '../lib/multisearch.js'
 import { champIcon, championName, profileIcon } from '../lib/assets.js'
 import { profilePath } from '../lib/format.js'
+import { regionFlag } from '../lib/flags.js'
 import type { Scout, Season } from '../lib/scout.js'
 import '../css/multisearch.css'
 import type { Match, RanksPayload, Summoner } from '../lib/types.js'
@@ -375,8 +376,12 @@ function pasted() {
 }
 const regionValue = ref(props.region ?? 'auto')
 const regionOptions = [
-  { value: 'auto', label: 'Any server' },
-  ...(MULTISEARCH_REGIONS as readonly string[]).map((r) => ({ value: r, label: r.toUpperCase() })),
+  { value: 'auto', label: 'Any server', icon: regionFlag(null) },
+  ...(MULTISEARCH_REGIONS as readonly string[]).map((r) => ({
+    value: r,
+    label: r.toUpperCase(),
+    icon: regionFlag(r),
+  })),
 ]
 watch(regionValue, (next) => pickRegion(next === 'auto' ? null : next))
 

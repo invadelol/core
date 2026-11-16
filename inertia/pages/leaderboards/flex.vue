@@ -24,6 +24,7 @@ import {
   winPct,
   withQuery,
 } from '../../lib/ladders.js'
+import { regionFlag } from '../../lib/flags.js'
 import '../../css/leaderboards.css'
 
 type Size = 'solo' | 'duo' | 'three' | 'five'
@@ -195,7 +196,7 @@ function groupLine(g: Group) {
             <Select
               v-model="regionSlug"
               label="Region"
-              :options="regions.map((r) => ({ value: r.slug, label: r.label }))"
+              :options="regions.map((r) => ({ value: r.slug, label: r.label, icon: regionFlag(r.slug) }))"
               width="11rem"
               align="right"
             />
