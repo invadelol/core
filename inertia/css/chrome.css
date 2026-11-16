@@ -102,6 +102,67 @@
   flex: none;
 }
 
+/* The Patch pill's menu: the patches with notes, each on the day Riot published them. */
+.vb .hx-nav > .ppill.open {
+  box-shadow: 0 0 0 3px rgb(var(--v-rgb) / 0.28);
+}
+.vb .hx-menu.pm {
+  width: 300px;
+  animation: hx-in 140ms var(--ease);
+}
+.vb .pm-r {
+  gap: 14px;
+  padding: 10px 12px;
+}
+.vb .pm-r.on {
+  background: rgb(var(--v-rgb) / 0.08);
+}
+.vb .pm-d {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r2);
+  background: var(--s2);
+  box-shadow: inset 0 0 0 1px var(--line);
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+.vb .pm-d b {
+  font-size: 17px;
+  line-height: 19px;
+  letter-spacing: -0.01em;
+  color: var(--t1);
+}
+.vb .pm-r.new .pm-d {
+  background: var(--v900);
+  box-shadow: inset 0 0 0 1px rgb(var(--v-rgb) / 0.35);
+  color: var(--v200);
+}
+.vb .pm-r.new .pm-d b {
+  color: var(--v100);
+}
+.vb .pm-new {
+  margin-left: auto;
+  align-self: center;
+  flex: none;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 6px;
+  background: var(--v900);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 20px;
+  color: var(--v100);
+}
+
 /* The end of the bar: the app, the account corner, the phone's buttons. */
 .vb .hx-end {
   display: flex;
@@ -447,6 +508,19 @@ html.hx-locked {
 }
 .vb .hx-phone-patch .i {
   transform: rotate(-45deg);
+}
+.vb .hx-phone-older {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  margin: 8px 0 4px 4px;
+  padding: 0 11px;
+  border-radius: 8px;
+  background: var(--s2);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--t2);
+  font-size: 13px;
+  font-weight: 700;
 }
 .vb .hx-phone-sec {
   padding: 16px 0 12px;

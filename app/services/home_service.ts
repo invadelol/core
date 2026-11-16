@@ -13,6 +13,7 @@ import proLadderService, { type LadderRow } from '#services/pro_ladder_service'
 import { leagueCatalog } from '#services/pro_leagues'
 import proMatchService, { isLive } from '#services/pro_match_service'
 import proService from '#services/pro_service'
+import patchNotesService from '#services/patch_notes_service'
 import { patchStart, rows as statRows } from '#services/ranked_games_service'
 import { RANKED_SOLO, seedTiers } from '#services/ranked_stats'
 import { areEventsCounted } from '#services/stats_cells'
@@ -888,12 +889,13 @@ export class HomeService {
 
   /** What the header's menus show beside their links. */
   async nav(): Promise<SiteNav> {
-    const [picks, pros, leagues, headline, teams] = await Promise.all([
+    const [picks, pros, leagues, headline, teams, patchNotes] = await Promise.all([
       capped(this.picks()),
       capped(this.pros()),
       leagueCatalog(),
       capped(proMatchService.headline(1)),
       capped(navTeams()),
+      patchNotesService.summaries(),
     ])
     const { bans, brackets, moves, ...tierList } = picks ?? {
       bans: null,
@@ -916,6 +918,7 @@ export class HomeService {
       })),
       live: headline?.find((m) => isLive(m)) ?? null,
       art: { teams: teams ?? {} },
+      patchNotes,
     }
   }
 

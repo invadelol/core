@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import Icon from '../ui/Icon.vue'
 import MenuArt from './MenuArt.vue'
@@ -7,10 +8,16 @@ import { SECTIONS, type NavContext } from '../../lib/site_nav.js'
 
 /**
  * The header on a phone (under 1024 px): every section's pages in one sheet under the bar, each
- * with its picture, then the patch notes and the theme. The page under it holds still.
+ * with its picture, then the patch notes (the newest, then the older ones) and the theme. The
+ * page under it holds still.
  */
-defineProps<{ ctx: NavContext; path: string; patchHref: string | null }>()
+const props = defineProps<{ ctx: NavContext; path: string; patchHref: string | null }>()
 defineEmits<{ close: [] }>()
+
+/** The other patches with notes, beside the newest. */
+const older = computed(() =>
+  (props.ctx.nav?.patchNotes ?? []).filter((n) => n.patch !== props.ctx.patch)
+)
 </script>
 
 <template>
@@ -23,6 +30,15 @@ defineEmits<{ close: [] }>()
         prefetch
         @click="$emit('close')"
         ><Icon name="arrow" :size="14" />Patch {{ ctx.patch }}</Link
+      >
+      <Link
+        v-for="n in older"
+        :key="n.patch"
+        :href="`/patch/${n.patch}`"
+        class="hx-phone-older num"
+        prefetch
+        @click="$emit('close')"
+        >{{ n.patch }}</Link
       >
       <nav v-for="s in SECTIONS" :key="s.key" class="hx-phone-sec" :aria-label="s.label">
         <span class="lab">{{ s.label }}</span>

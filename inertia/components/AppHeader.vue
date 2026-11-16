@@ -14,6 +14,7 @@ import Icon from './ui/Icon.vue'
 import SearchBar from './SearchBar.vue'
 import NavMenu from './header/NavMenu.vue'
 import AccountMenu from './header/AccountMenu.vue'
+import PatchMenu from './header/PatchMenu.vue'
 import {
   SECTIONS,
   loadSiteNav,
@@ -80,7 +81,7 @@ const subRow = computed(() => {
 
 /* ── Section menus ─────────────────────────────────────────────────── */
 
-const open = ref<SectionKey | 'account' | null>(null)
+const open = ref<SectionKey | 'account' | 'patch' | null>(null)
 const root = ref<HTMLElement>()
 const bar = ref<HTMLElement>()
 const triggers = ref<Record<string, HTMLElement | null>>({})
@@ -113,7 +114,10 @@ function close(focusTrigger = false) {
   clearTimeout(hoverTimer)
   clearTimeout(leaveTimer)
   open.value = null
-  if (focusTrigger && was) (was === 'account' ? accountButton.value : triggers.value[was])?.focus()
+  if (!focusTrigger || !was) return
+  if (was === 'account') accountButton.value?.focus()
+  else if (was === 'patch') patchPill.value?.$el.focus()
+  else triggers.value[was]?.focus()
 }
 
 /** A mouse resting on a trigger opens its menu; moving to another trigger switches at once. */
@@ -173,6 +177,44 @@ function onTriggerKey(key: SectionKey, event: KeyboardEvent) {
 function onFocusOut(event: FocusEvent) {
   const to = event.relatedTarget as Node | null
   if (open.value && to && !bar.value?.contains(to)) close()
+}
+
+/* ── Patch notes: the pill opens the older patches on hover ─────────── */
+
+/** The pill is an Inertia link: its element is the component's root. */
+const patchPill = ref<{ $el: HTMLElement } | null>(null)
+
+function showPatch() {
+  const el = patchPill.value?.$el
+  const wrap = bar.value
+  if (!el || !wrap) return
+  loadSiteNav()
+  clearTimeout(leaveTimer)
+  const left = el.getBoundingClientRect().left - wrap.getBoundingClientRect().left
+  menuLeft.value = Math.max(0, Math.min(left, wrap.clientWidth - 300))
+  open.value = 'patch'
+}
+
+function onPatchEnter(event: PointerEvent) {
+  if (event.pointerType !== 'mouse') return
+  loadSiteNav()
+  clearTimeout(leaveTimer)
+  clearTimeout(hoverTimer)
+  if (open.value === 'patch') return
+  if (open.value && open.value !== 'account') return showPatch()
+  hoverTimer = setTimeout(showPatch, 110)
+}
+
+/** ArrowDown on the pill opens its menu and moves into it; Escape closes it. */
+function onPatchKey(event: KeyboardEvent) {
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    showPatch()
+    nextTick(() => root.value?.querySelector<HTMLElement>('.hx-menu.pm a[href]')?.focus())
+  } else if (event.key === 'Escape' && open.value === 'patch') {
+    event.preventDefault()
+    close(true)
+  }
 }
 
 /* ── Account ───────────────────────────────────────────────────────── */
@@ -339,12 +381,19 @@ function skip(event: MouseEvent) {
             </button>
             <Link
               v-if="patch && patchHref"
+              ref="patchPill"
               class="ppill num"
-              :class="{ on: onPatch }"
+              :class="{ on: onPatch, open: open === 'patch' }"
               :href="patchHref"
               :aria-current="onPatch ? 'page' : undefined"
+              aria-haspopup="true"
+              :aria-expanded="open === 'patch'"
+              aria-controls="hx-menu-patch"
               prefetch
               data-track="header_patch"
+              @pointerenter="onPatchEnter"
+              @pointerleave="onLeave"
+              @keydown="onPatchKey"
               ><Icon name="arrow" :size="14" />Patch {{ patch }}</Link
             >
           </nav>
@@ -354,6 +403,18 @@ function skip(event: MouseEvent) {
             :id="`hx-menu-${openSection.key}`"
             :section="openSection"
             :ctx="ctx"
+            :path="path"
+            :style="{ left: `${menuLeft}px` }"
+            @pointerenter="onMenuEnter"
+            @pointerleave="onLeave"
+            @close="close()"
+          />
+
+          <PatchMenu
+            v-if="open === 'patch'"
+            id="hx-menu-patch"
+            :notes="siteNav?.patchNotes ?? null"
+            :patch="patch"
             :path="path"
             :style="{ left: `${menuLeft}px` }"
             @pointerenter="onMenuEnter"
