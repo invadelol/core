@@ -119,6 +119,11 @@ export default defineConfig({
       pattern: 'resources/changelog/**',
       reloadServer: false,
     },
+    {
+      // Each patch's notes (/patch/:version), read at run time.
+      pattern: 'resources/patch_notes/**',
+      reloadServer: false,
+    },
   ],
   hooks: {
     onBuildStarting: [() => import('@adonisjs/vite/build_hook')],
