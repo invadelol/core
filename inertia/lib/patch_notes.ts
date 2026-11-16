@@ -54,6 +54,8 @@ export interface PatchNotes {
     note?: string | null
     champions: { id: number; name: string; kind: ChangeKind; scope?: string; lines: NoteLine[] }[]
     augments: { id: number | null; name: string; kind: ChangeKind; lines: NoteLine[] }[]
+    /** The mode's system changes (a map back in the rotation). */
+    systems?: NoteLine[]
   } | null
   skins: { champion: number; skin: number; name: string; champions: string }[]
   chromas: string[]
@@ -66,6 +68,18 @@ export interface PatchChampionStat {
   win: number
   pick: number
   games: number
+  /** Tier (0 S+ … 5 D) and place in the role on the patch; null when not ranked. */
+  tier: number | null
+  rank: number | null
+  /** The same on the patch before, in the same role; null when it was not ranked there. */
+  prevTier: number | null
+  prevRank: number | null
+}
+
+/** Win rate each day of the last two weeks (UTC), one line per changed champion, in its main role. */
+export interface PatchDaily {
+  days: string[]
+  lines: Record<number, (number | null)[]>
 }
 
 /* ── Drawing a value ─────────────────────────────────────────────── */
@@ -143,4 +157,23 @@ export const versionOf = (patch: string) => {
 export function noteCounts(notes: PatchNotes) {
   const by = (k: ChangeKind) => notes.champions.filter((c) => c.kind === k).length
   return { up: by('up'), down: by('down'), mix: by('mix'), items: notes.items.length }
+}
+
+/** A value given per rank ("12 / 11 / 10 / 9 / 8s (+60% AP)"): the ranks, their unit, the rest. */
+const RANKS = /^(\d+(?:\.\d+)?(?:\s*\/\s*\d+(?:\.\d+)?)+)(%|s| seconds)?(.*)$/
+
+/**
+ * The table Riot draws for a value per rank: both values as lists of the same length (two or
+ * more ranks), the unit they share ("s", "%"), and what follows the list on each side ("(+60%
+ * AP)"). Null when the change is not a list on both sides.
+ */
+export function rankTable(before: string, after: string) {
+  const a = RANKS.exec(before.trim())
+  const b = RANKS.exec(after.trim())
+  if (!a || !b) return null
+  const old = a[1].split('/').map((x) => x.trim())
+  const next = b[1].split('/').map((x) => x.trim())
+  if (old.length !== next.length || (a[2] ?? '') !== (b[2] ?? '')) return null
+  const unit = (b[2] ?? '').trim() === 'seconds' ? 's' : (b[2] ?? '').trim()
+  return { old, new: next, unit, restOld: a[3].trim(), restNew: b[3].trim() }
 }
