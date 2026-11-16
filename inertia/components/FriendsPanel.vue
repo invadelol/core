@@ -11,7 +11,7 @@ import Frame from './ui/Frame.vue'
 import Icon from './ui/Icon.vue'
 import SectionHead from './ui/SectionHead.vue'
 import Skeleton from './ui/Skeleton.vue'
-import WinLoss from './ui/WinLoss.vue'
+import WinRate from './ui/WinRate.vue'
 import { champIcon, championName, profileIcon } from '../lib/assets.js'
 import { shortDate, timeAgo } from '../lib/format.js'
 import { isRemake } from '../lib/match.js'
@@ -434,9 +434,7 @@ const lean = (p: Partner) =>
                     >{{ signed(p.synergy) }} vs usual</span
                   >
                 </span>
-                <span class="split"
-                  ><i :style="{ width: `${rate(p.wins, p.games)}%` }" /><b
-                /></span>
+                <WinRate :wins="p.wins" :games="p.games" bare />
               </span>
             </span>
             <span v-if="pairRole(p)" class="fp-dr">
@@ -493,7 +491,7 @@ const lean = (p: Partner) =>
               ></span
             >
           </span>
-          <WinLoss :wins="p.wins" :losses="p.games - p.wins" />
+          <WinRate :wins="p.wins" :games="p.games" :width="110" small end />
         </button>
       </article>
 
@@ -531,7 +529,7 @@ const lean = (p: Partner) =>
                   }}, last {{ shortDate(group.lastMs) }}</span
                 >
               </span>
-              <WinLoss :wins="group.wins" :losses="group.games - group.wins" />
+              <WinRate :wins="group.wins" :games="group.games" :width="110" small end />
             </button>
             <ul v-if="openGroup === groupKey(group)" class="fp-members">
               <li v-for="member in group.members" :key="member.puuid">

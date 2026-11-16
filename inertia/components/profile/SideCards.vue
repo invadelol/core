@@ -6,6 +6,7 @@ import { positionOf, type Position } from '@invadelol/ui/logic'
 import CardHead from '../ui/CardHead.vue'
 import Frame from '../ui/Frame.vue'
 import ScoreDial from '../ui/ScoreDial.vue'
+import WinRate from '../ui/WinRate.vue'
 import { champIcon, championName, profileIcon } from '../../lib/assets.js'
 import { isRemake, scoreLobby } from '../../lib/match.js'
 import { profilePath } from '../../lib/format.js'
@@ -77,14 +78,7 @@ const mates = computed(() => props.teammates.slice(0, 4))
           >{{ c.games }} {{ c.games === 1 ? 'game' : 'games' }}, {{ c.kda.toFixed(1) }} KDA</span
         >
       </div>
-      <div class="col" style="gap: 6px">
-        <span class="meta" style="text-align: right"
-          ><b class="t1">{{ Math.round(c.winrate * 100) }}%</b></span
-        >
-        <div class="split" style="height: 4px">
-          <i :style="{ width: `${c.winrate * 100}%` }"></i><b></b>
-        </div>
-      </div>
+      <WinRate :rate="c.winrate" :width="72" small end />
       <ScoreDial :value="scoreOn.get(c.championId) ?? null" size="sm" />
     </Link>
   </article>
@@ -115,14 +109,7 @@ const mates = computed(() => props.teammates.slice(0, 4))
         >
         <span class="meta">{{ m.games }} games together</span>
       </div>
-      <div class="col" style="gap: 6px; width: 92px">
-        <span class="meta" style="text-align: right"
-          ><b class="wn">{{ m.wins }}W</b> <b class="ls">{{ m.games - m.wins }}L</b></span
-        >
-        <div class="split" style="height: 4px">
-          <i :style="{ width: `${(m.wins / Math.max(1, m.games)) * 100}%` }"></i><b></b>
-        </div>
-      </div>
+      <WinRate :wins="m.wins" :games="m.games" :width="92" small end />
     </Link>
   </article>
 </template>

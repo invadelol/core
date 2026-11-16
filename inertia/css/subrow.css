@@ -1,0 +1,202 @@
+/* The section's sub-row (AppHeader, header/SubArt.vue): a small League picture per link, grey at
+   rest and in colour on hover or on the current page; the current page underlined in violet like
+   the main row, a short grey line under a hovered one. On a phone the row scrolls sideways under
+   the header, fading at its right edge. */
+
+.vb .hx-sub.sr .wrap {
+  gap: 6px;
+  height: 50px;
+}
+.vb .hx-sub.sr a {
+  position: relative;
+  gap: 8px;
+  height: 50px;
+  padding: 0 12px 0 10px;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--t3);
+  transition: color 160ms var(--ease);
+}
+.vb .hx-sub.sr a::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 12px;
+  bottom: 0;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: var(--v500);
+  transform: scaleX(0);
+  transition: transform 200ms var(--ease);
+}
+.vb .hx-sub.sr a:hover,
+.vb .hx-sub.sr a:focus-visible {
+  color: var(--t1);
+  background: none;
+}
+.vb .hx-sub.sr a:hover::after,
+.vb .hx-sub.sr a:focus-visible::after {
+  transform: scaleX(0.35);
+  background: var(--line-3);
+}
+.vb .hx-sub.sr a.on {
+  color: var(--t1);
+  background: none;
+  box-shadow: none;
+}
+.vb .hx-sub.sr a.on::after {
+  transform: scaleX(1);
+  background: var(--v500);
+}
+
+/* The picture: 22 px, grey until its link is hovered or current. */
+.vb .sri {
+  position: relative;
+  display: block;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--s3);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.07);
+  filter: saturate(0.35) brightness(0.85);
+  transition:
+    filter 200ms var(--ease),
+    transform 200ms var(--ease);
+}
+.vb .sri img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.vb .sri.o {
+  border-radius: 50%;
+  background: var(--v900);
+}
+.vb .sri.o img {
+  object-position: 50% 5%;
+  transform: scale(1.25) translateY(8%);
+}
+.vb .sri.ct {
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  overflow: visible;
+}
+.vb .sri.ct img {
+  object-fit: contain;
+}
+.vb .sri.duo {
+  width: 32px;
+  background: none;
+  box-shadow: none;
+  overflow: visible;
+}
+.vb .sri.duo img {
+  position: absolute;
+  top: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  box-shadow: 0 0 0 2px var(--ink-1);
+}
+.vb .sri.duo img + img {
+  left: 11px;
+}
+.vb .hx-sub.sr a:hover .sri,
+.vb .hx-sub.sr a:focus-visible .sri,
+.vb .hx-sub.sr a.on .sri {
+  filter: none;
+}
+.vb .hx-sub.sr a:hover .sri,
+.vb .hx-sub.sr a:focus-visible .sri {
+  transform: translateY(-1px);
+}
+
+/* The live patch in the patch notes' row. */
+.vb .srd {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--v300);
+  box-shadow: 0 0 0 3px rgb(var(--v-rgb) / 0.22);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vb .hx-sub.sr a::after,
+  .vb .sri {
+    transition: none;
+  }
+  .vb .hx-sub.sr a:hover .sri {
+    transform: none;
+  }
+}
+
+/* Phone: a row that scrolls sideways, smaller pictures, a fade at the right edge. */
+@media (max-width: 639px) {
+  .vb .hx-sub.sr {
+    position: relative;
+  }
+  .vb .hx-sub.sr::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 1px;
+    width: 48px;
+    background: linear-gradient(to right, transparent, var(--ink-1));
+    pointer-events: none;
+  }
+  .vb .hx-sub.sr .wrap {
+    gap: 4px;
+    height: 46px;
+    padding: 0 12px;
+  }
+  .vb .hx-sub.sr .wrap::after {
+    /* Room past the last link, so it can scroll clear of the fade. */
+    content: '';
+    flex: none;
+    width: 36px;
+    height: 1px;
+  }
+  .vb .hx-sub.sr a {
+    height: 46px;
+    gap: 6px;
+    padding: 0 9px;
+    font-size: 13px;
+  }
+  .vb .hx-sub.sr a::after {
+    left: 9px;
+    right: 9px;
+  }
+  .vb .hx-sub.sr .sri {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+  }
+  .vb .hx-sub.sr .sri.duo {
+    width: 27px;
+  }
+  .vb .hx-sub.sr .sri.duo img {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+  }
+  .vb .hx-sub.sr .sri.duo img + img {
+    left: 9px;
+  }
+  .vb .hx-sub.sr .sri.o {
+    border-radius: 50%;
+  }
+  /* The crest is drawn for 22 px: scaled down whole. */
+  .vb .hx-sub.sr .sri.em {
+    width: 22px;
+    height: 22px;
+    margin: -2px;
+    transform: scale(0.82);
+  }
+}

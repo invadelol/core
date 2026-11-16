@@ -15,6 +15,9 @@ import SearchBar from './SearchBar.vue'
 import NavMenu from './header/NavMenu.vue'
 import AccountMenu from './header/AccountMenu.vue'
 import PatchMenu from './header/PatchMenu.vue'
+import SubArt from './header/SubArt.vue'
+import { SUB_ART, type SubPicture } from './header/sub_art.js'
+import '../css/subrow.css'
 import {
   SECTIONS,
   loadSiteNav,
@@ -68,16 +71,29 @@ const onPatch = computed(() => props.patchOn || path.value.startsWith('/patch'))
 const ctx = computed<NavContext>(() => ({ nav: siteNav.value, patch: patch.value }))
 const place = computed(() => placeOf(path.value))
 const current = computed<SectionKey | null>(() => props.section ?? place.value?.section.key ?? null)
-const subRow = computed(() => {
-  if (props.sub) return props.sub
+/**
+ * The sub-row: the section's links, each with its small League picture (header/sub_art.ts), or a
+ * page's own row (the patch notes' patches, the newest one marked with a violet dot). Tools has none.
+ */
+const subRow = computed<SubLink[] | null>(() => {
+  if (props.sub) return props.sub.map((l, i) => ({ ...l, dot: i === 0 }))
+  if (current.value === 'tools') return null
   const section = SECTIONS.find((s) => s.key === current.value)
   if (!section || section.noSubRow) return null
   return section.links.map((l) => ({
     label: l.short ?? l.label,
     href: l.href,
     on: l.key === place.value?.link.key,
+    art: SUB_ART[l.key],
   }))
 })
+interface SubLink {
+  label: string
+  href: string
+  on?: boolean
+  art?: SubPicture
+  dot?: boolean
+}
 
 /* ── Section menus ─────────────────────────────────────────────────── */
 
@@ -480,7 +496,7 @@ function skip(event: MouseEvent) {
         </div>
       </div>
 
-      <div v-if="subRow" class="hx-sub">
+      <div v-if="subRow" class="hx-sub sr">
         <nav
           class="wrap"
           :aria-label="
@@ -494,7 +510,9 @@ function skip(event: MouseEvent) {
             :class="{ on: l.on }"
             :aria-current="l.on ? 'page' : undefined"
             prefetch
-            >{{ l.label }}</Link
+            ><SubArt v-if="l.art" :art="l.art" /><span v-else-if="l.dot" class="srd" /><span>{{
+              l.label
+            }}</span></Link
           >
         </nav>
       </div>

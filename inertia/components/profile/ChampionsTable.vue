@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import Frame from '../ui/Frame.vue'
 import CardHead from '../ui/CardHead.vue'
 import EmptyState from '../ui/EmptyState.vue'
+import WinRate from '../ui/WinRate.vue'
 import SortHead from '../ui/SortHead.vue'
 import { useSort } from '../ui/sort.js'
 import { champIcon, championName } from '../../lib/assets.js'
@@ -90,15 +91,7 @@ const sort = useSort(
         }}</span></span
       >
       <span class="n">{{ c.games }}</span>
-      <span class="col" style="gap: 5px">
-        <span class="h5 num"
-          >{{ Math.round(c.winrate * 100) }}%
-          <span class="meta">{{ c.wins }}W {{ c.games - c.wins }}L</span></span
-        >
-        <span class="split" style="height: 4px"
-          ><i :style="{ width: `${c.winrate * 100}%` }"></i><b></b
-        ></span>
-      </span>
+      <WinRate :wins="c.wins" :games="c.games" small />
       <span class="n col" style="gap: 1px; align-items: flex-end">
         <span class="h5 num">{{ c.kda.toFixed(2) }}</span>
         <span class="meta"

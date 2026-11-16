@@ -143,7 +143,8 @@ export default class LeaderboardsController {
       wr: winRate,
     })
     const { rows: shown, page, pages, total } = pageOf(sorted, pageParam(request.input('page')), PAGE)
-    const podiumEntries = snapshot.entries.slice(0, 3)
+    // The top five: #1 on the leader banner, #2 to #5 as small cards beside it.
+    const podiumEntries = snapshot.entries.slice(0, 5)
     const [scores, podiumScores] = await Promise.all([
       ladderService.scores(shown),
       ladderService.scores(podiumEntries),

@@ -7,6 +7,7 @@ import Icon from '../../components/ui/Icon.vue'
 import Frame from '../../components/ui/Frame.vue'
 import Select from '../../components/ui/Select.vue'
 import RankEmblem from '../../components/ui/RankEmblem.vue'
+import WinRate from '../../components/ui/WinRate.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import SortHead from '../../components/ui/SortHead.vue'
 import { linkSort, type SortDir } from '../../components/ui/sort.js'
@@ -244,15 +245,7 @@ function groupLine(g: Group) {
                 </Link>
               </span>
               <span class="col" style="gap: 8px; margin-top: auto">
-                <span class="row" style="gap: 10px">
-                  <span class="fg-m"
-                    >{{ Math.round((g.wins / g.games) * 100) }}<span class="u">%</span></span
-                  >
-                  <span class="meta">{{ n(g.wins) }}W {{ n(g.games - g.wins) }}L</span>
-                </span>
-                <span class="split"
-                  ><i :style="{ width: winPct(g.wins, g.games) }"></i><b></b
-                ></span>
+                <WinRate :wins="g.wins" :games="g.games" class="lb-gwr" />
                 <span v-if="groupLine(g)" class="meta">{{ groupLine(g) }}</span>
               </span>
             </div>
@@ -368,15 +361,7 @@ function groupLine(g: Group) {
                 <span class="meta">{{ rankWords(r.tier, r.division) }}</span>
               </span>
             </span>
-            <span class="col" style="gap: 5px">
-              <span class="h5 num"
-                >{{ winPct(r.wins, r.wins + r.losses) }}
-                <span class="meta">{{ n(r.wins) }}W {{ n(r.losses) }}L</span></span
-              >
-              <span class="split"
-                ><i :style="{ width: winPct(r.wins, r.wins + r.losses) }"></i><b></b
-              ></span>
-            </span>
+            <WinRate :wins="r.wins" :losses="r.losses" :width="130" />
             <span v-if="r.queuesWith && r.queuesWith.size !== 'solo'" class="lb-with">
               <span class="lb-sz" :class="{ v: inFirst(r) }"
                 ><Icon name="users" />{{ SIZE_LABEL[r.queuesWith.size] }}</span
