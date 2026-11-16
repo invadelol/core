@@ -351,3 +351,7 @@
 
 /* A sorted table runs as one list: each row carries its tier chip before the picture. */
 .vb .tl-tc, .vb .tx-tc { flex: none; }
+/* The duos' lane filter: each pair of roles as its two role icons. */
+.vb .du-lanes > * { gap: 3px; padding: 0 10px; }
+.vb .du-lanes svg { width: 18px; height: 18px; opacity: 0.55; flex: none; }
+.vb .du-lanes > .on svg, .vb .du-lanes > :hover svg { opacity: 1; }
