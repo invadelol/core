@@ -7,6 +7,7 @@ import Icon from '../../components/ui/Icon.vue'
 import Frame from '../../components/ui/Frame.vue'
 import Select from '../../components/ui/Select.vue'
 import RankEmblem from '../../components/ui/RankEmblem.vue'
+import WinRate from '../../components/ui/WinRate.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import SortHead from '../../components/ui/SortHead.vue'
 import { linkSort, type SortDir } from '../../components/ui/sort.js'
@@ -14,16 +15,7 @@ import RoleFilter from '../../components/leaderboards/RoleFilter.vue'
 import LadderPager from '../../components/leaderboards/LadderPager.vue'
 import { champIcon, championName } from '../../lib/assets.js'
 import { leagueLogo } from '../../lib/board.js'
-import {
-  laneOf,
-  n,
-  rankWords,
-  roleLabel,
-  signedN,
-  since,
-  winPct,
-  withQuery,
-} from '../../lib/ladders.js'
+import { laneOf, n, rankWords, roleLabel, signedN, since, withQuery } from '../../lib/ladders.js'
 import '../../css/leaderboards.css'
 import '../../css/esports.css'
 
@@ -290,17 +282,12 @@ const short = (r: Row) =>
             </template>
             <span v-else class="t3">–</span>
           </span>
-          <span v-if="r.record && r.record.games" class="col" style="gap: 5px">
-            <span class="h5"
-              >{{ winPct(r.record.wins, r.record.games) }}
-              <span class="meta"
-                >{{ r.record.wins }}W {{ r.record.games - r.record.wins }}L</span
-              ></span
-            >
-            <span class="split"
-              ><i :style="{ width: winPct(r.record.wins, r.record.games) }"></i><b></b
-            ></span>
-          </span>
+          <WinRate
+            v-if="r.record && r.record.games"
+            :wins="r.record.wins"
+            :games="r.record.games"
+            :width="150"
+          />
           <span v-else class="t3">–</span>
           <span class="row" style="gap: 4px">
             <Frame

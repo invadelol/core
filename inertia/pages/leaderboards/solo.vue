@@ -8,17 +8,17 @@ import Frame from '../../components/ui/Frame.vue'
 import Select from '../../components/ui/Select.vue'
 import ScoreDial from '../../components/ui/ScoreDial.vue'
 import RankEmblem from '../../components/ui/RankEmblem.vue'
+import WinRate from '../../components/ui/WinRate.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import SortHead from '../../components/ui/SortHead.vue'
 import { linkSort, type SortDir } from '../../components/ui/sort.js'
 import RoleFilter from '../../components/leaderboards/RoleFilter.vue'
 import LadderPager from '../../components/leaderboards/LadderPager.vue'
 import LadderPlayer from '../../components/leaderboards/LadderPlayer.vue'
-import { champIcon, championName } from '../../lib/assets.js'
+import { champIcon, championName, championSplash, profileIcon } from '../../lib/assets.js'
 import {
   dayMonth,
   laneOf,
-  linePath,
   n,
   playerPath,
   roleLabel,
@@ -144,7 +144,6 @@ const shares = computed(() =>
   Object.fromEntries(props.roles.map((r) => [laneOf(r.role)!, r.share]))
 )
 const updated = computed(() => since(props.updatedAt))
-const line = computed(() => linePath(props.cutoffLines.CHALLENGER, 420, 52))
 const lineGain = computed(() => {
   const l = props.cutoffLines.CHALLENGER
   return l.length >= 2 ? l.at(-1)!.lp - l[0].lp : null
@@ -169,10 +168,25 @@ if (typeof window !== 'undefined') {
   setInterval(tick, 60_000)
 }
 
+/* ── The leader banner: #1 with the art of the champion they play most, #2 to #5 beside ── */
+const leader = computed(() => props.podium[0] ?? null)
+const chasers = computed(() => props.podium.slice(1, 5))
+/** How far #1 is ahead of #2, in LP. */
+const lead = computed(() => {
+  const [a, b] = props.podium
+  return a && b ? a.lp - b.lp : null
+})
 const topChampion = (r: Row) => r.champions[0] ?? null
-const share = (r: Row) => {
-  const c = topChampion(r)
-  return c && r.games ? Math.round((c.games / r.games) * 100) : null
+const shareOf = (r: Row, games: number) => (r.games ? Math.round((games / r.games) * 100) : 0)
+const whereTo = (r: Row) =>
+  (r.pro ? `/pro/${r.pro.slug}` : playerPath(r.gameName, r.tagLine)) ?? '#'
+const nameOf = (r: Row) => r.pro?.name ?? r.gameName ?? 'Unknown player'
+const tagOf = (r: Row) => (r.pro ? (r.pro.team?.name ?? null) : r.tagLine ? `#${r.tagLine}` : null)
+/** "2nd", "3rd", "4th": the place as words read. */
+const ordinal = (place: number) => {
+  const t = place % 100
+  if (t >= 11 && t <= 13) return 'th'
+  return ['th', 'st', 'nd', 'rd'][place % 10] ?? 'th'
 }
 </script>
 
@@ -200,7 +214,9 @@ const share = (r: Row) => {
             <Select
               v-model="regionSlug"
               label="Region"
-              :options="regions.map((r) => ({ value: r.slug, label: r.label, icon: regionFlag(r.slug) }))"
+              :options="
+                regions.map((r) => ({ value: r.slug, label: r.label, icon: regionFlag(r.slug) }))
+              "
               width="11rem"
               align="right"
             />
@@ -216,108 +232,108 @@ const share = (r: Row) => {
       />
 
       <template v-else>
-        <div class="lb-top">
-          <Link
-            v-for="(p, i) in podium"
-            :key="p.place"
-            class="lb-pod"
-            :href="(p.pro ? `/pro/${p.pro.slug}` : playerPath(p.gameName, p.tagLine)) ?? '#'"
-          >
-            <span class="lb-no" :class="{ g: i === 0 }">#{{ p.place }}</span>
-            <Frame
-              :src="topChampion(p) ? `/cdn/loading/${topChampion(p)!.champion}.jpg` : null"
-              eager
-            />
-            <span class="lb-pb">
-              <span class="row meta" style="gap: 7px"
-                ><RoleIcon v-if="laneOf(p.role)" :lane="laneOf(p.role)!" :size="15" /><template
-                  v-if="topChampion(p)"
-                  >{{ roleLabel(p.role) || 'Every role' }},
-                  {{ championName(topChampion(p)!.champion) }} in {{ share(p) }}% of games</template
-                ></span
-              >
-              <span class="col" style="gap: 14px">
-                <span class="lb-pn2">
-                  <span v-if="p.pro?.photo" class="lb-pp" style="width: 34px; height: 34px"
-                    ><img :src="`/cdn/pro/${p.pro.slug}?s=48&v=${p.pro.photo}`" alt=""
-                  /></span>
-                  <Frame v-else :src="`/cdn/profile-icon/${p.icon ?? 29}.png`" size="s" />
-                  <span class="col" style="min-width: 0">
-                    <span class="h2 ell">{{ p.pro?.name ?? p.gameName ?? 'Unknown player' }}</span>
-                    <span class="meta">{{
-                      p.pro ? (p.pro.team?.name ?? 'Pro') : p.tagLine ? `#${p.tagLine}` : ''
-                    }}</span>
-                  </span>
-                </span>
-                <span class="row" style="gap: 8px">
-                  <RankEmblem :tier="p.tier" :size="28" />
-                  <span class="fg-s">{{ n(p.lp) }}<span class="u">LP</span></span>
-                  <span class="meta" style="margin-left: 4px"
-                    >{{ n(p.wins) }}W {{ n(p.losses) }}L,
-                    {{ winPct(p.wins, p.wins + p.losses) }}</span
+        <template v-if="leader">
+          <Link class="sb-ban" :href="whereTo(leader)">
+            <span v-if="topChampion(leader)" class="sb-art"
+              ><img
+                :src="championSplash(topChampion(leader)!.champion)"
+                alt=""
+                fetchpriority="high"
+            /></span>
+            <span class="sb-in">
+              <span class="row sb-l1">
+                <span class="sb-k">1st in {{ region.label }}</span>
+                <span v-if="laneOf(leader.role)" class="row meta" style="gap: 7px"
+                  ><RoleIcon :lane="laneOf(leader.role)!" :size="15" />{{
+                    roleLabel(leader.role)
+                  }}</span
+                >
+                <span v-if="lead !== null" class="meta sb-hm">{{ n(lead) }} LP ahead of 2nd</span>
+              </span>
+              <span class="row sb-who">
+                <span v-if="leader.pro?.photo" class="lb-pp sb-pic"
+                  ><img :src="`/cdn/pro/${leader.pro.slug}?s=96&v=${leader.pro.photo}`" alt=""
+                /></span>
+                <Frame v-else class="sb-pic" :src="profileIcon(leader.icon)" eager />
+                <span class="col" style="gap: 4px; min-width: 0">
+                  <span class="sb-nm ell"
+                    >{{ nameOf(leader) }}
+                    <span v-if="tagOf(leader)" class="lb-tag">{{ tagOf(leader) }}</span></span
                   >
-                </span>
-                <span class="row" style="gap: 10px">
-                  <span class="row" style="gap: 4px">
-                    <Frame
-                      v-for="c in p.champions"
-                      :key="c.champion"
-                      :src="champIcon(c.champion)"
-                      :width="28"
-                      size="xs"
-                    />
+                  <span class="row sb-fig">
+                    <RankEmblem :tier="leader.tier" :size="30" />
+                    <span class="fg-l num">{{ n(leader.lp) }}<span class="u">LP</span></span>
+                    <span class="meta num"
+                      >{{ n(leader.wins) }}W {{ n(leader.losses) }}L,
+                      {{ winPct(leader.wins, leader.wins + leader.losses) }}</span
+                    >
+                    <span v-if="leader.move?.lp && movesHead" class="meta sb-hm"
+                      ><span :class="{ vi: leader.move.lp > 0 }"
+                        >{{ signedN(leader.move.lp) }} LP</span
+                      >
+                      {{ movesHead === '24 hours' ? 'today' : movesHead.toLowerCase() }}</span
+                    >
                   </span>
-                  <span style="margin-left: auto"><ScoreDial :value="p.score" size="sm" /></span>
                 </span>
+              </span>
+              <span class="row sb-chs">
+                <span v-for="c in leader.champions" :key="c.champion" class="row" style="gap: 8px"
+                  ><Frame :src="champIcon(c.champion)" :width="30" size="xs" /><span class="col"
+                    ><span class="h5">{{ championName(c.champion) }}</span
+                    ><span class="meta">{{ shareOf(leader, c.games) }}% of games</span></span
+                  ></span
+                >
+                <span v-if="leader.score !== null" class="row sb-sc"
+                  ><ScoreDial :value="leader.score" size="sm" /><span class="meta"
+                    >Score,<br />last {{ leader.scoreGames }}</span
+                  ></span
+                >
               </span>
             </span>
           </Link>
-        </div>
+          <div v-if="chasers.length" class="sb-row">
+            <Link v-for="p in chasers" :key="p.place" class="sb-s" :href="whereTo(p)">
+              <span class="sb-no" :class="{ hi: p.place <= 3 }"
+                >{{ p.place }}<span class="sb-ord">{{ ordinal(p.place) }}</span></span
+              >
+              <span v-if="p.pro?.photo" class="lb-pp sb-sp"
+                ><img :src="`/cdn/pro/${p.pro.slug}?s=48&v=${p.pro.photo}`" alt=""
+              /></span>
+              <Frame v-else :src="profileIcon(p.icon)" :width="40" size="s" />
+              <span class="col" style="min-width: 0; gap: 2px">
+                <span class="h4 ell">{{ nameOf(p) }}</span>
+                <span class="meta row sb-m"
+                  ><RoleIcon v-if="laneOf(p.role)" :lane="laneOf(p.role)!" :size="13" />{{
+                    n(p.lp)
+                  }}
+                  LP<span class="sb-hm">, {{ winPct(p.wins, p.wins + p.losses) }}</span></span
+                >
+              </span>
+            </Link>
+          </div>
+        </template>
 
-        <section class="card lb-cs" :class="{ c3: !line.line }">
-          <div v-for="c in cutoffs" :key="c.tier">
-            <RankEmblem :tier="c.tier" :size="40" />
-            <span class="col" style="gap: 3px">
-              <span class="lab">{{ tierWord(c.tier) }}</span>
-              <span class="fg-m num"
-                >{{ c.lp === null ? '–' : n(c.lp) }}<span class="u">LP</span></span
-              >
-              <span class="meta"
-                ><template v-if="c.change !== null && movesHead"
-                  ><span :class="{ vi: c.change > 0 }">{{ signedN(c.change) }}</span>
-                  {{ movesHead === '24 hours' ? 'today' : movesHead.toLowerCase() }}, </template
-                >{{ n(c.players) }} players</span
-              >
-            </span>
-          </div>
-          <div v-if="line.line" class="m">
-            <span class="lb-cx"
-              ><span class="lab">Challenger cutoff, last 30 days</span
-              ><span v-if="lineGain !== null" class="meta num vi"
-                >{{ signedN(lineGain) }} LP</span
-              ></span
-            >
-            <div class="lb-chart">
-              <svg class="fade" viewBox="0 0 420 52" preserveAspectRatio="none" aria-hidden="true">
-                <path class="area" :d="line.area" />
-              </svg>
-              <svg viewBox="0 0 420 52" preserveAspectRatio="none" aria-hidden="true">
-                <path class="lb-gd" d="M0 51.5 H420" />
-                <path class="ln" :d="line.line" />
-              </svg>
-              <span
-                v-if="line.last"
-                class="dt"
-                :style="{ left: `${line.last.x}%`, top: `${line.last.y}%` }"
-              />
-            </div>
-          </div>
-          <div class="n">
-            <span class="lab">Cutoffs move at</span>
-            <span class="h4">00:00 UTC</span>
-            <span class="meta">{{ nextReset }}</span>
-          </div>
-        </section>
+        <div class="sb-cut">
+          <span class="lab">Cutoffs</span>
+          <span
+            v-for="c in cutoffs"
+            :key="c.tier"
+            class="row sb-ct"
+            :title="`${tierWord(c.tier)}, ${n(c.players)} players`"
+            ><RankEmblem :tier="c.tier" :size="22" /><b class="num">{{
+              c.lp === null ? '–' : `${n(c.lp)} LP`
+            }}</b
+            ><span v-if="c.change !== null && movesHead" class="meta"
+              ><span :class="{ vi: c.change > 0 }">{{ signedN(c.change) }}</span>
+              {{ movesHead === '24 hours' ? 'today' : movesHead.toLowerCase() }}</span
+            ></span
+          >
+          <span v-if="lineGain !== null" class="meta sb-hm"
+            >Challenger cutoff
+            <span :class="{ vi: lineGain > 0 }">{{ signedN(lineGain) }} LP</span> in 30 days</span
+          >
+          <span class="meta sb-nx">Next move at 00:00 UTC, {{ nextReset }}</span>
+        </div>
 
         <div class="lb-filt">
           <RoleFilter :active="filters.role" :shares="shares" :href="(role) => href({ role })" />
@@ -347,7 +363,12 @@ const share = (r: Row) => {
             <span>Player</span>
             <span>Role</span>
             <SortHead :sorter="sort" col="rank" label="Rank" />
-            <SortHead :sorter="sort" col="move" :label="movesHead ?? 'Last read'" title="LP won or lost" />
+            <SortHead
+              :sorter="sort"
+              col="move"
+              :label="movesHead ?? 'Last read'"
+              title="LP won or lost"
+            />
             <SortHead :sorter="sort" col="wr" label="Win rate, season" />
             <span>Score</span>
             <span>Most played</span>
@@ -396,15 +417,7 @@ const share = (r: Row) => {
               </template>
               <span v-else class="t3">–</span>
             </span>
-            <span class="col" style="gap: 5px">
-              <span class="h5 num"
-                >{{ winPct(r.wins, r.wins + r.losses) }}
-                <span class="meta">{{ n(r.wins) }}W {{ n(r.losses) }}L</span></span
-              >
-              <span class="split"
-                ><i :style="{ width: winPct(r.wins, r.wins + r.losses) }"></i><b></b
-              ></span>
-            </span>
+            <WinRate :wins="r.wins" :losses="r.losses" :width="130" />
             <span><ScoreDial :value="r.score" size="sm" /></span>
             <span class="row" style="gap: 4px">
               <Frame

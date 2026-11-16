@@ -44,7 +44,8 @@ address there (`here`) if it should light up a section.
 | `RankEmblem.vue` | `tier` (any case), `size?` (24), `title?` | Riot's crest art (`/cdn/emblem`), cropped to a square. Unranked shows the small crest. |
 | `FormStrip.vue` | `results` (booleans, oldest first), `tall?`, `small?` | Last games as straight bars (`.form`): blue win, pink loss. |
 | `Chip.vue` | `variant?` (`tag` grey fact, `stat` a figure on dark violet, `violet` a leading figure), `icon?`, `href?`; slot | Small labels. |
-| `WinLoss.vue`, `VioletLine.vue`, `Sparkline.vue` | (unchanged) | Record bar, the one violet chart line, sparklines. Charts: one violet line, a soft fade, no red/green decoration. |
+| `WinRate.vue` | `wins?` with `games?` or `losses?` (a record), or `rate?` (0–1, no record); `width?` (the track, px or CSS, fills its cell by default), `record?` (the "83W 76L" beside the rate, on), `digits?` (0), `small?`, `end?` (right-aligned), `bare?` (the line alone, for a rate written elsewhere) | Every win rate of the site: the rate, the record, and one violet line on a grey track with a tick at 50% (above or below even at a glance). One colour: never a blue and pink split bar. |
+| `VioletLine.vue`, `Sparkline.vue` | (unchanged) | The one violet chart line, sparklines. Charts: one violet line, a soft fade, no red/green decoration. |
 
 ## Pictures
 
@@ -95,6 +96,6 @@ const sort = useSort(shown, { win: (r) => r.win, games: (r) => r.games }, { key:
 
 Other classes straight from the canvas (facet.css): `.card`, `.well`, `.btn` (`.pri`, `.sm`,
 `.lg`, `.ghost`, `.ico`), `.kbd`, `.field`, `.switch`/`.chk`, `.lrow` (list row), `.pic`
-(`.sm`, `.xs`, `.md`), `.split`, `.bar`, `.live`, `.chart`, type steps (`.d1`, `.h1`–`.h5`, `.meta`,
+(`.sm`, `.xs`, `.md`), `.bar` (a share, one violet; win rates are `WinRate.vue`), `.live`, `.chart`, type steps (`.d1`, `.h1`–`.h5`, `.meta`,
 `.lab`, `.fg-xl`…`.fg-xs`), colours (`.t1`–`.t3`, `.vi`, `.wn`, `.ls`, `.gd`), layout (`.wrap`,
 `.row`, `.col`, `.grid2`, `.grid3`, `.side2`, `.stk`, `.sec`).

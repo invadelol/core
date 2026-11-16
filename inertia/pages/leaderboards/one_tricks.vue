@@ -14,7 +14,7 @@ import { linkSort, useSort, type SortDir } from '../../components/ui/sort.js'
 import RoleFilter from '../../components/leaderboards/RoleFilter.vue'
 import LadderPager from '../../components/leaderboards/LadderPager.vue'
 import LadderPlayer from '../../components/leaderboards/LadderPlayer.vue'
-import { champIcon, profileIcon } from '../../lib/assets.js'
+import { champIcon, championSplash, profileIcon } from '../../lib/assets.js'
 import { patchName } from '../../lib/patch.js'
 import {
   ROLES,
@@ -276,41 +276,61 @@ const updated = computed(() => since(props.updatedAt))
           </aside>
 
           <section v-if="selected" class="card">
-            <div class="lb-sp">
-              <Frame size="l" :src="`/cdn/loading/${selected.champion}.jpg`" eager />
-              <div class="bd">
+            <div class="oa">
+              <span class="oa-art"
+                ><img
+                  :src="championSplash(selected.champion)"
+                  alt=""
+                  fetchpriority="high"
+                  decoding="async"
+              /></span>
+              <div class="oa-in">
                 <span class="row meta" style="gap: 7px"
                   ><RoleIcon
                     v-if="laneOf(selected.position)"
                     :lane="laneOf(selected.position)!"
                     :size="15"
-                  />{{ roleLabel(selected.position)
+                  />{{ roleLabel(selected.position) || 'Every role'
                   }}<template v-if="patch">, patch {{ patchName(patch) }}</template></span
                 >
-                <span class="row" style="gap: 12px">
-                  <Link :href="`/champions/${slugOf(selected.champion)}`" class="h1">{{
+                <span class="row" style="gap: 14px">
+                  <Frame :src="champIcon(selected.champion)" :width="56" size="s" eager />
+                  <Link :href="`/champions/${slugOf(selected.champion)}`" class="d1 oa-nm">{{
                     chosenName
                   }}</Link>
                   <TierChip
                     v-if="selected.stat?.tier !== null && selected.stat?.tier !== undefined"
                     :tier="selected.stat.tier"
+                    large
                   />
                 </span>
-                <span v-if="selected.stat" class="meta"
-                  >Wins {{ pct(selected.stat.win) }} of games in Emerald and above, picked in
-                  {{ pct(selected.stat.pick) }} of
-                  {{ roleLabel(selected.position).toLowerCase() }} games</span
-                >
-              </div>
-              <div class="lb-at">
-                <span v-for="t in ['CHALLENGER', 'GRANDMASTER', 'MASTER'] as const" :key="t">
-                  <RankEmblem :tier="t" :size="30" />
-                  <b>{{ selected.byTier[t] }}</b>
-                  <span class="meta">{{ tierWord(t) }}</span>
+                <span class="row oa-hs">
+                  <span v-if="selected.stat" class="col"
+                    ><span class="fg-s">{{ (selected.stat.win * 100).toFixed(1)
+                    }}<span class="u">%</span></span
+                    ><span class="meta">Win rate, Emerald+</span></span
+                  >
+                  <span v-if="selected.stat" class="col"
+                    ><span class="fg-s">{{ (selected.stat.pick * 100).toFixed(1)
+                    }}<span class="u">%</span></span
+                    ><span class="meta"
+                      >Picked in
+                      {{ (roleLabel(selected.position) || 'its role').toLowerCase() }}</span
+                    ></span
+                  >
+                  <span class="col"
+                    ><span class="fg-s">{{ selected.total }}</span
+                    ><span class="meta">{{
+                      selected.total === 1 ? 'One-trick' : 'One-tricks'
+                    }}</span></span
+                  >
                 </span>
-                <span class="tt">
-                  <b>{{ selected.total }}</b>
-                  <span class="meta">One-tricks</span>
+              </div>
+              <div class="oa-ct">
+                <span v-for="t in ['CHALLENGER', 'GRANDMASTER', 'MASTER'] as const" :key="t">
+                  <RankEmblem :tier="t" :size="26" />
+                  <b class="num">{{ selected.byTier[t] }}</b>
+                  <span class="oa-tn">{{ tierWord(t) }}</span>
                 </span>
               </div>
             </div>
