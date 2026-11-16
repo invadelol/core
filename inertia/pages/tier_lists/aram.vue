@@ -9,6 +9,8 @@ import Icon from '../../components/ui/Icon.vue'
 import TierChip from '../../components/ui/TierChip.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import Skeleton from '../../components/ui/Skeleton.vue'
+import SortHead from '../../components/ui/SortHead.vue'
+import { useSort } from '../../components/ui/sort.js'
 import StatFilters from '../../components/champions/StatFilters.vue'
 import ClassSeg from '../../components/champions/ClassSeg.vue'
 import Fig from '../../components/champions/Fig.vue'
@@ -82,12 +84,23 @@ const bands = computed(() =>
 )
 const FIRST = [9, 8, 6]
 const all = ref(false)
-const groups = computed(() =>
-  TIERS.map((label, t) => {
+const sort = useSort(() => shown.value.filter((r) => r.tier !== null), {
+  name: (r) => nm(r.champion),
+  win: (r) => r.win,
+  pick: (r) => r.pick,
+  games: (r) => r.games,
+  kda: (r) => r.kda,
+}, { first: { name: 'asc' } })
+const groups = computed(() => {
+  if (sort.key) {
+    const rows = all.value ? sort.rows : sort.rows.slice(0, FIRST.reduce((a, b) => a + b, 0))
+    return [{ t: null as number | null, label: '', total: sort.rows.length, rows }]
+  }
+  return TIERS.map((label, t) => {
     const list = shown.value.filter((r) => r.tier === t)
-    return { t, label, total: list.length, rows: all.value ? list : list.slice(0, FIRST[t] ?? 0) }
+    return { t: t as number | null, label, total: list.length, rows: all.value ? list : list.slice(0, FIRST[t] ?? 0) }
   }).filter((g) => g.rows.length)
-)
+})
 const hidden = computed(
   () => shown.value.filter((r) => r.tier !== null).length - groups.value.reduce((n, g) => n + g.rows.length, 0)
 )
@@ -163,17 +176,22 @@ const pickMax = computed(() => Math.max(0.1, ...shown.value.map((r) => r.pick)))
           <section class="sec" style="padding-top: 24px">
             <article class="card" style="overflow: hidden">
               <div class="tx-head ar-head">
-                <span>Champion</span><span>Win rate</span><span>Pick rate</span><span class="r">Games</span><span class="r">KDA</span
-                ><span>Keystone</span>
+                <SortHead :sorter="sort" col="name" label="Champion" />
+                <SortHead :sorter="sort" col="win" label="Win rate" />
+                <SortHead :sorter="sort" col="pick" label="Pick rate" />
+                <SortHead :sorter="sort" col="games" label="Games" class="r" />
+                <SortHead :sorter="sort" col="kda" label="KDA" class="r" />
+                <span>Keystone</span>
               </div>
-              <template v-for="g in groups" :key="g.t">
-                <div class="tx-grp">
+              <template v-for="g in groups" :key="g.t ?? 'sorted'">
+                <div v-if="g.t !== null" class="tx-grp">
                   <TierChip :tier="g.t" large />
                   <span class="h4">{{ g.label }} tier</span>
                   <span class="meta">{{ g.rows.length === g.total ? `${g.total} champion${g.total === 1 ? '' : 's'}` : `Showing ${g.rows.length} of ${g.total}` }}</span>
                 </div>
                 <Link v-for="r in g.rows" :key="r.champion" class="tx-row ar-row" :href="href(r.champion)">
                   <div class="tx-name">
+                    <TierChip v-if="g.t === null" :tier="r.tier" class="tx-tc" />
                     <div class="fr s visor" style="width: 84px; height: 44px; flex: none"><img :src="champIconUrl(r.champion)" alt="" loading="lazy" /></div>
                     <div class="col">
                       <span class="h4 ell">{{ nm(r.champion) }}</span>

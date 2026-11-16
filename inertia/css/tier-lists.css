@@ -348,3 +348,6 @@
   .vb .mast-r:has(.stat-filters) .ctl { margin-left: 0; }
   .vb .stat-filters { justify-content: flex-start; }
 }
+
+/* A sorted table runs as one list: each row carries its tier chip before the picture. */
+.vb .tl-tc, .vb .tx-tc { flex: none; }
