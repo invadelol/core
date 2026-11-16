@@ -1,7 +1,7 @@
 import { profilePath } from './format.js'
 
 /**
- * The handful of profiles, pro pages and champion pages this browser has opened.
+ * The handful of profiles, champion, pro and team pages this browser has opened.
  *
  * Kept entirely on the device: nothing about who you looked up is sent
  * anywhere. It exists so the landing page has something useful on it for a
@@ -26,6 +26,8 @@ export interface RecentPlayer {
   pro?: { slug: string; photo?: string | null; staff?: boolean }
   /** A champion's page: `gameName` is its name, `tagLine` is empty, the entry opens `/champions/:slug`. */
   champion?: { id: number; slug: string }
+  /** A team's page: `gameName` is its name, `tagLine` is empty, the entry opens `/team/:slug`. */
+  team?: { id: string; slug: string; shortName?: string | null }
   at: number
 }
 
@@ -40,16 +42,18 @@ export function recentPlayers(): RecentPlayer[] {
   }
 }
 
-function keyOf(player: Pick<RecentPlayer, 'gameName' | 'tagLine' | 'pro' | 'champion'>) {
+function keyOf(player: Pick<RecentPlayer, 'gameName' | 'tagLine' | 'pro' | 'champion' | 'team'>) {
   if (player.pro) return `pro:${player.pro.slug}`
   if (player.champion) return `champion:${player.champion.slug}`
+  if (player.team) return `team:${player.team.slug}`
   return `${player.gameName}#${player.tagLine}`.toLowerCase()
 }
 
-/** Where an entry leads: the pro's page, the champion's page, or the player's profile. */
+/** Where an entry leads: the pro's, champion's or team's page, or the player's profile. */
 export function recentHref(player: RecentPlayer) {
   if (player.pro) return `/pro/${encodeURIComponent(player.pro.slug)}`
   if (player.champion) return `/champions/${encodeURIComponent(player.champion.slug)}`
+  if (player.team) return `/team/${encodeURIComponent(player.team.slug)}`
   return profilePath(player.gameName, player.tagLine)
 }
 
@@ -58,7 +62,7 @@ export function recentKey(player: RecentPlayer) {
   return keyOf(player)
 }
 
-export function rememberPlayer(player: Omit<RecentPlayer, 'at' | 'pro' | 'champion'>) {
+export function rememberPlayer(player: Omit<RecentPlayer, 'at' | 'pro' | 'champion' | 'team'>) {
   if (!player.gameName || !player.tagLine) return
   remember(player)
 }
@@ -87,6 +91,22 @@ export function rememberChampion(champion: { id: number; slug: string; name: str
     tagLine: '',
     profileIconId: null,
     champion: { id: champion.id, slug: champion.slug },
+  })
+}
+
+/** A team's page, listed beside the players with its logo. */
+export function rememberTeam(team: {
+  id: string
+  slug: string
+  name: string
+  shortName?: string | null
+}) {
+  if (!team.id || !team.slug || !team.name) return
+  remember({
+    gameName: team.name,
+    tagLine: '',
+    profileIconId: null,
+    team: { id: team.id, slug: team.slug, shortName: team.shortName ?? null },
   })
 }
 
