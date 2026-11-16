@@ -255,10 +255,10 @@ const thousands = (n: number) => n.toLocaleString('en-US')
           </div>
           <span class="fr l shot"
             ><img
-              :src="'/app-page/facet-home-1440.webp'"
-              :srcset="'/app-page/facet-home-720.webp 720w, /app-page/facet-home-1440.webp 1440w'"
+              :src="'/app-page/home-1280.webp'"
+              :srcset="'/app-page/home-1280.webp 1280w, /app-page/home-2560.webp 2560w'"
               sizes="(max-width: 767px) 100vw, 640px"
-              alt="The Invade desktop app's Home: rank and LP, the session, the last games scored out of 100"
+              alt="The Invade desktop app's Home: rank and LP, the match history scored out of 100, clips and champions"
               loading="lazy"
               decoding="async"
           /></span>
