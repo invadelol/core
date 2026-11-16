@@ -621,6 +621,18 @@
         ]
       },
       {
+        "id": null,
+        "name": "Crimson Cobalt",
+        "kind": "mix",
+        "lines": [
+          {
+            "label": "Mark VFX",
+            "old": "Visible to all players",
+            "new": "Visible only to the augment owner"
+          }
+        ]
+      },
+      {
         "id": 2077,
         "name": "Ravenous Bind",
         "kind": "up",
@@ -708,9 +720,19 @@
             "new": "20"
           },
           {
+            "label": "Flat Magic Penetration Scalar",
+            "old": "25",
+            "new": "15"
+          },
+          {
             "label": "Percent Armor Penetration Scalar",
             "old": "0.25",
             "new": "0.15"
+          },
+          {
+            "label": "Percent Magic Penetration Scalar",
+            "old": "0.15",
+            "new": "0.09"
           }
         ]
       },
@@ -735,6 +757,13 @@
             "text": "New augment: champion kills with your ultimate reset its cooldown, up to 3 times."
           }
         ]
+      }
+    ],
+    "systems": [
+      {
+        "label": "Butcher's Bridge and Koeshin's Crossing",
+        "old": "Unavailable",
+        "new": "Enabled"
       }
     ]
   },
@@ -764,10 +793,7 @@
       "champions": "Kog'Maw"
     }
   ],
-  "chromas": [
-    "Music Fan Gragas (FIRESTARTER)",
-    "Prestige Classic Baron Kog'Maw (Vivid)"
-  ],
+  "chromas": ["Music Fan Gragas (FIRESTARTER)", "Prestige Classic Baron Kog'Maw (Vivid)"],
   "bugs": [
     "Aurora's ultimate can no longer be blocked by Samira's Blade Whirl.",
     "Quinn's ultimate no longer deals double damage when gained from recalling or respawning.",

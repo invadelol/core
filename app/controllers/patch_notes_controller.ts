@@ -40,6 +40,12 @@ export default class PatchNotesController {
     const [stats, slugs] = notes
       ? await Promise.all([patchNotesService.stats(version, ids), patchNotesService.slugs()])
       : [null, {}]
+    // The last two weeks by day speak of the newest patch only.
+    const daily =
+      stats && asked === patches[0] ? await patchNotesService.daily(stats.byChampion) : null
+    // Lanes without the patch's own statistics: each champion's main role on the newest patch.
+    const roles =
+      notes && !stats ? await patchNotesService.mainRoles(notes.champions.map((c) => c.id)) : {}
 
     const counts = notes && {
       champions: notes.champions.length,
@@ -50,6 +56,8 @@ export default class PatchNotesController {
       notes,
       patches,
       stats,
+      daily,
+      roles,
       slugs,
       robots: notes ? null : 'noindex,follow',
       ...meta({

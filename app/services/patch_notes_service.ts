@@ -2,7 +2,8 @@ import { readdir, readFile } from 'node:fs/promises'
 import app from '@adonisjs/core/services/app'
 import logger from '@adonisjs/core/services/logger'
 import championStatsService, { DEFAULT_BRACKET } from '#services/champion_stats_service'
-import type { PatchChampionStat, PatchNotes } from '../../inertia/lib/patch_notes.js'
+import type { Position } from '#services/champion_stats'
+import type { PatchChampionStat, PatchDaily, PatchNotes } from '../../inertia/lib/patch_notes.js'
 import type { NavPatchNotes } from '../../inertia/lib/home.js'
 
 /** A patch as players name it: "26.22". */
@@ -83,8 +84,9 @@ class PatchNotesService {
   }
 
   /**
-   * Win rate, pick rate and games of each champion on the patch (game version `version`), in the
-   * role it was played most, at the default rank. Null when the statistics do not offer the patch.
+   * Win rate, pick rate, games, tier and place in the role of each champion on the patch (game
+   * version `version`), in the role it was played most, at the default rank, with its tier and
+   * place on the patch before. Null when the statistics do not offer the patch.
    */
   async stats(
     version: string,
@@ -92,31 +94,102 @@ class PatchNotesService {
   ): Promise<{
     bracket: string
     games: number
+    /** The patch before, as the statistics name it (`16.21`), when they offer it. */
+    previous: string | null
     byChampion: Record<number, PatchChampionStat>
   } | null> {
     try {
       const filter = await championStatsService.filter({ rank: DEFAULT_BRACKET, patch: version })
       if (!filter || filter.patch !== version) return null
-      const summary = await championStatsService.summary(filter)
+      const [summary, before] = await Promise.all([
+        championStatsService.summary(filter),
+        championStatsService.previous(filter).catch(() => null),
+      ])
       if (!summary.games) return null
       const wanted = new Set(champions)
+      const was = new Map<string, { tier: number | null; rank: number | null }>()
+      for (const r of before?.roles ?? [])
+        if (wanted.has(r.champion)) was.set(`${r.champion}:${r.position}`, r)
       const byChampion: Record<number, PatchChampionStat> = {}
       for (const r of summary.roles) {
         if (!wanted.has(r.champion)) continue
         const known = byChampion[r.champion]
         if (!known || r.games > known.games) {
+          const prev = was.get(`${r.champion}:${r.position}`)
           byChampion[r.champion] = {
             position: r.position,
             win: r.win,
             pick: r.pick,
             games: r.games,
+            tier: r.tier,
+            rank: r.rank,
+            prevTier: prev?.tier ?? null,
+            prevRank: prev?.rank ?? null,
           }
         }
       }
-      return { bracket: filter.bracket, games: summary.games, byChampion }
+      return {
+        bracket: filter.bracket,
+        games: summary.games,
+        previous: before?.patch ?? null,
+        byChampion,
+      }
     } catch (error) {
       logger.warn({ err: error, version }, 'patch notes: statistics unavailable')
       return null
+    }
+  }
+
+  /**
+   * Each changed champion's win rate by day over the last two weeks, in its main role, from the
+   * tier list's trend lines when their cache holds them (a cold role is filled in the background,
+   * never while a visitor waits). Null when no role is ready.
+   */
+  async daily(byChampion: Record<number, PatchChampionStat>): Promise<PatchDaily | null> {
+    try {
+      const filter = await championStatsService.filter({ rank: DEFAULT_BRACKET })
+      if (!filter) return null
+      const positions = [...new Set(Object.values(byChampion).map((s) => s.position))]
+      const trends = await Promise.all(
+        positions.map((p) =>
+          championStatsService.roleTrendIfReady(filter, p as Position).catch(() => null)
+        )
+      )
+      let days: string[] | null = null
+      const lines: PatchDaily['lines'] = {}
+      for (const [id, s] of Object.entries(byChampion)) {
+        const t = trends[positions.indexOf(s.position)]
+        const line = t?.lines[Number(id)]
+        if (!t || !line) continue
+        days ??= t.days
+        lines[Number(id)] = line
+      }
+      return days ? { days, lines } : null
+    } catch (error) {
+      logger.warn({ err: error }, 'patch notes: daily lines unavailable')
+      return null
+    }
+  }
+
+  /**
+   * Each champion's main role on the newest patch the statistics offer, to lay out a patch whose
+   * own statistics are not there (too few games yet, or long gone).
+   */
+  async mainRoles(champions: number[]): Promise<Record<number, string>> {
+    try {
+      const filter = await championStatsService.filter({ rank: DEFAULT_BRACKET })
+      if (!filter) return {}
+      const summary = await championStatsService.summary(filter)
+      const wanted = new Set(champions)
+      const best: Record<number, { position: string; games: number }> = {}
+      for (const r of summary.roles) {
+        if (!wanted.has(r.champion)) continue
+        if (!best[r.champion] || r.games > best[r.champion].games) best[r.champion] = r
+      }
+      return Object.fromEntries(Object.entries(best).map(([id, r]) => [id, r.position]))
+    } catch (error) {
+      logger.warn({ err: error }, 'patch notes: main roles unavailable')
+      return {}
     }
   }
 
