@@ -159,6 +159,7 @@ test.group('Leaderboards', (group) => {
         ['GRANDMASTER', 1500, 1],
       ]
     )
+    // The top five when the ladder has them: this one has three.
     assert.equal(props.podium.length, 3)
     // A first read: no moves and no cutoff line yet, nothing made up in their place.
     assert.isNull(props.movesSince)

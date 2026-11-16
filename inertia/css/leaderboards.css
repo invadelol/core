@@ -143,68 +143,162 @@
     margin-left: -10px;
   }
 
-  /* solo: podium */
-  .vb .lb-top {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 16px;
-  }
-  .vb .lb-pod {
+  /* solo: the leader banner (#1 with the art of their main champion), #2 to #5, the cutoffs */
+  .vb .sb-ban {
     position: relative;
-    display: grid;
-    grid-template-columns: 150px minmax(0, 1fr);
-    gap: 20px;
-    height: 228px;
-    padding: 0 18px 0 0;
+    display: block;
+    height: 248px;
     border-radius: var(--r3);
     background: var(--s1);
     box-shadow: inset 0 0 0 1px var(--line);
     overflow: hidden;
   }
-  .vb .lb-pod > .fr {
-    height: 228px;
-    --cut: 16px;
-    border-radius: 0;
-  }
-  .vb .lb-pod > .fr img {
-    object-position: 50% 12%;
-  }
-  .vb .lb-pod .lb-no {
+  .vb .sb-art {
     position: absolute;
-    left: 12px;
-    top: 12px;
-    z-index: 2;
-    display: inline-grid;
-    place-items: center;
-    min-width: 28px;
-    height: 22px;
-    padding: 0 6px;
-    border-radius: 6px;
-    background: rgb(13 12 20/0.72);
-    font-size: 12px;
-    font-weight: 800;
-    color: var(--t1);
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 62%;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 46%);
+    mask-image: linear-gradient(90deg, transparent 0%, #000 46%);
   }
-  .vb .lb-pod .lb-no.g {
-    color: var(--chall);
+  .vb .sb-art img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 62% 22%;
+    filter: saturate(0.85) brightness(0.82);
+    transition: transform 600ms var(--ease);
   }
-  .vb .lb-pod .lb-pb {
+  .vb .sb-ban:hover .sb-art img {
+    transform: scale(1.02);
+  }
+  .vb .sb-art::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      0deg,
+      color-mix(in srgb, var(--s1) 75%, transparent),
+      transparent 45%
+    );
+  }
+  .vb .sb-in {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding: 18px 0;
+    height: 100%;
+    padding: 24px 28px;
+  }
+  .vb .sb-l1 {
+    gap: 12px;
+  }
+  .vb .sb-k {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 0 9px;
+    border-radius: 6px;
+    background: var(--v100);
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--ink-1);
+  }
+  .vb .sb-who {
+    gap: 16px;
     min-width: 0;
   }
-  .vb .lb-pod .lb-pn2 {
+  .vb .sb-pic {
+    width: 72px;
+    height: 72px;
+    flex: none;
+    border-radius: 12px;
+  }
+  .vb .sb-nm {
+    font-size: 30px;
+    line-height: 1.1;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+  }
+  .vb .sb-fig {
+    gap: 12px;
+  }
+  .vb .sb-chs {
+    gap: 22px;
+  }
+  .vb .sb-sc {
+    gap: 8px;
+    margin-left: 12px;
+  }
+  .vb .sb-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .vb .sb-s {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     min-width: 0;
+    padding: 14px 16px;
+    border-radius: var(--r3);
+    background: var(--s1);
+    box-shadow: inset 0 0 0 1px var(--line);
+    transition: background 160ms var(--ease);
   }
-  .vb .lb-pod .lb-pn2 .fr {
-    width: 34px;
-    height: 34px;
+  .vb .sb-s:hover {
+    background: var(--s2);
+  }
+  .vb .sb-m {
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .vb .sb-sp {
+    width: 40px;
+    height: 40px;
+  }
+  /* The place, as read: "2nd", "3rd" bright, "4th", "5th" grey. */
+  .vb .sb-no {
     flex: none;
+    min-width: 30px;
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--t3);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+  .vb .sb-no.hi {
+    color: var(--t1);
+  }
+  .vb .sb-ord {
+    margin-left: 1px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--t3);
+    vertical-align: 5px;
+  }
+  .vb .sb-cut {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-top: 12px;
+    padding: 12px 18px;
+    border-radius: var(--r3);
+    background: var(--ink-1);
+    box-shadow: inset 0 0 0 1px var(--line);
+    font-size: 14px;
+  }
+  .vb .sb-cut b {
+    font-weight: 700;
+  }
+  .vb .sb-ct {
+    gap: 8px;
+  }
+  .vb .sb-nx {
+    margin-left: auto;
   }
   .vb .lb-cs {
     display: grid;
@@ -686,15 +780,11 @@
     }
   }
   @media (max-width: 1023px) {
-    .vb .lb-top {
-      grid-template-columns: 1fr;
+    .vb .sb-row {
+      grid-template-columns: 1fr 1fr;
     }
-    .vb .lb-pod {
-      height: 180px;
-      grid-template-columns: 120px minmax(0, 1fr);
-    }
-    .vb .lb-pod > .fr {
-      height: 180px;
+    .vb .sb-sc {
+      display: none;
     }
     .vb .lb-ot {
       grid-template-columns: 1fr;
@@ -764,16 +854,76 @@
       border-left: 0;
       border-top: 1px solid var(--line);
     }
-    .vb .lb-pod {
-      grid-template-columns: 96px minmax(0, 1fr);
-      height: 160px;
-      gap: 14px;
+    /* The banner: the art over its top, fading down; the figures under it. */
+    .vb .sb-ban {
+      height: auto;
+      min-height: 236px;
     }
-    .vb .lb-pod > .fr {
-      height: 160px;
+    .vb .sb-art {
+      width: 100%;
+      -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.2) 100%);
+      mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.2) 100%);
     }
-    .vb .lb-pod .lb-pb {
-      padding: 14px 0;
+    .vb .sb-art img {
+      object-position: 70% 20%;
+    }
+    .vb .sb-in {
+      justify-content: flex-end;
+      gap: 12px;
+      min-height: 236px;
+      padding: 16px;
+    }
+    .vb .sb-l1 {
+      flex-wrap: wrap;
+      gap: 8px 12px;
+    }
+    .vb .sb-pic {
+      width: 52px;
+      height: 52px;
+    }
+    .vb .sb-nm {
+      font-size: 22px;
+    }
+    .vb .sb-fig {
+      flex-wrap: wrap;
+      gap: 6px 10px;
+    }
+    .vb .sb-fig .fg-l {
+      font-size: 24px;
+    }
+    .vb .sb-chs,
+    .vb .sb-hm {
+      display: none;
+    }
+    .vb .sb-row {
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .vb .sb-s {
+      padding: 10px 12px;
+      gap: 10px;
+    }
+    .vb .sb-no {
+      min-width: 26px;
+      font-size: 15px;
+    }
+    .vb .sb-s .h4 {
+      font-size: 14px;
+    }
+    .vb .sb-s .fr,
+    .vb .sb-s .sb-sp {
+      width: 32px !important;
+      height: 32px !important;
+    }
+    .vb .sb-cut {
+      flex-wrap: wrap;
+      gap: 8px 18px;
+      margin-top: 8px;
+      padding: 12px 14px;
+    }
+    .vb .sb-nx {
+      margin-left: 0;
+      flex-basis: 100%;
     }
     .vb .lb-sp {
       grid-template-columns: 84px minmax(0, 1fr);
