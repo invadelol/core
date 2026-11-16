@@ -6,6 +6,8 @@ import {
   laneRows,
   mostBanned,
   movesOf,
+  otherSplus,
+  patchNotesOf,
   type ChampionInfo,
 } from '#services/home_service'
 import type { RoleStat, Summary } from '#services/champion_stats'
@@ -165,5 +167,49 @@ test.group('Home lists', () => {
         [2, 'TOP'],
       ]
     )
+  })
+})
+
+test.group('Home | S+ palette and patch notes', () => {
+  test('lists the other S+ champions once, best win rate first', ({ assert }) => {
+    const s = summary([
+      { champion: 1, position: 'TOP', tier: 0, rank: 1, win: 0.56 },
+      { champion: 2, position: 'MIDDLE', tier: 0, rank: 2, win: 0.53 },
+      { champion: 2, position: 'TOP', tier: 0, rank: 3, win: 0.51 },
+      { champion: 3, position: 'JUNGLE', tier: 0, rank: 2, win: 0.55 },
+      { champion: 4, position: 'UTILITY', tier: 1, rank: 2, win: 0.6 },
+    ])
+    const best = bestPicks(s, names)
+    assert.deepEqual(
+      otherSplus(s, names, best).map((p) => [p.championId, p.position]),
+      [
+        [3, 'JUNGLE'],
+        [2, 'MIDDLE'],
+      ]
+    )
+  })
+
+  test('counts the buffs and nerfs of the notes', ({ assert }) => {
+    const notes = patchNotesOf({
+      patch: '26.22',
+      version: '16.22',
+      published: '2026-11-03',
+      source: '',
+      champions: [
+        { id: 1, name: 'A', kind: 'up', blocks: [] },
+        { id: 2, name: 'B', kind: 'up', blocks: [] },
+        { id: 3, name: 'C', kind: 'down', blocks: [] },
+        { id: 4, name: 'D', kind: 'mix', blocks: [] },
+      ],
+      items: [],
+      aram: null,
+      skins: [],
+      chromas: [],
+      bugs: [],
+    })
+    assert.equal(notes?.buffs, 2)
+    assert.equal(notes?.nerfs, 1)
+    assert.deepEqual(notes?.changes[3], { championId: 4, kind: 'mix' })
+    assert.isNull(patchNotesOf(null))
   })
 })

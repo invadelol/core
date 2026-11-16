@@ -12,12 +12,16 @@ import { discordServer } from '#services/discord_server'
 import proLadderService, { type LadderRow } from '#services/pro_ladder_service'
 import { leagueCatalog } from '#services/pro_leagues'
 import proMatchService, { isLive } from '#services/pro_match_service'
+import esportsService from '#services/esports_service'
+import patchNotesService from '#services/patch_notes_service'
 import proService from '#services/pro_service'
 import { patchStart, rows as statRows } from '#services/ranked_games_service'
 import { RANKED_SOLO, seedTiers } from '#services/ranked_stats'
 import { areEventsCounted } from '#services/stats_cells'
 import { escapeClickhouseString } from '#utils/clickhouse'
 import { detailOf, isRemake, scoreLobby } from '../../inertia/lib/match.js'
+import { patchName } from '../../inertia/lib/patch.js'
+import type { PatchNotes } from '../../inertia/lib/patch_notes.js'
 import type { Match } from '../../inertia/lib/types.js'
 import type {
   BestGame,
@@ -33,6 +37,7 @@ import type {
   HomeMover,
   HomeMoves,
   HomePage,
+  HomePatchNotes,
   HomePick,
   HomePlayer,
   HomePro,
@@ -151,6 +156,8 @@ export interface TierBoard {
   games: number
   champions: number
   best: HomePick[]
+  /** The other S+ champions, best win rate first (the home's search palette). */
+  splus: HomePick[]
   bans: HomeBan[]
   climbers: HomeClimber[]
   /** The home's rank switch: the best picks at each of `HOME_BRACKETS`. */
@@ -206,6 +213,42 @@ export function bestPicks(summary: Summary, names: Map<number, ChampionInfo>): H
     if (first && champion) picks.push({ ...champion, tier: first.tier, winRate: first.win })
   }
   return picks
+}
+
+/**
+ * The tier list's other S+ champions (the role leaders are the best picks already), one line per
+ * champion in its strongest S+ role, best win rate first.
+ */
+export function otherSplus(
+  summary: Summary,
+  names: Map<number, ChampionInfo>,
+  best: HomePick[],
+  limit = HOME_ROWS
+): HomePick[] {
+  const leaders = new Set(best.map((p) => p.championId))
+  const seen = new Set<number>()
+  return summary.roles
+    .filter((r) => r.tier === 0 && r.rank !== 1 && !leaders.has(r.champion))
+    .sort((a, b) => b.win - a.win)
+    .flatMap((r) => {
+      if (seen.has(r.champion)) return []
+      seen.add(r.champion)
+      const champion = championOf(names, r.champion, r.position)
+      return champion ? [{ ...champion, tier: r.tier, winRate: r.win }] : []
+    })
+    .slice(0, limit)
+}
+
+/** How many champions a patch's notes buff and nerf, and each changed champion's direction. */
+export function patchNotesOf(notes: PatchNotes | null): HomePatchNotes | null {
+  if (!notes) return null
+  const changes = notes.champions.map((c) => ({ championId: c.id, kind: c.kind }))
+  return {
+    patch: notes.patch,
+    buffs: changes.filter((c) => c.kind === 'up').length,
+    nerfs: changes.filter((c) => c.kind === 'down').length,
+    changes,
+  }
 }
 
 /** The champions banned in the most games, each in the role it is played most. */
@@ -854,22 +897,29 @@ export class HomeService {
    * and keeps computing into the cache for the next one.
    */
   async page(): Promise<HomePage> {
-    const [picks, pros, lanes, discord, games, scored] = await Promise.all([
+    const [picks, pros, lanes, discord, games, scored, results] = await Promise.all([
       capped(this.picks()),
       capped(this.pros()),
       capped(this.lanes()),
       this.discord(),
       capped(proMatchService.headline(HOME_GAMES)),
       capped(this.section('best', TTL.best, () => this.bestGames())),
+      capped(esportsService.recentResults(1)),
     ])
+    const notes = picks
+      ? await capped(patchNotesService.get(patchName(picks.patch)).then(patchNotesOf))
+      : null
     return {
       picks: picks && {
         patch: picks.patch,
         best: picks.best,
+        splus: picks.splus ?? [],
         bans: picks.bans,
         brackets: picks.brackets,
         moves: picks.moves,
       },
+      patchNotes: notes,
+      result: games?.length ? null : (results?.[0] ?? null),
       pros: pros?.top.length ? pros.top.map(({ tier, ...p }) => (void tier, p)) : null,
       scored: scored?.length ? scored.slice(0, HOME_SCORED) : null,
       lanes,
@@ -895,14 +945,16 @@ export class HomeService {
       capped(proMatchService.headline(1)),
       capped(navTeams()),
     ])
-    const { bans, brackets, moves, ...tierList } = picks ?? {
+    const { bans, brackets, moves, splus, ...tierList } = picks ?? {
       bans: null,
       brackets: null,
       moves: null,
+      splus: null,
     }
     void bans
     void brackets
     void moves
+    void splus
     return {
       tierList: picks ? (tierList as SiteNav['tierList']) : null,
       pros: pros && { top: pros.top.slice(0, NAV_PROS), counts: pros.counts },
@@ -938,7 +990,7 @@ export class HomeService {
 
   /** The tier list's best pick per role, the most banned and the climbers since last patch. */
   picks(): Promise<TierBoard | null> {
-    return this.section('picks:v3', TTL.picks, async () => {
+    return this.section('picks:v4', TTL.picks, async () => {
       const filter = await this.filter()
       if (!filter) return null
       const [summary, previous, names, others] = await Promise.all([
@@ -969,6 +1021,7 @@ export class HomeService {
         games: summary.games,
         champions: names.size,
         best: brackets[0].best,
+        splus: otherSplus(summary, names, brackets[0].best),
         bans: mostBanned(summary, names),
         climbers: climbersOf(summary, previous, names),
         brackets,
