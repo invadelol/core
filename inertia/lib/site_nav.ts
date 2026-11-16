@@ -46,7 +46,6 @@ export type MenuArtName =
   | 'flex'
   | 'otp'
   | 'proladder'
-  | 'live'
   | 'multi'
   | 'stats'
   | 'app'
@@ -255,14 +254,6 @@ const ALL_SECTIONS: NavSection[] = [
     key: 'tools',
     label: 'Tools',
     links: [
-      {
-        key: 'live',
-        label: 'Live game',
-        href: '/live',
-        art: 'live',
-        line: () => 'The game a player is in right now, and who wins each lane',
-        here: starts('/live'),
-      },
       {
         key: 'multisearch',
         label: 'Multisearch',

@@ -4,7 +4,7 @@ import { siteNav, type MenuArtName } from '../../lib/site_nav.js'
 /**
  * The pictures of the header's menus: small compositions of League art (champion portraits, items,
  * runes, rank emblems, pro photos, league and team logos, all from /cdn) with Invade's own pieces
- * (tier tiles, LP chips, the live chip, the score dial, the glyph). Each is drawn on a 144 px
+ * (tier tiles, LP chips, the score dial, the glyph). Each is drawn on a 144 px
  * stage, as the design made them, and scaled to `size`. The one piece /cdn has no art for (the
  * Mayhem augment of ARAM) is a small file in public/menu-art. Team logos are drawn once the menus'
  * data has named the teams' ids.
@@ -581,31 +581,6 @@ const team = (slug: string) => {
           "
         ></div
       ></template>
-      <template v-else-if="name === 'live'"
-        ><div
-          class="ma-rp"
-          style="
-            left: 6px;
-            top: 22px;
-            width: 70px;
-            height: 70px;
-            --ring: #6c9bff;
-            background-image: url(/cdn/champion/103.png);
-          "
-        ></div>
-        <div
-          class="ma-rp"
-          style="
-            left: 68px;
-            top: 22px;
-            width: 70px;
-            height: 70px;
-            --ring: #f06a82;
-            background-image: url(/cdn/champion/517.png);
-          "
-        ></div>
-        <div class="ma-lv" style="left: 42px; top: 98px">LIVE</div></template
-      >
       <template v-else-if="name === 'multi'"
         ><div
           class="ma-sl"

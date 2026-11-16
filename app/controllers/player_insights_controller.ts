@@ -14,11 +14,4 @@ export default class PlayerInsightsController {
     if (count) return response.ok(await playerInsightsService.top(params.puuid, count))
     return response.ok(await playerInsightsService.mastery(params.puuid))
   }
-
-  async live({ params, request, response }: HttpContext) {
-    response.header('Cache-Control', 'no-store')
-    await request.validateUsing(puuidParamsValidator, { data: params })
-    const refresh = request.qs().refresh === '1'
-    return response.ok(await playerInsightsService.get(params.puuid, 'live', refresh))
-  }
 }
