@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Deferred, Head, Link } from '@inertiajs/vue3'
+import { Deferred, Head, Link, usePage } from '@inertiajs/vue3'
+import { RoleIcon } from '@invadelol/ui'
 import '../../css/tier-lists.css'
 import SiteLayout from '../../components/SiteLayout.vue'
 import Masthead from '../../components/ui/Masthead.vue'
@@ -12,14 +13,13 @@ import Skeleton from '../../components/ui/Skeleton.vue'
 import SortHead from '../../components/ui/SortHead.vue'
 import { useSort } from '../../components/ui/sort.js'
 import StatFilters from '../../components/champions/StatFilters.vue'
-import ClassSeg from '../../components/champions/ClassSeg.vue'
 import MovedCard, { type Moved } from '../../components/champions/MovedCard.vue'
 import Fig from '../../components/champions/Fig.vue'
 import SinceCell from '../../components/champions/SinceCell.vue'
 import Computing from '../../components/champions/Computing.vue'
 import { BRACKETS, TIERS, champIconUrl } from '../../lib/champions.js'
 import { patchName } from '../../lib/patches.js'
-import { barWidth, movers, p1, sgn, thousands } from '../../lib/tier_lists.js'
+import { barWidth, movers, p1, sgn, thousands, withQuery } from '../../lib/tier_lists.js'
 
 type Lane = 'bot' | 'mid' | 'top'
 interface Row {
@@ -59,11 +59,14 @@ const LANES: Record<Lane, { title: string; a: string; b: string; pa: string; pb:
   mid: { title: 'Mid and jungle duos', a: 'mid', b: 'jungle', pa: 'mid', pb: 'jungle' },
   top: { title: 'Top and jungle duos', a: 'top', b: 'jungle', pa: 'top', pb: 'jungle' },
 }
+/** The lane filter: each pair of roles as its two role icons (the words are its name). */
 const laneOptions = [
-  { value: null, label: 'Bot and support' },
-  { value: 'mid', label: 'Mid and jungle' },
-  { value: 'top', label: 'Top and jungle' },
-]
+  { value: null, label: 'Bot and support', icons: ['ADC', 'SUPPORT'] },
+  { value: 'mid', label: 'Mid and jungle', icons: ['MID', 'JUNGLE'] },
+  { value: 'top', label: 'Top and jungle', icons: ['TOP', 'JUNGLE'] },
+] as const
+const page = usePage()
+const laneOn = (value: string | null) => (value ?? 'bot') === props.lane
 const L = computed(() => LANES[props.lane])
 const ready = computed(() => (props.list && !props.list.computing ? props.list : null))
 const rankText = computed(() => {
@@ -163,7 +166,19 @@ const shareMax = computed(() => Math.max(0.2, ...shown.value.map((r) => r.share)
           <StatFilters :filter="filter" :patches="patches" />
         </template>
         <div class="tx-filters">
-          <ClassSeg :options="laneOptions" :value="lane === 'bot' ? null : lane" param="lane" label="Lanes" />
+          <nav class="seg du-lanes" aria-label="Lanes">
+            <Link
+              v-for="o in laneOptions"
+              :key="o.value ?? 'bot'"
+              :href="withQuery(page.url, { lane: o.value })"
+              :class="{ on: laneOn(o.value) }"
+              :aria-current="laneOn(o.value) ? 'page' : undefined"
+              :aria-label="o.label"
+              :title="o.label"
+              preserve-scroll
+              ><RoleIcon :lane="o.icons[0]" :size="18" /><RoleIcon :lane="o.icons[1]" :size="18"
+            /></Link>
+          </nav>
           <label v-if="ready" class="chk" @click.prevent="hideFew = !hideFew">
             <span class="switch" :class="{ on: hideFew }" role="switch" :aria-checked="hideFew" />
             Hide pairs under {{ thousands(hideUnder) }} games
