@@ -1,11 +1,51 @@
 /* The multisearch (pages/multisearch.vue): the board's cards are in facet.css (.msg, .msc); this
    adds the search bar, more than five players and the phone. Components layer, under `.vb`. */
 @layer components {
+  /* The field (components/multisearch/LobbyField.vue) holds the server and Scout at its end. */
   .vb .ms-find {
+    display: block;
+  }
+  /* Nothing scouted: the hint, and the last lobbies of this device beside it. */
+  .vb .ms-rest {
+    display: grid;
+    gap: 24px;
+  }
+  .vb .ms-rest.two {
+    grid-template-columns: minmax(0, 1fr) 500px;
+    align-items: start;
+  }
+  .vb .ms-rest.two .ms-empty {
+    height: 100%;
+    justify-content: center;
+  }
+  .vb .ms-lb {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 14px 16px;
+    gap: 14px;
+    padding: 12px 20px;
+    border-top: 1px solid var(--line);
+    transition: background 160ms var(--ease);
+  }
+  .vb .ms-lb:hover {
+    background: rgb(var(--v-rgb) / 0.04);
+  }
+  .vb .ms-stk {
+    display: inline-flex;
+    flex: none;
+  }
+  .vb .ms-stk img {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px var(--s1);
+    object-fit: cover;
+  }
+  .vb .ms-stk img + img {
+    margin-left: -9px;
+  }
+  .vb .ms-lc {
+    gap: 3px;
+    margin-left: auto;
   }
   .vb .msg.many {
     grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -45,13 +85,18 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
-  @media (max-width: 767px) {
-    .vb .ms-find {
-      flex-wrap: wrap;
+  @media (max-width: 1023px) {
+    .vb .ms-rest.two {
+      grid-template-columns: 1fr;
     }
+  }
+  @media (max-width: 767px) {
     .vb .ms-find .btn {
       flex: 1;
       justify-content: center;
+    }
+    .vb .ms-lc {
+      display: none;
     }
     .vb .msg,
     .vb .msg.many {
