@@ -36,18 +36,22 @@ test.group('Player sitemap', (group) => {
     index.assertTextIncludes('https://invade.lol/sitemap.xml?page=1')
   })
 
-  test('the site section lists the champion, stats and pro pages', async ({ client }) => {
+  test('the site section lists the champion, stats and pro pages', async ({ client, assert }) => {
     const response = await client.get('/sitemap.xml?section=pages')
     response.assertStatus(200)
     for (const path of [
-      '/champions',
       '/tier-list?role=mid',
+      '/tier-list/items',
+      '/tier-list/duos',
       '/stats',
       '/stats?view=early',
-      '/pros?view=ladder',
+      '/leaderboards/pros',
+      '/league/lec',
     ]) {
       response.assertTextIncludes(`<loc>https://invade.lol${path.replace('&', '&amp;')}</loc>`)
     }
+    // The old champion directory leads to the tier list.
+    assert.notInclude(response.text(), '<loc>https://invade.lol/champions</loc>')
     const unknown = await client.get('/sitemap.xml?section=nope')
     unknown.assertStatus(404)
   })

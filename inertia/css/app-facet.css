@@ -1,0 +1,109 @@
+/* ──────────────────────────────────────────────────────────────
+   The desktop app's page (`/app`), loaded with its page. The board's
+   classes (ap-hero, ap-shot, feat3) are in facet.css; this adds the
+   joints and the narrower screens.
+   ────────────────────────────────────────────────────────────── */
+@layer components {
+  .vb .ap-hero .glyph {
+    margin: 0 auto;
+  }
+  .vb .ap-title {
+    margin-top: 22px;
+    font-size: 56px;
+  }
+  .vb .ap-lead {
+    max-width: 560px;
+    margin: 14px auto 0;
+    font-size: 17px;
+  }
+  .vb .ap-dl {
+    margin-top: 28px;
+  }
+  .vb .ap-dl .dl-app {
+    justify-content: center;
+    gap: 12px;
+  }
+  .vb .ap-ver {
+    margin-top: 14px;
+  }
+  .vb .ap-shot {
+    display: block;
+  }
+  .vb .ap-p {
+    max-width: 440px;
+    margin-top: 12px;
+  }
+  .vb .feat3 .fr {
+    display: block;
+  }
+  .vb .feat3 .fr img {
+    object-position: 0 0;
+  }
+  .vb .ap-last {
+    grid-template-columns: 1fr 1fr;
+    padding-bottom: 8px;
+  }
+  .vb .ap-new {
+    margin-top: 18px;
+  }
+  .vb .ap-new b {
+    color: var(--t1);
+    font-weight: 650;
+  }
+  .vb .ap-more {
+    margin-top: 18px;
+  }
+  .vb .ap-sys {
+    padding: 24px;
+  }
+  .vb .ap-rows {
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .vb .ap-rows .row {
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .vb .ap-rows .h5 {
+    text-align: right;
+  }
+
+  @media (max-width: 1023px) {
+    .vb .ap-shot {
+      height: auto;
+      aspect-ratio: 16 / 10;
+    }
+    .vb .feat3,
+    .vb .feat3.rev,
+    .vb .ap-last {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 28px;
+      padding: 48px 0;
+    }
+    .vb .feat3.rev > .fr {
+      order: 2;
+    }
+    .vb .feat3 .fr {
+      height: auto;
+      aspect-ratio: 16 / 10;
+    }
+  }
+  @media (max-width: 639px) {
+    .vb .ap-hero {
+      padding-top: 44px;
+    }
+    .vb .ap-title {
+      font-size: 38px;
+    }
+    .vb .ap-lead {
+      font-size: 16px;
+    }
+    .vb .ap-dl .dl-app {
+      flex-wrap: wrap;
+    }
+    .vb .ap-shot {
+      margin-top: 32px;
+      --cut: 16px;
+    }
+  }
+}

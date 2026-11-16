@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import Icon from '../ui/Icon.vue'
+import ScoreDial from '../ui/ScoreDial.vue'
+import type { IconName } from '../../lib/icons.js'
 import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
-import { ChevronDown } from 'lucide-vue-next'
 import LensTrend from './LensTrend.vue'
-import { dot, tone } from './tone.js'
+import { dot } from './tone.js'
 import {
   figureText,
   MIN_GAMES,
@@ -29,6 +31,17 @@ const props = defineProps<{
 }>()
 
 const open = ref(false)
+
+/** Each domain's line icon in the card head. */
+const ICONS: Record<string, IconName> = {
+  laning: 'route',
+  farming: 'coin',
+  fighting: 'swords',
+  vision: 'eye',
+  objectives: 'flag',
+  survival: 'shield',
+  consistency: 'chart',
+}
 
 /**
  * The card rises in the first time it comes into view, and only then draws its picture, so each
@@ -87,21 +100,22 @@ function lean(figure: LensFigure) {
   <article
     :id="`lens-${domain.key}`"
     ref="root"
-    class="iv-panel lv-story scroll-mt-20"
+    class="card lv-story"
     :class="{ 'lv-story-wide': wide, 'unrated': domain.rating === null, seen }"
   >
-    <header class="lv-story-head">
-      <div class="min-w-0">
-        <h3>{{ domain.label }}</h3>
-        <p v-if="meta" class="num">{{ meta }}</p>
-      </div>
+    <header class="card-h lv-story-head">
+      <Icon :name="ICONS[domain.key] ?? 'sliders'" :size="16" />
+      <span class="col" style="gap: 2px; min-width: 0">
+        <h3 class="h3">{{ domain.label }}</h3>
+        <span v-if="meta" class="meta num">{{ meta }}</span>
+      </span>
       <span
         v-if="domain.rating !== null"
-        class="lv-story-rating num"
-        :style="{ color: tone(domain.rating) }"
+        class="lv-story-rating"
         :aria-label="`Rated ${domain.rating}`"
-        >{{ domain.rating }}</span
       >
+        <ScoreDial :value="domain.rating" size="sm" />
+      </span>
     </header>
 
     <template v-if="domain.rating !== null">
@@ -125,12 +139,12 @@ function lean(figure: LensFigure) {
         @click="open = !open"
       >
         Figures
-        <ChevronDown :size="14" :class="{ 'rotate-180': open }" />
+        <Icon name="chev" :size="14" :class="{ up: open }" />
       </button>
       <div v-if="open" :id="`lens-${domain.key}-figures`" class="lv-fold-body">
         <ul class="lv-figures">
           <li v-for="figure in domain.figures" :key="figure.key" class="lv-figure">
-            <div class="min-w-0">
+            <div style="min-width: 0">
               <div class="lv-figure-label">{{ figure.label }}</div>
               <div v-if="figure.refs.length" class="lv-figure-refs num">{{ refsOf(figure) }}</div>
             </div>
@@ -173,12 +187,12 @@ function lean(figure: LensFigure) {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  padding: 20px;
+  padding: 0 0 8px;
   opacity: 0;
   transform: translateY(18px);
   transition:
-    opacity 700ms var(--ease-glide),
-    transform 900ms var(--ease-glide);
+    opacity 700ms cubic-bezier(0.25, 0.1, 0.25, 1),
+    transform 900ms cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 .lv-story.seen {
@@ -186,38 +200,25 @@ function lean(figure: LensFigure) {
   transform: none;
 }
 
-.lv-story-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
+.lv-story > :not(.card-h) {
+  margin-right: 20px;
+  margin-left: 20px;
 }
 
 .lv-story-rating {
-  font-size: 20px;
-  font-weight: 600;
-  line-height: 20px;
-  letter-spacing: -0.01em;
-}
-
-.lv-story-head h3 {
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 20px;
-  color: var(--text-1);
-}
-
-.lv-story-head p {
-  font-size: 12px;
-  line-height: 16px;
-  color: var(--text-3);
+  flex: none;
+  margin-left: auto;
 }
 
 .lv-story-body {
   display: grid;
   flex: 1;
   gap: 20px;
-  margin-top: 18px;
+  margin-top: 4px;
+}
+
+.lv-story-wide {
+  grid-column: 1 / -1;
 }
 
 .lv-story-wide .lv-story-body {
@@ -235,7 +236,7 @@ function lean(figure: LensFigure) {
   margin-top: 12px;
   font-size: 14px;
   line-height: 21px;
-  color: var(--text-2);
+  color: var(--t2);
   text-wrap: pretty;
 }
 
@@ -248,7 +249,7 @@ function lean(figure: LensFigure) {
   margin-top: 14px;
   font-size: 13px;
   line-height: 19px;
-  color: var(--text-3);
+  color: var(--t3);
   text-wrap: pretty;
 }
 
@@ -261,16 +262,20 @@ function lean(figure: LensFigure) {
   margin-top: 14px;
   font-size: 12px;
   font-weight: 500;
-  color: var(--text-3);
+  color: var(--t3);
   transition: color var(--t-fast) var(--ease);
 }
 
 .lv-fold:hover {
-  color: var(--text-1);
+  color: var(--t1);
 }
 
-.lv-fold svg {
+.lv-fold .i {
   transition: transform var(--t-base) var(--ease);
+}
+
+.lv-fold .i.up {
+  transform: rotate(180deg);
 }
 
 @media (pointer: coarse) {
@@ -307,14 +312,14 @@ function lean(figure: LensFigure) {
 .lv-figure-label {
   font-size: 13px;
   line-height: 18px;
-  color: var(--text-2);
+  color: var(--t2);
 }
 
 .lv-figure-refs {
   overflow: hidden;
   font-size: 12px;
   line-height: 16px;
-  color: var(--text-3);
+  color: var(--t3);
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -323,7 +328,7 @@ function lean(figure: LensFigure) {
   font-size: 15px;
   font-weight: 600;
   text-align: right;
-  color: var(--text-1);
+  color: var(--t1);
 }
 
 .lv-lean {
@@ -350,7 +355,7 @@ function lean(figure: LensFigure) {
 .lv-fold-trend-head {
   margin-bottom: 6px;
   font-size: 12px;
-  color: var(--text-3);
+  color: var(--t3);
 }
 
 @media (prefers-reduced-motion: reduce) {

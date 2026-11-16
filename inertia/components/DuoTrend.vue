@@ -154,8 +154,8 @@ const id = `fr-fade-${Math.random().toString(36).slice(2, 8)}`
     <svg v-if="chart" :width="chart.w" :height="chart.h" aria-hidden="true">
       <defs>
         <linearGradient :id="id" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stop-color="var(--brand)" stop-opacity="0.18" />
-          <stop offset="1" stop-color="var(--brand)" stop-opacity="0" />
+          <stop offset="0" stop-color="var(--v400)" stop-opacity="0.26" />
+          <stop offset="1" stop-color="var(--v400)" stop-opacity="0" />
         </linearGradient>
       </defs>
 
@@ -201,7 +201,7 @@ const id = `fr-fade-${Math.random().toString(36).slice(2, 8)}`
     </svg>
 
     <div v-if="tip" class="fr-trend-tip num" :style="{ left: `${tip.left}px` }">
-      <span class="text-ink-3">{{ tip.date }}, {{ tip.result }}</span>
+      <span class="t3">{{ tip.date }}, {{ tip.result }}</span>
       <b>{{ tip.form }}%</b>
     </div>
   </div>
@@ -228,29 +228,28 @@ const id = `fr-fade-${Math.random().toString(36).slice(2, 8)}`
 .fr-trend-guides text,
 .fr-trend-axis text {
   font-size: 11px;
-  font-weight: 500;
-  fill: var(--text-4);
+  font-weight: 600;
+  fill: var(--t3);
   font-variant-numeric: tabular-nums;
 }
 
 .fr-trend-base {
-  stroke: var(--text-4);
+  stroke: var(--line-3);
   stroke-width: 1;
   stroke-dasharray: 3 4;
-  opacity: 0.8;
 }
 
 .fr-trend-line {
   fill: none;
-  stroke: var(--brand);
-  stroke-width: 1.75;
+  stroke: var(--v400);
+  stroke-width: 2;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
 
 .fr-trend-dot {
-  fill: var(--brand);
-  stroke: var(--solid-1);
+  fill: var(--v400);
+  stroke: var(--s1);
   stroke-width: 2;
 }
 
@@ -270,16 +269,16 @@ const id = `fr-fade-${Math.random().toString(36).slice(2, 8)}`
   font-size: 12px;
   line-height: 16px;
   white-space: nowrap;
-  color: var(--text-1);
-  background: var(--solid-2);
-  border-radius: var(--r-sm);
-  box-shadow: var(--shadow-2);
+  color: var(--t1);
+  background: var(--s2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r2);
   pointer-events: none;
   animation: fr-tip-in 120ms var(--ease) both;
 }
 
 .fr-trend-tip b {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 @keyframes fr-tip-in {

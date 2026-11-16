@@ -1,0 +1,64 @@
+/* The multisearch (pages/multisearch.vue): the board's cards are in facet.css (.msg, .msc); this
+   adds the search bar, more than five players and the phone. Components layer, under `.vb`. */
+@layer components {
+  .vb .ms-find {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+  .vb .msg.many {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    row-gap: 16px;
+  }
+  .vb .msc .top2 a {
+    display: block;
+  }
+  .vb .msc .chr .ell {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .vb .msc .tagx.vi {
+    background: var(--v900);
+    color: var(--v100);
+    box-shadow: inset 0 0 0 1px rgb(var(--v-rgb) / 0.35);
+  }
+  .vb .msc .ms-x {
+    margin-left: auto;
+    width: 28px;
+    padding: 0;
+    justify-content: center;
+  }
+  .vb .ms-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 48px 24px;
+    text-align: center;
+  }
+  @media (max-width: 1199px) {
+    .vb .msg,
+    .vb .msg.many {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 767px) {
+    .vb .ms-find {
+      flex-wrap: wrap;
+    }
+    .vb .ms-find .field {
+      flex: 1 1 100% !important;
+    }
+    .vb .ms-find .btn {
+      flex: 1;
+      justify-content: center;
+    }
+    .vb .msg,
+    .vb .msg.many {
+      grid-template-columns: 1fr;
+    }
+  }
+}

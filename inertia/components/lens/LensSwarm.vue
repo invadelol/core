@@ -113,8 +113,8 @@ const at = (score: number) => `${score}%`
   position: absolute;
   inset-block: 0;
   border-radius: var(--r-md);
-  background: rgb(var(--brand-rgb) / 0.08);
-  animation: lv-fade 900ms 300ms var(--ease-glide) both;
+  background: rgb(var(--v-rgb) / 0.08);
+  animation: lv-fade 900ms 300ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
 }
 
 .lv-swarm-pace,
@@ -125,11 +125,11 @@ const at = (score: number) => `${score}%`
 }
 
 .lv-swarm-pace {
-  border-left: 1px dashed var(--text-3);
+  border-left: 1px dashed var(--t3);
 }
 
 .lv-swarm-mean {
-  border-left: 1.5px solid var(--brand);
+  border-left: 1.5px solid var(--v400);
 }
 
 .lv-swarm-game {
@@ -139,10 +139,10 @@ const at = (score: number) => `${score}%`
   margin: calc(var(--size) / -2) 0 0 calc(var(--size) / -2);
   border-radius: 50%;
   box-shadow:
-    0 0 0 1.5px var(--solid-1),
+    0 0 0 1.5px var(--s1),
     var(--contact);
   object-fit: cover;
-  animation: lv-pop 700ms var(--ease-glide) both;
+  animation: lv-pop 700ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
 }
 
 @keyframes lv-pop {
@@ -164,7 +164,7 @@ const at = (score: number) => `${score}%`
   margin: 10px calc(var(--size, 28px) / 2) 0;
   border-top: 1px solid var(--line-2);
   font-size: 11px;
-  color: var(--text-4);
+  color: var(--t4);
 }
 
 .lv-swarm-axis span {
@@ -185,7 +185,7 @@ const at = (score: number) => `${score}%`
 .lv-swarm-axis .mean {
   top: 20px;
   font-weight: 600;
-  color: var(--brand-hi);
+  color: var(--v300);
 }
 
 @media (prefers-reduced-motion: reduce) {

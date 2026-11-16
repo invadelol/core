@@ -195,8 +195,9 @@ Run `node ace migration:run` to create the tables (`desktop_device`,
 `desktop_device_account`, `riot_puuid_alias`, `desktop_match_upload`,
 `match_source`, `lp_change`, `player_observation`, `player_mastery`,
 `riot_rank_confirmed`, `desktop_crash_report`, and `riot_rank.source` /
-`riot_rank.device_id`). No new
-environment variables: `DESKTOP_UPLOADS_ENABLED` also pauses player reports.
+`riot_rank.device_id`). Each kind of
+desktop data has its own switch, off by default: `DESKTOP_UPLOADS_ENABLED` (the app's own games),
+`DESKTOP_OBSERVED_ENABLED` and `DESKTOP_PLAYERS_ENABLED` (player reports).
 
 Tests: `node ace test --tags=@desktop` runs the rules (conversion, structural
 checks, LP, identity mapping, publication policy, player snapshots, signing,
@@ -265,7 +266,9 @@ See [docs/design.md](docs/design.md) for the tokens, themes and primitives, and
 | `REDIS_PORT` | yes | Redis port |
 | `REDIS_PASSWORD` | no | Redis password |
 | `REDIS_DB` | no | Redis logical database (default 0) |
-| `DESKTOP_UPLOADS_ENABLED` | no | Desktop game uploads on/off (default true) |
+| `DESKTOP_UPLOADS_ENABLED` | no | Desktop uploads of the app's own games on/off (default false) |
+| `DESKTOP_OBSERVED_ENABLED` | no | Desktop observed games on/off, needs uploads on (default false) |
+| `DESKTOP_PLAYERS_ENABLED` | no | Desktop player reports on/off, needs uploads on (default false) |
 | `DESKTOP_RESOLVE_ENABLED` | no | Desktop Riot ID onboarding on/off (default true) |
 | `DESKTOP_MIN_APP_VERSION` | no | Oldest desktop app version told to upload (default none) |
 

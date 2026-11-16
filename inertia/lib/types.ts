@@ -259,7 +259,7 @@ export interface LiveGame {
     championId: number
     teamId: number
     bot?: boolean
-    championStats?: { games: number; winrate: number } | null
+    championStats?: { games: number; winrate: number; kda?: number | null } | null
     /** The player's newest stored games. */
     recent?: { games: number; wins: number } | null
     /** Their run of results, newest first: 3 for three wins in a row, -2 for two losses. */

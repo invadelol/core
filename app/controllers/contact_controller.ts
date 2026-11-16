@@ -1,5 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
-import { legalPublisher } from '#controllers/legal_controller'
+import env from '#start/env'
 import { discordServer, type DiscordServer } from '#services/discord_server'
 
 const DESCRIPTION =
@@ -10,8 +10,9 @@ const COUNTS_WAIT_MS = 800
 
 export default class ContactController {
   /**
-   * `/contact`: the ways to reach the team. The email is the publisher's, as /legal shows it; the
-   * Discord counts are left out when Discord is slow or unreachable.
+   * `/contact`: the ways to reach the team. The email is a contact address the environment sets
+   * (LEGAL_CONTACT_EMAIL), never the publisher's personal default: without one, the page has no
+   * email. The Discord counts are left out when Discord is slow or unreachable.
    */
   async show({ inertia }: HttpContext) {
     const discord = await Promise.race<DiscordServer | null>([
@@ -20,7 +21,7 @@ export default class ContactController {
     ])
 
     return inertia.render('contact', {
-      email: legalPublisher().email,
+      email: String(env.get('LEGAL_CONTACT_EMAIL') ?? '').trim() || null,
       discord,
       description: DESCRIPTION,
       social: {

@@ -68,8 +68,8 @@ const signed = (v: number) =>
     <svg :viewBox="`0 0 ${W} ${height}`" preserveAspectRatio="none" aria-hidden="true">
       <defs>
         <linearGradient :id="gradient" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0" stop-color="var(--brand)" stop-opacity="0.2" />
-          <stop offset="1" stop-color="var(--brand)" stop-opacity="0" />
+          <stop offset="0" stop-color="var(--v400)" stop-opacity="0.2" />
+          <stop offset="1" stop-color="var(--v400)" stop-opacity="0" />
         </linearGradient>
       </defs>
       <line class="lv-race-base" x1="0" :x2="W" :y1="geometry.base" :y2="geometry.base" />
@@ -125,7 +125,7 @@ const signed = (v: number) =>
   width: 100%;
   height: 100%;
   overflow: visible;
-  animation: lv-reveal 1300ms 120ms var(--ease-glide) both;
+  animation: lv-reveal 1300ms 120ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
 }
 
 /* The lines draw in from the first minute to the last; the marks follow. */
@@ -141,7 +141,7 @@ const signed = (v: number) =>
 .lv-race-dot,
 .lv-race-gap,
 .lv-race-end {
-  animation: lv-fade 500ms 1100ms var(--ease-glide) both;
+  animation: lv-fade 500ms 1100ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
 }
 
 .lv-race-base {
@@ -157,7 +157,7 @@ const signed = (v: number) =>
 
 .lv-race-them {
   fill: none;
-  stroke: var(--text-3);
+  stroke: var(--t3);
   stroke-width: 1.25;
   stroke-dasharray: 4 4;
   vector-effect: non-scaling-stroke;
@@ -165,7 +165,7 @@ const signed = (v: number) =>
 
 .lv-race-you {
   fill: none;
-  stroke: var(--brand);
+  stroke: var(--v400);
   stroke-width: 2;
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
@@ -186,13 +186,13 @@ const signed = (v: number) =>
 }
 
 .lv-race-dot.you {
-  background: var(--brand);
-  box-shadow: 0 0 0 2px var(--solid-1);
+  background: var(--v400);
+  box-shadow: 0 0 0 2px var(--s1);
 }
 
 .lv-race-dot.them {
-  box-shadow: inset 0 0 0 1.5px var(--text-3);
-  background: var(--solid-1);
+  box-shadow: inset 0 0 0 1.5px var(--t3);
+  background: var(--s1);
 }
 
 .lv-race-gap {
@@ -200,7 +200,7 @@ const signed = (v: number) =>
   top: 0;
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-1);
+  color: var(--t1);
   white-space: nowrap;
   transform: translateX(-50%);
 }
@@ -216,18 +216,18 @@ const signed = (v: number) =>
 
 .lv-race-end.you {
   font-weight: 600;
-  color: var(--text-1);
+  color: var(--t1);
 }
 
 .lv-race-end.them {
-  color: var(--text-3);
+  color: var(--t3);
 }
 
 .lv-race-tick {
   position: absolute;
   bottom: 0;
   font-size: 11px;
-  color: var(--text-4);
+  color: var(--t4);
   transform: translateX(-50%);
 }
 

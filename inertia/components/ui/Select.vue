@@ -1,6 +1,6 @@
 <script setup lang="ts" generic="T extends string | number">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Check, ChevronDown, Search } from 'lucide-vue-next'
+import Icon from './Icon.vue'
 
 interface Option<V> {
   value: V
@@ -103,54 +103,41 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside))
 </script>
 
 <template>
-  <div ref="root" class="relative" @keydown.esc="open = false">
+  <div ref="root" class="vb sel-root relative" @keydown.esc="open = false">
     <button
       type="button"
-      class="control flex h-[30px] w-full pointer-coarse:h-[38px] items-center gap-2 rounded-[5px] px-2.5 text-[12.5px] font-medium transition-[background-color,box-shadow]"
+      class="sel w-full"
       :aria-expanded="open"
       aria-haspopup="listbox"
       @click="open = !open"
     >
-      <span v-if="label" class="shrink-0 text-ink-3">{{ label }}</span>
-      <img
-        v-if="selected?.icon"
-        :src="selected.icon"
-        alt=""
-        class="thumb h-[18px] w-[18px] rounded-[3px]"
-      />
-      <span class="min-w-0 flex-1 truncate text-left" :class="selected ? 'text-ink' : 'text-ink-3'">
+      <span v-if="label" class="k">{{ label }}</span>
+      <img v-if="selected?.icon" :src="selected.icon" alt="" class="sel-ic" />
+      <span class="min-w-0 flex-1 truncate text-left" :class="{ t3: !selected }">
         {{ selected?.label ?? placeholder }}
       </span>
-      <ChevronDown
-        :size="14"
-        class="shrink-0 text-ink-3 transition-transform"
-        :class="open ? 'rotate-180' : ''"
-      />
+      <Icon name="chev" :size="14" class="sel-chev" :class="{ 'rotate-180': open }" />
     </button>
 
     <div
       v-if="open"
-      class="menu absolute z-40 max-h-[340px] overflow-hidden"
+      class="sel-pop absolute z-40 max-h-[340px] overflow-hidden"
       :class="[align === 'right' ? 'right-0' : 'left-0', up ? 'bottom-full mb-1.5' : 'mt-1.5']"
       :style="{ width: `min(${width}, calc(100vw - 32px))` }"
     >
-      <div v-if="searchable" class="border-b border-line p-2">
-        <div class="relative">
-          <Search
-            :size="13"
-            class="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-ink-3"
-          />
+      <div v-if="searchable" class="sel-q">
+        <label class="field">
+          <Icon name="search" :size="15" />
           <input
             ref="input"
             v-model="query"
-            class="field !pl-7"
             :placeholder="searchPlaceholder ?? 'Filter…'"
             @keydown.down.prevent="move(1)"
             @keydown.up.prevent="move(-1)"
             @keydown.enter.prevent="commit"
             @keydown.esc.prevent="open = false"
           />
-        </div>
+        </label>
       </div>
 
       <div
@@ -164,22 +151,18 @@ onBeforeUnmount(() => document.removeEventListener('mousedown', onOutside))
           :key="String(option.value)"
           type="button"
           role="option"
-          class="menu-item"
+          class="sel-o"
           :aria-selected="option.value === model"
           :data-active="index === active"
           @mouseenter="active = index"
           @click="choose(option.value)"
         >
-          <img v-if="option.icon" :src="option.icon" alt="" class="thumb h-6 w-6 rounded-[5px]" />
+          <img v-if="option.icon" :src="option.icon" alt="" class="sel-ic" />
           <span class="min-w-0 flex-1 truncate">{{ option.label }}</span>
-          <span v-if="option.meta" class="num shrink-0 text-[12px] text-ink-3">{{
-            option.meta
-          }}</span>
-          <Check v-if="option.value === model" :size="13" class="shrink-0 text-ink" />
+          <span v-if="option.meta" class="sel-m num">{{ option.meta }}</span>
+          <Icon v-if="option.value === model" name="check" :size="14" class="sel-ck" />
         </button>
-        <p v-if="!visible.length" class="px-3 py-4 text-[13px] text-ink-2">
-          No champion matches “{{ query }}”.
-        </p>
+        <p v-if="!visible.length" class="sel-none">Nothing matches “{{ query }}”.</p>
       </div>
     </div>
   </div>

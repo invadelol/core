@@ -30,7 +30,7 @@ test.group('Desktop player snapshots API', (group) => {
   group.each.setup(() => {
     seed = new DesktopSeed()
     // Core takes no desktop data by default (switches.ts): these tests exercise it switched on.
-    forceSwitches({ uploads: true, observed: true })
+    forceSwitches({ uploads: true, observed: true, players: true })
     riotCalls = []
     rateLimiter.prefix = `desktop:rl:test:${randomUUID()}:`
     playerSnapshotService.championIds = async () => null

@@ -1,13 +1,18 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import riotAssetsService from '#services/riot/assets'
 import championStatsService, { DEFAULT_BRACKET } from '#services/champion_stats_service'
-import statsExplorerService, { LENGTHS, VIEWS, type View } from '#services/stats_explorer_service'
+import statsExplorerService, {
+  LENGTHS,
+  VIEWS,
+  lengthWin,
+  type View,
+} from '#services/stats_explorer_service'
 import { ROLE_OF, positionOf, type Position } from '#services/champion_stats'
 import { latestPatch } from '#services/ranked_games_service'
 import { REGIONS } from '#services/ranked_stats'
 import { BRACKET_TEXT, breadcrumbs, count, meta } from '#services/page_meta'
 import { onceEach, settle } from '#services/page_blocks'
-import { patchName } from '../../inertia/lib/patch.js'
+import { patchText } from '../../inertia/lib/patches.js'
 
 /** How long the page waits for its view's blocks before it is sent (see the champion page). */
 const READY_MS = 150
@@ -15,6 +20,7 @@ const READY_MS = 150
 /** The views' names, as the page and its title say them. */
 export const VIEW_LABELS: Record<View, string> = {
   overview: 'Champion stats',
+  table: 'Champion stats table',
   early: 'Early game',
   length: 'Game length',
   firstblood: 'First blood',
@@ -24,7 +30,9 @@ export const VIEW_LABELS: Record<View, string> = {
 }
 
 const VIEW_TEXT: Record<View, string> = {
-  overview: 'win, pick and ban rates, KDA, CS, damage, gold at 10 minutes and first blood',
+  overview:
+    'the best at win, pick and ban rate, KDA, CS, damage, the lead at 10 minutes and first blood',
+  table: 'win, pick and ban rates, KDA, CS, damage, gold at 10 minutes and first blood',
   early: 'gold, CS and experience at 10 and 15 minutes against the lane opponent',
   length: 'win rate by game length',
   firstblood: 'how often each champion takes, helps or gives first blood',
@@ -37,7 +45,10 @@ const VIEW_TEXT: Record<View, string> = {
 export default class StatsController {
   async index({ inertia, request }: HttpContext) {
     const asked = String(request.input('view', 'overview'))
-    const view: View = (VIEWS as readonly string[]).includes(asked) ? (asked as View) : 'overview'
+    const known: View = (VIEWS as readonly string[]).includes(asked) ? (asked as View) : 'overview'
+    // The page shows four views (Overview, Table, Early game, Late game): the older ones' figures
+    // are all in the table.
+    const view: View = ['firstblood', 'items', 'regions', 'patch'].includes(known) ? 'table' : known
     const askedRole = positionOf(request.input('role'))
     const position: Position = askedRole ?? 'MIDDLE'
     const filter = await championStatsService.filter(request.qs())
@@ -64,7 +75,8 @@ export default class StatsController {
     // The view's blocks: what the cache holds within a short wait is sent with the page, the rest
     // (a cold filter's averages are a read of the role's games) follows as a deferred prop.
     const loads: Record<string, () => Promise<unknown>> = {}
-    if (view === 'overview' || view === 'length') {
+    const wide = view === 'overview' || view === 'table'
+    if (wide || view === 'length') {
       loads.averages = async () => {
         const averages = await statsExplorerService.averages(filter, position)
         return Object.fromEntries(
@@ -72,20 +84,23 @@ export default class StatsController {
             .filter(([c]) => ids.has(Number(c)))
             .map(([c, a]) => [
               c,
-              view === 'overview'
+              wide
                 ? {
                     kda: a.kda,
                     csPerMin: a.csPerMin,
                     damage: a.damage,
                     early: a.byLength[0],
                     late: a.byLength[a.byLength.length - 1],
+                    // Win rate in games under and over 25 minutes.
+                    under25: lengthWin(a.buckets, 0, 25),
+                    over25: lengthWin(a.buckets, 25, 999),
                   }
                 : { length: a.length, byLength: a.byLength, games: a.games },
             ])
         )
       }
     }
-    if (view === 'overview' || view === 'length') {
+    if (wide || view === 'length') {
       loads.events = async () => {
         const events = await statsExplorerService.events(filter, position)
         return Object.fromEntries(
@@ -156,8 +171,8 @@ export default class StatsController {
         return c ? [{ id: c.id, name: c.name, slug: c.slug }] : []
       }),
       ...meta({
-        title: `${VIEW_LABELS[view]}: ${label.toLowerCase()}, patch ${patchName(filter.patch)}`,
-        description: `${rows.length} ${label.toLowerCase()} champions, ${VIEW_TEXT[view]}. ${BRACKET_TEXT[filter.bracket]}, patch ${patchName(filter.patch)}, ${count(role?.summary.games ?? 0)} ranked games.`,
+        title: `${VIEW_LABELS[view]}: ${label.toLowerCase()}, ${patchText(filter.patch)}`,
+        description: `${rows.length} ${label.toLowerCase()} champions, ${VIEW_TEXT[view]}. ${BRACKET_TEXT[filter.bracket]}, ${patchText(filter.patch)}, ${count(role?.summary.games ?? 0)} ranked games.`,
         path,
         image: `/og/stats/${view === 'overview' ? 'all' : view}.jpg`,
         version: filter.patch,

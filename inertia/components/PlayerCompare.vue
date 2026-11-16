@@ -6,7 +6,6 @@ const UPDATE_AGAIN_MS = 5 * 60_000
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { X } from 'lucide-vue-next'
 import { RoleIcon } from '@invadelol/ui'
 import {
   positionName,
@@ -15,18 +14,24 @@ import {
   rankFromCore,
   rankLabel,
   rankValue,
-  tierColor,
   type Position,
 } from '@invadelol/ui/logic'
 import MatchFilters, { type Filters } from './MatchFilters.vue'
 import PlayerLink from './PlayerLink.vue'
 import PlayerSearchField from './PlayerSearchField.vue'
 import ShowMore from './ShowMore.vue'
+import CardHead from './ui/CardHead.vue'
+import EmptyState from './ui/EmptyState.vue'
 import FormStrip from './ui/FormStrip.vue'
+import Frame from './ui/Frame.vue'
+import Icon from './ui/Icon.vue'
+import RankEmblem from './ui/RankEmblem.vue'
+import SectionHead from './ui/SectionHead.vue'
+import Skeleton from './ui/Skeleton.vue'
 import { champIcon, championName, profileIcon } from '../lib/assets.js'
 import { monotone } from '../lib/rd_curve.js'
 import { compact, duration, timeAgo } from '../lib/format.js'
-import { killParticipation, matchMinutes, teamTotals } from '../lib/match.js'
+import { isRemake } from '../lib/match.js'
 import {
   championSplit,
   lineOf,
@@ -264,6 +269,10 @@ const lp = computed(() => {
   const y = (d: number) => 8 + (1 - (d - lo) / (hi - lo)) * (H - 16)
   return {
     paths: lines.map((l) => (l ? monotone(l.map((p) => [x(p.t), y(p.d)] as const)) : '')),
+    /** The soft fade under the profile's own line, closed down to the floor. */
+    area: lines[0]
+      ? `${monotone(lines[0].map((p) => [x(p.t), y(p.d)] as const))} L${x(lines[0][lines[0].length - 1].t)} ${H} L${x(lines[0][0].t)} ${H} Z`
+      : '',
     deltas: lines.map((l) => (l ? l[l.length - 1].d : null)),
     zero: y(0),
     from: new Date(start).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
@@ -337,10 +346,11 @@ function gap(key: MetricKey, factor: number, decimals: number) {
   return `+${diff.toFixed(decimals)}`
 }
 
-/** Last 20 results per player, oldest first. */
+/** Last 20 results per player (remakes are no result), oldest first. */
 const form = computed(() =>
   players.value.map((p, index) =>
     (datasets.value[index]?.matches ?? [])
+      .filter((m) => !isRemake(m))
       .slice(0, 20)
       .map((m) => m.participants.find((x) => x.puuid === p.puuid)?.win)
       .filter((w): w is boolean => w !== undefined)
@@ -417,7 +427,7 @@ const ROLE_COLUMNS = [
     factor: 100,
     decimals: 0,
     dense: false,
-    at: 'hidden xs:table-cell',
+    at: 'hm',
   },
   {
     key: 'csMin',
@@ -426,7 +436,7 @@ const ROLE_COLUMNS = [
     factor: 1,
     decimals: 1,
     dense: false,
-    at: 'hidden sm:table-cell',
+    at: 'hm',
   },
   {
     key: 'damagePerMinute',
@@ -435,7 +445,7 @@ const ROLE_COLUMNS = [
     factor: 1,
     decimals: 0,
     dense: true,
-    at: 'hidden md:table-cell',
+    at: 'hm',
   },
   {
     key: 'goldPerMinute',
@@ -444,7 +454,7 @@ const ROLE_COLUMNS = [
     factor: 1,
     decimals: 0,
     dense: true,
-    at: 'hidden lg:table-cell',
+    at: 'hm',
   },
 ] as const
 
@@ -463,8 +473,8 @@ function cell(line: Line | null, column: (typeof ROLE_COLUMNS)[number]) {
  */
 function roleInk(lines: Array<Line | null>, key: MetricKey, index: number) {
   const [a, b] = lines
-  if (!a?.games || !b?.games || a[key] === b[key]) return 'text-ink-2'
-  return (a[key] > b[key] ? 0 : 1) === index ? 'font-semibold text-ink' : 'text-ink-4'
+  if (!a?.games || !b?.games || a[key] === b[key]) return 't2'
+  return (a[key] > b[key] ? 0 : 1) === index ? 't1 b' : 't3'
 }
 
 /* ── Champion pools ────────────────────────────────────────────── */
@@ -495,770 +505,666 @@ const poolMore = computed(() =>
 </script>
 
 <template>
-  <section class="cmp">
+  <div class="cm">
     <!-- Who against whom, and every metric on one mirrored axis -->
-    <section class="rd-card">
-      <div v-if="other" class="vsh">
-        <div v-for="(p, i) in players" :key="p.puuid" class="vp" :class="{ r: i === 1 }">
-          <img :src="profileIcon(p.profileIconId)" alt="" width="72" height="72" />
-          <span class="min-w-0">
-            <PlayerLink
-              :game-name="p.gameName"
-              :tag-line="p.tagLine"
-              show-tag
-              bold
-              class="vp-name"
-            />
-            <small class="num"
-              ><template v-if="soloOf(i)"
-                ><em :style="{ color: tierColor(soloOf(i)!.tier) }">{{
-                  rankLabel(rankFromCore(soloOf(i)!), false)
-                }}</em
-                >, {{ soloOf(i)!.leaguePoints }} LP</template
-              ><template v-else>Unranked</template
-              ><template v-if="mainRole(i)"
-                >, {{ positionName(mainRole(i)).toLowerCase() }}</template
-              ></small
-            >
+    <article class="card">
+      <CardHead title="Compare" icon="compare" meta="Last 100 games each, same filters" />
+      <div v-if="other" class="cm-vs">
+        <div v-for="(p, i) in players" :key="p.puuid" class="cm-p" :class="{ r: i === 1 }">
+          <Frame :src="profileIcon(p.profileIconId)" :width="64" size="s" />
+          <span class="col" style="gap: 6px; min-width: 0">
+            <PlayerLink :game-name="p.gameName" :tag-line="p.tagLine" show-tag bold class="h2" />
+            <span class="row meta num cm-rk">
+              <RankEmblem v-if="soloOf(i)" :tier="soloOf(i)!.tier" :size="20" />
+              <span
+                ><template v-if="soloOf(i)"
+                  ><span class="t2">{{ rankLabel(rankFromCore(soloOf(i)!), false) }}</span
+                  >, {{ soloOf(i)!.leaguePoints }} LP</template
+                ><template v-else>Unranked</template
+                ><template v-if="mainRole(i)"
+                  >, {{ positionName(mainRole(i)).toLowerCase() }}</template
+                ></span
+              >
+            </span>
           </span>
         </div>
-        <div class="vsm">
-          against
-          <span v-if="ready" class="num" :title="'Metrics ahead'"
-            >{{ wins[0] }} to {{ wins[1] }}</span
+        <div class="cm-mid">
+          <span class="lab">against</span>
+          <span v-if="ready" class="fg-s num" title="Metrics ahead"
+            >{{ wins[0] }}<span class="t3"> to </span>{{ wins[1] }}</span
           >
         </div>
       </div>
-      <div v-else class="vsh one">
-        <div class="vp">
-          <img :src="profileIcon(profile.profileIconId)" alt="" width="72" height="72" />
-          <span class="min-w-0">
-            <b
-              >{{ profile.gameName }} <span>#{{ profile.tagLine }}</span></b
+      <div v-else class="cm-vs one">
+        <div class="cm-p">
+          <Frame :src="profileIcon(profile.profileIconId)" :width="64" size="s" />
+          <span class="col" style="gap: 6px; min-width: 0">
+            <b class="h2 ell"
+              >{{ profile.gameName }} <span class="t3">#{{ profile.tagLine }}</span></b
             >
-            <small>Pick a player to put their last games next to these.</small>
+            <span class="meta">Pick a player to put their last games next to these.</span>
           </span>
         </div>
       </div>
 
-      <div class="chg">
+      <div class="cm-pick">
         <PlayerSearchField
-          class="chg-field"
           :busy="busy"
           :placeholder="other ? 'Compare with someone else' : 'Search a Riot ID to compare against'"
           @select="pick"
         />
-        <button v-if="other" type="button" class="iv-btn sm" @click="clear">
-          <X :size="13" />
-          Clear
+        <button v-if="other" type="button" class="btn" @click="clear">
+          <Icon name="x" />Clear
         </button>
       </div>
 
-      <p v-if="error" class="notice mx-6 mb-4" role="alert">{{ error }}</p>
-      <p v-else-if="note && other" class="mx-6 mb-4 text-[12.5px] text-ink-3" role="status">
-        {{ note }}
-      </p>
+      <p v-if="error" class="cm-msg ls" role="alert">{{ error }}</p>
+      <p v-else-if="note && other" class="cm-msg meta" role="status">{{ note }}</p>
 
-      <MatchFilters v-model="filters" :champions="champions" class="cmp-f" />
+      <MatchFilters v-model="filters" :champions="champions" class="cm-f" />
 
-      <div v-if="fetching" class="px-6 pb-6" aria-busy="true">
-        <p class="py-2 text-[13px] text-ink-2" role="status">
-          Fetching {{ fetching }}’s latest games…
-        </p>
-        <div class="iv-skel h-[320px]" />
+      <div v-if="fetching" class="cm-wait" aria-busy="true">
+        <p class="meta" role="status">Fetching {{ fetching }}’s latest games…</p>
+        <Skeleton :rows="6" />
       </div>
 
-      <div v-else-if="other && !ready" class="px-6 pb-6">
-        <div class="iv-skel h-[420px]" />
-      </div>
+      <div v-else-if="other && !ready" class="cm-wait"><Skeleton :rows="9" /></div>
 
-      <div v-else-if="ready" class="mrs">
+      <div v-else-if="ready" class="cm-ms">
         <div
           v-for="metric in METRICS"
           :key="metric.key"
-          class="mr2"
+          class="cm-r"
           :title="
             gap(metric.key, metric.factor, metric.decimals)
               ? `${metric.name}: ${players[leader(metric.key)]?.gameName} ahead by ${gap(metric.key, metric.factor, metric.decimals)}${metric.unit}`
               : metric.name
           "
         >
-          <b class="num" :class="{ win: leader(metric.key) !== 1 }"
+          <b class="fg-xs num" :class="leader(metric.key) === 1 ? 't3' : ''"
             >{{ value(0, metric.key, metric.factor, metric.decimals) ?? '-' }}{{ metric.unit }}</b
           >
-          <span class="bl2 l"
-            ><i
-              :class="{ lo: leader(metric.key) === 1 }"
-              :style="{ width: `${weights(metric.key)[0]}%` }"
-          /></span>
-          <span class="lb">{{ metric.name }}</span>
-          <span class="bl2 r"
-            ><i
-              :class="{ lo: leader(metric.key) === 0 }"
-              :style="{ width: `${weights(metric.key)[1]}%` }"
-          /></span>
-          <b class="num" :class="{ win: leader(metric.key) !== 0 }"
+          <span class="cm-c">
+            <span class="lab">{{ metric.name }}</span>
+            <span class="cm-bars">
+              <span class="a"
+                ><i
+                  :class="{ lo: leader(metric.key) === 1 }"
+                  :style="{ width: `${weights(metric.key)[0]}%` }"
+              /></span>
+              <span class="b"
+                ><i
+                  :class="{ lo: leader(metric.key) === 0 }"
+                  :style="{ width: `${weights(metric.key)[1]}%` }"
+              /></span>
+            </span>
+          </span>
+          <b class="fg-xs num" :class="leader(metric.key) === 0 ? 't3' : ''"
             >{{ value(1, metric.key, metric.factor, metric.decimals) ?? '-' }}{{ metric.unit }}</b
           >
         </div>
-        <div class="mr2 frm">
+        <div class="cm-r cm-form">
           <span />
-          <span class="fl"><FormStrip :results="form[0]" /></span>
-          <span class="lb">Last {{ Math.max(form[0].length, form[1].length) }} games</span>
-          <span><FormStrip :results="form[1]" /></span>
+          <span class="cm-c">
+            <span class="lab">Last {{ Math.max(form[0].length, form[1].length) }} games</span>
+            <span class="cm-bars cm-strips">
+              <span class="a"><FormStrip :results="form[0]" small /></span>
+              <span class="b"><FormStrip :results="form[1]" small /></span>
+            </span>
+          </span>
           <span />
         </div>
       </div>
-    </section>
+    </article>
 
     <template v-if="ready">
-      <div class="two">
-        <section class="rd-card">
-          <div class="rd-head">
-            <h3>LP, last 30 days</h3>
-            <span v-if="lp" class="lgn num">
+      <div class="grid2 cm-two">
+        <article class="card">
+          <CardHead title="LP, last 30 days" icon="chart" />
+          <template v-if="lp">
+            <div class="row cm-lgd num">
               <span v-for="(p, i) in players" :key="p.puuid"
                 ><i :class="i ? 'b' : 'a'" />{{ p.gameName }}
-                {{ lp.deltas[i] === null ? 'no data' : signedLp(lp.deltas[i]!) }}</span
+                <b>{{ lp.deltas[i] === null ? 'no data' : signedLp(lp.deltas[i]!) }}</b></span
               >
-            </span>
-          </div>
-          <template v-if="lp">
-            <div class="lpg">
-              <span class="gd" :style="{ top: `${lp.zero}px` }"><span>Start</span></span>
+            </div>
+            <div class="chart cm-lp" :style="{ height: `${lp.H}px` }">
+              <span class="cm-zero" :style="{ top: `${lp.zero}px` }"><span>Start</span></span>
+              <svg
+                v-if="lp.area"
+                class="fade"
+                :viewBox="`0 0 ${lp.W} ${lp.H}`"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <path class="area" :d="lp.area" />
+              </svg>
               <svg :viewBox="`0 0 ${lp.W} ${lp.H}`" preserveAspectRatio="none" aria-hidden="true">
                 <path
                   v-if="lp.paths[1]"
-                  class="b"
+                  class="cm-ln2"
                   :d="lp.paths[1]"
                   vector-effect="non-scaling-stroke"
                 />
-                <path
-                  v-if="lp.paths[0]"
-                  class="a"
-                  :d="lp.paths[0]"
-                  vector-effect="non-scaling-stroke"
-                />
+                <path v-if="lp.paths[0]" class="ln" :d="lp.paths[0]" />
               </svg>
             </div>
-            <div class="lpx num">
+            <div class="row meta num cm-x">
               <span>{{ lp.from }}</span
               ><span>{{ lp.mid }}</span
               ><span>Latest</span>
             </div>
           </template>
-          <p v-else class="cmp-note">No stored rank changes for either player in 30 days.</p>
-        </section>
+          <EmptyState
+            v-else
+            compact
+            icon="chart"
+            title="No stored rank changes for either player in 30 days"
+          />
+        </article>
 
-        <section class="rd-card">
-          <div class="rd-head">
-            <h3>Champion pools</h3>
-            <span class="rd-hm num"
-              >{{ sharedIds.size }} shared
-              {{ sharedIds.size === 1 ? 'pick' : 'picks' }} highlighted</span
-            >
-          </div>
-          <div class="pl2">
+        <article class="card">
+          <CardHead
+            title="Champion pools"
+            icon="grid"
+            :meta="`${sharedIds.size} shared ${sharedIds.size === 1 ? 'pick' : 'picks'} in violet`"
+          />
+          <div class="cm-pools">
             <div v-for="(list, i) in columns" :key="i">
-              <h4>{{ players[i].gameName }}</h4>
+              <p class="lab cm-ph">{{ players[i].gameName }}</p>
               <div
                 v-for="c in list"
                 :key="c.championId"
-                class="prow pp"
+                class="cm-pc"
                 :class="{ sh: sharedIds.has(c.championId) }"
               >
-                <img :src="champIcon(c.championId)" alt="" width="32" height="32" loading="lazy" />
-                <span class="min-w-0">
-                  <b class="truncate">{{ championName(c.championId) }}</b>
-                  <small class="num">{{ c.games }} games, {{ c.kda.toFixed(2) }} KDA</small>
+                <Frame :src="champIcon(c.championId)" :width="32" size="xs" />
+                <span class="col grow" style="gap: 2px; min-width: 0">
+                  <b class="h5 ell">{{ championName(c.championId) }}</b>
+                  <span class="meta num">{{ c.games }} games, {{ c.kda.toFixed(2) }} KDA</span>
                 </span>
-                <em class="num">{{ Math.round(c.winrate * 100) }}%</em>
+                <span class="fg-xs num">{{ Math.round(c.winrate * 100) }}%</span>
               </div>
             </div>
           </div>
-          <div v-if="poolMore > POOL_ROWS" class="rd-foot">
+          <div v-if="poolMore > POOL_ROWS" class="cm-foot">
             <ShowMore v-model="poolsOpen" :total="poolMore" :limit="POOL_ROWS" />
           </div>
-        </section>
+        </article>
       </div>
 
       <!-- The games they shared -->
-      <template v-if="shared.length">
-        <div class="cmp-h">
-          <h2>
-            Together<span v-if="pairing">{{ pairing }}</span>
-          </h2>
-        </div>
-
-        <div class="rd-card mb-3 flex flex-wrap items-start gap-x-10 gap-y-4 px-5 py-4">
-          <div v-if="record.played">
-            <div class="label">Record</div>
-            <div class="fig mt-1.5 text-[24px]">
-              <span class="rd-up">{{ record.won }}</span>
-              <span class="text-ink-4">-</span>
-              <span class="rd-dn">{{ record.lost }}</span>
-              <span class="num ml-1.5 text-[12px] font-semibold text-ink-3">
-                {{ Math.round((record.won / record.played) * 100) }}%
-              </span>
+      <section v-if="shared.length">
+        <SectionHead title="Together" icon="users" :meta="pairing" />
+        <article class="card">
+          <div class="cm-figs">
+            <div v-if="record.played">
+              <span class="lab">Record</span>
+              <span class="fg-l num"
+                ><span class="wn">{{ record.won }}</span
+                ><span class="t3"> - </span><span class="ls">{{ record.lost }}</span></span
+              >
+              <span class="meta num"
+                >{{ Math.round((record.won / record.played) * 100) }}% won together</span
+              >
             </div>
-          </div>
-          <div v-if="versus.length">
-            <div class="label">Against</div>
-            <div class="fig mt-1.5 text-[24px] text-ink">{{ versus.length }}</div>
-          </div>
-          <div v-for="(row, i) in apart" :key="i">
-            <template v-if="row">
-              <div class="label">{{ players[i].gameName }} apart</div>
-              <div class="fig mt-1.5 text-[24px] text-ink">
-                {{ row.winrate }}%
-                <span class="num ml-1.5 text-[12px] font-semibold text-ink-3"
-                  >{{ row.games }} games</span
-                >
+            <div v-if="versus.length">
+              <span class="lab">Against each other</span>
+              <span class="fg-l num">{{ versus.length }}</span>
+              <span class="meta">games on opposite teams</span>
+            </div>
+            <template v-for="(row, i) in apart" :key="i">
+              <div v-if="row">
+                <span class="lab ell">{{ players[i].gameName }} apart</span>
+                <span class="fg-l num">{{ row.winrate }}%</span>
+                <span class="meta num">{{ row.games }} games</span>
               </div>
             </template>
           </div>
-        </div>
 
-        <div class="rd-card mb-2">
-          <div class="scroll-x">
-            <table class="dt dt-hover num min-w-[330px]">
-              <thead>
-                <tr>
-                  <th class="!pl-4">Game</th>
-                  <th v-for="p in players" :key="p.puuid" class="text-right">
-                    <PlayerLink
-                      :game-name="p.gameName"
-                      :tag-line="p.tagLine"
-                      class="!font-semibold"
-                    />
-                  </th>
-                  <th class="hidden !pr-4 text-right sm:table-cell">Length</th>
-                </tr>
-              </thead>
+          <div class="tbl cm-g" role="table" aria-label="Games together">
+            <div class="tbl-h" role="row">
+              <span role="columnheader">Game</span>
+              <span v-for="p in players" :key="p.puuid" class="n ell" role="columnheader">{{
+                p.gameName
+              }}</span>
+              <span class="n hm" role="columnheader">Length</span>
+            </div>
 
-              <tbody v-if="record.played">
-                <tr class="band">
-                  <td class="!pl-4">
-                    <span class="text-[12px] font-semibold text-ink-2"
-                      >{{ record.played }} games together</span
-                    >
-                  </td>
-                  <td v-for="(line, i) in togetherLines" :key="i" class="text-right">
-                    <span class="stat text-[14px]" :class="roleInk(togetherLines, 'kda', i)">
-                      {{ line.kda.toFixed(2) }}
-                    </span>
-                    <span
-                      class="ml-1.5 text-[11px]"
-                      :class="roleInk(togetherLines, 'killParticipation', i)"
-                    >
-                      {{ Math.round(line.killParticipation * 100) }}% KP
-                    </span>
-                  </td>
-                  <td class="hidden !pr-4 sm:table-cell" />
-                </tr>
+            <template v-if="record.played">
+              <div class="tbl-r cm-band" role="row">
+                <span class="lab" role="cell">{{ record.played }} games together</span>
+                <span v-for="(line, i) in togetherLines" :key="i" class="n" role="cell">
+                  <b class="num" :class="roleInk(togetherLines, 'kda', i)">{{
+                    line.kda.toFixed(2)
+                  }}</b>
+                  <span
+                    class="meta num cm-kp"
+                    :class="roleInk(togetherLines, 'killParticipation', i)"
+                    >{{ Math.round(line.killParticipation * 100) }}% KP</span
+                  >
+                </span>
+                <span class="hm" role="cell" />
+              </div>
+              <div v-for="game in sameTeam" :key="game.match.matchId" class="tbl-r" role="row">
+                <span class="row" style="gap: 10px; min-width: 0" role="cell">
+                  <b class="cm-wl" :class="game.players[0].win ? 'wn' : 'ls'">{{
+                    game.players[0].win ? 'Win' : 'Loss'
+                  }}</b>
+                  <span class="meta ell"
+                    >{{ queueName(game.match.queueId)
+                    }}<span class="hm">, {{ timeAgo(game.match.gameStartMs) }}</span></span
+                  >
+                </span>
+                <span v-for="(p, i) in game.players" :key="i" class="n cm-pl" role="cell">
+                  <span class="num t2">{{ p.kills }}/{{ p.deaths }}/{{ p.assists }}</span>
+                  <RoleIcon
+                    v-if="p.position"
+                    :lane="positionOf(p.position)"
+                    :size="13"
+                    class="t3 hm"
+                  />
+                  <Frame
+                    :src="champIcon(p.championId)"
+                    :alt="championName(p.championId)"
+                    :width="26"
+                    size="xs"
+                  />
+                </span>
+                <span class="n meta num hm" role="cell">{{ duration(game.match.duration) }}</span>
+              </div>
+            </template>
 
-                <tr v-for="game in sameTeam" :key="game.match.matchId">
-                  <td class="!pl-4">
-                    <span class="flex items-center gap-2.5">
-                      <span
-                        class="stat text-[13px]"
-                        :class="game.players[0].win ? 'text-win' : 'text-loss'"
-                      >
-                        {{ game.players[0].win ? 'W' : 'L' }}
-                      </span>
-                      <span class="min-w-0 truncate text-[12px] text-ink-2">
-                        {{ queueName(game.match.queueId) }}
-                        <span class="hidden text-ink-3 sm:inline">
-                          {{ timeAgo(game.match.gameStartMs) }}
-                        </span>
-                      </span>
-                    </span>
-                  </td>
-                  <td v-for="(p, i) in game.players" :key="i" class="text-right">
-                    <span class="flex items-center justify-end gap-2">
-                      <span class="text-[12px] font-medium text-ink-2">
-                        {{ p.kills }}/{{ p.deaths }}/{{ p.assists }}
-                      </span>
-                      <RoleIcon
-                        v-if="p.position"
-                        :lane="positionOf(p.position)"
-                        :size="13"
-                        class="text-ink-3"
-                      />
-                      <img
-                        :src="champIcon(p.championId)"
-                        :alt="championName(p.championId)"
-                        :title="championName(p.championId)"
-                        width="26"
-                        height="26"
-                        loading="lazy"
-                        class="thumb h-[26px] w-[26px] rounded-sm"
-                      />
-                    </span>
-                  </td>
-                  <td class="hidden !pr-4 text-right text-[12px] text-ink-3 sm:table-cell">
-                    {{ duration(game.match.duration) }}
-                  </td>
-                </tr>
-              </tbody>
-
-              <tbody v-if="versus.length">
-                <tr class="band">
-                  <td class="!pl-4">
-                    <span class="text-[12px] font-semibold text-ink-2"
-                      >{{ versus.length }} against each other</span
-                    >
-                  </td>
-                  <td :colspan="players.length" />
-                  <td class="hidden !pr-4 sm:table-cell" />
-                </tr>
-
-                <tr v-for="game in versus" :key="game.match.matchId">
-                  <td class="!pl-4">
-                    <span class="min-w-0 truncate text-[12px] text-ink-2">
-                      {{ queueName(game.match.queueId) }}
-                      <span class="hidden text-ink-3 sm:inline">
-                        {{ timeAgo(game.match.gameStartMs) }}
-                      </span>
-                    </span>
-                  </td>
-                  <td v-for="(p, i) in game.players" :key="i" class="text-right">
-                    <span class="flex items-center justify-end gap-2">
-                      <span class="stat text-[13px]" :class="p.win ? 'text-win' : 'text-loss'">
-                        {{ p.win ? 'W' : 'L' }}
-                      </span>
-                      <span class="text-[12px] font-medium text-ink-2">
-                        {{ p.kills }}/{{ p.deaths }}/{{ p.assists }}
-                      </span>
-                      <img
-                        :src="champIcon(p.championId)"
-                        :alt="championName(p.championId)"
-                        :title="championName(p.championId)"
-                        width="26"
-                        height="26"
-                        loading="lazy"
-                        class="thumb h-[26px] w-[26px] rounded-sm"
-                      />
-                    </span>
-                  </td>
-                  <td class="hidden !pr-4 text-right text-[12px] text-ink-3 sm:table-cell">
-                    {{ duration(game.match.duration) }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <template v-if="versus.length">
+              <div class="tbl-r cm-band" role="row">
+                <span class="lab" role="cell">{{ versus.length }} against each other</span>
+                <span v-for="p in players" :key="p.puuid" role="cell" />
+                <span class="hm" role="cell" />
+              </div>
+              <div v-for="game in versus" :key="game.match.matchId" class="tbl-r" role="row">
+                <span class="meta ell" role="cell"
+                  >{{ queueName(game.match.queueId)
+                  }}<span class="hm">, {{ timeAgo(game.match.gameStartMs) }}</span></span
+                >
+                <span v-for="(p, i) in game.players" :key="i" class="n cm-pl" role="cell">
+                  <b class="cm-wl" :class="p.win ? 'wn' : 'ls'">{{ p.win ? 'W' : 'L' }}</b>
+                  <span class="num t2">{{ p.kills }}/{{ p.deaths }}/{{ p.assists }}</span>
+                  <Frame
+                    :src="champIcon(p.championId)"
+                    :alt="championName(p.championId)"
+                    :width="26"
+                    size="xs"
+                  />
+                </span>
+                <span class="n meta num hm" role="cell">{{ duration(game.match.duration) }}</span>
+              </div>
+            </template>
           </div>
-        </div>
-      </template>
+        </article>
+      </section>
 
       <!-- The same metrics, one position at a time -->
-      <template v-if="roles.length">
-        <div class="cmp-h">
-          <h2>By role</h2>
-        </div>
-        <div class="rd-card mb-2">
-          <table class="dt num w-full">
-            <thead>
-              <tr>
-                <th class="!pl-4">Player</th>
-                <th class="text-right">Games</th>
-                <th
-                  v-for="(column, c) in ROLE_COLUMNS"
-                  :key="column.key"
-                  class="text-right"
-                  :class="[column.at, c === ROLE_COLUMNS.length - 1 ? '!pr-4' : '']"
-                >
-                  {{ column.head }}
-                </th>
-              </tr>
-            </thead>
-
-            <tbody v-for="row in roles" :key="row.role">
-              <tr class="band">
-                <td class="!pl-4" :colspan="2 + ROLE_COLUMNS.length">
-                  <span class="flex items-center gap-2">
-                    <RoleIcon :lane="positionOf(row.role)" :size="14" class="text-ink-2" />
-                    <span class="text-[12px] font-semibold text-ink-2">{{ row.label }}</span>
-                  </span>
-                </td>
-              </tr>
-
+      <section v-if="roles.length">
+        <SectionHead title="By role" icon="layers" />
+        <article class="card">
+          <div class="tbl cm-roles" role="table" aria-label="Metrics by role">
+            <div class="tbl-h" role="row">
+              <span role="columnheader">Player</span>
+              <span class="n" role="columnheader">Games</span>
+              <span
+                v-for="column in ROLE_COLUMNS"
+                :key="column.key"
+                class="n"
+                :class="column.at"
+                role="columnheader"
+                >{{ column.head }}</span
+              >
+            </div>
+            <template v-for="row in roles" :key="row.role">
+              <div class="tbl-r cm-band" role="row">
+                <span class="row lab" style="gap: 8px" role="cell">
+                  <RoleIcon :lane="positionOf(row.role)" :size="14" />{{ row.label }}
+                </span>
+              </div>
               <template v-for="(line, i) in row.lines" :key="i">
-                <tr v-if="line">
-                  <td class="!pl-4">
-                    <PlayerLink
-                      :game-name="players[i].gameName"
-                      :tag-line="players[i].tagLine"
-                      class="max-w-[140px] text-[12.5px]"
-                    />
-                  </td>
-                  <td class="text-right text-ink-3">{{ line.games }}</td>
-                  <td
-                    v-for="(column, c) in ROLE_COLUMNS"
+                <div v-if="line" class="tbl-r" role="row">
+                  <span class="cm-who" role="cell">
+                    <i :class="i ? 'b' : 'a'" />
+                    <PlayerLink :game-name="players[i].gameName" :tag-line="players[i].tagLine" />
+                  </span>
+                  <span class="n meta num" role="cell">{{ line.games }}</span>
+                  <span
+                    v-for="column in ROLE_COLUMNS"
                     :key="column.key"
-                    class="text-right"
-                    :class="[
-                      column.at,
-                      roleInk(row.lines, column.key, i),
-                      c === ROLE_COLUMNS.length - 1 ? '!pr-4' : '',
-                    ]"
+                    class="n num"
+                    :class="[column.at, roleInk(row.lines, column.key, i)]"
+                    role="cell"
+                    >{{ cell(line, column) }}</span
                   >
-                    {{ cell(line, column) }}
-                  </td>
-                </tr>
+                </div>
               </template>
-            </tbody>
-          </table>
-        </div>
-      </template>
+            </template>
+          </div>
+        </article>
+      </section>
     </template>
-  </section>
+  </div>
 </template>
 
 <style scoped>
-.vsh {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 96px minmax(0, 1fr);
-  align-items: center;
-  padding: 24px;
+.cm {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
 }
-.vsh .vp:nth-child(2) {
+.cm-vs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px minmax(0, 1fr);
+  align-items: center;
+  padding: 8px 20px 20px;
+}
+.cm-vs .cm-p.r {
   grid-column: 3;
   grid-row: 1;
 }
-.vsh .vsm {
-  grid-column: 2;
-  grid-row: 1;
-}
-.vsh.one {
+.cm-vs.one {
   grid-template-columns: minmax(0, 1fr);
 }
-.vp {
+.cm-p {
   display: flex;
   align-items: center;
   gap: 16px;
   min-width: 0;
 }
-.vp.r {
+.cm-p .fr {
+  box-shadow: 0 0 0 2px var(--v400);
+}
+.cm-p.r {
   flex-direction: row-reverse;
   text-align: right;
 }
-.vp img {
-  flex: none;
-  width: 72px;
-  height: 72px;
-  border-radius: 14px;
-  box-shadow: 0 0 0 2px var(--rd-violet-hi);
+.cm-p.r .fr {
+  box-shadow: 0 0 0 2px var(--t3);
 }
-.vp.r img {
-  box-shadow: 0 0 0 2px #e6e6f0;
+.cm-p.r .col {
+  align-items: flex-end;
 }
-.vp :deep(.vp-name),
-.vp b {
-  display: block;
-  max-width: 100%;
-  font-size: 22px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
-  color: var(--text-1);
+.cm-rk {
+  flex-wrap: wrap;
+  gap: 6px;
 }
-.vp b span {
-  font-size: 15px;
-  font-weight: 400;
-  color: var(--text-3);
-}
-.vp small {
-  display: block;
-  margin-top: 3px;
-  font-size: 13px;
-  color: var(--text-3);
-}
-.vp small em {
-  font-style: normal;
-  font-weight: 650;
-}
-.vsm {
-  display: grid;
-  gap: 2px;
+.cm-mid {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   text-align: center;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-3);
 }
-.vsm span {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-4);
-}
-.chg {
+.cm-pick {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 0 24px 14px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--line);
 }
-.chg-field {
-  flex: 1;
-  min-width: 0;
+.cm-msg {
+  margin: 0;
+  padding: 0 20px 14px;
+  font-size: 13px;
+  font-weight: 600;
 }
-.cmp-f {
-  margin: 0 24px 16px;
+.cm-f {
+  padding: 14px 20px;
+  border-top: 1px solid var(--line);
 }
-.mrs {
-  box-shadow: inset 0 1px 0 var(--rd-line);
+.cm-wait {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 20px 20px;
+  border-top: 1px solid var(--line);
 }
-.mr2 {
+.cm-ms {
+  padding: 8px 0 12px;
+  border-top: 1px solid var(--line);
+}
+.cm-r {
   display: grid;
-  grid-template-columns: 76px minmax(0, 1fr) 150px minmax(0, 1fr) 76px;
-  gap: 14px;
+  grid-template-columns: 90px minmax(0, 1fr) 90px;
   align-items: center;
-  height: 52px;
-  padding: 0 24px;
+  gap: 16px;
+  padding: 9px 20px;
 }
-.mr2 + .mr2 {
-  box-shadow: inset 0 1px 0 var(--rd-line);
-}
-.mr2 b {
-  font-size: 17px;
-  font-weight: 650;
-  color: var(--text-3);
-}
-.mr2 b.win {
-  color: var(--text-1);
-}
-.mr2 b:last-child {
+.cm-r > b {
   text-align: right;
 }
-.mr2 .lb {
-  font-size: 13px;
-  text-align: center;
-  color: var(--text-2);
+.cm-r > b:last-child {
+  text-align: left;
 }
-.mr2 .fl {
+.cm-c {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+.cm-bars {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  width: 100%;
+}
+.cm-bars > span {
+  display: flex;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--s3);
+}
+.cm-bars > .a {
   justify-content: flex-end;
 }
-.bl2 {
-  display: flex;
-  height: 8px;
-  overflow: hidden;
-  border-radius: 9px;
-  background: var(--rd-track);
-}
-.bl2.l {
-  justify-content: flex-end;
-}
-.bl2 i {
+.cm-bars i {
   display: block;
   height: 100%;
-  border-radius: 9px;
-  background: var(--rd-violet-hi);
-}
-.bl2.r i {
-  background: #e6e6f0;
-}
-.bl2 i.lo {
-  opacity: 0.45;
-}
-.two {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 16px;
-  margin-top: 16px;
-  align-items: start;
-}
-.lgn {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 14px;
-  font-size: 12px;
-  color: var(--text-3);
-}
-.lgn span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.lgn i {
-  width: 14px;
-  height: 3px;
   border-radius: 2px;
 }
-.lgn i.a,
-.lpg path.a {
-  background: var(--rd-violet-hi);
-  stroke: var(--rd-violet-hi);
+.cm-bars .a i {
+  background: var(--v400);
 }
-.lgn i.b {
-  background: #e6e6f0;
+.cm-bars .b i {
+  background: var(--t3);
 }
-.lpg {
-  position: relative;
-  height: 170px;
-  margin: 12px 22px 0;
+.cm-bars i.lo {
+  opacity: 0.45;
 }
-.lpg svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
+.cm-form {
+  padding-top: 14px;
 }
-.lpg path {
+.cm-strips > span {
+  height: auto;
+  background: none;
+}
+.cm-kp {
+  margin-left: 8px;
+}
+.cm-two {
+  align-items: start;
+}
+.cm-lgd {
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  padding: 0 20px 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--t3);
+}
+.cm-lgd i,
+.cm-who i {
+  display: inline-block;
+  width: 12px;
+  height: 3px;
+  margin-right: 8px;
+  border-radius: 2px;
+  vertical-align: middle;
+  background: var(--v400);
+}
+.cm-lgd i.b,
+.cm-who i.b {
+  background: var(--t3);
+}
+.cm-lgd b {
+  margin-left: 4px;
+  color: var(--t1);
+}
+.cm-lp {
+  margin: 8px 20px 0 56px;
+}
+.cm-ln2 {
   fill: none;
-  stroke-linejoin: round;
-  stroke-linecap: round;
+  stroke: var(--t3);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
 }
-.lpg path.a {
-  stroke-width: 2.25;
-}
-.lpg path.b {
-  stroke: #e6e6f0;
-  stroke-width: 1.75;
-  opacity: 0.8;
-}
-.lpg .gd {
+.cm-zero {
   position: absolute;
   left: 0;
   right: 0;
-  border-top: 1px dashed var(--line-3, rgb(255 255 255 / 0.14));
+  border-top: 1px dashed var(--line-3);
 }
-.lpg .gd span {
+.cm-zero span {
   position: absolute;
-  right: 0;
-  top: 4px;
+  right: calc(100% + 10px);
+  top: -8px;
   font-size: 11px;
-  color: var(--text-3);
+  font-weight: 600;
+  color: var(--t3);
 }
-.lpx {
-  display: flex;
+.cm-x {
   justify-content: space-between;
-  padding: 8px 22px 14px;
-  font-size: 11px;
-  color: var(--text-3);
+  padding: 10px 20px 18px 56px;
 }
-.pl2 {
+.cm-pools {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: 1fr 1fr;
+  gap: 0 20px;
+  padding: 0 20px 8px;
 }
-.pl2 > div + div {
-  box-shadow: inset 1px 0 0 var(--rd-line);
-}
-.pl2 h4 {
+.cm-ph {
   margin: 0;
-  padding: 12px 16px 4px;
-  overflow: hidden;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: var(--text-3);
+  padding: 4px 0 8px;
 }
-.pl2 .pp {
-  grid-template-columns: 32px minmax(0, 1fr) auto;
-  height: 48px;
-  cursor: default;
+.cm-pc {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  margin: 0 -8px;
+  padding: 0 8px;
+  border-top: 1px solid var(--line);
+  border-radius: 6px;
 }
-.pl2 .pp img {
-  width: 32px;
-  height: 32px;
+.cm-pc.sh {
+  background: rgb(var(--v-rgb) / 0.1);
+  box-shadow: inset 2px 0 0 var(--v400);
 }
-.pl2 .pp:hover {
-  background: none;
+.cm-foot {
+  padding: 8px 20px 16px;
+  border-top: 1px solid var(--line);
 }
-.pl2 .pp.sh {
-  background: var(--rd-violet-a);
+.cm-figs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 0;
+  padding: 18px 0;
 }
-.pl2 .pp em {
+.cm-figs > div {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 160px;
+  padding: 0 20px;
+}
+.cm-figs > div + div {
+  border-left: 1px solid var(--line);
+}
+.cm-g {
+  --cols: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) 72px;
+}
+.cm-band {
+  background: var(--s2);
+}
+.cm-wl {
+  width: 34px;
+  flex: none;
   font-size: 13px;
-  font-style: normal;
-  font-weight: 650;
-  color: var(--text-1);
 }
-.cmp-h {
-  margin: 28px 0 12px;
+.cm-pl {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 }
-.cmp-h h2 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 650;
-  color: var(--text-1);
+.cm-roles {
+  --cols: minmax(0, 1fr) 64px 72px 64px 56px 72px 72px 72px;
 }
-.cmp-h h2 span {
-  margin-left: 8px;
+.cm-who {
+  display: flex;
+  align-items: center;
+  min-width: 0;
   font-size: 13px;
-  font-weight: 400;
-  color: var(--text-3);
 }
-.cmp-note {
-  margin: 0;
-  padding: 18px;
-  font-size: 13px;
-  color: var(--text-3);
-}
-.cmp :deep(.dt) {
-  width: 100%;
-}
-
-@media (max-width: 1000px) {
-  .two {
+@media (max-width: 860px) {
+  .cm-vs {
     grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
   }
-  .mr2 {
-    grid-template-columns: 56px minmax(0, 1fr) 96px minmax(0, 1fr) 56px;
-    gap: 10px;
-    padding: 0 14px;
+  .cm-vs .cm-p.r {
+    grid-column: 1;
+    grid-row: 3;
+    flex-direction: row;
+    text-align: left;
   }
-}
-@media (max-width: 640px) {
-  .vsh {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 14px 12px;
-    padding: 18px 16px;
-  }
-  .vsh .vsm {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
-  .vsh .vp:nth-child(2) {
-    grid-column: 2;
-  }
-  .vp,
-  .vp.r {
-    flex-direction: column;
+  .cm-p.r .col {
     align-items: flex-start;
+  }
+  .cm-mid {
+    grid-column: 1;
+    grid-row: 2;
+    flex-direction: row;
+    justify-content: flex-start;
     gap: 10px;
   }
-  .vp.r {
-    align-items: flex-end;
+  .cm-r {
+    grid-template-columns: 64px minmax(0, 1fr) 64px;
+    gap: 10px;
+    padding: 8px 16px;
   }
-  .vp img {
-    width: 52px;
-    height: 52px;
-  }
-  .vp :deep(.vp-name),
-  .vp b {
-    font-size: 16px;
-  }
-  .chg,
-  .cmp-f {
-    margin-inline: 16px;
-  }
-  .mr2 {
-    grid-template-columns: 50px minmax(0, 1fr) 74px minmax(0, 1fr) 50px;
-    gap: 8px;
-    padding: 0 12px;
-  }
-  .mr2 b {
-    font-size: 14px;
-  }
-  .mr2 .lb {
-    font-size: 11px;
-  }
-  .pl2 {
+  .cm-two,
+  .cm-pools {
     grid-template-columns: minmax(0, 1fr);
   }
-  .pl2 > div + div {
-    box-shadow: inset 0 1px 0 var(--rd-line);
+  .cm-figs > div {
+    min-width: 50%;
+  }
+  .cm-figs > div:nth-child(odd) {
+    border-left: 0;
+  }
+  .cm-g {
+    --cols: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .cm-roles {
+    --cols: minmax(0, 1fr) 48px 56px 56px;
+  }
+  .cm-pick {
+    flex-wrap: wrap;
+  }
+  .cm-lp {
+    margin-left: 48px;
+  }
+  .cm-x {
+    padding-left: 48px;
   }
 }
 </style>

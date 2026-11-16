@@ -51,7 +51,7 @@ const share = (you: number, them: number) => (you + them > 0 ? (you / (you + the
   justify-content: space-between;
   padding: 0 40px 0 66px;
   font-size: 12px;
-  color: var(--text-3);
+  color: var(--t3);
 }
 
 .lv-tug-row {
@@ -64,20 +64,20 @@ const share = (you: number, them: number) => (you + them > 0 ? (you / (you + the
 .lv-tug-icon {
   display: grid;
   place-items: center;
-  color: var(--text-2);
+  color: var(--t2);
 }
 
 .lv-tug-value {
   font-size: 14px;
   font-weight: 650;
   text-align: right;
-  color: var(--text-1);
+  color: var(--t1);
 }
 
 .lv-tug-value.them {
   text-align: left;
   font-weight: 500;
-  color: var(--text-3);
+  color: var(--t3);
 }
 
 .lv-tug-bar {
@@ -85,16 +85,16 @@ const share = (you: number, them: number) => (you + them > 0 ? (you / (you + the
   height: 8px;
   overflow: hidden;
   border-radius: 4px;
-  background: var(--surface-3);
+  background: var(--s3);
 }
 
 .lv-tug-bar .you {
   position: absolute;
   inset: 0 auto 0 0;
   border-radius: 4px 0 0 4px;
-  background: var(--brand);
-  box-shadow: 2px 0 0 var(--solid-1);
-  transition: width 1100ms var(--ease-glide);
+  background: var(--v400);
+  box-shadow: 2px 0 0 var(--s1);
+  transition: width 1100ms cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {

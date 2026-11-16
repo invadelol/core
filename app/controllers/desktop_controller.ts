@@ -6,6 +6,7 @@ import publicationService from '#services/desktop/publication_service'
 import resolveService from '#services/desktop/resolve_service'
 import playerSnapshotService from '#services/desktop/player_snapshot_service'
 import crashReportService from '#services/desktop/crash_report_service'
+import { playersEnabled } from '#services/desktop/switches'
 import rateLimiter, { DESKTOP_LIMITS } from '#services/desktop/rate_limiter'
 import { DESKTOP_MAX_PAYLOAD_BYTES } from '#middleware/body_parser_middleware'
 import matchSourceService from '#services/match_source_service'
@@ -63,7 +64,7 @@ export default class DesktopController {
   /**
    * Kill switches and limits the app reads before uploading
    * @tag Desktop
-   * @responseBody 200 - {"uploads": true, "resolve": true, "observed": true, "encodings": ["gzip", "deflate"], "maxPayloadBytes": 2000000, "minAppVersion": null}
+   * @responseBody 200 - {"uploads": true, "resolve": true, "observed": false, "players": false, "encodings": ["gzip", "deflate"], "maxPayloadBytes": 2000000, "minAppVersion": null}
    */
   async config({ response }: HttpContext) {
     response.header('Cache-Control', 'public, max-age=300')
@@ -72,6 +73,9 @@ export default class DesktopController {
       resolve: resolveService.enabled(),
       // Since v1.3: observed games and `POST /matches/known`, and compressed request bodies.
       observed: publicationService.observedEnabled(),
+      // Player snapshots (§6), which only apps before 0.3.7 send: they read `uploads` alone and
+      // take the 503 of a refused batch as a pause.
+      players: playersEnabled(),
       encodings: ['gzip', 'deflate'],
       maxPayloadBytes: DESKTOP_MAX_PAYLOAD_BYTES,
       minAppVersion: env.get('DESKTOP_MIN_APP_VERSION') || null,
@@ -214,7 +218,7 @@ export default class DesktopController {
     const ip = ctx.request.ip()
     await limit(DESKTOP_LIMITS.playersDevice, current.id)
     await limit(DESKTOP_LIMITS.playersIp, ip)
-    if (!publicationService.enabled()) throw DesktopException.paused('uploads')
+    if (!playersEnabled()) throw DesktopException.paused('uploads')
 
     const batch = (await ctx.request.validateUsing(playersValidator)) as unknown as PlayerBatch
     // `distinct` compares the input as sent: catch a PUUID repeated in another case too.

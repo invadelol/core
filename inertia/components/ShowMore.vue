@@ -11,10 +11,16 @@ const open = defineModel<boolean>({ default: false })
   <button
     v-if="total > limit"
     type="button"
-    class="iv-btn ghost sm w-full"
+    class="btn ghost sm show-more"
     :aria-expanded="open"
     @click="open = !open"
   >
     {{ open ? 'Show fewer' : `Show all ${total}` }}
   </button>
 </template>
+
+<style scoped>
+.show-more {
+  width: 100%;
+}
+</style>

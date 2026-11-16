@@ -134,7 +134,7 @@ const splash = computed(() => (props.champion ? championSplash(props.champion) :
         {{ roleName }}<template v-if="champion">, {{ championName(champion) }}</template>
       </p>
       <div class="lv-stage-score">
-        <span class="iv-fig" :aria-label="`Invade score ${score ?? 'not rated'}`">{{
+        <span class="fg-xl" :aria-label="`Invade score ${score ?? 'not rated'}`">{{
           score === null ? '-' : counted
         }}</span>
         <span class="lv-stage-score-label num"> Invade score<br />{{ games }} games </span>
@@ -227,10 +227,9 @@ const splash = computed(() => (props.champion ? championSplash(props.champion) :
   overflow: hidden;
   isolation: isolate;
   padding: 28px 28px 20px;
-  color: var(--text-1);
-  background: var(--ink-1);
-  border-radius: var(--r-lg);
-  box-shadow: var(--window-depth);
+  color: var(--t1);
+  background: var(--s1);
+  border-radius: var(--r3);
 }
 
 @media (min-width: 48rem) {
@@ -253,7 +252,7 @@ const splash = computed(() => (props.champion ? championSplash(props.champion) :
   object-position: 68% 22%;
   opacity: 0.4;
   mask-image: linear-gradient(90deg, transparent 6%, #000 60%);
-  animation: lv-art 1600ms var(--ease-glide) both;
+  animation: lv-art 1600ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
 }
 
 @keyframes lv-art {
@@ -267,9 +266,7 @@ const splash = computed(() => (props.champion ? championSplash(props.champion) :
   position: absolute;
   inset: 0;
   z-index: -1;
-  background:
-    linear-gradient(0deg, var(--ink-1), transparent 40%),
-    radial-gradient(90% 120% at 100% 0%, rgb(var(--brand-rgb) / 0.14), transparent 60%);
+  background: linear-gradient(0deg, var(--s1), transparent 40%);
 }
 
 /* The window's lit edge and rim. */
@@ -278,14 +275,12 @@ const splash = computed(() => (props.champion ? championSplash(props.champion) :
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  box-shadow:
-    var(--lit),
-    inset 0 0 0 1px var(--line);
+  box-shadow: inset 0 0 0 1px var(--line);
   pointer-events: none;
 }
 
 .lv-stage-copy {
-  animation: lv-rise 900ms 100ms var(--ease-glide) both;
+  animation: lv-rise 900ms 100ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
 }
 
 @keyframes lv-rise {
@@ -298,7 +293,7 @@ const splash = computed(() => (props.champion ? championSplash(props.champion) :
 .lv-stage-over {
   font-size: 13px;
   font-weight: 500;
-  color: var(--text-2);
+  color: var(--t2);
 }
 
 .lv-stage-score {
@@ -308,7 +303,7 @@ const splash = computed(() => (props.champion ? championSplash(props.champion) :
   margin-top: 10px;
 }
 
-.lv-stage-score .iv-fig {
+.lv-stage-score .fg-xl {
   min-width: 2ch;
   font-size: 76px;
   line-height: 0.82;
@@ -319,7 +314,7 @@ const splash = computed(() => (props.champion ? championSplash(props.champion) :
   padding-bottom: 3px;
   font-size: 12px;
   line-height: 17px;
-  color: var(--text-3);
+  color: var(--t3);
 }
 
 .lv-stage-even {
@@ -327,7 +322,7 @@ const splash = computed(() => (props.champion ? championSplash(props.champion) :
   margin-top: 22px;
   font-size: 15px;
   line-height: 22px;
-  color: var(--text-2);
+  color: var(--t2);
 }
 
 .lv-stage-calls {
@@ -342,7 +337,7 @@ const splash = computed(() => (props.champion ? championSplash(props.champion) :
   align-items: baseline;
   gap: 8px;
   font-size: 12px;
-  color: var(--text-3);
+  color: var(--t3);
 }
 
 .lv-stage-calls dt button {
@@ -350,12 +345,12 @@ const splash = computed(() => (props.champion ? championSplash(props.champion) :
   gap: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-1);
+  color: var(--t1);
   transition: color var(--t-fast) var(--ease);
 }
 
 .lv-stage-calls dt button:hover {
-  color: var(--brand-hi);
+  color: var(--v300);
 }
 
 .lv-stage-calls dd {
@@ -363,7 +358,7 @@ const splash = computed(() => (props.champion ? championSplash(props.champion) :
   font-size: 16px;
   line-height: 22px;
   letter-spacing: -0.005em;
-  color: var(--text-1);
+  color: var(--t1);
   text-wrap: pretty;
 }
 
@@ -412,7 +407,7 @@ const splash = computed(() => (props.champion ? championSplash(props.champion) :
   stroke-linejoin: round;
   transform-origin: 0 0;
   transition: fill var(--t-base) var(--ease);
-  animation: lv-open 1200ms var(--ease-glide) both;
+  animation: lv-open 1200ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
 }
 
 .lv-domain.on .lv-petal {
@@ -433,11 +428,11 @@ const splash = computed(() => (props.champion ? championSplash(props.champion) :
 
 .lv-ring-pace {
   fill: none;
-  stroke: var(--text-2);
+  stroke: var(--t2);
   stroke-width: 1;
   stroke-dasharray: 2 4;
   pointer-events: none;
-  animation: lv-fade 900ms 500ms var(--ease-glide) both;
+  animation: lv-fade 900ms 500ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
 }
 
 @keyframes lv-fade {
@@ -447,26 +442,26 @@ const splash = computed(() => (props.champion ? championSplash(props.champion) :
 }
 
 .lv-label {
-  animation: lv-fade 700ms var(--ease-glide) both;
+  animation: lv-fade 700ms cubic-bezier(0.25, 0.1, 0.25, 1) both;
 }
 
 .lv-label .name {
   font-size: 13.5px;
   font-weight: 500;
-  fill: var(--text-2);
+  fill: var(--t2);
   transition: fill var(--t-fast) var(--ease);
 }
 
 .lv-domain.on .lv-label .name,
 .lv-domain:focus-visible .lv-label .name {
-  fill: var(--text-1);
+  fill: var(--t1);
 }
 
 .lv-label .value {
   font-size: 17px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  fill: var(--text-1);
+  fill: var(--t1);
 }
 
 .lv-hole-rim {
@@ -481,17 +476,17 @@ const splash = computed(() => (props.champion ? championSplash(props.champion) :
   gap: 6px;
   margin-top: 2px;
   font-size: 11px;
-  color: var(--text-3);
+  color: var(--t3);
 }
 
 .lv-key i {
   width: 16px;
   height: 1px;
-  background: repeating-linear-gradient(90deg, var(--text-3) 0 3px, transparent 3px 6px);
+  background: repeating-linear-gradient(90deg, var(--t3) 0 3px, transparent 3px 6px);
 }
 
 @media (max-width: 47.99rem) {
-  .lv-stage-score .iv-fig {
+  .lv-stage-score .fg-xl {
     font-size: 60px;
   }
 

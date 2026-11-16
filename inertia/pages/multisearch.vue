@@ -1,22 +1,50 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { Head, router } from '@inertiajs/vue3'
-import { X } from 'lucide-vue-next'
-import { rankFromCore, rankLabel, rankValue, tierColor, TIERS } from '@invadelol/ui/logic'
-import AppHeader from '../components/AppHeader.vue'
-import SiteFooter from '../components/SiteFooter.vue'
-import ScoutCard, { type ScoutEntry } from '../components/multisearch/ScoutCard.vue'
+import { Head, Link, router } from '@inertiajs/vue3'
+import { RoleIcon } from '@invadelol/ui'
+import { rankFromCore, rankLabel } from '@invadelol/ui/logic'
+import SiteLayout from '../components/SiteLayout.vue'
+import Masthead from '../components/ui/Masthead.vue'
+import Icon from '../components/ui/Icon.vue'
+import Frame from '../components/ui/Frame.vue'
+import Select from '../components/ui/Select.vue'
+import ScoreDial from '../components/ui/ScoreDial.vue'
+import RankEmblem from '../components/ui/RankEmblem.vue'
+import FormStrip from '../components/ui/FormStrip.vue'
+import Skeleton from '../components/ui/Skeleton.vue'
+import { isRemake, scoreLobby } from '../lib/match.js'
 import { rememberPlayer } from '../lib/recent.js'
-import { scout, type Season } from '../lib/scout.js'
+import { scout } from '../lib/scout.js'
 import {
   MAX_PLAYERS,
+  MULTISEARCH_REGIONS,
   multisearchPath,
   parseRiotIds,
   type RiotIdentity,
 } from '../lib/multisearch.js'
-import { profileIcon } from '../lib/assets.js'
-import '../css/rd-discover.css'
+import { champIcon, championName, profileIcon } from '../lib/assets.js'
+import { profilePath } from '../lib/format.js'
+import type { Scout, Season } from '../lib/scout.js'
+import '../css/multisearch.css'
 import type { Match, RanksPayload, Summoner } from '../lib/types.js'
+
+export interface ScoutEntry {
+  key: string
+  identity: RiotIdentity
+  status: 'loading' | 'ready' | 'not-found' | 'riot-unavailable' | 'error'
+  /** Asking Riot for the player's newest games. */
+  syncing: boolean
+  summoner: Summoner | null
+  ranks: RanksPayload | null
+  /** Champions and positions over the season. */
+  season: Season | null
+  /** The latest games. */
+  scout: Scout | null
+  /** The average Invade score of the latest games. */
+  score: number | null
+  /** A short line after an update ("Riot rate limit reached…"). */
+  note: string | null
+}
 
 /**
  * `/multisearch/:region?summoners=…`: a lobby scouted side by side, one card per player, over a
@@ -49,6 +77,7 @@ function blank(identity: RiotIdentity): ScoutEntry {
     ranks: null,
     season: null,
     scout: null,
+    score: null,
     note: null,
   }
 }
@@ -83,6 +112,7 @@ async function analytics(entry: ScoutEntry, signal: AbortSignal) {
   target.ranks = ranks
   target.season = season
   target.scout = matches ? scout(matches, puuid) : null
+  target.score = matches ? averageScore(matches, puuid) : null
   return matches
 }
 
@@ -236,39 +266,6 @@ function remove(entry: ScoutEntry) {
   writeAddress(entries.value.map((e) => e.identity))
 }
 
-function refresh(entry: ScoutEntry) {
-  if (!controller || entry.syncing) return
-  queueSync(entry.key)
-}
-
-/**
- * Who of the lobby already played together, read from each player's stored games: a premade
- * shows up as two cards naming each other.
- */
-const mates = computed(() => {
-  const out = new Map<string, Array<{ gameName: string; tagLine: string; games: number }>>()
-  const ready = entries.value.filter((e) => e.scout && e.summoner)
-  for (const a of ready) {
-    const list: Array<{ gameName: string; tagLine: string; games: number }> = []
-    for (const b of ready) {
-      if (a === b) continue
-      let games = 0
-      for (const id of a.scout!.matchIds) if (b.scout!.matchIds.has(id)) games++
-      if (games >= 2)
-        list.push({ gameName: b.summoner!.gameName, tagLine: b.summoner!.tagLine, games })
-    }
-    out.set(
-      a.key,
-      list.sort((x, y) => y.games - x.games)
-    )
-  }
-  return out
-})
-
-onMounted(() => {
-  show(props.players)
-})
-
 /** A new search from the header lands on this page again, with other players. */
 watch(
   () => props.players,
@@ -277,54 +274,6 @@ watch(
 
 onBeforeUnmount(() => controller?.abort())
 
-const title = computed(() => {
-  const names = (entries.value.length ? entries.value.map((e) => e.identity) : props.players).map(
-    (p) => p.gameName
-  )
-  return names.length ? names.join(', ') : 'Scout a lobby'
-})
-
-/** Past five players the columns get too narrow: each player becomes a wide row. */
-const rows = computed(() => entries.value.length > 5)
-
-const columns = computed(() => Math.min(Math.max(entries.value.length, 1), 5))
-
-/* ── The field: the lobby's Riot IDs as chips, more pasted or typed after them ── */
-const draft = ref('')
-const drafted = computed(() => parseRiotIds(draft.value))
-const total = computed(() =>
-  Math.min(MAX_PLAYERS, entries.value.length + drafted.value.filter((p) => !has(p)).length)
-)
-const has = (p: RiotIdentity) => entries.value.some((e) => e.key === keyOf(p))
-
-/** Adds what the field holds to the lobby, and the address follows. */
-function search() {
-  const added = drafted.value.filter((p) => !has(p))
-  draft.value = ''
-  if (!added.length) return
-  const players = [...entries.value.map((e) => e.identity), ...added].slice(0, MAX_PLAYERS)
-  show(players)
-  writeAddress(players)
-}
-
-/** A paste is a lobby: it is searched as soon as it lands in the field. */
-function onPaste() {
-  setTimeout(search, 0)
-}
-
-/** A backspace in an empty field takes the last player out. */
-function onBack() {
-  if (draft.value || !entries.value.length) return
-  remove(entries.value[entries.value.length - 1])
-}
-
-/** The region of the lookups: a new address, so the cards load again on it. */
-const REGION_TABS = ['euw', 'eune', 'na', 'kr'] as const
-const regionTabs = computed(() =>
-  props.region && !(REGION_TABS as readonly string[]).includes(props.region)
-    ? [...REGION_TABS, props.region]
-    : [...REGION_TABS]
-)
 function pickRegion(next: string | null) {
   if (next === props.region) return
   router.visit(
@@ -335,363 +284,258 @@ function pickRegion(next: string | null) {
   )
 }
 
-/* ── The lobby at a glance ───────────────────────────────────────── */
+/* ── The board's cards ─────────────────────────────────────────── */
+
+/** The average Invade score of the latest games (remakes and away games have none). */
+function averageScore(matches: Match[], puuid: string) {
+  const scores = matches
+    .filter((m) => !isRemake(m))
+    .slice(0, 20)
+    .map((m) => scoreLobby(m)[puuid]?.score)
+    .filter((v): v is number => typeof v === 'number')
+  return scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null
+}
+
 const soloOf = (e: ScoutEntry) =>
   e.ranks?.current?.find((r) => r.queueType === 'RANKED_SOLO_5x5' && r.tier) ?? null
-const DIVISIONS = ['IV', 'III', 'II', 'I']
-const lobby = computed(() => {
-  const ready = entries.value.filter((e) => e.status === 'ready')
-  if (ready.length < 2) return null
-  const ranked = ready.flatMap((e) => {
-    const r = soloOf(e)
-    const core = r ? rankFromCore(r) : null
-    const value = core ? rankValue(core) : null
-    return r && core && value !== null ? [{ e, r, core, value }] : []
-  })
-  let average: { label: string; color: string } | null = null
-  let range = ''
-  if (ranked.length) {
-    const mean = ranked.reduce((n, x) => n + x.value, 0) / ranked.length
-    const sorted = [...ranked].sort((a, b) => a.value - b.value)
-    if (mean >= 28) average = { label: 'Master and above', color: tierColor('MASTER') }
-    else {
-      const v = Math.floor(mean)
-      const tier = TIERS[Math.floor(v / 4)]
-      average = {
-        label: `${tier.charAt(0)}${tier.slice(1).toLowerCase()} ${DIVISIONS[v % 4]}`,
-        color: tierColor(tier),
-      }
+const rankName = (e: ScoutEntry) => {
+  const r = soloOf(e)
+  return r ? rankLabel(rankFromCore(r), false) : 'Unranked'
+}
+/** Their season: the Solo/Duo record when known, else their stored games of the season. */
+function seasonOf(e: ScoutEntry) {
+  const r = soloOf(e)
+  if (r && r.losses !== null && r.losses !== undefined && r.wins + r.losses > 0)
+    return { games: r.wins + r.losses, rate: Math.round((r.wins / (r.wins + r.losses)) * 100) }
+  const list = e.season?.champions ?? []
+  const games = list.reduce((n, c) => n + c.games, 0)
+  const wins = list.reduce((n, c) => n + c.wins, 0)
+  return games ? { games, rate: Math.round((wins / games) * 100) } : null
+}
+const LANE_WORD: Record<string, string> = {
+  TOP: 'Top',
+  JUNGLE: 'Jungle',
+  MID: 'Mid',
+  ADC: 'Bot',
+  SUPPORT: 'Support',
+}
+const mainRole = (e: ScoutEntry) => e.scout?.roles?.[0]?.lane ?? null
+const championsOf = (e: ScoutEntry) => (e.season?.champions ?? []).slice(0, 3)
+
+/** Who of the lobby already played together, from each player's stored games. */
+const mates = computed(() => {
+  const out = new Map<string, Array<{ gameName: string; games: number }>>()
+  const ready = entries.value.filter((e) => e.scout && e.summoner)
+  for (const a of ready) {
+    const list: Array<{ gameName: string; games: number }> = []
+    for (const b of ready) {
+      if (a === b) continue
+      let games = 0
+      for (const id of a.scout!.matchIds) if (b.scout!.matchIds.has(id)) games++
+      if (games >= 2) list.push({ gameName: b.summoner!.gameName, games })
     }
-    const lo = rankLabel(sorted[0].core, false)
-    const hi = rankLabel(sorted[sorted.length - 1].core, false)
-    range = lo === hi ? `all ${lo}` : `from ${lo} to ${hi}`
+    out.set(
+      a.key,
+      list.sort((x, y) => y.games - x.games)
+    )
   }
-  const records = ranked.filter((x) => x.r.losses !== null && x.r.losses !== undefined)
-  const wins = records.reduce((n, x) => n + x.r.wins, 0)
-  const losses = records.reduce((n, x) => n + (x.r.losses ?? 0), 0)
-  const mains = ready.filter((e) => {
-    const list = e.season?.champions ?? []
-    const all = list.reduce((n, c) => n + c.games, 0)
-    return list.slice(0, 2).some((c) => c.games >= 10 && c.games / all >= 0.2)
-  }).length
-  const pairs: string[] = []
-  for (const e of ready) {
-    for (const m of mates.value.get(e.key) ?? []) {
-      const other = `${m.gameName}#${m.tagLine}`.toLowerCase()
-      if (other > e.key)
-        pairs.push(`${e.summoner?.gameName ?? e.identity.gameName} and ${m.gameName}`)
-    }
-  }
-  return {
-    count: ready.length,
-    average,
-    range,
-    rate: wins + losses ? Math.round((wins / (wins + losses)) * 100) : null,
-    wins,
-    losses,
-    mains,
-    pairs,
-  }
+  return out
 })
+/** The facts worth a tag: a premade, a streak, a main. */
+function tagsOf(e: ScoutEntry) {
+  const out: { text: string; violet?: boolean }[] = []
+  const duo = mates.value.get(e.key) ?? []
+  if (duo.length)
+    out.push({
+      text: `${duo.length === 1 ? 'Duo' : 'Premade'} with ${duo.map((d) => d.gameName).join(', ')}`,
+      violet: true,
+    })
+  const streak = e.scout?.streak ?? 0
+  if (streak >= 3) out.push({ text: `Hot streak, ${streak} wins` })
+  if (streak <= -3) out.push({ text: `${-streak} losses in a row` })
+  const list = e.season?.champions ?? []
+  const all = list.reduce((n, c) => n + c.games, 0)
+  const top = list[0]
+  if (top && top.games >= 10 && top.games / all >= 0.4)
+    out.push({ text: `Main on ${championName(top.championId)}` })
+  return out.slice(0, 2)
+}
+
+/* ── The search: the lobby's names, a region, Scout ─────────────── */
+const field = ref(props.players.map((p) => `${p.gameName}#${p.tagLine}`).join(', '))
+function scoutLobby() {
+  const players = parseRiotIds(field.value).slice(0, MAX_PLAYERS)
+  if (!players.length) return
+  show(players)
+  writeAddress(players)
+}
+/** A paste is a lobby: it is scouted as soon as it lands in the field. */
+function pasted() {
+  setTimeout(scoutLobby, 0)
+}
+const regionValue = ref(props.region ?? 'auto')
+const regionOptions = [
+  { value: 'auto', label: 'Any server' },
+  ...(MULTISEARCH_REGIONS as readonly string[]).map((r) => ({ value: r, label: r.toUpperCase() })),
+]
+watch(regionValue, (next) => pickRegion(next === 'auto' ? null : next))
+
+onMounted(() => {
+  show(props.players)
+})
+/** A new search from the header lands on this page again, with other players. */
+watch(
+  () => props.players,
+  (players) => {
+    field.value = players.map((p) => `${p.gameName}#${p.tagLine}`).join(', ')
+    show(players)
+  }
+)
+onBeforeUnmount(() => controller?.abort())
 </script>
 
 <template>
-  <Head :title="title" />
-
-  <div class="flex min-h-screen flex-col">
-    <AppHeader />
-
-    <main id="main" class="page ms flex-1">
-      <div class="rd-ph">
-        <div>
-          <h1>Multisearch</h1>
-          <p>Paste your champ select chat and read the whole lobby before the game starts</p>
-        </div>
-        <div class="rd-seg" role="group" aria-label="Region">
-          <button
-            type="button"
-            :class="{ on: !region }"
-            :aria-pressed="!region"
-            title="Each player's region is found for them"
-            @click="pickRegion(null)"
-          >
-            Any
-          </button>
-          <button
-            v-for="r in regionTabs"
-            :key="r"
-            type="button"
-            :class="{ on: region === r }"
-            :aria-pressed="region === r"
-            @click="pickRegion(r)"
-          >
-            {{ r.toUpperCase() }}
-          </button>
-        </div>
-      </div>
-
-      <form class="ms-inp dv-bigfield" role="search" @submit.prevent="search">
-        <span v-for="e in entries" :key="e.key" class="ms-chp">
-          <img
-            v-if="e.summoner"
-            :src="profileIcon(e.summoner.profileIconId)"
-            alt=""
-            width="26"
-            height="26"
+  <Head title="Multisearch">
+    <meta
+      name="description"
+      content="Scout a whole lobby at once: rank, recent games, roles and champions of every player side by side."
+    />
+  </Head>
+  <SiteLayout section="tools">
+    <div class="wrap pg-ms">
+      <Masthead
+        title="Multisearch"
+        :crumbs="[{ label: 'Tools' }, { label: 'Multisearch' }]"
+        meta="Paste the names from champion select or the lobby chat, up to five a team"
+      />
+      <form class="card ms-find" @submit.prevent="scoutLobby">
+        <label class="field" style="flex: 1; height: 46px">
+          <Icon name="users" />
+          <input
+            v-model="field"
+            type="text"
+            placeholder="Name#TAG, Name#TAG…"
+            aria-label="Names"
+            @paste="pasted"
           />
-          <span v-else class="ph" aria-hidden="true" />
-          {{ e.identity.gameName }} <span class="t">#{{ e.identity.tagLine }}</span>
-          <button type="button" :aria-label="`Remove ${e.identity.gameName}`" @click="remove(e)">
-            <X :size="12" aria-hidden="true" />
-          </button>
-        </span>
-        <label class="dv-sr" for="ms-add">Riot IDs</label>
-        <input
-          id="ms-add"
-          v-model="draft"
-          type="text"
-          spellcheck="false"
-          autocomplete="off"
-          :placeholder="
-            entries.length ? 'Add a Riot ID' : 'Paste the lobby chat, or Riot IDs like Name#TAG'
-          "
-          @keydown.backspace="onBack"
-          @paste="onPaste"
-        />
-        <button type="submit" class="iv-btn primary" :disabled="!drafted.length">
-          Search {{ total }} {{ total === 1 ? 'player' : 'players' }}
-        </button>
+        </label>
+        <Select v-model="regionValue" :options="regionOptions" width="10rem" align="right" />
+        <button class="btn lg pri" type="submit">Scout</button>
       </form>
 
-      <section v-if="lobby" class="rd-card ms-lob" aria-label="The lobby">
-        <div class="st">
-          <span class="lbl">Average rank</span>
-          <b class="rd-fig" :style="lobby.average ? { color: lobby.average.color } : undefined">{{
-            lobby.average?.label ?? 'Unranked'
-          }}</b>
-          <small>{{ lobby.range || 'No Solo/Duo rank' }}</small>
+      <section class="sec" style="padding-top: 24px">
+        <div v-if="entries.length" class="msg" :class="{ many: entries.length > 5 }">
+          <div v-for="e in entries" :key="e.key" class="card msc">
+            <template v-if="e.status === 'loading'">
+              <div class="top2"><Skeleton :height="120" /></div>
+              <div class="sec3"><Skeleton :rows="4" /></div>
+            </template>
+            <template v-else-if="e.status !== 'ready'">
+              <div class="top2">
+                <div class="h3">{{ e.identity.gameName }}</div>
+                <p class="meta" style="margin-top: 8px">
+                  {{
+                    e.status === 'not-found'
+                      ? 'Not found on this server'
+                      : e.status === 'riot-unavailable'
+                        ? 'Riot is not answering right now'
+                        : 'Could not be loaded'
+                  }}
+                </p>
+              </div>
+              <div class="sec3 row" style="justify-content: center; border-bottom: 0">
+                <button class="btn sm" type="button" @click="remove(e)">Remove</button>
+              </div>
+            </template>
+            <template v-else-if="e.summoner">
+              <div class="top2">
+                <Link :href="profilePath(e.summoner.gameName, e.summoner.tagLine)">
+                  <img class="ic3" :src="profileIcon(e.summoner.profileIconId)" alt="" />
+                  <div class="h3 ell" style="margin-top: 10px">{{ e.summoner.gameName }}</div>
+                </Link>
+                <div class="rk7">
+                  <RankEmblem :tier="soloOf(e)?.tier" :size="28" />
+                  <span class="col" style="text-align: left">
+                    <span class="h5">{{ rankName(e) }}</span>
+                    <span v-if="soloOf(e)" class="meta">{{ soloOf(e)!.leaguePoints }} LP</span>
+                  </span>
+                </div>
+              </div>
+              <div class="sec3 row" style="justify-content: space-between">
+                <span v-if="seasonOf(e)" class="col">
+                  <span class="fg-xs">{{ seasonOf(e)!.rate }}<span class="u">%</span></span>
+                  <span class="meta">{{ seasonOf(e)!.games }} games</span>
+                </span>
+                <span v-else class="meta">No ranked game this season</span>
+                <ScoreDial :value="e.score" />
+              </div>
+              <div class="sec3">
+                <span class="lab">Main role</span>
+                <div class="row" style="gap: 7px; margin-top: 6px">
+                  <template v-if="mainRole(e)"
+                    ><RoleIcon :lane="mainRole(e)!" :size="16" /><span class="h5">{{
+                      LANE_WORD[mainRole(e)!]
+                    }}</span></template
+                  >
+                  <span v-else class="meta">None yet</span>
+                </div>
+              </div>
+              <div class="sec3">
+                <span class="lab">Champions</span>
+                <div v-for="c in championsOf(e)" :key="c.championId" class="chr">
+                  <Frame :src="champIcon(c.championId)" size="xs" />
+                  <span class="ell">{{ championName(c.championId) }}</span>
+                  <span class="w2"
+                    >{{ Math.round((c.wins / Math.max(1, c.games)) * 100) }}%<br />{{
+                      c.games
+                    }}
+                    games</span
+                  >
+                </div>
+                <p v-if="!championsOf(e).length" class="meta" style="margin-top: 6px">
+                  No stored game this season
+                </p>
+              </div>
+              <div v-if="e.scout?.results.length" class="sec3">
+                <span class="lab">Last {{ Math.min(10, e.scout.results.length) }}</span>
+                <div style="margin-top: 8px">
+                  <FormStrip :results="[...e.scout.results.slice(0, 10)].reverse()" />
+                </div>
+              </div>
+              <div class="sec3 row" style="gap: 6px; flex-wrap: wrap; border-bottom: 0">
+                <span
+                  v-for="t in tagsOf(e)"
+                  :key="t.text"
+                  class="tagx"
+                  :class="{ vi: t.violet }"
+                  style="height: 24px; font-size: 12px"
+                  >{{ t.text }}</span
+                >
+                <span v-if="e.syncing" class="meta">Updating</span>
+                <span v-else-if="e.note" class="meta">{{ e.note }}</span>
+                <button
+                  class="btn sm ms-x"
+                  type="button"
+                  :aria-label="`Remove ${e.summoner.gameName}`"
+                  @click="remove(e)"
+                >
+                  <Icon name="x" />
+                </button>
+              </div>
+            </template>
+          </div>
         </div>
-        <div class="st">
-          <span class="lbl">Season win rate</span>
-          <b class="rd-fig num">{{ lobby.rate === null ? '-' : `${lobby.rate}%` }}</b>
-          <small class="num">{{ lobby.wins }}W {{ lobby.losses }}L together</small>
-        </div>
-        <div class="st">
-          <span class="lbl">On a main</span>
-          <b class="rd-fig rd-vio num">{{ lobby.mains }} of {{ lobby.count }}</b>
-          <small>a fifth of their games on one champion</small>
-        </div>
-        <div class="st">
-          <span class="lbl">Premade</span>
-          <b class="rd-fig num">{{
-            lobby.pairs.length
-              ? `${lobby.pairs.length} ${lobby.pairs.length === 1 ? 'pair' : 'pairs'}`
-              : 'None seen'
-          }}</b>
-          <small>{{ lobby.pairs.join(', ') || 'No two of them in the same games' }}</small>
+        <div v-else class="card ms-empty">
+          <span class="h4">Paste a lobby to scout it</span>
+          <span class="meta"
+            >From champion select or the lobby chat: every Riot ID in it is read, up to ten.</span
+          >
         </div>
       </section>
-
-      <section
-        v-if="entries.length"
-        class="grid"
-        :class="{ rows }"
-        :style="{ '--cols': columns }"
-        aria-label="Players"
-      >
-        <ScoutCard
-          v-for="entry in entries"
-          :key="entry.key"
-          :entry="entry"
-          :mates="mates.get(entry.key) ?? []"
-          :layout="rows ? 'row' : 'card'"
-          @refresh="refresh(entry)"
-          @remove="remove(entry)"
-        />
-      </section>
-      <p v-else class="rd-card dv-empty ms-empty">
-        Paste the champ select chat above: every "joined the lobby" line becomes a player.
+      <p class="meta" style="margin-top: 16px">
+        Win rate: the Solo/Duo season. Champions: their stored games this season. Score: the average
+        Invade score of their last games.
       </p>
-    </main>
-
-    <SiteFooter />
-  </div>
+    </div>
+  </SiteLayout>
 </template>
-
-<style scoped>
-.ms {
-  padding-bottom: 16px;
-}
-
-.ms-inp {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
-}
-
-.ms-inp input {
-  flex: 1 1 200px;
-  min-width: 0;
-  height: 34px;
-  font: 400 14px var(--font);
-  color: var(--text-1);
-  background: none;
-  border: 0;
-  outline: 0;
-}
-
-.ms-inp input::placeholder {
-  color: var(--text-3);
-}
-
-.ms-inp:focus-within {
-  box-shadow:
-    inset 0 0 0 1px var(--rd-violet),
-    0 0 0 4px rgb(123 109 255 / 0.18);
-}
-
-.ms-chp {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 34px;
-  padding: 0 4px 0 4px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-1);
-  background: var(--rd-card-2);
-  border-radius: 8px;
-  box-shadow: inset 0 0 0 1px var(--rd-line);
-}
-
-.ms-chp img,
-.ms-chp .ph {
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-}
-
-.ms-chp .ph {
-  background: var(--surface-2);
-}
-
-.ms-chp .t {
-  font-weight: 400;
-  color: var(--text-3);
-}
-
-.ms-chp button {
-  display: inline-grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  color: var(--text-3);
-  border-radius: 5px;
-}
-
-.ms-chp button:hover {
-  color: var(--text-1);
-  background: var(--surface-2);
-}
-
-.ms-chp button:focus-visible {
-  box-shadow: var(--focus);
-}
-
-.ms-lob {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin: 16px 0;
-}
-
-.ms-lob .st {
-  min-width: 0;
-  padding: 14px 18px;
-}
-
-.ms-lob .st + .st {
-  box-shadow: inset 1px 0 0 var(--rd-line);
-}
-
-.ms-lob .lbl {
-  display: block;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--text-3);
-}
-
-.ms-lob .rd-fig {
-  display: block;
-  font-size: 24px;
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
-.ms-lob small {
-  display: block;
-  overflow: hidden;
-  font-size: 12px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: var(--text-3);
-}
-
-.ms-empty {
-  margin-top: 16px;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
-  align-items: start;
-  gap: 12px;
-  margin-top: 16px;
-}
-
-@media (min-width: 64rem) {
-  .grid.rows {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 8px;
-  }
-}
-
-@media (max-width: 79.99rem) {
-  .grid {
-    grid-template-columns: repeat(min(var(--cols), 3), minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 68.75rem) {
-  .ms-lob {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .ms-lob .st:nth-child(3) {
-    box-shadow: inset 0 1px 0 var(--rd-line);
-  }
-
-  .ms-lob .st:nth-child(4) {
-    box-shadow:
-      inset 1px 0 0 var(--rd-line),
-      inset 0 1px 0 var(--rd-line);
-  }
-}
-
-@media (max-width: 55.99rem) {
-  .grid {
-    grid-template-columns: repeat(min(var(--cols), 2), minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 39.99rem) {
-  .grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .ms-inp .iv-btn {
-    width: 100%;
-  }
-}
-</style>

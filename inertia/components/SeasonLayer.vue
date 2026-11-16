@@ -133,6 +133,41 @@ onMounted(() => {
 </template>
 
 <style>
+/* The season's colours (data-season on <html>, ../lib/season.ts): the snow, the wire and the bulbs,
+   in ink on a light page. Only these pieces wear them; the page keeps its own ink. */
+html[data-season='christmas'] {
+  --season-snow: rgb(228 232 255);
+  --season-wire: rgb(255 255 255 / 0.16);
+  --season-cap: rgb(255 255 255 / 0.28);
+  --season-bulb-gold: var(--gold);
+  --season-bulb-warm: #f3e9da;
+  --season-bulb-violet: var(--v300);
+  --season-bulb-rim: transparent;
+}
+html[data-theme='light'][data-season='christmas'] {
+  --season-snow: rgb(150 160 205);
+  --season-wire: rgb(16 17 24 / 0.2);
+  --season-cap: rgb(16 17 24 / 0.25);
+  --season-bulb-gold: #d0a23f;
+  --season-bulb-warm: #c3c8d6;
+  --season-bulb-violet: var(--v500);
+  --season-bulb-rim: rgb(16 17 24 / 0.12);
+}
+@media (prefers-color-scheme: light) {
+  html[data-theme='system'][data-season='christmas'] {
+    --season-snow: rgb(150 160 205);
+    --season-wire: rgb(16 17 24 / 0.2);
+    --season-cap: rgb(16 17 24 / 0.25);
+    --season-bulb-gold: #d0a23f;
+    --season-bulb-warm: #c3c8d6;
+    --season-bulb-violet: var(--v500);
+    --season-bulb-rim: rgb(16 17 24 / 0.12);
+  }
+}
+/* The snow falls behind the header's content, never through it. */
+html[data-season] .chrome {
+  isolation: isolate;
+}
 /* Snow: two masks of flakes slide down on the GPU, the near one swaying. Behind the header's content. */
 .season-snow {
   position: absolute;

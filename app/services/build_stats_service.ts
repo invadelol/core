@@ -1,12 +1,13 @@
 import { DDRAGON, FETCH_TIMEOUT_MS } from '#constants/assets'
 import { AnswerCache, ROLES, type Bracket, type Role } from '#services/ranked_stats'
-import { latestPatch, rows, statsCache } from '#services/ranked_games_service'
+import { readPatches, rows, statsCache } from '#services/ranked_games_service'
 import {
   buildRowsSql,
   itemKinds,
   summarizeBuilds,
   type BuildRow,
   type BuildStats,
+  type DdItem,
   type ItemKinds,
 } from '#services/build_stats'
 
@@ -22,6 +23,7 @@ export class ItemDataUnavailable extends Error {}
 export class BuildStatsService {
   #cache = statsCache('builds')
   #items = new AnswerCache(8)
+  #data = new AnswerCache(4)
 
   async forRole(
     champion: number,
@@ -30,17 +32,19 @@ export class BuildStatsService {
     patch?: string,
     region: string | null = null
   ): Promise<BuildStats | null> {
-    const resolvedPatch = patch ?? (await latestPatch())
-    if (!resolvedPatch) return null
+    const read = await readPatches(patch)
+    if (!read) return null
+    const resolvedPatch = read.patch
     const position = ROLES[role]
     // Every region keeps the key it always had.
     const key = `${champion}:${position}:${bracket}:${resolvedPatch}${region ? `:${region}` : ''}`
     return this.#cache.get(key, async () => {
-      const kinds = await this.kinds(resolvedPatch)
+      // A range reads its newest patch's items.
+      const kinds = await this.kinds(read.patches[0])
       const found = await rows(buildRowsSql(bracket, { champion, position }, kinds, region), {
         champion,
         position,
-        patch: resolvedPatch,
+        patches: read.patches,
       })
       const parsed = found.map(
         ([kind, items, slot, games, wins]) =>
@@ -64,13 +68,18 @@ export class BuildStatsService {
 
   /** The item kinds of `patch` (`16.20`), from its newest Data Dragon release. */
   kinds(patch: string): Promise<ItemKinds> {
-    return this.#items.get(patch, async () => {
+    return this.#items.get(patch, async () => itemKinds(await this.items(patch)))
+  }
+
+  /** Data Dragon's items of `patch` (`16.20`), from its newest release: `item.json`'s `data`. */
+  items(patch: string): Promise<Record<string, DdItem & { name?: string; description?: string }>> {
+    return this.#data.get(patch, async () => {
       const versions = await download(`${DDRAGON}/api/versions.json`)
       const list = Array.isArray(versions) ? versions.map(String) : []
       const version = list.find((v) => v.startsWith(`${patch}.`)) ?? list[0]
       const items = version && (await download(`${DDRAGON}/cdn/${version}/data/en_US/item.json`))
       if (!items?.data) throw new ItemDataUnavailable(`no Data Dragon items for ${patch}`)
-      return itemKinds(items.data)
+      return items.data
     })
   }
 }

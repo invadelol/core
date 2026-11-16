@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { CornerDownLeft, Search } from 'lucide-vue-next'
+import Icon from './ui/Icon.vue'
 import { profileIcon } from '../lib/assets.js'
 
 /**
@@ -133,19 +133,16 @@ function submit() {
 </script>
 
 <template>
-  <div class="relative min-w-[220px] flex-1">
-    <div class="relative">
-      <Search
-        :size="14"
-        class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-3"
-      />
+  <div class="psf">
+    <label class="field">
+      <Icon name="search" />
       <input
         v-model="query"
         type="text"
         spellcheck="false"
         autocomplete="off"
         :placeholder="placeholder"
-        class="field !pl-9 !pr-9"
+        :aria-label="placeholder"
         @focus="open = entries.length > 0"
         @blur="closeSoon"
         @keydown.down.prevent="move(1)"
@@ -153,40 +150,74 @@ function submit() {
         @keydown.enter.prevent="submit"
         @keydown.esc="open = false"
       />
-      <span
-        v-if="loading || busy"
-        class="absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin rounded-full border-[1.5px] border-line-2 border-t-ink"
-      />
-    </div>
+      <span v-if="loading || busy" class="psf-spin" aria-hidden="true" />
+    </label>
 
-    <ul v-if="open && entries.length" class="menu absolute z-40 mt-1.5 w-full p-1" role="listbox">
+    <ul v-if="open && entries.length" class="sel-pop psf-pop" role="listbox">
       <li
         v-for="(entry, index) in entries"
         :key="`${entry.gameName}-${entry.tagLine}-${index}`"
-        class="menu-item cursor-pointer"
+        class="sel-o"
         role="option"
         :aria-selected="index === active"
         :data-active="index === active"
         @mouseenter="active = index"
         @mousedown.prevent="choose(entry)"
       >
-        <img
-          v-if="!entry.direct"
-          :src="profileIcon(entry.icon)"
-          alt=""
-          width="24"
-          height="24"
-          class="thumb h-6 w-6 rounded-[5px]"
-        />
-        <span v-else class="grid h-6 w-6 shrink-0 place-items-center text-ink-3">
-          <CornerDownLeft :size="14" />
-        </span>
-        <span class="min-w-0 flex-1 truncate">
-          <span v-if="entry.direct" class="text-ink-3">Compare with </span>
-          <span class="font-semibold text-ink">{{ entry.gameName }}</span>
-          <span class="text-ink-3">#{{ entry.tagLine }}</span>
+        <img v-if="!entry.direct" :src="profileIcon(entry.icon)" alt="" class="psf-ic" />
+        <span v-else class="psf-ic psf-go"><Icon name="arrow" :size="14" /></span>
+        <span class="ell">
+          <span v-if="entry.direct" class="t3">Compare with </span>
+          <span class="t1">{{ entry.gameName }}</span>
+          <span class="t3">#{{ entry.tagLine }}</span>
         </span>
       </li>
     </ul>
   </div>
 </template>
+
+<style scoped>
+.psf {
+  position: relative;
+  flex: 1;
+  min-width: 220px;
+}
+.psf-spin {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  border: 1.5px solid var(--line-2);
+  border-top-color: var(--t1);
+  border-radius: 50%;
+  animation: psf-spin 0.8s linear infinite;
+}
+@keyframes psf-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.psf-pop {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+}
+.psf-pop .sel-o {
+  cursor: pointer;
+}
+.psf-ic {
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: 5px;
+}
+.psf-go {
+  display: grid;
+  place-items: center;
+  color: var(--t3);
+}
+</style>

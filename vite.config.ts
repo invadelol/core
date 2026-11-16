@@ -14,7 +14,13 @@ function uiStylesOnce(): Plugin {
   return {
     name: 'invade-ui-styles-once',
     enforce: 'pre',
-    resolveId: (source, importer) => (source.endsWith('.css') && importer?.includes('/@invadelol/ui/dist/') ? none : undefined),
+    // The package is a symlink to vendor/invadelol-ui: its modules are imported from either path.
+    resolveId: (source, importer) =>
+      source.endsWith('.css') &&
+      (importer?.includes('/@invadelol/ui/dist/') ||
+        importer?.includes('/vendor/invadelol-ui/dist/'))
+        ? none
+        : undefined,
     load: (id) => (id === none ? '' : undefined),
   }
 }
@@ -43,5 +49,7 @@ export default defineConfig({
   // The package's modules import their CSS: served as they are in development (pre-bundling would
   // resolve those imports past uiStylesOnce), and bundled into the server build (Node cannot import CSS).
   optimizeDeps: { exclude: ['@invadelol/ui'] },
+  // Several dev servers on one machine (worktrees): each sets its own HMR socket port.
+  server: process.env.VITE_HMR_PORT ? { hmr: { port: Number(process.env.VITE_HMR_PORT) } } : {},
   ssr: { noExternal: ['@invadelol/ui'] },
 })

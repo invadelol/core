@@ -1,7 +1,7 @@
 import { test } from '@japa/runner'
 import clickhouse from 'adonisjs-clickhouse/services/main'
 import championStatsService from '#services/champion_stats_service'
-import { latestPatch, shownPatches } from '#services/ranked_games_service'
+import { latestPatch, readPatches, shownPatches } from '#services/ranked_games_service'
 import { PATCH_READY_GAMES, readyPatches } from '#services/ranked_stats'
 
 test.group('Patch gate', () => {
@@ -57,6 +57,24 @@ test.group('Patch gate', () => {
       assert.equal(early?.patch, '16.21')
       const older = await championStatsService.filter({ patch: '16.20' })
       assert.equal(older?.patch, '16.20')
+      assert.deepEqual(older?.patches, ['16.20'])
+      // A range of offered patches, either way round, is written oldest first.
+      for (const patch of ['16.20-16.21', '16.21-16.20']) {
+        const range = await championStatsService.filter({ patch })
+        assert.equal(range?.patch, '16.20-16.21')
+        assert.deepEqual(range?.patches, ['16.21', '16.20'])
+      }
+      // A range reaching a patch that is not offered reads the default.
+      const wide = await championStatsService.filter({ patch: '16.20-16.22' })
+      assert.deepEqual(wide?.patches, ['16.21'])
+      // The API's builds, runes and spells: one patch as asked, a range of offered ones.
+      assert.deepEqual(await readPatches('16.19'), { patch: '16.19', patches: ['16.19'] })
+      assert.deepEqual(await readPatches('16.21-16.20'), {
+        patch: '16.20-16.21',
+        patches: ['16.21', '16.20'],
+      })
+      assert.deepEqual(await readPatches('16.19-16.21'), { patch: '16.21', patches: ['16.21'] })
+      assert.deepEqual(await readPatches(), { patch: '16.21', patches: ['16.21'] })
       assert.lengthOf(asked, 1, 'one query for every reader, then the cached list')
       assert.include(asked[0], 'FROM match_seed')
     } finally {

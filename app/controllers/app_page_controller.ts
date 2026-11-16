@@ -1,5 +1,8 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import { desktopReleases } from '#services/desktop_release'
+import { changelog } from '#services/changelog'
+import { discordServer } from '#services/discord_server'
+import { runsText } from '../../inertia/lib/changelog.js'
 
 /** The page is useful without the version, so a slow GitHub never holds it up. */
 const VERSION_WAIT_MS = 600
@@ -10,12 +13,35 @@ const DESCRIPTION =
 export default class AppPageController {
   /** `/app`: what the desktop app does, and where to get it. */
   async show({ inertia }: HttpContext) {
-    const release = await Promise.race([
-      desktopReleases.latest().catch(() => null),
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), VERSION_WAIT_MS)),
+    const wait = <T>(load: Promise<T>) =>
+      Promise.race([
+        load.catch(() => null),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), VERSION_WAIT_MS)),
+      ])
+    const [release, log, discord] = await Promise.all([
+      wait(desktopReleases.latest()),
+      changelog().catch(() => null),
+      wait(discordServer.counts()),
     ])
+    const version = release?.version ?? null
+    // The newest release the changelog dates: what "What is new" lists and when it shipped.
+    const notes =
+      log?.releases.find((r) => r.version === version && r.date) ??
+      log?.releases.find((r) => r.date) ??
+      null
+    const latest = notes && {
+      version: notes.version,
+      day: notes.day,
+      lines: [notes.hero, ...notes.features]
+        .filter((f): f is NonNullable<typeof f> => Boolean(f))
+        .map((f) => f.title ?? runsText(f.runs))
+        .filter(Boolean)
+        .slice(0, 4),
+    }
     return inertia.render('app', {
-      version: release?.version ?? null,
+      version,
+      latest,
+      discord,
       description: DESCRIPTION,
       social: {
         type: 'website',

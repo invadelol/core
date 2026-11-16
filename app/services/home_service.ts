@@ -11,7 +11,7 @@ import { ladder } from '#services/desktop/lp'
 import { discordServer } from '#services/discord_server'
 import proLadderService, { type LadderRow } from '#services/pro_ladder_service'
 import { leagueCatalog } from '#services/pro_leagues'
-import proMatchService from '#services/pro_match_service'
+import proMatchService, { isLive } from '#services/pro_match_service'
 import proService from '#services/pro_service'
 import { patchStart, rows as statRows } from '#services/ranked_games_service'
 import { RANKED_SOLO, seedTiers } from '#services/ranked_stats'
@@ -124,6 +124,24 @@ function capped<T>(load: Promise<T | null>, ms = SECTION_WAIT_MS): Promise<T | n
   ])
 }
 
+/** The teams whose logos the header menus' pictures draw (Esports: Pros, Teams). */
+export const NAV_ART_TEAMS = ['g2-esports', 'fnatic', 'karmine-corp-blue'] as const
+
+/** Their ids by slug, for `/cdn/team/<id>`; a team the database does not hold is left out. */
+async function navTeams(): Promise<Record<string, string>> {
+  try {
+    const { rows } = await db.rawQuery('SELECT slug, id FROM pro_team WHERE slug = ANY(?)', [
+      [...NAV_ART_TEAMS],
+    ])
+    return Object.fromEntries(
+      (rows as { slug: string; id: string }[]).map((r) => [r.slug, String(r.id)])
+    )
+  } catch (error) {
+    logger.debug({ err: error }, 'menu art teams unreadable')
+    return {}
+  }
+}
+
 /* ── Pure parts, tested on their own ─────────────────────────────── */
 
 /** The default tier list as the home and the menus read it (each takes its own part). */
@@ -196,11 +214,11 @@ export function mostBanned(
   names: Map<number, ChampionInfo>,
   limit = HOME_ROWS
 ): HomeBan[] {
-  const main = new Map<number, { position: string; games: number; ban: number }>()
+  const main = new Map<number, { position: string; games: number; ban: number; win: number }>()
   for (const r of summary.roles) {
     const known = main.get(r.champion)
     if (!known || r.games > known.games)
-      main.set(r.champion, { position: r.position, games: r.games, ban: r.ban })
+      main.set(r.champion, { position: r.position, games: r.games, ban: r.ban, win: r.win })
   }
   return [...main]
     .filter(([, r]) => r.ban > 0)
@@ -208,7 +226,7 @@ export function mostBanned(
     .slice(0, limit)
     .flatMap(([id, r]) => {
       const champion = championOf(names, id, r.position)
-      return champion ? [{ ...champion, banRate: r.ban }] : []
+      return champion ? [{ ...champion, banRate: r.ban, winRate: r.win }] : []
     })
 }
 
@@ -870,10 +888,12 @@ export class HomeService {
 
   /** What the header's menus show beside their links. */
   async nav(): Promise<SiteNav> {
-    const [picks, pros, leagues] = await Promise.all([
+    const [picks, pros, leagues, headline, teams] = await Promise.all([
       capped(this.picks()),
       capped(this.pros()),
       leagueCatalog(),
+      capped(proMatchService.headline(1)),
+      capped(navTeams()),
     ])
     const { bans, brackets, moves, ...tierList } = picks ?? {
       bans: null,
@@ -894,6 +914,8 @@ export class HomeService {
         short: l.code,
         teams: l.teams.length,
       })),
+      live: headline?.find((m) => isLive(m)) ?? null,
+      art: { teams: teams ?? {} },
     }
   }
 
@@ -916,7 +938,7 @@ export class HomeService {
 
   /** The tier list's best pick per role, the most banned and the climbers since last patch. */
   picks(): Promise<TierBoard | null> {
-    return this.section('picks:v2', TTL.picks, async () => {
+    return this.section('picks:v3', TTL.picks, async () => {
       const filter = await this.filter()
       if (!filter) return null
       const [summary, previous, names, others] = await Promise.all([

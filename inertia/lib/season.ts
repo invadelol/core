@@ -3,7 +3,7 @@ import { shallowRef } from 'vue'
 /**
  * The site's seasonal dress, on top of the light or dark theme, as in the desktop app: Christmas
  * from 15 November to 31 December, by the visitor's local date. The layout's head script puts
- * `data-season="christmas"` on <html> before the first paint (the winter light, ../css/season.css);
+ * `data-season="christmas"` on <html> before the first paint (its colours are in ../components/SeasonLayer.vue);
  * the header then draws the snow and the lights (../components/SeasonLayer.vue).
  */
 export type Season = 'christmas'

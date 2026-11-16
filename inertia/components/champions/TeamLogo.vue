@@ -34,3 +34,22 @@ const initials = () => (props.team.shortName || props.team.name).slice(0, 3).toU
     <template v-else>{{ initials() }}</template>
   </span>
 </template>
+
+<style>
+/* A team's logo, sized by the component, on every page the search reaches. */
+.cs-logo {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--s2);
+  font-weight: 700;
+  color: var(--t2);
+}
+.cs-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+</style>

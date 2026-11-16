@@ -189,7 +189,7 @@ onBeforeUnmount(() => {
         />
         <span
           v-if="bubble.r * 2 >= sizes.label"
-          class="ms-label iv-dark"
+          class="ms-label"
           :style="{ fontSize: `${Math.min(13, 11 + bubble.r / 60)}px` }"
         >
           <span class="ms-label-name">{{ championName(bubble.id) }}</span>
@@ -208,7 +208,7 @@ onBeforeUnmount(() => {
 
     <div v-if="tip" class="ms-tip" :style="tip.style" aria-hidden="true">
       <MasteryCrest :level="tip.entry.championLevel" :size="40" :titled="false" />
-      <span class="min-w-0">
+      <span style="min-width: 0">
         <span class="ms-tip-name">{{ championName(tip.entry.championId) }}</span>
         <span class="ms-tip-line num">
           Level {{ tip.entry.championLevel }}, {{ compact(tip.entry.championPoints) }} points
@@ -237,8 +237,8 @@ onBeforeUnmount(() => {
   border-radius: 50%;
   background: var(--well);
   box-shadow:
-    0 0 0 2px var(--rd-card),
-    0 0 0 3px rgb(255 255 255 / 0.14);
+    0 0 0 2px var(--s1),
+    0 0 0 3px var(--line-2);
   transition: opacity var(--t-base) var(--ease);
 }
 
@@ -262,14 +262,14 @@ onBeforeUnmount(() => {
 
 .ms-bubble.hi {
   box-shadow:
-    0 0 0 2px var(--rd-card),
-    0 0 0 4px var(--rd-violet);
+    0 0 0 2px var(--s1),
+    0 0 0 4px var(--v400);
 }
 
 .ms-bubble.is-on {
   box-shadow:
-    0 0 0 1.5px var(--text-2),
-    var(--contact);
+    0 0 0 2px var(--s1),
+    0 0 0 3.5px var(--t1);
 }
 
 /* Names on the biggest circles, over a shade of the night ink so they read on any art. */
@@ -283,13 +283,8 @@ onBeforeUnmount(() => {
   padding: 0 10% 15%;
   line-height: 1.2;
   text-align: center;
-  color: var(--text-1);
-  background: linear-gradient(
-    0deg,
-    color-mix(in srgb, var(--ink-0) 88%, transparent),
-    color-mix(in srgb, var(--ink-0) 62%, transparent) 30%,
-    color-mix(in srgb, var(--ink-0) 0%, transparent) 60%
-  );
+  color: #fff;
+  background: linear-gradient(0deg, rgb(8 8 14 / 0.86), rgb(8 8 14 / 0.55) 30%, transparent 60%);
   pointer-events: none;
 }
 
@@ -306,8 +301,8 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 2px;
   font-size: max(11px, 0.86em);
-  font-weight: 500;
-  color: var(--text-2);
+  font-weight: 600;
+  color: rgb(255 255 255 / 0.78);
 }
 
 /* Entrance: the circles grow in, biggest first, once the map is in view. */
@@ -316,7 +311,7 @@ onBeforeUnmount(() => {
 }
 
 .ms-map.is-play .ms-bubble {
-  animation: ms-grow 620ms var(--ease-glide) var(--delay) both;
+  animation: ms-grow 620ms cubic-bezier(0.25, 0.1, 0.25, 1) var(--delay) both;
 }
 
 @keyframes ms-grow {
@@ -339,9 +334,9 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 10px;
   padding: 8px 12px 8px 8px;
-  background: var(--solid-1);
+  background: var(--s2);
   border: 1px solid var(--line-2);
-  border-radius: var(--r-sm);
+  border-radius: var(--r2);
   box-shadow: var(--shadow-2);
   pointer-events: none;
   animation: ms-tip-in var(--t-fast) var(--ease) both;
@@ -357,9 +352,9 @@ onBeforeUnmount(() => {
   display: block;
   overflow: hidden;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 650;
   line-height: 17px;
-  color: var(--text-1);
+  color: var(--t1);
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -368,11 +363,11 @@ onBeforeUnmount(() => {
   display: block;
   font-size: 12px;
   line-height: 16px;
-  color: var(--text-2);
+  color: var(--t2);
   white-space: nowrap;
 }
 
 .ms-tip-line + .ms-tip-line {
-  color: var(--text-3);
+  color: var(--t3);
 }
 </style>

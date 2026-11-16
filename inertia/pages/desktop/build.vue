@@ -2,9 +2,9 @@
 import { computed, onMounted, ref } from 'vue'
 import { Head } from '@inertiajs/vue3'
 import { RoleIcon } from '@invadelol/ui'
-import { Check, ChevronRight, Copy, Download } from 'lucide-vue-next'
-import AppHeader from '../../components/AppHeader.vue'
-import SiteFooter from '../../components/SiteFooter.vue'
+import SiteLayout from '../../components/SiteLayout.vue'
+import Frame from '../../components/ui/Frame.vue'
+import Icon from '../../components/ui/Icon.vue'
 import { assetUrl, champIcon } from '../../lib/assets.js'
 import { detectDesktopTarget, type DesktopPlatform } from '../../lib/platform.js'
 
@@ -79,33 +79,31 @@ onMounted(async () => (target.value = await detectDesktopTarget()))
 <template>
   <Head :title="title" />
 
-  <div class="flex min-h-screen flex-col">
-    <AppHeader />
-
-    <main class="mx-auto w-full max-w-[1120px] flex-1 px-4 pb-16 pt-[clamp(32px,7vh,64px)] sm:px-6">
-      <header class="flex items-center gap-4">
-        <img
-          :src="champIcon(build.championId)"
-          :alt="build.championName"
-          width="64"
-          height="64"
-          class="sb-portrait"
-          draggable="false"
-        />
-        <div class="min-w-0">
-          <p class="flex items-center gap-1.5 text-[13px] font-medium text-ink-2">
-            <RoleIcon :lane="build.lane" :size="14" />
-            <span class="text-ink">{{ build.championName }}</span>
-            <span>{{ lane }}</span>
-          </p>
-          <h1 class="mt-1 break-words text-[30px] font-[650] leading-tight tracking-[-0.015em] text-ink">
-            {{ build.name || `${build.championName} build` }}
-          </h1>
+  <SiteLayout>
+    <div class="wrap sb">
+      <header class="mast sb-mast">
+        <nav class="crumbs" aria-label="Breadcrumb">
+          <a href="/app">Desktop app</a><Icon name="chevr" :size="12" /><span class="t2"
+            >Shared build</span
+          >
+        </nav>
+        <div class="sb-id">
+          <Frame :src="champIcon(build.championId)" :alt="build.championName" :width="64" eager />
+          <div class="min-w-0">
+            <p class="sb-who">
+              <RoleIcon :lane="build.lane" :size="14" />
+              <span class="t1">{{ build.championName }}</span>
+              <span>{{ lane }}</span>
+            </p>
+            <h1 class="h1 sb-name-h">
+              {{ build.name || `${build.championName} build` }}
+            </h1>
+          </div>
         </div>
       </header>
 
-      <section class="iv-panel lit-sheet mt-7 px-5 pb-6 pt-5 sm:px-7" aria-labelledby="sb-order">
-        <h2 id="sb-order" class="mb-5 text-[16px] font-semibold text-ink">Buy order</h2>
+      <section class="card sb-card" aria-labelledby="sb-order">
+        <h2 id="sb-order" class="h3 sb-h">Buy order</h2>
         <ol class="sb-route">
           <li v-if="build.items.start.length" class="sb-step">
             <div class="sb-col">
@@ -126,30 +124,38 @@ onMounted(async () => (target.value = await detectDesktopTarget()))
             </div>
           </li>
           <li v-if="build.items.boots !== null" class="sb-step">
-            <ChevronRight :size="16" class="sb-chev" aria-hidden="true" />
+            <Icon name="chevr" :size="16" class="sb-chev" />
             <div class="sb-col">
               <span class="sb-lab">Boots</span>
               <span class="sb-icons">
-                <img :src="item(build.items.boots)" :alt="itemName(build.items.boots)" class="sb-item" />
+                <img
+                  :src="item(build.items.boots)"
+                  :alt="itemName(build.items.boots)"
+                  class="sb-item"
+                />
               </span>
               <span class="sb-name">{{ itemName(build.items.boots) }}</span>
             </div>
           </li>
           <li class="sb-step">
-            <ChevronRight :size="16" class="sb-chev" aria-hidden="true" />
+            <Icon name="chevr" :size="16" class="sb-chev" />
             <ol class="sb-well" aria-label="Core">
               <li v-for="(id, i) in build.items.core" :key="i" class="sb-step">
-                <ChevronRight v-if="i" :size="16" class="sb-chev" aria-hidden="true" />
+                <Icon v-if="i" name="chevr" :size="16" class="sb-chev" />
                 <div class="sb-col">
-                  <span class="sb-lab strong">{{ ORDINALS[i] }}<template v-if="!i">, core</template></span>
-                  <span class="sb-icons"><img :src="item(id)" :alt="itemName(id)" class="sb-item" /></span>
+                  <span class="sb-lab strong"
+                    >{{ ORDINALS[i] }}<template v-if="!i">, core</template></span
+                  >
+                  <span class="sb-icons"
+                    ><img :src="item(id)" :alt="itemName(id)" class="sb-item"
+                  /></span>
                   <span class="sb-name strong">{{ itemName(id) }}</span>
                 </div>
               </li>
             </ol>
           </li>
           <li v-for="(options, slot) in build.items.later" :key="`l${slot}`" class="sb-step">
-            <ChevronRight :size="16" class="sb-chev" aria-hidden="true" />
+            <Icon name="chevr" :size="16" class="sb-chev" />
             <div class="sb-col">
               <span class="sb-lab">{{ ORDINALS[build.items.core.length + slot] }}</span>
               <span class="sb-icons">
@@ -166,32 +172,62 @@ onMounted(async () => (target.value = await detectDesktopTarget()))
         </ol>
       </section>
 
-      <div class="mt-5 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-1">
-        <p class="text-[13px] text-ink-2">Import it from the Champions page in Invade.</p>
-        <div class="flex flex-wrap gap-2">
-          <button type="button" class="iv-btn lg" @click="copy">
-            <component :is="copied ? Check : Copy" :size="14" aria-hidden="true" />
+      <div class="sb-foot">
+        <p class="meta">Import it from the Champions page in Invade.</p>
+        <div class="row sb-acts">
+          <button type="button" class="btn lg" @click="copy">
+            <Icon :name="copied ? 'check' : 'share'" :size="16" />
             {{ copied ? 'Link copied' : 'Copy link' }}
           </button>
-          <a :href="target ? `/download/${target}` : '/app'" class="iv-btn lg primary">
-            <Download :size="14" aria-hidden="true" />
+          <a :href="target ? `/download/${target}` : '/app'" class="btn lg pri">
+            <Icon name="download" :size="16" />
             {{ target ? `Download for ${SHORT[target]}` : 'Get Invade' }}
           </a>
         </div>
       </div>
-    </main>
-
-    <SiteFooter />
-  </div>
+    </div>
+  </SiteLayout>
 </template>
 
 <style scoped>
-.sb-portrait {
-  width: 64px;
-  height: 64px;
-  flex: none;
-  border-radius: var(--r-md);
-  box-shadow: var(--portrait);
+.sb-mast {
+  padding-bottom: 28px;
+}
+.sb-id {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.sb-who {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t3);
+}
+.sb-name-h {
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+.sb-card {
+  padding: 20px 24px 24px;
+}
+.sb-h {
+  margin-bottom: 20px;
+}
+.sb-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-top: 20px;
+  padding: 0 4px 24px;
+}
+.sb-acts {
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .sb-route,
 .sb-well {
@@ -210,7 +246,7 @@ onMounted(async () => (target.value = await detectDesktopTarget()))
   padding: 10px 6px 14px;
   border-radius: var(--r-md);
   background: var(--well);
-  box-shadow: var(--inset-shadow);
+  box-shadow: inset 0 0 0 1px var(--line);
 }
 .sb-step {
   display: flex;
@@ -256,7 +292,8 @@ onMounted(async () => (target.value = await detectDesktopTarget()))
   width: 56px;
   height: 56px;
   border-radius: var(--r-sm);
-  box-shadow: var(--row);
+  box-shadow: inset 0 0 0 1px var(--line);
+  background: var(--well);
 }
 .sb-item.sm {
   width: 40px;

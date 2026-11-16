@@ -7,21 +7,17 @@ import proPhotoService, { photoSize } from '#services/pro_photo_service'
 import proMatchService, { split, type ProMatch } from '#services/pro_match_service'
 import { leagueCatalog, leagueRef } from '#services/pro_leagues'
 import { ORIGIN, breadcrumbs, count, meta, notFoundPage, percent, today } from '#services/page_meta'
-import { SERVERS, serverList } from '#constants/riot'
+import esportsService from '#services/esports_service'
 
 /** Games in each strip of next games on `/pros` (one row on wide screens). */
 const STRIP_GAMES = 4
-/** Rows of the ladder per page; "Show more" asks for the next ones. */
-const LADDER_PAGE = 50
-/** The roles the ladder names a best player for, in lane order. */
-const LADDER_ROLES = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'] as const
-const ROLE_SLUG: Record<string, string> = {
-  top: 'TOP',
-  jungle: 'JUNGLE',
-  mid: 'MID',
-  bot: 'ADC',
-  adc: 'ADC',
-  support: 'SUPPORT',
+/** What the league pages read of a league's players (`proService.league`). */
+interface LeaguePlayer {
+  slug: string
+  name: string
+  best: { tier: string; lp: number } | null
+  move: { lp: number; places: number | null } | null
+  record: { games: number; wins: number } | null
 }
 
 /** "Mid", "Bot". */
@@ -110,148 +106,17 @@ export default class ProsController {
     const catalog = await leagueCatalog()
     const leagues = catalog.listed.map(leagueRef)
     const version = today()
+    // The ladder and the teams have their own pages now.
     if (view === 'ladder') {
-      const server = SERVERS.find(
-        (s) => s.slug === String(request.input('server', '')).toLowerCase()
-      )
-      const platform = server?.platform ?? null
-      const role = ROLE_SLUG[String(request.input('role', '')).toLowerCase()] ?? null
-      const asked = String(request.input('league', '')).toLowerCase()
-      const league = asked ? (catalog.bySlug(asked) ?? null) : null
-      const page = Math.max(1, Math.min(50, Number.parseInt(String(request.input('page', 1))) || 1))
-      const scope = { platform, league: league?.slug ?? null }
-      const [ladder, servers, top, ...best] = await Promise.all([
-        proLadderService
-          .ladder({ ...scope, role, limit: LADDER_PAGE, offset: (page - 1) * LADDER_PAGE })
-          .catch(() => ({ total: 0, rows: [] })),
-        proLadderService.servers(role).catch(() => []),
-        // The first 50 of every role: who climbed today and how the roles share the top.
-        proLadderService.ladder({ ...scope, limit: 50 }).catch(() => ({ total: 0, rows: [] })),
-        ...LADDER_ROLES.map((r) =>
-          proLadderService
-            .ladder({ ...scope, role: r, limit: 1 })
-            .catch(() => ({ total: 0, rows: [] }))
-        ),
-      ])
-      const ids = ladder.rows.map((r) => r.playerId)
-      const [records, form] = await Promise.all([
-        proService.records(ids).catch(() => new Map()),
-        proService.form(ids).catch(() => new Map<string, boolean[]>()),
-      ])
-      const first = ladder.rows[0]
-      const filtered = Boolean(platform || role || league || page > 1)
-      const on = server ? server.label : serverList(servers.map((s) => s.platform))
-      const proOf = (r: (typeof ladder.rows)[number]) => ({
-        slug: r.pro.slug,
-        name: r.pro.name,
-        ...(r.pro.photo ? { photo: r.pro.photo } : {}),
-        role: r.pro.role,
-        country: r.pro.country,
-        team: r.pro.team
-          ? {
-              id: r.pro.team.id,
-              slug: r.pro.team.slug,
-              name: r.pro.team.name,
-              shortName: r.pro.team.shortName,
-            }
-          : null,
-      })
-      const roles = new Map<string, number>()
-      for (const r of top.rows)
-        if (r.pro.role) roles.set(r.pro.role, (roles.get(r.pro.role) ?? 0) + 1)
-      return inertia.render('pros/index', {
-        view: 'ladder',
-        leagues,
-        filters: {
-          server: server?.slug ?? null,
-          role: request.input('role') ?? null,
-          league: league?.slug ?? null,
-        },
-        servers: servers.map(({ slug, label, pros }) => ({ slug, label, pros })),
-        on,
-        ladder: inertia.merge(() =>
-          ladder.rows.map((r) => ({
-            place: r.place,
-            pro: proOf(r),
-            league: r.league ? { slug: r.league.slug, code: r.league.code } : null,
-            account: {
-              platform: r.account.platform,
-              tier: r.account.tier,
-              division: r.account.division,
-              lp: r.account.lp,
-              wins: r.account.wins,
-              losses: r.account.losses,
-            },
-            move: r.move,
-            form: form.get(r.playerId) ?? [],
-            champions: (records.get(r.playerId)?.champions ?? []).slice(0, 4),
-          }))
-        ),
-        best: best
-          .map((b, i) => {
-            const r = b.rows[0]
-            return r
-              ? {
-                  role: LADDER_ROLES[i],
-                  place: top.rows.find((t) => t.pro.slug === r.pro.slug)?.place ?? null,
-                  pro: proOf(r),
-                  account: { platform: r.account.platform, lp: r.account.lp, tier: r.account.tier },
-                }
-              : null
-          })
-          .filter(Boolean),
-        climbing: top.rows
-          .filter((r) => r.move && r.move.lp > 0)
-          .sort((a, b) => b.move!.lp - a.move!.lp)
-          .slice(0, 5)
-          .map((r) => ({ place: r.place, pro: proOf(r), move: r.move })),
-        split: LADDER_ROLES.map((r) => ({ role: r, pros: roles.get(r) ?? 0 })),
-        total: ladder.total,
-        page,
-        pageSize: LADDER_PAGE,
-        ...meta({
-          title: 'Pro ladder: every pro ranked by LP',
-          description: first
-            ? `${count(ladder.total)} ${ladder.total === 1 ? 'pro' : 'pros'} in Master and above on ${on}, ranked by LP. ${first.pro.name} leads with ${count(first.account.lp)} LP.`
-            : `Every pro ranked by LP on ${on}, with their moves of the last 24 hours.`,
-          path: '/pros?view=ladder',
-          image: '/og/pros/all.jpg',
-          version,
-          alt: 'The pro ladder on invade.lol',
-        }),
-        robots: filtered ? 'noindex,follow' : null,
-        jsonld: [
-          breadcrumbs([
-            { name: 'Pros', path: '/pros' },
-            { name: 'Ladder', path: '/pros?view=ladder' },
-          ]),
-        ],
-      })
+      const q = new URLSearchParams()
+      for (const key of ['role', 'server', 'page']) {
+        const v = request.input(key)
+        if (v) q.set(key, String(v))
+      }
+      q.set('league', String(request.input('league', '')) || 'all')
+      return response.redirect().status(301).toPath(`/leaderboards/pros?${q}`)
     }
-    if (view === 'teams') {
-      const groups = await proService.leagueTeams().catch(() => [])
-      const teams = groups.reduce((n, g) => n + g.teams.length, 0)
-      const codes = leagues.slice(0, 6).map((l) => l.code)
-      return inertia.render('pros/index', {
-        view: 'teams',
-        leagues,
-        groups,
-        ...meta({
-          title: `Pro teams of the ${codes.length > 1 ? `${codes.slice(0, -1).join(', ')} and ${codes.at(-1)}` : (codes[0] ?? 'leagues')}`,
-          description: `${teams} teams in ${groups.length} leagues, with their rosters and how their players rank in solo queue.`,
-          path: '/pros?view=teams',
-          image: '/og/pros/all.jpg',
-          version,
-          alt: 'Pro teams on invade.lol',
-        }),
-        jsonld: [
-          breadcrumbs([
-            { name: 'Pros', path: '/pros' },
-            { name: 'Teams', path: '/pros?view=teams' },
-          ]),
-        ],
-      })
-    }
+    if (view === 'teams') return response.redirect().status(301).toPath('/teams')
     const asked = request.input('league')
     const found = asked ? catalog.bySlug(asked) : catalog.first
     // An event without teams of its own (Worlds) has its games on the first league's page.
@@ -274,8 +139,7 @@ export default class ProsController {
     if (!data) return notFoundPage({ inertia, response })
     const first = data.players[0]
     const path = league.slug === catalog.first?.slug ? '/pros' : `/pros?league=${league.slug}`
-    return inertia.render('pros/index', {
-      view: 'league',
+    return inertia.render('esports/pros', {
       leagues,
       data,
       matches: { league: next, international },
@@ -292,6 +156,127 @@ export default class ProsController {
         breadcrumbs([
           { name: 'Pros', path: '/pros' },
           { name: league.code, path },
+        ]),
+      ],
+    })
+  }
+
+  /** `/leagues`: every league, its teams and players, and its next game. */
+  async leagues({ inertia }: HttpContext) {
+    const catalog = await leagueCatalog()
+    const listed = await Promise.all(
+      catalog.listed.map(async (l) => {
+        const [data, next, results] = await Promise.all([
+          proService.league(l.slug).catch(() => null),
+          proMatchService.forLeague(l.slug, 1),
+          esportsService.results(l.slug, 1),
+        ])
+        return {
+          ...leagueRef(l),
+          tier: l.tier,
+          counts: data?.counts ?? null,
+          leader: (data?.players as LeaguePlayer[] | undefined)?.find((p) => p.best) ?? null,
+          next: next[0] ?? null,
+          last: results[0] ?? null,
+        }
+      })
+    )
+    return inertia.render('esports/leagues', {
+      leagues: listed,
+      ...meta({
+        title: 'Pro leagues: teams, games and solo queue',
+        description: `${listed.length} leagues, ${listed.reduce((n, l) => n + (l.counts?.teams ?? 0), 0)} teams, with their games around now and how their players rank in solo queue.`,
+        path: '/leagues',
+        image: '/og/pros/all.jpg',
+        version: today(),
+        alt: 'Pro leagues on invade.lol',
+      }),
+      jsonld: [
+        breadcrumbs([
+          { name: 'Esports', path: '/esports' },
+          { name: 'Leagues', path: '/leagues' },
+        ]),
+      ],
+    })
+  }
+
+  /**
+   * `/league/:slug`: a league's games of the last two weeks and the next three, its teams by their
+   * starters' solo queue and its players' solo queue (best LP, LP won in a day, most games).
+   */
+  async league({ inertia, params, response }: HttpContext) {
+    const catalog = await leagueCatalog()
+    const asked = String(params.slug).toLowerCase()
+    const league = catalog.bySlug(asked)
+    if (!league || !league.teams.length) {
+      const moved = catalog.successor(asked)
+      if (moved) return response.redirect().status(301).toPath(`/league/${moved.slug}`)
+      return notFoundPage({ inertia, response })
+    }
+    const [data, next, results, international] = await Promise.all([
+      proService.league(league.slug),
+      proMatchService.forLeague(league.slug, 8),
+      esportsService.results(league.slug, 10),
+      proMatchService.international(4),
+    ])
+    if (!data) return notFoundPage({ inertia, response })
+    const players = data.players as LeaguePlayer[]
+    const top = <T>(list: T[], key: (x: T) => number) =>
+      [...list].sort((a, b) => key(b) - key(a)).slice(0, 3)
+    return inertia.render('esports/league', {
+      league: leagueRef(league),
+      leagues: catalog.listed.map(leagueRef),
+      teams: data.teams,
+      counts: data.counts,
+      leaders: {
+        lp: players.filter((p) => p.best).slice(0, 3),
+        gained: top(
+          players.filter((p) => (p.move?.lp ?? 0) > 0),
+          (p) => p.move!.lp
+        ),
+        games: top(
+          players.filter((p) => (p.record?.games ?? 0) > 0),
+          (p) => p.record!.games
+        ),
+      },
+      next,
+      results,
+      international: [...international.next, ...international.results].slice(0, 4),
+      ...meta({
+        title: `${league.code}: teams, games and solo queue`,
+        description: `${league.name}: ${data.counts.teams} teams and ${data.counts.players} players, their games around now and how they rank in solo queue.`,
+        path: `/league/${league.slug}`,
+        image: `/og/pros/${league.slug}.jpg`,
+        version: today(),
+        alt: `${league.code} on invade.lol`,
+      }),
+      jsonld: [
+        breadcrumbs([
+          { name: 'Esports', path: '/esports' },
+          { name: league.code, path: `/league/${league.slug}` },
+        ]),
+      ],
+    })
+  }
+
+  /** `/teams`: every league's teams, by their starters' solo queue. */
+  async teams({ inertia }: HttpContext) {
+    const groups = await proService.leagueTeams().catch(() => [])
+    const teams = groups.reduce((n, g) => n + g.teams.length, 0)
+    return inertia.render('esports/teams', {
+      groups,
+      ...meta({
+        title: 'Pro teams: rosters and solo queue',
+        description: `${teams} teams in ${groups.length} leagues, with their rosters and how their players rank in solo queue.`,
+        path: '/teams',
+        image: '/og/pros/all.jpg',
+        version: today(),
+        alt: 'Pro teams on invade.lol',
+      }),
+      jsonld: [
+        breadcrumbs([
+          { name: 'Esports', path: '/esports' },
+          { name: 'Teams', path: '/teams' },
         ]),
       ],
     })
@@ -318,16 +303,17 @@ export default class ProsController {
         ? `${played} solo queue games in 30 days, ${percent(pro.record.wins / played, 0)} won`
         : null,
     ].filter(Boolean)
-    const crumbs = [{ name: 'Pros', path: '/pros' }]
-    if (pro.league) crumbs.push({ name: pro.league.code, path: `/pros?league=${pro.league.slug}` })
+    const crumbs = [{ name: 'Esports', path: '/esports' }]
+    if (pro.league) crumbs.push({ name: pro.league.code, path: `/league/${pro.league.slug}` })
     if (pro.team) crumbs.push({ name: pro.team.name, path: `/team/${pro.team.slug}` })
     crumbs.push({ name: pro.name, path: `/pro/${pro.slug}` })
     // Its games as stored matches, drawn and opened like a profile's; their team's roster and
     // where they stand on the pro ladder.
-    const [games, team, ladder] = await Promise.all([
+    const [games, team, ladder, leaguePlace] = await Promise.all([
       proService.recentMatches(pro.games),
       pro.team ? proService.team(pro.team.slug).catch(() => null) : null,
       proLadderService.ladder().catch(() => ({ total: 0, rows: [] })),
+      esportsService.leaguePlace(pro.slug, pro.league?.slug).catch(() => null),
     ])
     const onLadder = ladder.rows.find((r) => r.pro.slug === pro.slug)
     const roster = team
@@ -352,11 +338,13 @@ export default class ProsController {
           ),
         }
       : null
-    return inertia.render('pros/show', {
+    return inertia.render('esports/pro', {
       pro: shown,
       games,
       roster,
       ladder: onLadder ? { place: onLadder.place, total: ladder.total } : null,
+      /** Their place among their league's pros ("#1 of 55 ranked pros"). */
+      leaguePlace,
       matches: { next: matches?.next[0] ?? null, last: matches?.results[0] ?? null },
       now: Date.now(),
       names: await championNames(),
@@ -411,18 +399,22 @@ export default class ProsController {
   async team({ inertia, params, response }: HttpContext) {
     const team = await proService.team(String(params.slug))
     if (!team) return notFoundPage({ inertia, response })
-    const matches = split(await proMatchService.forTeam(team.id))
+    const [matches, standing] = await Promise.all([
+      proMatchService.forTeam(team.id).then(split),
+      team.league ? proService.league(team.league.slug).catch(() => null) : null,
+    ])
     const upcoming = matches.next.filter((m) => m.status !== 'running').slice(0, 3)
     const players = team.roster.filter(
       (m: { current: boolean; title: string }) => m.current && m.title !== 'staff'
     ) as { name: string; slug: string | null }[]
-    const crumbs = [{ name: 'Pros', path: '/pros' }]
-    if (team.league)
-      crumbs.push({ name: team.league.code, path: `/pros?league=${team.league.slug}` })
+    const crumbs = [{ name: 'Esports', path: '/esports' }]
+    if (team.league) crumbs.push({ name: team.league.code, path: `/league/${team.league.slug}` })
     crumbs.push({ name: team.name, path: `/team/${team.slug}` })
     const games = team.record.games
-    return inertia.render('pros/team', {
-      matches: { next: matches.next.slice(0, 5), results: matches.results.slice(0, 5) },
+    return inertia.render('esports/team', {
+      matches: { next: matches.next.slice(0, 5), results: matches.results.slice(0, 10) },
+      /** The league's teams by their starters' average LP, this one among them. */
+      leagueTeams: standing?.teams ?? [],
       now: Date.now(),
       names: await championNames(),
       team: {

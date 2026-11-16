@@ -7,6 +7,16 @@ import type { Filter, Position, RoleStat } from '#services/champion_stats'
  * counts (`laneSql`), so both show the same figures. Pure: the rows come in, the answer goes out.
  */
 
+/**
+ * The win rate two champions' own win rates predict when they meet (log5): `a` against `b`.
+ * Two equal champions give 50 %.
+ */
+export function log5(a: number, b: number) {
+  const top = a * (1 - b)
+  const bottom = top + b * (1 - a)
+  return bottom ? round(top / bottom) : 0.5
+}
+
 /** One lane opponent. */
 export interface LaneMatchup {
   champion: number

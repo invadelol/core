@@ -32,18 +32,48 @@ const href = computed(() => profilePath(props.gameName, props.tagLine))
     :is="linkable ? Link : 'span'"
     v-bind="linkable ? { href } : {}"
     :title="gameName && tagLine ? `${gameName}#${tagLine}` : undefined"
-    class="inline-flex min-w-0 items-baseline gap-1"
-    :class="[
-      wrap ? 'flex-wrap break-words' : 'truncate',
-      linkable ? 'transition-colors hover:text-ink hover:underline underline-offset-2' : '',
-      isSelf || bold ? 'font-semibold text-ink' : 'font-medium text-ink',
-    ]"
+    class="plink"
+    :class="{ wrap, link: linkable, b: isSelf || bold }"
   >
-    <span :class="wrap ? 'break-words [overflow-wrap:anywhere]' : 'truncate'">{{
-      gameName || 'Unknown player'
-    }}</span>
-    <span v-if="showTag && tagLine" class="shrink-0 text-[0.9em] font-normal text-ink-3">
-      #{{ tagLine }}
-    </span>
+    <span class="plink-n">{{ gameName || 'Unknown player' }}</span>
+    <span v-if="showTag && tagLine" class="plink-t">#{{ tagLine }}</span>
   </component>
 </template>
+
+<style scoped>
+.plink {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  font-weight: 600;
+  color: var(--t1);
+}
+.plink.b {
+  font-weight: 700;
+}
+.plink.link:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.plink-n {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.plink.wrap {
+  flex-wrap: wrap;
+}
+.plink.wrap .plink-n {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.plink-t {
+  flex: none;
+  font-size: 0.9em;
+  font-weight: 500;
+  color: var(--t3);
+}
+</style>

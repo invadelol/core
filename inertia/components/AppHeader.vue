@@ -9,81 +9,102 @@ import {
   watch,
 } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
-import { ChevronDown, ChevronRight, Download, Search, X } from 'lucide-vue-next'
-import { Logo } from '@invadelol/ui'
+import Glyph from './ui/Glyph.vue'
+import Icon from './ui/Icon.vue'
 import SearchBar from './SearchBar.vue'
-import ThemeToggle from './ui/ThemeToggle.vue'
-import { SECTIONS, type SectionKey } from './header/sections.js'
-import { loadSiteNav, siteNav } from '../lib/site_nav.js'
+import NavMenu from './header/NavMenu.vue'
+import AccountMenu from './header/AccountMenu.vue'
+import {
+  SECTIONS,
+  loadSiteNav,
+  patchPath,
+  placeOf,
+  siteNav,
+  type NavContext,
+  type SectionKey,
+} from '../lib/site_nav.js'
 import { season, startSeason } from '../lib/season.js'
 import { patchName } from '../lib/patch.js'
 
 /**
- * The site's header, on every page: the mark, the four sections with their menus, the search
- * (a palette under its field, ⌘K from anywhere), the desktop app and the theme. Under 1024px the
- * sections fold into the phone's menu; under 640px the search is a button.
+ * The site's header, on every page (Facet): one bar with the mark, the four sections and their
+ * small menus, the patch pill, the search (a field with its region; its results drop under it),
+ * the desktop app and the account corner; under it, the plain-text row of the section you are in.
+ * Under 1024 px the sections fold into the phone's sheet; under 640 px the search is a button.
  *
- * Nothing here reads the layout or fetches on load: a menu opens in the frame of its hover, click
- * or key, and its data (`siteNav`) is asked for on the first sign of interest.
+ * Nothing here fetches on load: a menu opens in the frame of its hover, click or key, and its
+ * figures (`siteNav`) are asked for on the first sign of interest.
  */
 
-/** Christmas (../lib/season.ts): its own chunk, loaded only in season, and only in the browser. */
 const SeasonLayer = defineAsyncComponent(() => import('./SeasonLayer.vue'))
-
-/**
- * The menus are their own chunks, asked for on the first sign of interest (a hover, a focus, a
- * touch), so a page carries none of their weight and a menu still opens in the frame it is asked.
- */
-const loadMega = () => import('./header/MegaMenu.vue')
-const loadMobile = () => import('./header/MobileMenu.vue')
-const MegaMenu = defineAsyncComponent(loadMega)
-const MobileMenu = defineAsyncComponent(loadMobile)
-
-/** The menus' code and data, once: on hover, focus or touch of anything that opens one. */
-function warmMenus() {
-  loadSiteNav()
-  void loadMega().catch(() => {})
-}
+const PhoneMenu = defineAsyncComponent(() => import('./header/PhoneMenu.vue'))
 
 const props = withDefaults(
   defineProps<{
-    /** Breadcrumb shown after the sections on wide screens, e.g. the player of a match. */
+    /** Older pages passed a breadcrumb here; pages now carry their own (ui/Masthead). Ignored. */
     crumbs?: Array<{ label: string; href?: string }>
     /** Hides the search field, for pages where the search is the page itself. */
     search?: boolean
+    /** A sub-row of the page's own (the patch notes list their patches), instead of the section's. */
+    sub?: Array<{ label: string; href: string; on?: boolean }> | null
+    /** Lights a section up when the address alone does not say (a page shared by two). */
+    section?: SectionKey | null
+    /** Lights the patch pill up (the patch notes). */
+    patchOn?: boolean
   }>(),
-  { crumbs: undefined, search: true }
+  { crumbs: undefined, search: true, sub: null, section: null, patchOn: false }
 )
 
 const page = usePage()
-const path = computed(() => page.url.split('?')[0])
-const onApp = computed(() => path.value === '/app')
-/** Pages with a main action of their own keep the header's download quiet: one violet button a page. */
-const QUIET_DOWNLOAD = new Set(['summoner', 'contact', 'desktop/build', 'errors/server_error'])
-const loudDownload = computed(() => !QUIET_DOWNLOAD.has(page.component))
-/** The newest patch the stats show (a shared prop), as players name it. */
-const patch = computed(() => {
-  const version = (page.props as { patch?: string | null }).patch
-  return version ? patchName(version) : null
+const path = computed(() => page.url.split('?')[0].replace(/\/+$/, '') || '/')
+
+/** The newest patch the statistics show (a shared prop: the game version), as players name it. */
+const version = computed(() => (page.props as { patch?: string | null }).patch ?? null)
+const patch = computed(() => (version.value ? patchName(version.value) : null))
+const patchHref = computed(() => (version.value ? patchPath(version.value) : null))
+const onPatch = computed(() => props.patchOn || path.value.startsWith('/patch'))
+
+const ctx = computed<NavContext>(() => ({ nav: siteNav.value, patch: patch.value }))
+const place = computed(() => placeOf(path.value))
+const current = computed<SectionKey | null>(() => props.section ?? place.value?.section.key ?? null)
+const subRow = computed(() => {
+  if (props.sub) return props.sub
+  const section = SECTIONS.find((s) => s.key === current.value)
+  if (!section) return null
+  return section.links.map((l) => ({
+    label: l.short ?? l.label,
+    href: l.href,
+    on: l.key === place.value?.link.key,
+  }))
 })
-/** The tier list has its own place in the bar, so Champions is not lit there. */
-const onTierList = computed(() => path.value.startsWith('/tier-list'))
-const isHere = (key: SectionKey, here: (p: string) => boolean) =>
-  here(path.value) && !(key === 'champions' && onTierList.value)
 
 /* ── Section menus ─────────────────────────────────────────────────── */
 
-const open = ref<SectionKey | null>(null)
+const open = ref<SectionKey | 'account' | null>(null)
 const root = ref<HTMLElement>()
+const bar = ref<HTMLElement>()
 const triggers = ref<Record<string, HTMLElement | null>>({})
+/** Where the open menu sits in the bar: under its trigger, its left edge on the trigger's. */
+const menuLeft = ref(0)
 let hoverTimer: ReturnType<typeof setTimeout> | undefined
 let leaveTimer: ReturnType<typeof setTimeout> | undefined
 let hoveredAt = 0
 
+const openSection = computed(() => SECTIONS.find((s) => s.key === open.value) ?? null)
+
+function place_(key: SectionKey) {
+  const el = triggers.value[key]
+  const wrap = bar.value
+  if (!el || !wrap) return
+  const left = el.getBoundingClientRect().left - wrap.getBoundingClientRect().left + 4
+  // A menu never runs past the bar's right edge.
+  menuLeft.value = Math.max(0, Math.min(left, wrap.clientWidth - 352))
+}
+
 function show(key: SectionKey) {
-  warmMenus()
+  loadSiteNav()
   clearTimeout(leaveTimer)
-  searchOpen.value = false
+  place_(key)
   open.value = key
 }
 
@@ -92,17 +113,17 @@ function close(focusTrigger = false) {
   clearTimeout(hoverTimer)
   clearTimeout(leaveTimer)
   open.value = null
-  if (focusTrigger && was) triggers.value[was]?.focus()
+  if (focusTrigger && was) (was === 'account' ? accountButton.value : triggers.value[was])?.focus()
 }
 
 /** A mouse resting on a trigger opens its menu; moving to another trigger switches at once. */
 function onEnter(key: SectionKey, event: PointerEvent) {
   if (event.pointerType !== 'mouse') return
-  warmMenus()
+  loadSiteNav()
   clearTimeout(leaveTimer)
   clearTimeout(hoverTimer)
   if (open.value === key) return
-  if (open.value) {
+  if (open.value && open.value !== 'account') {
     hoveredAt = performance.now()
     return show(key)
   }
@@ -112,10 +133,14 @@ function onEnter(key: SectionKey, event: PointerEvent) {
   }, 110)
 }
 
-function onLeave(key: SectionKey, event: PointerEvent) {
+function onLeave(event: PointerEvent) {
   if (event.pointerType !== 'mouse') return
   clearTimeout(hoverTimer)
-  if (open.value === key) leaveTimer = setTimeout(() => close(), 200)
+  if (open.value && open.value !== 'account') leaveTimer = setTimeout(() => close(), 220)
+}
+
+function onMenuEnter() {
+  clearTimeout(leaveTimer)
 }
 
 function onTrigger(key: SectionKey) {
@@ -131,11 +156,10 @@ function onTriggerKey(key: SectionKey, event: KeyboardEvent) {
   if (event.key === 'ArrowDown') {
     event.preventDefault()
     show(key)
-    nextTick(() => document.querySelector<HTMLElement>(`#sh-menu-${key} a[href]`)?.focus())
+    nextTick(() => root.value?.querySelector<HTMLElement>('.hx-menu a[href]')?.focus())
   } else if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
     event.preventDefault()
     const next = ORDER[(at + (event.key === 'ArrowRight' ? 1 : ORDER.length - 1)) % ORDER.length]
-    // Moving the focus closes the menu it leaves (focusout): an open menu follows the focus.
     const wasOpen = Boolean(open.value)
     triggers.value[next]?.focus()
     if (wasOpen) show(next)
@@ -145,57 +169,47 @@ function onTriggerKey(key: SectionKey, event: KeyboardEvent) {
   }
 }
 
-/** The focus leaving a section (Tab past its last link) closes its menu. */
-function onFocusOut(key: SectionKey, event: FocusEvent) {
+/** The focus leaving the bar and its menus closes what is open. */
+function onFocusOut(event: FocusEvent) {
   const to = event.relatedTarget as Node | null
-  if (open.value === key && to && !(event.currentTarget as HTMLElement).contains(to)) close()
+  if (open.value && to && !bar.value?.contains(to)) close()
 }
 
-/* ── Search palette ────────────────────────────────────────────────── */
+/* ── Account ───────────────────────────────────────────────────────── */
 
-const searchOpen = ref(false)
-/**
- * Mounted (hidden, but laid out) on the first sign of interest, so the tap that opens it only
- * shows it and can focus its field at once, which is what lets a phone raise its keyboard.
- */
-const searchReady = ref(false)
-const palette = ref<HTMLElement>()
+const accountButton = ref<HTMLElement>()
+function toggleAccount() {
+  if (open.value === 'account') return close()
+  clearTimeout(leaveTimer)
+  open.value = 'account'
+}
+
+/* ── Search ────────────────────────────────────────────────────────── */
+
 const searchBar = ref<InstanceType<typeof SearchBar>>()
-const searchTrigger = ref<HTMLElement>()
+/** A phone shows the field over the bar, from its button. */
+const searchOpen = ref(false)
 
-function prepareSearch() {
-  searchReady.value = true
-}
-
-/** Shown and focused within the tap or the key, which is what lets a phone raise its keyboard. */
 function openSearch() {
   close()
   mobileOpen.value = false
-  if (!searchReady.value) {
-    searchReady.value = true
-    searchOpen.value = true
-    nextTick(() => searchBar.value?.focus())
-    return
-  }
   searchOpen.value = true
-  // Laid out while hidden since the hover: showing it is a style change, and the focus is free.
-  palette.value?.classList.remove('off')
-  searchBar.value?.focus()
+  nextTick(() => searchBar.value?.focus())
 }
 
-/** The phone's search button opens the palette, and closes it when it is open. */
-function toggleSearch() {
-  if (searchOpen.value) closeSearch()
-  else openSearch()
-}
-
-function closeSearch(focusTrigger = false) {
+function closeSearch() {
   searchOpen.value = false
-  if (focusTrigger) searchTrigger.value?.focus()
 }
 
+/** `/` or ⌘K from anywhere puts the caret in the search (not while typing elsewhere). */
 function onHotkey(event: KeyboardEvent) {
-  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k' && props.search) {
+  if (!props.search) return
+  const target = event.target as HTMLElement | null
+  const typing =
+    target && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
+  const slash = event.key === '/' && !typing && !event.metaKey && !event.ctrlKey && !event.altKey
+  const k = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k'
+  if (slash || k) {
     event.preventDefault()
     openSearch()
   }
@@ -213,36 +227,27 @@ function toggleMobile() {
   if (mobileOpen.value) loadSiteNav()
 }
 
-function warmMobile() {
-  loadSiteNav()
-  void loadMobile().catch(() => {})
-}
-
 function closeMobile(focusButton = false) {
   mobileOpen.value = false
   if (focusButton) menuButton.value?.focus()
 }
 
-/** The page under the phone's menu holds still. */
-watch(mobileOpen, (on) => document.documentElement.classList.toggle('sh-locked', on))
+watch(mobileOpen, (on) => document.documentElement.classList.toggle('hx-locked', on))
 
 /* ── Shared listeners: only while something is open ────────────────── */
 
 function onPointerDown(event: PointerEvent) {
   const target = event.target as Node
-  if (open.value && !root.value?.querySelector('.sh-nav')?.contains(target)) close()
-  const zone = root.value?.querySelectorAll('.sh-search-zone, .sh-only-phone') ?? []
-  if (searchOpen.value && ![...zone].some((el) => el.contains(target))) closeSearch()
+  if (open.value && !bar.value?.contains(target)) close()
 }
 
 function onKey(event: KeyboardEvent) {
   if (event.key !== 'Escape') return
-  if (searchOpen.value) closeSearch(true)
-  else if (mobileOpen.value) closeMobile(true)
+  if (mobileOpen.value) closeMobile(true)
   else if (open.value) close(true)
 }
 
-const anyOpen = computed(() => Boolean(open.value || searchOpen.value || mobileOpen.value))
+const anyOpen = computed(() => Boolean(open.value || mobileOpen.value))
 watch(anyOpen, (on) => {
   if (on) {
     document.addEventListener('pointerdown', onPointerDown, true)
@@ -263,7 +268,6 @@ watch(
   }
 )
 
-/** The phone's menu has no place on a wide screen: widening the window folds it away. */
 let wide: MediaQueryList | undefined
 const onWide = (event: MediaQueryListEvent) => event.matches && (mobileOpen.value = false)
 
@@ -279,7 +283,7 @@ onBeforeUnmount(() => {
   wide?.removeEventListener('change', onWide)
   document.removeEventListener('pointerdown', onPointerDown, true)
   document.removeEventListener('keydown', onKey)
-  document.documentElement.classList.remove('sh-locked')
+  document.documentElement.classList.remove('hx-locked')
   clearTimeout(hoverTimer)
   clearTimeout(leaveTimer)
 })
@@ -297,176 +301,151 @@ function skip(event: MouseEvent) {
 </script>
 
 <template>
-  <header ref="root" class="chrome sh-head" :class="{ 'is-menu': mobileOpen }">
-    <a href="#main" class="sh-skip" @click="skip">Skip to content</a>
-    <template v-if="season">
-      <SeasonLayer part="chrome" />
-      <SeasonLayer part="ground" />
-    </template>
+  <header
+    ref="root"
+    class="vb hx-root chrome"
+    :class="{ 'is-menu': mobileOpen, 'is-search': searchOpen }"
+  >
+    <div class="hx">
+      <a href="#main" class="hx-skip" @click="skip">Skip to content</a>
+      <template v-if="season">
+        <SeasonLayer part="chrome" />
+        <SeasonLayer part="ground" />
+      </template>
 
-    <div class="page sh-in">
-      <Link href="/" class="sh-logo" aria-label="invade.lol home" prefetch>
-        <Logo :size="22" word />
-      </Link>
+      <div class="hx-main">
+        <div ref="bar" class="wrap" @focusout="onFocusOut">
+          <Link class="brand" href="/" aria-label="Invade home" prefetch>
+            <Glyph :h="26" /><span class="wm">Invade</span>
+          </Link>
 
-      <nav class="sh-nav" aria-label="Sections">
-        <Link
-          href="/"
-          class="sh-trig sh-plain"
-          :class="{ on: path === '/' }"
-          :aria-current="path === '/' ? 'page' : undefined"
-          prefetch
-          >Home</Link
-        >
-        <template v-for="s in SECTIONS" :key="s.key">
-          <div
-            class="sh-item"
-            @pointerenter="onEnter(s.key, $event)"
-            @pointerleave="onLeave(s.key, $event)"
-            @focusout="onFocusOut(s.key, $event)"
-          >
+          <nav class="hx-nav" aria-label="Site">
             <button
+              v-for="s in SECTIONS"
+              :key="s.key"
               :ref="(el) => (triggers[s.key] = el as HTMLElement | null)"
               type="button"
-              class="sh-trig"
-              :class="{ on: isHere(s.key, s.here), open: open === s.key }"
+              :class="{ on: current === s.key && open !== s.key, open: open === s.key }"
               :aria-expanded="open === s.key"
-              :aria-controls="`sh-menu-${s.key}`"
+              :aria-controls="`hx-menu-${s.key}`"
+              @pointerenter="onEnter(s.key, $event)"
+              @pointerleave="onLeave"
               @click="onTrigger(s.key)"
-              @focus="warmMenus"
-              @touchstart.passive="warmMenus"
+              @focus="loadSiteNav"
+              @touchstart.passive="loadSiteNav"
               @keydown="onTriggerKey(s.key, $event)"
             >
-              {{ s.label
-              }}<span class="chev"
-                ><ChevronDown :size="13" :stroke-width="1.8" aria-hidden="true"
-              /></span>
+              {{ s.label }}<Icon name="chev" :size="13" />
             </button>
-            <MegaMenu
-              v-if="open === s.key"
-              :id="`sh-menu-${s.key}`"
-              :section="s"
-              :nav="siteNav"
-              @close="close"
+            <Link
+              v-if="patch && patchHref"
+              class="ppill num"
+              :class="{ on: onPatch }"
+              :href="patchHref"
+              :aria-current="onPatch ? 'page' : undefined"
+              prefetch
+              data-track="header_patch"
+              ><Icon name="arrow" :size="14" />Patch {{ patch }}</Link
+            >
+          </nav>
+
+          <NavMenu
+            v-if="openSection"
+            :id="`hx-menu-${openSection.key}`"
+            :section="openSection"
+            :ctx="ctx"
+            :path="path"
+            :style="{ left: `${menuLeft}px` }"
+            @pointerenter="onMenuEnter"
+            @pointerleave="onLeave"
+            @close="close()"
+          />
+
+          <div v-if="search" class="hx-search" :class="{ open: searchOpen }">
+            <SearchBar
+              ref="searchBar"
+              variant="header"
+              placeholder="Player, champion or pro"
+              @close="closeSearch"
             />
           </div>
-          <Link
-            v-if="s.key === 'champions'"
-            href="/tier-list"
-            class="sh-trig sh-plain"
-            :class="{ on: onTierList }"
-            :aria-current="onTierList ? 'page' : undefined"
-            prefetch
-            >Tier list</Link
-          >
-        </template>
-      </nav>
 
-      <nav v-if="crumbs?.length" class="sh-crumbs" aria-label="Breadcrumb">
-        <template v-for="crumb in crumbs" :key="crumb.label">
-          <ChevronRight :size="13" :stroke-width="1.8" class="chev" aria-hidden="true" />
-          <Link v-if="crumb.href" :href="crumb.href" class="c">{{ crumb.label }}</Link>
-          <span v-else class="c here" aria-current="page">{{ crumb.label }}</span>
-        </template>
-      </nav>
+          <span class="hx-end">
+            <button
+              v-if="search"
+              type="button"
+              class="hx-ic hx-only-phone"
+              :aria-label="searchOpen ? 'Close the search' : 'Search'"
+              :aria-expanded="searchOpen"
+              @click="searchOpen ? closeSearch() : openSearch()"
+            >
+              <Icon :name="searchOpen ? 'x' : 'search'" :size="19" />
+            </button>
+            <Link
+              v-if="path !== '/app'"
+              class="btn sm pri hx-get"
+              href="/app"
+              prefetch
+              data-track="header_get_app"
+              aria-label="Get the app"
+              ><Icon name="download" :size="16" /><span>Get the app</span></Link
+            >
+            <button
+              ref="accountButton"
+              type="button"
+              class="hx-me"
+              :class="{ open: open === 'account' }"
+              aria-label="Theme and links"
+              :aria-expanded="open === 'account'"
+              @click="toggleAccount"
+            >
+              <span class="av"><Icon name="user" :size="18" /></span><Icon name="chev" :size="13" />
+            </button>
+            <button
+              ref="menuButton"
+              type="button"
+              class="hx-ic hx-burger"
+              :class="{ open: mobileOpen }"
+              :aria-label="mobileOpen ? 'Close the menu' : 'Menu'"
+              :aria-expanded="mobileOpen"
+              aria-controls="hx-phone"
+              @click="toggleMobile"
+            >
+              <Icon :name="mobileOpen ? 'x' : 'menu'" :size="20" />
+            </button>
+          </span>
 
-      <div v-if="search" class="sh-search-zone">
-        <button
-          ref="searchTrigger"
-          type="button"
-          class="sh-field"
-          :class="{ focus: searchOpen }"
-          aria-haspopup="dialog"
-          :aria-expanded="searchOpen"
-          @pointerenter="prepareSearch"
-          @touchstart.passive="prepareSearch"
-          @focus="prepareSearch"
-          @click="openSearch"
-        >
-          <Search :size="15" :stroke-width="1.8" aria-hidden="true" />
-          <span class="ph">Search</span>
-          <span class="sr-only">a player, a champion or a pro</span>
-          <kbd>⌘ K</kbd>
-        </button>
-        <div
-          v-if="searchReady"
-          ref="palette"
-          class="sh-pop sh-palette"
-          :class="{ off: !searchOpen }"
-          role="dialog"
-          aria-label="Search"
-        >
-          <SearchBar
-            ref="searchBar"
-            variant="palette"
-            placeholder="Search a player, champion or pro"
-            @close="closeSearch(true)"
-          />
+          <AccountMenu v-if="open === 'account'" @close="close()" />
         </div>
       </div>
 
-      <div class="sh-end" :class="{ alone: !search }">
-        <Link
-          v-if="patch"
-          href="/stats?view=patch"
-          prefetch
-          class="sh-patch num"
-          data-track="header_patch"
-          >Patch {{ patch }}</Link
+      <div v-if="subRow" class="hx-sub">
+        <nav
+          class="wrap"
+          :aria-label="
+            current ? `${SECTIONS.find((s) => s.key === current)?.label} pages` : 'Pages'
+          "
         >
-        <Link
-          v-if="!onApp"
-          href="/app"
-          prefetch
-          class="iv-btn sm sh-get"
-          :class="{ primary: loudDownload }"
-          data-track="header_get_app"
-        >
-          <Download :size="14" :stroke-width="1.8" aria-hidden="true" />Get the app
-        </Link>
-        <ThemeToggle class="sh-theme" />
-        <button
-          v-if="search"
-          type="button"
-          class="sh-ib sh-only-phone"
-          aria-label="Search"
-          :aria-expanded="searchOpen"
-          @touchstart.passive="prepareSearch"
-          @pointerenter="prepareSearch"
-          @click="toggleSearch"
-        >
-          <Search :size="18" :stroke-width="1.8" aria-hidden="true" />
-        </button>
-        <button
-          ref="menuButton"
-          type="button"
-          class="sh-ib sh-burger"
-          :class="{ on: mobileOpen }"
-          :aria-label="mobileOpen ? 'Close menu' : 'Menu'"
-          :aria-expanded="mobileOpen"
-          aria-controls="sh-mobile"
-          @pointerenter="warmMobile"
-          @touchstart.passive="warmMobile"
-          @focus="warmMobile"
-          @click="toggleMobile"
-        >
-          <X v-if="mobileOpen" :size="20" :stroke-width="1.8" aria-hidden="true" />
-          <svg v-else class="burger" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 7h16M4 12h16M4 17h16" />
-          </svg>
-        </button>
+          <Link
+            v-for="l in subRow"
+            :key="l.href"
+            :href="l.href"
+            :class="{ on: l.on }"
+            :aria-current="l.on ? 'page' : undefined"
+            prefetch
+            >{{ l.label }}</Link
+          >
+        </nav>
       </div>
-    </div>
 
-    <MobileMenu
-      v-if="mobileOpen"
-      id="sh-mobile"
-      :nav="siteNav"
-      :path="path"
-      :search="search"
-      :close-button="menuButton ?? null"
-      @close="closeMobile"
-      @search="openSearch"
-    />
+      <PhoneMenu
+        v-if="mobileOpen"
+        id="hx-phone"
+        :ctx="ctx"
+        :path="path"
+        :patch-href="patchHref"
+        @close="closeMobile"
+      />
+    </div>
   </header>
 </template>

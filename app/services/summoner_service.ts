@@ -388,6 +388,12 @@ class SummonerService {
     return matchSourceService.decorate(matches, puuid)
   }
 
+  /** A profile's view total without counting a view; null when the player is not stored. */
+  async getViewCount(puuid: string): Promise<bigint | null> {
+    const row = await db.from('riot_player').where('puuid', puuid).select('view_count').first()
+    return row ? BigInt(row.view_count ?? 0) : null
+  }
+
   /**
    * Records a profile view and returns the new total.
    *

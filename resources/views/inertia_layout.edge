@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="system">
+<html lang="en" data-theme="dark">
 
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#08090c" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#08070d" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#08070d" media="(prefers-color-scheme: dark)" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/icons/icon-192.png" type="image/png" sizes="192x192" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
@@ -24,17 +24,19 @@
       The stored theme has to be on <html> before the first paint, or a
       dark-theme visitor gets a white flash on every navigation. This is
       the one script that must run synchronously, ahead of the stylesheet.
-      Without a choice the page follows the system (`system`). The season's
+      Without a choice the page is dark, the reference look; `system` follows the device. The season's
       winter light is painted the same way.
     --}}
     <script>
       (function () {
         try {
           var t = localStorage.getItem('invade-theme')
-          if (t === 'light' || t === 'dark') {
+          if (t === 'light' || t === 'dark' || t === 'system') {
             document.documentElement.setAttribute('data-theme', t)
-            var bar = t === 'dark' ? '#08090c' : '#ffffff'
-            document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) { m.content = bar })
+            document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) {
+              var s = t === 'system' ? (m.media.indexOf('dark') >= 0 ? 'dark' : 'light') : t
+              m.content = s === 'dark' ? '#08070d' : '#ffffff'
+            })
           }
         } catch (e) {}
         // Christmas, 15 November to 31 December by the visitor's date (inertia/lib/season.ts).

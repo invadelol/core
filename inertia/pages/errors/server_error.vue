@@ -16,8 +16,8 @@ function retry() {
     line="Try again in a moment. If it keeps happening, Riot’s data is probably having a bad day."
     :message="error?.message"
   >
-    <div class="acts">
-      <button type="button" class="iv-btn primary" @click="retry">Try again</button>
+    <div class="er-acts">
+      <button type="button" class="btn pri" @click="retry">Try again</button>
     </div>
   </ErrorPage>
 </template>

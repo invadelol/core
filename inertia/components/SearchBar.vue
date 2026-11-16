@@ -4,26 +4,30 @@ import { router } from '@inertiajs/vue3'
 import { CornerDownLeft, Plus, Search, Users, X } from 'lucide-vue-next'
 import { champIcon, profileIcon, regionLabel } from '../lib/assets.js'
 import { championSlug } from '../lib/champions.js'
-import { recentPlayers, type RecentPlayer } from '../lib/recent.js'
+import { recentHref, recentPlayers, type RecentPlayer } from '../lib/recent.js'
 import ProPhoto from './champions/ProPhoto.vue'
 import TeamLogo from './champions/TeamLogo.vue'
 import {
   MAX_PLAYERS,
+  MULTISEARCH_REGIONS,
   multisearchPath,
   parseRiotIds,
   type RiotIdentity,
 } from '../lib/multisearch.js'
+import { tierName } from '../lib/board.js'
+import Glyph from './ui/Glyph.vue'
+import Icon from './ui/Icon.vue'
 
 const props = withDefaults(
   defineProps<{
     size?: 'sm' | 'lg'
     autofocus?: boolean
     /**
-     * `palette`: the header's search, opened over the page (⌘K or its field). The results sit
-     * under the field instead of floating, the profiles opened last show before anything is
-     * typed, and Escape or a choice closes it (`close`). The header owns ⌘K then.
+     * `header`: the header's search (Facet). A field with the glyph and the region; its results
+     * drop under it as a panel, the profiles opened last show before anything is typed, and
+     * Escape or a choice closes it (`close`). The header owns `/` and ⌘K then.
      */
-    variant?: 'field' | 'palette'
+    variant?: 'field' | 'header'
     placeholder?: string
     /** The placeholder on a phone, where the long one would be cut. */
     shortPlaceholder?: string
@@ -38,7 +42,48 @@ const props = withDefaults(
 )
 
 const emit = defineEmits<{ close: [] }>()
-const palette = computed(() => props.variant === 'palette')
+const inHeader = computed(() => props.variant === 'header')
+/** The home's search: the header's, set large, its region first and a go button at the end. */
+const big = computed(() => inHeader.value && props.size === 'lg')
+/** The shortcut as this computer writes it. */
+const hotkey = ref('Ctrl K')
+
+/* ── Region (the header's search) ───────────────────────────────────
+   Which region the visitor plays on, kept on this device: its players come first in the
+   results, and a pasted lobby opens on it. Riot IDs are global, so nothing is hidden. */
+const REGION_KEY = 'invade-region'
+const region = ref<string>('euw')
+const regionOpen = ref(false)
+const regionLabel_ = computed(() => region.value.toUpperCase())
+function setRegion(value: string) {
+  region.value = value
+  regionOpen.value = false
+  try {
+    localStorage.setItem(REGION_KEY, value)
+  } catch {
+    /* kept for this visit only */
+  }
+  input.value?.focus()
+}
+const REGION_PLATFORMS: Record<string, string[]> = {
+  euw: ['EUW1'],
+  eune: ['EUN1'],
+  na: ['NA1'],
+  kr: ['KR'],
+  br: ['BR1'],
+  lan: ['LA1'],
+  las: ['LA2'],
+  tr: ['TR1'],
+  jp: ['JP1'],
+  oce: ['OC1'],
+  vn: ['VN2'],
+  ru: ['RU'],
+  me: ['ME1'],
+  sea: ['SG2'],
+  tw: ['TW2'],
+}
+const inRegion = (platform?: string) =>
+  Boolean(platform && REGION_PLATFORMS[region.value]?.includes(platform.toUpperCase()))
 
 interface Result {
   puuid: string
@@ -87,6 +132,8 @@ interface Answer {
 type Section = 'recent' | 'champions' | 'esports' | 'summoners'
 
 interface Entry {
+  /** The rank last seen (a recent profile): "Emerald II". */
+  rank?: string
   gameName: string
   tagLine: string
   direct: boolean
@@ -118,6 +165,13 @@ const SECTION_LABELS: Record<Section, string> = {
   esports: 'Esports',
   summoners: 'Summoners',
 }
+/** The header's groups, in its words. */
+const HEADER_LABELS: Record<Section, string> = {
+  recent: 'Recent',
+  champions: 'Champions',
+  esports: 'Pros and teams',
+  summoners: 'Players',
+}
 
 /** A player put on the list with "+": shown in the field with their icon, before the text. */
 interface Picked extends RiotIdentity {
@@ -126,7 +180,7 @@ interface Picked extends RiotIdentity {
 
 const query = ref('')
 const picked = ref<Picked[]>([])
-/** The profiles this browser opened last, listed in the palette before anything is typed. */
+/** The profiles this browser opened last, listed by the header's search before anything is typed. */
 const recent = ref<RecentPlayer[]>([])
 const chips = ref<HTMLElement>()
 const chipsWidth = ref(0)
@@ -262,19 +316,51 @@ const groups = computed(() => {
   const top: Entry[] = []
   const bySection: Record<Section, Entry[]> = { champions: [], esports: [], summoners: [] }
 
-  if (palette.value && !query.value.trim() && !picked.value.length && recent.value.length) {
+  if (
+    inHeader.value &&
+    !big.value &&
+    !query.value.trim() &&
+    !picked.value.length &&
+    recent.value.length
+  ) {
     return [
       {
         section: 'recent' as Section,
         entries: recent.value.slice(0, 5).map(
-          (r): Entry => ({
-            gameName: r.gameName,
-            tagLine: r.tagLine,
-            direct: false,
-            icon: r.profileIconId,
-            region: r.platform ? regionLabel(r.platform) : undefined,
-            level: r.level,
-          })
+          (r): Entry =>
+            r.champion
+              ? {
+                  gameName: r.gameName,
+                  tagLine: '',
+                  direct: false,
+                  kind: 'champion',
+                  href: recentHref(r),
+                  title: r.gameName,
+                  detail: 'Champion',
+                  champion: r.champion.id,
+                }
+              : r.pro
+                ? {
+                    gameName: r.gameName,
+                    tagLine: '',
+                    direct: false,
+                    kind: 'pro',
+                    href: recentHref(r),
+                    title: r.gameName,
+                    ...(r.pro.photo ? { photo: { slug: r.pro.slug, v: r.pro.photo } } : {}),
+                    badge: r.pro.staff ? 'Staff' : 'Pro',
+                  }
+                : {
+                    gameName: r.gameName,
+                    tagLine: r.tagLine,
+                    direct: false,
+                    icon: r.profileIconId,
+                    region: r.platform ? regionLabel(r.platform) : undefined,
+                    level: r.level,
+                    rank: r.rank
+                      ? `${tierName(r.rank.tier)}${['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(r.rank.tier) ? '' : ` ${r.rank.division}`}`
+                      : undefined,
+                  }
         ),
       },
     ]
@@ -330,7 +416,11 @@ const groups = computed(() => {
       })
     }
   }
-  for (const r of results.value) {
+  // The region's players first (the header's search), the rest after them in their order.
+  const players = inHeader.value
+    ? [...results.value].sort((a, b) => Number(inRegion(b.platform)) - Number(inRegion(a.platform)))
+    : results.value
+  for (const r of players) {
     if (typedTarget.value && r.gameName === typedTarget.value.gameName) continue
     bySection.summoners.push({
       gameName: r.gameName,
@@ -367,7 +457,7 @@ const offsets = computed(() => {
   })
 })
 
-const showDropdown = computed(() => (palette.value || isOpen.value) && entries.value.length > 0)
+const showDropdown = computed(() => isOpen.value && entries.value.length > 0)
 
 watch(query, (value) => {
   clearTimeout(debounce)
@@ -470,9 +560,9 @@ function href(entry: { gameName: string; tagLine: string }) {
   return `/${encodeURIComponent(`${entry.gameName}-${entry.tagLine}`)}`
 }
 
-/** ⌘K / Ctrl-K puts the caret here from anywhere on the page (the header's palette has its own). */
+/** ⌘K / Ctrl-K puts the caret here from anywhere on the page (the header's search has its own). */
 function onHotkey(event: KeyboardEvent) {
-  if (palette.value) return
+  if (inHeader.value && !big.value) return
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
     event.preventDefault()
     input.value?.focus()
@@ -489,10 +579,19 @@ onMounted(() => {
   window.addEventListener('keydown', onHotkey)
   tight.value = window.matchMedia('(max-width: 359px)').matches
   narrow.value = window.matchMedia('(max-width: 479px)').matches
-  if (palette.value) recent.value = recentPlayers()
+  if (/Mac|iPhone|iPad/.test(navigator.platform)) hotkey.value = '⌘ K'
+  if (inHeader.value) {
+    recent.value = recentPlayers()
+    try {
+      const stored = localStorage.getItem(REGION_KEY)
+      if (stored && REGION_PLATFORMS[stored]) region.value = stored
+    } catch {
+      /* the default region */
+    }
+  }
 })
 
-/** The palette opens with the caret in its field, called within the tap (iOS keeps the keyboard). */
+/** The caret in the field, called within the tap (iOS keeps the keyboard). */
 function focus() {
   input.value?.focus()
   input.value?.select()
@@ -501,7 +600,11 @@ defineExpose({ focus })
 
 function onEscape() {
   isOpen.value = false
-  if (palette.value) emit('close')
+  regionOpen.value = false
+  if (inHeader.value) {
+    input.value?.blur()
+    emit('close')
+  }
 }
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onHotkey)
@@ -516,8 +619,12 @@ function go(entry: Entry) {
   picked.value = []
   results.value = []
   input.value?.blur()
-  if (palette.value) emit('close')
-  router.visit(entry.multi ? multisearchPath(entry.multi) : (entry.href ?? href(entry)))
+  if (inHeader.value) emit('close')
+  router.visit(
+    entry.multi
+      ? multisearchPath(entry.multi, inHeader.value ? region.value : null)
+      : (entry.href ?? href(entry))
+  )
 }
 
 function isListed(entry: Entry) {
@@ -592,14 +699,30 @@ function move(delta: number) {
 }
 
 function handleBlur() {
-  // Let a click on a result land before the list unmounts. The palette closes on its own terms.
-  if (palette.value) return
+  // Let a click on a result land before the list unmounts.
   setTimeout(() => (isOpen.value = false), 150)
 }
+
+/** The typed letters in a title, marked: [before, match, after]. */
+function marked(title: string): [string, string, string] {
+  const q = typing.value.trim()
+  const at = q ? title.toLowerCase().indexOf(q.toLowerCase()) : -1
+  if (at < 0) return [title, '', '']
+  return [title.slice(0, at), title.slice(at, at + q.length), title.slice(at + q.length)]
+}
+
+/** A champion's page and its matchups, from a result. */
+const championPath = (entry: Entry, tab?: string) => `${entry.href ?? ''}${tab ? `/${tab}` : ''}`
 
 /** Icons fade in once they have loaded, so a slow one never shows as an empty square. */
 function shown(event: Event) {
   ;(event.target as HTMLImageElement).dataset.loaded = 'true'
+}
+
+/** The go button: the highlighted result, or the caret into the field when nothing is typed. */
+function submitOrFocus() {
+  if (entries.value.length && query.value.trim()) submit()
+  else input.value?.focus()
 }
 
 function submit() {
@@ -609,16 +732,194 @@ function submit() {
 </script>
 
 <template>
+  <!-- The header's search (Facet): the field in the bar, its results a panel under it. -->
   <div
+    v-if="inHeader"
+    class="hs"
+    :class="{ 'hs-big': big }"
+    role="search"
+    @keydown.esc.prevent="onEscape"
+  >
+    <div
+      :class="[big ? 'bigs' : 'gsearch', { focus: isOpen || regionOpen }]"
+      @mousedown.self.prevent="input?.focus()"
+    >
+      <button
+        v-if="big"
+        type="button"
+        class="rg3"
+        :aria-label="`Region: ${regionLabel_}`"
+        :aria-expanded="regionOpen"
+        aria-haspopup="listbox"
+        @click="regionOpen = !regionOpen"
+      >
+        {{ regionLabel_ }}<Icon name="chev" :size="13" />
+      </button>
+      <Glyph :h="22" class="gl" />
+      <div v-if="picked.length" ref="chips" class="hs-chips" :data-overflow="chipsOverflow">
+        <button
+          v-for="(player, index) in picked"
+          :key="`${player.gameName}#${player.tagLine}`"
+          type="button"
+          class="hs-chip"
+          :title="`Remove ${player.gameName}#${player.tagLine}`"
+          @mousedown.prevent="remove(index)"
+        >
+          <img :src="profileIcon(player.icon)" alt="" width="18" height="18" />
+          <Icon name="x" :size="11" />
+        </button>
+      </div>
+      <input
+        ref="input"
+        v-model="query"
+        type="text"
+        spellcheck="false"
+        autocomplete="off"
+        :placeholder="
+          picked.length ? 'Add another player' : (props.placeholder ?? 'Player, champion or pro')
+        "
+        :autofocus="big && props.autofocus"
+        :aria-label="props.placeholder ?? 'Search a player, champion or pro'"
+        aria-autocomplete="list"
+        :aria-expanded="showDropdown"
+        :aria-controls="showDropdown ? listId : undefined"
+        @focus="isOpen = entries.length > 0"
+        @blur="handleBlur"
+        @keydown.down.prevent="move(1)"
+        @keydown.up.prevent="move(-1)"
+        @keydown.enter.prevent="submit"
+        @keydown.backspace="onBackspace"
+      />
+      <span v-if="isLoading" class="hs-spin" aria-hidden="true" />
+      <button
+        v-if="!big"
+        type="button"
+        class="rg2"
+        :aria-label="`Region: ${regionLabel_}`"
+        :aria-expanded="regionOpen"
+        aria-haspopup="listbox"
+        @click="regionOpen = !regionOpen"
+      >
+        {{ regionLabel_ }}<Icon name="chev" :size="12" />
+      </button>
+      <span class="kbd hs-kbd" aria-hidden="true">{{ big ? hotkey : '/' }}</span>
+      <button v-if="big" type="button" class="go" aria-label="Search" @click="submitOrFocus">
+        <Icon name="arrow" :size="20" />
+      </button>
+    </div>
+
+    <div v-if="regionOpen" class="hx-menu hs-reg panel reg" role="listbox" aria-label="Region">
+      <a
+        v-for="r in MULTISEARCH_REGIONS"
+        :key="r"
+        href="#"
+        role="option"
+        :class="{ on: r === region }"
+        :aria-selected="r === region"
+        @click.prevent="setRegion(r)"
+        >{{ r.toUpperCase() }}<Icon v-if="r === region" name="check" :size="15"
+      /></a>
+    </div>
+
+    <div v-if="showDropdown" :id="listId" ref="list" class="hx-menu hs-panel panel" role="listbox">
+      <template v-for="(group, g) in groups" :key="group.section ?? 'top'">
+        <div v-if="group.section" :id="`${listId}-${group.section}`" class="sg-h">
+          {{ HEADER_LABELS[group.section] }}
+        </div>
+        <div
+          v-for="(entry, i) in group.entries"
+          :key="`${entry.kind ?? 'player'}-${entry.gameName}-${entry.tagLine}-${i}`"
+          class="sg-r"
+          :class="{ act: offsets[g] + i === activeIndex }"
+          role="option"
+          :data-index="offsets[g] + i"
+          :aria-selected="offsets[g] + i === activeIndex"
+          @mouseenter="highlight(offsets[g] + i, entry)"
+          @mousedown.prevent="go(entry)"
+        >
+          <span v-if="entry.multi" class="fr s sg-ic"><Icon name="users" :size="18" /></span>
+          <span v-else-if="entry.kind === 'champion' && entry.champion" class="fr s"
+            ><img :src="champIcon(entry.champion)" alt=""
+          /></span>
+          <span v-else-if="entry.kind === 'pro' && entry.photo" class="fr s stage"
+            ><ProPhoto :slug="entry.photo.slug" :photo="entry.photo.v" :width="36" :height="36"
+          /></span>
+          <span v-else-if="entry.kind && entry.team" class="fr s sg-ic"
+            ><TeamLogo :team="entry.team" :size="24"
+          /></span>
+          <span v-else-if="entry.kind" class="fr s sg-ic">{{
+            entry.title?.slice(0, 2).toUpperCase()
+          }}</span>
+          <span v-else-if="!entry.direct" class="fr s"
+            ><img :src="profileIcon(entry.icon)" alt="" decoding="async"
+          /></span>
+          <span v-else class="fr s sg-ic"><Icon name="arrow" :size="18" /></span>
+
+          <span class="sg-t">
+            <b v-if="entry.multi">Search {{ entry.multi.length }} players together</b>
+            <b v-else-if="entry.kind"
+              >{{ marked(entry.title ?? '')[0] }}<mark>{{ marked(entry.title ?? '')[1] }}</mark
+              >{{ marked(entry.title ?? '')[2] }}</b
+            >
+            <b v-else
+              >{{ marked(entry.gameName)[0] }}<mark>{{ marked(entry.gameName)[1] }}</mark
+              >{{ marked(entry.gameName)[2] }} <span class="t3">#{{ entry.tagLine }}</span></b
+            >
+            <span v-if="entry.multi">On {{ regionLabel_ }}</span>
+            <span v-else-if="entry.kind === 'champion'">Build, runes and matchups</span>
+            <span v-else-if="entry.kind"
+              ><template v-if="entry.badge"
+                >{{ entry.badge }}<template v-if="entry.detail">, </template></template
+              >{{ entry.detail }}</span
+            >
+            <span v-else-if="entry.direct">Open the profile</span>
+            <span v-else class="num"
+              ><template v-if="entry.proName">Pro, {{ entry.proName }}, </template>{{ entry.region
+              }}<template v-if="entry.rank">, {{ entry.rank }}</template
+              ><template v-else-if="entry.level">, level {{ entry.level }}</template></span
+            >
+          </span>
+
+          <span v-if="entry.kind === 'champion' && entry.href" class="acts">
+            <a :href="championPath(entry)" @mousedown.prevent.stop="go(entry)">Build</a>
+            <a
+              :href="championPath(entry, 'matchups')"
+              @mousedown.prevent.stop="go({ ...entry, href: championPath(entry, 'matchups') })"
+              >Matchups</a
+            >
+          </span>
+          <button
+            v-if="canAdd(entry)"
+            type="button"
+            class="acts-add"
+            aria-label="Add to the lobby"
+            title="Add to the lobby"
+            @mousedown.prevent.stop="add(entry)"
+          >
+            <Icon name="plus" :size="14" />
+          </button>
+        </div>
+      </template>
+      <div class="panel-f" aria-hidden="true">
+        <span><span class="kbd">↑</span><span class="kbd">↓</span>move</span>
+        <span><span class="kbd">Enter</span>open</span>
+        <span><span class="kbd">Tab</span>region</span>
+        <span class="end">Searching {{ regionLabel_ }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div
+    v-else
     class="search relative w-full"
-    :class="[`search-${props.size}`, { 'search-palette': palette }]"
+    :class="[`search-${props.size}`, { 'search-palette': inHeader }]"
     role="search"
   >
     <div class="relative" :style="{ '--chips': chipsWidth ? `${chipsWidth + 6}px` : '0px' }">
       <Search
         class="pointer-events-none absolute top-1/2 z-10 -translate-y-1/2 text-ink-3"
         :class="
-          palette
+          inHeader
             ? 'left-3.5 h-[16px] w-[16px]'
             : props.size === 'lg'
               ? 'left-4 h-[18px] w-[18px]'
@@ -679,7 +980,7 @@ function submit() {
         class="absolute right-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin rounded-full border-2 border-line-2 border-t-ink-2"
       />
       <kbd
-        v-else-if="palette"
+        v-else-if="inHeader"
         class="pointer-events-none absolute right-3 top-1/2 hidden h-[20px] -translate-y-1/2 items-center rounded-[4px] bg-control px-1.5 font-sans text-[11px] font-medium text-ink-2 pointer-fine:flex"
       >
         Esc
@@ -699,7 +1000,7 @@ function submit() {
       ref="list"
       class="results"
       :class="
-        palette
+        inHeader
           ? 'palette-results'
           : [
               'menu absolute z-50 mt-1.5 w-full',
@@ -810,11 +1111,6 @@ function submit() {
           </button>
         </div>
       </div>
-    </div>
-    <div v-if="palette" class="palette-foot" aria-hidden="true">
-      <span><kbd>↑↓</kbd>Move</span>
-      <span><kbd>↵</kbd>Open</span>
-      <span class="end">Riot ID with a #, several with commas</span>
     </div>
   </div>
 </template>

@@ -88,7 +88,7 @@ const tracks = computed(() =>
 
 .lv-pace-label {
   font-size: 12px;
-  color: var(--text-3);
+  color: var(--t3);
 }
 
 .lv-pace-track {
@@ -103,8 +103,8 @@ const tracks = computed(() =>
   position: absolute;
   inset: 0 auto 0 0;
   border-radius: 3px;
-  background: linear-gradient(90deg, rgb(var(--brand-rgb) / 0.08), rgb(var(--brand-rgb) / 0.55));
-  transition: width 1100ms var(--ease-glide);
+  background: linear-gradient(90deg, rgb(var(--v-rgb) / 0.08), rgb(var(--v-rgb) / 0.55));
+  transition: width 1100ms cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 .lv-pace-you {
@@ -114,11 +114,11 @@ const tracks = computed(() =>
   height: 14px;
   margin: -7px 0 0 -7px;
   border-radius: 50%;
-  background: var(--brand);
+  background: var(--v400);
   box-shadow:
-    0 0 0 3px var(--solid-1),
+    0 0 0 3px var(--s1),
     var(--contact);
-  transition: left 1100ms var(--ease-glide);
+  transition: left 1100ms cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 .lv-pace-mark {
@@ -129,7 +129,7 @@ const tracks = computed(() =>
 }
 
 .lv-pace-mark.pace {
-  border-left: 1px dashed var(--text-2);
+  border-left: 1px dashed var(--t2);
 }
 
 .lv-pace-mark.opp {
@@ -139,8 +139,8 @@ const tracks = computed(() =>
   height: 10px;
   margin: -5px 0 0 -5px;
   border-radius: 50%;
-  box-shadow: inset 0 0 0 1.5px var(--text-3);
-  background: var(--solid-1);
+  box-shadow: inset 0 0 0 1.5px var(--t3);
+  background: var(--s1);
 }
 
 .lv-pace-tag {
@@ -148,7 +148,7 @@ const tracks = computed(() =>
   font-size: 12px;
   line-height: 14px;
   white-space: nowrap;
-  color: var(--text-3);
+  color: var(--t3);
   transform: translateX(-50%);
   transition: opacity 400ms 900ms var(--ease);
 }
@@ -157,7 +157,7 @@ const tracks = computed(() =>
   bottom: calc(100% + 12px);
   font-size: 15px;
   font-weight: 650;
-  color: var(--text-1);
+  color: var(--t1);
 }
 
 .lv-pace-tag.below {

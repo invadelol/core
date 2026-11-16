@@ -11,13 +11,17 @@ local API (LCU) on the player's computer. This contract lets it:
 
 Both sides implement exactly this document. Anything not written here is out of scope for v1.
 
-**Since 2 November 2026 core takes no League client data by default.** Uploads (§2.5, §2.6) and
-player snapshots (§6) are switched off (`DESKTOP_UPLOADS_ENABLED` and `DESKTOP_OBSERVED_ENABLED`
-default to false, `app/services/desktop/switches.ts`): the website reads games and players through
-the Riot API, the source Riot supports for data ingestion. `GET /config` says `uploads: false` and
-`observed: false`, the routes answer 503 `E_UPLOADS_PAUSED` with `Retry-After: 21600`, and snapshots
-staged earlier are never applied. Apps that still upload take that as a pause, as §2.1 describes;
-the app stopped uploading in 0.3.7. Onboarding (§2.4) and the read routes are unchanged.
+**Since 2 November 2026 core takes no League client data by default.** Uploads (§2.5), observed
+games (§2.5, §2.6) and player snapshots (§6) each have a switch, all off unless the environment turns
+them on (`DESKTOP_UPLOADS_ENABLED`, `DESKTOP_OBSERVED_ENABLED`, `DESKTOP_PLAYERS_ENABLED`,
+`app/services/desktop/switches.ts`; the last two need uploads on too): the website reads games and
+players through the Riot API, the source Riot supports for data ingestion. A switch off makes
+`GET /config` say so and its routes answer 503 `E_UPLOADS_PAUSED` with `Retry-After: 21600`; with
+player snapshots off, snapshots staged earlier are never applied. Apps that still send take that as
+a pause, as §2.1 describes. The app stopped sending in 0.3.7; since 0.3.9 it sends the game the
+signed-in account just played, with its LP change, and nothing else (no older game, no observed
+game, no player snapshot), so production turns uploads on alone. Onboarding (§2.4) and the read
+routes are unchanged.
 
 ## 0. Ground rules
 
@@ -154,14 +158,17 @@ exceeding one answers 429 with `Retry-After`.
 ### 2.1 `GET /api/desktop/config` (public)
 
 ```json
-{ "uploads": true, "resolve": true, "observed": true, "encodings": ["gzip", "deflate"],
-  "maxPayloadBytes": 2000000, "minAppVersion": null }
+{ "uploads": true, "resolve": true, "observed": false, "players": false,
+  "encodings": ["gzip", "deflate"], "maxPayloadBytes": 2000000, "minAppVersion": null }
 ```
 
 `observed` (v1.3, env `DESKTOP_OBSERVED_ENABLED`, default false; false whenever `uploads` is):
 core takes observed games (§2.5) and answers `POST /matches/known` (§2.6); when false both answer
 503 `E_UPLOADS_PAUSED`. `encodings` (v1.3): what §1 compressed bodies may use. A core without
-these fields takes neither: the app sends only its own games, uncompressed.
+these fields takes neither: the app sends only its own games, uncompressed. `players` (env
+`DESKTOP_PLAYERS_ENABLED`, default false; false whenever `uploads` is): core takes player snapshots
+(§6); when false `POST /players` answers 503 `E_UPLOADS_PAUSED`. Only apps before 0.3.7 send them,
+and they read `uploads` alone: a refused batch pauses their snapshots.
 
 Kill switches from env (`DESKTOP_UPLOADS_ENABLED`, default false; `DESKTOP_RESOLVE_ENABLED`, default
 true). The desktop reads it at most every 6 h, and before its first upload after a launch. A

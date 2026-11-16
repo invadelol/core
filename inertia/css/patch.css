@@ -1,0 +1,144 @@
+/* ──────────────────────────────────────────────────────────────
+   The patch notes (`/patch/:version`), loaded with their page. The
+   board's own classes (`pn-*`) are in facet.css; this adds what the
+   board left implicit and the narrower screens.
+   ────────────────────────────────────────────────────────────── */
+@layer components {
+  .vb .pn-hero .crumbs {
+    margin-bottom: 0;
+  }
+  .vb .pn-lead {
+    max-width: 640px;
+    margin-top: 14px;
+  }
+  .vb .pn-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 22px;
+  }
+  .vb .pn-bar .pn-sum {
+    margin-left: 8px;
+  }
+  .vb .pn-bar .pn-sum b {
+    font-weight: 700;
+  }
+  .vb .pn-sel .sel {
+    width: auto;
+  }
+  .vb .pn-s.it .pn-b {
+    box-shadow: 0 0 0 2px var(--ink-1);
+  }
+  .vb .pn-tabs .n {
+    font-variant-numeric: tabular-nums;
+  }
+  .vb .pn-first {
+    padding-top: 36px;
+  }
+  .vb .pn-list {
+    gap: 14px;
+  }
+  .vb .pn-h .h2 {
+    white-space: nowrap;
+  }
+  .vb .pn-h a.h2:hover {
+    color: var(--v200);
+  }
+  .vb .pn-ch2 .fr,
+  .vb .pn-s .fr {
+    display: block;
+  }
+  .vb .pn-scope {
+    margin-left: auto;
+  }
+  .vb .pn-st .rl9 svg {
+    width: 14px;
+    height: 14px;
+    opacity: 0.8;
+  }
+  .vb .pn-sk .fr {
+    width: 100%;
+    height: auto;
+  }
+  .vb .pn-skr {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .vb .pn-skr .meta {
+    display: block;
+    margin-top: 3px;
+  }
+  .vb .pn-chromas {
+    margin-top: 14px;
+  }
+  .vb .pn-last {
+    padding-bottom: 72px;
+  }
+
+  @media (max-width: 1023px) {
+    .vb .pn-sks {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 767px) {
+    .vb .pn-hero {
+      padding-top: 24px;
+    }
+    .vb .pn-num {
+      font-size: 76px;
+    }
+    .vb .pn-bar .pn-sum {
+      flex-basis: 100%;
+      margin-left: 0;
+    }
+    .vb .pn-strip {
+      gap: 8px;
+    }
+    .vb .pn-s .fr,
+    .vb .pn-ii {
+      width: 44px !important;
+      height: 44px !important;
+    }
+    .vb .pn-tabs {
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .vb .pn-tabs a {
+      flex: none;
+    }
+    .vb .pn-h {
+      flex-wrap: wrap;
+      row-gap: 10px;
+    }
+    .vb .pn-st {
+      flex-basis: 100%;
+      flex-wrap: wrap;
+      margin-left: 0;
+      gap: 6px;
+    }
+    .vb .pn-st > span {
+      height: 28px;
+      padding: 0 9px;
+    }
+    .vb .pn-c {
+      padding: 12px;
+    }
+    .vb .pn-a {
+      padding: 12px;
+    }
+    .vb .pn-augs {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .vb .pn-sks {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .vb .pn-scope {
+      flex-basis: 100%;
+      margin-left: 0;
+    }
+  }
+}

@@ -155,11 +155,11 @@ const wide = computed(() => ['survival', 'consistency'].includes(props.domain.ke
     :labels="labels"
     :wide="wide"
     :shown="leadKey ? [leadKey] : []"
-    :class="{ 'lg:col-span-2': wide }"
+    :class="{ 'lv-wide': wide }"
   >
     <template #figure>
       <div v-if="lead" class="lv-lead">
-        <span class="iv-fig">{{ lead.value }}</span>
+        <span class="fg-xl">{{ lead.value }}</span>
         <span class="lv-lead-unit">{{ lead.unit }}</span>
       </div>
     </template>
@@ -209,7 +209,7 @@ const wide = computed(() => ['survival', 'consistency'].includes(props.domain.ke
   gap: 4px;
 }
 
-.lv-lead .iv-fig {
+.lv-lead .fg-xl {
   font-size: 48px;
   line-height: 0.95;
   letter-spacing: -0.02em;
@@ -217,12 +217,12 @@ const wide = computed(() => ['survival', 'consistency'].includes(props.domain.ke
 
 .lv-lead-unit {
   font-size: 13px;
-  color: var(--text-2);
+  color: var(--t2);
 }
 
 .lv-epic {
   margin-top: 14px;
   font-size: 12.5px;
-  color: var(--text-3);
+  color: var(--t3);
 }
 </style>

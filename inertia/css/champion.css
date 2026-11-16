@@ -1,0 +1,150 @@
+/* ──────────────────────────────────────────────────────────────
+   A champion's page and a lane matchup: the Champion board's own
+   classes, ported under `.vb`, then the sections the board links to
+   below its first screen (every matchup, statistics, pros) and the
+   phone layout.
+   ────────────────────────────────────────────────────────────── */
+
+.vb .cp-head { display:grid;grid-template-columns:minmax(0,1fr) 520px;gap:40px;align-items:stretch;padding:36px 0 0 }
+.vb .cp-id { display:flex;gap:24px;align-items:flex-start }
+.vb .cp-id .fr.pt { width:104px;height:104px;flex:none }
+.vb .cp-abs { display:flex;gap:6px;margin-top:16px }
+.vb .cp-ab { position:relative;width:36px;height:36px }
+.vb .cp-ab img { width:36px;height:36px;border-radius:5px }
+.vb .cp-ab b { position:absolute;right:-4px;bottom:-4px;min-width:16px;height:16px;padding:0 3px;border-radius:3px;background:var(--ink-0);box-shadow:inset 0 0 0 1px var(--line-2);font-size:10px;font-weight:800;line-height:16px;text-align:center;color:var(--t2) }
+.vb .cp-stats { display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin-top:28px;border-top:1px solid var(--line) }
+.vb .cp-stats > div { display:flex;flex-direction:column;gap:6px;padding:16px 16px 0 0 }
+.vb .cp-stats > div + div { padding-left:20px;border-left:1px solid var(--line) }
+.vb .cp-art { height:100%;min-height:260px }
+.vb .cp-art img { object-position:50% 22% }
+.vb .cp-tabs { display:flex;align-items:flex-end;gap:16px;margin-top:28px;border-bottom:1px solid var(--line) }
+.vb .cp-tabs .tabs { border-bottom:0 }
+.vb .cp-runes { display:grid;grid-template-columns:auto 1px minmax(0,1fr) 1px minmax(0,1fr);gap:28px;padding:8px 24px 24px }
+.vb .cp-tree { display:grid;grid-template-columns:repeat(3,48px);gap:14px 22px;justify-items:center;align-items:center }
+.vb .cp-tree .hd2 { grid-column:1 / -1;justify-self:start;display:flex;align-items:center;gap:8px;margin-bottom:2px }
+.vb .cp-tree .hd2 img { width:20px;height:20px }
+.vb .cp-tree img.r { width:38px;height:38px;border-radius:50% }
+.vb .cp-tree img.k { width:48px;height:48px;border-radius:50% }
+.vb .cp-tree img.off { opacity:.26;filter:grayscale(1) }
+.vb .cp-tree img.on { box-shadow:0 0 0 2px var(--ink-1),0 0 0 4px var(--v400);background:var(--ink-0) }
+.vb .cp-tree .sep { grid-column:1 / -1;width:100%;height:1px;background:var(--line) }
+.vb .cp-pick { display:flex;align-items:center;gap:12px }
+.vb .cp-pick img { width:36px;height:36px;border-radius:50%;background:var(--ink-0);box-shadow:0 0 0 2px var(--ink-1),0 0 0 3px var(--v700) }
+.vb .cp-pick img.sh { width:24px;height:24px;padding:3px;background:var(--s3);box-shadow:none }
+.vb .cp-opt { display:flex;align-items:center;gap:12px;padding:12px 20px;border-top:1px solid var(--line) }
+.vb .cp-opt .pair { display:flex;gap:4px }
+.vb .cp-opt .pair img { width:32px;height:32px;border-radius:5px }
+.vb .cp-path { display:flex;align-items:flex-start;gap:14px;padding:12px 24px 24px }
+.vb .cp-stage { display:flex;flex-direction:column;gap:12px }
+.vb .cp-stage .its { display:flex;gap:8px }
+.vb .cp-stage .it { position:relative;width:52px;height:52px }
+.vb .cp-stage .it .fr { display:block;width:52px;height:52px }
+.vb .cp-stage .it b { position:absolute;right:-4px;bottom:-4px;min-width:16px;height:16px;padding:0 3px;border-radius:3px;background:var(--ink-0);box-shadow:inset 0 0 0 1px var(--line-2);font-size:10px;font-weight:800;line-height:16px;text-align:center;color:var(--t2) }
+.vb .cp-stage.core { padding:14px 16px 16px;margin-top:-14px;border-radius:10px;background:var(--v950);box-shadow:inset 0 0 0 1px rgb(var(--v-rgb)/.28) }
+.vb .cp-arrow { display:flex;align-items:center;height:52px;margin-top:26px;color:var(--t4) }
+.vb .cp-arrow .i { width:18px;height:18px }
+.vb .cp-list { display:flex;flex-direction:column }
+.vb .cp-li { display:grid;grid-template-columns:36px minmax(0,1fr) 120px 64px;align-items:center;gap:14px;min-height:52px;padding:6px 24px;border-top:1px solid var(--line) }
+.vb .cp-li .its { display:flex;gap:4px }
+.vb .cp-li img.ic { width:36px;height:36px;border-radius:5px }
+.vb .cp-sk { display:grid;grid-template-columns:150px repeat(15,minmax(0,1fr));gap:4px;padding:4px 24px 24px }
+.vb .cp-sk .ab { display:flex;align-items:center;gap:10px;height:32px;font-size:13px;font-weight:650;color:var(--t2) }
+.vb .cp-sk .ab img { width:28px;height:28px;border-radius:4px }
+.vb .cp-sk .c { height:32px;border-radius:4px;background:var(--well);box-shadow:inset 0 0 0 1px var(--line);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:750;color:var(--t2);font-variant-numeric:tabular-nums }
+.vb .cp-sk .c.on { background:var(--s4);box-shadow:none;color:var(--t1) }
+.vb .cp-sk .c.on.q { background:var(--v600);color:#fff }
+.vb .cp-max { display:flex;align-items:center;gap:10px }
+.vb .cp-max img { width:40px;height:40px;border-radius:5px }
+.vb .cp-max .i { width:16px;height:16px;color:var(--t4) }
+.vb .cp-mu { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;padding:4px 24px 24px }
+.vb .cp-mc { display:flex;flex-direction:column;gap:10px }
+.vb .cp-mc .fr { height:220px }
+.vb .cp-mc .fr img { object-position:50% 10% }
+.vb .cp-len { height:220px;margin:12px 24px 0 64px }
+.vb .cp-len .gy { position:absolute;left:0;right:0;height:1px;background:var(--line) }
+.vb .cp-len .gy span { position:absolute;left:-52px;top:-8px;width:40px;text-align:right;font-size:12px;font-weight:600;color:var(--t3) }
+.vb .cp-len .peak { position:absolute;transform:translate(-50%,-150%);font-size:12px;font-weight:700;color:var(--v200);white-space:nowrap }
+.vb .cp-xs { display:flex;justify-content:space-between;margin:12px 24px 0 64px;font-size:12px;font-weight:600;color:var(--t3) }
+.vb .cp-early { display:flex;flex-direction:column;gap:18px;padding:4px 20px 22px }
+.vb .cp-av { display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border-top:1px solid var(--line) }
+.vb .cp-av > div { display:flex;flex-direction:column;gap:6px;padding:16px 20px;background:var(--s1) }
+
+/* ── Beyond the board ──────────────────────────────────────── */
+.vb .cp-id h1 { margin: 0; }
+.vb .cp-tabs .tabs > a .n { font-size: 12px; font-weight: 650; color: var(--t3); margin-left: 4px; }
+.vb .cp-ctl { display: flex; gap: 8px; margin-left: auto; padding-bottom: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.vb .cp-ctl .seg svg { width: 16px; height: 16px; opacity: 0.6; }
+.vb .cp-ctl .seg > .on svg { opacity: 1; }
+.vb .cp-none { padding: 8px 24px 24px; }
+.vb .cp-mc .fr { display: block; }
+.vb .cp-mc:hover .h4 { color: var(--v200); }
+.vb .cp-len svg.ln-s { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.vb .cp-sec { scroll-margin-top: 80px; }
+.vb .cp-tbl { --cols: minmax(0, 1fr) 96px 120px 104px; }
+.vb .cp-rk { --cols: minmax(0, 1fr) 96px 120px 120px 72px; }
+.vb .cp-det { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border-top: 1px solid var(--line); }
+.vb .cp-det > div { display: flex; flex-direction: column; gap: 6px; padding: 16px 20px; background: var(--s1); }
+.vb .cp-pro { --cols: minmax(0, 1fr) 160px 120px 96px 88px; }
+.vb .cp-pro .who img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: var(--s3); }
+
+/* ── Phone ─────────────────────────────────────────────────── */
+@media (max-width: 1023px) {
+  .vb .cp-head { grid-template-columns: 1fr; gap: 24px; }
+  .vb .cp-art { min-height: 200px; height: 200px; }
+  .vb .g12 > .card, .vb .g12 > .col { grid-column: 1 / -1 !important; }
+  .vb .cp-tabs { flex-direction: column; align-items: stretch; gap: 8px; }
+  .vb .cp-tabs .tabs { overflow-x: auto; scrollbar-width: none; }
+  .vb .cp-ctl { margin-left: 0; justify-content: flex-start; }
+}
+@media (max-width: 767px) {
+  .vb .cp-id { gap: 16px; }
+  .vb .cp-id .fr.pt { width: 72px; height: 72px; }
+  .vb .cp-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .vb .cp-stats > div + div { padding-left: 0; border-left: 0; }
+  .vb .cp-stats > div { padding: 14px 12px 0 0; }
+  .vb .cp-runes { grid-template-columns: 1fr; padding: 8px 16px 20px; }
+  .vb .cp-runes > .vr { display: none; }
+  .vb .cp-path { flex-wrap: wrap; padding: 12px 16px 20px; }
+  .vb .cp-arrow { display: none; }
+  .vb .cp-stage.core { margin-top: 0; }
+  .vb .cp-li { padding: 6px 16px; grid-template-columns: 36px minmax(0, 1fr) 64px 56px !important; }
+  .vb .cp-li > .its { display: none; }
+  .vb .cp-list { grid-column: 1 / -1 !important; border-right: 0 !important; }
+  .vb .cp-sk { grid-template-columns: 44px repeat(15, minmax(0, 1fr)); gap: 2px; padding: 4px 12px 16px; overflow-x: auto; }
+  .vb .cp-sk .ab > span { display: none; }
+  .vb .cp-sk .c { height: 24px; font-size: 10px; }
+  .vb .cp-mu { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 4px 16px 20px; }
+  .vb .cp-mc .fr { height: 180px; }
+  .vb .cp-len, .vb .cp-xs { margin-left: 48px; margin-right: 16px; }
+  .vb .cp-det { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .vb .cp-tbl { --cols: minmax(0, 1fr) 72px 72px; }
+  .vb .cp-rk { --cols: minmax(0, 1fr) 72px 72px; }
+  .vb .cp-pro { --cols: minmax(0, 1fr) 72px; }
+}
+
+/* ── A lane matchup (the Matchup board; its classes are in facet.css) ── */
+.vb .mu-mast { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-bottom: 16px; }
+.vb .mu-mid { text-align: center; min-width: 300px; }
+.vb .mu-sum { display: grid; grid-template-columns: repeat(4, 1fr); }
+.vb .mu-sum > div { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 20px; text-align: center; }
+.vb .mu-sum > div + div { border-left: 1px solid var(--line); }
+.vb .mu2 > a { display: block; }
+@media (max-width: 1023px) {
+  .vb .side2 { grid-template-columns: 1fr; }
+}
+@media (max-width: 767px) {
+  .vb .mu2 { grid-template-columns: 1fr 1fr; gap: 16px; padding: 14px; }
+  .vb .mu2 .art2 { height: 120px; }
+  .vb .mu2 .art2 .h1 { font-size: 20px; }
+  .vb .mu-mid { grid-column: 1 / -1; grid-row: 2; min-width: 0; }
+  .vb .mu-mid .fg-xl { font-size: 32px; }
+  .vb .mu-mid .split { width: 100% !important; }
+  .vb .mu-sum { grid-template-columns: 1fr 1fr; }
+  .vb .mu-sum > div:nth-child(3) { border-left: 0; }
+  .vb .mu-sum > div:nth-child(n + 3) { border-top: 1px solid var(--line); }
+  .vb .h2x { grid-template-columns: 64px 1fr 64px; gap: 10px; padding: 9px 14px; }
+  .vb .bvs3 { grid-template-columns: 1fr; }
+  .vb .bvs3 > div + div { border-left: 0; border-top: 1px solid var(--line); }
+  .vb .bln { grid-template-columns: 64px minmax(0, 1fr) 52px; padding: 6px 14px; }
+  .vb .bln .ic2 { flex-wrap: wrap; }
+}

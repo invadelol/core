@@ -146,4 +146,24 @@ test.group('Stats cache', () => {
     assert.equal(await cache.get('k', async () => ++loads), 1)
     assert.equal(await cache.get('k', async () => ++loads), 1)
   })
+
+  test('peek never loads; fill loads once and keeps it for peek', async ({ assert }) => {
+    const time = clock()
+    const cache = new StatsCache('t', { store: memoryStore(time), now: time.now })
+    assert.isNull(await cache.peek('k'))
+    let loads = 0
+    const load = async () => ++loads
+    assert.equal(await cache.fill('k', load), 1)
+    // A fresh answer is not loaded again.
+    assert.equal(await cache.fill('k', load), 1)
+    assert.deepEqual(await cache.peek('k'), { value: 1, fresh: true })
+    // A day on it is stale, still served by peek; fill loads it again.
+    time.advance(25 * HOUR)
+    assert.deepEqual(await cache.peek('k'), { value: 1, fresh: false })
+    assert.equal(await cache.fill('k', load), 2)
+    assert.deepEqual(await cache.peek('k'), { value: 2, fresh: true })
+    // Past two days it is gone.
+    time.advance(49 * HOUR)
+    assert.isNull(await cache.peek('k'))
+  })
 })

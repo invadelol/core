@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import { Link } from '@inertiajs/vue3'
-import { MatchRowSkeleton, RoleIcon } from '@invadelol/ui'
+import { RoleIcon } from '@invadelol/ui'
 import { positionOf } from '@invadelol/ui/logic'
 import DuoTrend from './DuoTrend.vue'
-import MatchList from './MatchList.vue'
+import MatchRows from './profile/MatchRows.vue'
+import EmptyState from './ui/EmptyState.vue'
+import Frame from './ui/Frame.vue'
+import Icon from './ui/Icon.vue'
+import SectionHead from './ui/SectionHead.vue'
+import Skeleton from './ui/Skeleton.vue'
 import ShowMore from './ShowMore.vue'
 import { champIcon, championName, profileIcon } from '../lib/assets.js'
 import { profilePath, shortDate } from '../lib/format.js'
@@ -168,34 +173,21 @@ const more = computed(() => games.value.length > 0 && !exhausted.value)
 </script>
 
 <template>
-  <section class="fr-duo" :aria-label="`With ${partner.gameName}`">
-    <div class="iv-panel lit-sheet">
+  <section class="dd" :aria-label="`With ${partner.gameName}`">
+    <article class="card">
       <!-- Who -->
-      <header class="flex items-center gap-3 px-4 pt-4 sm:px-5">
-        <span class="fr-pair" aria-hidden="true">
-          <img
-            :src="profileIcon(profile.profileIconId)"
-            alt=""
-            width="40"
-            height="40"
-            class="thumb"
-          />
-          <img
-            :src="profileIcon(partner.profileIconId)"
-            alt=""
-            width="40"
-            height="40"
-            class="thumb"
-          />
+      <header class="dd-who">
+        <span class="dd-pair" aria-hidden="true">
+          <img :src="profileIcon(profile.profileIconId)" alt="" width="44" height="44" />
+          <img :src="profileIcon(partner.profileIconId)" alt="" width="44" height="44" />
         </span>
-        <div class="min-w-0 flex-1">
-          <h3 class="truncate text-[16px] font-semibold leading-5 text-ink">
-            With {{ partner.gameName
-            }}<span class="font-normal text-ink-3">#{{ partner.tagLine }}</span>
+        <div class="col grow" style="gap: 4px; min-width: 0">
+          <h3 class="h3 ell">
+            With {{ partner.gameName }}<span class="t3">#{{ partner.tagLine }}</span>
           </h3>
-          <p class="num mt-0.5 truncate text-[12px] text-ink-3">
+          <p class="meta num ell">
             {{ TIER[partner.tier] }}, {{ partner.games }} games
-            <span class="max-sm:hidden"
+            <span class="dd-hm"
               >since {{ shortDate(partner.firstMs) }}, last {{ shortDate(partner.lastMs) }}</span
             >
           </p>
@@ -203,65 +195,52 @@ const more = computed(() => games.value.length > 0 && !exhausted.value)
         <Link
           v-if="partner.gameName && partner.tagLine"
           :href="profilePath(partner.gameName, partner.tagLine)"
-          class="iv-btn sm shrink-0"
+          class="btn sm"
         >
-          Profile
+          Profile<Icon name="chevr" />
         </Link>
       </header>
 
       <!-- The record, and what it is worth -->
-      <dl class="fr-figures">
+      <dl class="dd-figs">
         <div>
-          <dt class="label">Win rate together</dt>
+          <dt class="lab">Win rate together</dt>
           <dd>
-            <span class="iv-fig text-[28px] text-ink"
-              >{{ rate(partner.wins, partner.games) }}%</span
-            >
-            <span class="num text-[12px] text-ink-3">
-              {{ partner.wins }}W {{ partner.games - partner.wins }}L
-            </span>
+            <span class="fg-l">{{ rate(partner.wins, partner.games) }}%</span>
+            <span class="meta num">{{ partner.wins }}W {{ partner.games - partner.wins }}L</span>
           </dd>
         </div>
         <div>
-          <dt class="label">Synergy</dt>
+          <dt class="lab">Synergy</dt>
           <dd>
-            <span class="iv-fig text-[28px]" :class="synergy.clear ? 'text-ink' : 'text-ink-3'">
-              {{ synergy.text }}
-            </span>
-            <span class="num text-[12px] text-ink-3">
-              vs {{ Math.round(partner.baseline * 100) }}% without
-            </span>
+            <span class="fg-l" :class="synergy.clear ? '' : 't3'">{{ synergy.text }}</span>
+            <span class="meta num">vs {{ Math.round(partner.baseline * 100) }}% without</span>
           </dd>
-          <p class="mt-1.5 text-[12px] leading-4 text-ink-4">{{ synergy.note }}</p>
+          <p class="meta dd-note">{{ synergy.note }}</p>
         </div>
         <div v-if="partner.together.score !== null">
-          <dt class="label">Your score together</dt>
+          <dt class="lab">Your score together</dt>
           <dd>
-            <span class="iv-fig text-[28px] text-ink">{{
-              Math.round(partner.together.score)
-            }}</span>
-            <span v-if="partner.apart?.score != null" class="num text-[12px] text-ink-3">
-              {{ Math.round(partner.apart.score) }} without
-            </span>
+            <span class="fg-l">{{ Math.round(partner.together.score) }}</span>
+            <span v-if="partner.apart?.score != null" class="meta num"
+              >{{ Math.round(partner.apart.score) }} without</span
+            >
           </dd>
         </div>
         <div v-if="partner.theirScore !== null">
-          <dt class="label">Their score</dt>
+          <dt class="lab">Their score</dt>
           <dd>
-            <span class="iv-fig text-[28px] text-ink">{{ Math.round(partner.theirScore) }}</span>
-            <span class="num text-[12px] text-ink-3">beside you</span>
+            <span class="fg-l">{{ Math.round(partner.theirScore) }}</span>
+            <span class="meta num">beside you</span>
           </dd>
         </div>
       </dl>
 
       <!-- Form over time -->
-      <div
-        v-if="partner.series.length >= TREND_MIN"
-        class="border-t border-line px-4 pb-3 pt-4 sm:px-5"
-      >
-        <div class="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <span class="text-[13px] font-semibold text-ink">Form together</span>
-          <span class="text-[12px] text-ink-3">
+      <div v-if="partner.series.length >= TREND_MIN" class="dd-form">
+        <div class="row dd-form-h">
+          <span class="h5">Form together</span>
+          <span class="meta">
             Win rate over the last 10 games together. Dashed:
             {{ Math.round(partner.baseline * 100) }}% without them.
           </span>
@@ -275,197 +254,239 @@ const more = computed(() => games.value.length > 0 && !exhausted.value)
       </div>
 
       <!-- What works -->
-      <div class="fr-works border-t border-line">
+      <div class="dd-works">
         <section v-if="!seats.length && !picks.length">
-          <h4 class="label mb-2">What works</h4>
-          <p class="fr-line text-ink-3">No seat or pick taken three times together yet.</p>
+          <h4 class="lab">What works</h4>
+          <p class="dd-line meta">No seat or pick taken three times together yet.</p>
         </section>
 
         <section v-if="seats.length">
-          <h4 class="label mb-2">Seats</h4>
+          <h4 class="lab">Seats</h4>
           <ul>
-            <li v-for="seat in seats" :key="`${seat.mine}:${seat.theirs}`" class="fr-line">
-              <span class="flex shrink-0 items-center gap-1 text-ink-3">
+            <li v-for="seat in seats" :key="`${seat.mine}:${seat.theirs}`" class="dd-line">
+              <span class="row t3" style="gap: 4px; flex: none">
                 <RoleIcon :lane="positionOf(seat.mine)" :size="14" />
                 <RoleIcon :lane="positionOf(seat.theirs)" :size="14" />
               </span>
-              <span class="min-w-0 flex-1 truncate text-ink-2">
-                {{ roleLabel(seat.mine) }} <span class="text-ink-4">+</span>
-                {{ roleLabel(seat.theirs) }}
+              <span class="grow ell t2">
+                {{ roleLabel(seat.mine) }} <span class="t3">+</span> {{ roleLabel(seat.theirs) }}
               </span>
-              <span class="num shrink-0 text-[12px] text-ink-3"
-                >{{ seat.wins }}W {{ seat.games - seat.wins }}L</span
+              <span class="meta num">{{ seat.wins }}W {{ seat.games - seat.wins }}L</span>
+              <span class="dd-rate num" :class="{ quiet: seat.games < SOLID }"
+                >{{ rate(seat.wins, seat.games) }}%</span
               >
-              <span class="fr-rate num" :class="{ quiet: seat.games < SOLID }">
-                {{ rate(seat.wins, seat.games) }}%
-              </span>
             </li>
           </ul>
-          <ShowMore v-model="seatsOpen" class="mt-1" :total="partner.roles.length" :limit="WORKS" />
+          <ShowMore v-model="seatsOpen" :total="partner.roles.length" :limit="WORKS" />
         </section>
 
         <section v-if="seats.length || picks.length">
-          <h4 class="label mb-2">Best picks together</h4>
+          <h4 class="lab">Best picks together</h4>
           <ul v-if="picks.length">
-            <li v-for="pick in picks" :key="`${pick.mine}:${pick.theirs}`" class="fr-line">
-              <span class="flex shrink-0 gap-[3px]">
-                <span class="portrait h-6 w-6" :title="championName(pick.mine)">
-                  <img :src="champIcon(pick.mine)" :alt="championName(pick.mine)" loading="lazy" />
-                </span>
-                <span class="portrait h-6 w-6" :title="championName(pick.theirs)">
-                  <img
-                    :src="champIcon(pick.theirs)"
-                    :alt="championName(pick.theirs)"
-                    loading="lazy"
-                  />
-                </span>
+            <li v-for="pick in picks" :key="`${pick.mine}:${pick.theirs}`" class="dd-line">
+              <span class="row" style="gap: 3px; flex: none">
+                <Frame
+                  :src="champIcon(pick.mine)"
+                  :alt="championName(pick.mine)"
+                  :width="24"
+                  size="xs"
+                />
+                <Frame
+                  :src="champIcon(pick.theirs)"
+                  :alt="championName(pick.theirs)"
+                  :width="24"
+                  size="xs"
+                />
               </span>
-              <span class="min-w-0 flex-1 truncate text-ink-2">
-                {{ championName(pick.mine) }} <span class="text-ink-4">+</span>
+              <span class="grow ell t2">
+                {{ championName(pick.mine) }} <span class="t3">+</span>
                 {{ championName(pick.theirs) }}
               </span>
-              <span class="num shrink-0 text-[12px] text-ink-3"
-                >{{ pick.wins }}W {{ pick.games - pick.wins }}L</span
+              <span class="meta num">{{ pick.wins }}W {{ pick.games - pick.wins }}L</span>
+              <span class="dd-rate num" :class="{ quiet: pick.games < SOLID }"
+                >{{ rate(pick.wins, pick.games) }}%</span
               >
-              <span class="fr-rate num" :class="{ quiet: pick.games < SOLID }">
-                {{ rate(pick.wins, pick.games) }}%
-              </span>
             </li>
           </ul>
           <ShowMore
             v-if="picks.length"
             v-model="picksOpen"
-            class="mt-1"
             :total="partner.champions.length"
             :limit="WORKS"
           />
-          <p v-else class="fr-line text-ink-3">No pair of picks played three times yet.</p>
+          <p v-else class="dd-line meta">No pair of picks played three times yet.</p>
         </section>
 
         <section v-if="partner.apart">
-          <h4 class="label mb-2 flex">
-            <span class="flex-1">You, beside them</span>
-            <span class="w-12 text-right">With</span>
-            <span class="w-14 text-right">Without</span>
+          <h4 class="lab row">
+            <span class="grow">You, beside them</span>
+            <span class="dd-c1">With</span>
+            <span class="dd-c2">Without</span>
           </h4>
           <ul>
-            <li v-for="row in splits" :key="row.label" class="fr-line">
-              <span class="min-w-0 flex-1 truncate text-ink-2">{{ row.label }}</span>
-              <span
-                class="num w-12 shrink-0 text-right"
-                :class="row.clear ? 'font-semibold text-ink' : 'text-ink-2'"
-                >{{ row.with }}</span
-              >
-              <span class="num w-14 shrink-0 text-right text-ink-3">{{ row.without }}</span>
+            <li v-for="row in splits" :key="row.label" class="dd-line">
+              <span class="grow ell t2">{{ row.label }}</span>
+              <span class="dd-c1 num" :class="row.clear ? 't1 b' : 't2'">{{ row.with }}</span>
+              <span class="dd-c2 num t3">{{ row.without }}</span>
             </li>
           </ul>
         </section>
       </div>
-    </div>
+    </article>
 
     <!-- The games themselves -->
-    <div class="section mt-6">
-      <h3>Games together</h3>
-      <span class="meta num">{{ partner.games }}</span>
-    </div>
+    <section class="dd-games">
+      <SectionHead title="Games together" icon="clock" :meta="String(partner.games)" />
+      <article v-if="failed && !games.length" class="card" role="alert">
+        <EmptyState compact icon="clock" title="These games could not be loaded">
+          <button type="button" class="btn sm" @click="load()">Retry</button>
+        </EmptyState>
+      </article>
+      <article v-else-if="!games.length" class="card"><Skeleton :rows="4" pic /></article>
+      <MatchRows
+        v-else
+        :matches="games"
+        :puuid="profile.puuid"
+        :game-name="profile.gameName"
+        :tag-line="profile.tagLine"
+      />
 
-    <p v-if="failed && !games.length" class="notice" role="alert">
-      <span>These games could not be loaded.</span>
-      <button type="button" class="iv-btn sm ml-auto" @click="load()">Retry</button>
-    </p>
-    <MatchRowSkeleton v-else-if="!games.length" :count="4" />
-    <MatchList
-      v-else
-      :matches="games"
-      :puuid="profile.puuid"
-      :game-name="profile.gameName"
-      :tag-line="profile.tagLine"
-    />
-
-    <div v-if="games.length && (more || failed)" class="mt-4 flex justify-center">
-      <button type="button" class="iv-btn" :disabled="loading" @click="load(true)">
-        {{ failed ? 'Retry' : loading ? 'Loading' : 'Show older games' }}
+      <button
+        v-if="games.length && (more || failed)"
+        type="button"
+        class="btn dd-older"
+        :disabled="loading"
+        @click="load(true)"
+      >
+        {{ failed ? 'Retry' : loading ? 'Loading' : 'Show older games' }}<Icon name="chev" />
       </button>
-    </div>
+    </section>
   </section>
 </template>
 
 <style scoped>
-/* Two players side by side, the second over the first and cut out of it by a ring. */
-.fr-pair {
+.dd {
   display: flex;
-  flex-shrink: 0;
+  flex-direction: column;
+  gap: 32px;
 }
-
-.fr-pair img {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--r-sm);
+.dd-who {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 20px 4px;
 }
-
-.fr-pair img + img {
-  margin-left: -8px;
-  outline: 2px solid var(--solid-1);
+.dd-pair {
+  display: flex;
+  flex: none;
 }
-
-.fr-figures {
+.dd-pair img {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  background: var(--s3);
+}
+.dd-pair img + img {
+  margin-left: -10px;
+  box-shadow: 0 0 0 2px var(--s1);
+}
+.dd-figs {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px 16px;
-  padding: 18px 16px 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  padding: 16px 0 20px;
 }
-
-.fr-figures dd {
+.dd-figs > div {
+  min-width: 0;
+  padding: 4px 20px;
+}
+.dd-figs > div + div {
+  border-left: 1px solid var(--line);
+}
+.dd-figs dd {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 4px 8px;
-  margin-top: 8px;
+  gap: 4px 10px;
+  margin: 10px 0 0;
 }
-
-@media (min-width: 40rem) {
-  .fr-figures {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    padding-inline: 20px;
-  }
+.dd-note {
+  margin-top: 6px;
 }
-
-.fr-works {
+.dd-form {
+  padding: 16px 20px 12px;
+  border-top: 1px solid var(--line);
+}
+.dd-form-h {
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-bottom: 16px;
+}
+.dd-works {
   display: grid;
-  gap: 20px;
-  padding: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+  padding: 18px 20px 20px;
+  border-top: 1px solid var(--line);
 }
-
-@media (min-width: 48rem) {
-  .fr-works {
-    grid-template-columns: repeat(auto-fit, minmax(196px, 1fr));
-    gap: 24px;
-    padding: 16px 20px 18px;
-  }
+.dd-works h4 {
+  margin: 0 0 8px;
 }
-
-.fr-line {
+.dd-works ul {
+  margin: 0 0 6px;
+  padding: 0;
+  list-style: none;
+}
+.dd-line {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 32px;
+  min-height: 36px;
   font-size: 13px;
+  font-weight: 600;
 }
-
-.fr-rate {
+.dd-line + .dd-line {
+  border-top: 1px solid var(--line);
+}
+.dd-rate {
   flex: none;
   width: 40px;
   text-align: right;
+  font-weight: 700;
+  color: var(--t1);
+}
+.dd-rate.quiet {
   font-weight: 600;
-  color: var(--text-1);
+  color: var(--t3);
 }
-
-.fr-rate.quiet {
-  font-weight: 400;
-  color: var(--text-3);
+.dd-c1 {
+  width: 48px;
+  flex: none;
+  text-align: right;
 }
-
-.fr-line + .fr-line {
-  border-top: 1px solid var(--line);
+.dd-c2 {
+  width: 60px;
+  flex: none;
+  text-align: right;
+}
+.b {
+  font-weight: 700;
+}
+.dd-older {
+  width: 100%;
+  margin-top: 16px;
+}
+@media (max-width: 860px) {
+  .dd-figs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 16px;
+  }
+  .dd-figs > div:nth-child(3) {
+    border-left: 0;
+  }
+  .dd-hm {
+    display: none;
+  }
 }
 </style>
