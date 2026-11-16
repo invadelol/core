@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { Head, Link } from '@inertiajs/vue3'
 import { RoleIcon } from '@invadelol/ui'
 import SiteLayout from '../../components/SiteLayout.vue'
@@ -13,6 +13,7 @@ import { champIcon } from '../../lib/assets.js'
 import { countryName, leagueLogo } from '../../lib/board.js'
 import { laneOf, n, rankWords, roleLabel } from '../../lib/ladders.js'
 import { profilePath } from '../../lib/format.js'
+import { rememberTeam } from '../../lib/recent.js'
 import { matchList, type ProMatch } from '../../lib/pro_matches.js'
 import '../../css/esports.css'
 
@@ -69,6 +70,15 @@ const props = defineProps<{
   names: Record<number, [string, string]>
   description: string
 }>()
+
+/** Listed with the recent searches, by its logo and name (lib/recent.ts). */
+onMounted(() =>
+  watch(
+    () => props.team.slug,
+    () => rememberTeam(props.team),
+    { immediate: true }
+  )
+)
 
 const ORDER = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT']
 /** The year of a date the page gets as text (or as a date on the server's render). */

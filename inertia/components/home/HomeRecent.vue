@@ -10,10 +10,12 @@ import {
   type RecentPlayer,
 } from '../../lib/recent.js'
 import ProPhoto from '../champions/ProPhoto.vue'
+import TeamLogo from '../champions/TeamLogo.vue'
 
 /**
  * The profiles this browser opened last, newest first, in one line under the home's search: a
- * portrait and the Riot ID, a pro's photo and name, or a champion's portrait and name. The list
+ * portrait and the Riot ID, a pro's photo and name, a champion's portrait and name, or a team's
+ * logo and name. The list
  * lives on this device only (lib/recent.ts), so it is read after hydration and the server never
  * renders it; its line keeps its height either way.
  */
@@ -46,6 +48,12 @@ function forget() {
           class="hm-chip-pic"
         />
         <img v-else-if="player.champion" :src="champIcon(player.champion.id)" alt="" />
+        <TeamLogo
+          v-else-if="player.team"
+          :team="{ id: player.team.id, name: player.gameName, shortName: player.team.shortName }"
+          :size="24"
+          class="hm-chip-pic"
+        />
         <img v-else :src="profileIcon(player.profileIconId)" alt="" decoding="async" />
         {{ player.gameName
         }}<span>{{
@@ -55,7 +63,9 @@ function forget() {
               : 'Pro'
             : player.champion
               ? 'Champion'
-              : `#${player.tagLine}`
+              : player.team
+                ? 'Team'
+                : `#${player.tagLine}`
         }}</span>
       </Link>
       <button type="button" class="hm-clear" @click="forget">Clear</button>

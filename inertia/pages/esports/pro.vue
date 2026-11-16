@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import { RoleIcon } from '@invadelol/ui'
 import SiteLayout from '../../components/SiteLayout.vue'
@@ -14,6 +14,7 @@ import { champIcon, assetUrl } from '../../lib/assets.js'
 import { countryName, leagueLogo } from '../../lib/board.js'
 import { laneOf, n, rankWords, roleLabel, winPct } from '../../lib/ladders.js'
 import { profilePath } from '../../lib/format.js'
+import { rememberPro } from '../../lib/recent.js'
 import '../../css/esports.css'
 
 interface ProTag {
@@ -131,6 +132,20 @@ const tab = computed<Tab>(() => {
   return (TABS as string[]).includes(q ?? '') ? (q as Tab) : 'overview'
 })
 const base = `/pro/${props.pro.slug}`
+/** Listed with the recent searches, by its photo and name (lib/recent.ts). */
+onMounted(() =>
+  watch(
+    () => props.pro.slug,
+    () =>
+      rememberPro({
+        slug: props.pro.slug,
+        name: props.pro.name,
+        photo: props.pro.photo ?? null,
+        staff: props.pro.teams.some((t) => t.current && t.title === 'staff') || undefined,
+      }),
+    { immediate: true }
+  )
+)
 const tabs = computed(() => [
   { key: 'overview', label: 'Overview', href: base },
   { key: 'solo', label: 'Solo queue', href: `${base}?tab=solo` },

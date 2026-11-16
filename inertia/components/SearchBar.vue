@@ -350,17 +350,28 @@ const groups = computed(() => {
                     ...(r.pro.photo ? { photo: { slug: r.pro.slug, v: r.pro.photo } } : {}),
                     badge: r.pro.staff ? 'Staff' : 'Pro',
                   }
-                : {
-                    gameName: r.gameName,
-                    tagLine: r.tagLine,
-                    direct: false,
-                    icon: r.profileIconId,
-                    region: r.platform ? regionLabel(r.platform) : undefined,
-                    level: r.level,
-                    rank: r.rank
-                      ? `${tierName(r.rank.tier)}${['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(r.rank.tier) ? '' : ` ${r.rank.division}`}`
-                      : undefined,
-                  }
+                : r.team
+                  ? {
+                      gameName: r.gameName,
+                      tagLine: '',
+                      direct: false,
+                      kind: 'team',
+                      href: recentHref(r),
+                      title: r.gameName,
+                      detail: 'Team',
+                      team: { id: r.team.id, name: r.gameName, shortName: r.team.shortName },
+                    }
+                  : {
+                      gameName: r.gameName,
+                      tagLine: r.tagLine,
+                      direct: false,
+                      icon: r.profileIconId,
+                      region: r.platform ? regionLabel(r.platform) : undefined,
+                      level: r.level,
+                      rank: r.rank
+                        ? `${tierName(r.rank.tier)}${['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(r.rank.tier) ? '' : ` ${r.rank.division}`}`
+                        : undefined,
+                    }
         ),
       },
     ]
