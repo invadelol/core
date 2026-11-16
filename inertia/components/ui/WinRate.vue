@@ -92,75 +92,78 @@ const trackWidth = computed(() =>
 </template>
 
 <style>
-/* The win rate (one violet line on a grey track, a tick at 50%): components/ui/WinRate.vue. */
-.wrt {
-  display: inline-flex;
-  flex-direction: column;
-  gap: 7px;
-  min-width: 0;
-  max-width: 100%;
-}
-/* A track that fills its cell takes the cell's width. */
-.wrt.fill {
-  display: flex;
-  width: 100%;
-}
-.wrt.end {
-  align-items: flex-end;
-}
-.wrt-t {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  white-space: nowrap;
-}
-.wrt.end .wrt-t {
-  justify-content: flex-end;
-}
-.wrt-t b {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--t1);
-}
-.wrt-t .meta {
-  font-size: 12.5px;
-}
-.wrt.sm {
-  gap: 6px;
-}
-.wrt.sm .wrt-t b {
-  font-size: 14px;
-}
-.wrt.sm .wrt-t .meta {
-  font-size: 12px;
-}
-.wrt-a {
-  position: relative;
-  display: block;
-  max-width: 100%;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--s3);
-}
-.wrt-a i {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  border-radius: 2px;
-  background: var(--v400);
-}
-/* Even: the tick at 50%, over the line. */
-.wrt-a::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: -3px;
-  bottom: -3px;
-  width: 1px;
-  background: var(--t4);
-}
-.wrt.bare {
-  justify-content: center;
+/* In the components layer, so a page's own rules (a table hiding a column on a phone) win. */
+@layer components {
+  /* The win rate (one violet line on a grey track, a tick at 50%): components/ui/WinRate.vue. */
+  .wrt {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+    max-width: 100%;
+  }
+  /* A track that fills its cell takes the cell's width. */
+  .wrt.fill {
+    display: flex;
+    width: 100%;
+  }
+  .wrt.end {
+    align-items: flex-end;
+  }
+  .wrt-t {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    white-space: nowrap;
+  }
+  .wrt.end .wrt-t {
+    justify-content: flex-end;
+  }
+  .wrt-t b {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--t1);
+  }
+  .wrt-t .meta {
+    font-size: 12.5px;
+  }
+  .wrt.sm {
+    gap: 6px;
+  }
+  .wrt.sm .wrt-t b {
+    font-size: 14px;
+  }
+  .wrt.sm .wrt-t .meta {
+    font-size: 12px;
+  }
+  .wrt-a {
+    position: relative;
+    display: block;
+    max-width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--s3);
+  }
+  .wrt-a i {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    border-radius: 2px;
+    background: var(--v400);
+  }
+  /* Even: the tick at 50%, over the line. */
+  .wrt-a::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: -3px;
+    bottom: -3px;
+    width: 1px;
+    background: var(--t4);
+  }
+  .wrt.bare {
+    justify-content: center;
+  }
 }
 </style>
