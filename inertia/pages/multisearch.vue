@@ -12,6 +12,7 @@ import ScoreDial from '../components/ui/ScoreDial.vue'
 import RankEmblem from '../components/ui/RankEmblem.vue'
 import FormStrip from '../components/ui/FormStrip.vue'
 import Skeleton from '../components/ui/Skeleton.vue'
+import LobbyField from '../components/multisearch/LobbyField.vue'
 import { isRemake, scoreLobby } from '../lib/match.js'
 import { rememberPlayer } from '../lib/recent.js'
 import { scout } from '../lib/scout.js'
@@ -370,10 +371,6 @@ function scoutLobby() {
   show(players)
   writeAddress(players)
 }
-/** A paste is a lobby: it is scouted as soon as it lands in the field. */
-function pasted() {
-  setTimeout(scoutLobby, 0)
-}
 const regionValue = ref(props.region ?? 'auto')
 const regionOptions = [
   { value: 'auto', label: 'Any server', icon: regionFlag(null) },
@@ -414,16 +411,13 @@ onBeforeUnmount(() => controller?.abort())
         meta="Paste the names from champion select or the lobby chat, up to five a team"
       />
       <form class="card ms-find" @submit.prevent="scoutLobby">
-        <label class="field" style="flex: 1; height: 46px">
-          <Icon name="users" />
-          <input
-            v-model="field"
-            type="text"
-            placeholder="Name#TAG, Name#TAG…"
-            aria-label="Names"
-            @paste="pasted"
-          />
-        </label>
+        <LobbyField
+          v-model="field"
+          :region="regionValue"
+          @pasted="scoutLobby"
+          @submit="scoutLobby"
+          @resolved="scoutLobby"
+        />
         <Select v-model="regionValue" :options="regionOptions" width="10rem" align="right" />
         <button class="btn lg pri" type="submit">Scout</button>
       </form>
