@@ -83,6 +83,8 @@ export interface NavSection {
   links: NavLink[]
   /** The menu's hairline footer link. */
   foot?: (ctx: NavContext) => { label: string; href: string } | null
+  /** No plain-text row of its pages under the header (its pages share no theme). */
+  noSubRow?: boolean
 }
 
 /**
@@ -253,6 +255,7 @@ const ALL_SECTIONS: NavSection[] = [
   {
     key: 'tools',
     label: 'Tools',
+    noSubRow: true,
     links: [
       {
         key: 'multisearch',
