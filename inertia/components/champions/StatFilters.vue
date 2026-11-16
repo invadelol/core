@@ -5,6 +5,7 @@ import Select from '../ui/Select.vue'
 import { BRACKETS, REGIONS } from '../../lib/champions.js'
 import { patchName, patchOptions } from '../../lib/patches.js'
 import { withQuery } from '../../lib/tier_lists.js'
+import { regionFlag } from '../../lib/flags.js'
 
 /**
  * The rank, patch and region menus of a statistics page (the boards' three `.sel` at the top
@@ -37,6 +38,7 @@ const patchMenu = computed(() =>
 const regionOptions = REGIONS.map((r) => ({
   value: r.value as string,
   label: r.value ? r.label : 'All servers',
+  icon: regionFlag(r.value),
 }))
 
 function go(changes: Record<string, string | null>) {

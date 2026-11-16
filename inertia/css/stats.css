@@ -10,8 +10,6 @@
 .vb .st-none { padding: 12px 20px 18px; }
 .vb .st-card { overflow-x: auto; }
 .vb .st-tbl { min-width: max-content; }
-.vb .st-tbl .tbl-h button { display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; white-space: nowrap; }
-.vb .st-tbl .tbl-h button.sorted { color: var(--t1); }
 .vb .lrow .vtop { flex: none; }
 
 @media (max-width: 1023px) {

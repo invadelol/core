@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Deferred, Head, Link } from '@inertiajs/vue3'
+import { Deferred, Head, Link, usePage } from '@inertiajs/vue3'
+import { RoleIcon } from '@invadelol/ui'
 import '../../css/tier-lists.css'
 import SiteLayout from '../../components/SiteLayout.vue'
 import Masthead from '../../components/ui/Masthead.vue'
@@ -9,15 +10,16 @@ import Icon from '../../components/ui/Icon.vue'
 import TierChip from '../../components/ui/TierChip.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import Skeleton from '../../components/ui/Skeleton.vue'
+import SortHead from '../../components/ui/SortHead.vue'
+import { useSort } from '../../components/ui/sort.js'
 import StatFilters from '../../components/champions/StatFilters.vue'
-import ClassSeg from '../../components/champions/ClassSeg.vue'
 import MovedCard, { type Moved } from '../../components/champions/MovedCard.vue'
 import Fig from '../../components/champions/Fig.vue'
 import SinceCell from '../../components/champions/SinceCell.vue'
 import Computing from '../../components/champions/Computing.vue'
 import { BRACKETS, TIERS, champIconUrl } from '../../lib/champions.js'
 import { patchName } from '../../lib/patches.js'
-import { barWidth, movers, p1, sgn, thousands } from '../../lib/tier_lists.js'
+import { barWidth, movers, p1, sgn, thousands, withQuery } from '../../lib/tier_lists.js'
 
 type Lane = 'bot' | 'mid' | 'top'
 interface Row {
@@ -57,11 +59,14 @@ const LANES: Record<Lane, { title: string; a: string; b: string; pa: string; pb:
   mid: { title: 'Mid and jungle duos', a: 'mid', b: 'jungle', pa: 'mid', pb: 'jungle' },
   top: { title: 'Top and jungle duos', a: 'top', b: 'jungle', pa: 'top', pb: 'jungle' },
 }
+/** The lane filter: each pair of roles as its two role icons (the words are its name). */
 const laneOptions = [
-  { value: null, label: 'Bot and support' },
-  { value: 'mid', label: 'Mid and jungle' },
-  { value: 'top', label: 'Top and jungle' },
-]
+  { value: null, label: 'Bot and support', icons: ['ADC', 'SUPPORT'] },
+  { value: 'mid', label: 'Mid and jungle', icons: ['MID', 'JUNGLE'] },
+  { value: 'top', label: 'Top and jungle', icons: ['TOP', 'JUNGLE'] },
+] as const
+const page = usePage()
+const laneOn = (value: string | null) => (value ?? 'bot') === props.lane
 const L = computed(() => LANES[props.lane])
 const ready = computed(() => (props.list && !props.list.computing ? props.list : null))
 const rankText = computed(() => {
@@ -124,13 +129,25 @@ const moved = computed(() => {
 /* ── Table ──────────────────────────────────────────────────── */
 const FIRST = [6, 6, 5]
 const all = ref(false)
-const groups = computed(() =>
-  TIERS.map((label, t) => {
+const sort = useSort(shown, {
+  name: (r) => `${nm(r.a)} ${nm(r.b)}`,
+  win: (r) => r.win,
+  synergy: (r) => r.synergy,
+  share: (r) => r.share,
+  games: (r) => r.games,
+  since: (r) => r.delta,
+}, { first: { name: 'asc' } })
+const groups = computed(() => {
+  if (sort.key) {
+    const rows = all.value ? sort.rows : sort.rows.slice(0, FIRST.reduce((a, b) => a + b, 0))
+    return [{ t: null as number | null, label: '', total: sort.rows.length, rows }]
+  }
+  return TIERS.map((label, t) => {
     const list = shown.value.filter((r) => r.tier === t).sort((a, b) => b.win - a.win)
     const rows = all.value ? list : list.slice(0, FIRST[t] ?? 0)
-    return { t, label, total: list.length, rows }
+    return { t: t as number | null, label, total: list.length, rows }
   }).filter((g) => g.rows.length)
-)
+})
 const hidden = computed(() => shown.value.length - groups.value.reduce((n, g) => n + g.rows.length, 0))
 const synWidth = (s: number) => `${Math.min(50, (Math.abs(s * 100) / 6) * 50).toFixed(1)}%`
 const shareMax = computed(() => Math.max(0.2, ...shown.value.map((r) => r.share)))
@@ -149,7 +166,19 @@ const shareMax = computed(() => Math.max(0.2, ...shown.value.map((r) => r.share)
           <StatFilters :filter="filter" :patches="patches" />
         </template>
         <div class="tx-filters">
-          <ClassSeg :options="laneOptions" :value="lane === 'bot' ? null : lane" param="lane" label="Lanes" />
+          <nav class="seg du-lanes" aria-label="Lanes">
+            <Link
+              v-for="o in laneOptions"
+              :key="o.value ?? 'bot'"
+              :href="withQuery(page.url, { lane: o.value })"
+              :class="{ on: laneOn(o.value) }"
+              :aria-current="laneOn(o.value) ? 'page' : undefined"
+              :aria-label="o.label"
+              :title="o.label"
+              preserve-scroll
+              ><RoleIcon :lane="o.icons[0]" :size="18" /><RoleIcon :lane="o.icons[1]" :size="18"
+            /></Link>
+          </nav>
           <label v-if="ready" class="chk" @click.prevent="hideFew = !hideFew">
             <span class="switch" :class="{ on: hideFew }" role="switch" :aria-checked="hideFew" />
             Hide pairs under {{ thousands(hideUnder) }} games
@@ -217,18 +246,27 @@ const shareMax = computed(() => Math.max(0.2, ...shown.value.map((r) => r.share)
           <section class="sec" style="padding-top: 24px">
             <article class="card" style="overflow: hidden">
               <div class="tx-head du-head">
-                <span>Duo</span><span>Win rate</span><span>Synergy</span><span>Of the {{ L.a }}’s duo games</span
-                ><span class="r">Games</span
-                ><span>{{ ready.previousPatch ? `Since ${patchName(ready.previousPatch)}` : 'Since' }}</span>
+                <SortHead :sorter="sort" col="name" label="Duo" />
+                <SortHead :sorter="sort" col="win" label="Win rate" />
+                <SortHead :sorter="sort" col="synergy" label="Synergy" />
+                <SortHead :sorter="sort" col="share" :label="`Of the ${L.a}’s duo games`" />
+                <SortHead :sorter="sort" col="games" label="Games" class="r" />
+                <SortHead
+                  :sorter="sort"
+                  col="since"
+                  :label="ready.previousPatch ? `Since ${patchName(ready.previousPatch)}` : 'Since'"
+                  title="Win rate change since the patch before"
+                />
               </div>
-              <template v-for="g in groups" :key="g.t">
-                <div class="tx-grp">
+              <template v-for="g in groups" :key="g.t ?? 'sorted'">
+                <div v-if="g.t !== null" class="tx-grp">
                   <TierChip :tier="g.t" large />
                   <span class="h4">{{ g.label }} tier</span>
                   <span class="meta">{{ g.rows.length === g.total ? `${g.total} duo${g.total === 1 ? '' : 's'}` : `Showing ${g.rows.length} of ${g.total}` }}</span>
                 </div>
                 <div v-for="r in g.rows" :key="`${r.a}:${r.b}`" class="tx-row du-row">
                   <div class="tx-name">
+                    <TierChip v-if="g.t === null" :tier="r.tier" class="tx-tc" />
                     <span class="du-pair"
                       ><Link class="fr s" :href="champHref(r.a, ROLE_SLUG[L.pa])"><img :src="champIconUrl(r.a)" alt="" loading="lazy" /></Link
                       ><Link class="fr s" :href="champHref(r.b, ROLE_SLUG[L.pb])"><img :src="champIconUrl(r.b)" alt="" loading="lazy" /></Link

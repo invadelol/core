@@ -10,6 +10,8 @@ import Icon from '../../components/ui/Icon.vue'
 import TierChip from '../../components/ui/TierChip.vue'
 import Skeleton from '../../components/ui/Skeleton.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
+import SortHead from '../../components/ui/SortHead.vue'
+import { useSort } from '../../components/ui/sort.js'
 import StatFilters from '../../components/champions/StatFilters.vue'
 import { nameOf } from '../../lib/assets.js'
 import {
@@ -163,6 +165,25 @@ const firstBlood = computed(() => block('firstBlood') as FirstBlood | null | und
 const byRank = computed(() => (block('byRank') ?? []) as ByRank)
 const details = computed(() => block('details') as Details | null | undefined)
 const pros = computed(() => block('pros') as ProGames | null | undefined)
+
+/* ── The tables' heads sort them (rank order, most met, latest first by default) ── */
+const rankSort = useSort(byRank, {
+  games: (r) => r.games,
+  win: (r) => r.win,
+  pick: (r) => r.pick,
+  tier: (r) => (r.tier === null ? null : -r.tier),
+})
+const matchupSort = useSort(matchups, {
+  name: (m) => champName(m.champion),
+  games: (m) => m.games,
+  win: (m) => m.win,
+}, { first: { name: 'asc' } })
+const proSort = useSort(() => pros.value?.games.slice(0, 12) ?? [], {
+  name: (g) => g.pro?.name ?? '',
+  kda: (g) => (g.kills + g.assists) / Math.max(1, g.deaths),
+  win: (g) => (g.win ? 1 : 0),
+  when: (g) => g.startMs,
+}, { first: { name: 'asc' } })
 
 const role = computed(() => roleOf(props.position))
 const roleWord = computed(() => role.value.label.toLowerCase())
@@ -672,8 +693,14 @@ const ago = (ms: number) => {
             <CardHead title="At each rank" icon="trophy" :meta="`${champion.name} ${roleWord}, this patch`" />
             <Skeleton v-if="waiting('byRank')" :rows="6" />
             <div v-else class="tbl cp-rk">
-              <div class="tbl-h"><span>Rank</span><span class="n">Games</span><span class="n">Win rate</span><span class="n hm">Pick rate</span><span class="n hm">Tier</span></div>
-              <div v-for="r in byRank" :key="r.group" class="tbl-r">
+              <div class="tbl-h">
+                <span>Rank</span>
+                <SortHead :sorter="rankSort" col="games" label="Games" class="n" />
+                <SortHead :sorter="rankSort" col="win" label="Win rate" class="n" />
+                <SortHead :sorter="rankSort" col="pick" label="Pick rate" class="n hm" />
+                <SortHead :sorter="rankSort" col="tier" label="Tier" class="n hm" />
+              </div>
+              <div v-for="r in rankSort.rows" :key="r.group" class="tbl-r">
                 <span class="h5">{{ rankLabel(r.group) }}</span>
                 <span class="n num">{{ thousands(r.games) }}</span>
                 <span class="n num">{{ r.win === null ? '–' : `${p1(r.win)}%` }}</span>
@@ -705,8 +732,13 @@ const ago = (ms: number) => {
             <CardHead title="Every lane opponent" icon="users" :meta="`${champion.name}’s win rate against each, most met first`" />
             <Skeleton v-if="waiting('matchups')" :rows="8" pic />
             <div v-else-if="matchups.length" class="tbl cp-tbl">
-              <div class="tbl-h"><span>Opponent</span><span class="n">Games</span><span class="n">Win rate</span><span class="n hm">Matchup</span></div>
-              <Link v-for="m in matchups" :key="m.champion" class="tbl-r" :href="matchupHref(m.champion)">
+              <div class="tbl-h">
+                <SortHead :sorter="matchupSort" col="name" label="Opponent" />
+                <SortHead :sorter="matchupSort" col="games" label="Games" class="n" />
+                <SortHead :sorter="matchupSort" col="win" label="Win rate" class="n" />
+                <span class="n hm">Matchup</span>
+              </div>
+              <Link v-for="m in matchupSort.rows" :key="m.champion" class="tbl-r" :href="matchupHref(m.champion)">
                 <span class="who"><img class="pic sm" :src="champIconUrl(m.champion)" alt="" loading="lazy" /><span class="h5 ell">{{ champName(m.champion) }}</span></span>
                 <span class="n num">{{ thousands(m.games) }}</span>
                 <span class="n num" :class="m.win >= 0.5 ? 't1' : 't3'">{{ p1(m.win) }}%</span>
@@ -722,8 +754,14 @@ const ago = (ms: number) => {
             <CardHead title="Pros on this champion" icon="pro" :meta="pros?.games?.length ? `Their ${pros.games.length} latest games in ${roleWord}` : null" />
             <Skeleton v-if="waiting('pros')" :rows="5" pic />
             <div v-else-if="pros?.games?.length" class="tbl cp-pro">
-              <div class="tbl-h"><span>Pro</span><span class="hm">Against</span><span class="n">KDA</span><span class="n hm">Result</span><span class="n hm">When</span></div>
-              <div v-for="g in pros.games.slice(0, 12)" :key="g.matchId + g.account" class="tbl-r">
+              <div class="tbl-h">
+                <SortHead :sorter="proSort" col="name" label="Pro" />
+                <span class="hm">Against</span>
+                <SortHead :sorter="proSort" col="kda" label="KDA" class="n" />
+                <SortHead :sorter="proSort" col="win" label="Result" class="n hm" />
+                <SortHead :sorter="proSort" col="when" label="When" class="n hm" />
+              </div>
+              <div v-for="g in proSort.rows" :key="g.matchId + g.account" class="tbl-r">
                 <Link class="who" :href="g.pro ? `/pro/${g.pro.slug}` : '#'"
                   ><img :src="g.pro ? `/cdn/pro/${g.pro.slug}${g.pro.photo ? `?v=${g.pro.photo}` : ''}` : champIconUrl(champion.id)" alt="" loading="lazy" /><span class="col" style="min-width: 0"
                     ><span class="h5 ell">{{ g.pro?.name ?? 'Pro' }}</span><span class="meta ell">{{ g.pro?.team?.name ?? g.league?.name ?? '' }}</span></span

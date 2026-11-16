@@ -49,9 +49,6 @@
     .vb .ms-find {
       flex-wrap: wrap;
     }
-    .vb .ms-find .field {
-      flex: 1 1 100% !important;
-    }
     .vb .ms-find .btn {
       flex: 1;
       justify-content: center;
