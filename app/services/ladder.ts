@@ -272,6 +272,41 @@ export function pageOf<T>(list: T[], page: number, size: number) {
   return { rows: list.slice((at - 1) * size, at * size), page: at, pages, total: list.length }
 }
 
+/**
+ * A ladder's `?sort=` and `?dir=`: one of `keys` and its direction, or the ladder's own order
+ * (`key` null) for anything else. `dir` is `desc` (most first) unless it says `asc`.
+ */
+export function sortParam<K extends string>(
+  sort: unknown,
+  dir: unknown,
+  keys: readonly K[]
+): { key: K | null; dir: 'asc' | 'desc' } {
+  const asked = String(sort ?? '').toLowerCase()
+  const key = (keys as readonly string[]).includes(asked) ? (asked as K) : null
+  return { key, dir: String(dir ?? '').toLowerCase() === 'asc' ? 'asc' : 'desc' }
+}
+
+/**
+ * A list sorted by `value` in `dir`, ties in the order they came (the ladder's), rows without a
+ * value last either way.
+ */
+export function sortRows<T>(
+  list: readonly T[],
+  value: (row: T) => number | null | undefined,
+  dir: 'asc' | 'desc'
+): T[] {
+  const sign = dir === 'asc' ? 1 : -1
+  return list
+    .map((row, i) => ({ row, i, v: value(row) }))
+    .sort((a, b) => {
+      const aNone = a.v === null || a.v === undefined || Number.isNaN(a.v)
+      const bNone = b.v === null || b.v === undefined || Number.isNaN(b.v)
+      if (aNone || bNone) return aNone === bNone ? a.i - b.i : aNone ? 1 : -1
+      return sign * (a.v! - b.v!) || a.i - b.i
+    })
+    .map((x) => x.row)
+}
+
 /** A Riot ID name that matches a search (anything after `#` is left out of it). */
 export function matchesName(gameName: string | null | undefined, q: string) {
   const term = q.trim().toLowerCase().replace(/#.*$/, '').trim()

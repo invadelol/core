@@ -10,6 +10,8 @@ import CardHead from '../components/ui/CardHead.vue'
 import ScoreDial from '../components/ui/ScoreDial.vue'
 import EmptyState from '../components/ui/EmptyState.vue'
 import Skeleton from '../components/ui/Skeleton.vue'
+import SortHead from '../components/ui/SortHead.vue'
+import { useSort } from '../components/ui/sort.js'
 import { assetUrl, champIcon, championName, championSplash } from '../lib/assets.js'
 import { decodeSlug, parseSlug, profilePath } from '../lib/format.js'
 import { detailOf } from '../lib/match.js'
@@ -232,6 +234,18 @@ const maxDamage = computed(() =>
   Math.max(1, ...(detail.value?.players.map((p) => p.damage) ?? [1]))
 )
 const kdaRatio = (p: Player) => ((p.kills + p.assists) / Math.max(1, p.deaths)).toFixed(2)
+/** The Statistics tab: one sorter for both sides, lane order until a head picks a figure. */
+const statSort = useSort(() => detail.value?.players ?? [], {
+  kda: (p) => (p.kills + p.assists) / Math.max(1, p.deaths),
+  kp: (p) => p.kp,
+  damage: (p) => p.damage,
+  taken: (p) => p.damageTaken,
+  cs: (p) => p.cs,
+  csMin: (p) => p.csMin,
+  wards: (p) => p.wardsPlaced,
+  vision: (p) => p.vision,
+})
+const sortedSide = (teamId: number) => statSort.rows.filter((p) => p.teamId === teamId)
 const playerHref = (p: Player) => (p.gameName ? profilePath(p.gameName, p.tagLine) : null)
 
 const LANES = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'] as const
@@ -668,14 +682,20 @@ async function copy() {
             </div>
             <div class="tbl-scroll">
               <div class="tbl-h">
-                <span>Player</span><span>K / D / A</span><span class="n">KP</span
-                ><span class="n">Damage</span><span class="n">Taken</span> <span class="n">CS</span
-                ><span class="n">CS/min</span><span class="n">Wards</span
-                ><span class="n">Vision</span><span>Items</span>
+                <span>Player</span>
+                <SortHead :sorter="statSort" col="kda" label="K / D / A" title="KDA" />
+                <SortHead :sorter="statSort" col="kp" label="KP" class="n" title="Kill participation" />
+                <SortHead :sorter="statSort" col="damage" label="Damage" class="n" />
+                <SortHead :sorter="statSort" col="taken" label="Taken" class="n" title="Damage taken" />
+                <SortHead :sorter="statSort" col="cs" label="CS" class="n" />
+                <SortHead :sorter="statSort" col="csMin" label="CS/min" class="n" />
+                <SortHead :sorter="statSort" col="wards" label="Wards" class="n" title="Wards placed" />
+                <SortHead :sorter="statSort" col="vision" label="Vision" class="n" />
+                <span>Items</span>
               </div>
               <component
                 :is="playerHref(p) ? Link : 'div'"
-                v-for="p in sideOf(t.teamId)"
+                v-for="p in sortedSide(t.teamId)"
                 :key="p.participantId"
                 class="tbl-r"
                 :class="{ me: p.puuid === ownerPuuid }"

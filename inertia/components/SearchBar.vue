@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, useId, watch } fro
 import { router } from '@inertiajs/vue3'
 import { CornerDownLeft, Plus, Search, Users, X } from 'lucide-vue-next'
 import { champIcon, profileIcon, regionLabel } from '../lib/assets.js'
+import { regionFlag } from '../lib/flags.js'
 import { championSlug } from '../lib/champions.js'
 import { recentHref, recentPlayers, type RecentPlayer } from '../lib/recent.js'
 import ProPhoto from './champions/ProPhoto.vue'
@@ -764,7 +765,9 @@ function submit() {
         aria-haspopup="listbox"
         @click="regionOpen = !regionOpen"
       >
-        {{ regionLabel_ }}<Icon name="chev" :size="13" />
+        <img :src="regionFlag(region)" alt="" width="18" height="13" style="border-radius: 2px" />{{
+          regionLabel_
+        }}<Icon name="chev" :size="13" />
       </button>
       <Glyph :h="22" class="gl" />
       <div v-if="picked.length" ref="chips" class="hs-chips" :data-overflow="chipsOverflow">
@@ -811,7 +814,9 @@ function submit() {
         aria-haspopup="listbox"
         @click="regionOpen = !regionOpen"
       >
-        {{ regionLabel_ }}<Icon name="chev" :size="12" />
+        <img :src="regionFlag(region)" alt="" width="16" height="11" style="border-radius: 2px" />{{
+          regionLabel_
+        }}<Icon name="chev" :size="12" />
       </button>
       <span class="kbd hs-kbd" aria-hidden="true">{{ big ? hotkey : '/' }}</span>
       <button v-if="big" type="button" class="go" aria-label="Search" @click="submitOrFocus">
@@ -828,7 +833,11 @@ function submit() {
         :class="{ on: r === region }"
         :aria-selected="r === region"
         @click.prevent="setRegion(r)"
-        >{{ r.toUpperCase() }}<Icon v-if="r === region" name="check" :size="15"
+        ><span class="row" style="gap: 10px"
+          ><img :src="regionFlag(r)" alt="" width="20" height="14" style="border-radius: 3px" />{{
+            r.toUpperCase()
+          }}</span
+        ><Icon v-if="r === region" name="check" :size="15"
       /></a>
     </div>
 

@@ -17,6 +17,8 @@ import {
   ROLE_PARAM,
   matchesName,
   pageOf,
+  sortParam,
+  sortRows,
   type ApexEntry,
   type LadderRole,
   type OneTrick,
@@ -52,6 +54,30 @@ const serverOf = (value: unknown) =>
 
 const pageParam = (value: unknown) =>
   Math.max(1, Math.min(1000, Number.parseInt(String(value ?? 1)) || 1))
+
+/** A season's win rate, null without a game. */
+const winRate = (r: { wins: number; losses: number }) =>
+  r.wins + r.losses ? r.wins / (r.wins + r.losses) : null
+
+/**
+ * A ladder in the order its heads asked (`?sort=&dir=`): `rank` most first is the ladder's own
+ * order, `rank` least first the same list from its end, any other key sorted by its value.
+ */
+function ordered<T, K extends string>(
+  list: T[],
+  order: { key: K | 'rank' | null; dir: 'asc' | 'desc' },
+  values: Record<K, (row: T) => number | null | undefined>
+) {
+  if (order.key === null || order.key === 'rank') {
+    return order.dir === 'asc' && order.key === 'rank' ? [...list].reverse() : list
+  }
+  return sortRows(list, values[order.key as K], order.dir)
+}
+/** The sort a page's props carry: null for the ladder's own order. */
+const sortProp = (order: { key: string | null; dir: 'asc' | 'desc' }) =>
+  order.key === null || (order.key === 'rank' && order.dir === 'desc')
+    ? { sort: null, dir: null }
+    : { sort: order.key, dir: order.dir }
 
 const flag = (value: unknown) => ['1', 'true', 'on', 'yes'].includes(String(value ?? ''))
 
@@ -90,7 +116,7 @@ const regionProps = (server: (typeof SERVERS)[number]) => ({
  * `pro_ladder_service.ts`); no page asks Riot anything.
  */
 export default class LeaderboardsController {
-  /** `/leaderboards/solo?region=euw&role=mid&tier=challenger&pros=1&q=&page=2` */
+  /** `/leaderboards/solo?region=euw&role=mid&tier=challenger&pros=1&q=&sort=wr&dir=asc&page=2` */
   async solo({ inertia, request }: HttpContext) {
     const server = serverOf(request.input('region')) ?? DEFAULT_SERVER
     const role = ROLE_PARAM[String(request.input('role', '')).toLowerCase()] ?? null
@@ -111,7 +137,12 @@ export default class LeaderboardsController {
           matchesName(snapshot.identities[e.puuid]?.gameName, q) ||
           matchesName(snapshot.pros[e.puuid]?.name, q))
     )
-    const { rows: shown, page, pages, total } = pageOf(list, pageParam(request.input('page')), PAGE)
+    const order = sortParam(request.input('sort'), request.input('dir'), ['rank', 'move', 'wr'])
+    const sorted = ordered(list, order, {
+      move: (e) => snapshot.history?.moves[e.puuid]?.lp ?? null,
+      wr: winRate,
+    })
+    const { rows: shown, page, pages, total } = pageOf(sorted, pageParam(request.input('page')), PAGE)
     const podiumEntries = snapshot.entries.slice(0, 3)
     const [scores, podiumScores] = await Promise.all([
       ladderService.scores(shown),
@@ -125,7 +156,7 @@ export default class LeaderboardsController {
     const rows = scored(shown, scores)
     const podium = scored(podiumEntries, podiumScores)
     const overview = ladderService.overview(snapshot)
-    const filtered = Boolean(role || tier || prosOnly || q || page > 1)
+    const filtered = Boolean(role || tier || prosOnly || q || page > 1 || sortProp(order).sort)
     const leader = podium[0]
 
     return inertia.render('leaderboards/solo', {
@@ -135,6 +166,7 @@ export default class LeaderboardsController {
         tier: tier?.toLowerCase() ?? null,
         pros: prosOnly,
         q: q || null,
+        ...sortProp(order),
       },
       podium,
       ...overview,
@@ -199,7 +231,7 @@ export default class LeaderboardsController {
     })
   }
 
-  /** `/leaderboards/flex?region=euw&role=mid&group=five&q=&page=2` */
+  /** `/leaderboards/flex?region=euw&role=mid&group=five&q=&sort=wr&dir=asc&page=2` */
   async flex({ inertia, request }: HttpContext) {
     const server = serverOf(request.input('region')) ?? DEFAULT_SERVER
     const role = ROLE_PARAM[String(request.input('role', '')).toLowerCase()] ?? null
@@ -219,8 +251,10 @@ export default class LeaderboardsController {
         (!group || p.queuesWith?.size === group) &&
         (!q || matchesName(p.gameName, q))
     )
-    const { rows, page, pages, total } = pageOf(list, pageParam(request.input('page')), PAGE)
-    const filtered = Boolean(role || group || q || page > 1)
+    const order = sortParam(request.input('sort'), request.input('dir'), ['rank', 'wr'])
+    const sorted = ordered(list, order, { wr: winRate })
+    const { rows, page, pages, total } = pageOf(sorted, pageParam(request.input('page')), PAGE)
+    const filtered = Boolean(role || group || q || page > 1 || sortProp(order).sort)
     return inertia.render('leaderboards/flex', {
       ...regionProps(server),
       /**
@@ -228,7 +262,7 @@ export default class LeaderboardsController {
        * or saw in the desktop app on this server in the last `seenDays` days.
        */
       scope: { kind: 'tracked', seenDays: SEEN_DAYS, listed: LISTED },
-      filters: { role: role ? roleSlug(role) : null, group, q: q || null },
+      filters: { role: role ? roleSlug(role) : null, group, q: q || null, ...sortProp(order) },
       tiers: ladder.tiers,
       groups: ladder.groups.slice(0, 3),
       shares: ladder.shares,
@@ -257,11 +291,21 @@ export default class LeaderboardsController {
     })
   }
 
-  /** `/leaderboards/one-tricks?region=euw&champion=katarina&role=mid&sort=games&recent=1&page=2` */
+  /**
+   * `/leaderboards/one-tricks?region=euw&champion=katarina&role=mid&sort=games&dir=asc&recent=1&page=2`:
+   * `sort` orders the best one-trick of each champion, by LP (`lp`), games on it (`games`, which
+   * also picks each champion's best by games), win rate on it (`wr`) or one-tricks (`count`).
+   */
   async oneTricks({ inertia, request }: HttpContext) {
     const server = serverOf(request.input('region')) ?? DEFAULT_SERVER
     const role = ROLE_PARAM[String(request.input('role', '')).toLowerCase()] ?? null
-    const sort = request.input('sort') === 'games' ? 'games' : 'lp'
+    const order = sortParam(request.input('sort'), request.input('dir'), [
+      'lp',
+      'games',
+      'wr',
+      'count',
+    ])
+    const sort = order.key ?? 'lp'
     const recent = flag(request.input('recent'))
     const full = flag(request.input('all'))
     const [snapshot, filter] = await Promise.all([
@@ -333,11 +377,11 @@ export default class LeaderboardsController {
     const chosenStat = chosen ? statOf(chosen, chosenPosition) : null
 
     // The best one-trick of each champion.
-    const ordered = (list: { entry: ApexEntry; trick: OneTrick }[]) =>
+    const bestOf = (list: { entry: ApexEntry; trick: OneTrick }[]) =>
       sort === 'games' ? [...list].sort((a, b) => b.trick.games - a.trick.games) : list
-    const best = [...byChampion]
+    const byPlace = [...byChampion]
       .map(([champion, list]) => {
-        const top = ordered(list)[0]
+        const top = bestOf(list)[0]
         const position = mostCommon(list.map((t) => t.trick.position))
         const stat = statOf(champion, position)
         return {
@@ -356,12 +400,24 @@ export default class LeaderboardsController {
       .sort((a, b) =>
         sort === 'games' ? b.best.games - a.best.games : a.best.place - b.best.place
       )
+    const best =
+      sort === 'wr' || sort === 'count'
+        ? sortRows(byPlace, (b) => (sort === 'wr' ? b.best.winRate : b.oneTricks), order.dir)
+        : order.dir === 'asc'
+          ? byPlace.reverse()
+          : byPlace
     const bestPage = pageOf(best, pageParam(request.input('page')), BEST_PAGE)
 
     return inertia.render('leaderboards/one_tricks', {
       ...regionProps(server),
       rule: { ...ONE_TRICK_RULE, windowDays: WINDOW_DAYS, recentDays: RECENT_DAYS },
-      filters: { role: role ? roleSlug(role) : null, sort, recent, all: full },
+      filters: {
+        role: role ? roleSlug(role) : null,
+        sort,
+        dir: order.dir,
+        recent,
+        all: full,
+      },
       updatedAt: ladderService.overview(snapshot).updatedAt,
       patch: summary?.patch ?? null,
       champions,
@@ -397,7 +453,9 @@ export default class LeaderboardsController {
         alt: `One-tricks on ${server.label} on invade.lol`,
       }),
       robots:
-        role || recent || asked || bestPage.page > 1 || sort !== 'lp' ? 'noindex,follow' : null,
+        role || recent || asked || bestPage.page > 1 || sort !== 'lp' || order.dir === 'asc'
+          ? 'noindex,follow'
+          : null,
       jsonld: [
         breadcrumbs([
           { name: 'Leaderboards', path: '/leaderboards/solo' },
@@ -407,7 +465,7 @@ export default class LeaderboardsController {
     })
   }
 
-  /** `/leaderboards/pros?role=mid&league=lec&team=fnatic&server=euw&q=&page=2` */
+  /** `/leaderboards/pros?role=mid&league=lec&team=fnatic&server=euw&q=&sort=move&dir=asc&page=2` */
   async pros({ inertia, request }: HttpContext) {
     const server = serverOf(request.input('server'))
     const role = PRO_ROLE[String(request.input('role', '')).toLowerCase()] ?? null
@@ -441,7 +499,9 @@ export default class LeaderboardsController {
     const list = ladder.rows.filter(
       (r) => (!team || r.pro.team?.slug === team) && (!q || matchesName(r.pro.name, q))
     )
-    const { rows: shown, page, pages, total } = pageOf(list, pageParam(request.input('page')), PAGE)
+    const order = sortParam(request.input('sort'), request.input('dir'), ['rank', 'move'])
+    const sorted = ordered(list, order, { move: (r) => r.move?.lp ?? null })
+    const { rows: shown, page, pages, total } = pageOf(sorted, pageParam(request.input('page')), PAGE)
     const podium = ladder.rows.slice(0, 3)
     const ids = [...new Set([...shown, ...podium].map((r) => r.playerId))]
     const records = await proService.records(ids).catch(() => new Map())
@@ -481,7 +541,9 @@ export default class LeaderboardsController {
       }
     }
     const rows = shown.map(out)
-    const filtered = Boolean(server || role || askedLeague || team || q || page > 1)
+    const filtered = Boolean(
+      server || role || askedLeague || team || q || page > 1 || sortProp(order).sort
+    )
     return inertia.render('leaderboards/pros', {
       leagues: catalog.listed.map(leagueRef),
       servers: servers.map(({ slug, label, pros }) => ({ slug, label, pros })),
@@ -492,6 +554,7 @@ export default class LeaderboardsController {
         league: league?.slug ?? 'all',
         team,
         q: q || null,
+        ...sortProp(order),
       },
       /** The servers the listed pros' accounts are on ("EUW and NA"). */
       on: serverList([...new Set(ladder.rows.map((r) => r.account.platform))]),

@@ -8,6 +8,8 @@ import CardHead from '../../components/ui/CardHead.vue'
 import Icon from '../../components/ui/Icon.vue'
 import TierChip from '../../components/ui/TierChip.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
+import SortHead from '../../components/ui/SortHead.vue'
+import { useSort } from '../../components/ui/sort.js'
 import StatFilters from '../../components/champions/StatFilters.vue'
 import RoleSeg from '../../components/champions/RoleSeg.vue'
 import MovedCard, { type Moved } from '../../components/champions/MovedCard.vue'
@@ -133,16 +135,29 @@ const moved = computed(() => {
   return { up: m.up.map(toRow), down: m.down.map(toRow) }
 })
 
-/* ── The table, grouped by tier ──────────────────────────────── */
+/* ── The table, grouped by tier (one run once a head sorts it) ── */
 const FIRST = 20
 const all = ref(false)
+const placesMoved = (r: Row) => (props.previousPatch && r.before && r.rank ? r.before - r.rank : null)
+const sort = useSort(shown, {
+  name: (r) => nameOf(r.champion),
+  win: (r) => r.win,
+  pick: (r) => r.pick,
+  ban: (r) => r.ban,
+  games: (r) => r.games,
+  since: placesMoved,
+}, { first: { name: 'asc' } })
 const groups = computed(() => {
+  if (sort.key) {
+    const rows = all.value ? sort.rows : sort.rows.slice(0, FIRST)
+    return [{ t: null, label: '', total: sort.rows.length, rows }]
+  }
   let left = all.value ? Infinity : FIRST
   return TIERS.map((label, t) => {
     const list = shown.value.filter((r) => r.tier === t)
     const rows = list.slice(0, Math.max(0, left))
     left -= rows.length
-    return { t, label, total: list.length, rows }
+    return { t: t as number | null, label, total: list.length, rows }
   }).filter((g) => g.total > 0 && (g.rows.length > 0 || all.value))
 })
 const hidden = computed(() => (all.value ? 0 : Math.max(0, shown.value.length - FIRST)))
@@ -255,16 +270,21 @@ const since = (r: Row) => {
         <section class="sec" style="padding-top: 24px">
           <article class="card" style="overflow: hidden">
             <div class="tl-head">
-              <span>Champion</span>
-              <span>Win rate</span>
-              <span>Pick rate</span>
-              <span>Ban rate</span>
-              <span class="r">Games</span>
+              <SortHead :sorter="sort" col="name" label="Champion" />
+              <SortHead :sorter="sort" col="win" label="Win rate" />
+              <SortHead :sorter="sort" col="pick" label="Pick rate" />
+              <SortHead :sorter="sort" col="ban" label="Ban rate" />
+              <SortHead :sorter="sort" col="games" label="Games" class="r" />
               <span>Win rate, 14 days</span>
-              <span>{{ previousPatch ? `Since ${patchName(previousPatch)}` : 'Since' }}</span>
+              <SortHead
+                :sorter="sort"
+                col="since"
+                :label="previousPatch ? `Since ${patchName(previousPatch)}` : 'Since'"
+                title="Places moved in the role since the patch before"
+              />
             </div>
-            <template v-for="g in groups" :key="g.t">
-              <div class="tl-grp">
+            <template v-for="g in groups" :key="g.t ?? 'sorted'">
+              <div v-if="g.t !== null" class="tl-grp">
                 <TierChip :tier="g.t" large />
                 <span class="h4">{{ g.label }} tier</span>
                 <span class="meta">{{ groupMeta(g) }}</span>
@@ -276,6 +296,7 @@ const since = (r: Row) => {
                 :href="href(r)"
               >
                 <div class="tl-champ">
+                  <TierChip v-if="g.t === null" :tier="r.tier" class="tl-tc" />
                   <div class="fr s visor"><img :src="champIconUrl(r.champion)" alt="" loading="lazy" /></div>
                   <div class="col" style="gap: 3px; min-width: 0">
                     <span class="h4 ell">{{ nameOf(r.champion) }}</span>

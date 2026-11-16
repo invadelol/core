@@ -8,6 +8,8 @@ import Frame from '../../components/ui/Frame.vue'
 import Select from '../../components/ui/Select.vue'
 import RankEmblem from '../../components/ui/RankEmblem.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
+import SortHead from '../../components/ui/SortHead.vue'
+import { linkSort, type SortDir } from '../../components/ui/sort.js'
 import RoleFilter from '../../components/leaderboards/RoleFilter.vue'
 import LadderPager from '../../components/leaderboards/LadderPager.vue'
 import { champIcon, championName } from '../../lib/assets.js'
@@ -71,6 +73,8 @@ const props = defineProps<{
     league: string
     team: string | null
     q: string | null
+    sort: string | null
+    dir: SortDir | null
   }
   apex: Record<'CHALLENGER' | 'GRANDMASTER' | 'MASTER', number>
   podium: Row[]
@@ -91,9 +95,19 @@ const query = computed(() => ({
   team: props.filters.team,
   server: props.filters.server,
   q: props.filters.q,
+  sort: props.filters.sort,
+  dir: props.filters.dir,
 }))
 const href = (changes: Record<string, string | number | boolean | null>) =>
   withQuery('/leaderboards/pros', query.value, changes)
+/** The heads sort every listed pro on the server (`?sort=&dir=`), the first page again. */
+const sort = computed(() =>
+  linkSort(
+    { key: props.filters.sort, dir: props.filters.dir ?? 'desc' },
+    (key, dir) => href({ sort: key, dir }),
+    { key: 'rank' }
+  )
+)
 
 const league = ref(props.filters.league)
 watch(league, (slug) =>
@@ -219,8 +233,8 @@ const short = (r: Row) =>
           <span>Pro</span>
           <span>Role</span>
           <span>Country</span>
-          <span>Rank</span>
-          <span>24 hours</span>
+          <SortHead :sorter="sort" col="rank" label="Rank" />
+          <SortHead :sorter="sort" col="move" label="24 hours" title="LP won or lost in 24 hours" />
           <span>Recent games</span>
           <span>Most played</span>
         </div>

@@ -3,6 +3,8 @@ import { computed } from 'vue'
 import Frame from '../ui/Frame.vue'
 import CardHead from '../ui/CardHead.vue'
 import EmptyState from '../ui/EmptyState.vue'
+import SortHead from '../ui/SortHead.vue'
+import { useSort } from '../ui/sort.js'
 import { champIcon, championName } from '../../lib/assets.js'
 import type { ChampionMastery, ChampionStats } from '../../lib/types.js'
 
@@ -24,6 +26,20 @@ const points = computed(() => new Map(props.mastery.map((m) => [m.championId, m]
 const short = (n: number) =>
   n >= 1e6 ? `${(n / 1e6).toFixed(2)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}k` : String(n)
 const total = computed(() => props.champions.reduce((s, c) => s + c.games, 0))
+const sort = useSort(
+  () => props.champions,
+  {
+    name: (c) => championName(c.championId),
+    games: (c) => c.games,
+    win: (c) => c.winrate,
+    kda: (c) => c.kda,
+    cs: (c) => c.csMin,
+    gold: (c) => c.goldMin,
+    damage: (c) => c.damageMin,
+    mastery: (c) => points.value.get(c.championId)?.championPoints ?? null,
+  },
+  { key: 'games', first: { name: 'asc' } }
+)
 </script>
 
 <template>
@@ -45,9 +61,14 @@ const total = computed(() => props.champions.reduce((s, c) => s + c.games, 0))
       </span>
     </CardHead>
     <div class="tbl-h">
-      <span>Champion</span><span class="n">Games</span><span>Win rate</span
-      ><span class="n">KDA</span> <span class="n hm">CS/min</span><span class="n hm">Gold/min</span
-      ><span class="n hm">Damage/min</span><span class="n hm">Mastery</span>
+      <SortHead :sorter="sort" col="name" label="Champion" />
+      <SortHead :sorter="sort" col="games" label="Games" class="n" />
+      <SortHead :sorter="sort" col="win" label="Win rate" />
+      <SortHead :sorter="sort" col="kda" label="KDA" class="n" />
+      <SortHead :sorter="sort" col="cs" label="CS/min" class="n hm" />
+      <SortHead :sorter="sort" col="gold" label="Gold/min" class="n hm" />
+      <SortHead :sorter="sort" col="damage" label="Damage/min" class="n hm" />
+      <SortHead :sorter="sort" col="mastery" label="Mastery" class="n hm" />
     </div>
     <EmptyState
       v-if="!champions.length && !busy"
@@ -56,7 +77,7 @@ const total = computed(() => props.champions.reduce((s, c) => s + c.games, 0))
       title="No game in this queue"
     />
     <button
-      v-for="c in champions"
+      v-for="c in sort.rows"
       :key="c.championId"
       type="button"
       class="tbl-r"

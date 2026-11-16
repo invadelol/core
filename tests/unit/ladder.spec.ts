@@ -6,6 +6,8 @@ import {
   oneTrickOf,
   pageOf,
   roleShares,
+  sortParam,
+  sortRows,
   summarizePlayers,
   type ApexEntry,
   type GamesRow,
@@ -177,6 +179,22 @@ test.group('Apex ladder', () => {
     assert.isTrue(matchesName('Velvet Ravine', 'velvet#EUW'))
     assert.isFalse(matchesName('Velvet Ravine', 'okami'))
     assert.isFalse(matchesName(null, 'okami'))
+  })
+
+  test('reads a sort and sorts a list, the ladder order on ties', ({ assert }) => {
+    assert.deepEqual(sortParam('wr', 'asc', ['lp', 'wr'] as const), { key: 'wr', dir: 'asc' })
+    assert.deepEqual(sortParam('WR', undefined, ['lp', 'wr'] as const), { key: 'wr', dir: 'desc' })
+    assert.deepEqual(sortParam('drop', 'up', ['lp', 'wr'] as const), { key: null, dir: 'desc' })
+    const rows = [
+      { name: 'a', v: 2 },
+      { name: 'b', v: null },
+      { name: 'c', v: 5 },
+      { name: 'd', v: 2 },
+    ]
+    const names = (list: typeof rows) => list.map((r) => r.name).join('')
+    assert.equal(names(sortRows(rows, (r) => r.v, 'desc')), 'cadb')
+    assert.equal(names(sortRows(rows, (r) => r.v, 'asc')), 'adcb')
+    assert.equal(names(rows), 'abcd')
   })
 
   test('averages scores over scored games only', ({ assert }) => {

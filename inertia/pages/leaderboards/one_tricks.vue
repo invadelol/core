@@ -9,6 +9,8 @@ import Select from '../../components/ui/Select.vue'
 import RankEmblem from '../../components/ui/RankEmblem.vue'
 import TierChip from '../../components/ui/TierChip.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
+import SortHead from '../../components/ui/SortHead.vue'
+import { linkSort, useSort, type SortDir } from '../../components/ui/sort.js'
 import RoleFilter from '../../components/leaderboards/RoleFilter.vue'
 import LadderPager from '../../components/leaderboards/LadderPager.vue'
 import LadderPlayer from '../../components/leaderboards/LadderPlayer.vue'
@@ -24,6 +26,7 @@ import {
   tierWord,
   withQuery,
 } from '../../lib/ladders.js'
+import { regionFlag } from '../../lib/flags.js'
 import '../../css/leaderboards.css'
 
 type Tier = 'CHALLENGER' | 'GRANDMASTER' | 'MASTER'
@@ -62,7 +65,13 @@ const props = defineProps<{
   region: { slug: string; label: string; platform: string }
   regions: { slug: string; label: string }[]
   rule: { minGames: number; minShare: number; windowDays: number; recentDays: number }
-  filters: { role: string | null; sort: 'lp' | 'games'; recent: boolean; all: boolean }
+  filters: {
+    role: string | null
+    sort: 'lp' | 'games' | 'wr' | 'count'
+    dir: SortDir
+    recent: boolean
+    all: boolean
+  }
   updatedAt: number | null
   patch: string | null
   champions: { champion: number; oneTricks: number; byTier: Record<Tier, number> }[]
@@ -101,11 +110,37 @@ const query = computed(() => ({
   region: props.region.slug === 'euw' ? null : props.region.slug,
   champion: chosenSlug.value,
   role: props.filters.role,
-  sort: props.filters.sort === 'games' ? 'games' : null,
+  sort: props.filters.sort === 'lp' ? null : props.filters.sort,
+  dir: props.filters.dir === 'asc' ? 'asc' : null,
   recent: props.filters.recent,
 }))
 const href = (changes: Record<string, string | number | boolean | null>) =>
   withQuery('/leaderboards/one-tricks', query.value, changes)
+
+/** The chosen champion's one-tricks: all on the page, sorted in the browser. */
+const chosenSort = useSort(
+  () => props.selected?.rows ?? [],
+  {
+    rank: (r) => -r.place,
+    games: (r) => r.games,
+    wr: (r) => r.winRate,
+  },
+  { key: 'rank' }
+)
+/** The best one-trick of each champion: paged, so the server sorts (`?sort=&dir=`). */
+const bestSort = computed(() =>
+  linkSort(
+    { key: props.filters.sort, dir: props.filters.dir },
+    (key, dir) => href({ sort: key === 'lp' ? null : key, dir: dir === 'asc' ? 'asc' : null }),
+    { key: 'lp' }
+  )
+)
+const SORT_WORDS = {
+  lp: 'their LP',
+  games: 'games on the champion',
+  wr: 'win rate on the champion',
+  count: 'one-tricks of the champion',
+} as const
 
 const regionSlug = ref(props.region.slug)
 watch(regionSlug, (slug) => router.visit(href({ region: slug === 'euw' ? null : slug })))
@@ -159,7 +194,7 @@ const updated = computed(() => since(props.updatedAt))
             <Select
               v-model="regionSlug"
               label="Region"
-              :options="regions.map((r) => ({ value: r.slug, label: r.label }))"
+              :options="regions.map((r) => ({ value: r.slug, label: r.label, icon: regionFlag(r.slug) }))"
               width="11rem"
               align="right"
             />
@@ -282,13 +317,13 @@ const updated = computed(() => since(props.updatedAt))
             <div class="lb-h lb-o1 nm">
               <span class="lb-n" style="font-weight: 650">#</span>
               <span>Player</span>
-              <span>Rank</span>
-              <span>On {{ chosenName }}</span>
-              <span>Win rate on it</span>
+              <SortHead :sorter="chosenSort" col="rank" label="Rank" />
+              <SortHead :sorter="chosenSort" col="games" :label="`On ${chosenName}`" title="Games on the champion" />
+              <SortHead :sorter="chosenSort" col="wr" label="Win rate on it" />
               <span>Also plays</span>
             </div>
             <Link
-              v-for="(r, i) in selected.rows"
+              v-for="(r, i) in chosenSort.rows"
               :key="r.place"
               class="lb-r lb-o1 nm"
               :href="(r.pro ? `/pro/${r.pro.slug}` : playerPath(r.gameName, r.tagLine)) ?? '#'"
@@ -361,19 +396,19 @@ const updated = computed(() => since(props.updatedAt))
             <Icon name="star" />
             <h2 class="h3">The best one-trick on each champion</h2>
             <span class="meta"
-              >Ranked by {{ filters.sort === 'games' ? 'games on the champion' : 'their LP' }}</span
+              >Ranked by {{ SORT_WORDS[filters.sort] }}{{ filters.dir === 'asc' ? ', least first' : '' }}</span
             >
             <span class="row" style="gap: 10px; margin-left: auto">
               <RoleFilter :active="filters.role" :href="(role) => href({ role })" />
               <nav class="seg" aria-label="Sort">
                 <Link
-                  :href="href({ sort: null })"
+                  :href="href({ sort: null, dir: null })"
                   :class="{ on: filters.sort === 'lp' }"
                   preserve-scroll
                   >By LP</Link
                 >
                 <Link
-                  :href="href({ sort: 'games' })"
+                  :href="href({ sort: 'games', dir: null })"
                   :class="{ on: filters.sort === 'games' }"
                   preserve-scroll
                   >By games</Link
@@ -384,10 +419,10 @@ const updated = computed(() => since(props.updatedAt))
           <div class="lb-h lb-o2 nm">
             <span>Champion</span>
             <span>Best one-trick</span>
-            <span>Rank</span>
-            <span>Games on it</span>
-            <span>Win rate on it</span>
-            <span>One-tricks</span>
+            <SortHead :sorter="bestSort" col="lp" label="Rank" />
+            <SortHead :sorter="bestSort" col="games" label="Games on it" />
+            <SortHead :sorter="bestSort" col="wr" label="Win rate on it" />
+            <SortHead :sorter="bestSort" col="count" label="One-tricks" />
           </div>
           <EmptyState
             v-if="!best.rows.length"

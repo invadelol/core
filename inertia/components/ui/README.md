@@ -63,7 +63,35 @@ the Vue compiler turns a static absolute URL into an import and the page fails t
 | --- | --- | --- |
 | `EmptyState.vue` | `title`, `line?`, `icon?`, `compact?`; slot for an action | A block with nothing to show: one plain sentence on what is missing and why. No apology, no filler. |
 | `Skeleton.vue` | `rows?` (list lines), `pic?` (a square per line), `height?` (one block) | While a block loads. Flat, breathes slowly. |
-| `.tbl` / `.tbl-h` / `.tbl-r` (CSS) | `--cols` on `.tbl` (a grid-template-columns), `--row-h` | Tables inside a `.card`: head row of 12 px grey labels, 52 px rows on hairlines, `.n` right-aligned figures, `.hm` hidden on a phone, `.me` your row, `.sorted` the sorted head (`<button>` with an `Icon name="chev"`), `.who` a picture + name cell. A row that is a link is an `<a class="tbl-r">`. The boards' own grids (`.sbr`, `.lt3`, `.std`) are in facet.css too. |
+| `.tbl` / `.tbl-h` / `.tbl-r` (CSS) | `--cols` on `.tbl` (a grid-template-columns), `--row-h` | Tables inside a `.card`: head row of 12 px grey labels, 52 px rows on hairlines, `.n` right-aligned figures, `.hm` hidden on a phone, `.me` your row, `.sorted` the sorted head (use `SortHead.vue`, below), `.who` a picture + name cell. A row that is a link is an `<a class="tbl-r">`. The boards' own grids (`.sbr`, `.lt3`, `.std`) are in facet.css too. |
+
+## Sortable tables
+
+Every data table sorts by its figures: click a head (win rate, pick rate, games, LP…) for most
+first, again for least first, a third time for the table's own order. The arrow shows the
+direction, the head cell carries `aria-sort`, the head is a button (or a link), so the keyboard
+reaches it.
+
+| Piece | API | Use |
+| --- | --- | --- |
+| `SortHead.vue` | `sorter`, `col` (the column's key), `label?` (or the default slot), `title?` | Replaces a plain head cell, one element for one: classes on it (`n`, `r`, `hm`) land on the cell, so a table's `:nth-child` rules and phone columns still count it. A right-aligned head (`.n`, `.r`) puts its arrow first. |
+| `useSort(rows, columns, options?)` (`sort.ts`) | `rows`: a ref, getter or array; `columns`: `{ key: (row) => number \| string \| null }` (a getter when they change); `options`: `key` (the table's own order, null by default), `dir`, `first` (`{ name: 'asc' }` for A to Z first) | Sorts the rows the page holds, in the browser. Returns a reactive sorter: `rows` in order, `key`, `dir`, `active`, `toggle(col)`, `reset()`. Rows without a value stay last either way. |
+| `linkSort(state, to, options?)` (`sort.ts`) | `state`: `{ key, dir }` from the page's props; `to(key, dir)`: the address of a state (null `key` drops `sort` and `dir`) | A table the server pages (the ladders): each head is an address with `?sort=&dir=`, and the controller sorts the whole list before it cuts the page (`sortParam`, `sortRows` in `app/services/ladder.ts`). |
+
+A tier list keeps its tier groups until a head sorts it; sorted, it runs as one list with each
+row's tier chip before its picture (`.tl-tc`, `.tx-tc`).
+
+```vue
+<script setup lang="ts">
+const sort = useSort(shown, { win: (r) => r.win, games: (r) => r.games }, { key: 'win' })
+</script>
+<div class="tbl-h">
+  <span>Champion</span>
+  <SortHead :sorter="sort" col="win" label="Win rate" class="n" />
+  <SortHead :sorter="sort" col="games" label="Games" class="n hm" />
+</div>
+<a v-for="r in sort.rows" class="tbl-r">…</a>
+```
 
 Other classes straight from the canvas (facet.css): `.card`, `.well`, `.btn` (`.pri`, `.sm`,
 `.lg`, `.ghost`, `.ico`), `.kbd`, `.field`, `.switch`/`.chk`, `.lrow` (list row), `.pic`

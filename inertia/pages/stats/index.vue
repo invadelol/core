@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, watch } from 'vue'
 import { Deferred, Head, Link, usePage } from '@inertiajs/vue3'
 import '../../css/tier-lists.css'
 import '../../css/stats.css'
@@ -8,6 +8,8 @@ import Masthead from '../../components/ui/Masthead.vue'
 import CardHead from '../../components/ui/CardHead.vue'
 import Icon from '../../components/ui/Icon.vue'
 import Skeleton from '../../components/ui/Skeleton.vue'
+import SortHead from '../../components/ui/SortHead.vue'
+import { useSort } from '../../components/ui/sort.js'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import StatFilters from '../../components/champions/StatFilters.vue'
 import RoleSeg from '../../components/champions/RoleSeg.vue'
@@ -131,8 +133,6 @@ const top5 = (c: CardDef) =>
 const waitingFor = (c: CardDef) => (c.needs === 'averages' ? props.averages === undefined : c.needs === 'events' ? props.events === undefined : false)
 
 /* ── Tables ─────────────────────────────────────────────────── */
-const sortKey = ref(new URLSearchParams(page.url.split('?')[1] ?? '').get('sort') ?? 'win')
-const sortUp = ref(false)
 interface Col {
   key: string
   label: string
@@ -184,24 +184,20 @@ const columns = computed<Col[]>(() => {
     { key: 'over25', label: 'Over 25', value: (r) => av(r.champion)?.over25, text: pct1, hm: true },
   ]
 })
-const sorted = computed(() => {
-  const col = columns.value.find((c) => c.key === sortKey.value) ?? columns.value[1] ?? columns.value[0]
-  const dir = sortUp.value ? 1 : -1
-  return [...props.rows].sort((a, b) => {
-    const x = col.value(a)
-    const y = col.value(b)
-    if (x === null || x === undefined) return 1
-    if (y === null || y === undefined) return -1
-    return (x - y) * dir
-  })
-})
-const sortBy = (key: string) => {
-  if (sortKey.value === key) sortUp.value = !sortUp.value
-  else {
-    sortKey.value = key
-    sortUp.value = false
+// A card's "every champion" link opens the table sorted by its figure (`?sort=`).
+const asked = new URLSearchParams(page.url.split('?')[1] ?? '').get('sort')
+const sort = useSort(
+  () => props.rows,
+  () => Object.fromEntries(columns.value.map((c) => [c.key, c.value])),
+  { key: asked ?? 'win' }
+)
+// Another view has other columns: follow its first figure when the one sorted is not among them.
+watch(columns, (cols) => {
+  if (sort.key && !cols.some((c) => c.key === sort.key)) {
+    sort.key = cols[1]?.key ?? cols[0]?.key ?? null
+    sort.dir = 'desc'
   }
-}
+}, { immediate: true })
 const tableCols = computed(() => `minmax(180px, 1fr) repeat(${columns.value.length}, minmax(76px, 96px))`)
 const title = computed(() => `${role.value.label} stats`)
 const metaLine = computed(() =>
@@ -263,18 +259,9 @@ const metaLine = computed(() =>
             <div class="tbl st-tbl" :style="{ '--cols': tableCols }">
               <div class="tbl-h">
                 <span>Champion</span>
-                <button
-                  v-for="c in columns"
-                  :key="c.key"
-                  type="button"
-                  class="n"
-                  :class="{ sorted: sortKey === c.key, hm: c.hm }"
-                  @click="sortBy(c.key)"
-                >
-                  {{ c.label }}<Icon v-if="sortKey === c.key" name="chev" :size="12" :style="sortUp ? { transform: 'rotate(180deg)' } : {}" />
-                </button>
+                <SortHead v-for="c in columns" :key="c.key" :sorter="sort" :col="c.key" :label="c.label" class="n" :class="{ hm: c.hm }" />
               </div>
-              <Link v-for="r in sorted" :key="r.champion" class="tbl-r" :href="href(r.champion)">
+              <Link v-for="r in sort.rows" :key="r.champion" class="tbl-r" :href="href(r.champion)">
                 <span class="who"><img class="pic sm" :src="champIconUrl(r.champion)" alt="" loading="lazy" /><span class="h5 ell">{{ nm(r.champion) }}</span></span>
                 <span v-for="c in columns" :key="c.key" class="n num" :class="{ hm: c.hm }">{{
                   c.value(r) === null || c.value(r) === undefined ? '–' : c.text(c.value(r)!)
