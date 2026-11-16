@@ -142,7 +142,7 @@ interface Want<T> {
 export class TierListsService {
   // A patch's blobs: a role's items hold a few MB of rows, the rest tens of kB.
   #items = statsCache('tier-items-v2', 12)
-  #runes = statsCache('tier-runes-v2', 12)
+  #runes = statsCache('tier-runes-v3', 12)
   #duos = statsCache('tier-duos-v2', 6)
   #aram = statsCache('tier-aram', 8)
   /** Views built from the blobs, a few minutes, so a busy page sums them once. */
@@ -386,7 +386,7 @@ export class TierListsService {
         riotAssetsService.names('perk').catch(() => ({}) as Record<string, string>),
         championStatsService.champions(),
       ])
-      const view = runeView(now, previous, position, keystoneTrees(trees.styles))
+      const view = runeView(now, previous, position, keystoneTrees(trees.styles), trees.styles)
       const ids = new Set<number>()
       for (const r of view.rows) {
         ids.add(r.keystone).add(r.style)
@@ -394,7 +394,11 @@ export class TierListsService {
         for (const p of r.pages) pageIds(p.page).forEach((i) => ids.add(i))
       }
       for (const p of view.pages) pageIds(p.page).forEach((i) => ids.add(i))
-      view.trees.forEach((t) => ids.add(t.style))
+      for (const t of view.trees) {
+        ids.add(t.style)
+        if (t.paired) ids.add(t.paired.style)
+        t.rows.flat().forEach((r) => ids.add(r.rune))
+      }
       view.shards.flat().forEach((s) => ids.add(s.shard))
       const names: Record<number, string> = {}
       for (const id of ids) {

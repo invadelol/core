@@ -32,7 +32,7 @@ const MIN_MAIN_GAMES = 30
 const PAGES_PER_KEYSTONE = 6
 
 /** The kinds of `runeRowsSql`'s rows. */
-export const RUNE_KINDS = { keystone: 1, shard: 2, page: 3 } as const
+export const RUNE_KINDS = { keystone: 1, shard: 2, page: 3, minor: 4 } as const
 
 /**
  * Every player's rune page in one role (`{position:String}`) of one patch's crawled games
@@ -42,6 +42,7 @@ export const RUNE_KINDS = { keystone: 1, shard: 2, page: 3 } as const
  * - `shard`: shard row `a` (0 offense, 1 flex, 2 defense) held shard `b`.
  * - `page`: a full page of keystone `a` (`page`: tree, keystone, 3 runes, tree, 2 runes smallest
  *   first, 3 shards), the `PAGES_PER_KEYSTONE` most played of each keystone and seed tier.
+ * - `minor`: rune `a` taken in primary tree `b` (one row of the tree each).
  *
  * A row per seed tier, every key a number (a page grouped by its hash), as the item tier list.
  * Rows without runes (stored before runes were kept) are left out, as on a champion's page.
@@ -70,7 +71,10 @@ export function runeRowsSql(region: string | null) {
       tuple(${k.shard}, toUInt16(0), toUInt16(0), stat_offense, ${none}),
       tuple(${k.shard}, toUInt16(0), toUInt16(1), stat_flex, ${none}),
       tuple(${k.shard}, toUInt16(0), toUInt16(2), stat_defense, ${none}),
-      tuple(${k.page}, toUInt16(0), rune1, toUInt16(0), ${page})
+      tuple(${k.page}, toUInt16(0), rune1, toUInt16(0), ${page}),
+      tuple(${k.minor}, toUInt16(0), rune2, primary_style, ${none}),
+      tuple(${k.minor}, toUInt16(0), rune3, primary_style, ${none}),
+      tuple(${k.minor}, toUInt16(0), rune4, primary_style, ${none})
     ] AS o
     GROUP BY tier, o.1, o.2, o.3, o.4, cityHash64(o.5)
     ORDER BY count() DESC
@@ -89,17 +93,20 @@ export interface RuneBlob {
   shards: [number, number, number, number][]
   /** Tier, page (11 ids), games, wins. */
   pages: [number, number[], number, number][]
+  /** Tier, rune, its primary tree, games: the runes taken under the keystone. */
+  minors: [number, number, number, number][]
 }
 
 /** `runeRowsSql`'s rows as a blob (rows of an unknown tier are left out). */
 export function runeBlob(rows: RuneRow[]): RuneBlob {
-  const out: RuneBlob = { keystones: [], shards: [], pages: [] }
+  const out: RuneBlob = { keystones: [], shards: [], pages: [], minors: [] }
   for (const [name, kind, champion, a, b, page, games, wins] of rows) {
     const t = tierIndex(name)
     if (t < 0) continue
     if (kind === RUNE_KINDS.keystone) out.keystones.push([t, champion, a, b, games, wins])
     else if (kind === RUNE_KINDS.shard) out.shards.push([t, a, b, games])
     else if (kind === RUNE_KINDS.page && page.length === 11) out.pages.push([t, page, games, wins])
+    else if (kind === RUNE_KINDS.minor && a) out.minors.push([t, a, b, games])
   }
   return out
 }
@@ -112,14 +119,17 @@ export interface RuneCounts {
   shards: [Position, number, number, number][]
   /** Position, page (`RunePage` as 11 ids), games, wins. */
   pages: [Position, number[], number, number][]
+  /** Position, rune, its primary tree, games. */
+  minors: [Position, number, number, number][]
 }
 
 /** One role's counts for a filter: its patches' blobs over the bracket's seed tiers. */
 export function roleRuneCounts(blobs: RuneBlob[], tiers: Set<number>, position: Position) {
-  const out: RuneCounts = { keystones: [], shards: [], pages: [] }
+  const out: RuneCounts = { keystones: [], shards: [], pages: [], minors: [] }
   const keystones = new Map<string, [Position, number, number, number, number, number]>()
   const shards = new Map<string, [Position, number, number, number]>()
   const pages = new Map<string, [Position, number[], number, number]>()
+  const minors = new Map<string, [Position, number, number, number]>()
   for (const b of blobs) {
     for (const [t, c, k, sec, g, w] of b.keystones) {
       if (!tiers.has(t)) continue
@@ -144,10 +154,19 @@ export function roleRuneCounts(blobs: RuneBlob[], tiers: Set<number>, position: 
       r[3] += w
       pages.set(at, r)
     }
+    // Blobs cached before the runes under the keystone were counted have none.
+    for (const [t, rune, style, g] of b.minors ?? []) {
+      if (!tiers.has(t)) continue
+      const at = `${rune}:${style}`
+      const r = minors.get(at) ?? [position, rune, style, 0]
+      r[3] += g
+      minors.set(at, r)
+    }
   }
   out.keystones = [...keystones.values()]
   out.shards = [...shards.values()]
   out.pages = [...pages.values()]
+  out.minors = [...minors.values()]
   return out
 }
 
@@ -157,6 +176,7 @@ export function mergeRuneCounts(list: RuneCounts[]): RuneCounts {
     keystones: list.flatMap((c) => c.keystones),
     shards: list.flatMap((c) => c.shards),
     pages: list.flatMap((c) => c.pages),
+    minors: list.flatMap((c) => c.minors),
   }
 }
 
@@ -210,13 +230,27 @@ export interface RuneView {
   games: number
   rows: KeystoneRow[]
   /** Each tree's share of the pages (as primary tree), most first. */
-  trees: { style: number; share: number }[]
+  trees: RuneTreeView[]
   /** The shard rows (offense, flex, defense): each shard's share, most first. */
   shards: { shard: number; share: number }[][]
   /** The most played full pages of every keystone (the "Full pages" view). */
   pages: (RunePageRow & { keystone: number })[]
   minGames: number
   minDeltaGames: number
+}
+
+/** A rune tree as the page draws it, read like the client's rune page. */
+export interface RuneTreeView {
+  style: number
+  /** Share of the view's pages with it as the primary tree. */
+  share: number
+  /** The secondary tree its pages take most, with its share of them; null without any. */
+  paired: { style: number; share: number } | null
+  /**
+   * Its rows under the keystones, in the client's order: each rune with its share of the row
+   * (the tree's pages that took one of the row's runes). Empty without the tree's layout.
+   */
+  rows: { rune: number; share: number }[][]
 }
 
 /** Per keystone: games, wins, by champion, by role, by secondary tree. */
@@ -259,7 +293,8 @@ export function runeView(
   counts: RuneCounts,
   previous: RuneCounts | null,
   position: Position | null,
-  treeOf: Map<number, number>
+  treeOf: Map<number, number>,
+  styles: Record<number, { rows: number[][] }> = {}
 ): RuneView {
   const now = perKeystone(counts, position)
   const was = previous ? perKeystone(previous, position) : new Map()
@@ -314,7 +349,7 @@ export function runeView(
     pick: games ? round(k.games / games) : 0,
     tier,
     mainOf: mainOf.get(keystone) ?? 0,
-    champions: topOf(k.champions, 3).map(([champion, g]) => ({ champion, games: g })),
+    champions: topOf(k.champions, 5).map(([champion, g]) => ({ champion, games: g })),
     roles: topOf(k.roles, POSITIONS.length).map(([p, g]) => ({ position: p, games: g })),
     secondary: topOf(k.secondary, 2).map(([style, g]) => ({ style, share: round(g / k.games) })),
     pages: (pagesOf.get(keystone) ?? [])
@@ -333,6 +368,38 @@ export function runeView(
   const trees = new Map<number, number>()
   for (const [keystone, k] of now) bump(trees, treeOf.get(keystone) ?? 0, k.games)
   trees.delete(0)
+  // The secondary tree each primary tree is paired with, and the runes taken under it.
+  const paired = new Map<number, Map<number, number>>()
+  for (const [pos, , keystone, secondary, g] of counts.keystones) {
+    if (position && pos !== position) continue
+    const style = treeOf.get(keystone)
+    if (!style || !secondary) continue
+    const m = paired.get(style) ?? new Map<number, number>()
+    bump(m, secondary, g)
+    paired.set(style, m)
+  }
+  const taken = new Map<number, number>()
+  for (const [pos, rune, , g] of counts.minors) {
+    if (position && pos !== position) continue
+    bump(taken, rune, g)
+  }
+  const treeView = (style: number, g: number): RuneTreeView => {
+    const [pair] = topOf(paired.get(style) ?? new Map<number, number>(), 1)
+    const pairedGames = [...(paired.get(style)?.values() ?? [])].reduce((n, x) => n + x, 0)
+    const minorRows = (styles[style]?.rows ?? []).slice(1).map((row) => {
+      const total = row.reduce((n, rune) => n + (taken.get(rune) ?? 0), 0)
+      return row.map((rune) => ({
+        rune,
+        share: total ? round((taken.get(rune) ?? 0) / total) : 0,
+      }))
+    })
+    return {
+      style,
+      share: games ? round(g / games) : 0,
+      paired: pair && pairedGames ? { style: pair[0], share: round(pair[1] / pairedGames) } : null,
+      rows: minorRows.some((row) => row.some((r) => r.share > 0)) ? minorRows : [],
+    }
+  }
   const shardRows = [0, 1, 2].map(() => new Map<number, number>())
   for (const [pos, row, shard, g] of counts.shards) {
     if (position && pos !== position) continue
@@ -354,10 +421,7 @@ export function runeView(
   return {
     games,
     rows,
-    trees: topOf(trees, trees.size).map(([style, g]) => ({
-      style,
-      share: games ? round(g / games) : 0,
-    })),
+    trees: topOf(trees, trees.size).map(([style, g]) => treeView(style, g)),
     shards: shardRows.map((m) => {
       const total = [...m.values()].reduce((n, g) => n + g, 0)
       return topOf(m, m.size).map(([shard, g]) => ({ shard, share: total ? round(g / total) : 0 }))

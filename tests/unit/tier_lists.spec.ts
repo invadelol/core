@@ -312,7 +312,7 @@ test.group('Tier lists: runes', () => {
   })
 
   test('ranks keystones with who runs them, their tree, pairing and pages', ({ assert }) => {
-    const { keystone, shard, page: full } = RUNE_KINDS
+    const { keystone, shard, page: full, minor } = RUNE_KINDS
     const E = 'DIAMOND'
     const tiers = bracketTiers('emerald_plus')
     const midRows: RuneRow[] = [
@@ -325,6 +325,8 @@ test.group('Tier lists: runes', () => {
       [E, full, 0, CONQUEROR, 0, page(CONQUEROR, PRECISION, DOMINATION), 60, 30],
       // A page cut short is never a page.
       [E, full, 0, CONQUEROR, 0, [1, 2, 3], 50, 25],
+      [E, minor, 0, 11, DOMINATION, [], 750, 0],
+      [E, minor, 0, 12, DOMINATION, [], 250, 0],
     ]
     const topRows: RuneRow[] = [
       [E, keystone, AHRI, CONQUEROR, DOMINATION, [], 900, 430],
@@ -336,11 +338,13 @@ test.group('Tier lists: runes', () => {
     ])
     assert.lengthOf(counts.keystones, 4)
     assert.lengthOf(counts.pages, 3)
-    const trees = keystoneTrees({
-      [DOMINATION]: { rows: [[ELECTROCUTE]] },
-      [PRECISION]: { rows: [[CONQUEROR]] },
-    })
-    const mid = runeView(counts, null, 'MIDDLE', trees)
+    assert.lengthOf(counts.minors, 2)
+    const styles = {
+      [DOMINATION]: { rows: [[ELECTROCUTE], [11, 12, 13]] },
+      [PRECISION]: { rows: [[CONQUEROR], [21, 22, 23]] },
+    }
+    const trees = keystoneTrees(styles)
+    const mid = runeView(counts, null, 'MIDDLE', trees, styles)
     assert.equal(mid.games, 1100)
     const electrocute = mid.rows.find((r) => r.keystone === ELECTROCUTE)!
     assert.equal(electrocute.style, DOMINATION)
@@ -357,6 +361,18 @@ test.group('Tier lists: runes', () => {
       mid.trees.map((t) => t.style),
       [DOMINATION, PRECISION]
     )
+    // Each tree reads like the client's: its pairing, then each row's runes with their share.
+    assert.deepEqual(mid.trees[0].paired, { style: SORCERY, share: 1 })
+    assert.deepEqual(mid.trees[0].rows, [
+      [
+        { rune: 11, share: 0.75 },
+        { rune: 12, share: 0.25 },
+        { rune: 13, share: 0 },
+      ],
+    ])
+    // A tree no rune under the keystone was counted for has no rows to draw.
+    assert.deepEqual(mid.trees[1].rows, [])
+    assert.deepEqual(mid.trees[1].paired, { style: DOMINATION, share: 1 })
 
     const all = runeView(counts, null, null, trees)
     const conqueror = all.rows.find((r) => r.keystone === CONQUEROR)!
