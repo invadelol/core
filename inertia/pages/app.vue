@@ -12,8 +12,8 @@ import '../css/app-facet.css'
 /**
  * /app, the desktop app's page (Facet): the app in one line with the download and its Home, then
  * the build in champion select and the score after each game, each beside the app's own screen,
- * then what the newest version changed and what it runs on. The screens are the app drawn with
- * fictional players.
+ * then what the newest version changed and what it runs on. The screens are captures of the app
+ * itself (public/app-page), with fictional players.
  */
 const props = defineProps<{
   version: string | null
@@ -36,14 +36,19 @@ const n = (x: number) => x.toLocaleString('en-US')
 
 const SHOTS = {
   home: {
-    src: '/app-page/facet-home-1440.webp',
-    srcset: '/app-page/facet-home-720.webp 720w, /app-page/facet-home-1440.webp 1440w',
-    alt: "The app's Home: rank and LP, tonight's games, the last games scored out of 100, your champion pool",
+    src: '/app-page/home-1280.webp',
+    srcset: '/app-page/home-1280.webp 1280w, /app-page/home-2560.webp 2560w',
+    alt: "The app's Home: rank and LP, the match history scored out of 100, clips, performance and champions",
   },
-  live: {
-    src: '/app-page/facet-live-1440.webp',
-    srcset: '/app-page/facet-live-720.webp 720w, /app-page/facet-live-1440.webp 1440w',
-    alt: "The app's live game: both teams lane by lane, your lane's win rate, the build path and the next skill",
+  draft: {
+    src: '/app-page/live-draft-1280.webp',
+    srcset: '/app-page/live-draft-1280.webp 1280w, /app-page/live-draft-2560.webp 2560w',
+    alt: 'The app in champion select: both teams, the runes, spells and skill order of your pick, and the strong picks for your lane',
+  },
+  match: {
+    src: '/app-page/match-1280.webp',
+    srcset: '/app-page/match-1280.webp 1280w, /app-page/match-2560.webp 2560w',
+    alt: "A game in the app: the scoreboard with every player's score out of 100",
   },
 }
 </script>
@@ -96,10 +101,10 @@ const SHOTS = {
         </div>
         <span class="fr l"
           ><img
-            :src="SHOTS.live.src"
-            :srcset="SHOTS.live.srcset"
+            :src="SHOTS.draft.src"
+            :srcset="SHOTS.draft.srcset"
             sizes="(max-width: 1023px) 100vw, 680px"
-            :alt="SHOTS.live.alt"
+            :alt="SHOTS.draft.alt"
             loading="lazy"
             decoding="async"
         /></span>
@@ -108,10 +113,10 @@ const SHOTS = {
       <section class="feat3 rev">
         <span class="fr l"
           ><img
-            :src="SHOTS.home.src"
-            :srcset="SHOTS.home.srcset"
+            :src="SHOTS.match.src"
+            :srcset="SHOTS.match.srcset"
             sizes="(max-width: 1023px) 100vw, 680px"
-            :alt="SHOTS.home.alt"
+            :alt="SHOTS.match.alt"
             loading="lazy"
             decoding="async"
         /></span>
