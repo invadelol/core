@@ -12,15 +12,16 @@ import ScoreDial from '../components/ui/ScoreDial.vue'
 import RankEmblem from '../components/ui/RankEmblem.vue'
 import FormStrip from '../components/ui/FormStrip.vue'
 import Skeleton from '../components/ui/Skeleton.vue'
+import CardHead from '../components/ui/CardHead.vue'
 import LobbyField from '../components/multisearch/LobbyField.vue'
 import { isRemake, scoreLobby } from '../lib/match.js'
 import { rememberPlayer } from '../lib/recent.js'
+import { lastLobbies, lobbyTime, rememberLobby, type Lobby } from '../lib/lobbies.js'
 import { scout } from '../lib/scout.js'
 import {
   MAX_PLAYERS,
   MULTISEARCH_REGIONS,
   multisearchPath,
-  parseRiotIds,
   type RiotIdentity,
 } from '../lib/multisearch.js'
 import { champIcon, championName, profileIcon } from '../lib/assets.js'
@@ -243,6 +244,7 @@ async function older(entry: ScoutEntry, matches: Match[], signal: AbortSignal) {
 
 /** Draws the cards for `players`, keeping the ones already loaded. */
 function show(players: RiotIdentity[]) {
+  unsaved = players.length > 0
   controller?.abort()
   controller = new AbortController()
   syncQueue.length = 0
@@ -265,16 +267,16 @@ function writeAddress(players: RiotIdentity[]) {
 
 function remove(entry: ScoutEntry) {
   entries.value = entries.value.filter((e) => e !== entry)
+  chips.value = chips.value.filter((c) => keyOf(c) !== entry.key)
   writeAddress(entries.value.map((e) => e.identity))
 }
-
-/** A new search from the header lands on this page again, with other players. */
-watch(
-  () => props.players,
-  (players) => show(players)
-)
-
-onBeforeUnmount(() => controller?.abort())
+/** A chip taken out of the field takes its card with it. */
+function dropped(player: RiotIdentity) {
+  const entry = find(keyOf(player))
+  if (!entry) return
+  entries.value = entries.value.filter((e) => e !== entry)
+  writeAddress(entries.value.map((e) => e.identity))
+}
 
 function pickRegion(next: string | null) {
   if (next === props.region) return
@@ -363,13 +365,55 @@ function tagsOf(e: ScoutEntry) {
   return out.slice(0, 2)
 }
 
-/* ── The search: the lobby's names, a region, Scout ─────────────── */
-const field = ref(props.players.map((p) => `${p.gameName}#${p.tagLine}`).join(', '))
+/* ── The search: the lobby as chips, a region, Scout ─────────────── */
+const chips = ref<RiotIdentity[]>([...props.players])
 function scoutLobby() {
-  const players = parseRiotIds(field.value).slice(0, MAX_PLAYERS)
+  const players = chips.value.slice(0, MAX_PLAYERS)
   if (!players.length) return
   show(players)
   writeAddress(players)
+}
+/** What the cards learnt of each chip: its icon, its rank, or that it was not found. */
+const known = computed(() =>
+  Object.fromEntries(
+    entries.value.map((e) => [
+      e.key,
+      {
+        icon: e.summoner?.profileIconId ?? null,
+        tier: soloOf(e)?.tier ?? null,
+        missing: e.status === 'not-found',
+      },
+    ])
+  )
+)
+
+/* ── Your last lobbies (this device only, lib/lobbies.ts) ─────────── */
+const lobbies = ref<Lobby[]>([])
+/** Set when a lobby is scouted: it is remembered once its cards have all answered. */
+let unsaved = false
+watch(
+  entries,
+  (list) => {
+    if (!unsaved || !list.length || list.some((e) => e.status === 'loading')) return
+    unsaved = false
+    rememberLobby(
+      list.map((e) => ({
+        gameName: e.summoner?.gameName ?? e.identity.gameName,
+        tagLine: e.summoner?.tagLine ?? e.identity.tagLine,
+        icon: e.summoner?.profileIconId ?? null,
+        champion: e.season?.champions?.[0]?.championId ?? null,
+      })),
+      props.region
+    )
+    lobbies.value = lastLobbies()
+  },
+  { deep: true }
+)
+const lobbyNames = (l: Lobby) => {
+  const names = l.players.map((p) => p.gameName)
+  return names.length <= 2
+    ? names.join(' and ')
+    : `${names.slice(0, 2).join(', ')} and ${names.length - 2} more`
 }
 const regionValue = ref(props.region ?? 'auto')
 const regionOptions = [
@@ -383,13 +427,14 @@ const regionOptions = [
 watch(regionValue, (next) => pickRegion(next === 'auto' ? null : next))
 
 onMounted(() => {
+  lobbies.value = lastLobbies()
   show(props.players)
 })
-/** A new search from the header lands on this page again, with other players. */
+/** A new search from the header (or a last lobby) lands on this page again, with other players. */
 watch(
   () => props.players,
   (players) => {
-    field.value = players.map((p) => `${p.gameName}#${p.tagLine}`).join(', ')
+    chips.value = [...players]
     show(players)
   }
 )
@@ -410,16 +455,19 @@ onBeforeUnmount(() => controller?.abort())
         :crumbs="[{ label: 'Tools' }, { label: 'Multisearch' }]"
         meta="Paste the names from champion select or the lobby chat, up to five a team"
       />
-      <form class="card ms-find" @submit.prevent="scoutLobby">
+      <form class="ms-find" @submit.prevent="scoutLobby">
         <LobbyField
-          v-model="field"
+          v-model="chips"
           :region="regionValue"
+          :known="known"
           @pasted="scoutLobby"
           @submit="scoutLobby"
           @resolved="scoutLobby"
-        />
-        <Select v-model="regionValue" :options="regionOptions" width="10rem" align="right" />
-        <button class="btn lg pri" type="submit">Scout</button>
+          @removed="dropped"
+        >
+          <Select v-model="regionValue" :options="regionOptions" width="10rem" align="right" />
+          <button class="btn lg pri" type="submit"><Icon name="search" />Scout</button>
+        </LobbyField>
       </form>
 
       <section class="sec" style="padding-top: 24px">
@@ -524,11 +572,46 @@ onBeforeUnmount(() => controller?.abort())
             </template>
           </div>
         </div>
-        <div v-else class="card ms-empty">
-          <span class="h4">Paste a lobby to scout it</span>
-          <span class="meta"
-            >From champion select or the lobby chat: every Riot ID in it is read, up to ten.</span
-          >
+        <div v-else class="ms-rest" :class="{ two: lobbies.length }">
+          <div class="card ms-empty">
+            <span class="h4">Type the names, or paste a lobby</span>
+            <span class="meta"
+              >From the client or the lobby chat: every Riot ID in it becomes a chip, up to
+              ten.</span
+            >
+          </div>
+          <article v-if="lobbies.length" class="card">
+            <CardHead title="Your last lobbies" icon="clock" meta="On this device" />
+            <Link
+              v-for="l in lobbies"
+              :key="l.at"
+              class="ms-lb"
+              :href="multisearchPath(l.players, l.region)"
+            >
+              <span class="ms-stk"
+                ><img
+                  v-for="pl in l.players.slice(0, 5)"
+                  :key="`${pl.gameName}#${pl.tagLine}`"
+                  :src="profileIcon(pl.icon ?? null)"
+                  alt=""
+              /></span>
+              <span class="col" style="gap: 2px; min-width: 0">
+                <span class="h5">{{ lobbyTime(l.at) }}</span>
+                <span class="meta ell">{{ lobbyNames(l) }}</span>
+              </span>
+              <span class="row ms-lc">
+                <template v-for="pl in l.players.slice(0, 5)" :key="`c-${pl.gameName}`"
+                  ><Frame
+                    v-if="pl.champion"
+                    :src="champIcon(pl.champion)"
+                    :width="26"
+                    size="xs"
+                    :alt="championName(pl.champion)"
+                /></template>
+              </span>
+              <Icon name="chevr" :size="16" class="t4" />
+            </Link>
+          </article>
         </div>
       </section>
       <p class="meta" style="margin-top: 16px">
