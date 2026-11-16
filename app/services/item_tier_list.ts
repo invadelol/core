@@ -318,7 +318,7 @@ export function itemView(
     pick: games ? round(r.i.games / games) : 0,
     tier,
     slots: r.i.slots.map((g) => round(g / r.i.games)) as [number, number, number],
-    champions: topOf(r.i.by, 4).map(([champion, g]) => ({ champion, games: g })),
+    champions: topOf(r.i.by, 5).map(([champion, g]) => ({ champion, games: g })),
     championCount: r.i.by.size,
     classes: r.classes,
     delta: delta(r.i, was.get(r.item), MIN_DELTA_GAMES),
