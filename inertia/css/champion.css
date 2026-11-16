@@ -138,7 +138,7 @@
   .vb .mu2 .art2 .h1 { font-size: 20px; }
   .vb .mu-mid { grid-column: 1 / -1; grid-row: 2; min-width: 0; }
   .vb .mu-mid .fg-xl { font-size: 32px; }
-  .vb .mu-mid .split { width: 100% !important; }
+  .vb .mu-mid .mu-wr, .vb .mu-mid .mu-wr .wrt-a { width: 100% !important; }
   .vb .mu-sum { grid-template-columns: 1fr 1fr; }
   .vb .mu-sum > div:nth-child(3) { border-left: 0; }
   .vb .mu-sum > div:nth-child(n + 3) { border-top: 1px solid var(--line); }

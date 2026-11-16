@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { rankFromCore, rankLabel, rankValue } from '@invadelol/ui/logic'
 import FormStrip from '../ui/FormStrip.vue'
 import RankEmblem from '../ui/RankEmblem.vue'
+import WinRate from '../ui/WinRate.vue'
 import { isRemake } from '../../lib/match.js'
 import type { Match, Rank, RanksPayload } from '../../lib/types.js'
 
@@ -121,15 +122,12 @@ const today = computed(() => {
           <span v-if="solo" class="fg-l">{{ solo.leaguePoints }}<span class="u">LP</span></span>
         </div>
       </div>
-      <div v-if="record && winRate !== null" class="col" style="gap: 8px; margin-top: auto">
-        <div class="row meta" style="justify-content: space-between">
-          <span
-            ><b class="wn">{{ record.wins }}W</b> <b class="ls">{{ record.losses }}L</b></span
-          >
-          <span class="t1" style="font-weight: 750">{{ winRate }}% win rate</span>
-        </div>
-        <div class="split"><i :style="{ width: `${winRate}%` }"></i><b></b></div>
-      </div>
+      <WinRate
+        v-if="record && winRate !== null"
+        :wins="record.wins"
+        :losses="record.losses"
+        style="margin-top: auto"
+      />
     </div>
     <div class="col">
       <div class="row" style="gap: 10px">

@@ -5,6 +5,7 @@ import '../../css/tier-lists.css'
 import '../../css/champion.css'
 import SiteLayout from '../../components/SiteLayout.vue'
 import CardHead from '../../components/ui/CardHead.vue'
+import WinRate from '../../components/ui/WinRate.vue'
 import Icon from '../../components/ui/Icon.vue'
 import TierChip from '../../components/ui/TierChip.vue'
 import Skeleton from '../../components/ui/Skeleton.vue'
@@ -158,9 +159,7 @@ const tabs = computed(() => [
             <span class="fg-xl">{{ fmt2(myWin) }}<span class="u">%</span></span><span class="meta">vs</span
             ><span class="fg-xl t3">{{ myWin === null ? '–' : (100 - myWin * 100).toFixed(2) }}<span class="u">%</span></span>
           </div>
-          <div class="split" style="width: 260px; margin: 14px auto 0">
-            <i :style="{ width: `${(myWin ?? 0.5) * 100}%`, background: 'var(--v400)' }" /><b style="background: var(--s4)" />
-          </div>
+          <WinRate class="mu-wr" :rate="myWin ?? 0.5" bare :width="260" style="margin-top: 14px" />
           <p class="meta" style="margin-top: 12px">
             {{ role.label }}, {{ rankLabel }}<template v-if="filter">, patch {{ patchName(filter.patch) }}</template
             ><template v-if="against">, {{ thousands(against.games) }} games</template>

@@ -8,6 +8,7 @@ import Frame from '../../components/ui/Frame.vue'
 import Select from '../../components/ui/Select.vue'
 import ScoreDial from '../../components/ui/ScoreDial.vue'
 import RankEmblem from '../../components/ui/RankEmblem.vue'
+import WinRate from '../../components/ui/WinRate.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import SortHead from '../../components/ui/SortHead.vue'
 import { linkSort, type SortDir } from '../../components/ui/sort.js'
@@ -396,15 +397,7 @@ const share = (r: Row) => {
               </template>
               <span v-else class="t3">–</span>
             </span>
-            <span class="col" style="gap: 5px">
-              <span class="h5 num"
-                >{{ winPct(r.wins, r.wins + r.losses) }}
-                <span class="meta">{{ n(r.wins) }}W {{ n(r.losses) }}L</span></span
-              >
-              <span class="split"
-                ><i :style="{ width: winPct(r.wins, r.wins + r.losses) }"></i><b></b
-              ></span>
-            </span>
+            <WinRate :wins="r.wins" :losses="r.losses" :width="130" />
             <span><ScoreDial :value="r.score" size="sm" /></span>
             <span class="row" style="gap: 4px">
               <Frame

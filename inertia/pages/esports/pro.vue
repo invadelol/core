@@ -8,6 +8,7 @@ import Frame from '../../components/ui/Frame.vue'
 import Tabs from '../../components/ui/Tabs.vue'
 import CardHead from '../../components/ui/CardHead.vue'
 import RankEmblem from '../../components/ui/RankEmblem.vue'
+import WinRate from '../../components/ui/WinRate.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import FormStrip from '../../components/ui/FormStrip.vue'
 import SortHead from '../../components/ui/SortHead.vue'
@@ -487,16 +488,9 @@ const PLATFORM: Record<string, string> = {
               <Frame :src="champIcon(b.champion)" :width="40" size="s" />
               <span class="col grow">
                 <span class="h4">{{ nameOf(b.champion) }}</span>
-                <span class="meta"
-                  >{{ b.wins }}W {{ b.games - b.wins }}L, {{ b.kda.toFixed(2) }} KDA</span
-                >
+                <span class="meta">{{ b.kda.toFixed(2) }} KDA</span>
               </span>
-              <span class="split" style="width: 80px"
-                ><i :style="{ width: winPct(b.wins, b.games) }"></i><b></b
-              ></span>
-              <span class="fg-xs num" style="width: 48px; text-align: right">{{
-                winPct(b.wins, b.games)
-              }}</span>
+              <WinRate :wins="b.wins" :games="b.games" :width="110" />
             </Link>
           </div>
           <div v-if="pro.teams.length" class="card">

@@ -6,6 +6,7 @@ import '../../css/tier-lists.css'
 import '../../css/champion.css'
 import SiteLayout from '../../components/SiteLayout.vue'
 import CardHead from '../../components/ui/CardHead.vue'
+import WinRate from '../../components/ui/WinRate.vue'
 import Icon from '../../components/ui/Icon.vue'
 import TierChip from '../../components/ui/TierChip.vue'
 import Skeleton from '../../components/ui/Skeleton.vue'
@@ -605,7 +606,7 @@ const ago = (ms: number) => {
                 <div class="row" style="justify-content: space-between; align-items: baseline">
                   <span class="sm t2">Ahead in gold</span><span class="fg-s">{{ Math.round(at15.ahead * 100) }}<span class="u">% of games</span></span>
                 </div>
-                <div class="split"><i :style="{ width: `${at15.ahead * 100}%` }" /><b style="background: var(--s4)" /></div>
+                <WinRate :rate="at15.ahead" bare />
               </div>
               <div class="row" style="gap: 12px">
                 <div class="col grow well" style="gap: 4px; padding: 12px 14px">
