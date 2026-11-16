@@ -319,22 +319,4 @@ test.group('Leaderboards', (group) => {
       'ladder',
     ])
   }).timeout(60_000)
-
-  test('reads a live game’s lanes, refusing anything but role.blue.red pairs', async ({
-    client,
-    assert,
-  }) => {
-    const bad = await client.get('/api/lanes?pairs=nothing')
-    bad.assertStatus(400)
-    const lanes = await client.get('/api/lanes?pairs=TOP.122.86,MIDDLE.103.7')
-    if (lanes.status() === 404) return // no ranked games stored on this database
-    lanes.assertStatus(200)
-    assert.deepEqual(
-      lanes.body().lanes.map((l: any) => [l.position, l.blue.champion, l.red.champion]),
-      [
-        ['TOP', 122, 86],
-        ['MIDDLE', 103, 7],
-      ]
-    )
-  }).timeout(60_000)
 })

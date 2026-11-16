@@ -101,9 +101,6 @@ export default await Env.create(new URL('../', import.meta.url), {
   /** When the privacy policy last changed, as it should read, e.g. "14 October 2026". */
   LEGAL_UPDATED: Env.schema.string.optional(),
 
-  /** Local only: a made-up live game for the fictional demo accounts. Ignored in production. */
-  DEMO_LIVE: Env.schema.boolean.optional(),
-
   /*
   |----------------------------------------------------------
   | OpenPanel analytics (app/services/openpanel.ts)

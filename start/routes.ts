@@ -71,7 +71,6 @@ router
     router.get('/summoners/:platform/:summoner', [SummonersController, 'show'])
 
     router.get('/summoners/puuid/:puuid/mastery', [PlayerInsightsController, 'mastery'])
-    router.get('/summoners/puuid/:puuid/live', [PlayerInsightsController, 'live'])
 
     // PUUID-based routes
     router
@@ -230,15 +229,8 @@ router.get('/leaderboards/one-tricks', [LeaderboardsController, 'oneTricks'])
 router.get('/leaderboards/pros', [LeaderboardsController, 'pros'])
 router.get('/api/leaderboards/solo/place', [LeaderboardsController, 'place'])
 router.get('/esports', [EsportsController, 'index'])
-/** The live game tool: a Riot ID opens that player's live game (`/:summoner/live`). */
-router.get('/live', ({ inertia }) =>
-  inertia.render('tools/live', {
-    description:
-      'See the game a League player is in right now: both teams, their ranks and who wins each lane.',
-  })
-)
-/** A live game's lanes as the counted ranked games see them: tiers, win rates, the matchup. */
-router.get('/api/lanes', [() => import('#controllers/lanes_controller'), 'show'])
+/** The live game page is gone: its old address leads home. */
+router.get('/live', ({ response }) => response.redirect('/', false, 302))
 
 /** Several players scouted side by side (a lobby), before the summoner catch-all below. */
 router.get('/multisearch/:region?', [MultisearchController, 'show'])
@@ -337,10 +329,11 @@ router.get('/:summoner/:section?', async ({ inertia, params, response }) => {
   const section = params.section ?? 'overview'
   if (section === 'history')
     return response.redirect(`/${encodeURIComponent(params.summoner)}/matches`)
+  // The live game page is gone; links to it (the desktop app's Discord presence) open the profile.
+  if (section === 'live')
+    return response.redirect(`/${encodeURIComponent(params.summoner)}`, true, 302)
   if (
-    !['overview', 'matches', 'lens', 'champions', 'mastery', 'friends', 'compare', 'live'].includes(
-      section
-    )
+    !['overview', 'matches', 'lens', 'champions', 'mastery', 'friends', 'compare'].includes(section)
   )
     return response.notFound()
   const { default: summonerService } = await import('#services/summoner_service')

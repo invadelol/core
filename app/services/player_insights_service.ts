@@ -6,26 +6,11 @@ import db from '@adonisjs/lucid/services/db'
 import logger from '@adonisjs/core/services/logger'
 import env from '#start/env'
 import Summoner from '#models/summoner'
-import Rank from '#models/rank'
 import PlayerMastery from '#models/player_mastery'
-import riotApiService from '#services/riot/api'
-import statsRepository from '#services/analytics/stats_repository'
-import { LiveRanks } from '#services/live/ranks'
 import { translateRiotError } from '#utils/riot_errors'
 import { SyncGuard } from '#utils/sync_guard'
-import { demoLiveEnabled, demoLiveGame } from '#services/live/demo_live_game'
-import {
-  buildLiveGame,
-  isPuuid,
-  LOBBY_HISTORY_GAMES,
-  type LiveGame,
-  type SpectatorGame,
-} from '#services/live/live_game'
 
 const insightsGuard = new SyncGuard()
-const liveRanks = new LiveRanks((puuid, platform) =>
-  riotApiService.client.league.getEntriesByPUUID({ puuid, region: platform as any })
-)
 
 export interface ChampionMastery {
   championId: number
@@ -52,30 +37,22 @@ const byPoints = (a: { championPoints: number }, b: { championPoints: number }) 
   b.championPoints - a.championPoints
 
 /**
- * Mastery and live game, read from Riot's current PUUID APIs; the installed
- * Riot SDK still targets the retired spectator API. Shared by the website's
- * profile and the desktop app's onboarding, so both hit the same cache.
+ * Mastery, read from Riot's current PUUID API. Shared by the website's profile
+ * and the desktop app's onboarding, so both hit the same cache.
  */
 class PlayerInsightsService {
-  async get(puuid: string, kind: 'mastery' | 'live', refresh = false) {
+  async get(puuid: string, kind: 'mastery', refresh = false) {
     const player = await Summoner.findBy('puuid', puuid)
     if (!player) throw new Exception('Player not found', { status: 404 })
-    if (kind === 'live' && demoLiveEnabled(puuid)) {
-      const demo = await demoLiveGame(player)
-      if (demo) return { game: await this.liveGame(demo) }
-    }
     const platform = normalizePlatform(player.platform).toLowerCase()
     const key = `player-insights:${platform}:${puuid}:${kind}`
     return cache.getOrSet({
       key,
-      ttl: kind === 'live' ? '30s' : '1h',
+      ttl: '1h',
       forceFresh: refresh,
       factory: () =>
         insightsGuard.run(key, async () => {
-          const path =
-            kind === 'live'
-              ? `spectator/v5/active-games/by-summoner/${encodeURIComponent(puuid)}`
-              : `champion-mastery/v4/champion-masteries/by-puuid/${encodeURIComponent(puuid)}`
+          const path = `champion-mastery/v4/champion-masteries/by-puuid/${encodeURIComponent(puuid)}`
           let res: Response
           try {
             res = await fetch(`https://${platform}.api.riotgames.com/lol/${path}`, {
@@ -85,73 +62,24 @@ class PlayerInsightsService {
           } catch {
             throw new Exception('Riot is temporarily unavailable', { status: 503 })
           }
-          if (kind === 'live' && res.status === 404) return { game: null }
           if (!res.ok) throw translateRiotError(res)
           const data: any = await res.json()
-          if (kind === 'mastery') {
-            const observedAt = Date.now()
-            const entries: ChampionMastery[] = data.map((entry: any) => ({
-              championId: entry.championId,
-              championLevel: entry.championLevel,
-              championPoints: entry.championPoints,
-              lastPlayTime: entry.lastPlayTime,
-              championPointsUntilNextLevel: entry.championPointsUntilNextLevel,
-              championPointsSinceLastLevel: entry.championPointsSinceLastLevel,
-              tokensEarned: entry.tokensEarned,
-              source: 'riot',
-              observedAt,
-            }))
-            await this.rememberTop(puuid, entries, observedAt)
-            return entries
-          }
-          return { game: await this.liveGame(data, platform, refresh) }
+          const observedAt = Date.now()
+          const entries: ChampionMastery[] = data.map((entry: any) => ({
+            championId: entry.championId,
+            championLevel: entry.championLevel,
+            championPoints: entry.championPoints,
+            lastPlayTime: entry.lastPlayTime,
+            championPointsUntilNextLevel: entry.championPointsUntilNextLevel,
+            championPointsSinceLastLevel: entry.championPointsSinceLastLevel,
+            tokensEarned: entry.tokensEarned,
+            source: 'riot',
+            observedAt,
+          }))
+          await this.rememberTop(puuid, entries, observedAt)
+          return entries
         }),
     })
-  }
-
-  /**
-   * Fetch every human participant's rank, even for profiles never opened on Invade. Stored
-   * ranks are a fallback on upstream failure; champion/form context still uses stored games.
-   * Demo lobbies never call Riot. Observer credentials never leave the server.
-   */
-  private async liveGame(
-    data: SpectatorGame,
-    platform?: string,
-    refresh = false
-  ): Promise<LiveGame> {
-    const ids = [
-      ...new Set(
-        data.participants
-          .filter((p) => !p.bot)
-          .map((p) => p.puuid)
-          .filter(isPuuid)
-      ),
-    ]
-    const [ranks, games, fetched] = await Promise.all([
-      ids.length
-        ? Rank.query()
-            .whereIn('puuid', ids)
-            .where('queueType', 'RANKED_SOLO_5x5')
-            .distinctOn('puuid')
-            .orderBy('puuid')
-            .orderBy('fetchedAt', 'desc')
-            .catch(() => [])
-        : [],
-      statsRepository.getRecentGames(ids, LOBBY_HISTORY_GAMES).catch(() => []),
-      platform
-        ? Promise.all(
-            ids.map(async (id) => [id, await liveRanks.get(id, platform, refresh)] as const)
-          )
-        : [],
-    ])
-    const statuses = new Map(fetched.map(([id, result]) => [id, result.status]))
-    const resolved = platform
-      ? fetched.flatMap(([id, result]) => {
-          const rank = result.rank === undefined ? ranks.find((r) => r.puuid === id) : result.rank
-          return rank ? [rank] : []
-        })
-      : ranks
-    return buildLiveGame(data, resolved, games, statuses)
   }
 
   /**

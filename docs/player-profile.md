@@ -9,12 +9,12 @@ See [design.md](design.md) for the palette, themes and primitives.
 | `/`                                  | Search, recent profiles, and what invade.lol stores (below)   |
 | `/:summoner`                         | Overview: ranks, LP, champions, roles, teammates, games       |
 | `/:summoner/champions`               | Champion pool, win-rate heatmap and lifetime mastery          |
-| `/:summoner/live`                    | Current lineup, spells, runes, tracked champion and rank data |
 | `/:summoner/friends`                 | Lane partnerships and per-teammate synergy                    |
 | `/:summoner/compare?with=Name%23Tag` | Two players on one table, same filters                        |
 | `/:summoner/match/:matchId`          | The game's header, scoreboard, analysis, timeline and build   |
 | `/:summoner/lens`                    | Performance by domain in one role (Lens)                      |
 | `/:summoner/history`                 | Redirects to the Overview match feed                          |
+| `/:summoner/live`                    | Redirects to the Overview (the live game page is gone)        |
 
 ## Home
 

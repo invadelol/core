@@ -13,7 +13,6 @@ import {
 import { PAGE_SIZE, positionOf, type Position } from '@invadelol/ui/logic'
 import MasteryPanel from '../components/MasteryPanel.vue'
 import FriendsPanel from '../components/FriendsPanel.vue'
-import LiveMatch from '../components/LiveMatch.vue'
 import PlayerCompare from '../components/PlayerCompare.vue'
 import LensSection from '../components/lens/LensSection.vue'
 import SiteLayout from '../components/SiteLayout.vue'
@@ -643,7 +642,6 @@ const tabs = computed(() => {
     { key: 'matches', label: 'Matches', href: `${base}/matches` },
     { key: 'champions', label: 'Champions', href: `${base}/champions` },
     { key: 'mastery', label: 'Mastery', href: `${base}/mastery` },
-    { key: 'live', label: 'Live game', href: `${base}/live` },
     { key: 'friends', label: 'Friends', href: `${base}/friends` },
     { key: 'compare', label: 'Compare', href: `${base}/compare` },
   ]
@@ -660,266 +658,209 @@ const championFilter = computed({
   get: () => filters.value.champion,
   set: (champion: number) => (filters.value = { ...filters.value, champion }),
 })
-/** Another lobby, from the live page's field: the multisearch reads the names. */
-const lobby = ref('')
-function scout() {
-  const names = lobby.value.trim()
-  if (!names) return
-  router.visit(`/multisearch?summoners=${encodeURIComponent(names)}`)
-}
 </script>
 
 <template>
   <Head :title="`${parsed.gameName}#${parsed.tagLine}`" />
-  <SiteLayout :section="section === 'live' ? 'tools' : null">
+  <SiteLayout>
     <div class="wrap pg-pf">
-      <!-- The live game: its own page, as the board draws it (Tools, Live game). -->
-      <template v-if="section === 'live'">
-        <div class="mast" style="padding-bottom: 16px">
-          <nav class="crumbs" aria-label="Breadcrumb">
-            <Link :href="profilePath(parsed.gameName, parsed.tagLine)">{{ parsed.gameName }}</Link
-            ><Icon name="chevr" />
-            <span class="t1">Live game</span>
-          </nav>
-        </div>
-        <div v-if="isLoading" class="card" style="padding: 20px"><Skeleton :height="120" /></div>
-        <EmptyState
-          v-else-if="error || !profile"
-          icon="search"
-          :title="`${parsed.gameName}#${parsed.tagLine} was not found`"
-        />
-        <LiveMatch
-          v-else
-          :puuid="profile.puuid"
-          :name="profile.gameName"
-          :platform="profile.platform"
-        />
-        <form class="card pf-scout" @submit.prevent="scout">
-          <span class="h4">Scout another lobby</span>
-          <label class="field" style="flex: 1">
-            <Icon name="search" />
-            <input
-              v-model="lobby"
-              type="text"
-              placeholder="Paste five names separated by commas"
-              aria-label="Names"
-            />
-          </label>
-          <button class="btn pri" type="submit">Search</button>
-        </form>
+      <!-- Loading: the shape of the profile that is coming -->
+      <template v-if="isLoading">
+        <div class="pf-head"><Skeleton :height="104" style="width: 560px" /></div>
+        <div class="card" style="padding: 20px; margin-top: 64px"><Skeleton :height="190" /></div>
+        <div class="card" style="padding: 20px; margin-top: 24px"><Skeleton :rows="6" pic /></div>
       </template>
 
-      <template v-else>
-        <!-- Loading: the shape of the profile that is coming -->
-        <template v-if="isLoading">
-          <div class="pf-head"><Skeleton :height="104" style="width: 560px" /></div>
-          <div class="card" style="padding: 20px; margin-top: 64px"><Skeleton :height="190" /></div>
-          <div class="card" style="padding: 20px; margin-top: 24px"><Skeleton :rows="6" pic /></div>
-        </template>
+      <EmptyState
+        v-else-if="error"
+        icon="search"
+        :title="
+          error === 'not-found'
+            ? 'Summoner not found'
+            : error === 'riot-unavailable'
+              ? 'Riot\'s API is not answering'
+              : 'This profile could not be loaded'
+        "
+        :line="
+          error === 'not-found'
+            ? `No League profile was found for ${parsed.gameName}#${parsed.tagLine} on any server.`
+            : error === 'riot-unavailable'
+              ? 'This profile is not stored yet and Riot is limiting requests. It usually clears in a minute.'
+              : 'Something broke on our side while looking this player up.'
+        "
+      >
+        <span class="row" style="gap: 8px">
+          <button class="btn pri" type="button" @click="retry">Try again</button>
+          <a class="btn" href="/">Back to search</a>
+        </span>
+      </EmptyState>
 
-        <EmptyState
-          v-else-if="error"
-          icon="search"
-          :title="
-            error === 'not-found'
-              ? 'Summoner not found'
-              : error === 'riot-unavailable'
-                ? 'Riot\'s API is not answering'
-                : 'This profile could not be loaded'
-          "
-          :line="
-            error === 'not-found'
-              ? `No League profile was found for ${parsed.gameName}#${parsed.tagLine} on any server.`
-              : error === 'riot-unavailable'
-                ? 'This profile is not stored yet and Riot is limiting requests. It usually clears in a minute.'
-                : 'Something broke on our side while looking this player up.'
-          "
-        >
-          <span class="row" style="gap: 8px">
-            <button class="btn pri" type="button" @click="retry">Try again</button>
-            <a class="btn" href="/">Back to search</a>
-          </span>
-        </EmptyState>
+      <template v-else-if="profile">
+        <ProfileHead
+          :summoner="profile"
+          :roles="roles"
+          :last-game-ms="lastGameMs"
+          :is-syncing="isSyncing"
+          :sync-message="syncMessage"
+          :pro="props.pro ?? null"
+          @sync="sync"
+          @share="shareOpen = true"
+        />
+        <Tabs
+          :items="tabs"
+          :active="section"
+          label="Profile"
+          preserve-scroll
+          style="margin-top: 28px"
+        />
 
-        <template v-else-if="profile">
-          <ProfileHead
-            :summoner="profile"
-            :roles="roles"
-            :last-game-ms="lastGameMs"
-            :is-syncing="isSyncing"
-            :sync-message="syncMessage"
-            :pro="props.pro ?? null"
-            @sync="sync"
-            @share="shareOpen = true"
-          />
-          <Tabs
-            :items="tabs"
-            :active="section"
-            label="Profile"
-            preserve-scroll
-            style="margin-top: 28px"
-          />
+        <p v-if="failedPanels.length" class="pf-note" role="alert">
+          Some data could not be loaded ({{ failedPanels.join(', ') }}).
+          <button type="button" class="btn sm" @click="retry">Retry</button>
+        </p>
 
-          <p v-if="failedPanels.length" class="pf-note" role="alert">
-            Some data could not be loaded ({{ failedPanels.join(', ') }}).
-            <button type="button" class="btn sm" @click="retry">Retry</button>
-          </p>
-
-          <!-- ── Overview and Matches ──────────────────────────── -->
-          <template v-if="section === 'overview' || section === 'matches'">
-            <template v-if="section === 'overview'">
-              <div v-if="pending.ranks" class="card pf-rank"><Skeleton :height="190" /></div>
-              <RankCard v-else :ranks="ranks" :matches="matches" :puuid="profile.puuid" />
-            </template>
-
-            <section class="g12 pf-main" style="padding-top: 24px; align-items: start">
-              <div id="matches" class="col pf-games">
-                <div class="row pf-mh" style="gap: 12px">
-                  <h2 class="h2">Match history</h2>
-                  <span class="meta">{{ filterSummary }}</span>
-                  <span class="seg" style="margin-left: auto">
-                    <button
-                      v-for="q in QUEUES"
-                      :key="q.value"
-                      type="button"
-                      :class="{ on: filters.type === q.value }"
-                      @click="filters = { ...filters, type: q.value }"
-                    >
-                      {{ q.label }}
-                    </button>
-                  </span>
-                  <Select
-                    v-model="championFilter"
-                    :options="championOptions"
-                    searchable
-                    width="15rem"
-                    align="right"
-                  />
-                </div>
-                <p v-if="hiddenCustoms" class="meta">
-                  {{ hiddenCustoms }} custom {{ hiddenCustoms === 1 ? 'game' : 'games' }} not shown
-                </p>
-                <p v-if="filterError" class="pf-note" role="alert">
-                  {{ filterError }}
-                  <button type="button" class="btn sm" @click="applyFilters()">Retry</button>
-                </p>
-                <div v-if="pending.matches" class="card" style="padding: 16px">
-                  <Skeleton :rows="6" pic />
-                </div>
-                <EmptyState
-                  v-else-if="!displayedMatches.length"
-                  icon="list"
-                  title="No game here"
-                  line="No stored game matches these filters."
-                >
-                  <button
-                    class="btn"
-                    type="button"
-                    @click="filters = { type: 'all', champion: 0, role: 'all' }"
-                  >
-                    Clear the filters
-                  </button>
-                </EmptyState>
-                <MatchRows
-                  v-else
-                  :matches="
-                    section === 'overview'
-                      ? displayedMatches.slice(0, OVERVIEW_GAMES)
-                      : displayedMatches
-                  "
-                  :puuid="profile.puuid"
-                  :game-name="profile.gameName"
-                  :tag-line="profile.tagLine"
-                />
-                <Link
-                  v-if="section === 'overview' && displayedMatches.length > OVERVIEW_GAMES"
-                  class="btn"
-                  :href="`${profilePath(profile.gameName, profile.tagLine)}/matches`"
-                  style="margin-top: 6px; justify-content: center"
-                  >Show older games<Icon name="chev"
-                /></Link>
-                <OlderGames
-                  v-if="section === 'matches' && !pending.matches"
-                  v-show="!filterError && loadedMatches.length"
-                  :key="profile.puuid"
-                  style="margin-top: 16px"
-                  :more="hasMore"
-                  :load="loadMore"
-                  :auto="wide"
-                />
-              </div>
-              <div class="col pf-side" style="gap: 24px">
-                <div v-if="pending.stats" class="card" style="padding: 20px">
-                  <Skeleton :height="200" />
-                </div>
-                <PerformanceCard v-else :matches="performanceMatches" :puuid="profile.puuid" />
-                <SideCards
-                  :champions="champions"
-                  :matches="matches"
-                  :teammates="teammates"
-                  :puuid="profile.puuid"
-                  :champions-href="`${profilePath(profile.gameName, profile.tagLine)}/champions`"
-                />
-              </div>
-            </section>
+        <!-- ── Overview and Matches ──────────────────────────── -->
+        <template v-if="section === 'overview' || section === 'matches'">
+          <template v-if="section === 'overview'">
+            <div v-if="pending.ranks" class="card pf-rank"><Skeleton :height="190" /></div>
+            <RankCard v-else :ranks="ranks" :matches="matches" :puuid="profile.puuid" />
           </template>
 
-          <!-- ── Lens (no tab of its own: reached from its old address) ─ -->
-          <section v-else-if="section === 'lens'" class="sec" style="padding-top: 24px">
-            <LensSection :puuid="profile.puuid" />
-          </section>
-
-          <!-- ── Champions ──────────────────────────────────────── -->
-          <section v-else-if="section === 'champions'" class="sec" style="padding-top: 24px">
-            <p v-if="filterError" class="pf-note" role="alert">
-              {{ filterError }}
-              <button type="button" class="btn sm" @click="applyFilters()">Retry</button>
-            </p>
-            <ChampionsTable
-              :champions="filteredChampions ?? champions"
-              :busy="filterBusy || pending.champions"
-              :queue="filters.type"
-              :mastery="mastery"
-              @queue="(type) => (filters = { ...filters, type: type as Filters['type'] })"
-              @matches="championMatches"
-            />
-          </section>
-
-          <!-- ── Mastery, Friends, Compare ───────────────────────── -->
-          <section
-            v-else-if="section === 'mastery'"
-            class="sec pf-shared"
-            style="padding-top: 24px"
-          >
-            <MasteryPanel
-              :mastery="mastery"
-              :loading="masteryLoading"
-              :error="masteryError"
-              @retry="loadMastery(true)"
-            />
-          </section>
-          <section
-            v-else-if="section === 'friends'"
-            class="sec pf-shared"
-            style="padding-top: 24px"
-          >
-            <FriendsPanel
-              :report="friendsReport"
-              :profile="profile"
-              :loading="friendsLoading"
-              :error="friendsError"
-              :matches="matches"
-              @retry="loadFriends(true)"
-            />
-          </section>
-          <section
-            v-else-if="section === 'compare'"
-            class="sec pf-shared"
-            style="padding-top: 24px"
-          >
-            <PlayerCompare :profile="profile" :champions="champions" />
+          <section class="g12 pf-main" style="padding-top: 24px; align-items: start">
+            <div id="matches" class="col pf-games">
+              <div class="row pf-mh" style="gap: 12px">
+                <h2 class="h2">Match history</h2>
+                <span class="meta">{{ filterSummary }}</span>
+                <span class="seg" style="margin-left: auto">
+                  <button
+                    v-for="q in QUEUES"
+                    :key="q.value"
+                    type="button"
+                    :class="{ on: filters.type === q.value }"
+                    @click="filters = { ...filters, type: q.value }"
+                  >
+                    {{ q.label }}
+                  </button>
+                </span>
+                <Select
+                  v-model="championFilter"
+                  :options="championOptions"
+                  searchable
+                  width="15rem"
+                  align="right"
+                />
+              </div>
+              <p v-if="hiddenCustoms" class="meta">
+                {{ hiddenCustoms }} custom {{ hiddenCustoms === 1 ? 'game' : 'games' }} not shown
+              </p>
+              <p v-if="filterError" class="pf-note" role="alert">
+                {{ filterError }}
+                <button type="button" class="btn sm" @click="applyFilters()">Retry</button>
+              </p>
+              <div v-if="pending.matches" class="card" style="padding: 16px">
+                <Skeleton :rows="6" pic />
+              </div>
+              <EmptyState
+                v-else-if="!displayedMatches.length"
+                icon="list"
+                title="No game here"
+                line="No stored game matches these filters."
+              >
+                <button
+                  class="btn"
+                  type="button"
+                  @click="filters = { type: 'all', champion: 0, role: 'all' }"
+                >
+                  Clear the filters
+                </button>
+              </EmptyState>
+              <MatchRows
+                v-else
+                :matches="
+                  section === 'overview'
+                    ? displayedMatches.slice(0, OVERVIEW_GAMES)
+                    : displayedMatches
+                "
+                :puuid="profile.puuid"
+                :game-name="profile.gameName"
+                :tag-line="profile.tagLine"
+              />
+              <Link
+                v-if="section === 'overview' && displayedMatches.length > OVERVIEW_GAMES"
+                class="btn"
+                :href="`${profilePath(profile.gameName, profile.tagLine)}/matches`"
+                style="margin-top: 6px; justify-content: center"
+                >Show older games<Icon name="chev"
+              /></Link>
+              <OlderGames
+                v-if="section === 'matches' && !pending.matches"
+                v-show="!filterError && loadedMatches.length"
+                :key="profile.puuid"
+                style="margin-top: 16px"
+                :more="hasMore"
+                :load="loadMore"
+                :auto="wide"
+              />
+            </div>
+            <div class="col pf-side" style="gap: 24px">
+              <div v-if="pending.stats" class="card" style="padding: 20px">
+                <Skeleton :height="200" />
+              </div>
+              <PerformanceCard v-else :matches="performanceMatches" :puuid="profile.puuid" />
+              <SideCards
+                :champions="champions"
+                :matches="matches"
+                :teammates="teammates"
+                :puuid="profile.puuid"
+                :champions-href="`${profilePath(profile.gameName, profile.tagLine)}/champions`"
+              />
+            </div>
           </section>
         </template>
+
+        <!-- ── Lens (no tab of its own: reached from its old address) ─ -->
+        <section v-else-if="section === 'lens'" class="sec" style="padding-top: 24px">
+          <LensSection :puuid="profile.puuid" />
+        </section>
+
+        <!-- ── Champions ──────────────────────────────────────── -->
+        <section v-else-if="section === 'champions'" class="sec" style="padding-top: 24px">
+          <p v-if="filterError" class="pf-note" role="alert">
+            {{ filterError }}
+            <button type="button" class="btn sm" @click="applyFilters()">Retry</button>
+          </p>
+          <ChampionsTable
+            :champions="filteredChampions ?? champions"
+            :busy="filterBusy || pending.champions"
+            :queue="filters.type"
+            :mastery="mastery"
+            @queue="(type) => (filters = { ...filters, type: type as Filters['type'] })"
+            @matches="championMatches"
+          />
+        </section>
+
+        <!-- ── Mastery, Friends, Compare ───────────────────────── -->
+        <section v-else-if="section === 'mastery'" class="sec pf-shared" style="padding-top: 24px">
+          <MasteryPanel
+            :mastery="mastery"
+            :loading="masteryLoading"
+            :error="masteryError"
+            @retry="loadMastery(true)"
+          />
+        </section>
+        <section v-else-if="section === 'friends'" class="sec pf-shared" style="padding-top: 24px">
+          <FriendsPanel
+            :report="friendsReport"
+            :profile="profile"
+            :loading="friendsLoading"
+            :error="friendsError"
+            :matches="matches"
+            @retry="loadFriends(true)"
+          />
+        </section>
+        <section v-else-if="section === 'compare'" class="sec pf-shared" style="padding-top: 24px">
+          <PlayerCompare :profile="profile" :champions="champions" />
+        </section>
       </template>
 
       <ShareProfile
