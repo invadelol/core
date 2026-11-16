@@ -156,12 +156,24 @@ export interface HomeLaneRow extends HomeChampion {
   value: number
 }
 
+/** The newest patch's notes as the home counts them (`resources/patch_notes`). */
+export interface HomePatchNotes {
+  /** As players name it: "26.22". */
+  patch: string
+  buffs: number
+  nerfs: number
+  /** Each champion the notes change, and which way. */
+  changes: Array<{ championId: number; kind: 'up' | 'down' | 'mix' | 'new' }>
+}
+
 /** The home page's sections, each null when it could not be read. */
 export interface HomePage {
   /** The default tier list (newest patch, Emerald and above, every region). */
   picks: {
     patch: string
     best: HomePick[]
+    /** The other S+ champions, best win rate first (the search palette's column). */
+    splus?: HomePick[]
     bans: HomeBan[]
     /** The best picks again at each rank group of the home's switch, the default first. */
     brackets?: HomeBracketPicks[]
@@ -179,6 +191,10 @@ export interface HomePage {
   discord: { members: number; online: number } | null
   /** The next pro games (international events first while they run), when any is planned. */
   games?: ProMatch[] | null
+  /** With no game live or planned: the last result of the last three days (major leagues and events). */
+  result?: ProMatch | null
+  /** The shown patch's notes, when the repository holds them. */
+  patchNotes?: HomePatchNotes | null
 }
 
 /** A league of the pros directory, with its logo at `/cdn/league/<slug>`. */
