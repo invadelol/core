@@ -5,7 +5,11 @@ import { CornerDownLeft, Plus, Search, Users, X } from 'lucide-vue-next'
 import { champIcon, profileIcon, regionLabel } from '../lib/assets.js'
 import { regionFlag } from '../lib/flags.js'
 import { championSlug } from '../lib/champions.js'
-import { recentHref, recentPlayers, type RecentPlayer } from '../lib/recent.js'
+import { forgetRecent, recentHref, recentPlayers, type RecentPlayer } from '../lib/recent.js'
+import { RoleIcon } from '@invadelol/ui'
+import { championHref, positionOf } from './header/sections.js'
+import type { HomePick, HomePro } from '../lib/home.js'
+import type { IconName } from '../lib/icons.js'
 import ProPhoto from './champions/ProPhoto.vue'
 import TeamLogo from './champions/TeamLogo.vue'
 import {
@@ -16,8 +20,28 @@ import {
   type RiotIdentity,
 } from '../lib/multisearch.js'
 import { tierName } from '../lib/board.js'
-import Glyph from './ui/Glyph.vue'
 import Icon from './ui/Icon.vue'
+
+/** A page the home's palette lists before anything is typed. */
+export interface PalettePage {
+  icon: IconName
+  title: string
+  detail: string
+  href: string
+}
+
+/** What the home's palette shows before anything is typed (the recent lookups are the browser's). */
+export interface PaletteIdle {
+  /** The S+ champions of the patch. */
+  splus: HomePick[]
+  /** The pros at the top of solo queue: the first column while this browser has no recents. */
+  pros: HomePro[]
+  pages: PalettePage[]
+  /** The patch as players name it ("26.22"), for the S+ column's title. */
+  patch: string | null
+  /** The footer's line: "1,315,200 games on 26.22, Emerald+". */
+  note: string | null
+}
 
 const props = withDefaults(
   defineProps<{
@@ -32,6 +56,12 @@ const props = withDefaults(
     placeholder?: string
     /** The placeholder on a phone, where the long one would be cut. */
     shortPlaceholder?: string
+    /**
+     * The home's search, set large (`variant="header" size="lg"`): a palette, open from the start.
+     * Before anything is typed it lists the recent lookups, the patch's S+ champions and the main
+     * pages in three columns the keys move through; typing turns it into the list of results.
+     */
+    palette?: PaletteIdle | null
   }>(),
   {
     size: 'sm',
@@ -39,6 +69,7 @@ const props = withDefaults(
     variant: 'field',
     placeholder: undefined,
     shortPlaceholder: undefined,
+    palette: null,
   }
 )
 
@@ -130,7 +161,7 @@ interface Answer {
   accounts: ProAccount[]
 }
 
-type Section = 'recent' | 'champions' | 'esports' | 'summoners'
+type Section = 'recent' | 'pros' | 'splus' | 'pages' | 'champions' | 'esports' | 'summoners'
 
 interface Entry {
   /** The rank last seen (a recent profile): "Emerald II". */
@@ -158,10 +189,18 @@ interface Entry {
   multi?: RiotIdentity[]
   /** The titled group the entry is listed under; a pasted lobby stands above them all. */
   section?: Section
+  /** A page of the site (the palette): its icon. */
+  page?: IconName
+  /** An S+ champion (the palette): its role and win rate there. */
+  position?: string
+  winRate?: number
 }
 
 const SECTION_LABELS: Record<Section, string> = {
   recent: 'Recently viewed',
+  pros: 'Pros',
+  splus: 'S+',
+  pages: 'Pages',
   champions: 'Champions',
   esports: 'Esports',
   summoners: 'Summoners',
@@ -169,6 +208,9 @@ const SECTION_LABELS: Record<Section, string> = {
 /** The header's groups, in its words. */
 const HEADER_LABELS: Record<Section, string> = {
   recent: 'Recent',
+  pros: 'Pros in solo queue',
+  splus: 'S+',
+  pages: 'Pages',
   champions: 'Champions',
   esports: 'Pros and teams',
   summoners: 'Players',
@@ -309,13 +351,164 @@ function unique(players: RiotIdentity[]) {
 /** The last name is a whole Riot ID: nothing left to look up, the list is the answer. */
 const typingDone = computed(() => parseRiotIds(typing.value).length > 0)
 
+/** A profile, pro or champion this browser opened, as a row. */
+function recentEntry(r: RecentPlayer): Entry {
+  if (r.champion)
+    return {
+      gameName: r.gameName,
+      tagLine: '',
+      direct: false,
+      kind: 'champion',
+      href: recentHref(r),
+      title: r.gameName,
+      detail: 'Champion',
+      champion: r.champion.id,
+    }
+  if (r.pro)
+    return {
+      gameName: r.gameName,
+      tagLine: '',
+      direct: false,
+      kind: 'pro',
+      href: recentHref(r),
+      title: r.gameName,
+      ...(r.pro.photo ? { photo: { slug: r.pro.slug, v: r.pro.photo } } : {}),
+      badge: r.pro.staff ? 'Staff' : 'Pro',
+    }
+  if (r.team)
+    return {
+      gameName: r.gameName,
+      tagLine: '',
+      direct: false,
+      kind: 'team',
+      href: recentHref(r),
+      title: r.gameName,
+      detail: 'Team',
+      team: { id: r.team.id, name: r.gameName, shortName: r.team.shortName },
+    }
+  return {
+    gameName: r.gameName,
+    tagLine: r.tagLine,
+    direct: false,
+    icon: r.profileIconId,
+    region: r.platform ? regionLabel(r.platform) : undefined,
+    level: r.level,
+    rank: r.rank
+      ? `${tierName(r.rank.tier)}${['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(r.rank.tier) ? '' : ` ${r.rank.division}`}`
+      : undefined,
+  }
+}
+
+/** The palette's field has the caret. */
+const focused = ref(false)
+const palettePatch = computed(() => props.palette?.patch ?? '')
+
+/** The palette before anything is typed: one to three letters keep it, so it never jumps. */
+const idle = computed(() => big.value && !picked.value.length && query.value.trim().length < 2)
+
+/** The palette's three columns: the recent lookups (else the top pros), the S+ champions, the pages. */
+const idleGroups = computed(() => {
+  const p = props.palette
+  const list: { section: Section; entries: Entry[] }[] = []
+  if (recent.value.length)
+    list.push({ section: 'recent', entries: recent.value.slice(0, 5).map(recentEntry) })
+  else if (p?.pros.length)
+    list.push({
+      section: 'pros',
+      entries: p.pros.slice(0, 5).map(
+        (pro): Entry => ({
+          gameName: pro.name,
+          tagLine: '',
+          direct: false,
+          kind: 'pro',
+          href: `/pro/${pro.slug}`,
+          title: pro.name,
+          detail: `${pro.team?.name ?? 'Free agent'}${pro.lp === null ? '' : `, ${pro.lp.toLocaleString('en-US')} LP`}`,
+          ...(pro.photo ? { photo: { slug: pro.slug, v: pro.photo } } : {}),
+        })
+      ),
+    })
+  if (p?.splus.length)
+    list.push({
+      section: 'splus',
+      entries: p.splus.slice(0, 5).map(
+        (c): Entry => ({
+          gameName: c.name,
+          tagLine: '',
+          direct: false,
+          kind: 'champion',
+          href: championHref(c.slug, c.position),
+          title: c.name,
+          champion: c.championId,
+          position: c.position,
+          winRate: c.winRate,
+        })
+      ),
+    })
+  if (p?.pages.length)
+    list.push({
+      section: 'pages',
+      entries: p.pages.map(
+        (page): Entry => ({
+          gameName: page.title,
+          tagLine: '',
+          direct: false,
+          href: page.href,
+          title: page.title,
+          detail: page.detail,
+          page: page.icon,
+        })
+      ),
+    })
+  return list
+})
+
+/** "Clear" in the palette: this browser forgets its lookups, the column shows the pros. */
+function clearRecent() {
+  forgetRecent()
+  recent.value = []
+  activeIndex.value = 0
+  input.value?.focus()
+}
+
+/** ← → in the palette's columns: the same row of the column beside, while nothing is typed. */
+function side(delta: number, event: KeyboardEvent) {
+  if (!idle.value || query.value) return
+  const g = offsets.value.findIndex(
+    (start, i) =>
+      activeIndex.value >= start && activeIndex.value < start + groups.value[i].entries.length
+  )
+  if (g < 0) return
+  event.preventDefault()
+  const next = (g + delta + groups.value.length) % groups.value.length
+  const row = Math.min(activeIndex.value - offsets.value[g], groups.value[next].entries.length - 1)
+  activeIndex.value = offsets.value[next] + row
+  warm(entries.value[activeIndex.value])
+}
+
+/** A row's second line. */
+function lineOf(entry: Entry) {
+  if (entry.multi) return `On ${regionLabel_.value}`
+  if (entry.page || (entry.kind && !entry.badge)) return entry.detail ?? ''
+  if (entry.kind === 'champion') return 'Build, runes and matchups'
+  if (entry.kind) return [entry.badge, entry.detail].filter(Boolean).join(', ')
+  if (entry.direct) return 'Open the profile'
+  const where = [entry.rank, entry.region].filter(Boolean).join(', ')
+  return `${entry.proName ? `Pro, ${entry.proName}, ` : ''}${where || (entry.level ? `Level ${entry.level}` : '')}`
+}
+
 /** Esports takes five rows at most: pros first, and teams keep two when both are found. */
 const MAX_ESPORTS = 5
 
 /** Everything selectable, grouped by section; `entries` flattens it so arrow keys have one index space. */
 const groups = computed(() => {
+  if (idle.value) return idleGroups.value
   const top: Entry[] = []
-  const bySection: Record<Section, Entry[]> = { champions: [], esports: [], summoners: [] }
+  const bySection: Record<'champions' | 'esports' | 'summoners', Entry[]> = {
+    champions: [],
+    esports: [],
+    summoners: [],
+  }
 
   if (
     inHeader.value &&
@@ -327,53 +520,7 @@ const groups = computed(() => {
     return [
       {
         section: 'recent' as Section,
-        entries: recent.value.slice(0, 5).map(
-          (r): Entry =>
-            r.champion
-              ? {
-                  gameName: r.gameName,
-                  tagLine: '',
-                  direct: false,
-                  kind: 'champion',
-                  href: recentHref(r),
-                  title: r.gameName,
-                  detail: 'Champion',
-                  champion: r.champion.id,
-                }
-              : r.pro
-                ? {
-                    gameName: r.gameName,
-                    tagLine: '',
-                    direct: false,
-                    kind: 'pro',
-                    href: recentHref(r),
-                    title: r.gameName,
-                    ...(r.pro.photo ? { photo: { slug: r.pro.slug, v: r.pro.photo } } : {}),
-                    badge: r.pro.staff ? 'Staff' : 'Pro',
-                  }
-                : r.team
-                  ? {
-                      gameName: r.gameName,
-                      tagLine: '',
-                      direct: false,
-                      kind: 'team',
-                      href: recentHref(r),
-                      title: r.gameName,
-                      detail: 'Team',
-                      team: { id: r.team.id, name: r.gameName, shortName: r.team.shortName },
-                    }
-                  : {
-                      gameName: r.gameName,
-                      tagLine: r.tagLine,
-                      direct: false,
-                      icon: r.profileIconId,
-                      region: r.platform ? regionLabel(r.platform) : undefined,
-                      level: r.level,
-                      rank: r.rank
-                        ? `${tierName(r.rank.tier)}${['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(r.rank.tier) ? '' : ` ${r.rank.division}`}`
-                        : undefined,
-                    }
-        ),
+        entries: recent.value.slice(0, 5).map(recentEntry),
       },
     ]
   }
@@ -391,7 +538,7 @@ const groups = computed(() => {
         kind: 'champion',
         href: `/champions/${championSlug(c.name)}`,
         title: c.name,
-        detail: 'Champion',
+        detail: 'Build, runes and matchups',
         champion: c.id,
       })
     }
@@ -446,7 +593,7 @@ const groups = computed(() => {
   }
 
   // A whole Riot ID typed is a player's: their section leads, so Enter opens them.
-  const order: Section[] = typedTarget.value
+  const order: Array<'champions' | 'esports' | 'summoners'> = typedTarget.value
     ? ['summoners', 'champions', 'esports']
     : ['champions', 'esports', 'summoners']
   const list: { section: Section | null; entries: Entry[] }[] = []
@@ -504,6 +651,7 @@ watch(query, (value) => {
     return
   }
 
+  isLoading.value = true
   debounce = setTimeout(() => search(trimmed), DEBOUNCE_MS)
 })
 
@@ -572,10 +720,23 @@ function href(entry: { gameName: string; tagLine: string }) {
   return `/${encodeURIComponent(`${entry.gameName}-${entry.tagLine}`)}`
 }
 
-/** ⌘K / Ctrl-K puts the caret here from anywhere on the page (the header's search has its own). */
+/**
+ * ⌘K / Ctrl-K puts the caret here from anywhere on the page (the header's search has its own);
+ * the home's palette takes `/` too, when nothing else is being typed in.
+ */
 function onHotkey(event: KeyboardEvent) {
   if (inHeader.value && !big.value) return
-  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+  const target = event.target as HTMLElement | null
+  const typingElsewhere =
+    target && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
+  const slash =
+    big.value &&
+    event.key === '/' &&
+    !typingElsewhere &&
+    !event.metaKey &&
+    !event.ctrlKey &&
+    !event.altKey
+  if (slash || ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k')) {
     event.preventDefault()
     input.value?.focus()
     input.value?.select()
@@ -744,9 +905,263 @@ function submit() {
 </script>
 
 <template>
+  <!-- The home's search (Facet): a palette, open from the start; typing turns it into the results. -->
+  <div v-if="big" class="pal" role="search" @keydown.esc.prevent="onEscape">
+    <div class="pal-f" :class="{ focus: focused }" @mousedown.self.prevent="input?.focus()">
+      <Icon name="search" :size="20" />
+      <div v-if="picked.length" ref="chips" class="hs-chips" :data-overflow="chipsOverflow">
+        <button
+          v-for="(player, index) in picked"
+          :key="`${player.gameName}#${player.tagLine}`"
+          type="button"
+          class="hs-chip"
+          :title="`Remove ${player.gameName}#${player.tagLine}`"
+          @mousedown.prevent="remove(index)"
+        >
+          <img :src="profileIcon(player.icon)" alt="" width="18" height="18" />
+          <Icon name="x" :size="11" />
+        </button>
+      </div>
+      <input
+        ref="input"
+        v-model="query"
+        type="text"
+        spellcheck="false"
+        autocomplete="off"
+        :placeholder="
+          picked.length
+            ? 'Add another player'
+            : narrow
+              ? (props.shortPlaceholder ?? 'Player, champion or pro')
+              : (props.placeholder ?? 'Player, champion, pro or page')
+        "
+        :autofocus="props.autofocus"
+        aria-label="Search a player, champion, pro or page"
+        aria-autocomplete="list"
+        :aria-controls="listId"
+        :aria-activedescendant="entries.length ? `${listId}-o${activeIndex}` : undefined"
+        @focus="focused = true"
+        @blur="focused = false"
+        @keydown.down.prevent="move(1)"
+        @keydown.up.prevent="move(-1)"
+        @keydown.left="side(-1, $event)"
+        @keydown.right="side(1, $event)"
+        @keydown.enter.prevent="submit"
+        @keydown.backspace="onBackspace"
+      />
+      <span v-if="isLoading" class="hs-spin" aria-hidden="true" />
+      <button
+        type="button"
+        class="rg"
+        :aria-label="`Region: ${regionLabel_}`"
+        :aria-expanded="regionOpen"
+        aria-haspopup="listbox"
+        @click="regionOpen = !regionOpen"
+      >
+        <img :src="regionFlag(region)" alt="" width="18" height="13" />{{ regionLabel_
+        }}<Icon name="chev" :size="12" />
+      </button>
+      <span class="kbd pal-k" aria-hidden="true">/</span>
+    </div>
+
+    <div
+      v-if="regionOpen"
+      class="hx-menu hs-reg panel reg pal-reg"
+      role="listbox"
+      aria-label="Region"
+    >
+      <a
+        v-for="r in MULTISEARCH_REGIONS"
+        :key="r"
+        href="#"
+        role="option"
+        :class="{ on: r === region }"
+        :aria-selected="r === region"
+        @click.prevent="setRegion(r)"
+        ><span class="row" style="gap: 10px"
+          ><img :src="regionFlag(r)" alt="" width="20" height="14" style="border-radius: 3px" />{{
+            r.toUpperCase()
+          }}</span
+        ><Icon v-if="r === region" name="check" :size="15"
+      /></a>
+    </div>
+
+    <div v-if="idle" :id="listId" ref="list" class="pal-b" role="listbox" aria-label="Suggestions">
+      <div
+        v-for="(group, g) in groups"
+        :key="group.section ?? 'top'"
+        class="pal-c"
+        :class="`pal-${group.section}`"
+        role="group"
+        :aria-labelledby="`${listId}-${group.section}`"
+      >
+        <span :id="`${listId}-${group.section}`" class="pal-l"
+          ><template v-if="group.section === 'splus'"
+            ><span class="tier sp">S+</span>on {{ palettePatch
+            }}<span class="end">Win rate</span></template
+          ><template v-else>{{ group.section ? HEADER_LABELS[group.section] : '' }}</template
+          ><button
+            v-if="group.section === 'recent'"
+            type="button"
+            class="pal-x end"
+            @mousedown.prevent
+            @click="clearRecent"
+          >
+            Clear
+          </button></span
+        >
+        <a
+          v-for="(entry, i) in group.entries"
+          :id="`${listId}-o${offsets[g] + i}`"
+          :key="`${group.section}-${entry.href ?? entry.gameName}-${i}`"
+          class="pal-r"
+          :class="{ act: offsets[g] + i === activeIndex }"
+          :href="entry.href ?? href(entry)"
+          role="option"
+          :data-index="offsets[g] + i"
+          :aria-selected="offsets[g] + i === activeIndex"
+          @mouseenter="highlight(offsets[g] + i, entry)"
+          @mousedown.prevent
+          @click.prevent="go(entry)"
+        >
+          <span v-if="entry.page" class="pi"><Icon :name="entry.page" :size="17" /></span>
+          <span v-else-if="entry.kind === 'champion' && entry.champion" class="av ch"
+            ><img :src="champIcon(entry.champion)" alt="" width="34" height="34" @load="shown"
+          /></span>
+          <span v-else-if="entry.kind === 'pro' && entry.photo" class="av pr"
+            ><ProPhoto :slug="entry.photo.slug" :photo="entry.photo.v" :width="34" :height="34"
+          /></span>
+          <span v-else-if="entry.kind" class="av ini">{{ entry.title?.slice(0, 2) }}</span>
+          <span v-else class="av"
+            ><img :src="profileIcon(entry.icon)" alt="" width="34" height="34" decoding="async"
+          /></span>
+          <span class="tx">
+            <b
+              >{{ entry.title ?? entry.gameName
+              }}<span v-if="!entry.kind && !entry.page" class="t4"> #{{ entry.tagLine }}</span></b
+            >
+            <span v-if="entry.position" class="hrl"
+              ><RoleIcon :lane="positionOf(entry.position).lane" :size="12" />{{
+                positionOf(entry.position).label
+              }}</span
+            >
+            <span v-else>{{ lineOf(entry) }}</span>
+          </span>
+          <span v-if="entry.winRate !== undefined" class="pal-v num"
+            >{{ (entry.winRate * 100).toFixed(1) }}<span class="u">%</span></span
+          >
+          <Icon v-if="entry.page" name="arrow" :size="14" class="go" />
+        </a>
+        <!-- A phone: the S+ champions as faces, the pages as chips. -->
+        <div v-if="group.section === 'splus'" class="pal-ics">
+          <a
+            v-for="entry in group.entries"
+            :key="`f-${entry.href}`"
+            :href="entry.href"
+            tabindex="-1"
+            @click.prevent="go(entry)"
+            ><span class="ic m"><img :src="champIcon(entry.champion!)" alt="" /></span
+            ><span>{{ entry.title }}</span
+            ><i class="num">{{ ((entry.winRate ?? 0) * 100).toFixed(1) }}%</i></a
+          >
+        </div>
+        <div v-if="group.section === 'pages'" class="pal-chips">
+          <a
+            v-for="entry in group.entries"
+            :key="`c-${entry.href}`"
+            :href="entry.href"
+            tabindex="-1"
+            @click.prevent="go(entry)"
+            ><Icon :name="entry.page!" :size="14" />{{ entry.title }}</a
+          >
+        </div>
+      </div>
+    </div>
+
+    <div v-else :id="listId" ref="list" class="pal-one" role="listbox" aria-label="Results">
+      <template v-for="(group, g) in groups" :key="group.section ?? 'top'">
+        <div v-if="group.section" class="pal-l">{{ HEADER_LABELS[group.section] }}</div>
+        <div
+          v-for="(entry, i) in group.entries"
+          :id="`${listId}-o${offsets[g] + i}`"
+          :key="`${entry.kind ?? 'player'}-${entry.gameName}-${entry.tagLine}-${i}`"
+          class="pal-r wide"
+          :class="{ act: offsets[g] + i === activeIndex }"
+          role="option"
+          :data-index="offsets[g] + i"
+          :aria-selected="offsets[g] + i === activeIndex"
+          @mouseenter="highlight(offsets[g] + i, entry)"
+          @mousedown.prevent="go(entry)"
+        >
+          <span v-if="entry.multi" class="pi"><Icon name="users" :size="17" /></span>
+          <span v-else-if="entry.kind === 'champion' && entry.champion" class="av ch"
+            ><img :src="champIcon(entry.champion)" alt="" width="34" height="34"
+          /></span>
+          <span v-else-if="entry.kind === 'pro' && entry.photo" class="av pr"
+            ><ProPhoto :slug="entry.photo.slug" :photo="entry.photo.v" :width="34" :height="34"
+          /></span>
+          <span v-else-if="entry.kind && entry.team" class="av tm"
+            ><TeamLogo :team="entry.team" :size="24"
+          /></span>
+          <span v-else-if="entry.kind" class="av ini">{{ entry.title?.slice(0, 2) }}</span>
+          <span v-else-if="!entry.direct" class="av"
+            ><img :src="profileIcon(entry.icon)" alt="" width="34" height="34" decoding="async"
+          /></span>
+          <span v-else class="pi"><Icon name="arrow" :size="17" /></span>
+          <span class="tx">
+            <b v-if="entry.multi">Search {{ entry.multi.length }} players together</b>
+            <b v-else-if="entry.kind"
+              >{{ marked(entry.title ?? '')[0] }}<mark>{{ marked(entry.title ?? '')[1] }}</mark
+              >{{ marked(entry.title ?? '')[2] }}</b
+            >
+            <b v-else
+              >{{ marked(entry.gameName)[0] }}<mark>{{ marked(entry.gameName)[1] }}</mark
+              >{{ marked(entry.gameName)[2] }} <span class="t4">#{{ entry.tagLine }}</span></b
+            >
+            <span>{{ lineOf(entry) }}</span>
+          </span>
+          <span v-if="entry.kind === 'champion' && entry.href" class="acts">
+            <a :href="championPath(entry)" @mousedown.prevent.stop="go(entry)">Build</a>
+            <a
+              :href="championPath(entry, 'matchups')"
+              @mousedown.prevent.stop="go({ ...entry, href: championPath(entry, 'matchups') })"
+              >Matchups</a
+            >
+          </span>
+          <button
+            v-if="canAdd(entry)"
+            type="button"
+            class="acts-add"
+            aria-label="Add to the lobby"
+            title="Add to the lobby"
+            @mousedown.prevent.stop="add(entry)"
+          >
+            <Icon name="plus" :size="13" />
+          </button>
+        </div>
+      </template>
+      <p v-if="!entries.length" class="pal-none">
+        <template v-if="isLoading">Searching…</template>
+        <template v-else>Nothing found for “{{ typing.trim() }}”.</template>
+      </p>
+    </div>
+
+    <div class="pal-ft" aria-hidden="true">
+      <span><span class="kbd">↑</span><span class="kbd">↓</span>move</span>
+      <span><span class="kbd">Enter</span>open</span>
+      <span class="pal-ft-k"
+        ><span class="kbd">/</span><span class="kbd">{{ hotkey }}</span
+        >search from anywhere</span
+      >
+      <span class="end num">{{
+        idle ? (props.palette?.note ?? '') : `Searching ${regionLabel_} first`
+      }}</span>
+    </div>
+  </div>
+
   <!-- The header's search (Facet): the field in the bar, its results a panel under it. -->
   <div
-    v-if="inHeader"
+    v-else-if="inHeader"
     class="hs"
     :class="{ 'hs-big': big }"
     role="search"
@@ -769,7 +1184,7 @@ function submit() {
           regionLabel_
         }}<Icon name="chev" :size="13" />
       </button>
-      <Glyph :h="22" class="gl" />
+      <Icon name="search" :size="17" class="gl" />
       <div v-if="picked.length" ref="chips" class="hs-chips" :data-overflow="chipsOverflow">
         <button
           v-for="(player, index) in picked"

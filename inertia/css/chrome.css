@@ -177,6 +177,10 @@
 .vb .hx-end .hx-me {
   margin-left: 0;
 }
+/* No search in the bar (the home, where the page is the search): the end keeps to the right. */
+.vb .hx-end.alone {
+  margin-left: auto;
+}
 .vb .hx-me .av {
   display: grid;
   place-items: center;
@@ -295,6 +299,15 @@
   width: 100%;
   margin-left: 0;
   cursor: text;
+}
+/* A plain lens at the start of the field (no logo in a search). */
+.vb .gsearch .gl {
+  width: 17px;
+  height: 17px;
+  color: var(--t3);
+}
+.vb .gsearch.focus .gl {
+  color: var(--v300);
 }
 .vb .hs {
   position: relative;

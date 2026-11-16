@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, reactive } from 'vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import { RoleIcon } from '@invadelol/ui'
 import SiteLayout from '../components/SiteLayout.vue'
-import SearchBar from '../components/SearchBar.vue'
+import SearchBar, { type PaletteIdle } from '../components/SearchBar.vue'
 import DownloadApp from '../components/DownloadApp.vue'
-import HomeRecent from '../components/home/HomeRecent.vue'
 import ProPhoto from '../components/champions/ProPhoto.vue'
 import MatchTime from '../components/pros/MatchTime.vue'
 import Glyph from '../components/ui/Glyph.vue'
@@ -15,123 +14,273 @@ import Frame from '../components/ui/Frame.vue'
 import SectionHead from '../components/ui/SectionHead.vue'
 import CardHead from '../components/ui/CardHead.vue'
 import { championHref, positionOf } from '../components/header/sections.js'
-import { isLive, matchList, teamLabel, teamName, type ProMatch } from '../lib/pro_matches.js'
+import { champIcon } from '../lib/assets.js'
+import { headlineGame, homeCards, patchMoves } from '../lib/home_cards.js'
+import {
+  isLive,
+  matchList,
+  matchOrNull,
+  stageOf,
+  teamName,
+  type ProMatch,
+} from '../lib/pro_matches.js'
 import { patchName } from '../lib/patch.js'
+import { patchPath } from '../lib/site_nav.js'
+import { DISCORD_URL, X_URL } from '../lib/links.js'
 import type { HomePage } from '../lib/home.js'
 import '../css/home-facet.css'
 
 /**
- * `/`: the search with the profiles this browser opened last, the pro game of the moment, then
- * what invade.lol reads from its own games (the best pick of each role, the pros' ladder, the
- * patch's bans) and the desktop app. A block is left out when its data could not be read; the
- * search always stands.
+ * `/`: the search at the centre, already open as a palette (the recent lookups, the patch's S+
+ * champions, the main pages), three live cards under it (the pro game, where the patch moved
+ * champions, a lane figure), then what invade.lol reads from its own games (the best pick of each
+ * role, the pros' ladder, the patch's bans), the desktop app, Discord and X. A block is left out
+ * when its data could not be read; the search always stands.
  */
 const props = defineProps<HomePage>()
 const page = usePage()
 
-const patch = computed(() => {
-  const version = props.picks?.patch ?? (page.props as { patch?: string | null }).patch
-  return version ? patchName(version) : null
-})
+const version = computed(
+  () => props.picks?.patch ?? (page.props as { patch?: string | null }).patch ?? null
+)
+const patch = computed(() => (version.value ? patchName(version.value) : null))
 
 const picks = computed(() => props.picks?.best ?? [])
 const bans = computed(() => (props.picks?.bans ?? []).slice(0, 5))
 const topBan = computed(() => bans.value[0]?.banRate || 1)
 const pros = computed(() => (props.pros ?? []).slice(0, 5))
+const notes = computed(() => props.patchNotes ?? null)
 
-/** The pro game of the moment: the one being played, else the next one. */
-const game = computed<ProMatch | null>(() => {
-  const games = matchList(props.games)
-  return games.find((g) => isLive(g)) ?? games[0] ?? null
+/* ── The palette ─────────────────────────────────────────────────── */
+
+const games = computed(() => props.picks?.brackets?.[0]?.games ?? null)
+const palette = computed<PaletteIdle>(() => ({
+  splus: props.picks?.splus ?? [],
+  pros: pros.value,
+  patch: patch.value,
+  note:
+    games.value && patch.value
+      ? `${games.value.toLocaleString('en-US')} games on ${patch.value}, Emerald+`
+      : null,
+  pages: [
+    {
+      icon: 'list',
+      title: 'Tier list',
+      detail: 'Champions, items, runes, duos, ARAM',
+      href: '/tier-list',
+    },
+    {
+      icon: 'trophy',
+      title: 'Leaderboards',
+      detail: 'Solo/Duo, flex, one-tricks, pros',
+      href: '/leaderboards/solo',
+    },
+    { icon: 'globe', title: 'Esports', detail: 'Matches, leagues, teams', href: '/esports' },
+    ...(version.value
+      ? [
+          {
+            icon: 'news' as const,
+            title: `Patch notes ${patch.value}`,
+            detail: notes.value
+              ? `${notes.value.buffs} buffs, ${notes.value.nerfs} nerfs`
+              : 'What changed in the patch',
+            href: patchPath(version.value),
+          },
+        ]
+      : []),
+    { icon: 'download', title: 'Desktop app', detail: 'Windows and macOS', href: '/app' },
+  ],
+}))
+
+/* ── The three cards ─────────────────────────────────────────────── */
+
+const game = computed<ProMatch | null>(() =>
+  headlineGame(matchList(props.games), matchOrNull(props.result))
+)
+const cards = computed(() =>
+  homeCards({
+    game: game.value,
+    moves: patchMoves(props.picks?.moves, notes.value?.changes),
+    previousPatch: props.picks?.moves?.previousPatch ?? null,
+    lanes: props.lanes,
+  })
+)
+
+const live = (m: ProMatch) => isLive(m)
+const finished = (m: ProMatch) => m.status === 'finished'
+const stage = (m: ProMatch) => {
+  const s = stageOf(m)
+  return s ? s.charAt(0) + s.slice(1).toLowerCase() : null
+}
+const bestOf = (m: ProMatch) =>
+  m.bestOf && m.bestOf > 1
+    ? `Best of ${['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven'][m.bestOf] ?? m.bestOf}`
+    : 'Best of one'
+const winner = (m: ProMatch) => (m.winner ? teamName(m.teams[m.winner - 1]) : null)
+const gameNow = (m: ProMatch) => (m.teams[0].score ?? 0) + (m.teams[1].score ?? 0) + 1
+const teamLogo = (t: ProMatch['teams'][number]) => (t.id ? `/cdn/team/${t.id}?s=96` : null)
+/** A team whose logo did not load shows its code instead (also when it failed before hydration). */
+const noLogo = reactive(new Set<number>())
+onMounted(() => {
+  for (const img of document.querySelectorAll<HTMLImageElement>('.lc.pro .tm img[data-side]'))
+    if (img.complete && img.naturalWidth === 0) noLogo.add(Number(img.dataset.side))
 })
-const live = computed(() => (game.value ? isLive(game.value) : false))
-const gameTitle = computed(() => {
-  const m = game.value
-  if (!m) return ''
-  const event = m.league?.name ?? m.tournament ?? 'Pro game'
-  return m.name && !m.name.includes(' vs ') ? `${event}, ${m.name.toLowerCase()}` : event
-})
-const gameLine = computed(() => {
-  const m = game.value
-  if (!m) return ''
-  const of = m.bestOf && m.bestOf > 1 ? `Best of ${m.bestOf}` : 'Best of one'
-  if (!live.value) return of
-  const played = (m.teams[0].score ?? 0) + (m.teams[1].score ?? 0)
-  return m.bestOf && m.bestOf > 1 ? `${of}, game ${played + 1} live` : `${of}, live`
-})
-const teamLogo = (t: ProMatch['teams'][number]) => (t.id ? `/cdn/team/${t.id}?s=48` : null)
+const lost = (m: ProMatch, side: 0 | 1) => finished(m) && m.winner !== null && m.winner !== side + 1
+
+/* ── Figures ─────────────────────────────────────────────────────── */
 
 const pct1 = (x: number) => (x * 100).toFixed(1)
 const lp = (n: number | null) => (n === null ? '' : n.toLocaleString('en-US'))
 const initials = (name: string) => name.slice(0, 2)
 const moved = (lpChange: number) => `${lpChange > 0 ? '+' : '−'}${Math.abs(lpChange)} LP today`
 const thousands = (n: number) => n.toLocaleString('en-US')
+/** The stream opens beside the page (the card itself leads to the esports page). */
+const watch = (url: string) => window.open(url, '_blank', 'noopener')
+const topBully = (rows: { value: number }[]) => rows[0]?.value || 1
 </script>
 
 <template>
   <Head title="Find a player" />
   <SiteLayout :search="false">
     <div class="wrap">
-      <section class="hm-hero">
-        <h1 class="d1">Look up a player</h1>
-        <p class="body hm-sub">Rank, match history and a score out of 100 for every game</p>
-        <SearchBar variant="header" size="lg" autofocus placeholder="Riot ID, champion or pro" />
-        <HomeRecent />
+      <section class="hp" aria-labelledby="hp-title">
+        <Link v-if="patch && version" class="hp-pill" :href="patchPath(version)" prefetch
+          ><i class="dot" /><b>Patch {{ patch }}</b
+          ><span v-if="notes">{{ notes.buffs }} buffs, {{ notes.nerfs }} nerfs</span
+          ><Icon name="chevr" :size="13"
+        /></Link>
+        <h1 id="hp-title" class="d1 hp-t">Look up a player</h1>
+        <SearchBar variant="header" size="lg" :palette="palette" />
+
+        <div v-if="cards.length" class="hc3" :class="`n${cards.length}`">
+          <template v-for="card in cards" :key="card.key">
+            <!-- The pro game of the moment: live, next, or the last result. -->
+            <Link v-if="card.key === 'game'" class="lc pro" href="/esports" prefetch>
+              <span class="lc-h"
+                ><img
+                  v-if="card.game.league"
+                  class="lg"
+                  :src="`/cdn/league/${card.game.league.slug}`"
+                  alt=""
+                  width="22"
+                  height="22"
+                /><b class="ell">{{
+                  card.game.league?.name ?? card.game.tournament ?? 'Pro game'
+                }}</b
+                ><span v-if="live(card.game)" class="live lc-m">Live</span
+                ><span v-else-if="stage(card.game)" class="lc-m">{{ stage(card.game) }}</span></span
+              >
+              <span class="lc-g">
+                <span
+                  v-for="side in [0, 1] as const"
+                  :key="side"
+                  class="tm"
+                  :class="{ w: !lost(card.game, side), [`s${side}`]: true }"
+                  ><img
+                    v-if="teamLogo(card.game.teams[side]) && !noLogo.has(side)"
+                    :src="teamLogo(card.game.teams[side])!"
+                    alt=""
+                    width="68"
+                    height="68"
+                    :data-side="side"
+                    @error="noLogo.add(side)"
+                  /><span v-else class="tm-ini">{{
+                    (card.game.teams[side].code ?? teamName(card.game.teams[side])).slice(0, 3)
+                  }}</span
+                  ><b>{{ card.game.teams[side].code ?? teamName(card.game.teams[side]) }}</b></span
+                >
+                <span class="sc">
+                  <span v-if="live(card.game) || finished(card.game)" class="fg-xl num"
+                    ><b :class="{ lo: lost(card.game, 0) }">{{ card.game.teams[0].score ?? 0 }}</b
+                    ><i /><b :class="{ lo: lost(card.game, 1) }">{{
+                      card.game.teams[1].score ?? 0
+                    }}</b></span
+                  >
+                  <span v-else class="fg-l vs">vs</span>
+                  <span class="meta"
+                    ><template v-if="live(card.game)">Game {{ gameNow(card.game) }}, live</template
+                    ><MatchTime v-else :at="card.game.at"
+                  /></span>
+                </span>
+              </span>
+              <span class="lc-f"
+                ><span class="meta ell"
+                  >{{ bestOf(card.game)
+                  }}<template v-if="finished(card.game) && winner(card.game)"
+                    >, {{ winner(card.game) }} win</template
+                  ></span
+                ><button
+                  v-if="live(card.game) && card.game.stream"
+                  type="button"
+                  class="btn sm pri"
+                  @click.prevent.stop="watch(card.game.stream)"
+                >
+                  <Icon name="play" :size="15" />Watch</button
+                ><span v-else class="more">Esports<Icon name="chevr" :size="14" /></span
+              ></span>
+            </Link>
+
+            <!-- Where the patch moved champions in their role. -->
+            <Link
+              v-else-if="card.key === 'moves'"
+              class="lc"
+              :href="version ? patchPath(version) : '/tier-list'"
+              prefetch
+            >
+              <span class="lc-h"
+                ><Icon name="news" :size="16" /><b>Where {{ patch }} moved them</b
+                ><span class="lc-m"
+                  ><span class="lc-long">Rank in role since</span
+                  ><span class="lc-short">Since</span> {{ patchName(card.previousPatch) }}</span
+                ></span
+              >
+              <span v-for="m in card.rows" :key="`${m.championId}-${m.position}`" class="lc-r">
+                <span class="ic s"><img :src="champIcon(m.championId)" alt="" /></span>
+                <span class="tx"
+                  ><b>{{ m.name }}</b
+                  ><span class="hrl">{{ positionOf(m.position).label }}</span></span
+                >
+                <span v-if="m.kind === 'up' || m.kind === 'down'" class="pt" :class="m.kind"
+                  ><Icon :name="m.kind" :size="11" />{{
+                    m.kind === 'up' ? 'Buffed' : 'Nerfed'
+                  }}</span
+                >
+                <span v-else-if="m.kind" class="pt mix">Adjusted</span>
+                <span class="mv num" :class="{ up: m.to < m.from }"
+                  ><span>#{{ m.from }}</span
+                  ><Icon name="arrow" :size="12" /><b>#{{ m.to }}</b></span
+                >
+              </span>
+            </Link>
+
+            <!-- A lane figure from the patch's games. -->
+            <Link v-else class="lc bully" href="/stats" prefetch>
+              <span class="lc-h"
+                ><Icon :name="card.key === 'bullies' ? 'swords' : 'flame'" :size="16" /><b>{{
+                  card.key === 'bullies' ? 'Lane bullies' : 'First bloods'
+                }}</b
+                ><span class="lc-m">{{
+                  card.key === 'bullies' ? 'Gold ahead at 10 min' : 'Share of games'
+                }}</span></span
+              >
+              <span v-for="r in card.rows" :key="`${r.championId}-${r.position}`" class="lc-r">
+                <span class="ic s"><img :src="champIcon(r.championId)" alt="" /></span>
+                <span class="tx"
+                  ><b>{{ r.name }}</b
+                  ><span class="hrl">{{ positionOf(r.position).label }}</span></span
+                >
+                <span v-if="card.key === 'bullies'" class="gv num"
+                  >+{{ Math.round(r.value) }}<span class="u">gold</span></span
+                >
+                <span v-else class="gv num">{{ pct1(r.value) }}<span class="u">%</span></span>
+                <i class="gb" :style="{ '--w': (r.value / topBully(card.rows)).toFixed(3) }" />
+              </span>
+            </Link>
+          </template>
+        </div>
       </section>
 
-      <section v-if="game" class="card lvrow" aria-label="Pro game">
-        <span class="lg5">
-          <img
-            v-if="game.league"
-            :src="`/cdn/league/${game.league.slug}`"
-            :alt="game.league.name"
-            width="36"
-            height="36"
-          />
-          <span class="col">
-            <span class="h4">{{ gameTitle }}</span>
-            <span class="meta">{{ gameLine }}</span>
-          </span>
-        </span>
-        <span class="tmx2 a"
-          >{{ teamName(game.teams[0])
-          }}<img
-            v-if="teamLogo(game.teams[0])"
-            :src="teamLogo(game.teams[0])!"
-            :alt="teamLabel(game.teams[0])"
-            width="44"
-            height="44"
-        /></span>
-        <span class="mid3">
-          <template v-if="live || game.status === 'finished'">
-            <span class="fg-l num"
-              >{{ game.teams[0].score ?? 0 }} – {{ game.teams[1].score ?? 0 }}</span
-            ><br />
-            <span v-if="live" class="live hm-live">Live</span>
-          </template>
-          <template v-else>
-            <span class="fg-m">vs</span><br />
-            <span class="meta"><MatchTime :at="game.at" /></span>
-          </template>
-        </span>
-        <span class="tmx2"
-          ><img
-            v-if="teamLogo(game.teams[1])"
-            :src="teamLogo(game.teams[1])!"
-            :alt="teamLabel(game.teams[1])"
-            width="44"
-            height="44"
-          />{{ teamName(game.teams[1]) }}</span
-        >
-        <span class="row hm-acts">
-          <Link class="btn" href="/esports" prefetch>Rosters</Link>
-          <a v-if="game.stream" class="btn pri" :href="game.stream" target="_blank" rel="noreferrer"
-            ><Icon name="play" :size="16" />Watch</a
-          >
-        </span>
-      </section>
-
-      <section v-if="picks.length" class="sec" aria-labelledby="hm-picks">
+      <section v-if="picks.length" class="sec hm-s" aria-labelledby="hm-picks">
         <SectionHead
           id="hm-picks"
           title="Best picks"
@@ -152,7 +301,6 @@ const thousands = (n: number) => n.toLocaleString('en-US')
               :alt="p.name"
               size="l"
               position="50% 18%"
-              eager
             />
             <span class="rl2"
               ><RoleIcon :lane="positionOf(p.position).lane" :size="15" />{{
@@ -188,7 +336,7 @@ const thousands = (n: number) => n.toLocaleString('en-US')
             <span v-else class="fr s hm-pro hm-ini">{{ initials(p.name) }}</span>
             <span class="col grow"
               ><span class="h4 ell">{{ p.name }}</span
-              ><span v-if="p.team" class="meta ell">{{ p.team.name }}</span></span
+              ><span class="meta ell">{{ p.team?.name ?? 'Free agent' }}</span></span
             >
             <span v-if="p.movement && p.movement.lp" class="stat2 num">{{
               moved(p.movement.lp)
@@ -205,38 +353,33 @@ const thousands = (n: number) => n.toLocaleString('en-US')
             :more="{ label: 'Stats', href: '/stats' }"
           />
           <Link
-            v-for="b in bans"
+            v-for="(b, i) in bans"
             :key="b.championId"
-            class="lrow"
+            class="bn"
             :href="championHref(b.slug, b.position)"
             prefetch
           >
-            <Frame
-              :src="`/cdn/centered/${b.championId}.jpg`"
-              :alt="b.name"
-              size="s"
-              class="ban-pic"
-              position="50% 25%"
-            />
-            <span class="col grow"
-              ><span class="h4">{{ b.name }}</span
-              ><span class="meta"
-                >{{ positionOf(b.position).label
+            <span class="bn-n num">{{ i + 1 }}</span>
+            <span class="ic m"><img :src="champIcon(b.championId)" :alt="b.name" /></span>
+            <span class="col grow bn-t"
+              ><b class="h4">{{ b.name }}</b
+              ><span class="meta bn-m"
+                ><RoleIcon :lane="positionOf(b.position).lane" :size="13" />{{
+                  positionOf(b.position).label
                 }}<template v-if="b.winRate !== undefined"
                   >, wins {{ pct1(b.winRate) }}%</template
                 ></span
               ></span
             >
-            <span class="col hm-ban"
-              ><span class="fg-xs num">{{ pct1(b.banRate) }}<span class="u">%</span></span
-              ><span class="bar"
-                ><i :style="{ width: `${Math.round((b.banRate / topBan) * 98)}%` }" /></span
-            ></span>
+            <span class="fg-xs num bn-v">{{ pct1(b.banRate) }}<span class="u">%</span></span>
+            <i class="bn-l"
+              ><i :style="{ width: `${((b.banRate / topBan) * 100).toFixed(1)}%` }"
+            /></i>
           </Link>
         </div>
       </section>
 
-      <section class="sec hm-last" aria-labelledby="hm-app">
+      <section class="sec" aria-labelledby="hm-app">
         <div class="promo">
           <div class="hm-promo">
             <Glyph :h="44" />
@@ -246,12 +389,7 @@ const thousands = (n: number) => n.toLocaleString('en-US')
               games out of 100.
             </p>
             <DownloadApp track="home" />
-            <p class="meta hm-free">
-              Free.<template v-if="discord">
-                {{ thousands(discord.members) }} players on the Discord,
-                {{ thousands(discord.online) }} online now.</template
-              >
-            </p>
+            <p class="meta hm-free">Free, no account needed.</p>
           </div>
           <span class="fr l shot"
             ><img
@@ -263,6 +401,53 @@ const thousands = (n: number) => n.toLocaleString('en-US')
               decoding="async"
           /></span>
         </div>
+      </section>
+
+      <section class="sec cm hm-last" aria-label="Invade on Discord and X">
+        <a
+          class="cm-d"
+          :href="DISCORD_URL"
+          target="_blank"
+          rel="noreferrer"
+          data-track="home_discord"
+        >
+          <span class="cm-h"
+            ><span class="cm-ico"><Icon name="discord" :size="24" /></span
+            ><span class="col cm-n"
+              ><b class="h2">Invade on Discord</b
+              ><span class="meta">Bugs, ideas and games with other players</span></span
+            ><span class="btn cm-b">Join<Icon name="external" :size="15" /></span
+          ></span>
+          <span v-if="discord" class="cm-s"
+            ><span
+              ><b class="fg-m num">{{ thousands(discord.members) }}</b
+              >members</span
+            ><span
+              ><b class="fg-m num"><i class="dot" />{{ thousands(discord.online) }}</b
+              >online now</span
+            ></span
+          >
+          <span class="cm-l"
+            ><span class="lab">Channels in</span>English, Français, Español, Português</span
+          >
+        </a>
+        <a class="cm-x" :href="X_URL" target="_blank" rel="noreferrer" data-track="home_x">
+          <span class="cm-h"
+            ><span class="cm-ico x"
+              ><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  fill="currentColor"
+                  d="M17.75 3h3.07l-6.7 7.66L22 21h-6.17l-4.83-6.32L5.47 21H2.4l7.17-8.2L2 3h6.33l4.37 5.77L17.75 3Zm-1.08 16.17h1.7L7.4 4.74H5.58l11.09 14.43Z"
+                /></svg></span
+            ><span class="col cm-n"
+              ><b class="h2">@invadedotlol</b><span class="meta">On X</span></span
+            ><span class="btn cm-b">Follow<Icon name="external" :size="15" /></span
+          ></span>
+          <span class="cm-xp"
+            >Patch day numbers, stat posters from our games, and each new version of the app.</span
+          >
+          <span class="cm-l"><span class="lab">Posts in</span>English</span>
+        </a>
       </section>
     </div>
   </SiteLayout>
