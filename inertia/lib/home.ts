@@ -215,4 +215,16 @@ export interface SiteNav {
   live?: ProMatch | null
   /** Team ids the menus' pictures draw logos of (`/cdn/team/<id>`), by team slug. */
   art?: { teams: Record<string, string> }
+  /** The patches the site has notes for, newest first: the Patch pill's menu. */
+  patchNotes?: NavPatchNotes[]
+}
+
+/** A patch's notes as the Patch pill's menu lists them. */
+export interface NavPatchNotes {
+  /** As players name it: "26.22". */
+  patch: string
+  /** When Riot published the notes (yyyy-mm-dd). */
+  published: string
+  champions: number
+  items: number
 }
