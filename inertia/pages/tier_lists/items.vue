@@ -9,6 +9,8 @@ import Icon from '../../components/ui/Icon.vue'
 import TierChip from '../../components/ui/TierChip.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import Skeleton from '../../components/ui/Skeleton.vue'
+import SortHead from '../../components/ui/SortHead.vue'
+import { useSort } from '../../components/ui/sort.js'
 import StatFilters from '../../components/champions/StatFilters.vue'
 import RoleSeg from '../../components/champions/RoleSeg.vue'
 import ClassSeg from '../../components/champions/ClassSeg.vue'
@@ -159,13 +161,25 @@ const shown = computed(() => {
 })
 const FIRST = 20
 const all = ref(false)
+const sort = useSort(shown, {
+  name: (r) => nameOf(r.item),
+  win: (r) => r.win,
+  pick: (r) => r.pick,
+  games: (r) => r.games,
+  by: (r) => r.championCount,
+  since: (r) => r.delta,
+}, { first: { name: 'asc' } })
 const groups = computed(() => {
+  if (sort.key) {
+    const rows = all.value ? sort.rows : sort.rows.slice(0, FIRST)
+    return [{ t: null as number | null, label: '', total: sort.rows.length, rows }]
+  }
   let left = all.value ? Infinity : FIRST
   return TIERS.map((label, t) => {
     const list = shown.value.filter((r) => r.tier === t)
     const rows = list.slice(0, Math.max(0, left))
     left -= rows.length
-    return { t, label, total: list.length, rows }
+    return { t: t as number | null, label, total: list.length, rows }
   }).filter((g) => g.rows.length > 0)
 })
 const hidden = computed(() => Math.max(0, shown.value.length - (all.value ? Infinity : FIRST)))
@@ -275,12 +289,21 @@ const toggle = (item: number) => (open.value = open.value === item ? null : item
           <section class="sec" style="padding-top: 24px">
             <article class="card" style="overflow: hidden">
               <div class="tx-head ti-head">
-                <span>Item</span><span>Win rate</span><span>Pick rate</span><span class="r">Games</span
-                ><span>Built most by</span><span>Slot</span
-                ><span>{{ ready.previousPatch ? `Since ${patchName(ready.previousPatch)}` : 'Since' }}</span>
+                <SortHead :sorter="sort" col="name" label="Item" />
+                <SortHead :sorter="sort" col="win" label="Win rate" />
+                <SortHead :sorter="sort" col="pick" label="Pick rate" />
+                <SortHead :sorter="sort" col="games" label="Games" class="r" />
+                <SortHead :sorter="sort" col="by" label="Built most by" title="How many champions build it" />
+                <span>Slot</span>
+                <SortHead
+                  :sorter="sort"
+                  col="since"
+                  :label="ready.previousPatch ? `Since ${patchName(ready.previousPatch)}` : 'Since'"
+                  title="Win rate change since the patch before"
+                />
               </div>
-              <template v-for="g in groups" :key="g.t">
-                <div class="tx-grp">
+              <template v-for="g in groups" :key="g.t ?? 'sorted'">
+                <div v-if="g.t !== null" class="tx-grp">
                   <TierChip :tier="g.t" large />
                   <span class="h4">{{ g.label }} tier</span>
                   <span class="meta">{{ groupMeta(g) }}</span>
@@ -296,6 +319,7 @@ const toggle = (item: number) => (open.value = open.value === item ? null : item
                     @keydown.enter="toggle(r.item)"
                   >
                     <div class="tx-name">
+                      <TierChip v-if="g.t === null" :tier="r.tier" class="tx-tc" />
                       <span class="fr s tx-ic"><img :src="itemUrl(r.item)" alt="" loading="lazy" /></span>
                       <div class="col">
                         <span class="h4 ell">{{ nameOf(r.item) }}</span>

@@ -9,6 +9,8 @@ import Icon from '../../components/ui/Icon.vue'
 import TierChip from '../../components/ui/TierChip.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import Skeleton from '../../components/ui/Skeleton.vue'
+import SortHead from '../../components/ui/SortHead.vue'
+import { useSort } from '../../components/ui/sort.js'
 import StatFilters from '../../components/champions/StatFilters.vue'
 import RoleSeg from '../../components/champions/RoleSeg.vue'
 import MovedCard, { type Moved } from '../../components/champions/MovedCard.vue'
@@ -125,12 +127,20 @@ const moved = computed(() => {
 
 /* ── Table ──────────────────────────────────────────────────── */
 const shown = computed(() => (ready.value?.rows ?? []).filter((r) => matches(name(r.keystone))))
-const groups = computed(() =>
-  TIERS.map((label, t) => {
+const sort = useSort(shown, {
+  name: (r) => name(r.keystone),
+  win: (r) => r.win,
+  pick: (r) => r.pick,
+  on: (r) => r.mainOf,
+  since: (r) => r.delta,
+}, { first: { name: 'asc' } })
+const groups = computed(() => {
+  if (sort.key) return [{ t: null as number | null, label: '', rows: sort.rows }]
+  return TIERS.map((label, t) => {
     const rows = shown.value.filter((r) => r.tier === t).sort((a, b) => b.win - a.win)
-    return { t, label, rows }
+    return { t: t as number | null, label, rows }
   }).filter((g) => g.rows.length)
-)
+})
 const winScale = computed(() => {
   const w = shown.value.map((r) => r.win)
   return { lo: Math.min(0.475, ...w) - 0.005, hi: Math.max(0.525, ...w) }
@@ -146,6 +156,14 @@ const changes = (main: Page, other: Page) => {
   return diff.length ? diff.join(', ') : `Same ${name(main.primaryStyle)} runes`
 }
 const pages = computed(() => (ready.value?.pages ?? []).filter((p) => matches(name(p.keystone))))
+const pageKey = (p: { page: Page }) =>
+  [p.page.primaryStyle, p.page.keystone, ...p.page.primary, p.page.secondaryStyle, ...p.page.secondary, ...p.page.shards].join('.')
+const pageSort = useSort(pages, {
+  games: (p) => p.games,
+  win: (p) => p.win,
+  pick: (p) => p.share,
+})
+const pageMax = computed(() => Math.max(0, ...pages.value.map((p) => p.share)) || 1)
 </script>
 
 <template>
@@ -233,11 +251,20 @@ const pages = computed(() => (ready.value?.pages ?? []).filter((p) => matches(na
           <section class="sec" style="padding-top: 24px">
             <article v-if="view === 'keystones'" class="card" style="overflow: hidden">
               <div class="tx-head ru-head">
-                <span>Keystone</span><span>Win rate</span><span>Pick rate</span><span>Played on</span><span>Paired with</span
-                ><span>{{ ready.previousPatch ? `Since ${patchName(ready.previousPatch)}` : 'Since' }}</span>
+                <SortHead :sorter="sort" col="name" label="Keystone" />
+                <SortHead :sorter="sort" col="win" label="Win rate" />
+                <SortHead :sorter="sort" col="pick" label="Pick rate" />
+                <SortHead :sorter="sort" col="on" label="Played on" title="Champions who run it as their main rune" />
+                <span>Paired with</span>
+                <SortHead
+                  :sorter="sort"
+                  col="since"
+                  :label="ready.previousPatch ? `Since ${patchName(ready.previousPatch)}` : 'Since'"
+                  title="Win rate change since the patch before"
+                />
               </div>
-              <template v-for="g in groups" :key="g.t">
-                <div class="tx-grp">
+              <template v-for="g in groups" :key="g.t ?? 'sorted'">
+                <div v-if="g.t !== null" class="tx-grp">
                   <TierChip :tier="g.t" large />
                   <span class="h4">{{ g.label }} tier</span>
                   <span class="meta">{{ g.rows.length }} keystone{{ g.rows.length === 1 ? '' : 's' }}</span>
@@ -253,6 +280,7 @@ const pages = computed(() => (ready.value?.pages ?? []).filter((p) => matches(na
                     @keydown.enter="toggle(r.keystone)"
                   >
                     <div class="tx-name">
+                      <TierChip v-if="g.t === null" :tier="r.tier" class="tx-tc" />
                       <span class="tx-ks"><img :src="perkUrl(r.keystone)" alt="" loading="lazy" /></span>
                       <div class="col">
                         <span class="h4 ell">{{ name(r.keystone) }}</span>
@@ -340,9 +368,12 @@ const pages = computed(() => (ready.value?.pages ?? []).filter((p) => matches(na
             </article>
             <article v-else class="card" style="overflow: hidden">
               <div class="tx-head ru-pg-head">
-                <span>Full page</span><span class="r">Games</span><span>Win rate</span><span>Pick rate</span>
+                <span>Full page</span>
+                <SortHead :sorter="pageSort" col="games" label="Games" class="r" />
+                <SortHead :sorter="pageSort" col="win" label="Win rate" />
+                <SortHead :sorter="pageSort" col="pick" label="Pick rate" />
               </div>
-              <div v-for="(p, i) in pages" :key="i" class="tx-row ru-pg-row">
+              <div v-for="p in pageSort.rows" :key="pageKey(p)" class="tx-row ru-pg-row">
                 <div class="ru-page">
                   <span class="ru-pt"
                     ><img class="tr0" :src="styleUrl(p.page.primaryStyle)" alt="" /><img class="ks" :src="perkUrl(p.keystone)" alt="" /><img
@@ -358,7 +389,7 @@ const pages = computed(() => (ready.value?.pages ?? []).filter((p) => matches(na
                 </div>
                 <span class="fg-xs t2 r">{{ thousands(p.games) }}</span>
                 <Fig :value="p1(p.win)" :width="barWidth(p.win, winScale.lo, winScale.hi)" big mid />
-                <Fig :value="p1(p.share)" :width="barWidth(p.share, 0, pages[0]?.share || 1)" />
+                <Fig :value="p1(p.share)" :width="barWidth(p.share, 0, pageMax)" />
               </div>
               <div class="tx-foot">
                 <span class="meta">The {{ pages.length }} most played full pages{{ role ? ` in ${role.label.toLowerCase()}` : '' }}, each counted with every champion who runs it.</span>
