@@ -370,7 +370,7 @@ function skip(event: MouseEvent) {
             />
           </div>
 
-          <span class="hx-end">
+          <span class="hx-end" :class="{ alone: !search }">
             <button
               v-if="search"
               type="button"
