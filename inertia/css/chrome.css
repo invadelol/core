@@ -181,25 +181,41 @@
 .vb .hx-end.alone {
   margin-left: auto;
 }
-/* The settings corner: a plain icon button, like the bar's others. */
+/* The settings corner: a poro in a rounded frame, lit violet when its menu is open. */
 .vb .hx-end .hx-me {
-  width: 40px;
-  height: 40px;
   padding: 0;
-  margin-left: -4px;
+  height: auto;
+  margin-left: 0;
+  border-radius: 10px;
 }
-.vb .hx-me .i {
-  width: 19px;
-  height: 19px;
-  color: inherit;
-  transition: transform 240ms var(--ease);
-}
+.vb .hx-me:hover,
 .vb .hx-me.open {
-  background: var(--s1);
-  color: var(--t1);
+  background: none;
 }
-.vb .hx-me.open .i {
-  transform: rotate(60deg);
+.vb .hx-me .av {
+  display: block;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  box-shadow:
+    0 0 0 1px var(--line-2),
+    0 0 0 3px transparent;
+  transition:
+    box-shadow 180ms var(--ease),
+    transform 180ms var(--ease);
+}
+.vb .hx-me:hover .av {
+  box-shadow:
+    0 0 0 1px var(--v400),
+    0 0 0 3px color-mix(in srgb, var(--v400) 22%, transparent);
+}
+.vb .hx-me.open .av {
+  box-shadow:
+    0 0 0 1px var(--v300),
+    0 0 0 3px color-mix(in srgb, var(--v400) 35%, transparent);
+}
+.vb .hx-me:active .av {
+  transform: scale(0.94);
 }
 .vb .hx-burger,
 .vb .hx-only-phone {
@@ -464,13 +480,8 @@
     width: 32px;
     padding: 0;
   }
-  .vb .hx-get span,
-  .vb .hx-discord span {
+  .vb .hx-get span {
     display: none;
-  }
-  .vb .hx-discord {
-    width: 32px;
-    padding: 0;
   }
 }
 @media (max-width: 1023px) {
