@@ -215,6 +215,13 @@
   background: var(--d-inset);
   box-shadow: var(--d-inset-sh);
 }
+/* the focus ring belongs to the whole field, not the bare input inside it */
+.vb .field input:focus-visible {
+  outline: none;
+}
+.vb .field:focus-within {
+  box-shadow: var(--d-inset-sh), 0 0 0 1px rgb(var(--v-rgb) / 0.55), 0 0 0 3px rgb(var(--v-rgb) / 0.16);
+}
 .vb .seg {
   background: var(--d-inset);
   box-shadow: var(--d-inset-sh);
