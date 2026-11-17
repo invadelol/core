@@ -177,17 +177,6 @@ const ALL_SECTIONS: NavSection[] = [
         here: starts('/esports'),
       },
       {
-        key: 'pros',
-        label: 'Pros',
-        href: '/pros',
-        art: 'pros',
-        line: ({ nav }) =>
-          nav?.pros?.counts
-            ? `${n(nav.pros.counts.players)} pros, their solo queue accounts and the champions they play`
-            : 'Pros, their solo queue accounts and the champions they play',
-        here: starts('/pros', '/pro'),
-      },
-      {
         key: 'leagues',
         label: 'Leagues',
         href: '/leagues',
@@ -207,6 +196,17 @@ const ALL_SECTIONS: NavSection[] = [
         art: 'teams',
         line: () => 'Starting fives, staff and results, season by season',
         here: starts('/teams', '/team'),
+      },
+      {
+        key: 'pros',
+        label: 'Pros',
+        href: '/pros',
+        art: 'pros',
+        line: ({ nav }) =>
+          nav?.pros?.counts
+            ? `${n(nav.pros.counts.players)} pros, their solo queue accounts and the champions they play`
+            : 'Pros, their solo queue accounts and the champions they play',
+        here: starts('/pros', '/pro'),
       },
     ],
   },

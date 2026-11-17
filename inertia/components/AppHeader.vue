@@ -105,7 +105,6 @@ const triggers = ref<Record<string, HTMLElement | null>>({})
 const menuLeft = ref(0)
 let hoverTimer: ReturnType<typeof setTimeout> | undefined
 let leaveTimer: ReturnType<typeof setTimeout> | undefined
-let hoveredAt = 0
 
 const openSection = computed(() => SECTIONS.find((s) => s.key === open.value) ?? null)
 
@@ -136,7 +135,10 @@ function close(focusTrigger = false) {
   else triggers.value[was]?.focus()
 }
 
-/** A mouse resting on a trigger opens its menu; moving to another trigger switches at once. */
+/**
+ * A mouse resting on a trigger opens its menu; moving to another trigger switches at once. A click
+ * goes to the section's first page (the sub-row then lists the others); ArrowDown opens the menu.
+ */
 function onEnter(key: SectionKey, event: PointerEvent) {
   if (event.pointerType !== 'mouse') return
   loadSiteNav()
@@ -144,13 +146,9 @@ function onEnter(key: SectionKey, event: PointerEvent) {
   clearTimeout(hoverTimer)
   if (open.value === key) return
   if (open.value && open.value !== 'account') {
-    hoveredAt = performance.now()
     return show(key)
   }
-  hoverTimer = setTimeout(() => {
-    hoveredAt = performance.now()
-    show(key)
-  }, 110)
+  hoverTimer = setTimeout(() => show(key), 110)
 }
 
 function onLeave(event: PointerEvent) {
@@ -161,12 +159,6 @@ function onLeave(event: PointerEvent) {
 
 function onMenuEnter() {
   clearTimeout(leaveTimer)
-}
-
-function onTrigger(key: SectionKey) {
-  // The click that follows a hover's opening keeps the menu open instead of closing it.
-  if (open.value === key && performance.now() - hoveredAt > 450) return close()
-  show(key)
 }
 
 const ORDER = SECTIONS.map((s) => s.key)
@@ -378,23 +370,25 @@ function skip(event: MouseEvent) {
           </Link>
 
           <nav class="hx-nav" aria-label="Site">
-            <button
+            <Link
               v-for="s in SECTIONS"
               :key="s.key"
-              :ref="(el) => (triggers[s.key] = el as HTMLElement | null)"
-              type="button"
+              :ref="(el) => (triggers[s.key] = ((el as { $el?: HTMLElement } | null)?.$el ?? null))"
+              :href="s.links[0].href"
               :class="{ on: current === s.key && open !== s.key, open: open === s.key }"
+              aria-haspopup="true"
               :aria-expanded="open === s.key"
               :aria-controls="`hx-menu-${s.key}`"
+              prefetch
               @pointerenter="onEnter(s.key, $event)"
               @pointerleave="onLeave"
-              @click="onTrigger(s.key)"
+              @click="close()"
               @focus="loadSiteNav"
               @touchstart.passive="loadSiteNav"
               @keydown="onTriggerKey(s.key, $event)"
             >
               {{ s.label }}<Icon name="chev" :size="13" />
-            </button>
+            </Link>
             <Link
               v-if="patch && patchHref"
               ref="patchPill"
