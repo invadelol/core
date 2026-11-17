@@ -178,7 +178,8 @@ const more = computed(() => games.value.length > 0 && !exhausted.value)
         </span>
         <div class="col grow" style="gap: 4px; min-width: 0">
           <h3 class="h3 ell">
-            With {{ partner.gameName }}<span class="t3">#{{ partner.tagLine }}</span>
+            With {{ partner.gameName }}
+            <span class="t3" style="font-weight: 500">#{{ partner.tagLine }}</span>
           </h3>
           <p class="meta num ell">
             {{ TIER[partner.tier] }}, {{ partner.games }} games
