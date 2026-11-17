@@ -1,47 +1,35 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
-import {
-  positionName,
-  positionOf,
-  rankFromCore,
-  rankLabel,
-  rankValue,
-  type Position,
-} from '@invadelol/ui/logic'
+import { rankFromCore, rankLabel } from '@invadelol/ui/logic'
 import Icon from './ui/Icon.vue'
 import Select from './ui/Select.vue'
-import { assetUrl, champIcon, profileIcon, regionLabel, skinSplash } from '../lib/assets.js'
-import { isRemake } from '../lib/match.js'
+import { champIcon, profileIcon } from '../lib/assets.js'
 import {
   CARD_COUNTS,
+  CARD_DEFAULTS,
   CARD_QUEUES,
   FORMATS,
-  LEDGER_DEFAULT,
   MAX_STATS,
   STATS,
-  championLines,
-  linesFor,
+  cardImagePath,
+  cardPagePath,
   record,
-  windowLabel,
-  type CardData,
   type CardFormat,
   type CardKind,
   type CardQueue,
-  type CardRank,
+  type CardSettings,
   type StatKey,
 } from '../lib/share_card.js'
-import { drawCard, loadCardFonts, type CardInput } from '../lib/share_card_draw.js'
-import type { Match, Rank, RanksPayload, StatsPayload, Summoner } from '../lib/types.js'
+import type { RanksPayload, StatsPayload, Summoner } from '../lib/types.js'
 
 /**
- * Share this profile: the card on the left, ready cards to start from on the right (the last
- * games as a ledger, the rank with its LP line, a champion), then the games it counts, the
- * picture and, for the ledger, its lines in the player's order. Copy the image, download it,
- * or copy the link.
+ * Share this profile. It opens simple: the card, three ready cards to pick from, the link and the
+ * image. "Customize" opens the rest (the games counted, the picture, the figures and their order).
+ * The card is drawn on the server from its link, so the link shared is the card, and it keeps
+ * showing the player's figures of the day wherever it was posted.
  */
 const props = defineProps<{
   profile: Summoner
-  /** What the profile already shows: drawn until the card's own window has loaded. */
   stats: StatsPayload | null
   ranks?: RanksPayload | null
   champion?: number
@@ -51,44 +39,60 @@ const props = defineProps<{
 const emit = defineEmits<{ close: [] }>()
 
 const dialog = ref<HTMLDialogElement>()
-const canvas = ref<HTMLCanvasElement>()
-/** An `.iv-dark` node: the card is night ink in every theme, so its colours are the dark tokens. */
-const probe = ref<HTMLElement>()
 const message = ref('')
 const copied = ref<'' | 'link' | 'image'>('')
 const busy = ref(false)
-const url = ref('')
+const customizing = ref(false)
+const origin = ref('')
 
-/* ── Options ─────────────────────────────────────────────────── */
+/* ── The card's settings ─────────────────────────────────────── */
 
-const format = ref<CardFormat>('square')
+const format = ref<CardFormat>('wide')
 const kind = ref<CardKind>('stats')
 const queue = ref<CardQueue>(
   CARD_QUEUES.some((q) => q.value === props.queue) ? (props.queue as CardQueue) : 'all'
 )
-const count = ref<number>(30)
-const chosen = ref<StatKey[]>([...LEDGER_DEFAULT])
+const count = ref<number>(CARD_DEFAULTS.count)
+const lines = ref<StatKey[]>([...CARD_DEFAULTS.lines])
+/** 0: the most played champion of the window, decided by the server each time. */
 const championId = ref(props.champion ?? 0)
-/** Set once the viewer picks a picture, which then stays whatever the window holds. */
-let championPicked = false
-const pickedChampion = () => (championPicked = true)
 const skin = ref(0)
 
-const formats = Object.entries(FORMATS) as Array<[CardFormat, (typeof FORMATS)[CardFormat]]>
+const settings = (k: CardKind = kind.value, f: CardFormat = format.value): CardSettings => ({
+  kind: k,
+  format: f,
+  queue: queue.value,
+  count: count.value,
+  lines: lines.value,
+  champion: championId.value,
+  skin: skin.value,
+})
+const slug = computed(() => `${props.profile.gameName}-${props.profile.tagLine}`)
 
-/* ── Data ────────────────────────────────────────────────────── */
+/** The image, debounced while the player is still clicking through the options. */
+const imageUrl = ref(cardImagePath(slug.value, settings()))
+const loading = ref(true)
+let timer: ReturnType<typeof setTimeout> | undefined
+watch(
+  () => cardImagePath(slug.value, settings()),
+  (next) => {
+    clearTimeout(timer)
+    timer = setTimeout(() => {
+      if (next === imageUrl.value) return
+      loading.value = true
+      imageUrl.value = next
+    }, 250)
+  }
+)
+const thumbUrl = (k: CardKind) => cardImagePath(slug.value, settings(k, 'square'))
+const pageUrl = computed(() => `${origin.value}${cardPagePath(slug.value, settings())}`)
+const shownUrl = computed(() => pageUrl.value.replace(/^https?:\/\//, ''))
+
+/* ── What the options and ready cards say ────────────────────── */
 
 const payload = shallowRef<StatsPayload | null>(props.stats)
-const roleMatches = shallowRef<Match[] | null>(null)
-/** Only an answer (or art) slower than 200 ms dims the card it will replace. */
-const slowData = ref(false)
-const slowDraw = ref(false)
-const slow = computed(() => slowData.value || slowDraw.value)
-const skins = shallowRef<Array<{ num: number; name: string }>>([])
 const allChampions = shallowRef<Array<{ id: number; name: string }>>([])
-
-const base = computed(() => `/api/summoners/puuid/${props.profile.puuid}`)
-const typeParam = computed(() => (queue.value === 'all' ? '' : `&type=${queue.value}`))
+const skins = shallowRef<Array<{ num: number; name: string }>>([])
 
 let statsController: AbortController | undefined
 watch(
@@ -96,43 +100,15 @@ watch(
   async () => {
     statsController?.abort()
     const controller = (statsController = new AbortController())
-    const timer = setTimeout(() => (slowData.value = true), 200)
+    const type = queue.value === 'all' ? '' : `&type=${queue.value}`
     try {
-      const res = await fetch(`${base.value}/stats?count=${count.value}${typeParam.value}`, {
-        signal: controller.signal,
-      })
-      if (res.ok) {
-        payload.value = (await res.json()) as StatsPayload
-        // No main champion from the profile yet: the most played of the window, until one is picked.
-        const top = [...payload.value.champions].sort((a, b) => b.games - a.games)[0]
-        if (!championId.value && !championPicked && top) championId.value = top.championId
-      }
+      const res = await fetch(
+        `/api/summoners/puuid/${props.profile.puuid}/stats?count=${count.value}${type}`,
+        { signal: controller.signal }
+      )
+      if (res.ok) payload.value = (await res.json()) as StatsPayload
     } catch {
-      /* The last answer stays on the card. */
-    } finally {
-      clearTimeout(timer)
-      if (!controller.signal.aborted) slowData.value = false
-    }
-  },
-  { immediate: true }
-)
-
-let roleController: AbortController | undefined
-const wantsRole = computed(() => chosen.value.includes('role'))
-watch(
-  [queue, count, wantsRole],
-  async () => {
-    if (!wantsRole.value) return
-    roleController?.abort()
-    const controller = (roleController = new AbortController())
-    try {
-      const n = Math.min(count.value, 100)
-      const res = await fetch(`${base.value}/matches?count=${n}${typeParam.value}&view=summary`, {
-        signal: controller.signal,
-      })
-      if (res.ok) roleMatches.value = (await res.json()) as Match[]
-    } catch {
-      /* No role then: the line is left out. */
+      /* The last answer stays. */
     }
   },
   { immediate: true }
@@ -155,7 +131,7 @@ watch(
 )
 
 onMounted(async () => {
-  url.value = `${location.origin}/${encodeURIComponent(`${props.profile.gameName}-${props.profile.tagLine}`)}`
+  origin.value = location.origin
   dialog.value?.showModal()
   try {
     const res = await fetch('/cdn/names/champion')
@@ -163,7 +139,6 @@ onMounted(async () => {
     const names = (await res.json()) as Record<string, string>
     allChampions.value = Object.entries(names)
       .map(([id, name]) => ({ id: Number(id), name }))
-      // Mode variants reuse a name under ids in the tens of thousands.
       .filter((c) => c.id > 0 && c.id < 10_000)
       .sort((a, b) => a.name.localeCompare(b.name))
   } catch {
@@ -173,29 +148,15 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   statsController?.abort()
-  roleController?.abort()
+  clearTimeout(timer)
   dialog.value?.close()
 })
 
-/* ── What the cards say ──────────────────────────────────────── */
-
-const role = computed<CardData['role']>(() => {
-  const counts = new Map<Position, number>()
-  let total = 0
-  for (const match of roleMatches.value ?? []) {
-    if (isRemake(match)) continue
-    const lane = positionOf(
-      match.participants.find((p) => p.puuid === props.profile.puuid)?.position
-    )
-    if (!lane) continue
-    counts.set(lane, (counts.get(lane) ?? 0) + 1)
-    total++
-  }
-  const [lane, games] = [...counts].sort((a, b) => b[1] - a[1])[0] ?? []
-  return lane && games ? { name: positionName(lane), share: games / total } : null
-})
-
-const rankRow = computed<Rank | null>(() => {
+const championName = (id: number) => allChampions.value.find((c) => c.id === id)?.name ?? ''
+const played = computed(() =>
+  [...(payload.value?.champions ?? [])].sort((a, b) => b.games - a.games)
+)
+const rankRow = computed(() => {
   const current = (props.ranks?.current ?? []).filter((r) => r.tier)
   const wanted = queue.value === 'flex' ? 'RANKED_FLEX_SR' : 'RANKED_SOLO_5x5'
   return (
@@ -205,99 +166,78 @@ const rankRow = computed<Rank | null>(() => {
   )
 })
 
-const rank = computed<CardRank | null>(() => {
-  const row = rankRow.value
-  if (!row) return null
-  return {
-    name: rankLabel(rankFromCore(row), false),
-    tier: row.tier.toLowerCase(),
-    lp: row.leaguePoints,
-    queue: row.queueType === 'RANKED_FLEX_SR' ? 'Flex' : 'Solo/Duo',
-  }
+const kinds = computed(() => {
+  const total = payload.value?.global.total ?? 0
+  const champ = played.value.find((c) => c.championId === championId.value) ?? played.value[0]
+  const list: Array<{ value: CardKind; title: string; sub: string }> = [
+    {
+      value: 'stats',
+      title: total ? `Last ${total} games` : 'Last games',
+      sub: total && payload.value ? record(payload.value.global.winrate, total) : '',
+    },
+  ]
+  if (rankRow.value)
+    list.push({
+      value: 'ranked',
+      title: 'Ranked',
+      sub: `${rankLabel(rankFromCore(rankRow.value), false)}, ${rankRow.value.leaguePoints} LP`,
+    })
+  if (champ)
+    list.push({
+      value: 'champion',
+      title: championName(champ.championId) || 'Champion',
+      sub: `${champ.games} games, ${Math.round(champ.winrate * 100)}%`,
+    })
+  return list
 })
+const loadedThumbs = ref<Record<string, boolean>>({})
 
-const data = computed<CardData>(() => ({
-  figures: payload.value?.global ?? null,
-  role: role.value,
-  rank: rank.value,
-}))
-const lines = computed(() => linesFor(data.value, chosen.value))
+/* ── Customize ───────────────────────────────────────────────── */
 
-/** The LP at the end of each of the last 30 days, from the rank snapshots, and what it gained. */
-const lpDays = computed(() => {
-  const row = rankRow.value
-  if (!row) return null
-  const value = (r: Rank) => {
-    const v = rankValue(rankFromCore(r))
-    return v === null ? null : Math.round(v * 100)
-  }
-  const pts = (props.ranks?.history ?? [])
-    .filter((r) => r.queueType === row.queueType && r.tier && r.fetchedAt)
-    .map((r) => ({ t: new Date(r.fetchedAt!).getTime(), v: value(r) }))
-    .filter((p): p is { t: number; v: number } => p.v !== null)
-    .sort((a, b) => a.t - b.t)
-  const now = value(row)
-  if (now !== null) pts.push({ t: Date.now(), v: now })
-  const DAY = 864e5
-  const first = Date.now() - 29 * DAY
-  const inside = pts.filter((p) => p.t >= first)
-  if (inside.length < 2) return null
-  let prev = pts.filter((p) => p.t < first).at(-1)?.v ?? inside[0].v
-  const start = prev
-  const days: number[] = []
-  for (let i = 0; i < 30; i++) {
-    const day = inside.filter((p) => p.t >= first + i * DAY && p.t < first + (i + 1) * DAY)
-    if (day.length) prev = day.at(-1)!.v
-    days.push(prev)
-  }
-  return { days, gain: days.at(-1)! - start }
-})
-
-/** The champion card's champion: the picture's when it was played in the window, else the most played. */
-const champ = computed(() => {
-  const played = [...(payload.value?.champions ?? [])].sort((a, b) => b.games - a.games)
-  return played.find((c) => c.championId === championId.value) ?? played[0] ?? null
-})
-const championName = (id: number) => allChampions.value.find((c) => c.id === id)?.name ?? ''
-
-const statOptions = computed(() =>
-  STATS.filter((s) => !chosen.value.includes(s.key) && (s.key !== 'rank' || rank.value)).map(
-    (s) => ({ value: s.key, label: s.label })
-  )
+const formats = Object.entries(FORMATS) as Array<[CardFormat, (typeof FORMATS)[CardFormat]]>
+// The main role needs every game's lane: the card leaves it out.
+const offered = computed(() =>
+  STATS.filter((s) => s.key !== 'role' && (s.key !== 'rank' || rankRow.value))
+)
+const labelOf = (key: StatKey) => STATS.find((s) => s.key === key)?.label ?? key
+const addOptions = computed(() =>
+  offered.value
+    .filter((s) => !lines.value.includes(s.key))
+    .map((s) => ({ value: s.key, label: s.label }))
 )
 const adding = ref<StatKey | ''>('')
 watch(adding, (key) => {
   if (!key) return
-  if (chosen.value.length < MAX_STATS) chosen.value = [...chosen.value, key]
+  if (lines.value.length < MAX_STATS) lines.value = [...lines.value, key]
   adding.value = ''
 })
-const remove = (key: StatKey) => (chosen.value = chosen.value.filter((k) => k !== key))
-
-/* Reordering: drag a line by its handle, or move it with the arrow keys. */
+const remove = (key: StatKey) => {
+  if (lines.value.length > 1) lines.value = lines.value.filter((k) => k !== key)
+}
 const dragging = ref<StatKey | null>(null)
 function moveTo(key: StatKey, over: StatKey) {
   if (key === over) return
-  const list = chosen.value.filter((k) => k !== key)
-  list.splice(list.indexOf(over) + (chosen.value.indexOf(key) < chosen.value.indexOf(over) ? 1 : 0), 0, key)
-  chosen.value = list
+  const to = lines.value.indexOf(over)
+  const list = lines.value.filter((k) => k !== key)
+  list.splice(to, 0, key)
+  lines.value = list
 }
 function nudge(key: StatKey, by: number) {
-  const i = chosen.value.indexOf(key)
+  const i = lines.value.indexOf(key)
   const j = i + by
-  if (j < 0 || j >= chosen.value.length) return
-  const list = [...chosen.value]
+  if (j < 0 || j >= lines.value.length) return
+  const list = [...lines.value]
   ;[list[i], list[j]] = [list[j], list[i]]
-  chosen.value = list
+  lines.value = list
 }
 
 const championOptions = computed(() => {
-  const played = [...(payload.value?.champions ?? [])].sort((a, b) => b.games - a.games)
-  const seen = new Set(played.map((c) => c.championId))
-  const name = (id: number) => championName(id) || `Champion ${id}`
-  const options = [
-    ...played.map((c) => ({
+  const seen = new Set(played.value.map((c) => c.championId))
+  return [
+    { value: 0, label: 'Most played' },
+    ...played.value.map((c) => ({
       value: c.championId,
-      label: name(c.championId),
+      label: championName(c.championId) || `Champion ${c.championId}`,
       icon: champIcon(c.championId),
       meta: `${c.games}`,
     })),
@@ -305,161 +245,12 @@ const championOptions = computed(() => {
       .filter((c) => !seen.has(c.id))
       .map((c) => ({ value: c.id, label: c.name, icon: champIcon(c.id) })),
   ]
-  // The profile's main champion may have left the window: keep it offered.
-  if (championId.value && !options.some((o) => o.value === championId.value)) {
-    options.unshift({ value: championId.value, label: name(championId.value), icon: champIcon(championId.value) })
-  }
-  return options
 })
-
 const skinOptions = computed(() =>
   skins.value.length
     ? skins.value.map((s) => ({ value: s.num, label: s.num === 0 ? 'Default skin' : s.name }))
     : [{ value: 0, label: 'Default skin' }]
 )
-
-/* ── Drawing ─────────────────────────────────────────────────── */
-
-const images = new Map<string, Promise<HTMLImageElement | null>>()
-function image(src: string) {
-  let pending = images.get(src)
-  if (!pending) {
-    pending = new Promise((resolve) => {
-      const img = new Image()
-      img.onload = () => resolve(img)
-      img.onerror = () => resolve(null)
-      img.src = src
-    })
-    images.set(src, pending)
-  }
-  return pending
-}
-
-const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-const tagLine = computed(() => {
-  const region = regionLabel(props.profile.platform)
-  return `#${props.profile.tagLine}${region ? ` · ${region}` : ''}`
-})
-
-/** Everything one card needs, images loaded. */
-async function inputFor(k: CardKind, f: CardFormat): Promise<CardInput> {
-  const total = payload.value?.global.total ?? 0
-  const tiers = new Set<string>()
-  if (rank.value) tiers.add(rank.value.tier)
-  const c = champ.value
-  const art = k === 'champion' && c ? c.championId : championId.value
-  const artSkin = art === championId.value ? skin.value : 0
-  const [icon, splash, ...emblems] = await Promise.all([
-    k === 'champion' && c ? image(champIcon(c.championId)) : image(profileIcon(props.profile.profileIconId)),
-    art ? image(skinSplash(art, artSkin)) : null,
-    ...[...tiers].map((t) => image(assetUrl('rank', t))),
-  ])
-  const emblemMap = Object.fromEntries([...tiers].map((t, i) => [t, emblems[i]]))
-  const name = props.profile.gameName
-  if (k === 'ranked' && rank.value) {
-    const row = rankRow.value!
-    const games = row.losses === null ? 0 : row.wins + row.losses
-    return {
-      format: f,
-      kind: k,
-      title: name,
-      subtitle: tagLine.value,
-      icon,
-      splash,
-      kicker: `Ranked ${rank.value.queue}`,
-      kickerRight: games ? `${row.wins}W ${row.losses}L · ${Math.round((row.wins / games) * 100)}%` : '',
-      lines: [],
-      emblems: emblemMap,
-      ranked: { tier: rank.value.tier, name: rank.value.name, lp: rank.value.lp, days: lpDays.value?.days ?? [], gain: lpDays.value?.gain ?? 0 },
-      date: today,
-    }
-  }
-  if (k === 'champion' && c) {
-    return {
-      format: f,
-      kind: k,
-      title: championName(c.championId) || 'Champion',
-      subtitle: `${name} #${props.profile.tagLine}`,
-      icon,
-      splash,
-      kicker: 'Most played',
-      kickerRight: total ? windowLabel(total, queue.value).replace('Last ', '').replace(/^\d+ games?, /, '') : '',
-      lines: championLines(c),
-      emblems: emblemMap,
-      date: today,
-    }
-  }
-  return {
-    format: f,
-    kind: 'stats',
-    title: name,
-    subtitle: tagLine.value,
-    icon,
-    splash,
-    kicker: total ? windowLabel(total, queue.value) : 'No games in this window',
-    kickerRight: total && payload.value ? record(payload.value.global.winrate, total) : '',
-    lines: lines.value,
-    emblems: emblemMap,
-    date: today,
-  }
-}
-
-const palette = () => {
-  const style = getComputedStyle(probe.value!)
-  return (token: string) => style.getPropertyValue(token).trim()
-}
-
-let drawn = 0
-async function render() {
-  const version = ++drawn
-  const timer = setTimeout(() => (slowDraw.value = true), 200)
-  const [input] = await Promise.all([inputFor(kind.value, format.value), loadCardFonts()])
-  clearTimeout(timer)
-  // A newer draw started meanwhile: let it land instead, in one go.
-  if (version !== drawn || !canvas.value || !probe.value) return
-  slowDraw.value = false
-  const off = document.createElement('canvas')
-  drawCard(off, input, palette())
-  canvas.value.width = off.width
-  canvas.value.height = off.height
-  canvas.value.getContext('2d')!.drawImage(off, 0, 0)
-}
-
-/* The ready cards, drawn small as square cards. */
-const kinds = computed(() =>
-  (
-    [
-      { value: 'ranked', title: 'Ranked', sub: rank.value ? `${rank.value.name}${lpDays.value ? `, ${lpDays.value.gain >= 0 ? '+' : '−'}${Math.abs(lpDays.value.gain)} LP` : ''}` : '' },
-      { value: 'stats', title: `Last ${payload.value?.global.total || count.value} games`, sub: `${lines.value.length} line${lines.value.length === 1 ? '' : 's'}` },
-      { value: 'champion', title: champ.value ? championName(champ.value.championId) || 'Champion' : 'Champion', sub: champ.value ? `${champ.value.games} games, ${Math.round(champ.value.winrate * 100)}%` : '' },
-    ] as Array<{ value: CardKind; title: string; sub: string }>
-  ).filter((k) => (k.value === 'ranked' ? rank.value : k.value === 'champion' ? champ.value : true))
-)
-const thumbs = ref<Record<string, HTMLCanvasElement | null>>({})
-let thumbVersion = 0
-async function renderThumbs() {
-  const version = ++thumbVersion
-  await loadCardFonts()
-  for (const k of kinds.value) {
-    const input = await inputFor(k.value, 'square')
-    if (version !== thumbVersion || !probe.value) return
-    const el = thumbs.value[k.value]
-    if (!el) continue
-    const off = document.createElement('canvas')
-    drawCard(off, input, palette())
-    el.width = 276
-    el.height = 276
-    el.getContext('2d')!.drawImage(off, 0, 0, 276, 276)
-  }
-}
-const setThumb = (k: string) => (el: unknown) => (thumbs.value[k] = (el as HTMLCanvasElement) ?? null)
-
-watch([format, kind, championId, skin, lines, rank, lpDays, champ, () => payload.value?.global.total], () => void render())
-watch([kinds, championId, skin, lines, lpDays, champ], () => void renderThumbs())
-onMounted(() => {
-  void render()
-  void renderThumbs()
-})
 
 /* ── Actions ─────────────────────────────────────────────────── */
 
@@ -471,25 +262,24 @@ function flash(what: 'link' | 'image', text: string) {
 
 async function copyLink() {
   try {
-    await navigator.clipboard.writeText(url.value)
+    await navigator.clipboard.writeText(pageUrl.value)
     flash('link', 'Link copied')
   } catch {
     message.value = 'Select and copy the link.'
   }
 }
 
-async function blob() {
-  await render()
-  return new Promise<Blob>((resolve, reject) =>
-    canvas.value!.toBlob((b) => (b ? resolve(b) : reject(new Error())), 'image/png')
-  )
+async function image() {
+  const res = await fetch(cardImagePath(slug.value, settings()))
+  if (!res.ok) throw new Error()
+  return res.blob()
 }
 
 async function copyImage() {
   busy.value = true
   message.value = ''
   try {
-    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob() })])
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': image() })])
     flash('image', 'Image copied')
   } catch {
     message.value = 'This browser cannot copy images. Download it instead.'
@@ -502,7 +292,7 @@ async function download() {
   busy.value = true
   message.value = ''
   try {
-    const href = URL.createObjectURL(await blob())
+    const href = URL.createObjectURL(await image())
     const link = document.createElement('a')
     link.href = href
     link.download = `${props.profile.gameName}-invade-${kind.value}-${format.value}.png`
@@ -510,13 +300,11 @@ async function download() {
     setTimeout(() => URL.revokeObjectURL(href), 1000)
     message.value = 'Card downloaded'
   } catch {
-    message.value = 'Could not create the image. You can still copy the link.'
+    message.value = 'Could not get the image. You can still copy the link.'
   } finally {
     busy.value = false
   }
 }
-
-const shortUrl = computed(() => url.value.replace(/^https?:\/\//, ''))
 </script>
 
 <template>
@@ -531,9 +319,6 @@ const shortUrl = computed(() => url.value.replace(/^https?:\/\//, ''))
       }
     "
   >
-    <!-- Reads the dark theme's tokens for the card, whatever the page's theme. -->
-    <div ref="probe" class="iv-dark sh-probe" />
-
     <div class="sh-h">
       <Icon name="share" :size="16" />
       <h2 id="share-title" class="h3">Share this profile</h2>
@@ -559,17 +344,20 @@ const shortUrl = computed(() => url.value.replace(/^https?:\/\//, ''))
     </div>
 
     <div class="sh-body">
-      <!-- The card itself: the canvas the copy and the download save. -->
       <div class="sh-prev" :class="format">
-        <canvas ref="canvas" role="img" :aria-label="`Share card for ${profile.gameName}`" :class="{ slow }" />
+        <img
+          :src="imageUrl"
+          :alt="`Share card for ${profile.gameName}`"
+          :class="{ slow: loading }"
+          @load="loading = false"
+          @error="loading = false"
+        />
       </div>
 
-      <div class="sh-ctl">
+      <!-- At first: the ready cards and nothing else to decide. -->
+      <div v-if="!customizing" class="sh-ctl">
         <section>
-          <div class="sh-gh">
-            <span class="lab">Ready cards</span>
-            <span class="meta">From your last {{ payload?.global.total || count }} games</span>
-          </div>
+          <div class="sh-gh"><span class="lab">Ready cards</span></div>
           <div class="sh-gal">
             <button
               v-for="k in kinds"
@@ -580,121 +368,132 @@ const shortUrl = computed(() => url.value.replace(/^https?:\/\//, ''))
               :aria-pressed="kind === k.value"
               @click="kind = k.value"
             >
-              <canvas :ref="setThumb(k.value)" aria-hidden="true" />
+              <span class="sh-th" :class="{ ready: loadedThumbs[k.value] }"
+                ><img
+                  :src="thumbUrl(k.value)"
+                  alt=""
+                  loading="lazy"
+                  @load="loadedThumbs[k.value] = true"
+              /></span>
               <b>{{ k.title }}</b>
-              <span>{{ k.sub }}</span>
+              <span class="sh-sub">{{ k.sub }}</span>
             </button>
           </div>
         </section>
+        <button type="button" class="btn sh-cz" @click="customizing = true">
+          <Icon name="sliders" />Customize<span class="meta">games, picture, figures</span>
+        </button>
+      </div>
 
-        <div class="sh-opts">
-          <div class="col" style="gap: 20px; min-width: 0">
-            <section>
-              <div class="sh-gh">
-                <span class="lab">Games</span>
-                <span v-if="payload?.global.total" class="meta num"
-                  >{{ payload.global.total }} games, {{ record(payload.global.winrate, payload.global.total) }}</span
-                >
-              </div>
-              <div class="seg sh-seg" role="group" aria-label="Queue">
-                <button
-                  v-for="q in CARD_QUEUES"
-                  :key="q.value"
-                  type="button"
-                  :class="{ on: queue === q.value }"
-                  :aria-pressed="queue === q.value"
-                  @click="queue = q.value"
-                >
-                  {{ q.short }}
-                </button>
-              </div>
-              <div class="seg sh-seg" role="group" aria-label="Recent games counted">
-                <button
-                  v-for="n in CARD_COUNTS"
-                  :key="n"
-                  type="button"
-                  class="num"
-                  :class="{ on: count === n }"
-                  :aria-pressed="count === n"
-                  :aria-label="`Last ${n} games`"
-                  @click="count = n"
-                >
-                  {{ n }}
-                </button>
-              </div>
-            </section>
-
-            <section>
-              <div class="sh-gh"><span class="lab">Picture</span></div>
-              <div class="col" style="gap: 6px">
-                <Select
-                  v-model="championId"
-                  @update:model-value="pickedChampion"
-                  :options="championOptions"
-                  searchable
-                  search-placeholder="Find a champion"
-                  width="17rem"
-                />
-                <Select
-                  v-if="championId"
-                  v-model="skin"
-                  :options="skinOptions"
-                  :searchable="skinOptions.length > 8"
-                  search-placeholder="Find a skin"
-                  width="17rem"
-                />
-              </div>
-            </section>
-          </div>
-
-          <section v-if="kind === 'stats'">
-            <div class="sh-gh">
-              <span class="lab">Lines</span>
-              <span class="meta num">{{ chosen.length }} of {{ MAX_STATS }}</span>
-            </div>
-            <ol class="sh-lines">
-              <li
-                v-for="key in chosen"
-                :key="key"
-                class="sh-line"
-                :class="{ drag: dragging === key }"
-                draggable="true"
-                @dragstart="dragging = key"
-                @dragend="dragging = null"
-                @dragover.prevent="dragging && moveTo(dragging, key)"
-              >
-                <button
-                  type="button"
-                  class="sh-hd"
-                  :aria-label="`Move ${STATS.find((s) => s.key === key)?.label}`"
-                  title="Drag, or use the arrow keys"
-                  @keydown.up.prevent="nudge(key, -1)"
-                  @keydown.down.prevent="nudge(key, 1)"
-                >
-                  <i /><i /><i />
-                </button>
-                <span class="ell">{{ STATS.find((s) => s.key === key)?.label }}</span>
-                <b class="num">{{ lines.find((l) => l.key === key)?.value ?? '–' }}</b>
-                <button
-                  type="button"
-                  class="sh-rm"
-                  :aria-label="`Remove ${STATS.find((s) => s.key === key)?.label}`"
-                  @click="remove(key)"
-                >
-                  <Icon name="x" :size="13" />
-                </button>
-              </li>
-            </ol>
-            <Select
-              v-if="chosen.length < MAX_STATS && statOptions.length"
-              v-model="adding"
-              :options="statOptions"
-              placeholder="Add a line"
-              width="15rem"
-              class="sh-add"
-            />
-          </section>
+      <!-- Customize: everything else. -->
+      <div v-else class="sh-ctl">
+        <div class="sh-gh">
+          <button type="button" class="btn ghost sm sh-back" @click="customizing = false">
+            <Icon name="back" />Ready cards
+          </button>
         </div>
+        <section>
+          <div class="sh-gh">
+            <span class="lab">Games</span>
+            <span v-if="payload?.global.total" class="meta num"
+              >{{ payload.global.total }},
+              {{ record(payload.global.winrate, payload.global.total) }}</span
+            >
+          </div>
+          <div class="seg sh-seg" role="group" aria-label="Queue">
+            <button
+              v-for="q in CARD_QUEUES"
+              :key="q.value"
+              type="button"
+              :class="{ on: queue === q.value }"
+              :aria-pressed="queue === q.value"
+              @click="queue = q.value"
+            >
+              {{ q.short }}
+            </button>
+          </div>
+          <div class="seg sh-seg" role="group" aria-label="Recent games counted">
+            <button
+              v-for="n in CARD_COUNTS"
+              :key="n"
+              type="button"
+              class="num"
+              :class="{ on: count === n }"
+              :aria-pressed="count === n"
+              :aria-label="`Last ${n} games`"
+              @click="count = n"
+            >
+              {{ n }}
+            </button>
+          </div>
+        </section>
+        <section>
+          <div class="sh-gh"><span class="lab">Picture</span></div>
+          <div class="col" style="gap: 6px">
+            <Select
+              v-model="championId"
+              :options="championOptions"
+              searchable
+              search-placeholder="Find a champion"
+              width="18rem"
+            />
+            <Select
+              v-if="championId"
+              v-model="skin"
+              :options="skinOptions"
+              :searchable="skinOptions.length > 8"
+              search-placeholder="Find a skin"
+              width="18rem"
+            />
+          </div>
+        </section>
+        <section v-if="kind === 'stats'">
+          <div class="sh-gh">
+            <span class="lab">Figures</span>
+            <span class="meta num">{{ lines.length }} of {{ MAX_STATS }}</span>
+          </div>
+          <ol class="sh-lines">
+            <li
+              v-for="key in lines"
+              :key="key"
+              class="sh-line"
+              :class="{ drag: dragging === key }"
+              draggable="true"
+              @dragstart="dragging = key"
+              @dragend="dragging = null"
+              @dragover.prevent="dragging && moveTo(dragging, key)"
+            >
+              <button
+                type="button"
+                class="sh-hd"
+                :aria-label="`Move ${labelOf(key)}`"
+                title="Drag, or use the arrow keys"
+                @keydown.up.prevent="nudge(key, -1)"
+                @keydown.down.prevent="nudge(key, 1)"
+              >
+                <i /><i /><i />
+              </button>
+              <span class="ell">{{ labelOf(key) }}</span>
+              <button
+                type="button"
+                class="sh-rm"
+                :disabled="lines.length === 1"
+                :aria-label="`Remove ${labelOf(key)}`"
+                @click="remove(key)"
+              >
+                <Icon name="x" :size="13" />
+              </button>
+            </li>
+          </ol>
+          <Select
+            v-if="lines.length < MAX_STATS && addOptions.length"
+            v-model="adding"
+            :options="addOptions"
+            placeholder="Add a figure"
+            width="15rem"
+            class="sh-add"
+          />
+        </section>
       </div>
     </div>
 
@@ -702,22 +501,26 @@ const shortUrl = computed(() => url.value.replace(/^https?:\/\//, ''))
       <label class="field sh-link">
         <Icon name="external" />
         <input
-          :value="shortUrl"
+          :value="shownUrl"
           readonly
-          aria-label="Profile link"
+          aria-label="Link to this card"
           @focus="(e) => (e.target as HTMLInputElement).select()"
         />
         <button type="button" class="sh-cp" @click="copyLink">
-          <Icon :name="copied === 'link' ? 'check' : 'share'" :size="14" />{{ copied === 'link' ? 'Copied' : 'Copy link' }}
+          <Icon :name="copied === 'link' ? 'check' : 'share'" :size="14" />{{
+            copied === 'link' ? 'Copied' : 'Copy link'
+          }}
         </button>
       </label>
       <span v-if="message" class="meta sh-msg" role="status">{{ message }}</span>
       <div class="row sh-acts">
         <button type="button" class="btn" :disabled="busy" @click="copyImage">
-          <Icon :name="copied === 'image' ? 'check' : 'layers'" />{{ copied === 'image' ? 'Copied' : 'Copy image' }}
+          <Icon :name="copied === 'image' ? 'check' : 'layers'" />{{
+            copied === 'image' ? 'Copied' : 'Copy image'
+          }}
         </button>
         <button type="button" class="btn pri" :disabled="busy" @click="download">
-          <Icon name="download" />{{ busy ? 'Rendering…' : 'Download PNG' }}
+          <Icon name="download" />{{ busy ? 'Preparing…' : 'Download PNG' }}
         </button>
       </div>
     </div>
@@ -725,9 +528,8 @@ const shortUrl = computed(() => url.value.replace(/^https?:\/\//, ''))
 </template>
 
 <style scoped>
-/* A dialog is a popover: opaque, a hairline border, the only kind of shadow. */
 .share {
-  width: min(1100px, calc(100% - 24px));
+  width: min(1060px, calc(100% - 24px));
   margin: auto;
   padding: 0;
   color: var(--t1);
@@ -743,13 +545,6 @@ const shortUrl = computed(() => url.value.replace(/^https?:\/\//, ''))
   .share {
     overflow: visible;
   }
-}
-.sh-probe {
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-  pointer-events: none;
 }
 .sh-h {
   display: flex;
@@ -778,33 +573,32 @@ const shortUrl = computed(() => url.value.replace(/^https?:\/\//, ''))
 }
 .sh-body {
   display: grid;
-  grid-template-columns: 440px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 320px;
   gap: 24px;
   padding: 20px;
 }
 .sh-prev {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  min-height: 440px;
+  min-height: 380px;
 }
-.sh-prev canvas {
+.sh-prev img {
   max-width: 100%;
-  max-height: min(560px, calc(100dvh - 230px));
+  max-height: min(520px, calc(100dvh - 240px));
   border-radius: 12px;
-  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.06), 0 10px 30px rgb(0 0 0 / 0.45);
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.06),
+    0 10px 30px rgb(0 0 0 / 0.45);
   transition: opacity 160ms var(--ease);
 }
-.sh-prev.wide {
-  align-items: center;
-}
-.sh-prev canvas.slow {
-  opacity: 0.85;
+.sh-prev img.slow {
+  opacity: 0.6;
 }
 .sh-ctl {
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 18px;
   min-width: 0;
 }
 .sh-gh {
@@ -815,15 +609,17 @@ const shortUrl = computed(() => url.value.replace(/^https?:\/\//, ''))
   margin-bottom: 10px;
 }
 .sh-gal {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-.sh-g {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 6px 6px 8px;
+  gap: 6px;
+}
+.sh-g {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 14px;
+  align-items: center;
+  padding: 8px;
   border-radius: 12px;
   text-align: left;
   transition: background 160ms var(--ease);
@@ -831,34 +627,58 @@ const shortUrl = computed(() => url.value.replace(/^https?:\/\//, ''))
 .sh-g:hover {
   background: rgb(255 255 255 / 0.03);
 }
-.sh-g canvas {
+.sh-th {
+  grid-row: span 2;
+  width: 64px;
+  height: 64px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--s3);
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.08),
+    0 2px 6px rgb(0 0 0 / 0.5);
+}
+.sh-th img {
   width: 100%;
-  aspect-ratio: 1;
-  margin-bottom: 4px;
-  border-radius: 6px;
-  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.08), 0 2px 6px rgb(0 0 0 / 0.5);
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 200ms var(--ease);
+}
+.sh-th.ready img {
+  opacity: 1;
 }
 .sh-g b {
-  font-size: 13px;
+  align-self: end;
+  font-size: 14px;
   font-weight: 700;
   color: var(--t2);
 }
-.sh-g span {
-  font-size: 11.5px;
+.sh-sub {
+  align-self: start;
+  font-size: 12.5px;
   font-weight: 600;
   color: var(--t3);
 }
 .sh-g.on {
   background: var(--key, var(--s2));
-  box-shadow: var(--key-sh, none), inset 0 0 0 1px rgb(var(--v-rgb) / 0.5);
+  box-shadow:
+    var(--key-sh, 0 0 0 0 transparent),
+    inset 0 0 0 1px rgb(var(--v-rgb) / 0.5);
 }
 .sh-g.on b {
   color: var(--t1);
 }
-.sh-opts {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 24px;
+.sh-cz {
+  justify-content: flex-start;
+  height: 44px;
+}
+.sh-cz .meta {
+  margin-left: auto;
+  font-size: 12px;
+}
+.sh-back {
+  margin-left: -8px;
 }
 .sh-seg {
   display: flex;
@@ -883,7 +703,7 @@ const shortUrl = computed(() => url.value.replace(/^https?:\/\//, ''))
 }
 .sh-line {
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) auto 22px;
+  grid-template-columns: 18px minmax(0, 1fr) 22px;
   align-items: center;
   gap: 8px;
   height: 36px;
@@ -898,17 +718,12 @@ const shortUrl = computed(() => url.value.replace(/^https?:\/\//, ''))
 .sh-line.drag {
   opacity: 0.5;
 }
-.sh-line b {
-  color: var(--t1);
-  font-weight: 700;
-}
 .sh-hd {
   display: grid;
-  grid-template-columns: 3px 3px;
   gap: 3px;
   justify-content: center;
-  height: 24px;
   align-content: center;
+  height: 24px;
   cursor: grab;
 }
 .sh-hd i {
@@ -927,9 +742,12 @@ const shortUrl = computed(() => url.value.replace(/^https?:\/\//, ''))
   border-radius: 6px;
   color: var(--t3);
 }
-.sh-rm:hover {
+.sh-rm:hover:not(:disabled) {
   color: var(--t1);
   background: rgb(255 255 255 / 0.06);
+}
+.sh-rm:disabled {
+  opacity: 0.3;
 }
 .sh-add {
   margin-top: 6px;
@@ -942,7 +760,7 @@ const shortUrl = computed(() => url.value.replace(/^https?:\/\//, ''))
   border-top: 1px solid var(--line);
 }
 .sh-link {
-  flex: 0 1 380px;
+  flex: 0 1 460px;
   min-width: 0;
   height: 38px;
 }
@@ -959,33 +777,27 @@ const shortUrl = computed(() => url.value.replace(/^https?:\/\//, ''))
   font-weight: 650;
   color: var(--v200);
 }
-.sh-msg {
-  margin-left: 4px;
-}
 .sh-acts {
   gap: 8px;
   margin-left: auto;
 }
 @media (max-width: 899px) {
-  .sh-body,
-  .sh-opts {
+  .sh-body {
     grid-template-columns: minmax(0, 1fr);
   }
   .sh-prev {
     min-height: 0;
   }
-  .sh-prev canvas {
+  .sh-prev img {
     max-height: 56vh;
+  }
+  .sh-h,
+  .sh-foot {
+    flex-wrap: wrap;
   }
   .sh-fmt {
     order: 5;
     width: 100%;
-  }
-  .sh-h {
-    flex-wrap: wrap;
-  }
-  .sh-foot {
-    flex-wrap: wrap;
   }
   .sh-link {
     flex: 1 1 100%;

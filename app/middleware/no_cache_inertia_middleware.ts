@@ -26,6 +26,7 @@ export default class NoCacheInertiaMiddleware {
       !url.startsWith('/api/') &&
       !url.startsWith('/cdn/') &&
       !url.startsWith('/og/') &&
+      !url.startsWith('/card/') &&
       !url.startsWith('/presence/') &&
       url !== '/sitemap.xml' &&
       url !== '/robots.txt'

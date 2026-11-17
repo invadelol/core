@@ -75,8 +75,8 @@
       <meta property="og:url" content="{{ page.props.social.url }}" />
       <meta property="og:image" content="{{ page.props.social.image }}" />
       <meta property="og:image:type" content="{{ page.props.social.imageType || 'image/png' }}" />
-      <meta property="og:image:width" content="1200" />
-      <meta property="og:image:height" content="630" />
+      <meta property="og:image:width" content="{{ page.props.social.imageWidth || 1200 }}" />
+      <meta property="og:image:height" content="{{ page.props.social.imageHeight || 630 }}" />
       <meta property="og:image:alt" content="{{ page.props.social.alt || (page.props.social.title + ' champion artwork and recent stats') }}" />
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:site" content="@invadedotlol" />

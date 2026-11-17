@@ -3,7 +3,11 @@ import {
   DEFAULT_STATS,
   MAX_STATS,
   STATS,
+  CARD_DEFAULTS,
   LEDGER_DEFAULT,
+  cardImagePath,
+  cardPagePath,
+  parseCard,
   cellsFor,
   championLines,
   columnsFor,
@@ -79,7 +83,7 @@ test.group('Share card', () => {
     assert.equal(windowLabel(1, 'ranked'), 'Last 1 game, Solo/Duo')
   })
 
-  test('the ledger keeps the player\'s order and adds the asides', ({ assert }) => {
+  test("the ledger keeps the player's order and adds the asides", ({ assert }) => {
     const lines = linesFor(data, ['kda', 'rank', 'winrate'])
     assert.deepEqual(
       lines.map((l) => [l.label, l.value, l.aside ?? '']),
@@ -95,7 +99,10 @@ test.group('Share card', () => {
 
   test('an empty window keeps only the rank', ({ assert }) => {
     const empty = { ...data, figures: { ...figures, total: 0 } }
-    assert.deepEqual(linesFor(empty, LEDGER_DEFAULT).map((l) => l.key), ['rank'])
+    assert.deepEqual(
+      linesFor(empty, LEDGER_DEFAULT).map((l) => l.key),
+      ['rank']
+    )
   })
 
   test('records and champion lines', ({ assert }) => {
@@ -108,5 +115,46 @@ test.group('Share card', () => {
         ['3.40', ''],
       ]
     )
+  })
+
+  test('a card is its link, defaults left out', ({ assert }) => {
+    assert.equal(
+      cardImagePath('Briar Signal-5555', CARD_DEFAULTS),
+      '/card/Briar%20Signal-5555/stats-wide.png'
+    )
+    const s = {
+      ...CARD_DEFAULTS,
+      kind: 'stats' as const,
+      format: 'square' as const,
+      queue: 'ranked' as const,
+      count: 50,
+      lines: ['rank', 'kda'] as const,
+      champion: 103,
+      skin: 4,
+    }
+    const page = cardPagePath('Briar Signal-5555', { ...s, lines: [...s.lines] })
+    assert.equal(
+      page,
+      '/Briar%20Signal-5555?q=ranked&n=50&l=rank%2Ckda&c=103&s=4&card=stats-square'
+    )
+    const back = parseCard(
+      'stats-square',
+      Object.fromEntries(new URL(`https://x${page}`).searchParams)
+    )
+    assert.deepEqual(back, { ...s, lines: ['rank', 'kda'] })
+  })
+
+  test('a link with junk falls back to the defaults', ({ assert }) => {
+    assert.deepEqual(
+      parseCard('nope-huge.png', { q: 'aram', n: '7', l: 'evil,kda', c: '-3', s: '9' }),
+      {
+        ...CARD_DEFAULTS,
+        lines: ['kda'],
+      }
+    )
+    assert.deepEqual(parseCard('ranked-story.png', { l: ['kda', 'winrate'] }).lines, [
+      'kda',
+      'winrate',
+    ])
   })
 })
