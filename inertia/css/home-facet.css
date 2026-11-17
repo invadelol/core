@@ -771,3 +771,161 @@
     }
   }
 }
+
+/* ── The hero's poros: one on each side of the search, a sleepier one behind, and a few things from
+   the Rift floating at different depths. Lit like the page (the light comes from the top right),
+   breathing slowly; off on narrow screens and for reduced motion. ── */
+@layer components {
+  .vb .hp-art {
+    position: absolute;
+    inset: 0 0 auto;
+    height: 380px;
+    pointer-events: none;
+  }
+  .vb .hpa {
+    position: absolute;
+    top: 78px;
+    width: 270px;
+    height: 250px;
+  }
+  .vb .hpa.l {
+    left: 0;
+  }
+  .vb .hpa.r {
+    right: 0;
+  }
+  .vb .hpa > * {
+    position: absolute;
+    display: block;
+    animation: hp-float var(--t, 8s) ease-in-out var(--d, 0s) infinite;
+  }
+  .vb .hpa .hpf {
+    width: 150px;
+    height: auto;
+    top: 84px;
+    filter: drop-shadow(0 18px 22px rgb(0 0 0 / 0.42)) drop-shadow(0 2px 3px rgb(0 0 0 / 0.3));
+    --t: 7s;
+  }
+  .vb .hpa .hpb {
+    height: auto;
+    top: 0;
+    opacity: 0.62;
+    filter: blur(1.4px) saturate(0.85) brightness(0.82);
+    --t: 9s;
+    --d: -3s;
+  }
+  .vb .hpa .hpg {
+    top: 228px;
+    width: 120px;
+    height: 18px;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgb(0 0 0 / 0.38), rgb(0 0 0 / 0));
+    animation: hp-shade 7s ease-in-out infinite;
+  }
+  .vb .hpa .hpi {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    box-shadow:
+      0 0 0 1px rgb(255 255 255 / 0.1),
+      0 10px 18px -6px rgb(0 0 0 / 0.55);
+    rotate: var(--r, 0deg);
+  }
+  .vb .hpa .hpi.y {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    opacity: 0.55;
+    filter: blur(1.2px);
+  }
+  /* Left: the cheeky poro in front, the peace poro behind, a ward and a Poro-Snax. */
+  .vb .hpa.l .hpf {
+    left: 92px;
+  }
+  .vb .hpa.l .hpg {
+    left: 108px;
+  }
+  .vb .hpa.l .hpb {
+    left: 10px;
+    width: 96px;
+  }
+  .vb .hpa.l .hpi.x {
+    left: 214px;
+    top: 34px;
+    --r: 12deg;
+    --t: 8s;
+    --d: -2s;
+  }
+  .vb .hpa.l .hpi.y {
+    left: 22px;
+    top: 168px;
+    --r: -10deg;
+    --t: 10s;
+    --d: -5s;
+  }
+  /* Right: the Poro-Snax sign in front, the snoozy poro behind, a potion and a Doran's Ring. */
+  .vb .hpa.r .hpf {
+    right: 92px;
+  }
+  .vb .hpa.r .hpg {
+    right: 108px;
+  }
+  .vb .hpa.r .hpb {
+    right: 0;
+    width: 112px;
+  }
+  .vb .hpa.r .hpi.x {
+    right: 222px;
+    top: 52px;
+    --r: -12deg;
+    --t: 9s;
+    --d: -4s;
+  }
+  .vb .hpa.r .hpi.y {
+    right: 28px;
+    top: 176px;
+    --r: 9deg;
+    --t: 11s;
+    --d: -1s;
+  }
+  .vb .hp > :not(.hp-art) {
+    position: relative;
+  }
+  @keyframes hp-float {
+    0%,
+    100% {
+      translate: 0 0;
+    }
+    50% {
+      translate: 0 -7px;
+    }
+  }
+  @keyframes hp-shade {
+    0%,
+    100% {
+      scale: 1;
+      opacity: 1;
+    }
+    50% {
+      scale: 0.86;
+      opacity: 0.7;
+    }
+  }
+  [data-theme='light'] .vb .hpa .hpf {
+    filter: drop-shadow(0 16px 20px rgb(30 24 80 / 0.18))
+      drop-shadow(0 2px 3px rgb(30 24 80 / 0.12));
+  }
+  [data-theme='light'] .vb .hpa .hpg {
+    background: radial-gradient(closest-side, rgb(30 24 80 / 0.14), rgb(30 24 80 / 0));
+  }
+  @media (max-width: 1179px) {
+    .vb .hp-art {
+      display: none;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .vb .hpa > * {
+      animation: none;
+    }
+  }
+}
