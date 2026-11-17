@@ -222,6 +222,8 @@ export interface Line {
   key: StatKey
   /** "Win rate" */
   label: string
+  /** Under the figure on the card: "Win rate, 17W 13L", "Solo/Duo, 64 LP". */
+  caption: string
   /** "57%" */
   value: string
   /** "17W 13L", "64 LP" */
@@ -241,12 +243,21 @@ export function linesFor(data: CardData, chosen: ReadonlyArray<StatKey>): Line[]
     if (key !== 'rank' && !data.figures?.total) continue
     const cell = stat.cell(data)
     if (!cell) continue
-    const line: Line = { key, label: stat.label, value: cell.value, tone: cell.tone }
+    const line: Line = {
+      key,
+      label: stat.label,
+      caption: cell.label,
+      value: cell.value,
+      tone: cell.tone,
+    }
     if (key === 'rank' && data.rank) {
       line.aside = `${data.rank.lp} LP`
       line.tier = data.rank.tier
     }
-    if (key === 'winrate' && data.figures) line.aside = record(data.figures.winrate, data.figures.total)
+    if (key === 'winrate' && data.figures) {
+      line.aside = record(data.figures.winrate, data.figures.total)
+      line.caption = `Win rate, ${line.aside}`
+    }
     if (key === 'role' && data.role) line.aside = `${Math.round(data.role.share * 100)}%`
     lines.push(line)
     if (lines.length === MAX_STATS) break
@@ -263,8 +274,99 @@ export function record(winrate: number, games: number) {
 /** The lines of a champion card: games, win rate with the record, KDA. */
 export function championLines(c: { games: number; winrate: number; kda: number }): Line[] {
   return [
-    { key: 'games', label: 'Games', value: String(c.games) },
-    { key: 'winrate', label: 'Win rate', value: `${Math.round(c.winrate * 100)}%`, aside: record(c.winrate, c.games) },
-    { key: 'kda', label: 'KDA', value: c.kda.toFixed(2) },
+    { key: 'games', label: 'Games', caption: 'Games', value: String(c.games) },
+    {
+      key: 'winrate',
+      label: 'Win rate',
+      caption: `Win rate, ${record(c.winrate, c.games)}`,
+      value: `${Math.round(c.winrate * 100)}%`,
+      aside: record(c.winrate, c.games),
+    },
+    { key: 'kda', label: 'KDA', caption: 'KDA', value: c.kda.toFixed(2) },
   ]
+}
+
+/* ── The card's address ──────────────────────────────────────────
+ * A card is its settings, written in its link: the image `/card/Name-Tag/stats-square.png?…`
+ * is drawn on the server from the day's data, and the profile link `/Name-Tag?card=…` shows
+ * that image as its link preview. Defaults are left out, so a plain card has a short link.
+ */
+
+export interface CardSettings {
+  kind: CardKind
+  format: CardFormat
+  queue: CardQueue
+  count: number
+  /** The statistics, in their order (the card of the last games). */
+  lines: StatKey[]
+  /** The art's champion (0: the most played of the window) and skin. */
+  champion: number
+  skin: number
+}
+
+export const CARD_DEFAULTS: CardSettings = {
+  kind: 'stats',
+  format: 'wide',
+  queue: 'all',
+  count: 30,
+  lines: [...DEFAULT_STATS],
+  champion: 0,
+  skin: 0,
+}
+
+const KINDS = CARD_KINDS.map((k) => k.value)
+const STAT_KEYS = STATS.map((s) => s.key)
+
+/** The settings a card's link carries, defaults left out. */
+export function cardQuery(s: CardSettings) {
+  const q = new URLSearchParams()
+  if (s.queue !== CARD_DEFAULTS.queue) q.set('q', s.queue)
+  if (s.count !== CARD_DEFAULTS.count) q.set('n', String(s.count))
+  if (s.kind === 'stats' && s.lines.join(',') !== CARD_DEFAULTS.lines.join(','))
+    q.set('l', s.lines.join(','))
+  if (s.champion) q.set('c', String(s.champion))
+  if (s.champion && s.skin) q.set('s', String(s.skin))
+  return q
+}
+
+/** `/card/Name-Tag/stats-wide.png?…`: the image itself. */
+export function cardImagePath(slug: string, s: CardSettings) {
+  const q = cardQuery(s).toString()
+  return `/card/${encodeURIComponent(slug)}/${s.kind}-${s.format}.png${q ? `?${q}` : ''}`
+}
+
+/** `/Name-Tag?card=stats-wide&…`: the profile, previewed by that card wherever the link is posted. */
+export function cardPagePath(slug: string, s: CardSettings) {
+  const q = cardQuery(s)
+  q.set('card', `${s.kind}-${s.format}`)
+  return `/${encodeURIComponent(slug)}?${q.toString()}`
+}
+
+/** Reads a card's settings back from its link; anything unknown falls back to the default. */
+export function parseCard(
+  design: string | undefined,
+  query: Record<string, unknown>
+): CardSettings {
+  const [kind, format] = String(design ?? '')
+    .replace(/\.png$/, '')
+    .split('-')
+  const s: CardSettings = { ...CARD_DEFAULTS, lines: [...CARD_DEFAULTS.lines] }
+  if ((KINDS as string[]).includes(kind)) s.kind = kind as CardKind
+  if (format && format in FORMATS) s.format = format as CardFormat
+  const q = String(query.q ?? '')
+  if (CARD_QUEUES.some((x) => x.value === q)) s.queue = q as CardQueue
+  const n = Number(query.n)
+  if ((CARD_COUNTS as readonly number[]).includes(n)) s.count = n
+  const l = Array.isArray(query.l) ? query.l.join(',') : query.l
+  if (typeof l === 'string') {
+    const lines = [...new Set(l.split(','))].filter((k): k is StatKey =>
+      (STAT_KEYS as string[]).includes(k)
+    )
+    if (lines.length) s.lines = lines.slice(0, MAX_STATS)
+  }
+  const c = Number(query.c)
+  if (Number.isInteger(c) && c > 0 && c < 10_000) s.champion = c
+  const skin = Number(query.s)
+  if (s.champion && Number.isInteger(skin) && skin > 0 && skin < 1000) s.skin = skin
+  return s
 }

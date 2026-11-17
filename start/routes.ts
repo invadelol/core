@@ -19,7 +19,9 @@ const AutoSwagger = ((AutoSwaggerModule as unknown as { default?: unknown }).def
 import swagger from '#config/swagger'
 import { middleware } from '#start/middleware'
 import { ANALYTICS_PANELS, analyticsUrls } from '#constants/analytics'
+import type { HttpContext } from '@adonisjs/core/http'
 import { BUGS_URL, DISCORD_URL, X_URL } from '../inertia/lib/links.js'
+import { FORMATS, cardImagePath, parseCard } from '../inertia/lib/share_card.js'
 
 const SummonersController = () => import('#controllers/summoners_controller')
 const HealthChecksController = () => import('#controllers/health_checks_controller')
@@ -276,6 +278,8 @@ router.get('/og/team/:file', [SiteCardsController, 'team'])
 router.get('/og/mastery/:file', [SiteCardsController, 'mastery'])
 
 router.get('/og/:summoner', [() => import('#controllers/social_cards_controller'), 'show'])
+/** A profile's share card, drawn from its link: `/card/Name-Tag/stats-wide.png?q=…&n=…&l=…`. */
+router.get('/card/:summoner/:design', [() => import('#controllers/share_cards_controller'), 'show'])
 
 /** The match page's og:image, one player's game: `/og/match/:matchId/Name-Tag.jpg`. */
 router.get('/og/match/:matchId/:file', [
@@ -325,7 +329,7 @@ router.get('/:summoner/match/:matchId', async ({ inertia, params }) => {
   })
 })
 
-router.get('/:summoner/:section?', async ({ inertia, params, response }) => {
+router.get('/:summoner/:section?', async ({ inertia, params, request, response }) => {
   const section = params.section ?? 'overview'
   if (section === 'history')
     return response.redirect(`/${encodeURIComponent(params.summoner)}/matches`)
@@ -358,7 +362,7 @@ router.get('/:summoner/:section?', async ({ inertia, params, response }) => {
     summoner: params.summoner,
     section,
     initialProfile,
-    social: initialProfile ? profileSocial(initialProfile, section) : null,
+    social: initialProfile ? profileSocial(initialProfile, section, request) : null,
     panels: ANALYTICS_PANELS,
     preload,
     pro,
@@ -369,9 +373,33 @@ router.get('/:summoner/:section?', async ({ inertia, params, response }) => {
  * A profile's link preview: the profile card, or on the Mastery tab the pool itself
  * (`/og/mastery/…`), at that tab's address.
  */
-function profileSocial(profile: { gameName: string; tagLine: string }, section: string) {
+function profileSocial(
+  profile: { gameName: string; tagLine: string },
+  section: string,
+  request: HttpContext['request']
+) {
   const id = encodeURIComponent(`${profile.gameName}-${profile.tagLine}`)
   const title = `${profile.gameName}#${profile.tagLine} | invade.lol`
+  // A link shared from the share dialog (`?card=stats-wide&…`) previews as that card, drawn fresh.
+  const query = request.qs()
+  if (section === 'overview' && typeof query.card === 'string') {
+    const card = parseCard(query.card, query)
+    const host = request.host() ?? 'invade.lol'
+    const origin = host.endsWith('invade.lol')
+      ? `https://${host}`
+      : `${request.protocol()}://${host}`
+    const [w, h] = [FORMATS[card.format].width, FORMATS[card.format].height]
+    return {
+      title,
+      description: `${profile.gameName}'s League of Legends profile, recent performance and champion pool.`,
+      url: `https://invade.lol/${id}`,
+      image: `${origin}${cardImagePath(`${profile.gameName}-${profile.tagLine}`, card)}`,
+      imageType: 'image/png',
+      imageWidth: w,
+      imageHeight: h,
+      alt: `${profile.gameName}'s share card`,
+    }
+  }
   if (section === 'mastery')
     return {
       title,
