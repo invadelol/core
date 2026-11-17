@@ -586,7 +586,7 @@
   transform: scale(1.1);
 }
 /* People are round; a pro stands on violet ink. */
-.vb .sx-i.pl,
+.vb .sx-i.ply,
 .vb .sx-i.pr {
   border-radius: 50%;
 }
