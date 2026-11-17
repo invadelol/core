@@ -161,7 +161,8 @@ const bars = computed(() => {
   if (!list.length) return null
   const even = evenWithin(metric.value)
   const most = Math.max(...list.map((b) => Math.abs(b.v)))
-  const w = Math.max(1, PW / list.length - 2)
+  // Thin at any width: on the wide match page the columns grow, the bars don't.
+  const w = Math.min(11, Math.max(1, PW / list.length - 2))
   return {
     most,
     list: list.map((b) => {
