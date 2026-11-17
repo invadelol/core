@@ -155,6 +155,13 @@
     height: 14px;
     opacity: 0.75;
   }
+  .vb .pl-tag img.pl-flag {
+    width: 16px;
+    height: 12px;
+    border-radius: 2px;
+    object-fit: cover;
+    opacity: 1;
+  }
   .vb .pl-tag.pro {
     color: var(--v100);
     background: rgb(var(--v-rgb) / 0.16);
@@ -177,11 +184,30 @@
   .vb .pl-acts .pri {
     flex: 1;
   }
+  /* the earlier flat buttons: 36 px, hairline, the primary a flat violet without glow */
   .vb .pl-acts .btn {
-    height: 40px;
+    height: 36px;
+    font-size: 13px;
+    background: var(--s2);
+    box-shadow: inset 0 0 0 1px var(--line-2);
+  }
+  .vb .pl-acts .btn:hover {
+    background: var(--s3);
+  }
+  .vb .pl-acts .btn.pri {
+    background: var(--v600);
+    box-shadow: none;
+    color: #fff;
+  }
+  .vb .pl-acts .btn.pri:hover {
+    background: #6e62f4;
+  }
+  .vb .pl-acts .btn .i {
+    width: 15px;
+    height: 15px;
   }
   .vb .pl-acts .btn.ico {
-    width: 40px;
+    width: 36px;
   }
   .vb .pl-spin {
     animation: pl-spin 0.9s linear infinite;
@@ -794,7 +820,7 @@
   .vb .cp-r .r {
     text-align: right;
   }
-  .vb .ct-t {
+  .vb .tbl.ct-t {
     --cols: minmax(132px, 1fr) 52px 104px 56px 56px 64px 64px 72px 84px 84px;
     overflow: hidden;
     padding-bottom: 6px;
@@ -841,7 +867,7 @@
       grid-template-columns: 280px minmax(0, 1fr);
       column-gap: 24px;
     }
-    .vb .ct-t {
+    .vb .tbl.ct-t {
       --cols: minmax(132px, 1fr) 52px 104px 56px 56px 64px 64px;
     }
     .vb .ct-t .tbl-h > :nth-child(n + 8),
@@ -915,10 +941,10 @@
       height: 120px;
     }
     .vb .pl-acts .btn {
-      height: 44px;
+      height: 40px;
     }
     .vb .pl-acts .btn.ico {
-      width: 44px;
+      width: 40px;
     }
     .vb .pl-nav a {
       height: 44px;
@@ -969,7 +995,7 @@
     .vb .cp-r .wrl {
       display: none;
     }
-    .vb .ct-t {
+    .vb .tbl.ct-t {
       --cols: minmax(0, 1fr) 32px 72px 48px !important;
     }
     .vb .ct-t .tbl-h,
