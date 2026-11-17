@@ -409,12 +409,8 @@ watch(
   },
   { deep: true }
 )
-const lobbyNames = (l: Lobby) => {
-  const names = l.players.map((p) => p.gameName)
-  return names.length <= 2
-    ? names.join(' and ')
-    : `${names.slice(0, 2).join(', ')} and ${names.length - 2} more`
-}
+/** Every name of the lobby: the card runs the page's width, a narrow screen cuts the line. */
+const lobbyNames = (l: Lobby) => l.players.map((p) => p.gameName).join(', ')
 const regionValue = ref(props.region ?? 'auto')
 const regionOptions = [
   { value: 'auto', label: 'Any server', icon: regionFlag(null) },
@@ -470,7 +466,7 @@ onBeforeUnmount(() => controller?.abort())
         </LobbyField>
       </form>
 
-      <section class="sec" style="padding-top: 24px">
+      <section v-if="entries.length || lobbies.length" class="sec" style="padding-top: 24px">
         <div v-if="entries.length" class="msg" :class="{ many: entries.length > 5 }">
           <div v-for="e in entries" :key="e.key" class="card msc">
             <template v-if="e.status === 'loading'">
@@ -572,52 +568,39 @@ onBeforeUnmount(() => controller?.abort())
             </template>
           </div>
         </div>
-        <div v-else class="ms-rest" :class="{ two: lobbies.length }">
-          <div class="card ms-empty">
-            <span class="h4">Type the names, or paste a lobby</span>
-            <span class="meta"
-              >From the client or the lobby chat: every Riot ID in it becomes a chip, up to
-              ten.</span
-            >
-          </div>
-          <article v-if="lobbies.length" class="card">
-            <CardHead title="Your last lobbies" icon="clock" meta="On this device" />
-            <Link
-              v-for="l in lobbies"
-              :key="l.at"
-              class="ms-lb"
-              :href="multisearchPath(l.players, l.region)"
-            >
-              <span class="ms-stk"
-                ><img
-                  v-for="pl in l.players.slice(0, 5)"
-                  :key="`${pl.gameName}#${pl.tagLine}`"
-                  :src="profileIcon(pl.icon ?? null)"
-                  alt=""
-              /></span>
-              <span class="col" style="gap: 2px; min-width: 0">
-                <span class="h5">{{ lobbyTime(l.at) }}</span>
-                <span class="meta ell">{{ lobbyNames(l) }}</span>
-              </span>
-              <span class="row ms-lc">
-                <template v-for="pl in l.players.slice(0, 5)" :key="`c-${pl.gameName}`"
-                  ><Frame
-                    v-if="pl.champion"
-                    :src="champIcon(pl.champion)"
-                    :width="26"
-                    size="xs"
-                    :alt="championName(pl.champion)"
-                /></template>
-              </span>
-              <Icon name="chevr" :size="16" class="t4" />
-            </Link>
-          </article>
-        </div>
+        <article v-else-if="lobbies.length" class="card">
+          <CardHead title="Your last lobbies" icon="clock" meta="On this device" />
+          <Link
+            v-for="l in lobbies"
+            :key="l.at"
+            class="ms-lb"
+            :href="multisearchPath(l.players, l.region)"
+          >
+            <span class="ms-stk"
+              ><img
+                v-for="pl in l.players.slice(0, 5)"
+                :key="`${pl.gameName}#${pl.tagLine}`"
+                :src="profileIcon(pl.icon ?? null)"
+                alt=""
+            /></span>
+            <span class="col" style="gap: 2px; min-width: 0; flex: 1">
+              <span class="h5">{{ lobbyTime(l.at) }}</span>
+              <span class="meta ell">{{ lobbyNames(l) }}</span>
+            </span>
+            <span class="row ms-lc">
+              <template v-for="pl in l.players" :key="`c-${pl.gameName}#${pl.tagLine}`"
+                ><Frame
+                  v-if="pl.champion"
+                  :src="champIcon(pl.champion)"
+                  :width="26"
+                  size="xs"
+                  :alt="championName(pl.champion)"
+              /></template>
+            </span>
+            <Icon name="chevr" :size="16" class="t4" />
+          </Link>
+        </article>
       </section>
-      <p class="meta" style="margin-top: 16px">
-        Win rate: the Solo/Duo season. Champions: their stored games this season. Score: the average
-        Invade score of their last games.
-      </p>
     </div>
   </SiteLayout>
 </template>

@@ -5,19 +5,7 @@
   .vb .ms-find {
     display: block;
   }
-  /* Nothing scouted: the hint, and the last lobbies of this device beside it. */
-  .vb .ms-rest {
-    display: grid;
-    gap: 24px;
-  }
-  .vb .ms-rest.two {
-    grid-template-columns: minmax(0, 1fr) 500px;
-    align-items: start;
-  }
-  .vb .ms-rest.two .ms-empty {
-    height: 100%;
-    justify-content: center;
-  }
+  /* Nothing scouted: the last lobbies of this device, the page's width. */
   .vb .ms-lb {
     display: flex;
     align-items: center;
@@ -29,9 +17,11 @@
   .vb .ms-lb:hover {
     background: rgb(var(--v-rgb) / 0.04);
   }
+  /* Five icons wide, so the names line up from one lobby to the next. */
   .vb .ms-stk {
     display: inline-flex;
     flex: none;
+    width: 114px;
   }
   .vb .ms-stk img {
     width: 30px;
@@ -71,23 +61,10 @@
     padding: 0;
     justify-content: center;
   }
-  .vb .ms-empty {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    padding: 48px 24px;
-    text-align: center;
-  }
   @media (max-width: 1199px) {
     .vb .msg,
     .vb .msg.many {
       grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-  }
-  @media (max-width: 1023px) {
-    .vb .ms-rest.two {
-      grid-template-columns: 1fr;
     }
   }
   @media (max-width: 767px) {
