@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef } from 'vue'
-import { BuildTab, GoldChart, ObjectiveIcon, Timeline } from '@invadelol/ui'
+import { BuildTab, ObjectiveIcon, Timeline } from '@invadelol/ui'
 import { hasEvents, queueName, type MatchDetail } from '@invadelol/ui/logic'
 import SiteLayout from '../components/SiteLayout.vue'
+import MatchChart from '../components/match/MatchChart.vue'
 import Icon from '../components/ui/Icon.vue'
 import Frame from '../components/ui/Frame.vue'
 import CardHead from '../components/ui/CardHead.vue'
@@ -26,7 +27,8 @@ type Team = MatchDetail['teams'][number]
 /**
  * `/:summoner/match/:matchId`: one stored game as the board draws it: the scoreline, then
  * Overview (gold lead, team stats, both sides, lanes at 15, the best player, objectives, bans),
- * Scoreboard (every figure of every player), Builds and Timeline (the shared views). The game is
+ * Scoreboard (every figure of every player), Chart (every player's gold, XP or CS a minute),
+ * Builds and Timeline (the shared views). The game is
  * read from `/api/matches/:id` after the page opens; a game that just ended is waited for.
  */
 const props = defineProps<{ summoner: string; matchId: string }>()
@@ -49,6 +51,7 @@ const me = computed(() => detail.value?.players.find((p) => p.puuid === ownerPuu
 const TABS = computed(() => [
   { id: 'overview', label: 'Overview' },
   { id: 'scoreboard', label: 'Scoreboard' },
+  ...(detail.value?.timeline ? [{ id: 'chart', label: 'Chart' }] : []),
   { id: 'builds', label: 'Builds' },
   ...(detail.value?.timeline && hasEvents(detail.value)
     ? [{ id: 'timeline', label: 'Timeline' }]
@@ -59,7 +62,7 @@ const tab = ref('overview')
 const ALIASES: Record<string, string> = {
   analysis: 'overview',
   breakdown: 'overview',
-  gold: 'timeline',
+  gold: 'chart',
   build: 'builds',
 }
 function readHash() {
@@ -734,6 +737,21 @@ async function copy() {
           </div>
         </section>
 
+        <section
+          v-else-if="tab === 'chart' && detail.timeline"
+          class="sec"
+          style="padding-top: 24px"
+        >
+          <div class="card mx-shared">
+            <MatchChart
+              :detail="detail"
+              :timeline="detail.timeline"
+              :selected="selected"
+              :me="me"
+            />
+          </div>
+        </section>
+
         <section v-else-if="tab === 'builds'" class="sec" style="padding-top: 24px">
           <div class="card mx-shared">
             <BuildTab :detail="detail" :selected="selected" :me="me" @select="selected = $event" />
@@ -745,9 +763,6 @@ async function copy() {
           class="sec stk"
           style="padding-top: 24px"
         >
-          <div class="card mx-shared">
-            <GoldChart :detail="detail" :timeline="detail.timeline" :selected="selected" :me="me" />
-          </div>
           <div class="card mx-shared">
             <Timeline
               :detail="detail"

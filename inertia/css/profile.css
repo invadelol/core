@@ -669,7 +669,7 @@
     list-style: none;
   }
 
-  /* The shared rows (@invadelol/ui MatchRow) and the game they open (MatchDetailPanel), on the
+  /* The shared rows (@invadelol/ui MatchRow) and the game they open (GameDetail), on the
      page's materials: a row is a sheet with its lit edge and the result tint; open, it and its
      detail read as one sheet. */
   .vb .mh-it .iv-mr {
