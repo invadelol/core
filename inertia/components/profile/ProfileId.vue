@@ -6,6 +6,7 @@ import type { Position } from '@invadelol/ui/logic'
 import Icon from '../ui/Icon.vue'
 import { championSplash, profileIcon } from '../../lib/assets.js'
 import { SERVER } from '../../lib/board.js'
+import { regionFlag } from '../../lib/flags.js'
 import { since } from '../../lib/ladders.js'
 import type { Summoner } from '../../lib/types.js'
 
@@ -93,7 +94,7 @@ const views = (n: number) => `${n.toLocaleString('en-US')} ${n === 1 ? 'view' : 
       <span v-if="roles[0]" class="pl-tag"
         ><RoleIcon :lane="roles[0]" :size="14" />Mostly {{ ROLE[roles[0]] }}</span
       >
-      <span class="pl-tag">{{ SERVER[summoner.platform] ?? summoner.platform }}</span>
+      <span class="pl-tag"><img class="pl-flag" :src="regionFlag(summoner.platform)" alt="" />{{ SERVER[summoner.platform] ?? summoner.platform }}</span>
       <Link v-if="pro" class="pl-tag pro" :href="`/pro/${pro.slug}`"
         >Pro<template v-if="pro.team">, {{ pro.team.name }}</template></Link
       >
