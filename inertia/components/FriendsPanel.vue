@@ -543,10 +543,11 @@ button.qm:hover {
   text-align: left;
   color: inherit;
   cursor: pointer;
-  transition: transform 160ms var(--ease);
+  transition: background 160ms var(--ease);
 }
+/* A card that opens the duo: a shade brighter, never raised. */
 .mc:hover {
-  transform: translateY(-1px);
+  background: var(--hover-sheet, var(--d-sheen), var(--d-sf2));
 }
 .mc.on {
   box-shadow:
