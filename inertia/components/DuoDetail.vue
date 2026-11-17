@@ -8,7 +8,6 @@ import MatchRows from './profile/MatchRows.vue'
 import EmptyState from './ui/EmptyState.vue'
 import Frame from './ui/Frame.vue'
 import Icon from './ui/Icon.vue'
-import SectionHead from './ui/SectionHead.vue'
 import Skeleton from './ui/Skeleton.vue'
 import ShowMore from './ShowMore.vue'
 import { champIcon, championName, profileIcon } from '../lib/assets.js'
@@ -27,7 +26,7 @@ const props = defineProps<{
 }>()
 
 const PAGE = 10
-/** Under this many games a seat's or a pick's win rate is shown, but quietly. */
+/** Under this many games a win rate (the duo's, a seat's, a pick's) is not shown. */
 const SOLID = 5
 /** Under this many games together a form line would only be noise. */
 const TREND_MIN = 8
@@ -52,12 +51,8 @@ const synergy = computed(() => {
     text: signed(value),
     /** Strong enough, on enough games, to be read as a real difference. */
     clear: props.partner.confidence !== 'low' && Math.abs(value) >= 2,
-    note:
-      props.partner.confidence === 'low'
-        ? 'Few games: kept close to the usual rate'
-        : props.partner.confidence === 'fair'
-          ? 'Some games: a hint, not a verdict'
-          : 'Enough games to rely on',
+    tone:
+      props.partner.confidence === 'low' || Math.abs(value) < 2 ? 't3' : value > 0 ? 'wn' : 'ls',
   }
 })
 
@@ -174,7 +169,7 @@ const more = computed(() => games.value.length > 0 && !exhausted.value)
 
 <template>
   <section class="dd" :aria-label="`With ${partner.gameName}`">
-    <article class="card">
+    <article class="card lit">
       <!-- Who -->
       <header class="dd-who">
         <span class="dd-pair" aria-hidden="true">
@@ -188,7 +183,7 @@ const more = computed(() => games.value.length > 0 && !exhausted.value)
           <p class="meta num ell">
             {{ TIER[partner.tier] }}, {{ partner.games }} games
             <span class="dd-hm"
-              >since {{ shortDate(partner.firstMs) }}, last {{ shortDate(partner.lastMs) }}</span
+              >since {{ shortDate(partner.firstMs) }} · last {{ shortDate(partner.lastMs) }}</span
             >
           </p>
         </div>
@@ -203,20 +198,28 @@ const more = computed(() => games.value.length > 0 && !exhausted.value)
 
       <!-- The record, and what it is worth -->
       <dl class="dd-figs">
-        <div>
-          <dt class="lab">Win rate together</dt>
+        <template v-if="partner.games >= SOLID">
+          <div>
+            <dt class="lab">Win rate together</dt>
+            <dd>
+              <span class="fg-l">{{ rate(partner.wins, partner.games) }}%</span>
+              <span class="meta num">{{ partner.wins }}W {{ partner.games - partner.wins }}L</span>
+            </dd>
+          </div>
+          <div>
+            <dt class="lab">Synergy</dt>
+            <dd>
+              <span class="fg-l num" :class="synergy.tone">{{ synergy.text }}</span>
+              <span class="meta num">on {{ Math.round(partner.baseline * 100) }}% without</span>
+            </dd>
+          </div>
+        </template>
+        <div v-else>
+          <dt class="lab">Games together</dt>
           <dd>
-            <span class="fg-l">{{ rate(partner.wins, partner.games) }}%</span>
+            <span class="fg-l">{{ partner.games }}</span>
             <span class="meta num">{{ partner.wins }}W {{ partner.games - partner.wins }}L</span>
           </dd>
-        </div>
-        <div>
-          <dt class="lab">Synergy</dt>
-          <dd>
-            <span class="fg-l" :class="synergy.clear ? '' : 't3'">{{ synergy.text }}</span>
-            <span class="meta num">vs {{ Math.round(partner.baseline * 100) }}% without</span>
-          </dd>
-          <p class="meta dd-note">{{ synergy.note }}</p>
         </div>
         <div v-if="partner.together.score !== null">
           <dt class="lab">Your score together</dt>
@@ -240,10 +243,7 @@ const more = computed(() => games.value.length > 0 && !exhausted.value)
       <div v-if="partner.series.length >= TREND_MIN" class="dd-form">
         <div class="row dd-form-h">
           <span class="h5">Form together</span>
-          <span class="meta">
-            Win rate over the last 10 games together. Dashed:
-            {{ Math.round(partner.baseline * 100) }}% without them.
-          </span>
+          <span class="meta">Win rate, last 10 games together</span>
         </div>
         <DuoTrend
           :values="form"
@@ -272,9 +272,9 @@ const more = computed(() => games.value.length > 0 && !exhausted.value)
                 {{ roleLabel(seat.mine) }} <span class="t3">+</span> {{ roleLabel(seat.theirs) }}
               </span>
               <span class="meta num">{{ seat.wins }}W {{ seat.games - seat.wins }}L</span>
-              <span class="dd-rate num" :class="{ quiet: seat.games < SOLID }"
-                >{{ rate(seat.wins, seat.games) }}%</span
-              >
+              <span class="dd-rate num">{{
+                seat.games >= SOLID ? `${rate(seat.wins, seat.games)}%` : ''
+              }}</span>
             </li>
           </ul>
           <ShowMore v-model="seatsOpen" :total="partner.roles.length" :limit="WORKS" />
@@ -303,9 +303,9 @@ const more = computed(() => games.value.length > 0 && !exhausted.value)
                 {{ championName(pick.theirs) }}
               </span>
               <span class="meta num">{{ pick.wins }}W {{ pick.games - pick.wins }}L</span>
-              <span class="dd-rate num" :class="{ quiet: pick.games < SOLID }"
-                >{{ rate(pick.wins, pick.games) }}%</span
-              >
+              <span class="dd-rate num">{{
+                pick.games >= SOLID ? `${rate(pick.wins, pick.games)}%` : ''
+              }}</span>
             </li>
           </ul>
           <ShowMore
@@ -336,7 +336,10 @@ const more = computed(() => games.value.length > 0 && !exhausted.value)
 
     <!-- The games themselves -->
     <section class="dd-games">
-      <SectionHead title="Games together" icon="clock" :meta="String(partner.games)" />
+      <div class="mh-h">
+        <h2 class="h3">Games together</h2>
+        <span class="meta num">{{ partner.games }}</span>
+      </div>
       <article v-if="failed && !games.length" class="card" role="alert">
         <EmptyState compact icon="clock" title="These games could not be loaded">
           <button type="button" class="btn sm" @click="load()">Retry</button>
@@ -368,7 +371,13 @@ const more = computed(() => games.value.length > 0 && !exhausted.value)
 .dd {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 28px;
+  scroll-margin-top: 80px;
+}
+.dd-games {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 .dd-who {
   display: flex;
@@ -475,7 +484,7 @@ const more = computed(() => games.value.length > 0 && !exhausted.value)
 }
 .dd-older {
   width: 100%;
-  margin-top: 16px;
+  margin-top: 6px;
 }
 @media (max-width: 860px) {
   .dd-figs {
