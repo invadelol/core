@@ -1,6 +1,6 @@
 /* The section's sub-row (AppHeader, header/SubArt.vue): a small League picture per link, grey at
    rest and in colour on hover or on the current page; the current page underlined in violet like
-   the main row, a short grey line under a hovered one. On a phone the row scrolls sideways under
+   the main row. On a phone the row scrolls sideways under
    the header, fading at its right edge. */
 
 .vb .hx-sub.sr .wrap {
@@ -16,7 +16,7 @@
   background: none;
   box-shadow: none;
   color: var(--t3);
-  transition: color 160ms var(--ease);
+  transition: color var(--m) var(--ease);
 }
 .vb .hx-sub.sr a::after {
   content: '';
@@ -27,18 +27,12 @@
   height: 2px;
   border-radius: 2px 2px 0 0;
   background: var(--v500);
-  transform: scaleX(0);
-  transition: transform 200ms var(--ease);
+  opacity: 0;
 }
 .vb .hx-sub.sr a:hover,
 .vb .hx-sub.sr a:focus-visible {
   color: var(--t1);
   background: none;
-}
-.vb .hx-sub.sr a:hover::after,
-.vb .hx-sub.sr a:focus-visible::after {
-  transform: scaleX(0.35);
-  background: var(--line-3);
 }
 .vb .hx-sub.sr a.on {
   color: var(--t1);
@@ -46,8 +40,7 @@
   box-shadow: none;
 }
 .vb .hx-sub.sr a.on::after {
-  transform: scaleX(1);
-  background: var(--v500);
+  opacity: 1;
 }
 
 /* The picture: 22 px, grey until its link is hovered or current. */
@@ -62,9 +55,7 @@
   background: var(--s3);
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.07);
   filter: saturate(0.35) brightness(0.85);
-  transition:
-    filter 200ms var(--ease),
-    transform 200ms var(--ease);
+  transition: filter var(--m) var(--ease);
 }
 .vb .sri img {
   display: block;
@@ -111,10 +102,6 @@
 .vb .hx-sub.sr a.on .sri {
   filter: none;
 }
-.vb .hx-sub.sr a:hover .sri,
-.vb .hx-sub.sr a:focus-visible .sri {
-  transform: translateY(-1px);
-}
 
 /* The live patch in the patch notes' row. */
 .vb .srd {
@@ -124,16 +111,6 @@
   border-radius: 50%;
   background: var(--v300);
   box-shadow: 0 0 0 3px rgb(var(--v-rgb) / 0.22);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .vb .hx-sub.sr a::after,
-  .vb .sri {
-    transition: none;
-  }
-  .vb .hx-sub.sr a:hover .sri {
-    transform: none;
-  }
 }
 
 /* Phone: a row that scrolls sideways, smaller pictures, a fade at the right edge. */
