@@ -104,6 +104,23 @@ const topBully = (rows: { value: number }[]) => rows[0]?.value || 1
   <SiteLayout :search="false">
     <div class="wrap">
       <section class="hp" aria-labelledby="hp-title">
+        <!-- Poros on both sides of the search, with a few things from the Rift floating around them. -->
+        <div class="hp-art" aria-hidden="true">
+          <div class="hpa l">
+            <img class="hpb" :src="'/home/poro-peace.webp'" alt="" width="174" height="173" />
+            <img class="hpi x" :src="'/cdn/item/3340'" alt="" width="64" height="64" />
+            <img class="hpi y" :src="'/cdn/item/2052'" alt="" width="64" height="64" />
+            <span class="hpg" />
+            <img class="hpf" :src="'/home/poro-cheeky.webp'" alt="" width="180" height="157" />
+          </div>
+          <div class="hpa r">
+            <img class="hpb" :src="'/home/poro-snoozy.webp'" alt="" width="224" height="200" />
+            <img class="hpi x" :src="'/cdn/item/2003'" alt="" width="64" height="64" />
+            <img class="hpi y" :src="'/cdn/item/1056'" alt="" width="64" height="64" />
+            <span class="hpg" />
+            <img class="hpf" :src="'/home/poro-snax.webp'" alt="" width="175" height="176" />
+          </div>
+        </div>
         <h1 id="hp-title" class="d1 hp-t">Look up a player</h1>
         <SearchBar
           variant="header"
