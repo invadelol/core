@@ -233,7 +233,7 @@
 }
 
 /* ── Empty and loading ───────────────────────────────────────── */
-.vb .empty {
+.vb .empty:where(:not(.vb [class*='iv-'] *)) {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -241,28 +241,28 @@
   padding: 44px 24px;
   text-align: center;
 }
-.vb .empty > .i {
+.vb .empty:where(:not(.vb [class*='iv-'] *)) > .i {
   margin-bottom: 6px;
   color: var(--t4);
 }
-.vb .empty .meta {
+.vb .empty:where(:not(.vb [class*='iv-'] *)) .meta {
   max-width: 420px;
   text-wrap: balance;
 }
 .vb .empty-act {
   margin-top: 10px;
 }
-.vb .empty.compact {
+.vb .empty:where(:not(.vb [class*='iv-'] *)).compact {
   flex-direction: row;
   justify-content: flex-start;
   gap: 10px;
   padding: 16px 20px;
   text-align: left;
 }
-.vb .empty.compact > .i {
+.vb .empty:where(:not(.vb [class*='iv-'] *)).compact > .i {
   margin: 0;
 }
-.vb .empty.compact .empty-act {
+.vb .empty:where(:not(.vb [class*='iv-'] *)).compact .empty-act {
   margin: 0 0 0 auto;
 }
 .vb .skel-wrap {
