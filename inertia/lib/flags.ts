@@ -2,10 +2,10 @@
  * Small flags for the server menus (EUW, NA, KR…), drawn here as SVG and served as data URLs, so
  * they work anywhere a picture does (a `Select` option's `icon`, an `<img>`), with no image host.
  *
- * A server that is one country shows that country's flag, simplified to read at 16 px. A server
- * that spans several countries (EUW, EUNE, LAN, LAS, OCE, ME, SEA, and TW, kept neutral) shows
- * the same regional mark: a small globe with a lit dot where the server plays. Every server at
- * once is the globe without a dot.
+ * Every server shows a flag, simplified to read at 16 px: its country's, or for a server that
+ * spans several, the flag of the union (EUW, EUNE: Europe) or of its main country (LAN: Mexico,
+ * LAS: Argentina, OCE: Australia, SEA: Singapore, ME: the Emirates). TW stays neutral, a globe
+ * with a lit dot. Every server at once is the globe without a dot.
  */
 
 const W = 21
@@ -98,6 +98,71 @@ function russia() {
   )
 }
 
+function europe() {
+  // The twelve gold stars in their ring.
+  let body = `<rect width="${W}" height="${H}" fill="#003399"/>`
+  for (let i = 0; i < 12; i++) {
+    const a = (i * Math.PI) / 6
+    body += star(10.5 + 4.6 * Math.cos(a), 7.5 + 4.6 * Math.sin(a), 0.85, '#ffcc00')
+  }
+  return body
+}
+
+function mexico() {
+  return (
+    `<rect width="7" height="${H}" fill="#006847"/>` +
+    `<rect x="7" width="7" height="${H}" fill="#fff"/>` +
+    `<rect x="14" width="7" height="${H}" fill="#ce1126"/>` +
+    `<circle cx="10.5" cy="7.5" r="1.6" fill="#8c5a2b"/>`
+  )
+}
+
+function argentina() {
+  return (
+    `<rect width="${W}" height="${H}" fill="#74acdf"/>` +
+    `<rect y="5" width="${W}" height="5" fill="#fff"/>` +
+    `<circle cx="10.5" cy="7.5" r="1.5" fill="#f6b40e"/>`
+  )
+}
+
+function australia() {
+  // The Union Jack canton, simplified, and the Southern Cross.
+  return (
+    `<rect width="${W}" height="${H}" fill="#012169"/>` +
+    `<path d="M0 0 10 7.5M10 0 0 7.5" stroke="#fff" stroke-width="1.5"/>` +
+    `<path d="M0 0 10 7.5M10 0 0 7.5" stroke="#c8102e" stroke-width=".6"/>` +
+    `<path d="M5 0v7.5M0 3.75h10" stroke="#fff" stroke-width="2.2"/>` +
+    `<path d="M5 0v7.5M0 3.75h10" stroke="#c8102e" stroke-width="1.2"/>` +
+    star(5, 11.3, 1.6, '#fff') +
+    star(15.8, 3, 0.9, '#fff') +
+    star(13.2, 7, 0.9, '#fff') +
+    star(18.3, 6.3, 0.9, '#fff') +
+    star(15.8, 12, 0.9, '#fff')
+  )
+}
+
+function singapore() {
+  return (
+    `<rect width="${W}" height="7.5" fill="#ef3340"/>` +
+    `<rect y="7.5" width="${W}" height="7.5" fill="#fff"/>` +
+    `<circle cx="4.6" cy="3.75" r="2.6" fill="#fff"/><circle cx="5.6" cy="3.75" r="2.4" fill="#ef3340"/>` +
+    star(7.4, 2.3, 0.5, '#fff') +
+    star(8.8, 3.3, 0.5, '#fff') +
+    star(8.3, 5, 0.5, '#fff') +
+    star(6.5, 5, 0.5, '#fff') +
+    star(6, 3.3, 0.5, '#fff')
+  )
+}
+
+function emirates() {
+  return (
+    `<rect width="${W}" height="5" fill="#00732f"/>` +
+    `<rect y="5" width="${W}" height="5" fill="#fff"/>` +
+    `<rect y="10" width="${W}" height="5" fill="#000"/>` +
+    `<rect width="5.5" height="${H}" fill="#ff0000"/>`
+  )
+}
+
 /** The regional mark: a globe, and a lit dot at (`lon`, `lat`) when the server has a place. */
 function globe(at: [number, number] | null) {
   const x = at ? 10.5 + (at[0] / 180) * 4.7 : 0
@@ -116,13 +181,6 @@ function globe(at: [number, number] | null) {
 
 /** Where each regional server plays, roughly (longitude, latitude). */
 const REGIONAL: Record<string, [number, number]> = {
-  euw: [2, 49],
-  eune: [24, 58],
-  lan: [-92, 17],
-  las: [-64, -31],
-  oce: [140, -30],
-  me: [46, 25],
-  sea: [104, 4],
   tw: [121, 24],
 }
 
@@ -134,6 +192,13 @@ const COUNTRY: Record<string, () => string> = {
   tr: turkey,
   vn: vietnam,
   ru: russia,
+  euw: europe,
+  eune: europe,
+  lan: mexico,
+  las: argentina,
+  oce: australia,
+  sea: singapore,
+  me: emirates,
 }
 
 /** The servers' platform ids (`EUW1`) as the menus' slugs. */
