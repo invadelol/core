@@ -6,18 +6,16 @@ import type { ChampionMastery } from '../lib/types.js'
 import MasteryBubbles from './mastery/MasteryBubbles.vue'
 import MasteryCrest from './mastery/MasteryCrest.vue'
 import MasteryPodium from './mastery/MasteryPodium.vue'
-import CardHead from './ui/CardHead.vue'
 import EmptyState from './ui/EmptyState.vue'
-import Frame from './ui/Frame.vue'
 import Icon from './ui/Icon.vue'
 import Segmented from './ui/Segmented.vue'
 import Skeleton from './ui/Skeleton.vue'
-import SortHead from './ui/SortHead.vue'
 import { useSort } from './ui/sort.js'
 
 /**
- * Lifetime mastery: the totals in a card, the three biggest champions as art cards, then the whole
- * pool as circles sized by points, or as a ranked table.
+ * Lifetime mastery: a lit sheet with the totals over the three biggest champions on a podium, the
+ * whole pool as circles sized by points, then every other champion in two columns, searchable and
+ * sortable by points, level or name.
  */
 const props = defineProps<{
   mastery: ChampionMastery[]
@@ -27,16 +25,16 @@ const props = defineProps<{
 
 defineEmits<{ retry: [] }>()
 
-/** Rows shown under the podium before "Show all". */
-const LIST_SIZE = 20
+/** Rows of "More champions" before "Show all". */
+const LIST_SIZE = 12
 
 const query = ref('')
 const expanded = ref(false)
-/** The pool as circles, or the same champions as a ranked list. */
-const view = ref<'pool' | 'list'>('pool')
-const VIEWS = [
-  { value: 'pool' as const, label: 'Pool' },
-  { value: 'list' as const, label: 'List' },
+/** The order of "More champions". */
+const SORTS = [
+  { value: 'points' as const, label: 'Points' },
+  { value: 'level' as const, label: 'Level' },
+  { value: 'name' as const, label: 'Name' },
 ]
 
 const sorted = computed(() =>
@@ -64,12 +62,10 @@ const provenance = computed(() => {
   return sorted.value.length <= 10 ? `Top ten only. ${seen}` : seen
 })
 
-/** The champion played most recently, with when. */
-const latest = computed(
-  () => [...sorted.value].sort((a, b) => b.lastPlayTime - a.lastPlayTime)[0] ?? null
+/** Everyone after the podium, with their place in the pool. */
+const ranked = computed(() =>
+  sorted.value.map((entry, index) => ({ entry, rank: index + 1 })).slice(3)
 )
-
-const ranked = computed(() => sorted.value.map((entry, index) => ({ entry, rank: index + 1 })))
 
 const rest = computed(() => {
   const text = query.value.trim().toLowerCase()
@@ -90,18 +86,31 @@ const order = useSort(
   { key: 'points', first: { name: 'asc' } }
 )
 
+const sortKey = computed({
+  get: () => (order.key ?? 'points') as 'points' | 'level' | 'name',
+  set: (key: 'points' | 'level' | 'name') => {
+    order.key = key
+    order.dir = key === 'name' ? 'asc' : 'desc'
+  },
+})
+
 const visible = computed(() =>
   expanded.value || query.value.trim() ? order.rows : order.rows.slice(0, LIST_SIZE)
 )
+/** Two columns, filled top to bottom. */
+const columns = computed(() => {
+  const list = visible.value
+  const half = Math.ceil(list.length / 2)
+  return list.length > 3 ? [list.slice(0, half), list.slice(half)] : [list]
+})
 </script>
 
 <template>
   <div class="ms">
     <!-- Loading: the shapes of what is coming -->
     <div v-if="loading" class="ms" aria-busy="true" aria-label="Loading mastery">
-      <article class="card"><Skeleton :height="104" /></article>
-      <div class="grid3 ms-top"><Skeleton v-for="n in 3" :key="n" :height="300" /></div>
-      <article class="card"><Skeleton :rows="8" pic /></article>
+      <article class="card" style="padding: 20px 24px"><Skeleton :height="420" /></article>
+      <article class="card" style="padding: 20px"><Skeleton :height="320" /></article>
     </div>
 
     <article v-else-if="error" class="card" role="alert">
@@ -123,111 +132,88 @@ const visible = computed(() =>
     </article>
 
     <template v-else>
-      <article class="card">
-        <CardHead title="Mastery" icon="star" :meta="provenance || 'Every champion, all time'" />
-        <div class="ms-kpi">
-          <div>
-            <span class="lab">Total points</span>
-            <span class="fg-l">{{ compact(totals.points) }}</span>
+      <section class="card lit ms-head">
+        <div class="ms-h">
+          <div class="col" style="gap: 4px; min-width: 0">
+            <h2 class="h3">Mastery</h2>
+            <span class="meta">{{ provenance || 'Every champion, all time' }}</span>
           </div>
-          <div>
-            <span class="lab">Champions played</span>
-            <span class="fg-l">{{ totals.champions }}</span>
-          </div>
-          <div>
-            <span class="lab">Level 10 and above</span>
-            <span class="fg-l vi">{{ totals.levelTen }}</span>
-          </div>
-          <div v-if="latest">
-            <span class="lab">Played last</span>
-            <span class="row" style="gap: 10px; min-width: 0">
-              <Frame :src="champIcon(latest.championId)" :width="32" size="xs" />
-              <span class="col" style="gap: 2px; min-width: 0">
-                <span class="h5 ell">{{ championName(latest.championId) }}</span>
-                <span class="meta num">{{ timeAgo(latest.lastPlayTime) }}</span>
-              </span>
-            </span>
-          </div>
+          <dl class="ms-tot">
+            <div>
+              <dt class="lab">Total points</dt>
+              <dd class="fg-m num">{{ compact(totals.points) }}</dd>
+            </div>
+            <div>
+              <dt class="lab">Champions</dt>
+              <dd class="fg-m num">{{ totals.champions }}</dd>
+            </div>
+            <div>
+              <dt class="lab">Level 10 and up</dt>
+              <dd class="fg-m num">{{ totals.levelTen }}</dd>
+            </div>
+          </dl>
         </div>
-      </article>
+        <MasteryPodium :top="sorted.slice(0, 3)" />
+      </section>
 
-      <MasteryPodium :top="sorted.slice(0, 3)" />
-
-      <article class="card">
-        <CardHead
-          title="Pool"
-          icon="grid"
-          :meta="
-            view === 'pool'
-              ? `${sorted.length} champions, sized by points`
-              : `${sorted.length} champions, most points first`
-          "
-        >
-          <Segmented v-model="view" :options="VIEWS" label="View" />
-        </CardHead>
-
-        <!-- Every champion, sized by points -->
-        <div v-if="view === 'pool'" class="ms-pool">
+      <section class="card">
+        <div class="card-h">
+          <h2 class="h3">Pool</h2>
+          <span class="meta num">{{ sorted.length }} champions</span>
+        </div>
+        <div class="ms-pool">
           <MasteryBubbles :mastery="sorted" />
           <p class="lgd ms-lgd">
-            <span><i class="v" />Level 10 and above</span>
+            <span><i class="v" />Level 10 and up</span>
           </p>
         </div>
+      </section>
 
-        <!-- The same, ranked -->
-        <template v-else>
-          <div class="ms-find">
-            <label class="field">
-              <Icon name="search" />
-              <input v-model="query" aria-label="Find a champion" placeholder="Find a champion" />
-            </label>
-          </div>
-          <div class="tbl ms-tbl" role="table" aria-label="Mastery by champion">
-            <div class="tbl-h" role="row">
-              <span class="n" role="columnheader">#</span>
-              <SortHead :sorter="order" col="name" label="Champion" />
-              <SortHead :sorter="order" col="level" label="Level" />
-              <SortHead :sorter="order" col="points" label="Points" class="n" />
-            </div>
-            <div
-              v-for="{ entry, rank } in visible"
-              :key="entry.championId"
-              class="tbl-r"
-              role="row"
-            >
-              <span class="n rk" role="cell">{{ rank }}</span>
-              <span class="who" role="cell">
-                <Frame :src="champIcon(entry.championId)" :width="32" size="xs" />
-                <span>
-                  <b class="h5 ell">{{ championName(entry.championId) }}</b>
-                  <small class="meta num">{{ timeAgo(entry.lastPlayTime) }}</small>
-                </span>
+      <section v-if="ranked.length" class="card">
+        <div class="card-h ms-mh">
+          <h2 class="h3">More champions</h2>
+          <span class="meta num">{{ ranked.length }} more</span>
+          <Segmented v-model="sortKey" :options="SORTS" label="Order" class="ms-sort" />
+          <label class="field ms-find">
+            <Icon name="search" />
+            <input v-model="query" aria-label="Find a champion" placeholder="Find a champion" />
+          </label>
+        </div>
+        <div class="ms-list" :class="{ one: columns.length === 1 }">
+          <div v-for="(col, c) in columns" :key="c">
+            <div v-for="{ entry, rank } in col" :key="entry.championId" class="ml">
+              <span class="k num">{{ rank }}</span>
+              <img class="pic" :src="champIcon(entry.championId)" alt="" width="34" height="34" />
+              <span class="col" style="gap: 3px; min-width: 0">
+                <span class="h5 ell">{{ championName(entry.championId) }}</span>
+                <span class="meta num">{{ timeAgo(entry.lastPlayTime) }}</span>
               </span>
-              <span class="row ms-lv num" role="cell">
-                <MasteryCrest :level="entry.championLevel" :size="26" />{{ entry.championLevel }}
-              </span>
-              <span class="n fg-xs" role="cell">{{ compact(entry.championPoints) }}</span>
+              <span class="lv num"
+                ><MasteryCrest :level="entry.championLevel" :size="20" />Lv
+                {{ entry.championLevel }}</span
+              >
+              <span class="pt num">{{ compact(entry.championPoints) }}</span>
             </div>
           </div>
-          <EmptyState
-            v-if="!visible.length"
-            compact
-            icon="search"
-            :title="`No champion matches “${query.trim()}”`"
-          />
-          <div v-if="!query.trim() && rest.length > LIST_SIZE" class="ms-more">
-            <button
-              type="button"
-              class="btn"
-              :aria-expanded="expanded"
-              @click="expanded = !expanded"
-            >
-              {{ expanded ? 'Show fewer' : `Show all ${rest.length}` }}
-              <Icon name="chev" :style="expanded ? 'transform: rotate(180deg)' : undefined" />
-            </button>
-          </div>
-        </template>
-      </article>
+        </div>
+        <EmptyState
+          v-if="!visible.length"
+          compact
+          icon="search"
+          :title="`No champion matches “${query.trim()}”`"
+        />
+        <div v-if="!query.trim() && rest.length > LIST_SIZE" class="ms-more">
+          <button
+            type="button"
+            class="btn sm"
+            :aria-expanded="expanded"
+            @click="expanded = !expanded"
+          >
+            {{ expanded ? 'Show fewer' : `Show all ${rest.length}` }}
+            <Icon name="chev" :style="expanded ? 'transform: rotate(180deg)' : undefined" />
+          </button>
+        </div>
+      </section>
     </template>
   </div>
 </template>
@@ -238,21 +224,27 @@ const visible = computed(() =>
   flex-direction: column;
   gap: 24px;
 }
-.ms-kpi {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  padding: 4px 0 20px;
+.ms-head {
+  overflow: hidden;
 }
-.ms-kpi > div {
+.ms-h {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px 24px 0;
+}
+.ms-tot {
+  display: flex;
+  gap: 40px;
+  margin: 0 0 0 auto;
+}
+.ms-tot > div {
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  gap: 8px;
-  min-width: 0;
-  padding: 4px 20px;
+  gap: 6px;
 }
-.ms-kpi > div + div {
-  border-left: 1px solid var(--line);
+.ms-tot dd {
+  margin: 0;
 }
 .ms-pool {
   position: relative;
@@ -267,45 +259,87 @@ const visible = computed(() =>
 .ms-lgd i.v {
   box-shadow: inset 0 0 0 2px var(--v400);
 }
+.ms-mh {
+  flex-wrap: wrap;
+  row-gap: 10px;
+}
+.ms-sort {
+  margin-left: auto;
+}
 .ms-find {
-  padding: 0 20px 12px;
+  width: 220px;
+  height: 34px;
 }
-.ms-find .field {
-  max-width: 280px;
+.ms-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 32px;
+  padding: 4px 22px 14px;
 }
-.ms-tbl {
-  --cols: 40px minmax(0, 1fr) 96px 88px;
+.ms-list.one {
+  grid-template-columns: 1fr;
 }
-.ms-tbl .who > span {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.ml {
+  display: grid;
+  grid-template-columns: 24px 34px minmax(0, 1fr) 76px 56px;
+  align-items: center;
+  gap: 12px;
+  height: 54px;
+  border-top: 1px solid var(--line);
 }
-.ms-lv {
-  gap: 4px;
-  font-size: 13px;
+.ml .pic {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+}
+.ml .k {
+  font-size: 12px;
   font-weight: 650;
-  color: var(--t2);
+  color: var(--t4);
+}
+.ml .lv {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--v200);
+}
+:global([data-theme='light']) .ml .lv {
+  color: var(--v600);
+}
+.ml .pt {
+  text-align: right;
+  font-weight: 700;
 }
 .ms-more {
   display: flex;
-  justify-content: center;
-  padding: 16px 20px 20px;
-  border-top: 1px solid var(--line);
+  padding: 0 22px 20px;
 }
 @media (max-width: 860px) {
-  .ms-kpi {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    row-gap: 16px;
+  .ms-h {
+    flex-direction: column;
+    padding: 16px 16px 0;
   }
-  .ms-kpi > div:nth-child(3) {
-    border-left: 0;
+  .ms-tot {
+    margin: 4px 0 0;
+    gap: 28px;
   }
-  .ms-find .field {
-    max-width: none;
+  .ms-sort,
+  .ms-find {
+    margin-left: 0;
   }
-  .ms-tbl {
-    --cols: 28px minmax(0, 1fr) 64px 64px;
+  .ms-find {
+    width: 100%;
+    height: 40px;
+  }
+  .ms-list {
+    grid-template-columns: 1fr;
+    padding: 4px 16px 12px;
+  }
+  .ms-pool {
+    padding: 4px 12px 48px;
   }
 }
 </style>
