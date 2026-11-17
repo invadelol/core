@@ -8,9 +8,15 @@ import { profileIcon } from '../lib/assets.js'
  * navigating. Typing a full Riot ID is still a valid answer, so a complete
  * "Name#Tag" is always offered first even when nothing is stored for it.
  */
-withDefaults(defineProps<{ placeholder?: string; busy?: boolean }>(), {
-  placeholder: 'Search a Riot ID',
-})
+const props = withDefaults(
+  defineProps<{
+    placeholder?: string
+    busy?: boolean
+    /** Empty the field once a player is picked (the pick shows elsewhere, in the slot). */
+    clearOnSelect?: boolean
+  }>(),
+  { placeholder: 'Search a Riot ID', clearOnSelect: false }
+)
 
 const emit = defineEmits<{ select: [value: { gameName: string; tagLine: string }] }>()
 
@@ -114,8 +120,8 @@ function closeSoon() {
 }
 
 function choose(entry: { gameName: string; tagLine: string }) {
-  echoing = true
-  query.value = `${entry.gameName}#${entry.tagLine}`
+  echoing = query.value !== (props.clearOnSelect ? '' : `${entry.gameName}#${entry.tagLine}`)
+  query.value = props.clearOnSelect ? '' : `${entry.gameName}#${entry.tagLine}`
   open.value = false
   results.value = []
   emit('select', entry)
@@ -136,6 +142,7 @@ function submit() {
   <div class="psf">
     <label class="field">
       <Icon name="search" />
+      <slot />
       <input
         v-model="query"
         type="text"

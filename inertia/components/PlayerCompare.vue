@@ -10,7 +10,6 @@ import { RoleIcon } from '@invadelol/ui'
 import {
   positionName,
   positionOf,
-  queueName,
   rankFromCore,
   rankLabel,
   rankValue,
@@ -20,18 +19,17 @@ import MatchFilters, { type Filters } from './MatchFilters.vue'
 import PlayerLink from './PlayerLink.vue'
 import PlayerSearchField from './PlayerSearchField.vue'
 import ShowMore from './ShowMore.vue'
-import CardHead from './ui/CardHead.vue'
 import EmptyState from './ui/EmptyState.vue'
 import FormStrip from './ui/FormStrip.vue'
 import Frame from './ui/Frame.vue'
 import Icon from './ui/Icon.vue'
-import RankEmblem from './ui/RankEmblem.vue'
-import SectionHead from './ui/SectionHead.vue'
 import Skeleton from './ui/Skeleton.vue'
+import MatchRows from './profile/MatchRows.vue'
+import { spark, tierVar } from './profile/rank.js'
 import { champIcon, championName, profileIcon } from '../lib/assets.js'
 import { monotone } from '../lib/rd_curve.js'
-import { compact, duration, timeAgo } from '../lib/format.js'
-import { isRemake } from '../lib/match.js'
+import { compact } from '../lib/format.js'
+import { isRemake, scoreLobby } from '../lib/match.js'
 import {
   championSplit,
   lineOf,
@@ -369,6 +367,40 @@ const wins = computed(() => {
   return [a, b]
 })
 
+/** Each metric's line over a player's games, oldest first, one per side. */
+const sparks = computed(() => {
+  const out: Record<string, Array<ReturnType<typeof spark>>> = {}
+  for (const metric of METRICS) {
+    out[metric.key] = players.value.map((p, index) => {
+      const games = (datasets.value[index]?.matches ?? []).filter((m) => !isRemake(m)).reverse()
+      return spark(
+        games.map((m) => lineOf([m], p.puuid)[metric.key]),
+        120,
+        24,
+        metric.key === 'winrate' ? 10 : 6
+      )
+    })
+  }
+  return out
+})
+
+/** Each player's average Invade score in the games they played on the same team. */
+const besideScores = computed(() =>
+  players.value.map((p) => {
+    const list = sameTeam.value
+      .map((g) => scoreLobby(g.match)[p.puuid]?.score)
+      .filter((v): v is number => typeof v === 'number')
+    return list.length ? Math.round(list.reduce((a, b) => a + b, 0) / list.length) : null
+  })
+)
+const againstRecord = computed(() => {
+  const won = versus.value.filter((g) => Boolean(g.players[0]?.win)).length
+  return { won, lost: versus.value.length - won }
+})
+const sharedMatches = computed(() => shared.value.map((g) => g.match))
+const SHARED_PAGE = 6
+const sharedOpen = ref(false)
+
 /* ── The games they actually shared ────────────────────────────── */
 const shared = computed(() => (ready.value ? sharedGames(sides.value) : []))
 const sameTeam = computed(() => shared.value.filter((g) => g.together))
@@ -379,16 +411,6 @@ const record = computed(() => {
   const won = sameTeam.value.filter((g) => Boolean(g.players[0]?.win)).length
   return { played, won, lost: played - won }
 })
-
-/** Each side's numbers narrowed to the games they queued together. */
-const togetherLines = computed(() =>
-  sides.value.map((side) =>
-    lineOf(
-      sameTeam.value.map((g) => g.match),
-      side.puuid
-    )
-  )
-)
 
 /**
  * The same player without the other one, which is the number that turns a
@@ -506,121 +528,210 @@ const poolMore = computed(() =>
 
 <template>
   <div class="cm">
-    <!-- Who against whom, and every metric on one mirrored axis -->
-    <article class="card">
-      <CardHead title="Compare" icon="compare" meta="Last 100 games each, same filters" />
-      <div v-if="other" class="cm-vs">
-        <div v-for="(p, i) in players" :key="p.puuid" class="cm-p" :class="{ r: i === 1 }">
-          <Frame :src="profileIcon(p.profileIconId)" :width="64" size="s" />
-          <span class="col" style="gap: 6px; min-width: 0">
-            <PlayerLink :game-name="p.gameName" :tag-line="p.tagLine" show-tag bold class="h2" />
-            <span class="row meta num cm-rk">
-              <RankEmblem v-if="soloOf(i)" :tier="soloOf(i)!.tier" :size="20" />
-              <span
-                ><template v-if="soloOf(i)"
-                  ><span class="t2">{{ rankLabel(rankFromCore(soloOf(i)!), false) }}</span
-                  >, {{ soloOf(i)!.leaguePoints }} LP</template
-                ><template v-else>Unranked</template
-                ><template v-if="mainRole(i)"
-                  >, {{ positionName(mainRole(i)).toLowerCase() }}</template
-                ></span
-              >
-            </span>
-          </span>
-        </div>
-        <div class="cm-mid">
-          <span class="lab">against</span>
-          <span v-if="ready" class="fg-s num" title="Metrics ahead"
-            >{{ wins[0] }}<span class="t3"> to </span>{{ wins[1] }}</span
-          >
-        </div>
-      </div>
-      <div v-else class="cm-vs one">
-        <div class="cm-p">
-          <Frame :src="profileIcon(profile.profileIconId)" :width="64" size="s" />
-          <span class="col" style="gap: 6px; min-width: 0">
-            <b class="h2 ell"
-              >{{ profile.gameName }} <span class="t3">#{{ profile.tagLine }}</span></b
+    <div class="ptb">
+      <h2 class="h3">Compare</h2>
+      <span class="meta">Up to 100 games each, same filters</span>
+    </div>
+
+    <div class="cm-pick">
+      <PlayerSearchField
+        :busy="busy"
+        clear-on-select
+        :placeholder="other ? 'Compare with someone else' : 'Add a player'"
+        @select="pick"
+      >
+        <span v-if="other" class="cm-chip">
+          <img :src="profileIcon(other.profileIconId)" alt="" />{{ other.gameName
+          }}<span class="t3">#{{ other.tagLine }}</span>
+          <button type="button" class="cm-x" aria-label="Remove" @click="clear">
+            <Icon name="x" :size="12" />
+          </button>
+        </span>
+      </PlayerSearchField>
+    </div>
+
+    <p v-if="error" class="cm-msg ls" role="alert">{{ error }}</p>
+    <p v-else-if="note && other" class="cm-msg meta" role="status">{{ note }}</p>
+
+    <MatchFilters v-model="filters" :champions="champions" class="cm-f" />
+
+    <!-- Face to face, every metric on one mirrored axis -->
+    <section class="card lit cm-board">
+      <div class="cmp-h" :class="{ one: !other }">
+        <div v-for="(p, i) in players" :key="p.puuid" class="cmp-p" :class="{ r: i === 1 }">
+          <img class="por" :src="profileIcon(p.profileIconId)" alt="" width="56" height="56" />
+          <span class="col" style="gap: 4px; min-width: 0">
+            <PlayerLink
+              :game-name="p.gameName"
+              :tag-line="p.tagLine"
+              show-tag
+              bold
+              class="h3 ell"
+            />
+            <span class="meta num ell"
+              ><span v-if="soloOf(i)" :style="{ color: tierVar(soloOf(i)!.tier) }">{{
+                rankLabel(rankFromCore(soloOf(i)!), false)
+              }}</span
+              ><template v-else>Unranked</template
+              ><template v-if="mainRole(i)">
+                · {{ positionName(mainRole(i)).toLowerCase() }}</template
+              ><template v-if="datasets[i]">
+                · {{ datasets[i].matches.length }} games</template
+              ></span
             >
-            <span class="meta">Pick a player to put their last games next to these.</span>
           </span>
         </div>
+        <div v-if="other" class="cmp-mid">
+          <span class="lab">Metrics ahead</span>
+          <b v-if="ready" class="num">{{ wins[0] }}<i>–</i>{{ wins[1] }}</b>
+        </div>
       </div>
-
-      <div class="cm-pick">
-        <PlayerSearchField
-          :busy="busy"
-          :placeholder="other ? 'Compare with someone else' : 'Search a Riot ID to compare against'"
-          @select="pick"
-        />
-        <button v-if="other" type="button" class="btn" @click="clear">
-          <Icon name="x" />Clear
-        </button>
-      </div>
-
-      <p v-if="error" class="cm-msg ls" role="alert">{{ error }}</p>
-      <p v-else-if="note && other" class="cm-msg meta" role="status">{{ note }}</p>
-
-      <MatchFilters v-model="filters" :champions="champions" class="cm-f" />
 
       <div v-if="fetching" class="cm-wait" aria-busy="true">
         <p class="meta" role="status">Fetching {{ fetching }}’s latest games…</p>
         <Skeleton :rows="6" />
       </div>
-
       <div v-else-if="other && !ready" class="cm-wait"><Skeleton :rows="9" /></div>
+      <EmptyState v-else-if="!other" compact icon="compare" title="Pick a player to compare with" />
 
       <div v-else-if="ready" class="cm-ms">
         <div
           v-for="metric in METRICS"
           :key="metric.key"
-          class="cm-r"
+          class="mt"
           :title="
             gap(metric.key, metric.factor, metric.decimals)
               ? `${metric.name}: ${players[leader(metric.key)]?.gameName} ahead by ${gap(metric.key, metric.factor, metric.decimals)}${metric.unit}`
               : metric.name
           "
         >
-          <b class="fg-xs num" :class="leader(metric.key) === 1 ? 't3' : ''"
-            >{{ value(0, metric.key, metric.factor, metric.decimals) ?? '-' }}{{ metric.unit }}</b
+          <span class="v num" :class="{ dim: leader(metric.key) === 1 }"
+            >{{ value(0, metric.key, metric.factor, metric.decimals) ?? '-'
+            }}{{ metric.unit }}</span
           >
-          <span class="cm-c">
-            <span class="lab">{{ metric.name }}</span>
-            <span class="cm-bars">
-              <span class="a"
-                ><i
-                  :class="{ lo: leader(metric.key) === 1 }"
-                  :style="{ width: `${weights(metric.key)[0]}%` }"
-              /></span>
-              <span class="b"
-                ><i
-                  :class="{ lo: leader(metric.key) === 0 }"
-                  :style="{ width: `${weights(metric.key)[1]}%` }"
-              /></span>
-            </span>
+          <span class="chart spark mt-sp">
+            <template v-if="sparks[metric.key]?.[0]">
+              <svg class="fade" viewBox="0 0 120 24" preserveAspectRatio="none" aria-hidden="true">
+                <path class="area" :d="sparks[metric.key][0]!.area" />
+              </svg>
+              <svg viewBox="0 0 120 24" preserveAspectRatio="none" aria-hidden="true">
+                <path class="ln" :d="sparks[metric.key][0]!.d" />
+              </svg>
+            </template>
           </span>
-          <b class="fg-xs num" :class="leader(metric.key) === 0 ? 't3' : ''"
-            >{{ value(1, metric.key, metric.factor, metric.decimals) ?? '-' }}{{ metric.unit }}</b
+          <span class="bl" :class="{ dimb: leader(metric.key) === 1 }"
+            ><i :style="{ width: `${weights(metric.key)[0] * 0.87}%` }"
+          /></span>
+          <span class="nm">{{ metric.name }}</span>
+          <span class="br" :class="{ dimb: leader(metric.key) === 0 }"
+            ><i :style="{ width: `${weights(metric.key)[1] * 0.87}%` }"
+          /></span>
+          <span class="chart spark mt-sp w">
+            <template v-if="sparks[metric.key]?.[1]">
+              <svg class="fade" viewBox="0 0 120 24" preserveAspectRatio="none" aria-hidden="true">
+                <path class="area" :d="sparks[metric.key][1]!.area" />
+              </svg>
+              <svg viewBox="0 0 120 24" preserveAspectRatio="none" aria-hidden="true">
+                <path class="ln" :d="sparks[metric.key][1]!.d" />
+              </svg>
+            </template>
+          </span>
+          <span class="v r num" :class="{ dim: leader(metric.key) === 0 }"
+            >{{ value(1, metric.key, metric.factor, metric.decimals) ?? '-'
+            }}{{ metric.unit }}</span
           >
         </div>
-        <div class="cm-r cm-form">
-          <span />
-          <span class="cm-c">
-            <span class="lab">Last {{ Math.max(form[0].length, form[1].length) }} games</span>
-            <span class="cm-bars cm-strips">
-              <span class="a"><FormStrip :results="form[0]" small /></span>
-              <span class="b"><FormStrip :results="form[1]" small /></span>
-            </span>
-          </span>
-          <span />
+        <div class="mt mt-form">
+          <span class="mt-fl"><FormStrip :results="form[0]" small /></span>
+          <span class="nm">Last {{ Math.max(form[0].length, form[1].length) }} games</span>
+          <span class="mt-fr"><FormStrip :results="form[1]" small /></span>
         </div>
       </div>
-    </article>
+    </section>
 
     <template v-if="ready">
+      <!-- The games they shared -->
+      <section v-if="shared.length" class="card">
+        <div class="card-h">
+          <h2 class="h3">Together</h2>
+          <span class="meta num"
+            >{{ sameTeam.length }} {{ sameTeam.length === 1 ? 'game' : 'games' }} on the same team,
+            {{ versus.length }} against<template v-if="pairing"> · {{ pairing }}</template></span
+          >
+        </div>
+        <div class="kv">
+          <div v-if="record.played">
+            <span class="lab">Same team</span>
+            <span class="fg-l num"
+              >{{ record.won }}<span class="t4"> – </span>{{ record.lost }}</span
+            >
+          </div>
+          <div v-if="versus.length">
+            <span class="lab">Against</span>
+            <span class="fg-l num"
+              >{{ againstRecord.won }}<span class="t4"> – </span>{{ againstRecord.lost }}</span
+            >
+          </div>
+          <template v-for="(p, i) in players" :key="p.puuid">
+            <div v-if="besideScores[i] !== null">
+              <span class="lab ell"
+                >{{ p.gameName }}’s score beside {{ players[1 - i].gameName }}</span
+              >
+              <span class="fg-l num">{{ besideScores[i] }}</span>
+            </div>
+          </template>
+          <template v-for="(row, i) in apart" :key="`a${i}`">
+            <div v-if="row">
+              <span class="lab ell">{{ players[i].gameName }} apart</span>
+              <span class="fg-l num">{{ row.winrate }}%</span>
+              <span class="meta num">{{ row.games }} games</span>
+            </div>
+          </template>
+        </div>
+        <div class="cm-games">
+          <MatchRows
+            :matches="sharedOpen ? sharedMatches : sharedMatches.slice(0, SHARED_PAGE)"
+            :puuid="profile.puuid"
+            :game-name="profile.gameName"
+            :tag-line="profile.tagLine"
+          />
+          <ShowMore
+            v-if="sharedMatches.length > SHARED_PAGE"
+            v-model="sharedOpen"
+            :total="sharedMatches.length"
+            :limit="SHARED_PAGE"
+          />
+        </div>
+      </section>
+
+      <section v-if="pools.both.length" class="card">
+        <div class="card-h">
+          <h2 class="h3">Champions both play</h2>
+          <span class="meta">Games and win rate</span>
+        </div>
+        <div
+          v-for="row in pools.both.slice(0, poolsOpen ? undefined : 8)"
+          :key="row.championId"
+          class="mt mt-both"
+        >
+          <span class="v r num"
+            >{{ row.stats[0]!.games }} · {{ Math.round(row.stats[0]!.winrate * 100) }}%</span
+          >
+          <span class="nm row" style="gap: 10px; justify-content: center"
+            ><img class="pic" :src="champIcon(row.championId)" alt="" width="28" height="28" />{{
+              championName(row.championId)
+            }}</span
+          >
+          <span class="v num"
+            >{{ row.stats[1]!.games }} · {{ Math.round(row.stats[1]!.winrate * 100) }}%</span
+          >
+        </div>
+        <div style="height: 8px" />
+      </section>
+
       <div class="grid2 cm-two">
         <article class="card">
-          <CardHead title="LP, last 30 days" icon="chart" />
+          <div class="card-h"><h2 class="h3">LP, last 30 days</h2></div>
           <template v-if="lp">
             <div class="row cm-lgd num">
               <span v-for="(p, i) in players" :key="p.puuid"
@@ -649,7 +760,7 @@ const poolMore = computed(() =>
                 <path v-if="lp.paths[0]" class="ln" :d="lp.paths[0]" />
               </svg>
             </div>
-            <div class="row meta num cm-x">
+            <div class="row meta num cm-x2">
               <span>{{ lp.from }}</span
               ><span>{{ lp.mid }}</span
               ><span>Latest</span>
@@ -664,11 +775,12 @@ const poolMore = computed(() =>
         </article>
 
         <article class="card">
-          <CardHead
-            title="Champion pools"
-            icon="grid"
-            :meta="`${sharedIds.size} shared ${sharedIds.size === 1 ? 'pick' : 'picks'} in violet`"
-          />
+          <div class="card-h">
+            <h2 class="h3">Champion pools</h2>
+            <span class="meta num"
+              >{{ sharedIds.size }} shared {{ sharedIds.size === 1 ? 'pick' : 'picks' }}</span
+            >
+          </div>
           <div class="cm-pools">
             <div v-for="(list, i) in columns" :key="i">
               <p class="lab cm-ph">{{ players[i].gameName }}</p>
@@ -693,119 +805,9 @@ const poolMore = computed(() =>
         </article>
       </div>
 
-      <!-- The games they shared -->
-      <section v-if="shared.length">
-        <SectionHead title="Together" icon="users" :meta="pairing" />
-        <article class="card">
-          <div class="cm-figs">
-            <div v-if="record.played">
-              <span class="lab">Record</span>
-              <span class="fg-l num"
-                ><span class="wn">{{ record.won }}</span
-                ><span class="t3"> - </span><span class="ls">{{ record.lost }}</span></span
-              >
-              <span class="meta num"
-                >{{ Math.round((record.won / record.played) * 100) }}% won together</span
-              >
-            </div>
-            <div v-if="versus.length">
-              <span class="lab">Against each other</span>
-              <span class="fg-l num">{{ versus.length }}</span>
-              <span class="meta">games on opposite teams</span>
-            </div>
-            <template v-for="(row, i) in apart" :key="i">
-              <div v-if="row">
-                <span class="lab ell">{{ players[i].gameName }} apart</span>
-                <span class="fg-l num">{{ row.winrate }}%</span>
-                <span class="meta num">{{ row.games }} games</span>
-              </div>
-            </template>
-          </div>
-
-          <div class="tbl cm-g" role="table" aria-label="Games together">
-            <div class="tbl-h" role="row">
-              <span role="columnheader">Game</span>
-              <span v-for="p in players" :key="p.puuid" class="n ell" role="columnheader">{{
-                p.gameName
-              }}</span>
-              <span class="n hm" role="columnheader">Length</span>
-            </div>
-
-            <template v-if="record.played">
-              <div class="tbl-r cm-band" role="row">
-                <span class="lab" role="cell">{{ record.played }} games together</span>
-                <span v-for="(line, i) in togetherLines" :key="i" class="n" role="cell">
-                  <b class="num" :class="roleInk(togetherLines, 'kda', i)">{{
-                    line.kda.toFixed(2)
-                  }}</b>
-                  <span
-                    class="meta num cm-kp"
-                    :class="roleInk(togetherLines, 'killParticipation', i)"
-                    >{{ Math.round(line.killParticipation * 100) }}% KP</span
-                  >
-                </span>
-                <span class="hm" role="cell" />
-              </div>
-              <div v-for="game in sameTeam" :key="game.match.matchId" class="tbl-r" role="row">
-                <span class="row" style="gap: 10px; min-width: 0" role="cell">
-                  <b class="cm-wl" :class="game.players[0].win ? 'wn' : 'ls'">{{
-                    game.players[0].win ? 'Win' : 'Loss'
-                  }}</b>
-                  <span class="meta ell"
-                    >{{ queueName(game.match.queueId)
-                    }}<span class="hm">, {{ timeAgo(game.match.gameStartMs) }}</span></span
-                  >
-                </span>
-                <span v-for="(p, i) in game.players" :key="i" class="n cm-pl" role="cell">
-                  <span class="num t2">{{ p.kills }}/{{ p.deaths }}/{{ p.assists }}</span>
-                  <RoleIcon
-                    v-if="p.position"
-                    :lane="positionOf(p.position)"
-                    :size="13"
-                    class="t3 hm"
-                  />
-                  <Frame
-                    :src="champIcon(p.championId)"
-                    :alt="championName(p.championId)"
-                    :width="26"
-                    size="xs"
-                  />
-                </span>
-                <span class="n meta num hm" role="cell">{{ duration(game.match.duration) }}</span>
-              </div>
-            </template>
-
-            <template v-if="versus.length">
-              <div class="tbl-r cm-band" role="row">
-                <span class="lab" role="cell">{{ versus.length }} against each other</span>
-                <span v-for="p in players" :key="p.puuid" role="cell" />
-                <span class="hm" role="cell" />
-              </div>
-              <div v-for="game in versus" :key="game.match.matchId" class="tbl-r" role="row">
-                <span class="meta ell" role="cell"
-                  >{{ queueName(game.match.queueId)
-                  }}<span class="hm">, {{ timeAgo(game.match.gameStartMs) }}</span></span
-                >
-                <span v-for="(p, i) in game.players" :key="i" class="n cm-pl" role="cell">
-                  <b class="cm-wl" :class="p.win ? 'wn' : 'ls'">{{ p.win ? 'W' : 'L' }}</b>
-                  <span class="num t2">{{ p.kills }}/{{ p.deaths }}/{{ p.assists }}</span>
-                  <Frame
-                    :src="champIcon(p.championId)"
-                    :alt="championName(p.championId)"
-                    :width="26"
-                    size="xs"
-                  />
-                </span>
-                <span class="n meta num hm" role="cell">{{ duration(game.match.duration) }}</span>
-              </div>
-            </template>
-          </div>
-        </article>
-      </section>
-
       <!-- The same metrics, one position at a time -->
       <section v-if="roles.length">
-        <SectionHead title="By role" icon="layers" />
+        <div class="mh-h cm-sh"><h2 class="h3">By role</h2></div>
         <article class="card">
           <div class="tbl cm-roles" role="table" aria-label="Metrics by role">
             <div class="tbl-h" role="row">
@@ -855,45 +857,89 @@ const poolMore = computed(() =>
 .cm {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 20px;
 }
-.cm-vs {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 120px minmax(0, 1fr);
+.cm-pick :deep(.field) {
+  height: 44px;
+}
+.cm-chip {
+  display: inline-flex;
+  flex: none;
   align-items: center;
-  padding: 8px 20px 20px;
+  gap: 8px;
+  height: 30px;
+  padding: 0 4px 0 3px;
+  border-radius: 8px;
+  background: var(--key, var(--s2));
+  box-shadow: var(--key-sh, none);
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--t1);
 }
-.cm-vs .cm-p.r {
-  grid-column: 3;
-  grid-row: 1;
+.cm-chip img {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
 }
-.cm-vs.one {
-  grid-template-columns: minmax(0, 1fr);
+.cm-chip .t3 {
+  margin-left: -4px;
+  font-weight: 500;
 }
-.cm-p {
-  display: flex;
+.cm-x {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: var(--t3);
+  cursor: pointer;
+}
+.cm-x:hover {
+  color: var(--t1);
+  background: var(--s3);
+}
+.cm-msg {
+  margin: -8px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.cm-board {
+  overflow: hidden;
+}
+.cmp-h {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 140px minmax(0, 1fr);
   align-items: center;
   gap: 16px;
+  padding: 20px 24px;
+}
+.cmp-h.one {
+  grid-template-columns: minmax(0, 1fr);
+}
+.cmp-p {
+  display: flex;
+  align-items: center;
+  gap: 14px;
   min-width: 0;
 }
-.cm-p .fr {
-  box-shadow: 0 0 0 2px var(--v400);
-}
-.cm-p.r {
+.cmp-p.r {
+  grid-column: 3;
+  grid-row: 1;
   flex-direction: row-reverse;
   text-align: right;
 }
-.cm-p.r .fr {
-  box-shadow: 0 0 0 2px var(--t3);
-}
-.cm-p.r .col {
+.cmp-p.r .col {
   align-items: flex-end;
 }
-.cm-rk {
-  flex-wrap: wrap;
-  gap: 6px;
+.cmp-p .por {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: var(--s3);
+  box-shadow: var(--d-portrait, none);
 }
-.cm-mid {
+.cmp-mid {
   grid-column: 2;
   grid-row: 1;
   display: flex;
@@ -902,95 +948,139 @@ const poolMore = computed(() =>
   gap: 4px;
   text-align: center;
 }
-.cm-pick {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 16px 20px;
-  border-top: 1px solid var(--line);
+.cmp-mid b {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
 }
-.cm-msg {
-  margin: 0;
-  padding: 0 20px 14px;
-  font-size: 13px;
-  font-weight: 600;
-}
-.cm-f {
-  padding: 14px 20px;
-  border-top: 1px solid var(--line);
+.cmp-mid b i {
+  margin: 0 6px;
+  font-style: normal;
+  color: var(--t4);
 }
 .cm-wait {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 8px 20px 20px;
-  border-top: 1px solid var(--line);
+  padding: 8px 24px 20px;
 }
 .cm-ms {
-  padding: 8px 0 12px;
+  padding-bottom: 10px;
+}
+.mt {
+  display: grid;
+  grid-template-columns:
+    70px minmax(0, 120px) minmax(0, 1fr) 150px minmax(0, 1fr) minmax(0, 120px)
+    70px;
+  align-items: center;
+  gap: 14px;
+  height: 54px;
+  padding: 0 24px;
   border-top: 1px solid var(--line);
 }
-.cm-r {
-  display: grid;
-  grid-template-columns: 90px minmax(0, 1fr) 90px;
-  align-items: center;
-  gap: 16px;
-  padding: 9px 20px;
+.mt .v {
+  font-size: 17px;
+  font-weight: 700;
 }
-.cm-r > b {
+.mt .v.dim {
+  font-weight: 600;
+  color: var(--t3);
+}
+.mt .v.r {
   text-align: right;
 }
-.cm-r > b:last-child {
-  text-align: left;
-}
-.cm-c {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 7px;
+.mt .nm {
   min-width: 0;
+  font-size: 13px;
+  font-weight: 650;
+  text-align: center;
+  color: var(--t2);
 }
-.cm-bars {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 4px;
-  width: 100%;
-}
-.cm-bars > span {
-  display: flex;
+.mt .bl,
+.mt .br {
+  position: relative;
   height: 6px;
-  border-radius: 2px;
-  background: var(--s3);
+  border-radius: 3px;
+  background: var(--d-track, var(--s3));
+  box-shadow: var(--d-track-sh, none);
 }
-.cm-bars > .a {
+.mt .bl i,
+.mt .br i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 3px;
+}
+.mt .bl i {
+  right: 0;
+  background: linear-gradient(180deg, var(--v300), var(--v500));
+}
+.mt .br i {
+  left: 0;
+  background: var(--t2);
+}
+.mt .dimb i {
+  opacity: 0.35;
+}
+.mt-sp {
+  height: 24px;
+}
+.mt-sp.w .ln {
+  stroke: var(--t2);
+}
+.mt-sp.w .area {
+  fill: var(--t3);
+  opacity: 0.35;
+}
+.mt-form {
+  grid-template-columns: minmax(0, 1fr) 150px minmax(0, 1fr);
+}
+.mt-fl {
+  display: flex;
   justify-content: flex-end;
 }
-.cm-bars i {
-  display: block;
-  height: 100%;
-  border-radius: 2px;
+.mt-both {
+  grid-template-columns: minmax(0, 1fr) 190px minmax(0, 1fr);
+  height: 56px;
 }
-.cm-bars .a i {
-  background: var(--v400);
+.mt-both .v {
+  font-size: 14px;
 }
-.cm-bars .b i {
-  background: var(--t3);
+.mt-both .pic {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
 }
-.cm-bars i.lo {
-  opacity: 0.45;
+.kv {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 20px;
+  padding: 0 22px 20px;
 }
-.cm-form {
-  padding-top: 14px;
+.kv > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
 }
-.cm-strips > span {
-  height: auto;
-  background: none;
+.kv .fg-l {
+  font-size: 30px;
 }
-.cm-kp {
-  margin-left: 8px;
+.cm-games {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+.cm-games :deep(.mh-grp:first-child .mh-day) {
+  margin-top: 0;
 }
 .cm-two {
   align-items: start;
+}
+.cm-sh {
+  margin-bottom: 10px;
 }
 .cm-lgd {
   flex-wrap: wrap;
@@ -1041,7 +1131,7 @@ const poolMore = computed(() =>
   font-weight: 600;
   color: var(--t3);
 }
-.cm-x {
+.cm-x2 {
   justify-content: space-between;
   padding: 10px 20px 18px 56px;
 }
@@ -1052,59 +1142,25 @@ const poolMore = computed(() =>
   padding: 0 20px 8px;
 }
 .cm-ph {
-  margin: 0;
-  padding: 4px 0 8px;
+  margin: 0 0 6px;
 }
 .cm-pc {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 52px;
+  min-height: 48px;
+  padding: 6px 8px;
   margin: 0 -8px;
-  padding: 0 8px;
-  border-top: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 8px;
 }
 .cm-pc.sh {
-  background: rgb(var(--v-rgb) / 0.1);
-  box-shadow: inset 2px 0 0 var(--v400);
+  background: rgb(var(--v-rgb) / 0.08);
 }
 .cm-foot {
-  padding: 8px 20px 16px;
-  border-top: 1px solid var(--line);
-}
-.cm-figs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px 0;
-  padding: 18px 0;
-}
-.cm-figs > div {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 160px;
-  padding: 0 20px;
-}
-.cm-figs > div + div {
-  border-left: 1px solid var(--line);
-}
-.cm-g {
-  --cols: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr) 72px;
+  padding: 4px 20px 16px;
 }
 .cm-band {
   background: var(--s2);
-}
-.cm-wl {
-  width: 34px;
-  flex: none;
-  font-size: 13px;
-}
-.cm-pl {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
 }
 .cm-roles {
   --cols: minmax(0, 1fr) 64px 72px 64px 56px 72px 72px 72px;
@@ -1115,55 +1171,83 @@ const poolMore = computed(() =>
   min-width: 0;
   font-size: 13px;
 }
-@media (max-width: 860px) {
-  .cm-vs {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
+@media (max-width: 1100px) {
+  .mt {
+    grid-template-columns: 56px 0 minmax(0, 1fr) 128px minmax(0, 1fr) 0 56px;
+    gap: 10px;
   }
-  .cm-vs .cm-p.r {
-    grid-column: 1;
+  .mt-sp {
+    display: none;
+  }
+}
+@media (max-width: 767px) {
+  .cmp-h {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 16px;
+  }
+  .cmp-p {
+    grid-column: 1 / -1;
+  }
+  .cmp-p.r {
+    grid-column: 1 / -1;
     grid-row: 3;
     flex-direction: row;
     text-align: left;
   }
-  .cm-p.r .col {
+  .cmp-p.r .col {
     align-items: flex-start;
   }
-  .cm-mid {
-    grid-column: 1;
+  .cmp-mid {
+    grid-column: 1 / -1;
     grid-row: 2;
     flex-direction: row;
-    justify-content: flex-start;
     gap: 10px;
   }
-  .cm-r {
-    grid-template-columns: 64px minmax(0, 1fr) 64px;
-    gap: 10px;
-    padding: 8px 16px;
+  .cmp-mid b {
+    font-size: 24px;
+  }
+  .mt {
+    grid-template-columns: 44px 0 minmax(0, 1fr) 112px minmax(0, 1fr) 0 44px;
+    gap: 6px;
+    height: 48px;
+    padding: 0 14px;
+  }
+  .mt .v {
+    font-size: 14px;
+  }
+  .mt .nm {
+    overflow: hidden;
+    font-size: 11px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .mt-form {
+    grid-template-columns: minmax(0, 1fr) 112px minmax(0, 1fr);
+  }
+  .mt-form :deep(.form i) {
+    width: 4px;
+  }
+  .mt-both {
+    grid-template-columns: minmax(0, 1fr) 130px minmax(0, 1fr);
+  }
+  .kv {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 0 16px 16px;
+  }
+  .cm-games {
+    padding: 0 10px 12px;
   }
   .cm-two,
   .cm-pools {
     grid-template-columns: minmax(0, 1fr);
   }
-  .cm-figs > div {
-    min-width: 50%;
-  }
-  .cm-figs > div:nth-child(odd) {
-    border-left: 0;
-  }
-  .cm-g {
-    --cols: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
-  }
   .cm-roles {
     --cols: minmax(0, 1fr) 48px 56px 56px;
-  }
-  .cm-pick {
-    flex-wrap: wrap;
   }
   .cm-lp {
     margin-left: 48px;
   }
-  .cm-x {
+  .cm-x2 {
     padding-left: 48px;
   }
 }
