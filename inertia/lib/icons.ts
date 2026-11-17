@@ -84,6 +84,8 @@ export const ICONS = {
   x: [{ d: 'M4.5 4.5l11 11M15.5 4.5l-11 11' }],
   back: [{ d: 'M12 5.5 7.5 10l4.5 4.5' }],
   plus: [{ d: 'M10 4v12M4 10h12' }],
+  /** The Enter key, on the search's highlighted row. */
+  enter: [{ d: 'M16 4.5v6.5H5' }, { d: 'M8.5 7.5 5 11l3.5 3.5' }],
   check: [{ d: 'M4 10.5 8 14.5 16 5.5' }],
   minimap: [{ d: 'M3 3h14v14H3Z' }, { d: 'M3 17 17 3M3 7.5 7.5 3M12.5 17 17 12.5' }],
   scroll: [{ d: 'M5 3h10v14H5Z' }, { d: 'M8 7h4M8 10h4M8 13h2' }],

@@ -382,27 +382,6 @@
 .vb .hs-chip:hover {
   color: var(--t1);
 }
-.vb .hs-panel {
-  left: 0;
-  top: calc(100% + 13px);
-  width: 560px;
-  max-height: min(600px, calc(100dvh - 96px));
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-  animation: hx-in 140ms var(--ease);
-}
-.vb .hs-panel.sx {
-  padding-bottom: 0;
-}
-.vb .hs-panel .panel-f {
-  position: sticky;
-  bottom: 0;
-  margin: 6px -6px 0;
-}
-.vb .hs-panel .panel-f .end {
-  margin-left: auto;
-}
 .vb .hs-reg {
   left: auto;
   right: 0;
@@ -462,27 +441,112 @@
   flex: none;
 }
 
-/* ── The search's results (SearchBar.vue: the header's panel and the home's palette) ──
-   The older invade.lol list, in Facet: one line per result, a 28 px picture, the name with its
-   tag, one quiet line of meta at the end. The row under the pointer or the keys sits on a soft
-   key; a champion's Build and Matchups show on that row only. */
-.vb .sx {
-  padding: 6px;
+/* ── The search's results (SearchBar.vue: the header's list and the home's) ──
+   One list on the whole site, the old invade.lol one made finer: titled groups, one 42 px line
+   per result, the picture's shape telling the kind (champions square, people round, teams on a
+   tile), the letters typed bright and the rest a step dimmer, the details right-aligned in a
+   quiet grey. The row under the keys or the pointer sits on a soft fill with an Enter key; a
+   champion's matchups or a player onto the lobby show on that row only. */
+:root:not([data-theme='light']):not([data-theme='system']),
+[data-theme='dark'],
+.iv-dark {
+  --sx-bg: linear-gradient(180deg, rgb(255 255 255 / 0.04), rgb(255 255 255 / 0) 120px), #16141f;
+  --sx-sh:
+    inset 0 1px 0 rgb(255 255 255 / 0.085), inset 0 0 0 1px rgb(196 188 255 / 0.085),
+    0 2px 4px rgb(0 0 0 / 0.45), 0 34px 70px -24px rgb(0 0 0 / 0.95);
+  --sx-act: rgb(255 255 255 / 0.06);
+  --sx-act-sh: inset 0 1px 0 rgb(255 255 255 / 0.05);
+  --sx-pro: linear-gradient(180deg, #2c2670, #1b1842);
+  --hf-bg:
+    linear-gradient(180deg, rgb(255 255 255 / 0.055), rgb(255 255 255 / 0.018)),
+    rgb(21 19 30 / 0.78);
+  --hf-sh:
+    inset 0 1px 0 rgb(255 255 255 / 0.09), inset 0 0 0 1px rgb(196 188 255 / 0.11),
+    0 1px 2px rgb(0 0 0 / 0.5), 0 26px 50px -26px rgb(0 0 0 / 0.95);
+  --hf-sh-on:
+    inset 0 1px 0 rgb(255 255 255 / 0.09), inset 0 0 0 1px rgb(var(--v-rgb) / 0.62),
+    0 0 0 4px rgb(var(--v-rgb) / 0.13), 0 26px 50px -26px rgb(0 0 0 / 0.95);
+  --hf-kbd: rgb(196 188 255 / 0.075);
+  --hf-kbd-sh: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 1px 2px rgb(0 0 0 / 0.5);
 }
-.vb .sx-g + .sx-g {
-  margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px solid var(--line);
+[data-theme='light'],
+.iv-light {
+  --sx-bg: #fff;
+  --sx-sh:
+    inset 0 0 0 1px rgb(44 38 112 / 0.09), 0 2px 4px rgb(30 24 80 / 0.06),
+    0 26px 56px -22px rgb(30 24 80 / 0.28);
+  --sx-act: rgb(44 38 112 / 0.055);
+  --sx-act-sh: none;
+  --sx-pro: linear-gradient(180deg, #e9e6ff, #d9d4fb);
+  --hf-bg: #fff;
+  --hf-sh:
+    inset 0 0 0 1px rgb(44 38 112 / 0.1), 0 1px 2px rgb(30 24 80 / 0.07),
+    0 20px 44px -24px rgb(30 24 80 / 0.3);
+  --hf-sh-on:
+    inset 0 0 0 1px rgb(var(--v-rgb) / 0.6), 0 0 0 4px rgb(var(--v-rgb) / 0.12),
+    0 20px 44px -24px rgb(30 24 80 / 0.3);
+  --hf-kbd: linear-gradient(180deg, #ffffff, #f8f7fc);
+  --hf-kbd-sh: 0 1px 2px rgb(30 24 80 / 0.14), inset 0 0 0 1px rgb(44 38 112 / 0.08);
+}
+@media (prefers-color-scheme: light) {
+  [data-theme='system'] {
+    --sx-bg: #fff;
+    --sx-sh:
+      inset 0 0 0 1px rgb(44 38 112 / 0.09), 0 2px 4px rgb(30 24 80 / 0.06),
+      0 26px 56px -22px rgb(30 24 80 / 0.28);
+    --sx-act: rgb(44 38 112 / 0.055);
+    --sx-act-sh: none;
+    --sx-pro: linear-gradient(180deg, #e9e6ff, #d9d4fb);
+    --hf-bg: #fff;
+    --hf-sh:
+      inset 0 0 0 1px rgb(44 38 112 / 0.1), 0 1px 2px rgb(30 24 80 / 0.07),
+      0 20px 44px -24px rgb(30 24 80 / 0.3);
+    --hf-sh-on:
+      inset 0 0 0 1px rgb(var(--v-rgb) / 0.6), 0 0 0 4px rgb(var(--v-rgb) / 0.12),
+      0 20px 44px -24px rgb(30 24 80 / 0.3);
+    --hf-kbd: linear-gradient(180deg, #ffffff, #f8f7fc);
+    --hf-kbd-sh: 0 1px 2px rgb(30 24 80 / 0.14), inset 0 0 0 1px rgb(44 38 112 / 0.08);
+  }
+}
+
+/* The list: under the header's field at 560 px, under the home's at its width. */
+.vb .hs-panel {
+  left: 0;
+  top: calc(100% + 13px);
+  width: 560px;
+  max-height: min(600px, calc(100dvh - 96px));
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  border-radius: 14px;
+  background: var(--sx-bg);
+  box-shadow: var(--sx-sh);
+  text-align: left;
+  animation: hx-in 140ms var(--ease);
+}
+.vb .hs-hero .hs-panel {
+  left: 0;
+  right: 0;
+  top: calc(100% + 8px);
+  width: auto;
+  max-width: none;
+  max-height: min(520px, calc(100dvh - 120px));
+  z-index: 15;
 }
 .vb .sx-h {
   display: flex;
   align-items: center;
-  height: 28px;
-  padding: 0 10px;
+  padding: 10px 12px 5px;
   font-size: 12px;
-  font-weight: 650;
-  color: var(--t3);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--t4);
   user-select: none;
+}
+.vb .sx-g:first-child .sx-h {
+  padding-top: 6px;
 }
 .vb .sx-r {
   display: flex;
@@ -490,12 +554,15 @@
   gap: 12px;
   height: 42px;
   padding: 0 10px;
-  border-radius: 8px;
+  border-radius: 9px;
+  font-size: 14.5px;
+  white-space: nowrap;
   cursor: pointer;
   transition: background var(--m-fast) var(--ease);
 }
 .vb .sx-r.act {
-  background: var(--hover-item);
+  background: var(--sx-act);
+  box-shadow: var(--sx-act-sh);
 }
 .vb .sx-i {
   display: grid;
@@ -508,7 +575,8 @@
   background: var(--s3);
   box-shadow: var(--d-portrait);
 }
-.vb .sx-i > img {
+.vb .sx-i > img,
+.vb .sx-i .nb-photo {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -516,6 +584,17 @@
 /* A champion's square carries a frame: cropped out. */
 .vb .sx-i.ch > img {
   transform: scale(1.1);
+}
+/* People are round; a pro stands on violet ink. */
+.vb .sx-i.pl,
+.vb .sx-i.pr {
+  border-radius: 50%;
+}
+.vb .sx-i.pr {
+  background: var(--sx-pro);
+}
+.vb .sx-i.pr .nb-photo img {
+  object-position: 50% 10%;
 }
 .vb .sx-i.gl,
 .vb .sx-i.tm {
@@ -532,82 +611,91 @@
   color: var(--t3);
 }
 .vb .sx-n {
-  flex: 1;
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
-  font-size: 14px;
   font-weight: 550;
-  color: var(--t1);
-  white-space: nowrap;
+  color: var(--t2);
   text-overflow: ellipsis;
 }
 .vb .sx-n mark {
   background: none;
-  color: inherit;
-  font-weight: 750;
+  color: var(--t1);
+  font-weight: 650;
 }
 .vb .sx-tag {
   font-weight: 500;
-  color: var(--t3);
+  color: var(--t4);
+}
+/* "Pro" beside the name, the one violet word in the list. */
+.vb .sx-w {
+  flex: none;
+  margin-left: -4px;
+  font-size: 11.5px;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  color: var(--v300);
 }
 .vb .sx-m {
-  flex: none;
-  max-width: 52%;
-  overflow: hidden;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--t3);
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.vb .sx-acts {
-  display: none;
-  flex: none;
-  gap: 4px;
-}
-.vb .sx-r.act .sx-acts {
-  display: flex;
-}
-.vb .sx-r.act .sx-m.swap {
-  display: none;
-}
-.vb .sx-acts a {
   display: inline-flex;
   align-items: center;
-  height: 26px;
-  padding: 0 9px;
-  border-radius: 6px;
-  background: var(--key);
-  box-shadow: var(--key-sh);
-  font-size: 12px;
-  font-weight: 650;
-  color: var(--t2);
-  transition: color var(--m-fast) var(--ease);
+  gap: 7px;
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-left: auto;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--t3);
+  text-overflow: ellipsis;
 }
-.vb .sx-acts a:hover {
-  color: var(--t1);
+.vb .sx-m .cs-logo {
+  flex: none;
+  background: none;
 }
-.vb .sx-add {
+/* The Enter key: on the lit row; the others keep its room so their details line up. */
+.vb .sx-k {
   display: grid;
   place-items: center;
   flex: none;
-  width: 26px;
-  height: 26px;
-  margin-right: -4px;
+  width: 24px;
+  height: 22px;
   border-radius: 6px;
+  color: var(--t2);
+  background: var(--key);
+  box-shadow: var(--key-sh);
+  visibility: hidden;
+}
+.vb .sx-r.act .sx-k {
+  visibility: visible;
+}
+/* The lit row's other way in, beside the name: quiet words or a plus, never a button's chrome. */
+.vb .sx-x {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  height: 26px;
+  margin-left: -4px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
   color: var(--t3);
-  opacity: 0;
   cursor: pointer;
   transition:
-    opacity var(--m-fast) var(--ease),
     background var(--m-fast) var(--ease),
     color var(--m-fast) var(--ease);
 }
-.vb .sx-r.act .sx-add,
-.vb .sx-add:focus-visible {
-  opacity: 1;
+.vb .sx-add {
+  width: 26px;
+  padding: 0;
 }
-.vb .sx-add:hover {
+.vb .sx-r.act .sx-x,
+.vb .sx-x:focus-visible {
+  display: inline-flex;
+}
+.vb .sx-x:hover {
   background: var(--hover-item);
   color: var(--t1);
 }
@@ -615,24 +703,114 @@
   .vb .sx-r {
     height: 48px;
   }
-  .vb .sx-add {
-    width: 32px;
-    height: 32px;
-    opacity: 1;
-  }
-}
-@media (max-width: 639px) {
-  .vb .sx-r.act .sx-acts {
+  .vb .sx-k {
     display: none;
   }
-  .vb .sx-r.act .sx-m.swap {
-    display: block;
+  .vb .sx-x {
+    height: 40px;
+    padding: 0 10px;
+  }
+  .vb .sx-add {
+    width: 40px;
+  }
+}
+
+/* ── The home's field (SearchBar.vue, `size="lg"`): normal size, a lit sheet you could press,
+   the region as a raised key, then the / key. Focus changes only its ring. ── */
+.vb .hs-hero {
+  position: relative;
+  z-index: 12;
+  width: 640px;
+  max-width: 100%;
+  margin-inline: auto;
+}
+.vb .hf {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 56px;
+  padding: 0 10px 0 18px;
+  border-radius: 14px;
+  background: var(--hf-bg);
+  box-shadow: var(--hf-sh);
+  text-align: left;
+  cursor: text;
+  transition: box-shadow var(--m) var(--ease);
+}
+.vb .hf.focus {
+  box-shadow: var(--hf-sh-on);
+}
+.vb .hf .gl {
+  flex: none;
+  color: var(--t3);
+}
+.vb .hf input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--t1);
+  caret-color: var(--v300);
+}
+.vb .hf input::placeholder {
+  color: var(--t3);
+}
+.vb .hf input:focus-visible {
+  outline: none;
+}
+.vb .hf .hs-chips {
+  max-width: 50%;
+}
+.vb .hf-rg {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  height: 34px;
+  padding: 0 9px 0 10px;
+  border-radius: 9px;
+  background: var(--key);
+  box-shadow: var(--key-sh);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--t2);
+  cursor: pointer;
+  transition: color var(--m-fast) var(--ease);
+}
+.vb .hf-rg .i {
+  color: var(--t3);
+}
+.vb .hf-rg:hover {
+  color: var(--t1);
+}
+.vb .hf .kbd {
+  flex: none;
+  min-width: 22px;
+  height: 22px;
+  margin-right: 4px;
+  border-radius: 6px;
+  background: var(--hf-kbd);
+  box-shadow: var(--hf-kbd-sh);
+  color: var(--t3);
+}
+.vb .hs-hero .hs-reg {
+  right: 36px;
+  top: calc(100% + 8px);
+  margin: 0;
+}
+@media (pointer: coarse) {
+  .vb .hf .kbd {
+    display: none;
+  }
+  .vb .hf-rg {
+    height: 40px;
   }
 }
 
 /* ── Narrower screens ────────────────────────────────────────── */
 @media (max-width: 1399px) {
-  .vb .hs-panel {
+  .vb .hx-search .hs-panel {
     left: auto;
     right: 0;
   }
@@ -657,7 +835,7 @@
     flex: 1 1 auto;
     margin-left: 12px;
   }
-  .vb .hs-panel {
+  .vb .hx-search .hs-panel {
     left: 0;
     right: 0;
     width: auto;
@@ -708,15 +886,12 @@
   .vb.is-search .gsearch .kbd {
     display: none;
   }
-  .vb .hs-panel {
+  .vb .hx-search .hs-panel {
     position: fixed;
     left: 8px;
     right: 8px;
     top: 66px;
     max-height: calc(100dvh - 80px);
-  }
-  .vb .hs-panel .panel-f {
-    display: none;
   }
   .vb .sg-r .acts {
     display: none;
