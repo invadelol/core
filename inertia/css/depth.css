@@ -1,0 +1,259 @@
+/* ──────────────────────────────────────────────────────────────
+   Depth: the materials on the Facet look. Night ink lit from above:
+   one soft violet light on the ground (top right) over a fine static
+   grain, sheets that catch it (a sheen falling from a lit top edge,
+   a near-invisible rim, a contact shadow), one or two lit sheets per
+   page (`.card.lit`), rows with a lit edge, raised buttons and keys,
+   inset wells. Same hues and type; only the materials change.
+   Light theme: white sheets lifted by a soft shadow, the light and
+   the grain at a whisper. Components layer, scoped under `.vb`.
+   ────────────────────────────────────────────────────────────── */
+
+/* ── Dark ──────────────────────────────────────────────────────── */
+:root:not([data-theme='light']):not([data-theme='system']),
+[data-theme='dark'],
+.iv-dark {
+  --d-ink: #0b0a11;
+  --d-sf1: rgb(196 188 255 / 0.055);
+  --d-sf2: rgb(196 188 255 / 0.075);
+  --d-sf3: rgb(196 188 255 / 0.105);
+  --d-sheen: linear-gradient(180deg, rgb(255 255 255 / 0.045), rgb(255 255 255 / 0) 48%);
+  --d-lit: inset 0 1px 0 rgb(255 255 255 / 0.11), inset 0 0 0 1px rgb(255 255 255 / 0.035);
+  --d-drop: 0 1px 2px rgb(0 0 0 / 0.5), 0 14px 34px -16px rgb(0 0 0 / 0.9);
+  --d-row: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.35);
+  --d-glow: rgb(var(--v-rgb) / 0.2);
+  --d-inset: rgb(0 0 0 / 0.26);
+  --d-inset-sh: inset 0 1px 2px rgb(0 0 0 / 0.5), 0 1px 0 rgb(255 255 255 / 0.04);
+  --key: linear-gradient(180deg, rgb(255 255 255 / 0.12), rgb(255 255 255 / 0.06)), #15131e;
+  --key-sh: inset 0 1px 0 rgb(255 255 255 / 0.1), 0 1px 3px rgb(0 0 0 / 0.55);
+  --d-btn: linear-gradient(180deg, rgb(255 255 255 / 0.06), rgb(255 255 255 / 0.015)), var(--d-sf2);
+  --d-btn-hover: linear-gradient(180deg, rgb(255 255 255 / 0.09), rgb(255 255 255 / 0.03)), var(--d-sf3);
+  --d-btn-sh: inset 0 1px 0 rgb(255 255 255 / 0.085), 0 1px 2px rgb(0 0 0 / 0.45);
+  --d-pri: linear-gradient(180deg, #8f83ff, #6a5bf3);
+  --d-pri-hover: linear-gradient(180deg, #9b90ff, #7668f8);
+  --d-pri-sh: inset 0 1px 0 rgb(255 255 255 / 0.24), 0 1px 2px rgb(0 0 0 / 0.5), 0 6px 16px -6px rgb(var(--v-rgb) / 0.6);
+  --d-portrait: 0 0 0 1px rgb(255 255 255 / 0.09), 0 2px 5px rgb(0 0 0 / 0.5);
+  --d-track: rgb(0 0 0 / 0.3);
+  --d-track-sh: inset 0 1px 1px rgb(0 0 0 / 0.4);
+  --d-chrome: rgb(7 6 11 / 0.82);
+  --d-edge: 0 1px 0 rgb(255 255 255 / 0.055);
+  --d-grain: url('./img/grain.png');
+  --d-light: radial-gradient(85% 60% at 78% -12%, rgb(var(--v-rgb) / 0.17), rgb(var(--v-rgb) / 0.155) 12%, rgb(var(--v-rgb) / 0.125) 25%, rgb(var(--v-rgb) / 0.085) 40%, rgb(var(--v-rgb) / 0.045) 56%, rgb(var(--v-rgb) / 0.018) 72%, rgb(var(--v-rgb) / 0) 88%);
+  --d-light-2: radial-gradient(60% 40% at 0% 34%, rgb(var(--v-rgb) / 0.035), rgb(var(--v-rgb) / 0) 70%);
+}
+
+/* ── Light ─────────────────────────────────────────────────────── */
+[data-theme='light'],
+.iv-light {
+  --d-ink: #f4f3f9;
+  --d-sf1: #ffffff;
+  --d-sf2: #ffffff;
+  --d-sf3: #f7f6fb;
+  --d-sheen: linear-gradient(180deg, rgb(255 255 255 / 0), rgb(255 255 255 / 0));
+  --d-lit: inset 0 0 0 1px rgb(44 38 112 / 0.075);
+  --d-drop: 0 1px 2px rgb(30 24 80 / 0.06), 0 10px 26px -14px rgb(30 24 80 / 0.18);
+  --d-row: inset 0 0 0 1px rgb(44 38 112 / 0.07), 0 1px 2px rgb(30 24 80 / 0.06);
+  --d-glow: rgb(var(--v-rgb) / 0.09);
+  --d-inset: rgb(44 38 112 / 0.055);
+  --d-inset-sh: inset 0 1px 2px rgb(30 24 80 / 0.1);
+  --key: linear-gradient(180deg, #ffffff, #f8f7fc);
+  --key-sh: 0 1px 2px rgb(30 24 80 / 0.16), inset 0 0 0 1px rgb(44 38 112 / 0.08);
+  --d-btn: linear-gradient(180deg, #ffffff, #f7f6fb);
+  --d-btn-hover: linear-gradient(180deg, #ffffff, #f1f0f8);
+  --d-btn-sh: inset 0 0 0 1px rgb(44 38 112 / 0.11), 0 1px 2px rgb(30 24 80 / 0.08);
+  --d-pri: linear-gradient(180deg, #8578ff, #6153ee);
+  --d-pri-hover: linear-gradient(180deg, #9084ff, #6b5ef3);
+  --d-pri-sh: inset 0 1px 0 rgb(255 255 255 / 0.25), 0 1px 2px rgb(30 24 80 / 0.2), 0 6px 14px -6px rgb(var(--v-rgb) / 0.45);
+  --d-portrait: 0 0 0 1px rgb(44 38 112 / 0.1), 0 2px 5px rgb(30 24 80 / 0.14);
+  --d-track: rgb(44 38 112 / 0.08);
+  --d-track-sh: inset 0 1px 1px rgb(30 24 80 / 0.08);
+  --d-chrome: rgb(255 255 255 / 0.86);
+  --d-edge: 0 1px 0 rgb(44 38 112 / 0.08);
+  --d-grain: none;
+  --d-light: radial-gradient(85% 60% at 78% -12%, rgb(var(--v-rgb) / 0.08), rgb(var(--v-rgb) / 0.05) 30%, rgb(var(--v-rgb) / 0.02) 60%, rgb(var(--v-rgb) / 0) 88%);
+  --d-light-2: none;
+}
+
+@media (prefers-color-scheme: light) {
+  [data-theme='system'] {
+    --d-ink: #f4f3f9;
+    --d-sf1: #ffffff;
+    --d-sf2: #ffffff;
+    --d-sf3: #f7f6fb;
+    --d-sheen: linear-gradient(180deg, rgb(255 255 255 / 0), rgb(255 255 255 / 0));
+    --d-lit: inset 0 0 0 1px rgb(44 38 112 / 0.075);
+    --d-drop: 0 1px 2px rgb(30 24 80 / 0.06), 0 10px 26px -14px rgb(30 24 80 / 0.18);
+    --d-row: inset 0 0 0 1px rgb(44 38 112 / 0.07), 0 1px 2px rgb(30 24 80 / 0.06);
+    --d-glow: rgb(var(--v-rgb) / 0.09);
+    --d-inset: rgb(44 38 112 / 0.055);
+    --d-inset-sh: inset 0 1px 2px rgb(30 24 80 / 0.1);
+    --key: linear-gradient(180deg, #ffffff, #f8f7fc);
+    --key-sh: 0 1px 2px rgb(30 24 80 / 0.16), inset 0 0 0 1px rgb(44 38 112 / 0.08);
+    --d-btn: linear-gradient(180deg, #ffffff, #f7f6fb);
+    --d-btn-hover: linear-gradient(180deg, #ffffff, #f1f0f8);
+    --d-btn-sh: inset 0 0 0 1px rgb(44 38 112 / 0.11), 0 1px 2px rgb(30 24 80 / 0.08);
+    --d-pri: linear-gradient(180deg, #8578ff, #6153ee);
+    --d-pri-hover: linear-gradient(180deg, #9084ff, #6b5ef3);
+    --d-pri-sh: inset 0 1px 0 rgb(255 255 255 / 0.25), 0 1px 2px rgb(30 24 80 / 0.2), 0 6px 14px -6px rgb(var(--v-rgb) / 0.45);
+    --d-portrait: 0 0 0 1px rgb(44 38 112 / 0.1), 0 2px 5px rgb(30 24 80 / 0.14);
+    --d-track: rgb(44 38 112 / 0.08);
+    --d-track-sh: inset 0 1px 1px rgb(30 24 80 / 0.08);
+    --d-chrome: rgb(255 255 255 / 0.86);
+    --d-edge: 0 1px 0 rgb(44 38 112 / 0.08);
+    --d-grain: none;
+    --d-light: radial-gradient(85% 60% at 78% -12%, rgb(var(--v-rgb) / 0.08), rgb(var(--v-rgb) / 0.05) 30%, rgb(var(--v-rgb) / 0.02) 60%, rgb(var(--v-rgb) / 0) 88%);
+    --d-light-2: none;
+  }
+}
+
+/* ── The ground: one light, painted once behind the page ──────── */
+.vb.site {
+  background-color: var(--d-ink);
+  background-image: var(--d-grain), var(--d-light), var(--d-light-2);
+  background-size: 160px 160px, 100% 1600px, 100% 100%;
+  background-repeat: repeat, no-repeat, no-repeat;
+}
+
+/* ── Chrome: unlit over the grain, one lit hairline where the page starts ── */
+.vb .hx,
+.vb .ft {
+  background: var(--d-chrome);
+}
+.vb .hx-main,
+.vb .hx-sub {
+  border-bottom: 0;
+  box-shadow: var(--d-edge);
+}
+.vb .hx-sub {
+  background: transparent;
+}
+.vb .ft {
+  border-top: 0;
+  box-shadow: inset var(--d-edge);
+}
+.vb .gsearch {
+  background: var(--d-inset);
+  box-shadow: var(--d-inset-sh);
+}
+.vb .gsearch.focus {
+  background: var(--d-inset);
+  box-shadow: var(--d-inset-sh), inset 0 0 0 2px var(--v400);
+}
+.vb .gsearch .rg2 {
+  background: var(--key);
+  box-shadow: var(--key-sh);
+}
+
+/* ── Sheets ───────────────────────────────────────────────────── */
+.vb .card {
+  border-color: transparent;
+  background: var(--d-sheen), var(--d-sf1);
+  box-shadow: var(--d-lit), var(--d-drop);
+}
+.vb .card.lit,
+.vb .lit-sheet {
+  background:
+    radial-gradient(70% 100% at 100% 0%, var(--d-glow), rgb(var(--v-rgb) / 0) 75%),
+    var(--d-sheen),
+    var(--d-sf1);
+  box-shadow: var(--d-lit), var(--d-drop);
+}
+.vb .well {
+  border-color: transparent;
+  background: var(--d-inset);
+  box-shadow: var(--d-inset-sh);
+}
+
+/* ── Rows: a lit edge, a short shadow, the result edge and tint ── */
+.vb .mrow {
+  background: var(--d-sheen), var(--d-sf1);
+  box-shadow: var(--d-row);
+}
+.vb .mrow.w {
+  background:
+    linear-gradient(90deg, rgb(var(--win-rgb) / 0.11), rgb(var(--win-rgb) / 0) 40%),
+    var(--d-sheen),
+    var(--d-sf1);
+}
+.vb .mrow.l {
+  background:
+    linear-gradient(90deg, rgb(var(--loss-rgb) / 0.1), rgb(var(--loss-rgb) / 0) 40%),
+    var(--d-sheen),
+    var(--d-sf1);
+}
+
+/* ── Media: a lit ring and a contact shadow ───────────────────── */
+.vb .pic {
+  box-shadow: var(--d-portrait);
+}
+
+/* ── Controls: raised buttons, the lit primary, wells with a raised key ── */
+.vb .btn {
+  background: var(--d-btn);
+  box-shadow: var(--d-btn-sh);
+}
+.vb .btn:hover {
+  background: var(--d-btn-hover);
+}
+.vb .btn.pri {
+  background: var(--d-pri);
+  box-shadow: var(--d-pri-sh);
+  color: #fff;
+}
+.vb .btn.pri:hover {
+  background: var(--d-pri-hover);
+}
+.vb .btn.ghost {
+  background: transparent;
+  box-shadow: none;
+}
+.vb .sel {
+  background: var(--d-btn);
+  box-shadow: var(--d-btn-sh);
+}
+.vb .field {
+  background: var(--d-inset);
+  box-shadow: var(--d-inset-sh);
+}
+.vb .seg {
+  background: var(--d-inset);
+  box-shadow: var(--d-inset-sh);
+}
+.vb .seg > .on {
+  background: var(--key);
+  box-shadow: var(--key-sh);
+  color: var(--t1);
+}
+
+/* ── Tracks are wells; values are lit ─────────────────────────── */
+.vb .bar {
+  background: var(--d-track);
+  box-shadow: var(--d-track-sh);
+}
+.vb .bar > i {
+  background: linear-gradient(180deg, var(--v300), var(--v500));
+}
+.vb .chart .dot {
+  box-shadow: 0 0 0 3px var(--d-ink), 0 0 0 4px rgb(var(--v-rgb) / 0.35);
+}
+.vb .tier.sp,
+.vb .tier.s,
+.vb .tier.a {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.22), 0 1px 2px rgb(0 0 0 / 0.3);
+}
+
+/* ── The pages' own sheets take the same material ─────────────── */
+.vb :is(.podc, .pick, .mate, .bestr a, .ov-g a, .pn-aug, .lb-gc, .lb-you, .lc, .lns, .sg, .sb-s) {
+  border-color: transparent;
+  background: var(--d-sheen), var(--d-sf1);
+  box-shadow: var(--d-lit), var(--d-drop);
+}
+/* Pills and chips sit raised, like buttons. */
+.vb :is(.chip2, .pn-tabs a, .hp-pill) {
+  background: var(--d-btn);
+  box-shadow: var(--d-btn-sh);
+}
+/* Floating panels stay opaque; they only catch the light on their top edge. */
+.vb :is(.panel, .dm, .sel-pop) {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.07), inset 0 0 0 1px var(--line-2), var(--drop);
+}

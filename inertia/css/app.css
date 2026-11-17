@@ -11,6 +11,8 @@
 @import './facet.css' layer(components);
 @import './chrome.css' layer(components);
 @import './ui.css' layer(components);
+/* The materials: one light on the ground, lit sheets, raised controls. After the rest, so it wins. */
+@import './depth.css' layer(components);
 
 /* Every class used by the app lives under inertia/. */
 @source '../';
