@@ -181,20 +181,25 @@
 .vb .hx-end.alone {
   margin-left: auto;
 }
-.vb .hx-me .av {
-  display: grid;
-  place-items: center;
-  background: var(--s2);
-  box-shadow: inset 0 0 0 1px var(--line-2);
-  color: var(--t2);
+/* The settings corner: a plain icon button, like the bar's others. */
+.vb .hx-end .hx-me {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  margin-left: -4px;
 }
-.vb .hx-me:hover .av,
-.vb .hx-me.open .av {
+.vb .hx-me .i {
+  width: 19px;
+  height: 19px;
+  color: inherit;
+  transition: transform 240ms var(--ease);
+}
+.vb .hx-me.open {
+  background: var(--s1);
   color: var(--t1);
 }
-.vb .hx-me.open > .i {
-  transform: rotate(180deg);
-  color: var(--v300);
+.vb .hx-me.open .i {
+  transform: rotate(60deg);
 }
 .vb .hx-burger,
 .vb .hx-only-phone {
@@ -218,6 +223,9 @@
 }
 .vb .acc-l {
   padding: 8px 0;
+}
+.vb .acc-theme .seg {
+  flex: none;
 }
 /* The theme: one icon button turning Dark, Light, Auto; its name in a tooltip. */
 .vb .theme-btn {
@@ -456,8 +464,13 @@
     width: 32px;
     padding: 0;
   }
-  .vb .hx-get span {
+  .vb .hx-get span,
+  .vb .hx-discord span {
     display: none;
+  }
+  .vb .hx-discord {
+    width: 32px;
+    padding: 0;
   }
 }
 @media (max-width: 1023px) {
@@ -478,6 +491,9 @@
   }
   .vb .hx-acc {
     right: 24px;
+  }
+  .vb .hx-discord {
+    display: none;
   }
 }
 @media (max-width: 639px) {

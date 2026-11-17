@@ -1,31 +1,37 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
 import Icon from '../ui/Icon.vue'
-import ThemeChoice from './ThemeChoice.vue'
-import { DISCORD_URL } from '../../lib/links.js'
+import Segmented from '../ui/Segmented.vue'
+import { useTheme, type ThemeChoice } from '../../lib/theme.js'
 
 /**
- * The account corner's menu. invade.lol has no accounts (nothing to sign in to), so the corner
- * holds what is the visitor's own here: the theme, and where to go for more (the desktop app,
- * which keeps your games, favourites and linked accounts; the Discord; contact).
+ * The settings corner's menu. invade.lol has no accounts, so it holds what is the visitor's own:
+ * the theme, then the desktop app and contact.
  */
 defineEmits<{ close: [] }>()
+
+const { choice, setTheme } = useTheme()
+const THEMES = [
+  { value: 'dark', label: 'Dark' },
+  { value: 'light', label: 'Light' },
+  { value: 'system', label: 'Auto' },
+] as const satisfies ReadonlyArray<{ value: ThemeChoice; label: string }>
 </script>
 
 <template>
   <div class="hx-menu hx-acc panel">
     <div class="acc-theme">
       <span class="lab">Theme</span>
-      <ThemeChoice />
+      <Segmented
+        :model-value="choice"
+        :options="THEMES"
+        label="Theme"
+        @update:model-value="(v) => v && setTheme(v)"
+      />
     </div>
     <div class="acc-l">
       <Link href="/app" prefetch data-track="account_app" @click="$emit('close')"
-        ><Icon name="download" :size="17" />Desktop app<span class="n"
-          >Games, favourites</span
-        ></Link
-      >
-      <a :href="DISCORD_URL" target="_blank" rel="noreferrer" data-track="account_discord"
-        ><Icon name="discord" :size="17" />Discord<span class="n">Join</span></a
+        ><Icon name="download" :size="17" />Desktop app<span class="n">Games, favourites</span></Link
       >
       <Link href="/contact" prefetch @click="$emit('close')"
         ><Icon name="news" :size="17" />Contact</Link

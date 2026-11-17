@@ -15,6 +15,7 @@ import SearchBar from './SearchBar.vue'
 import NavMenu from './header/NavMenu.vue'
 import AccountMenu from './header/AccountMenu.vue'
 import PatchMenu from './header/PatchMenu.vue'
+import { DISCORD_URL } from '../lib/links.js'
 import SubArt from './header/SubArt.vue'
 import { SUB_ART, type SubPicture } from './header/sub_art.js'
 import '../css/subrow.css'
@@ -461,16 +462,25 @@ function skip(event: MouseEvent) {
               aria-label="Get the app"
               ><Icon name="download" :size="16" /><span>Get the app</span></Link
             >
+            <a
+              class="btn sm hx-discord"
+              :href="DISCORD_URL"
+              target="_blank"
+              rel="noreferrer"
+              data-track="header_discord"
+              aria-label="Discord"
+              ><Icon name="discord" :size="16" /><span>Discord</span></a
+            >
             <button
               ref="accountButton"
               type="button"
-              class="hx-me"
+              class="hx-ic hx-me"
               :class="{ open: open === 'account' }"
-              aria-label="Theme and links"
+              aria-label="Settings"
               :aria-expanded="open === 'account'"
               @click="toggleAccount"
             >
-              <span class="av"><Icon name="user" :size="18" /></span><Icon name="chev" :size="13" />
+              <Icon name="settings" :size="19" />
             </button>
             <button
               ref="menuButton"
