@@ -31,7 +31,7 @@
 :where(.vb) :focus-visible { outline: 2px solid var(--v400); outline-offset: 2px; box-shadow: none; }
 
 /* ---------- type: whole pixels only ---------- */
-.vb .d1 { font-size: 44px; line-height: 1.05; font-weight: 650; letter-spacing: -0.025em; }
+.vb .d1:where(:not(.vb [class*='iv-'] *)) { font-size: 44px; line-height: 1.05; font-weight: 650; letter-spacing: -0.025em; }
 .vb .h1 { font-size: 32px; line-height: 1.1; font-weight: 650; letter-spacing: -0.02em; }
 .vb .h2 { font-size: 20px; line-height: 1.2; font-weight: 650; letter-spacing: -0.012em; }
 .vb .h3 { font-size: 16px; line-height: 1.25; font-weight: 650; letter-spacing: -0.005em; }
@@ -199,7 +199,7 @@
 /* ---------- site header ---------- */
 .vb .hd { position: relative; z-index: 2; background: var(--ink-0); border-bottom: 1px solid var(--line); }
 .vb .hd-in { display: flex; align-items: center; gap: 12px; height: 60px; }
-.vb .brand { display: inline-flex; align-items: center; gap: 9px; margin-right: 20px; }
+.vb .brand:where(:not(.vb [class*='iv-'] *)) { display: inline-flex; align-items: center; gap: 9px; margin-right: 20px; }
 .vb .glyph { fill: var(--v500); flex: none; display: block; }
 .vb .wm { font-size: 18px; font-weight: 750; letter-spacing: -0.02em; color: var(--t1); }
 .vb .nav { display: flex; align-self: stretch; gap: 4px; }
@@ -490,8 +490,8 @@
 .vb .side3 .ob2 img, .vb .side3 .ob2 .i { width: 16px; height: 16px; object-fit: contain; color: var(--t3); }
 .vb .dotb, .vb .dotr { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--win); }
 .vb .dotr { background: var(--loss); }
-.vb .gold { position: relative; height: 170px; margin: 0 20px; }
-.vb .gold svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.vb .mx-gold { position: relative; height: 170px; margin: 0 20px; }
+.vb .mx-gold svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .vb .cmp3 { display: grid; grid-template-columns: 80px 1fr 80px; gap: 16px; align-items: center; padding: 8px 20px; }
 .vb .cmp3 .m4 { display: flex; flex-direction: column; gap: 7px; text-align: center; font-size: 13px; font-weight: 600; color: var(--t3); }
 .vb .cmp3 .sp3 { display: flex; gap: 4px; height: 6px; }
