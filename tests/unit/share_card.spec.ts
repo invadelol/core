@@ -3,8 +3,12 @@ import {
   DEFAULT_STATS,
   MAX_STATS,
   STATS,
+  LEDGER_DEFAULT,
   cellsFor,
+  championLines,
   columnsFor,
+  linesFor,
+  record,
   windowLabel,
   type CardData,
 } from '../../inertia/lib/share_card.js'
@@ -73,5 +77,36 @@ test.group('Share card', () => {
   test('says what the figures cover', ({ assert }) => {
     assert.equal(windowLabel(30, 'all'), 'Last 30 games, all queues')
     assert.equal(windowLabel(1, 'ranked'), 'Last 1 game, Solo/Duo')
+  })
+
+  test('the ledger keeps the player\'s order and adds the asides', ({ assert }) => {
+    const lines = linesFor(data, ['kda', 'rank', 'winrate'])
+    assert.deepEqual(
+      lines.map((l) => [l.label, l.value, l.aside ?? '']),
+      [
+        ['KDA', '3.21', ''],
+        ['Rank', 'Emerald II', '45 LP'],
+        ['Win rate', '53%', '16W 14L'],
+      ]
+    )
+    assert.equal(lines[1].tier, 'emerald')
+    assert.lengthOf(linesFor(data, LEDGER_DEFAULT), 6)
+  })
+
+  test('an empty window keeps only the rank', ({ assert }) => {
+    const empty = { ...data, figures: { ...figures, total: 0 } }
+    assert.deepEqual(linesFor(empty, LEDGER_DEFAULT).map((l) => l.key), ['rank'])
+  })
+
+  test('records and champion lines', ({ assert }) => {
+    assert.equal(record(0.5714, 30), '17W 13L')
+    assert.deepEqual(
+      championLines({ games: 46, winrate: 0.61, kda: 3.4 }).map((l) => [l.value, l.aside ?? '']),
+      [
+        ['46', ''],
+        ['61%', '28W 18L'],
+        ['3.40', ''],
+      ]
+    )
   })
 })

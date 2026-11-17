@@ -193,3 +193,78 @@ export function windowLabel(total: number, queue: CardQueue) {
   const name = CARD_QUEUES.find((q) => q.value === queue)?.label ?? 'All queues'
   return `Last ${games}, ${name === 'All queues' ? 'all queues' : name}`
 }
+
+/* ── The ledger card ─────────────────────────────────────────────
+ * One statistic per line, in the order the player set: the label on the left, the figure on
+ * the right, and a quiet aside after it (the LP after a rank, the record after a win rate).
+ */
+
+/** The ready cards the dialog offers. */
+export type CardKind = 'stats' | 'ranked' | 'champion'
+
+export const CARD_KINDS: ReadonlyArray<{ value: CardKind; label: string }> = [
+  { value: 'stats', label: 'Last games' },
+  { value: 'ranked', label: 'Ranked' },
+  { value: 'champion', label: 'Champion' },
+]
+
+/** What a fresh ledger lists: the rank first, then the five figures people quote most. */
+export const LEDGER_DEFAULT: StatKey[] = [
+  'rank',
+  'winrate',
+  'kda',
+  'killParticipation',
+  'csMin',
+  'damagePerMinute',
+]
+
+export interface Line {
+  key: StatKey
+  /** "Win rate" */
+  label: string
+  /** "57%" */
+  value: string
+  /** "17W 13L", "64 LP" */
+  aside?: string
+  /** A tier colour token (`--tier-emerald`) when the value is a rank. */
+  tone?: string
+  /** Lowercase tier, so the card can draw its emblem beside the rank. */
+  tier?: string
+}
+
+/** The chosen statistics that have data, as ledger lines, in the player's order. */
+export function linesFor(data: CardData, chosen: ReadonlyArray<StatKey>): Line[] {
+  const lines: Line[] = []
+  for (const key of chosen) {
+    const stat = STATS.find((s) => s.key === key)
+    if (!stat) continue
+    if (key !== 'rank' && !data.figures?.total) continue
+    const cell = stat.cell(data)
+    if (!cell) continue
+    const line: Line = { key, label: stat.label, value: cell.value, tone: cell.tone }
+    if (key === 'rank' && data.rank) {
+      line.aside = `${data.rank.lp} LP`
+      line.tier = data.rank.tier
+    }
+    if (key === 'winrate' && data.figures) line.aside = record(data.figures.winrate, data.figures.total)
+    if (key === 'role' && data.role) line.aside = `${Math.round(data.role.share * 100)}%`
+    lines.push(line)
+    if (lines.length === MAX_STATS) break
+  }
+  return lines
+}
+
+/** "17W 13L" from a win rate over a number of games. */
+export function record(winrate: number, games: number) {
+  const wins = Math.round(winrate * games)
+  return `${wins}W ${games - wins}L`
+}
+
+/** The lines of a champion card: games, win rate with the record, KDA. */
+export function championLines(c: { games: number; winrate: number; kda: number }): Line[] {
+  return [
+    { key: 'games', label: 'Games', value: String(c.games) },
+    { key: 'winrate', label: 'Win rate', value: `${Math.round(c.winrate * 100)}%`, aside: record(c.winrate, c.games) },
+    { key: 'kda', label: 'KDA', value: c.kda.toFixed(2) },
+  ]
+}
