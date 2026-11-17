@@ -527,7 +527,7 @@ const poolMore = computed(() =>
 </script>
 
 <template>
-  <div class="cm">
+  <div class="cmw">
     <div class="ptb">
       <h2 class="h3">Compare</h2>
       <span class="meta">Up to 100 games each, same filters</span>
@@ -543,8 +543,14 @@ const poolMore = computed(() =>
         <span v-if="other" class="cm-chip">
           <img :src="profileIcon(other.profileIconId)" alt="" />{{ other.gameName
           }}<span class="t3">#{{ other.tagLine }}</span>
-          <button type="button" class="cm-x" aria-label="Remove" @click="clear">
-            <Icon name="x" :size="12" />
+          <button
+            type="button"
+            class="cm-rm"
+            :aria-label="`Remove ${other.gameName}`"
+            title="Remove"
+            @click="clear"
+          >
+            <Icon name="x" :size="14" />
           </button>
         </span>
       </PlayerSearchField>
@@ -854,13 +860,38 @@ const poolMore = computed(() =>
 </template>
 
 <style scoped>
-.cm {
+.cmw {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
+/* The search: a well that lights as a whole on focus (a soft violet ring and a brighter inset),
+   never a box drawn around the text inside it. */
 .cm-pick :deep(.field) {
   height: 44px;
+  transition:
+    box-shadow 160ms var(--ease),
+    background-color 160ms var(--ease);
+}
+.cm-pick :deep(.field input) {
+  min-width: 0;
+  height: 100%;
+  background: transparent;
+  border: 0;
+  outline: none;
+  box-shadow: none;
+}
+.cm-pick :deep(.field input:focus-visible) {
+  outline: none;
+}
+.cm-pick :deep(.field:focus-within) {
+  box-shadow:
+    var(--d-inset-sh, inset 0 0 0 1px var(--line-2)),
+    inset 0 0 0 1px rgb(var(--v-rgb) / 0.55),
+    0 0 0 3px rgb(var(--v-rgb) / 0.14);
+}
+.cm-pick :deep(.field:focus-within > .i) {
+  color: var(--t2);
 }
 .cm-chip {
   display: inline-flex;
@@ -868,7 +899,7 @@ const poolMore = computed(() =>
   align-items: center;
   gap: 8px;
   height: 30px;
-  padding: 0 4px 0 3px;
+  padding: 0 3px 0 3px;
   border-radius: 8px;
   background: var(--key, var(--s2));
   box-shadow: var(--key-sh, none);
@@ -885,18 +916,39 @@ const poolMore = computed(() =>
   margin-left: -4px;
   font-weight: 500;
 }
-.cm-x {
+/* Remove: a quiet icon in the chip, a 24px target. */
+.cm-rm {
   display: inline-grid;
+  flex: none;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
+  min-width: 0;
+  min-height: 0;
+  margin-left: -2px;
+  padding: 0;
+  border: 0;
   border-radius: 6px;
+  background: transparent;
+  box-shadow: none;
   color: var(--t3);
   cursor: pointer;
+  transition:
+    color 140ms var(--ease),
+    background-color 140ms var(--ease);
 }
-.cm-x:hover {
+.cm-rm :deep(svg) {
+  width: 14px;
+  height: 14px;
+}
+.cm-rm:hover {
   color: var(--t1);
-  background: var(--s3);
+  background: rgb(var(--v-rgb) / 0.1);
+}
+.cm-rm:focus-visible {
+  outline: none;
+  color: var(--t1);
+  box-shadow: inset 0 0 0 1.5px var(--v400);
 }
 .cm-msg {
   margin: -8px 0 0;
