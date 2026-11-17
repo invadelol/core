@@ -662,7 +662,8 @@
 .vb .dm-live .r2 img { width: 22px; height: 22px; object-fit: contain; }
 .vb .dm-live .r2 b { padding: 0 4px; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 .vb .dm-live .r2 .g { margin-left: auto; font-size: 12.5px; font-weight: 600; color: var(--t3); }
-.vb .dm-live:hover { box-shadow: inset 0 0 0 1px rgb(var(--v-rgb) / 0.45); }
+.vb .dm-live { transition: background var(--m) var(--ease); }
+.vb .dm-live:hover { background: var(--v900); }
 
 /* ---- patch notes ---- */
 .vb .pn-hero { padding: 40px 0 0; }
@@ -670,7 +671,8 @@
 .vb .pn-strip { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
 .vb .pn-s { position: relative; display: block; }
 .vb .pn-s .fr { width: 52px; height: 52px; }
-.vb .pn-s:hover .fr { box-shadow: 0 0 0 2px var(--v400); }
+.vb .pn-s .fr { transition: box-shadow var(--m) var(--ease); }
+.vb .pn-s:hover .fr { box-shadow: 0 0 0 2px var(--line-3); }
 .vb .pn-ii { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 8px; overflow: hidden; background: var(--s3); box-shadow: inset 0 0 0 1px var(--line-2); }
 .vb .pn-ii img { width: 100%; height: 100%; object-fit: cover; }
 .vb .pn-ii.lg { width: 44px; height: 44px; flex: none; }

@@ -1,0 +1,98 @@
+/* ──────────────────────────────────────────────────────────────
+   Motion: how the site answers the pointer. One easing (--ease),
+   two durations, quiet states. Nothing lifts, scales, bounces or
+   draws a coloured line: a sheet that goes somewhere gets a shade
+   brighter, a row takes a faint violet wash, text goes to full
+   white, an arrow that leads somewhere nudges 2 px, the item under
+   the pointer or the keys in a menu or the search sits on a soft
+   key (--hover-item). Pictures in a card may drift in very slowly
+   (at most 3 %). Panels open with a plain fade. Components layer,
+   after depth.css.
+   ────────────────────────────────────────────────────────────── */
+
+:root {
+  --m-fast: 120ms;
+  --m: 160ms;
+  --m-slow: 700ms;
+  --hover-row: rgb(var(--v-rgb) / 0.045);
+}
+:root:not([data-theme='light']):not([data-theme='system']),
+[data-theme='dark'],
+.iv-dark {
+  --hover-sheet: var(--d-sheen), var(--d-sf2);
+  --hover-item: rgb(255 255 255 / 0.055);
+}
+[data-theme='light'],
+.iv-light {
+  --hover-sheet: linear-gradient(rgb(var(--v-rgb) / 0.025), rgb(var(--v-rgb) / 0.025)), #fff;
+  --hover-item: rgb(44 38 112 / 0.055);
+}
+@media (prefers-color-scheme: light) {
+  [data-theme='system'] {
+    --hover-sheet: linear-gradient(rgb(var(--v-rgb) / 0.025), rgb(var(--v-rgb) / 0.025)), #fff;
+    --hover-item: rgb(44 38 112 / 0.055);
+  }
+}
+
+/* ── Sheets that are links: a shade brighter, never raised ───── */
+.vb :is(.pick, .lc, .cm-d, .cm-x, .ov-g a, .sb-s, .ct-card, a.card) {
+  transition: background var(--m) var(--ease);
+}
+.vb :is(.pick, .lc, .cm-d, .cm-x, .ov-g a, .sb-s, .ct-card, a.card):hover {
+  background: var(--hover-sheet);
+}
+/* The button a whole card answers to wakes with it. */
+.vb :is(.lc, .cm-d, .cm-x, .ct-card, a.card):hover .btn:not(.pri) {
+  background: var(--d-btn-hover);
+}
+
+/* ── Rows: one faint violet wash ─────────────────────────────── */
+.vb :is(.lrow, .bn, .tl-row, .tx-row, .lb-r, a.tbl-r, .tbl-r.link, .es-tg a) {
+  transition: background var(--m) var(--ease);
+}
+.vb :is(.lrow, .bn, .tl-row, .tx-row, .lb-r, a.tbl-r, .tbl-r.link, .es-tg a):hover {
+  background: var(--hover-row);
+}
+
+/* ── Menu items: the soft key ─────────────────────────────────── */
+.vb :is(.dm-r, .dm-f a, .reg a) {
+  transition:
+    background var(--m-fast) var(--ease),
+    color var(--m-fast) var(--ease);
+}
+.vb :is(.dm-r, .dm-f a, .reg a):hover {
+  background: var(--hover-item);
+  color: var(--t1);
+}
+
+/* ── Links that go somewhere: the arrow nudges, the words go white ── */
+.vb .more {
+  transition: color var(--m) var(--ease);
+}
+.vb .more .i {
+  transition:
+    transform var(--m) var(--ease),
+    color var(--m) var(--ease);
+}
+.vb .more:hover .i,
+.vb a:hover .more .i {
+  transform: translateX(2px);
+  color: var(--t2);
+}
+.vb a:hover .more {
+  color: var(--t1);
+}
+
+/* ── Panels and menus: a plain fade ──────────────────────────── */
+@keyframes m-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vb .more:hover .i,
+  .vb a:hover .more .i {
+    transform: none;
+  }
+}

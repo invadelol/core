@@ -97,7 +97,8 @@
 .vb .du-pair { position:relative;display:flex;flex:none;width:76px;height:44px }
 .vb .du-pair .fr { position:absolute;top:0;width:44px;height:44px }
 .vb .du-pair .fr:last-child { left:32px;box-shadow:0 0 0 2px var(--s1) }
-.vb .tx-row:hover .du-pair .fr:last-child { box-shadow:0 0 0 2px #181624 }
+.vb .du-pair .fr:last-child { transition:box-shadow var(--m) var(--ease) }
+.vb .tx-row:hover .du-pair .fr:last-child { box-shadow:0 0 0 2px color-mix(in srgb, rgb(var(--v-rgb)) 4.5%, var(--s1)) }
 .vb .tx-row.me .du-pair .fr:last-child { box-shadow:0 0 0 2px #191728 }
 .vb .du-syn { display:flex;flex-direction:column;gap:6px }
 .vb .du-syn .tk { position:relative;width:112px;height:4px;border-radius:1px;background:var(--s3) }
