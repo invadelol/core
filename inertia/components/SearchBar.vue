@@ -969,7 +969,7 @@ function submit() {
             ><TeamLogo :team="entry.team" :size="22"
           /></span>
           <span v-else-if="entry.kind" class="sx-i gl ini">{{ initialsOf(entry) }}</span>
-          <span v-else-if="!entry.direct" class="sx-i pl"
+          <span v-else-if="!entry.direct" class="sx-i ply"
             ><img :src="profileIcon(entry.icon)" alt="" width="28" height="28" decoding="async"
           /></span>
           <span v-else class="sx-i gl"><Icon name="arrow" :size="15" /></span>
