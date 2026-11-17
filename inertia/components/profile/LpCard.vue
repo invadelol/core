@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { assetUrl } from '../../lib/assets.js'
 import { rankFromCore, rankLabel, rankValue } from '@invadelol/ui/logic'
 import { tierVar } from './rank.js'
+import Select from '../ui/Select.vue'
 import type { Rank, RanksPayload } from '../../lib/types.js'
 
 /**
@@ -26,7 +27,18 @@ const solo = computed(
 )
 
 const W = 260
-const TIERS = ['IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'EMERALD', 'DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER']
+const TIERS = [
+  'IRON',
+  'BRONZE',
+  'SILVER',
+  'GOLD',
+  'PLATINUM',
+  'EMERALD',
+  'DIAMOND',
+  'MASTER',
+  'GRANDMASTER',
+  'CHALLENGER',
+]
 const DIV = ['IV', 'III', 'II', 'I']
 const hover = ref<number | null>(null)
 const H = 100
@@ -37,10 +49,11 @@ const RANGES: ReadonlyArray<{ value: Range; label: string; name: string; empty: 
   { value: '30d', label: '30D', name: '30 days', empty: 'in the last 30 days' },
   { value: '120d', label: '120D', name: '120 days', empty: 'in the last 120 days' },
   { value: '1y', label: '1Y', name: '1 year', empty: 'in the last year' },
-  { value: 'all', label: 'All', name: 'All stored history', empty: 'yet' },
+  { value: 'all', label: 'All', name: 'All time', empty: 'yet' },
 ]
 const range = ref<Range>('30d')
 const rangeInfo = computed(() => RANGES.find((r) => r.value === range.value)!)
+const rangeOptions = RANGES.map((r) => ({ value: r.value, label: r.name }))
 const pick = (r: Range) => {
   range.value = r
   hover.value = null
@@ -72,7 +85,8 @@ const stepOf = (t: number, unit: Unit) => {
   return d.getTime()
 }
 const thisYear = new Date().getFullYear()
-const md = (t: number) => new Date(t).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+const md = (t: number) =>
+  new Date(t).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
 const withYear = (t: number) =>
   new Date(t).toLocaleDateString('en-US', {
     day: 'numeric',
@@ -81,8 +95,14 @@ const withYear = (t: number) =>
   })
 /** A bucket's dates for the tooltip: the day, the week's first and last day, or the month. */
 function bucketDate(from: number, last: number, unit: Unit) {
-  if (unit === 'day') return new Date(from).toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })
-  if (unit === 'month') return new Date(from).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  if (unit === 'day')
+    return new Date(from).toLocaleDateString('en-US', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    })
+  if (unit === 'month')
+    return new Date(from).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
   const a = new Date(from)
   const b = new Date(last)
   const end = a.getMonth() === b.getMonth() ? `${b.getDate()}` : md(last)
@@ -161,7 +181,12 @@ const line = computed(() => {
   const wide = Math.min(max, 2800) - Math.min(min, 2800) > 500 || (max >= 2800 && min < 2800)
   const apexStep = max - 2800 > 1200 ? 500 : max - 2800 > 500 ? 250 : 100
   const levels: number[] = []
-  const floorOf = (v: number) => (v >= 2800 ? 2800 + Math.floor((v - 2800) / apexStep) * apexStep : wide ? Math.floor(v / 400) * 400 : Math.floor(v / 100) * 100)
+  const floorOf = (v: number) =>
+    v >= 2800
+      ? 2800 + Math.floor((v - 2800) / apexStep) * apexStep
+      : wide
+        ? Math.floor(v / 400) * 400
+        : Math.floor(v / 100) * 100
   const next = (v: number) => (v >= 2800 ? v + apexStep : wide ? Math.min(2800, v + 400) : v + 100)
   for (let v = floorOf(min); ; v = next(v)) {
     levels.push(v)
@@ -189,7 +214,12 @@ const line = computed(() => {
   const promos = ranks
     .map((r, i) => ({ r, i }))
     .filter(({ r, i }) => i > 0 && r.tier !== ranks[i - 1].tier)
-    .map(({ r, i }) => ({ x: (i * cw / W) * 100, y: (y(ends[i]) / H) * 100, tier: r.tier!, up: ends[i] > ends[i - 1] }))
+    .map(({ r, i }) => ({
+      x: ((i * cw) / W) * 100,
+      y: (y(ends[i]) / H) * 100,
+      tier: r.tier!,
+      up: ends[i] > ends[i - 1],
+    }))
   const days = ends.map((v, i) => ({
     x: ((i + 0.5) / n) * 100,
     y: (y(v) / H) * 100,
@@ -224,21 +254,15 @@ const gain = (n: number) => `${n >= 0 ? '+' : '−'}${Math.abs(n)} LP`
   <section v-if="solo" class="card pl-sec">
     <div class="pl-sec-h">
       <h2 class="h4">LP history</h2>
-      <div class="seg lpr" role="radiogroup" aria-label="Range">
-        <button
-          v-for="r in RANGES"
-          :key="r.value"
-          type="button"
-          role="radio"
-          :class="{ on: range === r.value }"
-          :aria-checked="range === r.value"
-          :aria-label="r.name"
-          :title="r.name"
-          @click="pick(r.value)"
-        >
-          {{ r.label }}
-        </button>
-      </div>
+      <Select
+        :model-value="range"
+        :options="rangeOptions"
+        width="10rem"
+        align="right"
+        class="lpr"
+        aria-label="Range"
+        @update:model-value="pick"
+      />
     </div>
     <div class="row" style="gap: 8px; align-items: baseline">
       <span class="h5" :style="{ color: tierVar(solo.tier) }">{{ label(solo) }}</span>
@@ -252,13 +276,19 @@ const gain = (n: number) => `${n >= 0 ? '+' : '−'}${Math.abs(n)} LP`
       <div class="lpg" @mouseleave="hover = null">
         <div class="lpg-ax" aria-hidden="true">
           <span v-for="(m, i) in line.marks" :key="i" class="lpg-m" :style="{ top: `${m.y}%` }"
-            ><i class="lpg-e"><img v-if="m.emblem" :src="assetUrl('rank', m.tier)" alt="" /></i><b :style="{ color: tierVar(m.tier) }">{{ m.div }}</b></span
+            ><i class="lpg-e"><img v-if="m.emblem" :src="assetUrl('rank', m.tier)" alt="" /></i
+            ><b :style="{ color: tierVar(m.tier) }">{{ m.div }}</b></span
           >
         </div>
         <div class="lpg-plot">
           <div class="chart lpd">
             <i v-for="(m, i) in line.marks" :key="i" class="lpg-l" :style="{ top: `${m.y}%` }" />
-            <svg class="fade" :viewBox="`0 0 ${W} ${H}`" preserveAspectRatio="none" aria-hidden="true">
+            <svg
+              class="fade"
+              :viewBox="`0 0 ${W} ${H}`"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
               <path class="area" :d="line.area" />
             </svg>
             <svg :viewBox="`0 0 ${W} ${H}`" preserveAspectRatio="none" aria-hidden="true">
@@ -274,11 +304,24 @@ const gain = (n: number) => `${n >= 0 ? '+' : '−'}${Math.abs(n)} LP`
             /></span>
             <template v-if="hover !== null">
               <i class="lpg-x" :style="{ left: `${line.days[hover].x}%` }" />
-              <i class="lpg-dot" :style="{ left: `${line.days[hover].x}%`, top: `${line.days[hover].y}%` }" />
+              <i
+                class="lpg-dot"
+                :style="{ left: `${line.days[hover].x}%`, top: `${line.days[hover].y}%` }"
+              />
             </template>
           </div>
-          <div class="lpd-bars" :class="{ thin: line.n > 31 }" :style="{ gridTemplateColumns: `repeat(${line.n}, 1fr)` }" aria-hidden="true">
-            <i v-for="(b, i) in line.bars" :key="i" :class="[b.cls, { on: hover === i }]" :style="{ height: `${b.h}px` }" />
+          <div
+            class="lpd-bars"
+            :class="{ thin: line.n > 31 }"
+            :style="{ gridTemplateColumns: `repeat(${line.n}, 1fr)` }"
+            aria-hidden="true"
+          >
+            <i
+              v-for="(b, i) in line.bars"
+              :key="i"
+              :class="[b.cls, { on: hover === i }]"
+              :style="{ height: `${b.h}px` }"
+            />
           </div>
           <div class="lpg-hit" :style="{ gridTemplateColumns: `repeat(${line.n}, 1fr)` }">
             <span v-for="i in line.days.length" :key="i" @mouseenter="hover = i - 1" />
@@ -291,13 +334,19 @@ const gain = (n: number) => `${n >= 0 ? '+' : '−'}${Math.abs(n)} LP`
           >
             <span class="meta">{{ line.days[hover].date }}</span>
             <b>{{ line.days[hover].name }}</b>
-            <span :class="line.days[hover].delta > 0 ? 'wn' : line.days[hover].delta < 0 ? 'ls' : 'meta'">{{
-              line.days[hover].delta ? gain(line.days[hover].delta) : 'No change'
-            }}</span>
+            <span
+              :class="
+                line.days[hover].delta > 0 ? 'wn' : line.days[hover].delta < 0 ? 'ls' : 'meta'
+              "
+              >{{ line.days[hover].delta ? gain(line.days[hover].delta) : 'No change' }}</span
+            >
           </div>
         </div>
       </div>
-      <div class="row meta" style="justify-content: space-between; gap: 8px; margin: 8px 0 0 40px; white-space: nowrap">
+      <div
+        class="row meta"
+        style="justify-content: space-between; gap: 8px; margin: 8px 0 0 40px; white-space: nowrap"
+      >
         <span>{{ line.start }}</span>
         <span
           >Peak <b class="t1">{{ line.peak }}</b></span
@@ -310,7 +359,7 @@ const gain = (n: number) => `${n >= 0 ? '+' : '−'}${Math.abs(n)} LP`
 </template>
 
 <style scoped>
-/* the range: a small quiet well in the header, the chosen one lit like every other .seg */
+/* the range: a small select in the header */
 .pl-sec-h .h4 {
   white-space: nowrap;
 }
@@ -324,14 +373,18 @@ const gain = (n: number) => `${n >= 0 ? '+' : '−'}${Math.abs(n)} LP`
   align-self: center;
   flex: none;
   margin: -6px 0 -6px auto;
-  padding: 2px;
 }
-.lpr > * {
-  height: 22px;
-  padding: 0 7px;
-  border-radius: 5px;
-  font-size: 11.5px;
+/* a small select: the chosen range and a chevron */
+.lpr :deep(.sel) {
+  height: 28px;
+  gap: 4px;
+  padding: 0 7px 0 10px;
+  font-size: 12px;
   font-weight: 650;
+}
+.lpr :deep(.sel-chev) {
+  width: 12px;
+  height: 12px;
 }
 .lpg {
   display: grid;
@@ -383,7 +436,9 @@ const gain = (n: number) => `${n >= 0 ? '+' : '−'}${Math.abs(n)} LP`
   overflow: hidden;
   border-radius: 50%;
   background: var(--solid-2, #1c1a27);
-  box-shadow: 0 0 0 1px rgb(var(--v-rgb) / 0.5), 0 2px 6px rgb(0 0 0 / 0.5);
+  box-shadow:
+    0 0 0 1px rgb(var(--v-rgb) / 0.5),
+    0 2px 6px rgb(0 0 0 / 0.5);
 }
 .lpg-pr img {
   flex: none;
@@ -436,7 +491,9 @@ const gain = (n: number) => `${n >= 0 ? '+' : '−'}${Math.abs(n)} LP`
   padding: 8px 10px;
   border-radius: 8px;
   background: var(--solid-2, #1c1a27);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 8px 24px rgb(0 0 0 / 0.5);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.08),
+    0 8px 24px rgb(0 0 0 / 0.5);
   font-size: 12px;
   white-space: nowrap;
   transform: translateX(-50%);
