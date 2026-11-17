@@ -3,7 +3,8 @@ import { computed, onMounted, reactive } from 'vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import { RoleIcon } from '@invadelol/ui'
 import SiteLayout from '../components/SiteLayout.vue'
-import SearchBar, { type PaletteIdle } from '../components/SearchBar.vue'
+import SearchBar from '../components/SearchBar.vue'
+import HomeRecent from '../components/home/HomeRecent.vue'
 import DownloadApp from '../components/DownloadApp.vue'
 import ProPhoto from '../components/champions/ProPhoto.vue'
 import MatchTime from '../components/pros/MatchTime.vue'
@@ -31,11 +32,11 @@ import type { HomePage } from '../lib/home.js'
 import '../css/home-facet.css'
 
 /**
- * `/`: the search at the centre, already open as a palette (the recent lookups, the patch's S+
- * champions, the main pages), three live cards under it (the pro game, where the patch moved
- * champions, a lane figure), then what invade.lol reads from its own games (the best pick of each
- * role, the pros' ladder, the patch's bans), the desktop app, Discord and X. A block is left out
- * when its data could not be read; the search always stands.
+ * `/`: a title and one normal-size search at the centre, one quiet line of this browser's recent
+ * lookups under it, then three live cards (the pro game, where the patch moved champions, a lane
+ * figure), then what invade.lol reads from its own games (the best pick of each role, the pros'
+ * ladder, the patch's bans), the desktop app, Discord and X. A block is left out when its data
+ * could not be read; the search always stands.
  */
 const props = defineProps<HomePage>()
 const page = usePage()
@@ -50,47 +51,6 @@ const bans = computed(() => (props.picks?.bans ?? []).slice(0, 5))
 const topBan = computed(() => bans.value[0]?.banRate || 1)
 const pros = computed(() => (props.pros ?? []).slice(0, 5))
 const notes = computed(() => props.patchNotes ?? null)
-
-/* ── The palette ─────────────────────────────────────────────────── */
-
-const games = computed(() => props.picks?.brackets?.[0]?.games ?? null)
-const palette = computed<PaletteIdle>(() => ({
-  splus: props.picks?.splus ?? [],
-  pros: pros.value,
-  patch: patch.value,
-  note:
-    games.value && patch.value
-      ? `${games.value.toLocaleString('en-US')} games on ${patch.value}, Emerald+`
-      : null,
-  pages: [
-    {
-      icon: 'list',
-      title: 'Tier list',
-      detail: 'Champions, items, runes, duos, ARAM',
-      href: '/tier-list',
-    },
-    {
-      icon: 'trophy',
-      title: 'Leaderboards',
-      detail: 'Solo/Duo, flex, one-tricks, pros',
-      href: '/leaderboards/solo',
-    },
-    { icon: 'globe', title: 'Esports', detail: 'Matches, leagues, teams', href: '/esports' },
-    ...(version.value
-      ? [
-          {
-            icon: 'news' as const,
-            title: `Patch notes ${patch.value}`,
-            detail: notes.value
-              ? `${notes.value.buffs} buffs, ${notes.value.nerfs} nerfs`
-              : 'What changed in the patch',
-            href: patchPath(version.value),
-          },
-        ]
-      : []),
-    { icon: 'download', title: 'Desktop app', detail: 'Windows and macOS', href: '/app' },
-  ],
-}))
 
 /* ── The three cards ─────────────────────────────────────────────── */
 
@@ -144,13 +104,14 @@ const topBully = (rows: { value: number }[]) => rows[0]?.value || 1
   <SiteLayout :search="false">
     <div class="wrap">
       <section class="hp" aria-labelledby="hp-title">
-        <Link v-if="patch && version" class="hp-pill" :href="patchPath(version)" prefetch
-          ><i class="dot" /><b>Patch {{ patch }}</b
-          ><span v-if="notes">{{ notes.buffs }} buffs, {{ notes.nerfs }} nerfs</span
-          ><Icon name="chevr" :size="13"
-        /></Link>
         <h1 id="hp-title" class="d1 hp-t">Look up a player</h1>
-        <SearchBar variant="header" size="lg" :palette="palette" />
+        <SearchBar
+          variant="header"
+          size="lg"
+          placeholder="Riot ID, champion or pro"
+          short-placeholder="Riot ID, champion or pro"
+        />
+        <HomeRecent />
 
         <div v-if="cards.length" class="hc3" :class="`n${cards.length}`">
           <template v-for="card in cards" :key="card.key">

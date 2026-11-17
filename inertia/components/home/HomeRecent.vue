@@ -13,11 +13,10 @@ import ProPhoto from '../champions/ProPhoto.vue'
 import TeamLogo from '../champions/TeamLogo.vue'
 
 /**
- * The profiles this browser opened last, newest first, in one line under the home's search: a
- * portrait and the Riot ID, a pro's photo and name, a champion's portrait and name, or a team's
- * logo and name. The list
- * lives on this device only (lib/recent.ts), so it is read after hydration and the server never
- * renders it; its line keeps its height either way.
+ * What this browser looked up last, newest first, in one quiet line under the home's search: a
+ * small picture (round for people, square for champions) and the name, a player's tag in grey.
+ * The list lives on this device only (lib/recent.ts), so it is read after hydration and the server
+ * never renders it; its line keeps its height either way.
  */
 const recent = ref<RecentPlayer[]>([])
 onMounted(() => (recent.value = recentPlayers().slice(0, 4)))
@@ -29,46 +28,50 @@ function forget() {
 </script>
 
 <template>
-  <div class="recent hm-recent" :aria-hidden="recent.length ? undefined : 'true'">
+  <div class="rc" :aria-hidden="recent.length ? undefined : 'true'">
     <template v-if="recent.length">
-      <span>Recent</span>
+      <span class="rc-l">Recent</span>
       <Link
         v-for="player in recent"
         :key="recentKey(player)"
         :href="recentHref(player)"
         prefetch
-        class="chip2"
+        class="rc-i"
       >
         <ProPhoto
           v-if="player.pro"
           :slug="player.pro.slug"
           :photo="player.pro.photo"
-          :width="24"
-          :height="24"
-          class="hm-chip-pic"
+          :width="20"
+          :height="20"
+          class="rc-p pr"
         />
-        <img v-else-if="player.champion" :src="champIcon(player.champion.id)" alt="" />
-        <TeamLogo
-          v-else-if="player.team"
-          :team="{ id: player.team.id, name: player.gameName, shortName: player.team.shortName }"
-          :size="24"
-          class="hm-chip-pic"
+        <img
+          v-else-if="player.champion"
+          class="rc-p ch"
+          :src="champIcon(player.champion.id)"
+          alt=""
+          width="20"
+          height="20"
         />
-        <img v-else :src="profileIcon(player.profileIconId)" alt="" decoding="async" />
-        {{ player.gameName
-        }}<span>{{
-          player.pro
-            ? player.pro.staff
-              ? 'Staff'
-              : 'Pro'
-            : player.champion
-              ? 'Champion'
-              : player.team
-                ? 'Team'
-                : `#${player.tagLine}`
-        }}</span>
+        <span v-else-if="player.team" class="rc-p tm"
+          ><TeamLogo
+            :team="{ id: player.team.id, name: player.gameName, shortName: player.team.shortName }"
+            :size="16"
+        /></span>
+        <img
+          v-else
+          class="rc-p"
+          :src="profileIcon(player.profileIconId)"
+          alt=""
+          width="20"
+          height="20"
+          decoding="async"
+        />
+        <b>{{ player.gameName }}</b
+        ><span v-if="!player.pro && !player.champion && !player.team">#{{ player.tagLine }}</span>
       </Link>
-      <button type="button" class="hm-clear" @click="forget">Clear</button>
+      <button type="button" class="rc-x" @click="forget">Clear</button>
     </template>
   </div>
 </template>

@@ -5,11 +5,8 @@ import { CornerDownLeft, Plus, Search, Users, X } from 'lucide-vue-next'
 import { champIcon, profileIcon, regionLabel } from '../lib/assets.js'
 import { regionFlag } from '../lib/flags.js'
 import { championSlug } from '../lib/champions.js'
-import { forgetRecent, recentHref, recentPlayers, type RecentPlayer } from '../lib/recent.js'
-import { RoleIcon } from '@invadelol/ui'
-import { championHref, positionOf } from './header/sections.js'
-import type { HomePick, HomePro } from '../lib/home.js'
-import type { IconName } from '../lib/icons.js'
+import { recentHref, recentPlayers, type RecentPlayer } from '../lib/recent.js'
+import { positionOf } from './header/sections.js'
 import ProPhoto from './champions/ProPhoto.vue'
 import TeamLogo from './champions/TeamLogo.vue'
 import {
@@ -21,27 +18,6 @@ import {
 } from '../lib/multisearch.js'
 import { tierName } from '../lib/board.js'
 import Icon from './ui/Icon.vue'
-
-/** A page the home's palette lists before anything is typed. */
-export interface PalettePage {
-  icon: IconName
-  title: string
-  detail: string
-  href: string
-}
-
-/** What the home's palette shows before anything is typed (the recent lookups are the browser's). */
-export interface PaletteIdle {
-  /** The S+ champions of the patch. */
-  splus: HomePick[]
-  /** The pros at the top of solo queue: the first column while this browser has no recents. */
-  pros: HomePro[]
-  pages: PalettePage[]
-  /** The patch as players name it ("26.22"), for the S+ column's title. */
-  patch: string | null
-  /** The footer's line: "1,315,200 games on 26.22, Emerald+". */
-  note: string | null
-}
 
 const props = withDefaults(
   defineProps<{
@@ -56,12 +32,6 @@ const props = withDefaults(
     placeholder?: string
     /** The placeholder on a phone, where the long one would be cut. */
     shortPlaceholder?: string
-    /**
-     * The home's search, set large (`variant="header" size="lg"`): a palette, open from the start.
-     * Before anything is typed it lists the recent lookups, the patch's S+ champions and the main
-     * pages in three columns the keys move through; typing turns it into the list of results.
-     */
-    palette?: PaletteIdle | null
   }>(),
   {
     size: 'sm',
@@ -69,16 +39,16 @@ const props = withDefaults(
     variant: 'field',
     placeholder: undefined,
     shortPlaceholder: undefined,
-    palette: null,
   }
 )
 
 const emit = defineEmits<{ close: [] }>()
 const inHeader = computed(() => props.variant === 'header')
-/** The home's search: the header's, set large, its region first and a go button at the end. */
+/**
+ * The home's search (and the error pages'): the header's, set as a field of its own, the region
+ * as a key at its end; its results drop under it at its width.
+ */
 const big = computed(() => inHeader.value && props.size === 'lg')
-/** The shortcut as this computer writes it. */
-const hotkey = ref('Ctrl K')
 
 /* ── Region (the header's search) ───────────────────────────────────
    Which region the visitor plays on, kept on this device: its players come first in the
@@ -161,7 +131,7 @@ interface Answer {
   accounts: ProAccount[]
 }
 
-type Section = 'recent' | 'pros' | 'splus' | 'pages' | 'champions' | 'esports' | 'summoners'
+type Section = 'recent' | 'champions' | 'esports' | 'summoners'
 
 interface Entry {
   /** The rank last seen (a recent profile): "Emerald II". */
@@ -189,18 +159,10 @@ interface Entry {
   multi?: RiotIdentity[]
   /** The titled group the entry is listed under; a pasted lobby stands above them all. */
   section?: Section
-  /** A page of the site (the palette): its icon. */
-  page?: IconName
-  /** An S+ champion (the palette): its role and win rate there. */
-  position?: string
-  winRate?: number
 }
 
 const SECTION_LABELS: Record<Section, string> = {
   recent: 'Recently viewed',
-  pros: 'Pros',
-  splus: 'S+',
-  pages: 'Pages',
   champions: 'Champions',
   esports: 'Esports',
   summoners: 'Summoners',
@@ -208,9 +170,6 @@ const SECTION_LABELS: Record<Section, string> = {
 /** The header's groups, in its words. */
 const HEADER_LABELS: Record<Section, string> = {
   recent: 'Recent',
-  pros: 'Pros in solo queue',
-  splus: 'S+',
-  pages: 'Pages',
   champions: 'Champions',
   esports: 'Pros and teams',
   summoners: 'Players',
@@ -246,6 +205,7 @@ let championsAsked = false
 function loadChampions() {
   if (championsAsked || typeof window === 'undefined') return
   championsAsked = true
+  loadRoles()
   fetch('/cdn/names/champion')
     .then((r) => (r.ok ? (r.json() as Promise<Record<string, string>>) : null))
     .then((json) => {
@@ -268,6 +228,49 @@ function playable(json: Record<string, string>) {
       const key = c.name.toLowerCase()
       return !seen.has(key) && seen.add(key)
     })
+}
+
+/**
+ * Where each champion is played (the tier list's roles, most games first, a role counted from a
+ * tenth of its games), fetched with the names: a champion's row reads "Mid, top".
+ */
+const championRoles = ref<Map<number, string>>(new Map())
+let rolesAsked = false
+function loadRoles() {
+  if (rolesAsked) return
+  rolesAsked = true
+  fetch('/api/tier-list')
+    .then((r) => (r.ok ? (r.json() as Promise<{ roles?: TierRole[] }>) : null))
+    .then((json) => {
+      if (json?.roles) championRoles.value = rolesOf(json.roles)
+      else rolesAsked = false
+    })
+    .catch(() => (rolesAsked = false))
+}
+interface TierRole {
+  champion: number
+  position: string
+  games: number
+  roleShare: number
+}
+function rolesOf(rows: TierRole[]) {
+  const by = new Map<number, TierRole[]>()
+  for (const r of rows) {
+    if (r.roleShare < 0.1) continue
+    by.set(r.champion, [...(by.get(r.champion) ?? []), r])
+  }
+  const out = new Map<number, string>()
+  for (const [id, list] of by) {
+    const words = list
+      .sort((a, b) => b.games - a.games)
+      .slice(0, 2)
+      .map((r, i) => {
+        const label = positionOf(r.position).label
+        return i ? label.toLowerCase() : label
+      })
+    out.set(id, words.join(', '))
+  }
+  return out
 }
 
 const champions = computed(() => {
@@ -399,102 +402,14 @@ function recentEntry(r: RecentPlayer): Entry {
   }
 }
 
-/** The palette's field has the caret. */
+/** The home's field has the caret: its ring turns violet. */
 const focused = ref(false)
-const palettePatch = computed(() => props.palette?.patch ?? '')
 
-/** The palette before anything is typed: one to three letters keep it, so it never jumps. */
-const idle = computed(() => big.value && !picked.value.length && query.value.trim().length < 2)
-
-/** The palette's three columns: the recent lookups (else the top pros), the S+ champions, the pages. */
-const idleGroups = computed(() => {
-  const p = props.palette
-  const list: { section: Section; entries: Entry[] }[] = []
-  if (recent.value.length)
-    list.push({ section: 'recent', entries: recent.value.slice(0, 5).map(recentEntry) })
-  else if (p?.pros.length)
-    list.push({
-      section: 'pros',
-      entries: p.pros.slice(0, 5).map(
-        (pro): Entry => ({
-          gameName: pro.name,
-          tagLine: '',
-          direct: false,
-          kind: 'pro',
-          href: `/pro/${pro.slug}`,
-          title: pro.name,
-          detail: `${pro.team?.name ?? 'Free agent'}${pro.lp === null ? '' : `, ${pro.lp.toLocaleString('en-US')} LP`}`,
-          ...(pro.photo ? { photo: { slug: pro.slug, v: pro.photo } } : {}),
-        })
-      ),
-    })
-  if (p?.splus.length)
-    list.push({
-      section: 'splus',
-      entries: p.splus.slice(0, 5).map(
-        (c): Entry => ({
-          gameName: c.name,
-          tagLine: '',
-          direct: false,
-          kind: 'champion',
-          href: championHref(c.slug, c.position),
-          title: c.name,
-          champion: c.championId,
-          position: c.position,
-          winRate: c.winRate,
-        })
-      ),
-    })
-  if (p?.pages.length)
-    list.push({
-      section: 'pages',
-      entries: p.pages.map(
-        (page): Entry => ({
-          gameName: page.title,
-          tagLine: '',
-          direct: false,
-          href: page.href,
-          title: page.title,
-          detail: page.detail,
-          page: page.icon,
-        })
-      ),
-    })
-  return list
-})
-
-/** "Clear" in the palette: this browser forgets its lookups, the column shows the pros. */
-function clearRecent() {
-  forgetRecent()
-  recent.value = []
-  activeIndex.value = 0
-  input.value?.focus()
-}
-
-/** ← → in the palette's columns: the same row of the column beside, while nothing is typed. */
-function side(delta: number, event: KeyboardEvent) {
-  if (!idle.value || query.value) return
-  const g = offsets.value.findIndex(
-    (start, i) =>
-      activeIndex.value >= start && activeIndex.value < start + groups.value[i].entries.length
-  )
-  if (g < 0) return
-  event.preventDefault()
-  const next = (g + delta + groups.value.length) % groups.value.length
-  const row = Math.min(activeIndex.value - offsets.value[g], groups.value[next].entries.length - 1)
-  activeIndex.value = offsets.value[next] + row
-  warm(entries.value[activeIndex.value])
-}
-
-/** A row's second line. */
-function lineOf(entry: Entry) {
-  if (entry.multi) return `On ${regionLabel_.value}`
-  if (entry.page || (entry.kind && !entry.badge)) return entry.detail ?? ''
-  if (entry.kind === 'champion') return 'Build, runes and matchups'
-  if (entry.kind) return [entry.badge, entry.detail].filter(Boolean).join(', ')
-  if (entry.direct) return 'Open the profile'
-  const where = [entry.rank, entry.region].filter(Boolean).join(', ')
-  return `${entry.proName ? `Pro, ${entry.proName}, ` : ''}${where || (entry.level ? `Level ${entry.level}` : '')}`
+/** A pro's details: "Fnatic, mid", or the role alone ("Mid") without a team. */
+function proDetail(p: ProResult) {
+  const role = p.role && !p.staff ? p.role.toLowerCase() : null
+  if (p.team) return [p.team.name, role].filter(Boolean).join(', ')
+  return role ? role.charAt(0).toUpperCase() + role.slice(1) : ''
 }
 
 /** Esports takes five rows at most: pros first, and teams keep two when both are found. */
@@ -502,7 +417,6 @@ const MAX_ESPORTS = 5
 
 /** Everything selectable, grouped by section; `entries` flattens it so arrow keys have one index space. */
 const groups = computed(() => {
-  if (idle.value) return idleGroups.value
   const top: Entry[] = []
   const bySection: Record<'champions' | 'esports' | 'summoners', Entry[]> = {
     champions: [],
@@ -551,12 +465,7 @@ const groups = computed(() => {
         kind: 'pro',
         href: `/pro/${p.slug}`,
         title: p.name,
-        detail: [
-          p.team?.name,
-          p.role && !p.staff ? p.role.charAt(0) + p.role.slice(1).toLowerCase() : null,
-        ]
-          .filter(Boolean)
-          .join(', '),
+        detail: proDetail(p),
         team: p.team,
         ...(p.photo ? { photo: { slug: p.slug, v: p.photo } } : {}),
         badge: p.staff ? 'Staff' : 'Pro',
@@ -570,7 +479,7 @@ const groups = computed(() => {
         kind: 'team',
         href: `/team/${t.slug}`,
         title: t.name,
-        detail: [t.shortName, t.region].filter(Boolean).join(', '),
+        detail: t.region ?? '',
         team: t,
       })
     }
@@ -618,7 +527,7 @@ const offsets = computed(() => {
 
 const showDropdown = computed(() => isOpen.value && entries.value.length > 0)
 
-watch(query, (value) => {
+watch(query, () => {
   clearTimeout(debounce)
   searchController?.abort()
   isLoading.value = false
@@ -722,7 +631,7 @@ function href(entry: { gameName: string; tagLine: string }) {
 
 /**
  * ⌘K / Ctrl-K puts the caret here from anywhere on the page (the header's search has its own);
- * the home's palette takes `/` too, when nothing else is being typed in.
+ * the home's field takes `/` too, when nothing else is being typed in.
  */
 function onHotkey(event: KeyboardEvent) {
   if (inHeader.value && !big.value) return
@@ -752,7 +661,6 @@ onMounted(() => {
   window.addEventListener('keydown', onHotkey)
   tight.value = window.matchMedia('(max-width: 359px)').matches
   narrow.value = window.matchMedia('(max-width: 479px)').matches
-  if (/Mac|iPhone|iPad/.test(navigator.platform)) hotkey.value = '⌘ K'
   if (inHeader.value) {
     recent.value = recentPlayers()
     try {
@@ -871,6 +779,16 @@ function move(delta: number) {
   )
 }
 
+/** The home's field: its ring, and the list back when there is something in it. */
+function onFocus() {
+  focused.value = true
+  isOpen.value = entries.value.length > 0
+}
+function onBlur() {
+  focused.value = false
+  handleBlur()
+}
+
 function handleBlur() {
   // Let a click on a result land before the list unmounts.
   setTimeout(() => (isOpen.value = false), 150)
@@ -884,24 +802,25 @@ function marked(title: string): [string, string, string] {
   return [title.slice(0, at), title.slice(at, at + q.length), title.slice(at + q.length)]
 }
 
-/** A result's one quiet line, beside its name: what it is and where. */
+/** A result's details, right-aligned on its line: where it plays, its team, its region. */
 function metaOf(entry: Entry) {
   if (entry.multi) return `On ${regionLabel_.value}`
-  if (entry.kind === 'champion') return 'Champion'
-  if (entry.kind) {
-    const what = entry.kind === 'team' ? 'Team' : entry.badge
-    const detail = entry.detail === 'Team' ? null : entry.detail?.replace(/, /g, ' · ')
-    return [what, detail].filter(Boolean).join(' · ')
-  }
+  if (entry.kind === 'champion')
+    return (entry.champion && championRoles.value.get(entry.champion)) || 'Champion'
+  if (entry.kind === 'team')
+    return ['Team', entry.detail === 'Team' ? null : entry.detail].filter(Boolean).join(', ')
+  if (entry.kind) return entry.detail ?? ''
   if (entry.direct) return 'Open the profile'
-  return [
-    entry.proName ? `Pro ${entry.proName}` : null,
-    entry.region,
-    entry.rank ?? (entry.level ? `Lv ${entry.level}` : null),
-  ]
+  return [entry.proName, entry.region, entry.rank ?? (entry.level ? `level ${entry.level}` : null)]
     .filter(Boolean)
-    .join(' · ')
+    .join(', ')
 }
+
+/** The word beside a name: a pro's or staff member's, or a pro's account among the players. */
+const badgeOf = (entry: Entry) => entry.badge ?? (entry.proName ? 'Pro' : null)
+
+/** A pro's team logo leads their details. */
+const teamOf = (entry: Entry) => (entry.kind === 'pro' && entry.team ? entry.team : null)
 
 /** A pro or team without a picture: two letters in its tile. */
 const initialsOf = (entry: Entry) => (entry.title ?? '').slice(0, 2).toUpperCase()
@@ -914,12 +833,6 @@ function shown(event: Event) {
   ;(event.target as HTMLImageElement).dataset.loaded = 'true'
 }
 
-/** The go button: the highlighted result, or the caret into the field when nothing is typed. */
-function submitOrFocus() {
-  if (entries.value.length && query.value.trim()) submit()
-  else input.value?.focus()
-}
-
 function submit() {
   const entry = entries.value[activeIndex.value]
   if (entry) go(entry)
@@ -927,10 +840,23 @@ function submit() {
 </script>
 
 <template>
-  <!-- The home's search (Facet): a palette, open from the start; typing turns it into the results. -->
-  <div v-if="big" class="pal" role="search" @keydown.esc.prevent="onEscape">
-    <div class="pal-f" :class="{ focus: focused }" @mousedown.self.prevent="input?.focus()">
-      <Icon name="search" :size="20" />
+  <!--
+    The header's search and the home's (Facet): a field, its results a list under it. In the header
+    the field sits in the bar and the list drops at 560 px; on the home (`size="lg"`) the field is
+    a lit sheet of its own and the list takes its width.
+  -->
+  <div
+    v-if="inHeader"
+    class="hs"
+    :class="{ 'hs-hero': big }"
+    role="search"
+    @keydown.esc.prevent="onEscape"
+  >
+    <div
+      :class="[big ? 'hf' : 'gsearch', { focus: big ? focused : isOpen || regionOpen }]"
+      @mousedown.self.prevent="input?.focus()"
+    >
+      <Icon name="search" :size="big ? 18 : 17" class="gl" />
       <div v-if="picked.length" ref="chips" class="hs-chips" :data-overflow="chipsOverflow">
         <button
           v-for="(player, index) in picked"
@@ -953,299 +879,18 @@ function submit() {
         :placeholder="
           picked.length
             ? 'Add another player'
-            : narrow
-              ? (props.shortPlaceholder ?? 'Player, champion or pro')
-              : (props.placeholder ?? 'Player, champion, pro or page')
-        "
-        :autofocus="props.autofocus"
-        aria-label="Search a player, champion, pro or page"
-        aria-autocomplete="list"
-        :aria-controls="listId"
-        :aria-activedescendant="entries.length ? `${listId}-o${activeIndex}` : undefined"
-        @focus="focused = true"
-        @blur="focused = false"
-        @keydown.down.prevent="move(1)"
-        @keydown.up.prevent="move(-1)"
-        @keydown.left="side(-1, $event)"
-        @keydown.right="side(1, $event)"
-        @keydown.enter.prevent="submit"
-        @keydown.backspace="onBackspace"
-      />
-      <span v-if="isLoading" class="hs-spin" aria-hidden="true" />
-      <button
-        type="button"
-        class="rg"
-        :aria-label="`Region: ${regionLabel_}`"
-        :aria-expanded="regionOpen"
-        aria-haspopup="listbox"
-        @click="regionOpen = !regionOpen"
-      >
-        <img :src="regionFlag(region)" alt="" width="18" height="13" />{{ regionLabel_
-        }}<Icon name="chev" :size="12" />
-      </button>
-      <span class="kbd pal-k" aria-hidden="true">/</span>
-    </div>
-
-    <div
-      v-if="regionOpen"
-      class="hx-menu hs-reg panel reg pal-reg"
-      role="listbox"
-      aria-label="Region"
-    >
-      <a
-        v-for="r in MULTISEARCH_REGIONS"
-        :key="r"
-        href="#"
-        role="option"
-        :class="{ on: r === region }"
-        :aria-selected="r === region"
-        @click.prevent="setRegion(r)"
-        ><span class="row" style="gap: 10px"
-          ><img :src="regionFlag(r)" alt="" width="20" height="14" style="border-radius: 3px" />{{
-            r.toUpperCase()
-          }}</span
-        ><Icon v-if="r === region" name="check" :size="15"
-      /></a>
-    </div>
-
-    <div v-if="idle" :id="listId" ref="list" class="pal-b" role="listbox" aria-label="Suggestions">
-      <div
-        v-for="(group, g) in groups"
-        :key="group.section ?? 'top'"
-        class="pal-c"
-        :class="`pal-${group.section}`"
-        role="group"
-        :aria-labelledby="`${listId}-${group.section}`"
-      >
-        <span :id="`${listId}-${group.section}`" class="pal-l"
-          ><template v-if="group.section === 'splus'"
-            ><span class="tier sp">S+</span>on {{ palettePatch
-            }}<span class="end">Win rate</span></template
-          ><template v-else>{{ group.section ? HEADER_LABELS[group.section] : '' }}</template
-          ><button
-            v-if="group.section === 'recent'"
-            type="button"
-            class="pal-x end"
-            @mousedown.prevent
-            @click="clearRecent"
-          >
-            Clear
-          </button></span
-        >
-        <a
-          v-for="(entry, i) in group.entries"
-          :id="`${listId}-o${offsets[g] + i}`"
-          :key="`${group.section}-${entry.href ?? entry.gameName}-${i}`"
-          class="pal-r"
-          :class="{ act: offsets[g] + i === activeIndex }"
-          :href="entry.href ?? href(entry)"
-          role="option"
-          :data-index="offsets[g] + i"
-          :aria-selected="offsets[g] + i === activeIndex"
-          @mouseenter="highlight(offsets[g] + i, entry)"
-          @mousedown.prevent
-          @click.prevent="go(entry)"
-        >
-          <span v-if="entry.page" class="pi"><Icon :name="entry.page" :size="17" /></span>
-          <span v-else-if="entry.kind === 'champion' && entry.champion" class="av ch"
-            ><img :src="champIcon(entry.champion)" alt="" width="34" height="34" @load="shown"
-          /></span>
-          <span v-else-if="entry.kind === 'pro' && entry.photo" class="av pr"
-            ><ProPhoto :slug="entry.photo.slug" :photo="entry.photo.v" :width="34" :height="34"
-          /></span>
-          <span v-else-if="entry.kind" class="av ini">{{ entry.title?.slice(0, 2) }}</span>
-          <span v-else class="av"
-            ><img :src="profileIcon(entry.icon)" alt="" width="34" height="34" decoding="async"
-          /></span>
-          <span class="tx">
-            <b
-              >{{ entry.title ?? entry.gameName
-              }}<span v-if="!entry.kind && !entry.page" class="t4"> #{{ entry.tagLine }}</span></b
-            >
-            <span v-if="entry.position" class="hrl"
-              ><RoleIcon :lane="positionOf(entry.position).lane" :size="12" />{{
-                positionOf(entry.position).label
-              }}</span
-            >
-            <span v-else>{{ lineOf(entry) }}</span>
-          </span>
-          <span v-if="entry.winRate !== undefined" class="pal-v num"
-            >{{ (entry.winRate * 100).toFixed(1) }}<span class="u">%</span></span
-          >
-          <Icon v-if="entry.page" name="arrow" :size="14" class="go" />
-        </a>
-        <!-- A phone: the S+ champions as faces, the pages as chips. -->
-        <div v-if="group.section === 'splus'" class="pal-ics">
-          <a
-            v-for="entry in group.entries"
-            :key="`f-${entry.href}`"
-            :href="entry.href"
-            tabindex="-1"
-            @click.prevent="go(entry)"
-            ><span class="ic m"><img :src="champIcon(entry.champion!)" alt="" /></span
-            ><span>{{ entry.title }}</span
-            ><i class="num">{{ ((entry.winRate ?? 0) * 100).toFixed(1) }}%</i></a
-          >
-        </div>
-        <div v-if="group.section === 'pages'" class="pal-chips">
-          <a
-            v-for="entry in group.entries"
-            :key="`c-${entry.href}`"
-            :href="entry.href"
-            tabindex="-1"
-            @click.prevent="go(entry)"
-            ><Icon :name="entry.page!" :size="14" />{{ entry.title }}</a
-          >
-        </div>
-      </div>
-    </div>
-
-    <div v-else :id="listId" ref="list" class="pal-one sx" role="listbox" aria-label="Results">
-      <div
-        v-for="(group, g) in groups"
-        :key="group.section ?? 'top'"
-        class="sx-g"
-        role="group"
-        :aria-labelledby="group.section ? `${listId}-${group.section}` : undefined"
-      >
-        <div v-if="group.section" :id="`${listId}-${group.section}`" class="sx-h">
-          {{ HEADER_LABELS[group.section] }}
-        </div>
-        <div
-          v-for="(entry, i) in group.entries"
-          :id="`${listId}-o${offsets[g] + i}`"
-          :key="`${entry.kind ?? 'player'}-${entry.gameName}-${entry.tagLine}-${i}`"
-          class="sx-r"
-          :class="{ act: offsets[g] + i === activeIndex }"
-          role="option"
-          :data-index="offsets[g] + i"
-          :aria-selected="offsets[g] + i === activeIndex"
-          @mouseenter="highlight(offsets[g] + i, entry)"
-          @mousedown.prevent="go(entry)"
-        >
-          <span v-if="entry.multi" class="sx-i gl"><Icon name="users" :size="15" /></span>
-          <span v-else-if="entry.kind === 'champion' && entry.champion" class="sx-i ch"
-            ><img :src="champIcon(entry.champion)" alt="" width="28" height="28"
-          /></span>
-          <span v-else-if="entry.kind === 'pro' && entry.photo" class="sx-i"
-            ><ProPhoto :slug="entry.photo.slug" :photo="entry.photo.v" :width="28" :height="28"
-          /></span>
-          <span v-else-if="entry.kind && entry.team" class="sx-i tm"
-            ><TeamLogo :team="entry.team" :size="22"
-          /></span>
-          <span v-else-if="entry.kind" class="sx-i gl ini">{{ initialsOf(entry) }}</span>
-          <span v-else-if="!entry.direct" class="sx-i"
-            ><img :src="profileIcon(entry.icon)" alt="" width="28" height="28" decoding="async"
-          /></span>
-          <span v-else class="sx-i gl"><Icon name="arrow" :size="15" /></span>
-          <span class="sx-n">
-            <template v-if="entry.multi">Search {{ entry.multi.length }} players together</template>
-            <template v-else-if="entry.kind"
-              >{{ marked(entry.title ?? '')[0] }}<mark>{{ marked(entry.title ?? '')[1] }}</mark
-              >{{ marked(entry.title ?? '')[2] }}</template
-            >
-            <template v-else
-              >{{ marked(entry.gameName)[0] }}<mark>{{ marked(entry.gameName)[1] }}</mark
-              >{{ marked(entry.gameName)[2] }}<span class="sx-tag">#{{ entry.tagLine }}</span></template
-            >
-          </span>
-          <span class="sx-m num" :class="{ swap: entry.kind === 'champion' && entry.href }">{{
-            metaOf(entry)
-          }}</span>
-          <span v-if="entry.kind === 'champion' && entry.href" class="sx-acts">
-            <a :href="championPath(entry)" @mousedown.prevent.stop="go(entry)">Build</a>
-            <a
-              :href="championPath(entry, 'matchups')"
-              @mousedown.prevent.stop="go({ ...entry, href: championPath(entry, 'matchups') })"
-              >Matchups</a
-            >
-          </span>
-          <button
-            v-if="canAdd(entry)"
-            type="button"
-            class="sx-add"
-            aria-label="Add to the lobby"
-            title="Add to the lobby"
-            @mousedown.prevent.stop="add(entry)"
-          >
-            <Icon name="plus" :size="13" />
-          </button>
-        </div>
-      </div>
-      <p v-if="!entries.length" class="pal-none">
-        <template v-if="isLoading">Searching…</template>
-        <template v-else>Nothing found for “{{ typing.trim() }}”.</template>
-      </p>
-    </div>
-
-    <div class="pal-ft" aria-hidden="true">
-      <span><span class="kbd">↑</span><span class="kbd">↓</span>move</span>
-      <span><span class="kbd">Enter</span>open</span>
-      <span class="pal-ft-k"
-        ><span class="kbd">/</span><span class="kbd">{{ hotkey }}</span
-        >search from anywhere</span
-      >
-      <span class="end num">{{
-        idle ? (props.palette?.note ?? '') : `Searching ${regionLabel_} first`
-      }}</span>
-    </div>
-  </div>
-
-  <!-- The header's search (Facet): the field in the bar, its results a panel under it. -->
-  <div
-    v-else-if="inHeader"
-    class="hs"
-    :class="{ 'hs-big': big }"
-    role="search"
-    @keydown.esc.prevent="onEscape"
-  >
-    <div
-      :class="[big ? 'bigs' : 'gsearch', { focus: isOpen || regionOpen }]"
-      @mousedown.self.prevent="input?.focus()"
-    >
-      <button
-        v-if="big"
-        type="button"
-        class="rg3"
-        :aria-label="`Region: ${regionLabel_}`"
-        :aria-expanded="regionOpen"
-        aria-haspopup="listbox"
-        @click="regionOpen = !regionOpen"
-      >
-        <img :src="regionFlag(region)" alt="" width="18" height="13" style="border-radius: 2px" />{{
-          regionLabel_
-        }}<Icon name="chev" :size="13" />
-      </button>
-      <Icon name="search" :size="17" class="gl" />
-      <div v-if="picked.length" ref="chips" class="hs-chips" :data-overflow="chipsOverflow">
-        <button
-          v-for="(player, index) in picked"
-          :key="`${player.gameName}#${player.tagLine}`"
-          type="button"
-          class="hs-chip"
-          :title="`Remove ${player.gameName}#${player.tagLine}`"
-          @mousedown.prevent="remove(index)"
-        >
-          <img :src="profileIcon(player.icon)" alt="" width="18" height="18" />
-          <Icon name="x" :size="11" />
-        </button>
-      </div>
-      <input
-        ref="input"
-        v-model="query"
-        type="text"
-        spellcheck="false"
-        autocomplete="off"
-        :placeholder="
-          picked.length ? 'Add another player' : (props.placeholder ?? 'Player, champion or pro')
+            : big && narrow && props.shortPlaceholder
+              ? props.shortPlaceholder
+              : (props.placeholder ?? 'Player, champion or pro')
         "
         :autofocus="big && props.autofocus"
         :aria-label="props.placeholder ?? 'Search a player, champion or pro'"
         aria-autocomplete="list"
         :aria-expanded="showDropdown"
         :aria-controls="showDropdown ? listId : undefined"
-        @focus="isOpen = entries.length > 0"
-        @blur="handleBlur"
+        :aria-activedescendant="showDropdown ? `${listId}-o${activeIndex}` : undefined"
+        @focus="onFocus"
+        @blur="onBlur"
         @keydown.down.prevent="move(1)"
         @keydown.up.prevent="move(-1)"
         @keydown.enter.prevent="submit"
@@ -1253,22 +898,22 @@ function submit() {
       />
       <span v-if="isLoading" class="hs-spin" aria-hidden="true" />
       <button
-        v-if="!big"
         type="button"
-        class="rg2"
+        :class="big ? 'hf-rg' : 'rg2'"
         :aria-label="`Region: ${regionLabel_}`"
         :aria-expanded="regionOpen"
         aria-haspopup="listbox"
         @click="regionOpen = !regionOpen"
       >
-        <img :src="regionFlag(region)" alt="" width="16" height="11" style="border-radius: 2px" />{{
-          regionLabel_
-        }}<Icon name="chev" :size="12" />
+        <img
+          :src="regionFlag(region)"
+          alt=""
+          :width="big ? 18 : 16"
+          :height="big ? 13 : 11"
+          style="border-radius: 2px"
+        />{{ regionLabel_ }}<Icon name="chev" :size="big ? 13 : 12" />
       </button>
-      <span class="kbd hs-kbd" aria-hidden="true">{{ big ? hotkey : '/' }}</span>
-      <button v-if="big" type="button" class="go" aria-label="Search" @click="submitOrFocus">
-        <Icon name="arrow" :size="20" />
-      </button>
+      <span class="kbd hs-kbd" aria-hidden="true">/</span>
     </div>
 
     <div v-if="regionOpen" class="hx-menu hs-reg panel reg" role="listbox" aria-label="Region">
@@ -1288,13 +933,8 @@ function submit() {
       /></a>
     </div>
 
-    <div
-      v-if="showDropdown"
-      :id="listId"
-      ref="list"
-      class="hx-menu hs-panel panel sx"
-      role="listbox"
-    >
+    <!-- One list on the whole site: titled groups, one line per result, Enter on the lit row. -->
+    <div v-if="showDropdown" :id="listId" ref="list" class="hx-menu hs-panel sx" role="listbox">
       <div
         v-for="(group, g) in groups"
         :key="group.section ?? 'top'"
@@ -1321,14 +961,15 @@ function submit() {
           <span v-else-if="entry.kind === 'champion' && entry.champion" class="sx-i ch"
             ><img :src="champIcon(entry.champion)" alt="" width="28" height="28"
           /></span>
-          <span v-else-if="entry.kind === 'pro' && entry.photo" class="sx-i"
+          <span v-else-if="entry.kind === 'pro' && entry.photo" class="sx-i pr"
             ><ProPhoto :slug="entry.photo.slug" :photo="entry.photo.v" :width="28" :height="28"
           /></span>
+          <span v-else-if="entry.kind === 'pro'" class="sx-i pr ini">{{ initialsOf(entry) }}</span>
           <span v-else-if="entry.kind && entry.team" class="sx-i tm"
             ><TeamLogo :team="entry.team" :size="22"
           /></span>
           <span v-else-if="entry.kind" class="sx-i gl ini">{{ initialsOf(entry) }}</span>
-          <span v-else-if="!entry.direct" class="sx-i"
+          <span v-else-if="!entry.direct" class="sx-i pl"
             ><img :src="profileIcon(entry.icon)" alt="" width="28" height="28" decoding="async"
           /></span>
           <span v-else class="sx-i gl"><Icon name="arrow" :size="15" /></span>
@@ -1340,37 +981,37 @@ function submit() {
             >
             <template v-else
               >{{ marked(entry.gameName)[0] }}<mark>{{ marked(entry.gameName)[1] }}</mark
-              >{{ marked(entry.gameName)[2] }}<span class="sx-tag">#{{ entry.tagLine }}</span></template
+              >{{ marked(entry.gameName)[2]
+              }}<span class="sx-tag">&nbsp;#{{ entry.tagLine }}</span></template
             >
           </span>
-          <span class="sx-m num" :class="{ swap: entry.kind === 'champion' && entry.href }">{{
-            metaOf(entry)
-          }}</span>
-          <span v-if="entry.kind === 'champion' && entry.href" class="sx-acts">
-            <a :href="championPath(entry)" @mousedown.prevent.stop="go(entry)">Build</a>
-            <a
-              :href="championPath(entry, 'matchups')"
-              @mousedown.prevent.stop="go({ ...entry, href: championPath(entry, 'matchups') })"
-              >Matchups</a
-            >
-          </span>
+          <span v-if="badgeOf(entry)" class="sx-w">{{ badgeOf(entry) }}</span>
+          <!-- The lit row's one other way in: a champion's matchups, a player onto the lobby. -->
+          <a
+            v-if="entry.kind === 'champion' && entry.href"
+            class="sx-x"
+            :href="championPath(entry, 'matchups')"
+            tabindex="-1"
+            @mousedown.prevent.stop="go({ ...entry, href: championPath(entry, 'matchups') })"
+            >Matchups</a
+          >
           <button
-            v-if="canAdd(entry)"
+            v-else-if="canAdd(entry)"
             type="button"
-            class="sx-add"
+            class="sx-x sx-add"
             aria-label="Add to the lobby"
             title="Add to the lobby"
             @mousedown.prevent.stop="add(entry)"
           >
             <Icon name="plus" :size="13" />
           </button>
+          <span class="sx-m num"
+            ><TeamLogo v-if="teamOf(entry)" :team="teamOf(entry)!" :size="16" />{{
+              metaOf(entry)
+            }}</span
+          >
+          <span class="sx-k" aria-hidden="true"><Icon name="enter" :size="13" /></span>
         </div>
-      </div>
-      <div class="panel-f" aria-hidden="true">
-        <span><span class="kbd">↑</span><span class="kbd">↓</span>move</span>
-        <span><span class="kbd">Enter</span>open</span>
-        <span><span class="kbd">Tab</span>region</span>
-        <span class="end">Searching {{ regionLabel_ }}</span>
       </div>
     </div>
   </div>

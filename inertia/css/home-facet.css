@@ -1,6 +1,7 @@
 /* ──────────────────────────────────────────────────────────────
-   The home page (`/`), loaded with its page: the search as a
-   palette, the three live cards, then best picks, pros and bans,
+   The home page (`/`), loaded with its page: the title, the
+   search and the recent lookups, the three live cards, then best
+   picks, pros and bans,
    the desktop app, Discord and X. The board's base classes
    (picks, pick, promo, card, lrow) are in facet.css; this adds
    the rest and the narrower screens; the hovers follow motion.css.
@@ -34,325 +35,115 @@
     border-radius: 10px;
   }
 
-  /* ── The hero: the patch pill, the title, the palette, a faint dot grid and violet light ── */
-  /* The dot grid is wider than the page's column: the page clips it at the window's edges. */
-  .vb .site-main:has(> .wrap > .hp) {
-    overflow-x: clip;
-  }
+  /* ── The hero: the title, one normal-size search, one quiet line of recent lookups ──
+     The field and its list are SearchBar.vue's (chrome.css); the light is the page's own. */
   .vb .hp {
     position: relative;
-    padding: 60px 0 0;
+    padding: 104px 0 0;
     text-align: center;
   }
-  .vb .hp > * {
-    position: relative;
-  }
-  .vb .hp::before {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: 0;
-    width: 1440px;
-    height: 760px;
-    margin-left: -720px;
-    pointer-events: none;
-    background-image: radial-gradient(var(--line-3) 1px, transparent 1.3px);
-    background-size: 24px 24px;
-    background-position: 12px 12px;
-    -webkit-mask-image: radial-gradient(ellipse 52% 62% at 50% 34%, #000 18%, transparent 78%);
-    mask-image: radial-gradient(ellipse 52% 62% at 50% 34%, #000 18%, transparent 78%);
-  }
-  .vb .hp::after {
-    content: '';
-    position: absolute;
-    left: 50%;
-    top: 120px;
-    width: 1100px;
-    height: 520px;
-    margin-left: -550px;
-    pointer-events: none;
-    background: radial-gradient(closest-side, rgb(var(--v-rgb) / 0.11), rgb(var(--v-rgb) / 0));
-  }
-  .vb .hp-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    height: 32px;
-    padding: 0 10px 0 12px;
-    border-radius: 999px;
-    background: var(--s1);
-    box-shadow: inset 0 0 0 1px var(--line-2);
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--t2);
-    transition:
-      background var(--m) var(--ease),
-      color var(--m) var(--ease);
-  }
-  .vb .hp-pill .dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--v400);
-    box-shadow: 0 0 0 3px rgb(var(--v-rgb) / 0.22);
-  }
-  .vb .hp-pill b {
-    font-weight: 700;
-    color: var(--v200);
-  }
-  .vb .hp-pill span {
-    padding-left: 10px;
-    border-left: 1px solid var(--line-2);
-  }
-  .vb .hp-pill .i {
-    color: var(--t3);
-    transition:
-      transform var(--m) var(--ease),
-      color var(--m) var(--ease);
-  }
-  .vb .hp-pill:hover {
-    background: var(--d-btn-hover);
-    color: var(--t1);
-  }
-  .vb .hp-pill:hover .i {
-    transform: translateX(2px);
-    color: var(--t2);
-  }
   .vb .hp-t {
-    margin-top: 18px;
     font-size: 52px;
-    letter-spacing: -0.03em;
+    line-height: 1.02;
+    letter-spacing: -0.032em;
   }
-
-  /* ── The palette (components/SearchBar.vue, `size="lg"`) ── */
-  .vb .pal {
+  .vb .hp .hs-hero {
+    margin-top: 34px;
+  }
+  /* Recent lookups: a small picture and the name, nothing around them. */
+  .vb .rc {
     position: relative;
-    z-index: 2;
-    width: 1000px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    width: fit-content;
     max-width: 100%;
-    margin: 30px auto 0;
-    border-radius: 18px;
-    background: var(--s1);
-    border: 1px solid var(--line-2);
-    box-shadow: var(--drop);
-    text-align: left;
+    min-height: 28px;
+    margin: 14px auto 0;
+    font-size: 13.5px;
+    white-space: nowrap;
   }
-  .vb .pal::before {
-    content: '';
-    position: absolute;
-    left: 12%;
-    right: 12%;
-    top: -1px;
-    height: 1px;
-    background: linear-gradient(
-      90deg,
-      rgb(var(--v-rgb) / 0),
-      rgb(var(--v-rgb) / 0.7),
-      rgb(var(--v-rgb) / 0)
-    );
-    pointer-events: none;
-  }
-  .vb .pal-f {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    height: 68px;
-    padding: 0 14px 0 22px;
-    border-bottom: 1px solid var(--line);
-    border-radius: 17px 17px 0 0;
-    cursor: text;
-  }
-  .vb .pal-f > .i {
-    flex: none;
-    color: var(--t3);
-    transition: color var(--m) var(--ease);
-  }
-  .vb .pal-f.focus > .i {
-    color: var(--v300);
-  }
-  .vb .pal-f input {
-    flex: 1;
-    min-width: 0;
-    height: 100%;
-    font-size: 18px;
-    font-weight: 500;
-    letter-spacing: -0.005em;
-    color: var(--t1);
-  }
-  .vb .pal-f input:focus-visible {
-    outline: none;
-  }
-  .vb .pal-f .hs-chips {
-    position: static;
-    flex: none;
-    max-width: 50%;
-  }
-  .vb .pal-f .rg {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    flex: none;
-    height: 34px;
-    padding: 0 10px;
-    border-radius: 9px;
-    background: var(--s2);
-    box-shadow: inset 0 0 0 1px var(--line);
+  .vb .rc-l {
     font-size: 13px;
-    font-weight: 700;
-    color: var(--t2);
-    cursor: pointer;
-    transition:
-      background var(--m) var(--ease),
-      color var(--m) var(--ease);
-  }
-  .vb .pal-f .rg img {
-    border-radius: 2px;
-  }
-  .vb .pal-f .rg .i {
-    color: var(--t3);
-  }
-  .vb .pal-f .rg:hover {
-    background: var(--s3);
-    color: var(--t1);
-  }
-  .vb .pal-k {
-    flex: none;
-    min-width: 26px;
-    height: 26px;
-    margin: 0;
-  }
-  .vb .pal-reg {
-    left: auto;
-    right: 48px;
-    top: 62px;
-    width: 180px;
-  }
-  /* The idle columns and the results share one height: typing never moves the page. */
-  .vb .pal-b,
-  .vb .pal-one {
-    height: 314px;
-  }
-  .vb .pal-b {
-    display: grid;
-    grid-template-columns: 1.12fr 1fr 1fr;
-  }
-  .vb .pal-c {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    padding: 12px 8px 10px;
-  }
-  .vb .pal-c + .pal-c {
-    border-left: 1px solid var(--line);
-  }
-  .vb .pal-l {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    height: 26px;
-    margin-bottom: 4px;
-    padding: 0 10px;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--t3);
-  }
-  .vb .pal-l .tier {
-    height: 18px;
-    min-width: 24px;
-    font-size: 11px;
-  }
-  .vb .pal-l .end {
-    margin-left: auto;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--t4);
   }
-  .vb .pal-x {
-    font-size: 12px;
-    cursor: pointer;
+  .vb .rc-i {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    height: 28px;
+    color: var(--t2);
+    transition: color var(--m) var(--ease);
   }
-  .vb .pal-x:hover {
+  .vb .rc-i b {
+    overflow: hidden;
+    font-weight: 600;
+    text-overflow: ellipsis;
+  }
+  .vb .rc-i > span:not(.rc-p) {
+    margin-left: -4px;
+    font-weight: 500;
+    color: var(--t4);
+  }
+  .vb .rc-i:hover {
+    color: var(--t1);
+  }
+  .vb .rc-p {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: var(--d-portrait);
+  }
+  .vb .rc-p.ch {
+    border-radius: 5px;
+  }
+  .vb .rc-p.pr {
+    background: var(--sx-pro);
+  }
+  .vb .rc-p.tm {
+    display: grid;
+    place-items: center;
+    border-radius: 5px;
+    background: var(--s2);
+  }
+  .vb .rc-p.tm .cs-logo {
+    background: none;
+  }
+  /* Forgetting them: the line's last word, there when the pointer is. */
+  /* Outside the line's own width, so the line stays centred. */
+  .vb .rc-x {
+    position: absolute;
+    left: calc(100% + 12px);
+    top: 0;
+    height: 28px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--t4);
+    opacity: 0;
+    cursor: pointer;
+    transition:
+      opacity var(--m) var(--ease),
+      color var(--m) var(--ease);
+  }
+  .vb .rc:hover .rc-x,
+  .vb .rc-x:focus-visible {
+    opacity: 1;
+  }
+  .vb .rc-x:hover {
     color: var(--t2);
   }
-  .vb .pal-r {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex: none;
-    height: 52px;
-    padding: 0 10px;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: background var(--m-fast) var(--ease);
+  @media (hover: none) {
+    .vb .rc-x {
+      opacity: 1;
+    }
   }
-  .vb .pal-r.act {
-    background: var(--hover-item);
-  }
-  .vb .pal-r .av {
-    display: block;
-    flex: none;
-    width: 34px;
-    height: 34px;
-    border-radius: 9px;
-    overflow: hidden;
-    background: var(--s3);
-  }
-  .vb .pal-r .av img,
-  .vb .pal-r .av .pp {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  .vb .pal-r .av.ch img {
-    transform: scale(1.1);
-  }
-  .vb .pal-r .av.pr {
-    background: var(--v950);
-  }
-  .vb .pal-r .av.ini,
-  .vb .pal-r .av.tm {
-    display: grid;
-    place-items: center;
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--t3);
-  }
-  .vb .pal-r .pi {
-    display: grid;
-    place-items: center;
-    flex: none;
-    width: 34px;
-    height: 34px;
-    border-radius: 9px;
-    background: var(--s2);
-    box-shadow: inset 0 0 0 1px var(--line);
-    color: var(--v300);
-  }
-  .vb .pal-r .tx {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-  }
-  .vb .pal-r .tx b {
-    overflow: hidden;
-    font-size: 14.5px;
-    font-weight: 650;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-  .vb .pal-r .tx b mark {
-    background: none;
-    color: var(--v200);
-  }
-  .vb .pal-r .tx > span {
-    overflow: hidden;
-    font-size: 12.5px;
-    font-weight: 500;
-    color: var(--t3);
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
+
+  /* ── The three live cards ── */
   .vb .hrl {
     display: inline-flex;
     align-items: center;
@@ -364,76 +155,13 @@
   .vb .hrl svg {
     opacity: 0.62;
   }
-  .vb .pal-v {
-    font-size: 14px;
-    font-weight: 650;
-    color: var(--t2);
-  }
-  .vb .pal-r .go {
-    color: var(--v300);
-    opacity: 0;
-    transform: translateX(-4px);
-    transition:
-      opacity var(--m) var(--ease),
-      transform var(--m) var(--ease);
-  }
-  .vb .pal-r.act .go {
-    opacity: 1;
-    transform: none;
-  }
-  .vb .pal-one {
-    overflow-y: auto;
-    padding: 8px;
-    scrollbar-width: thin;
-  }
-  .vb .pal-one.sx {
-    padding: 8px;
-  }
-  .vb .pal-none {
-    padding: 18px 10px;
-    font-size: 14px;
-    color: var(--t3);
-  }
-  .vb .pal-ft {
-    display: flex;
-    align-items: center;
-    gap: 18px;
-    height: 44px;
-    padding: 0 20px;
-    border-top: 1px solid var(--line);
-    border-radius: 0 0 17px 17px;
-    background: var(--well);
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--t3);
-  }
-  .vb .pal-ft > span {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-  }
-  .vb .pal-ft .kbd {
-    min-width: 22px;
-    margin: 0;
-  }
-  .vb .pal-ft .end {
-    margin-left: auto;
-    color: var(--t4);
-  }
-  /* A phone's palette: faces and chips (hidden on wider screens). */
-  .vb .pal-ics,
-  .vb .pal-chips {
-    display: none;
-  }
-
-  /* ── The three live cards ── */
   .vb .hc3 {
     position: relative;
     z-index: 1;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 20px;
-    margin-top: 40px;
+    margin-top: 68px;
     text-align: left;
   }
   .vb .hc3.n2 {
@@ -901,8 +629,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .vb .pick:hover .fr img,
-    .vb .hp-pill:hover .i {
+    .vb .pick:hover .fr img {
       transform: none;
     }
   }
@@ -933,12 +660,6 @@
       height: 320px;
       border-radius: 12px 12px 0 0;
     }
-    .vb .pal-b {
-      grid-template-columns: 1fr 1fr;
-    }
-    .vb .pal-pages {
-      display: none;
-    }
   }
   @media (max-width: 767px) {
     .vb .hc3,
@@ -948,132 +669,39 @@
   }
   @media (max-width: 639px) {
     .vb .hp {
-      padding-top: 28px;
-      text-align: left;
-    }
-    .vb .hp::before {
-      width: 100vw;
-      height: 520px;
-      margin-left: -50vw;
-    }
-    .vb .hp::after {
-      width: 420px;
-      height: 360px;
-      margin-left: -210px;
-      top: 60px;
+      padding-top: 44px;
     }
     .vb .hp-t {
-      margin-top: 14px;
       font-size: 34px;
     }
-    .vb .pal {
-      margin-top: 20px;
-      border-radius: 16px;
+    .vb .hp .hs-hero {
+      margin-top: 22px;
     }
-    .vb .pal-f {
-      height: 54px;
+    .vb .hf {
+      height: 52px;
       gap: 10px;
-      padding: 0 8px 0 14px;
-      border-radius: 15px 15px 0 0;
+      padding: 0 6px 0 15px;
     }
-    .vb .pal-f input {
-      font-size: 16px;
-    }
-    .vb .pal-k,
-    .vb .pal-ft {
-      display: none;
-    }
-    .vb .pal-f .rg {
-      padding: 0 8px;
-    }
-    .vb .pal-reg {
-      right: 8px;
-      top: 50px;
-    }
-    .vb .pal-b {
-      display: flex;
-      flex-direction: column;
-      height: auto;
-    }
-    .vb .pal-one {
-      height: 360px;
-    }
-    .vb .pal-c {
-      padding: 10px 6px 8px;
-    }
-    .vb .pal-c + .pal-c {
-      border-left: 0;
-      border-top: 1px solid var(--line);
-    }
-    .vb .pal-pages {
-      display: flex;
-    }
-    .vb .pal-recent .pal-r:nth-of-type(n + 4),
-    .vb .pal-pros .pal-r:nth-of-type(n + 4),
-    .vb .pal-splus .pal-r,
-    .vb .pal-pages .pal-r,
-    .vb .pal-splus .pal-l .end {
-      display: none;
-    }
-    .vb .pal-r {
-      height: 50px;
-    }
-    .vb .pal-ics {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 4px;
-      padding: 2px 4px 4px;
-    }
-    .vb .pal-ics a {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 5px;
-      min-width: 0;
-      padding: 6px 0;
-      border-radius: 10px;
-      font-size: 11.5px;
-      font-weight: 650;
-      color: var(--t2);
-    }
-    .vb .pal-ics a > span:not(.ic) {
-      max-width: 100%;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-    }
-    .vb .pal-ics i {
-      margin-top: -3px;
-      font-size: 11px;
-      font-style: normal;
-      font-weight: 600;
-      color: var(--t3);
-    }
-    .vb .pal-chips {
-      display: flex;
+    .vb .rc {
       flex-wrap: wrap;
-      gap: 6px;
-      padding: 2px 8px 6px;
+      gap: 0 16px;
+      width: auto;
+      margin-top: 8px;
     }
-    .vb .pal-chips a {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      height: 34px;
-      padding: 0 11px;
-      border-radius: 9px;
-      background: var(--s2);
-      box-shadow: inset 0 0 0 1px var(--line);
-      font-size: 13px;
-      font-weight: 650;
-      color: var(--t2);
+    .vb .rc-l {
+      display: none;
     }
-    .vb .pal-chips .i {
-      color: var(--v300);
+    .vb .rc-i {
+      height: 40px;
+      max-width: 100%;
+    }
+    .vb .rc-x {
+      position: static;
+      height: 40px;
     }
     .vb .hc3 {
       gap: 14px;
-      margin-top: 24px;
+      margin-top: 28px;
     }
     .vb .lc-long {
       display: none;
