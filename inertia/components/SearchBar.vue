@@ -884,6 +884,28 @@ function marked(title: string): [string, string, string] {
   return [title.slice(0, at), title.slice(at, at + q.length), title.slice(at + q.length)]
 }
 
+/** A result's one quiet line, beside its name: what it is and where. */
+function metaOf(entry: Entry) {
+  if (entry.multi) return `On ${regionLabel_.value}`
+  if (entry.kind === 'champion') return 'Champion'
+  if (entry.kind) {
+    const what = entry.kind === 'team' ? 'Team' : entry.badge
+    const detail = entry.detail === 'Team' ? null : entry.detail?.replace(/, /g, ' · ')
+    return [what, detail].filter(Boolean).join(' · ')
+  }
+  if (entry.direct) return 'Open the profile'
+  return [
+    entry.proName ? `Pro ${entry.proName}` : null,
+    entry.region,
+    entry.rank ?? (entry.level ? `Lv ${entry.level}` : null),
+  ]
+    .filter(Boolean)
+    .join(' · ')
+}
+
+/** A pro or team without a picture: two letters in its tile. */
+const initialsOf = (entry: Entry) => (entry.title ?? '').slice(0, 2).toUpperCase()
+
 /** A champion's page and its matchups, from a result. */
 const championPath = (entry: Entry, tab?: string) => `${entry.href ?? ''}${tab ? `/${tab}` : ''}`
 
@@ -1078,14 +1100,22 @@ function submit() {
       </div>
     </div>
 
-    <div v-else :id="listId" ref="list" class="pal-one" role="listbox" aria-label="Results">
-      <template v-for="(group, g) in groups" :key="group.section ?? 'top'">
-        <div v-if="group.section" class="pal-l">{{ HEADER_LABELS[group.section] }}</div>
+    <div v-else :id="listId" ref="list" class="pal-one sx" role="listbox" aria-label="Results">
+      <div
+        v-for="(group, g) in groups"
+        :key="group.section ?? 'top'"
+        class="sx-g"
+        role="group"
+        :aria-labelledby="group.section ? `${listId}-${group.section}` : undefined"
+      >
+        <div v-if="group.section" :id="`${listId}-${group.section}`" class="sx-h">
+          {{ HEADER_LABELS[group.section] }}
+        </div>
         <div
           v-for="(entry, i) in group.entries"
           :id="`${listId}-o${offsets[g] + i}`"
           :key="`${entry.kind ?? 'player'}-${entry.gameName}-${entry.tagLine}-${i}`"
-          class="pal-r wide"
+          class="sx-r"
           :class="{ act: offsets[g] + i === activeIndex }"
           role="option"
           :data-index="offsets[g] + i"
@@ -1093,34 +1123,36 @@ function submit() {
           @mouseenter="highlight(offsets[g] + i, entry)"
           @mousedown.prevent="go(entry)"
         >
-          <span v-if="entry.multi" class="pi"><Icon name="users" :size="17" /></span>
-          <span v-else-if="entry.kind === 'champion' && entry.champion" class="av ch"
-            ><img :src="champIcon(entry.champion)" alt="" width="34" height="34"
+          <span v-if="entry.multi" class="sx-i gl"><Icon name="users" :size="15" /></span>
+          <span v-else-if="entry.kind === 'champion' && entry.champion" class="sx-i ch"
+            ><img :src="champIcon(entry.champion)" alt="" width="28" height="28"
           /></span>
-          <span v-else-if="entry.kind === 'pro' && entry.photo" class="av pr"
-            ><ProPhoto :slug="entry.photo.slug" :photo="entry.photo.v" :width="34" :height="34"
+          <span v-else-if="entry.kind === 'pro' && entry.photo" class="sx-i"
+            ><ProPhoto :slug="entry.photo.slug" :photo="entry.photo.v" :width="28" :height="28"
           /></span>
-          <span v-else-if="entry.kind && entry.team" class="av tm"
-            ><TeamLogo :team="entry.team" :size="24"
+          <span v-else-if="entry.kind && entry.team" class="sx-i tm"
+            ><TeamLogo :team="entry.team" :size="22"
           /></span>
-          <span v-else-if="entry.kind" class="av ini">{{ entry.title?.slice(0, 2) }}</span>
-          <span v-else-if="!entry.direct" class="av"
-            ><img :src="profileIcon(entry.icon)" alt="" width="34" height="34" decoding="async"
+          <span v-else-if="entry.kind" class="sx-i gl ini">{{ initialsOf(entry) }}</span>
+          <span v-else-if="!entry.direct" class="sx-i"
+            ><img :src="profileIcon(entry.icon)" alt="" width="28" height="28" decoding="async"
           /></span>
-          <span v-else class="pi"><Icon name="arrow" :size="17" /></span>
-          <span class="tx">
-            <b v-if="entry.multi">Search {{ entry.multi.length }} players together</b>
-            <b v-else-if="entry.kind"
+          <span v-else class="sx-i gl"><Icon name="arrow" :size="15" /></span>
+          <span class="sx-n">
+            <template v-if="entry.multi">Search {{ entry.multi.length }} players together</template>
+            <template v-else-if="entry.kind"
               >{{ marked(entry.title ?? '')[0] }}<mark>{{ marked(entry.title ?? '')[1] }}</mark
-              >{{ marked(entry.title ?? '')[2] }}</b
+              >{{ marked(entry.title ?? '')[2] }}</template
             >
-            <b v-else
+            <template v-else
               >{{ marked(entry.gameName)[0] }}<mark>{{ marked(entry.gameName)[1] }}</mark
-              >{{ marked(entry.gameName)[2] }} <span class="t4">#{{ entry.tagLine }}</span></b
+              >{{ marked(entry.gameName)[2] }}<span class="sx-tag">#{{ entry.tagLine }}</span></template
             >
-            <span>{{ lineOf(entry) }}</span>
           </span>
-          <span v-if="entry.kind === 'champion' && entry.href" class="acts">
+          <span class="sx-m num" :class="{ swap: entry.kind === 'champion' && entry.href }">{{
+            metaOf(entry)
+          }}</span>
+          <span v-if="entry.kind === 'champion' && entry.href" class="sx-acts">
             <a :href="championPath(entry)" @mousedown.prevent.stop="go(entry)">Build</a>
             <a
               :href="championPath(entry, 'matchups')"
@@ -1131,7 +1163,7 @@ function submit() {
           <button
             v-if="canAdd(entry)"
             type="button"
-            class="acts-add"
+            class="sx-add"
             aria-label="Add to the lobby"
             title="Add to the lobby"
             @mousedown.prevent.stop="add(entry)"
@@ -1139,7 +1171,7 @@ function submit() {
             <Icon name="plus" :size="13" />
           </button>
         </div>
-      </template>
+      </div>
       <p v-if="!entries.length" class="pal-none">
         <template v-if="isLoading">Searching…</template>
         <template v-else>Nothing found for “{{ typing.trim() }}”.</template>
@@ -1256,15 +1288,28 @@ function submit() {
       /></a>
     </div>
 
-    <div v-if="showDropdown" :id="listId" ref="list" class="hx-menu hs-panel panel" role="listbox">
-      <template v-for="(group, g) in groups" :key="group.section ?? 'top'">
-        <div v-if="group.section" :id="`${listId}-${group.section}`" class="sg-h">
+    <div
+      v-if="showDropdown"
+      :id="listId"
+      ref="list"
+      class="hx-menu hs-panel panel sx"
+      role="listbox"
+    >
+      <div
+        v-for="(group, g) in groups"
+        :key="group.section ?? 'top'"
+        class="sx-g"
+        role="group"
+        :aria-labelledby="group.section ? `${listId}-${group.section}` : undefined"
+      >
+        <div v-if="group.section" :id="`${listId}-${group.section}`" class="sx-h">
           {{ HEADER_LABELS[group.section] }}
         </div>
         <div
           v-for="(entry, i) in group.entries"
+          :id="`${listId}-o${offsets[g] + i}`"
           :key="`${entry.kind ?? 'player'}-${entry.gameName}-${entry.tagLine}-${i}`"
-          class="sg-r"
+          class="sx-r"
           :class="{ act: offsets[g] + i === activeIndex }"
           role="option"
           :data-index="offsets[g] + i"
@@ -1272,50 +1317,36 @@ function submit() {
           @mouseenter="highlight(offsets[g] + i, entry)"
           @mousedown.prevent="go(entry)"
         >
-          <span v-if="entry.multi" class="fr s sg-ic"><Icon name="users" :size="18" /></span>
-          <span v-else-if="entry.kind === 'champion' && entry.champion" class="fr s"
-            ><img :src="champIcon(entry.champion)" alt=""
+          <span v-if="entry.multi" class="sx-i gl"><Icon name="users" :size="15" /></span>
+          <span v-else-if="entry.kind === 'champion' && entry.champion" class="sx-i ch"
+            ><img :src="champIcon(entry.champion)" alt="" width="28" height="28"
           /></span>
-          <span v-else-if="entry.kind === 'pro' && entry.photo" class="fr s stage"
-            ><ProPhoto :slug="entry.photo.slug" :photo="entry.photo.v" :width="36" :height="36"
+          <span v-else-if="entry.kind === 'pro' && entry.photo" class="sx-i"
+            ><ProPhoto :slug="entry.photo.slug" :photo="entry.photo.v" :width="28" :height="28"
           /></span>
-          <span v-else-if="entry.kind && entry.team" class="fr s sg-ic"
-            ><TeamLogo :team="entry.team" :size="24"
+          <span v-else-if="entry.kind && entry.team" class="sx-i tm"
+            ><TeamLogo :team="entry.team" :size="22"
           /></span>
-          <span v-else-if="entry.kind" class="fr s sg-ic">{{
-            entry.title?.slice(0, 2).toUpperCase()
-          }}</span>
-          <span v-else-if="!entry.direct" class="fr s"
-            ><img :src="profileIcon(entry.icon)" alt="" decoding="async"
+          <span v-else-if="entry.kind" class="sx-i gl ini">{{ initialsOf(entry) }}</span>
+          <span v-else-if="!entry.direct" class="sx-i"
+            ><img :src="profileIcon(entry.icon)" alt="" width="28" height="28" decoding="async"
           /></span>
-          <span v-else class="fr s sg-ic"><Icon name="arrow" :size="18" /></span>
-
-          <span class="sg-t">
-            <b v-if="entry.multi">Search {{ entry.multi.length }} players together</b>
-            <b v-else-if="entry.kind"
+          <span v-else class="sx-i gl"><Icon name="arrow" :size="15" /></span>
+          <span class="sx-n">
+            <template v-if="entry.multi">Search {{ entry.multi.length }} players together</template>
+            <template v-else-if="entry.kind"
               >{{ marked(entry.title ?? '')[0] }}<mark>{{ marked(entry.title ?? '')[1] }}</mark
-              >{{ marked(entry.title ?? '')[2] }}</b
+              >{{ marked(entry.title ?? '')[2] }}</template
             >
-            <b v-else
+            <template v-else
               >{{ marked(entry.gameName)[0] }}<mark>{{ marked(entry.gameName)[1] }}</mark
-              >{{ marked(entry.gameName)[2] }} <span class="t3">#{{ entry.tagLine }}</span></b
-            >
-            <span v-if="entry.multi">On {{ regionLabel_ }}</span>
-            <span v-else-if="entry.kind === 'champion'">Build, runes and matchups</span>
-            <span v-else-if="entry.kind"
-              ><template v-if="entry.badge"
-                >{{ entry.badge }}<template v-if="entry.detail">, </template></template
-              >{{ entry.detail }}</span
-            >
-            <span v-else-if="entry.direct">Open the profile</span>
-            <span v-else class="num"
-              ><template v-if="entry.proName">Pro, {{ entry.proName }}, </template>{{ entry.region
-              }}<template v-if="entry.rank">, {{ entry.rank }}</template
-              ><template v-else-if="entry.level">, level {{ entry.level }}</template></span
+              >{{ marked(entry.gameName)[2] }}<span class="sx-tag">#{{ entry.tagLine }}</span></template
             >
           </span>
-
-          <span v-if="entry.kind === 'champion' && entry.href" class="acts">
+          <span class="sx-m num" :class="{ swap: entry.kind === 'champion' && entry.href }">{{
+            metaOf(entry)
+          }}</span>
+          <span v-if="entry.kind === 'champion' && entry.href" class="sx-acts">
             <a :href="championPath(entry)" @mousedown.prevent.stop="go(entry)">Build</a>
             <a
               :href="championPath(entry, 'matchups')"
@@ -1326,15 +1357,15 @@ function submit() {
           <button
             v-if="canAdd(entry)"
             type="button"
-            class="acts-add"
+            class="sx-add"
             aria-label="Add to the lobby"
             title="Add to the lobby"
             @mousedown.prevent.stop="add(entry)"
           >
-            <Icon name="plus" :size="14" />
+            <Icon name="plus" :size="13" />
           </button>
         </div>
-      </template>
+      </div>
       <div class="panel-f" aria-hidden="true">
         <span><span class="kbd">↑</span><span class="kbd">↓</span>move</span>
         <span><span class="kbd">Enter</span>open</span>

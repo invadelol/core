@@ -85,10 +85,10 @@
 .vb .hx-menu.dm {
   animation: hx-in 140ms var(--ease);
 }
+/* Menus and panels open with a plain fade. */
 @keyframes hx-in {
   from {
     opacity: 0;
-    transform: translateY(-4px);
   }
 }
 .vb .dm-r:focus-visible,
@@ -200,22 +200,17 @@
   box-shadow:
     0 0 0 1px var(--line-2),
     0 0 0 3px transparent;
-  transition:
-    box-shadow 180ms var(--ease),
-    transform 180ms var(--ease);
+  transition: box-shadow var(--m) var(--ease);
 }
 .vb .hx-me:hover .av {
   box-shadow:
-    0 0 0 1px var(--v400),
-    0 0 0 3px color-mix(in srgb, var(--v400) 22%, transparent);
+    0 0 0 1px var(--line-3),
+    0 0 0 3px transparent;
 }
 .vb .hx-me.open .av {
   box-shadow:
     0 0 0 1px var(--v300),
     0 0 0 3px color-mix(in srgb, var(--v400) 35%, transparent);
-}
-.vb .hx-me:active .av {
-  transform: scale(0.94);
 }
 .vb .hx-burger,
 .vb .hx-only-phone {
@@ -257,8 +252,8 @@
   color: var(--t2);
   cursor: pointer;
   transition:
-    background 160ms var(--ease),
-    color 160ms var(--ease);
+    background var(--m) var(--ease),
+    color var(--m) var(--ease);
 }
 .vb .theme-btn:hover {
   background: var(--s3);
@@ -284,15 +279,11 @@
   white-space: nowrap;
   pointer-events: none;
   opacity: 0;
-  transform: translateY(-2px);
-  transition:
-    opacity 120ms var(--ease),
-    transform 120ms var(--ease);
+  transition: opacity var(--m-fast) var(--ease);
 }
 .vb .theme-btn:hover::after,
 .vb .theme-btn:focus-visible::after {
   opacity: 1;
-  transform: none;
 }
 /* At the foot of the page the tooltip opens upwards. */
 .vb .ft .theme-btn::after {
@@ -401,10 +392,13 @@
   scrollbar-width: thin;
   animation: hx-in 140ms var(--ease);
 }
+.vb .hs-panel.sx {
+  padding-bottom: 0;
+}
 .vb .hs-panel .panel-f {
   position: sticky;
   bottom: 0;
-  margin-top: 8px;
+  margin: 6px -6px 0;
 }
 .vb .hs-panel .panel-f .end {
   margin-left: auto;
@@ -466,6 +460,174 @@
 }
 .vb .reg a .i {
   flex: none;
+}
+
+/* ── The search's results (SearchBar.vue: the header's panel and the home's palette) ──
+   The older invade.lol list, in Facet: one line per result, a 28 px picture, the name with its
+   tag, one quiet line of meta at the end. The row under the pointer or the keys sits on a soft
+   key; a champion's Build and Matchups show on that row only. */
+.vb .sx {
+  padding: 6px;
+}
+.vb .sx-g + .sx-g {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+.vb .sx-h {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--t3);
+  user-select: none;
+}
+.vb .sx-r {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 42px;
+  padding: 0 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background var(--m-fast) var(--ease);
+}
+.vb .sx-r.act {
+  background: var(--hover-item);
+}
+.vb .sx-i {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--s3);
+  box-shadow: var(--d-portrait);
+}
+.vb .sx-i > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* A champion's square carries a frame: cropped out. */
+.vb .sx-i.ch > img {
+  transform: scale(1.1);
+}
+.vb .sx-i.gl,
+.vb .sx-i.tm {
+  background: var(--s2);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--t2);
+}
+.vb .sx-i.tm .cs-logo {
+  background: none;
+}
+.vb .sx-i.ini {
+  font-size: 11px;
+  font-weight: 750;
+  color: var(--t3);
+}
+.vb .sx-n {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 550;
+  color: var(--t1);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.vb .sx-n mark {
+  background: none;
+  color: inherit;
+  font-weight: 750;
+}
+.vb .sx-tag {
+  font-weight: 500;
+  color: var(--t3);
+}
+.vb .sx-m {
+  flex: none;
+  max-width: 52%;
+  overflow: hidden;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--t3);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.vb .sx-acts {
+  display: none;
+  flex: none;
+  gap: 4px;
+}
+.vb .sx-r.act .sx-acts {
+  display: flex;
+}
+.vb .sx-r.act .sx-m.swap {
+  display: none;
+}
+.vb .sx-acts a {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 9px;
+  border-radius: 6px;
+  background: var(--key);
+  box-shadow: var(--key-sh);
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--t2);
+  transition: color var(--m-fast) var(--ease);
+}
+.vb .sx-acts a:hover {
+  color: var(--t1);
+}
+.vb .sx-add {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  margin-right: -4px;
+  border-radius: 6px;
+  color: var(--t3);
+  opacity: 0;
+  cursor: pointer;
+  transition:
+    opacity var(--m-fast) var(--ease),
+    background var(--m-fast) var(--ease),
+    color var(--m-fast) var(--ease);
+}
+.vb .sx-r.act .sx-add,
+.vb .sx-add:focus-visible {
+  opacity: 1;
+}
+.vb .sx-add:hover {
+  background: var(--hover-item);
+  color: var(--t1);
+}
+@media (pointer: coarse) {
+  .vb .sx-r {
+    height: 48px;
+  }
+  .vb .sx-add {
+    width: 32px;
+    height: 32px;
+    opacity: 1;
+  }
+}
+@media (max-width: 639px) {
+  .vb .sx-r.act .sx-acts {
+    display: none;
+  }
+  .vb .sx-r.act .sx-m.swap {
+    display: block;
+  }
 }
 
 /* ── Narrower screens ────────────────────────────────────────── */
