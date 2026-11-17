@@ -3,18 +3,16 @@ import { computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { RoleIcon } from '@invadelol/ui'
 import { positionOf, type Position } from '@invadelol/ui/logic'
-import CardHead from '../ui/CardHead.vue'
-import Frame from '../ui/Frame.vue'
-import ScoreDial from '../ui/ScoreDial.vue'
-import WinRate from '../ui/WinRate.vue'
+import Icon from '../ui/Icon.vue'
 import { champIcon, championName, profileIcon } from '../../lib/assets.js'
-import { isRemake, scoreLobby } from '../../lib/match.js'
+import { isRemake } from '../../lib/match.js'
 import { profilePath } from '../../lib/format.js'
 import type { ChampionStats, Match, Teammate } from '../../lib/types.js'
 
 /**
- * The profile's right column under Performance: champions (record, KDA, and the average score of
- * their loaded games on it), roles (share of the loaded games) and who they played with.
+ * The Overview rail under the rank: the five most played champions with their win rate, the
+ * roles of the latest games, and who the player queues with (a win rate only from five games
+ * together).
  */
 const props = defineProps<{
   champions: ChampionStats[]
@@ -22,94 +20,115 @@ const props = defineProps<{
   teammates: Teammate[]
   puuid: string
   championsHref: string
+  friendsHref: string
 }>()
 
-const scoreOn = computed(() => {
-  const by = new Map<number, number[]>()
-  for (const m of props.matches) {
-    if (isRemake(m)) continue
-    const me = m.participants.find((p) => p.puuid === props.puuid)
-    const s = scoreLobby(m)[props.puuid]
-    if (!me || !s) continue
-    by.set(me.championId, [...(by.get(me.championId) ?? []), s.score])
-  }
-  return new Map(
-    [...by].map(([c, list]) => [c, Math.round(list.reduce((a, b) => a + b, 0) / list.length)])
-  )
-})
 const top = computed(() => props.champions.slice(0, 5))
+const pct = (wins: number, games: number) => (games ? Math.round((wins / games) * 100) : 0)
 
-const ROLE: Record<string, string> = {
-  TOP: 'Top',
-  JUNGLE: 'Jungle',
-  MID: 'Mid',
-  ADC: 'Bot',
-  SUPPORT: 'Support',
-}
+const ROLES: Array<[Position, string]> = [
+  ['TOP', 'Top'],
+  ['JUNGLE', 'Jungle'],
+  ['MID', 'Mid'],
+  ['ADC', 'Bot'],
+  ['SUPPORT', 'Support'],
+]
 const roles = computed(() => {
-  const counts = new Map<Position, number>()
+  const counts = new Map<Position, { games: number; wins: number }>()
   for (const m of props.matches) {
-    const lane = positionOf(m.participants.find((p) => p.puuid === props.puuid)?.position)
-    if (lane) counts.set(lane, (counts.get(lane) ?? 0) + 1)
+    if (m.queueId === 0 || isRemake(m)) continue
+    const me = m.participants.find((p) => p.puuid === props.puuid)
+    const lane = positionOf(me?.position)
+    if (!me || !lane) continue
+    const row = counts.get(lane) ?? { games: 0, wins: 0 }
+    row.games++
+    if (me.win) row.wins++
+    counts.set(lane, row)
   }
-  const total = [...counts.values()].reduce((a, b) => a + b, 0)
-  return [...counts]
-    .sort((a, b) => b[1] - a[1])
-    .filter(([, n]) => n / total >= 0.05)
-    .slice(0, 4)
-    .map(([lane, n]) => ({ lane, name: ROLE[lane], v: Math.round((n / total) * 100) }))
+  const laned = [...counts.values()].reduce((s, r) => s + r.games, 0)
+  const most = Math.max(1, ...[...counts.values()].map((r) => r.games))
+  return {
+    laned,
+    rows: ROLES.map(([lane, name]) => {
+      const r = counts.get(lane) ?? { games: 0, wins: 0 }
+      return { lane, name, ...r, width: (r.games / most) * 100 }
+    }).sort((a, b) => b.games - a.games),
+  }
 })
-const mates = computed(() => props.teammates.slice(0, 4))
+
+/** Five games together before a win rate means anything. */
+const MIN = 5
+const mates = computed(() => props.teammates.slice(0, 3))
 </script>
 
 <template>
-  <article v-if="top.length" class="card">
-    <CardHead
-      title="Champions"
-      icon="grid"
-      meta="This season"
-      :more="{ label: `All ${champions.length}`, href: championsHref }"
-    />
-    <Link v-for="c in top" :key="c.championId" class="pf-chp" :href="championsHref">
-      <Frame :src="champIcon(c.championId)" :width="36" size="xs" />
-      <div class="col" style="gap: 2px; min-width: 0">
-        <span class="h5 ell">{{ championName(c.championId) }}</span>
-        <span class="meta"
-          >{{ c.games }} {{ c.games === 1 ? 'game' : 'games' }}, {{ c.kda.toFixed(1) }} KDA</span
-        >
-      </div>
-      <WinRate :rate="c.winrate" :width="72" small end />
-      <ScoreDial :value="scoreOn.get(c.championId) ?? null" size="sm" />
-    </Link>
-  </article>
-  <article v-if="roles.length" class="card">
-    <CardHead title="Roles" icon="layers" :meta="`Last ${matches.length} games`" />
-    <div class="col" style="gap: 12px; padding: 0 20px 20px">
-      <div v-for="r in roles" :key="r.lane" class="pf-role">
-        <RoleIcon :lane="r.lane" :size="16" />
-        <span>{{ r.name }}</span>
-        <div class="bar"><i :style="{ width: `${r.v}%` }"></i></div>
-        <span class="fg-xs" style="text-align: right">{{ r.v }}%</span>
-      </div>
+  <section v-if="top.length" class="card pl-sec">
+    <div class="pl-sec-h">
+      <h2 class="h4">Champions</h2>
+      <Link class="more r" :href="championsHref"
+        >All {{ champions.length }}<Icon name="chevr" :size="14"
+      /></Link>
     </div>
-  </article>
-  <article v-if="mates.length" class="card">
-    <CardHead title="Played with" icon="users" meta="Recent games" />
+    <Link v-for="c in top" :key="c.championId" class="pl-cr" :href="championsHref">
+      <img class="pic" :src="champIcon(c.championId)" alt="" width="36" height="36" />
+      <span class="col" style="gap: 4px; min-width: 0">
+        <span class="h5 ell">{{ championName(c.championId) }}</span>
+        <span class="meta num"
+          >{{ c.games }} {{ c.games === 1 ? 'game' : 'games' }} · {{ c.kda.toFixed(1) }} KDA</span
+        >
+      </span>
+      <span class="v">
+        <b class="num">{{ pct(c.wins, c.games) }}%</b>
+        <span class="meta num">{{ c.wins }}W {{ c.games - c.wins }}L</span>
+      </span>
+    </Link>
+  </section>
+
+  <section v-if="roles.laned" class="card pl-sec">
+    <div class="pl-sec-h">
+      <h2 class="h4">Roles</h2>
+      <span class="meta num"
+        >{{ roles.laned }} laned {{ roles.laned === 1 ? 'game' : 'games' }}</span
+      >
+    </div>
+    <div v-for="r in roles.rows" :key="r.lane" class="pl-ro" :class="{ off: !r.games }">
+      <RoleIcon :lane="r.lane" :size="16" />
+      <span>{{ r.name }}</span>
+      <div class="bar"><i :style="{ width: `${r.width}%` }" /></div>
+      <span class="meta num" style="text-align: right"
+        >{{ r.games }} {{ r.games === 1 ? 'game' : 'games' }}</span
+      >
+      <span class="r">{{ r.games ? `${pct(r.wins, r.games)}%` : '–' }}</span>
+    </div>
+  </section>
+
+  <section v-if="mates.length" class="card pl-sec">
+    <div class="pl-sec-h">
+      <h2 class="h4">Played with</h2>
+      <Link class="more r" :href="friendsHref"
+        >All {{ teammates.length }}<Icon name="chevr" :size="14"
+      /></Link>
+    </div>
     <Link
       v-for="m in mates"
       :key="m.puuid"
-      class="lrow"
+      class="pl-cr"
       :href="profilePath(m.gameName, m.tagLine)"
-      style="min-height: 60px"
     >
-      <Frame :src="profileIcon(m.profileIconId)" :width="36" size="xs" />
-      <div class="col grow" style="gap: 2px; min-width: 0">
+      <img class="pic" :src="profileIcon(m.profileIconId)" alt="" width="36" height="36" />
+      <span class="col" style="gap: 4px; min-width: 0">
         <span class="h5 ell"
-          >{{ m.gameName }} <span class="t3" style="font-weight: 500">#{{ m.tagLine }}</span></span
+          >{{ m.gameName }}<span class="t3" style="font-weight: 500"> #{{ m.tagLine }}</span></span
         >
-        <span class="meta">{{ m.games }} games together</span>
-      </div>
-      <WinRate :wins="m.wins" :games="m.games" :width="92" small end />
+        <span class="meta num">{{ m.games }} games together</span>
+      </span>
+      <span v-if="m.games >= MIN" class="v">
+        <b class="num">{{ pct(m.wins, m.games) }}%</b>
+        <span class="meta num">{{ m.wins }}W {{ m.games - m.wins }}L</span>
+      </span>
+      <span v-else class="v"
+        ><span class="meta num">{{ m.wins }}W {{ m.games - m.wins }}L</span></span
+      >
     </Link>
-  </article>
+  </section>
 </template>
