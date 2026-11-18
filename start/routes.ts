@@ -268,6 +268,8 @@ router.get('/docs', async () => {
 
 /** The share cards of the site's pages (`site_card`), before a profile's `/og/:summoner`. */
 const SiteCardsController = () => import('#controllers/site_cards_controller')
+/** The multisearch page's link preview: the lobby's seats, `/og/multisearch.jpg?summoners=…`. */
+router.get('/og/multisearch.jpg', [MultisearchController, 'card'])
 router.get('/og/home.jpg', [SiteCardsController, 'home'])
 router.get('/og/champion/:slug/:file', [SiteCardsController, 'champion'])
 router.get('/og/tier-list/:file', [SiteCardsController, 'tierList'])

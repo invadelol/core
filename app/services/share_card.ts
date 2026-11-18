@@ -40,7 +40,7 @@ export interface ShareCardInput {
   date: string
 }
 
-const C = {
+export const C = {
   ink: '#0d0e13',
   text1: '#f1f0f7',
   text2: '#b4b3c6',
@@ -50,7 +50,7 @@ const C = {
   line: '#9d93ff',
   brand: '#7b6dff',
 }
-const TIER: Record<string, string> = {
+export const TIER: Record<string, string> = {
   iron: '#8c8c95',
   bronze: '#b27a52',
   silver: '#a3b1bf',
@@ -94,10 +94,10 @@ const LAYOUTS: Record<CardFormat, Layout> = {
 }
 
 /* ── Type ──────────────────────────────────────────────────────────────────────────────────── */
-type Face = keyof typeof GLYPHS
+export type Face = keyof typeof GLYPHS
 const glyphsOf = (face: Face) => GLYPHS[face].glyphs as Record<string, readonly [number, string]>
 
-function measure(face: Face, text: string, size: number, tracking = 0) {
+export function measure(face: Face, text: string, size: number, tracking = 0) {
   const glyphs = glyphsOf(face)
   let advance = 0
   let count = 0
@@ -110,7 +110,7 @@ function measure(face: Face, text: string, size: number, tracking = 0) {
   return ((advance - (count ? tracking * 1000 : 0)) * size) / 1000
 }
 
-function text(
+export function text(
   face: Face,
   value: string,
   fill: string,
@@ -135,7 +135,14 @@ function text(
 }
 
 /** The largest size from `max` down to `min` at which `value` fits `room`, then cut with an ellipsis. */
-function fit(face: Face, value: string, room: number, max: number, min: number, tracking = 0) {
+export function fit(
+  face: Face,
+  value: string,
+  room: number,
+  max: number,
+  min: number,
+  tracking = 0
+) {
   let size = max
   while (size > min && measure(face, value, size, tracking) > room) size -= 2
   let t = value
@@ -145,7 +152,7 @@ function fit(face: Face, value: string, room: number, max: number, min: number, 
 }
 
 /* ── Pictures ──────────────────────────────────────────────────────────────────────────────── */
-async function dataUri(bytes: Buffer, max = 1400, trim = false) {
+export async function dataUri(bytes: Buffer, max = 1400, trim = false) {
   // An emblem's art sits small in a wide transparent square: trimmed to the crest.
   const source = trim ? await sharp(bytes).trim().toBuffer() : bytes
   const png = await sharp(source)
@@ -161,7 +168,7 @@ async function dataUri(bytes: Buffer, max = 1400, trim = false) {
 }
 
 /** An image covering a box, anchored like the dialog (faces sit in a splash's upper third). */
-function cover(
+export function cover(
   img: { href: string; w: number; h: number },
   x: number,
   y: number,
@@ -177,11 +184,16 @@ function cover(
 }
 
 /** A trimmed emblem, fitted in a square box. */
-function emblem(img: { href: string; w: number; h: number }, x: number, y: number, size: number) {
+export function emblem(
+  img: { href: string; w: number; h: number },
+  x: number,
+  y: number,
+  size: number
+) {
   return `<image href="${img.href}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${size}" height="${size}" preserveAspectRatio="xMidYMid meet"/>`
 }
 
-const LOGO =
+export const LOGO =
   'M140.32,114.78l66.57-52.4-84.5,29.38,18.32-28.35-30.09,17.83,39.13-56.71-79.86,45.07-7.92,13.62.91,24.19,31.05,8.35,9.9,22.32,25.04,9.9-8.54,18.83-36.29.19v8.54l67.35,14.75-21.54-28.53,71.03-44.25-60.55-2.72ZM73.47,105.37l14.19-27.76,4.98,27.76h-19.17Z'
 
 /* ── The card ──────────────────────────────────────────────────────────────────────────────── */
