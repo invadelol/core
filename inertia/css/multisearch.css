@@ -5,6 +5,24 @@
   .vb .ms-find {
     display: block;
   }
+  /* The server and Scout: the chips' height, side by side; Scout a plain violet key, no glow. */
+  .vb .ms-find .sel {
+    height: 36px;
+  }
+  .vb .ms-find .btn.ms-go {
+    height: 36px;
+    padding: 0 16px;
+    font-size: 14px;
+    background: var(--v600);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12);
+  }
+  .vb .ms-find .btn.ms-go:hover {
+    background: #6e62f4;
+  }
+  .vb .ms-find .ms-go .i {
+    width: 15px;
+    height: 15px;
+  }
   /* Nothing scouted: the last lobbies of this device, the page's width. */
   .vb .ms-lb {
     display: flex;

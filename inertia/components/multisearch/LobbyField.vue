@@ -447,10 +447,11 @@ const capacity = computed(() => (chips.value.length > 5 ? MAX_PLAYERS : 5))
 }
 .ms-f {
   display: flex;
-  align-items: center;
+  /* everything sits on the first row of names: the icon, the count, the server, Scout */
+  align-items: flex-start;
   gap: 12px;
-  min-height: 68px;
-  padding: 10px 12px 10px 18px;
+  min-height: 60px;
+  padding: 11px 12px 11px 18px;
   border-radius: 14px;
   background: var(--s1);
   box-shadow: inset 0 0 0 1px var(--line-2);
@@ -464,6 +465,8 @@ const capacity = computed(() => (chips.value.length > 5 ? MAX_PLAYERS : 5))
 }
 .ms-ic {
   display: flex;
+  align-items: center;
+  height: 36px;
   color: var(--t3);
 }
 .ms-chips {
@@ -543,6 +546,9 @@ const capacity = computed(() => (chips.value.length > 5 ? MAX_PLAYERS : 5))
   font-weight: 500;
 }
 .ms-n {
+  display: flex;
+  align-items: center;
+  height: 36px;
   font-size: 13px;
   font-weight: 650;
   color: var(--t3);
