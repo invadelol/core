@@ -1,5 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import env from '#start/env'
+import { meta, today } from '#services/page_meta'
 import type { LegalPublisher } from '../../inertia/lib/legal.js'
 
 const value = (key: Parameters<typeof env.get>[0]) => {
@@ -38,8 +39,15 @@ export default class LegalController {
   async privacy({ inertia }: HttpContext) {
     return inertia.render('legal/privacy', {
       publisher: legalPublisher(),
-      description:
-        'What invade.lol and the Invade desktop app collect, why, who receives it, how long it is kept, and how to have it removed.',
+      ...meta({
+        title: 'Privacy policy | invade.lol',
+        description:
+          'What invade.lol and the Invade desktop app collect, why, who receives it, how long it is kept, and how to have it removed.',
+        path: '/privacy',
+        image: '/og/home.jpg',
+        version: today(),
+        alt: 'The words “Look up any League player” over a champion’s splash art, with a poro',
+      }),
     })
   }
 
@@ -47,7 +55,14 @@ export default class LegalController {
   async legal({ inertia }: HttpContext) {
     return inertia.render('legal/legal', {
       publisher: legalPublisher(),
-      description: 'Who publishes invade.lol, who hosts it, and the terms of use.',
+      ...meta({
+        title: 'Legal notice and terms | invade.lol',
+        description: 'Who publishes invade.lol, who hosts it, and the terms of use.',
+        path: '/legal',
+        image: '/og/home.jpg',
+        version: today(),
+        alt: 'The words “Look up any League player” over a champion’s splash art, with a poro',
+      }),
     })
   }
 }

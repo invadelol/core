@@ -19,9 +19,9 @@ export default class EsportsController {
           ? `Pro matches live and next, every league, and the solo queue of ${count(players)} ${focus.league.code} players.`
           : 'Pro matches live and next, every league and the pros in solo queue.',
         path: '/esports',
-        image: '/og/pros/all.jpg',
+        image: '/og/esports.jpg',
         version: today(),
-        alt: 'Esports on invade.lol',
+        alt: 'The match on now or next, its two team logos face to face (else the leagues’ logos), with the hype poro',
       }),
       robots: asked ? 'noindex,follow' : null,
       jsonld: [breadcrumbs([{ name: 'Esports', path: '/esports' }])],

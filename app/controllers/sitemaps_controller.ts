@@ -16,6 +16,7 @@ import { AnswerCache } from '#services/ranked_stats'
 import { ROLE_OF } from '#services/champion_stats'
 import { leagueCatalog } from '#services/pro_leagues'
 import { VIEWS } from '#services/stats_explorer_service'
+import patchNotesService from '#services/patch_notes_service'
 
 /** A section's sitemap is built at most once an hour. */
 const sections = new AnswerCache(8, 3600_000)
@@ -27,11 +28,17 @@ const MIN_ROLE_GAMES = 1000
 async function section(name: SitemapSection): Promise<SitemapUrl[]> {
   const lastmod = today()
   if (name === 'pages') {
-    const { listed } = await leagueCatalog()
+    const [{ listed }, patches] = await Promise.all([
+      leagueCatalog(),
+      patchNotesService.list().catch(() => [] as string[]),
+    ])
     return [
+      { path: '/app', lastmod },
+      { path: '/app/changelog', lastmod },
       { path: '/tier-list', lastmod },
       ...Object.values(ROLE_OF).map((r) => ({ path: `/tier-list?role=${r.slug}`, lastmod })),
       ...['items', 'runes', 'duos'].map((list) => ({ path: `/tier-list/${list}`, lastmod })),
+      ...['mid', 'top'].map((lane) => ({ path: `/tier-list/duos?lane=${lane}`, lastmod })),
       { path: '/stats', lastmod },
       ...VIEWS.filter((v) => v !== 'overview').map((v) => ({ path: `/stats?view=${v}`, lastmod })),
       { path: '/esports', lastmod },
@@ -44,6 +51,8 @@ async function section(name: SitemapSection): Promise<SitemapUrl[]> {
       { path: '/leaderboards/flex', lastmod },
       { path: '/leaderboards/one-tricks', lastmod },
       { path: '/leaderboards/pros', lastmod },
+      ...patches.map((p) => ({ path: `/patch/${p}`, lastmod })),
+      { path: '/contact', lastmod },
     ]
   }
   if (name === 'champions') {

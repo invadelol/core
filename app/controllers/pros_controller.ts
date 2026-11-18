@@ -149,7 +149,7 @@ export default class ProsController {
         path,
         image: `/og/pros/${league.slug}.jpg`,
         version,
-        alt: `${league.code} pros on invade.lol`,
+        alt: `Photos of the five best ${league.code} pros by LP, the league's logo and a poro with a foam finger`,
       }),
       robots: data.players.length ? null : 'noindex,follow',
       jsonld: [
@@ -189,7 +189,7 @@ export default class ProsController {
         path: '/leagues',
         image: '/og/pros/all.jpg',
         version: today(),
-        alt: 'Pro leagues on invade.lol',
+        alt: 'Photos of the five best pros by LP, with a poro holding a foam finger',
       }),
       jsonld: [
         breadcrumbs([
@@ -248,7 +248,7 @@ export default class ProsController {
         path: `/league/${league.slug}`,
         image: `/og/pros/${league.slug}.jpg`,
         version: today(),
-        alt: `${league.code} on invade.lol`,
+        alt: `Photos of the five best ${league.code} pros by LP, the league's logo and a poro with a foam finger`,
       }),
       jsonld: [
         breadcrumbs([
@@ -271,7 +271,7 @@ export default class ProsController {
         path: '/teams',
         image: '/og/pros/all.jpg',
         version: today(),
-        alt: 'Pro teams on invade.lol',
+        alt: 'Photos of the five best pros by LP, with a poro holding a foam finger',
       }),
       jsonld: [
         breadcrumbs([
@@ -354,7 +354,7 @@ export default class ProsController {
         path: `/pro/${pro.slug}`,
         image: `/og/pro/${pro.slug}.jpg`,
         version: today(),
-        alt: `${pro.name} on invade.lol`,
+        alt: `${pro.name}'s photo, ${pro.team ? `${pro.team.name}'s logo, ` : ''}and their best solo queue LP, with a poro`,
         type: 'profile',
       }),
       robots: pro.accounts.length || pro.team ? null : 'noindex,follow',
@@ -427,7 +427,7 @@ export default class ProsController {
         path: `/team/${team.slug}`,
         image: `/og/team/${team.slug}.jpg`,
         version: today(),
-        alt: `${team.name} on invade.lol`,
+        alt: `${team.name}'s logo and its players' photos and names, with two poros`,
       }),
       robots: players.length ? null : 'noindex,follow',
       jsonld: [

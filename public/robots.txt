@@ -1,4 +1,9 @@
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /search
+Disallow: /download/
+Disallow: /swagger
+Disallow: /docs
 
 Sitemap: https://invade.lol/sitemap.xml

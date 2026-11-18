@@ -3,6 +3,8 @@ import { desktopReleases } from '#services/desktop_release'
 import { changelog } from '#services/changelog'
 import { discordServer } from '#services/discord_server'
 import { runsText } from '../../inertia/lib/changelog.js'
+import { RENDERER } from '#services/og/version'
+import { breadcrumbs } from '#services/page_meta'
 
 /** The page is useful without the version, so a slow GitHub never holds it up. */
 const VERSION_WAIT_MS = 600
@@ -48,9 +50,28 @@ export default class AppPageController {
         title: 'Invade for desktop | invade.lol',
         description: DESCRIPTION,
         url: 'https://invade.lol/app',
-        image: 'https://invade.lol/landing/app-og-v2.png',
-        alt: 'The Invade desktop app’s Home, with rank and LP, scored games, clips and performance, under the lines “A native app for League of Legends. Free for everyone.”',
+        canonical: 'https://invade.lol/app',
+        image: `https://invade.lol/og/app.jpg?v=${RENDERER}.${version ?? 'none'}`,
+        imageType: 'image/jpeg',
+        alt: 'The Invade desktop app’s Home in its window, with a poro leaning on it, beside the words “Invade for desktop, free on Windows and macOS”',
       },
+      jsonld: [
+        {
+          '@context': 'https://schema.org',
+          '@type': 'SoftwareApplication',
+          'name': 'Invade',
+          'url': 'https://invade.lol/app',
+          'description': DESCRIPTION,
+          'applicationCategory': 'GameApplication',
+          'operatingSystem': 'Windows, macOS',
+          'offers': { '@type': 'Offer', 'price': '0', 'priceCurrency': 'EUR' },
+          'image': 'https://invade.lol/og/app.jpg',
+          'publisher': { '@type': 'Organization', 'name': 'Invade', 'url': 'https://invade.lol/' },
+          ...(version ? { softwareVersion: version } : {}),
+          ...(notes?.day ? { dateModified: notes.day } : {}),
+        },
+        breadcrumbs([{ name: 'Desktop app', path: '/app' }]),
+      ],
     })
   }
 }

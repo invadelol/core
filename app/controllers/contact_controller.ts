@@ -1,6 +1,8 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import env from '#start/env'
 import { discordServer, type DiscordServer } from '#services/discord_server'
+import { RENDERER } from '#services/og/version'
+import { today } from '#services/page_meta'
 
 const DESCRIPTION =
   'How to reach the Invade team: the Discord for help, feedback and bug reports, X for news.'
@@ -29,8 +31,10 @@ export default class ContactController {
         title: 'Contact | invade.lol',
         description: DESCRIPTION,
         url: 'https://invade.lol/contact',
-        image: 'https://invade.lol/landing/app-og-v2.png',
-        alt: 'The Invade desktop app’s Home, with rank and LP, scored games, clips and performance, under the lines “A native app for League of Legends. Free for everyone.”',
+        canonical: 'https://invade.lol/contact',
+        image: `https://invade.lol/og/home.jpg?v=${RENDERER}.${today()}`,
+        imageType: 'image/jpeg',
+        alt: 'The words “Look up any League player” over a champion’s splash art, the best pick of each role and a poro on the patch’s game count',
       },
     })
   }

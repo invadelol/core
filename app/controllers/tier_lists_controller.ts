@@ -74,6 +74,10 @@ export default class TierListsController {
         path,
       },
       crumb: 'Items',
+      image: {
+        path: '/og/tier-list/items.jpg',
+        alt: 'The five best items by win rate, their icons and tiers, with a poro holding a heart',
+      },
       indexable: !cls,
     })
   }
@@ -95,6 +99,10 @@ export default class TierListsController {
         path,
       },
       crumb: 'Runes',
+      image: {
+        path: '/og/tier-list/runes.jpg',
+        alt: 'The five best keystones by win rate, their icons and tiers, with a poro',
+      },
       indexable: true,
     })
   }
@@ -115,6 +123,10 @@ export default class TierListsController {
         path,
       },
       crumb: 'Duos',
+      image: {
+        path: `/og/tier-list/duos${lane === 'bot' ? '' : `-${lane}`}.jpg`,
+        alt: `The best ${DUO_LABEL[lane].toLowerCase()} as pairs of champion portraits with their win rate together, with two poros`,
+      },
       indexable: true,
     })
   }
@@ -137,6 +149,10 @@ export default class TierListsController {
         path,
       },
       crumb: 'ARAM',
+      image: {
+        path: '/og/tier-list/aram.jpg',
+        alt: 'The five best ARAM champions, their portraits, tiers and win rates, with a poro',
+      },
       // Too few games stored to be worth indexing yet.
       indexable: false,
       bracket: 'all',
@@ -156,6 +172,7 @@ export default class TierListsController {
       props: Record<string, unknown>
       meta: { title: string; description: string; path: string }
       crumb: string
+      image: { path: string; alt: string }
       indexable: boolean
       bracket?: Filter['bracket']
     }
@@ -182,9 +199,9 @@ export default class TierListsController {
         title: opts.meta.title,
         description: opts.meta.description,
         path: opts.meta.path,
-        image: '/og/tier-list/all.jpg',
+        image: opts.image.path,
         version: filter?.patch ?? 'none',
-        alt: `${opts.meta.title} on invade.lol`,
+        alt: opts.image.alt,
       }),
       robots: indexable ? null : 'noindex,follow',
       jsonld: [
