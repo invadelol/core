@@ -53,7 +53,11 @@ export interface ScoutEntry {
  * `/multisearch/:region?summoners=…`: a lobby scouted side by side, one card per player, over a
  * field to paste the champ select chat into and a few figures of the whole lobby.
  */
-const props = defineProps<{ players: RiotIdentity[]; region: string | null }>()
+const props = defineProps<{
+  players: RiotIdentity[]
+  region: string | null
+  description?: string
+}>()
 
 /** Enough stored games for a form line, the champions and the last few games. */
 const MATCH_COUNT = 30
@@ -441,7 +445,10 @@ onBeforeUnmount(() => controller?.abort())
   <Head title="Multisearch">
     <meta
       name="description"
-      content="Scout a whole lobby at once: rank, recent games, roles and champions of every player side by side."
+      :content="
+        description ??
+        'Scout a whole League of Legends lobby at once: rank, recent games, main role and champions of every player side by side.'
+      "
     />
   </Head>
   <SiteLayout section="tools">
