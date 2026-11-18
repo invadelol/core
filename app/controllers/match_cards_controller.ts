@@ -46,8 +46,16 @@ export default class MatchCardsController {
       let job = pending.get(key)
       if (!job) {
         job = limited(async () => {
-          const art = await riotAssets.get('centered', String(share.card.championId))
-          const rendered = await renderMatchCard(share.card, art.placeholder ? undefined : art.body)
+          const [art, icon] = await Promise.all([
+            riotAssets.get('centered', String(share.card.championId)),
+            riotAssets.get('champion', String(share.card.championId)),
+          ])
+          const rendered = await renderMatchCard(
+            share.card,
+            art.placeholder ? undefined : art.body,
+            share.player,
+            icon.placeholder ? undefined : icon.body
+          )
           // Without its art the card is still readable, but not worth keeping.
           if (!art.placeholder) cards.set(key, rendered, rendered.byteLength, 3_600_000)
           return { body: rendered, complete: !art.placeholder }

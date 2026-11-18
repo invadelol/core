@@ -120,6 +120,11 @@ export default defineConfig({
       reloadServer: false,
     },
     {
+      // The poros of the link previews (scripts/og_poros.mjs), read at run time.
+      pattern: 'resources/og/**',
+      reloadServer: false,
+    },
+    {
       // The teams' logos (/cdn/team/:id), read at run time.
       pattern: 'resources/teams/**',
       reloadServer: false,

@@ -3,6 +3,7 @@ import { GLYPHS } from '#services/build_card_glyphs'
 import { GRAIN_PNG } from '#services/match_card_glyphs'
 import { ROLE_ICONS } from '#services/presence_card'
 import type { BuildItems, BuildLane } from '#services/build_link'
+import { poroLayer } from '#services/og/kit'
 
 /**
  * The link preview of a build shared from the desktop app (`/og/build/…`), drawn as the app's
@@ -22,7 +23,7 @@ export const CARD_WIDTH = 1200
 export const CARD_HEIGHT = 630
 
 /** Bump on any change to how the card is drawn: every `?v=` changes, so shared images refresh. */
-export const RENDERER = 1
+export const RENDERER = 2
 
 export function buildCardVersion() {
   return String(RENDERER)
@@ -360,6 +361,8 @@ export async function renderBuildCard(
       { input: under },
       ...pictures,
       { input: over },
+      // The poro, peeking from the foot's right corner, keen on the build.
+      { input: await poroLayer('cheeky', W - 300, H + 34, 236) },
     ])
     .jpeg({ quality: 88, mozjpeg: true })
     .toBuffer()
