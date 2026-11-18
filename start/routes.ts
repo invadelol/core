@@ -8,6 +8,7 @@
 */
 
 import router from '@adonisjs/core/services/router'
+import { RENDERER as OG_RENDERER } from '#services/og/version'
 import AutoSwaggerModule from 'adonis-autoswagger'
 
 type SwaggerInstance = typeof AutoSwaggerModule extends { default: infer T }
@@ -278,6 +279,10 @@ router.get('/og/pros/:file', [SiteCardsController, 'pros'])
 router.get('/og/pro/:file', [SiteCardsController, 'pro'])
 router.get('/og/team/:file', [SiteCardsController, 'team'])
 router.get('/og/mastery/:file', [SiteCardsController, 'mastery'])
+router.get('/og/leaderboards/:file', [SiteCardsController, 'leaderboard'])
+router.get('/og/esports.jpg', [SiteCardsController, 'esports'])
+router.get('/og/patch/:file', [SiteCardsController, 'patch'])
+router.get('/og/app.jpg', [SiteCardsController, 'app'])
 
 router.get('/og/:summoner', [() => import('#controllers/social_cards_controller'), 'show'])
 /** A profile's share card, drawn from its link: `/card/Name-Tag/stats-wide.png?q=…&n=…&l=…`. */
@@ -365,6 +370,7 @@ router.get('/:summoner/:section?', async ({ inertia, params, request, response }
     section,
     initialProfile,
     social: initialProfile ? profileSocial(initialProfile, section, request) : null,
+    jsonld: initialProfile ? profileJsonLd(initialProfile) : [],
     panels: ANALYTICS_PANELS,
     preload,
     pro,
@@ -402,19 +408,44 @@ function profileSocial(
       alt: `${profile.gameName}'s share card`,
     }
   }
+  // The cards change through the day: a day's version, with the drawing's.
+  const v = `${OG_RENDERER}.${new Date().toISOString().slice(0, 10).replaceAll('-', '')}`
+  const tab = section === 'overview' ? '' : `/${section}`
   if (section === 'mastery')
     return {
       title,
       description: `${profile.gameName}'s champion mastery: every champion, sized by mastery points.`,
       url: `https://invade.lol/${id}/mastery`,
-      image: `https://invade.lol/og/mastery/${id}.jpg`,
+      canonical: `https://invade.lol/${id}/mastery`,
+      image: `https://invade.lol/og/mastery/${id}.jpg?v=${v}`,
       imageType: 'image/jpeg',
-      alt: `${profile.gameName}'s champion mastery pool`,
+      alt: `${profile.gameName}'s champion mastery pool, every champion a circle sized by its points, and their total points with a poro holding a heart`,
     }
   return {
     title,
-    description: `${profile.gameName}'s League of Legends profile, recent performance and champion pool.`,
-    url: `https://invade.lol/${id}`,
-    image: `https://invade.lol/og/${id}`,
+    description: `${profile.gameName}#${profile.tagLine}'s League of Legends profile: rank, match history with a score for every game, and champion pool.`,
+    url: `https://invade.lol/${id}${tab}`,
+    canonical: `https://invade.lol/${id}${tab}`,
+    image: `https://invade.lol/og/${id}?v=${v}`,
+    imageType: 'image/jpeg',
+    alt: `${profile.gameName}'s profile icon and name over their most played champion's splash art, their rank and recent win rate, with a poro reacting to it`,
   }
+}
+
+/** A profile's structured data: the page is about one player, known by their Riot ID. */
+function profileJsonLd(profile: { gameName: string; tagLine: string }) {
+  const url = `https://invade.lol/${encodeURIComponent(`${profile.gameName}-${profile.tagLine}`)}`
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'ProfilePage',
+      url,
+      'mainEntity': {
+        '@type': 'Person',
+        'name': `${profile.gameName}#${profile.tagLine}`,
+        'alternateName': profile.gameName,
+        url,
+      },
+    },
+  ]
 }

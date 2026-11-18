@@ -1,7 +1,7 @@
 import { positionName, positionOf, queueName } from '@invadelol/ui/logic'
 import matchRepository from '#services/analytics/match_repository'
 import riotAssets from '#services/riot/assets'
-import { matchCardVersion, type MatchCard } from '#services/match_card'
+import { matchCardVersion, type MatchCard, type MatchCardPlayer } from '#services/match_card'
 import { SITE_ORIGIN } from '#services/sitemap'
 import { decodeSlug } from '../../inertia/lib/format.js'
 import { detailOf, isRemake, scoreLobby } from '../../inertia/lib/match.js'
@@ -22,6 +22,8 @@ export interface MatchSocial {
 /** One player's game, shareable: the card's facts, its version, and the page's meta tags. */
 export interface MatchShare {
   card: MatchCard
+  /** Who played it, as the card names them. */
+  player: MatchCardPlayer
   version: string
   social: MatchSocial
 }
@@ -74,18 +76,20 @@ export function shareOf(
     score,
     tag,
   }
-  const version = matchCardVersion(card)
+  const champion = champions[String(card.championId)]
+  const who: MatchCardPlayer = { gameName: player.gameName, champion: champion ?? null }
+  const version = matchCardVersion(card, who)
 
   const riotId = `${player.gameName}#${player.tagLine}`
   const path = encodeURIComponent(`${player.gameName}-${player.tagLine}`)
   const result = win ? 'Victory' : 'Defeat'
-  const champion = champions[String(card.championId)]
   const kda = `${card.kills}/${card.deaths}/${card.assists}`
   const role = positionName(positionOf(player.position))
   const facts = [role, queueName(queueId), clock(card.duration)].filter(Boolean).join(', ')
   const url = `${SITE_ORIGIN}/${path}/match/${match.matchId}`
   return {
     card,
+    player: who,
     version,
     social: {
       type: 'website',
@@ -95,7 +99,7 @@ export function shareOf(
       canonical: url,
       image: `${SITE_ORIGIN}/og/match/${match.matchId}/${path}.jpg?v=${version}`,
       imageType: 'image/jpeg',
-      alt: `${result}${champion ? ` on ${champion}` : ''}: ${kda}, Invade score ${score}${tag ? `, ${tag}` : ''}`,
+      alt: `${result} in large type over ${champion ? `${champion}'s` : 'the champion'} splash art, ${player.gameName}'s ${kda} and Invade score ${score}${tag ? ` (${tag})` : ''}, with a poro reacting to the game`,
     },
   }
 }
