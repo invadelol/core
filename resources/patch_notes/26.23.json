@@ -1,0 +1,699 @@
+{
+  "patch": "26.23",
+  "version": "16.23",
+  "published": "2026-11-17",
+  "source": "https://www.leagueoflegends.com/en-us/news/game-updates/league-of-legends-patch-26-23-notes/",
+  "champions": [
+    {
+      "id": 1,
+      "name": "Annie",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "R",
+          "title": "Summon: Tibbers",
+          "lines": [
+            {
+              "label": "Tibbers Health",
+              "old": "1150 - 3500 (Scaling with Champion Level) (+50% AP)",
+              "new": "1275 - 4000 (Scaling with Champion Level) (+50% AP) (+150% Bonus HP)"
+            },
+            {
+              "label": "Tibbers Aura Damage per Second",
+              "old": "8 / 12 / 16 (+4% AP)",
+              "new": "10 / 15 / 20 (+4% AP)"
+            },
+            {
+              "label": "Tibbers Attack Damage",
+              "old": "30 / 45 / 60 (+10% AP)",
+              "new": "30 / 50 / 70 (+10% AP)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 268,
+      "name": "Azir",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "base",
+          "title": "Base stats",
+          "lines": [
+            {
+              "label": "Attack Range",
+              "old": "525",
+              "new": "550"
+            }
+          ]
+        },
+        {
+          "key": "W",
+          "title": "Arise!",
+          "lines": [
+            {
+              "label": "On Hit / Attack Damage Ratio",
+              "old": "50%",
+              "new": "67%"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 432,
+      "name": "Bard",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "Q",
+          "title": "Cosmic Binding",
+          "lines": [
+            {
+              "label": "Damage",
+              "old": "80 / 120 / 160 / 200 / 240 (+80% AP)",
+              "new": "80 / 125 / 170 / 215 / 260 (+100% AP)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 81,
+      "name": "Ezreal",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "W",
+          "title": "Essence Flux",
+          "lines": [
+            {
+              "label": "Damage",
+              "old": "80 / 135 / 190 / 245 / 300 (+100% bonus AD) (+90% AP)",
+              "new": "80 / 135 / 190 / 245 / 300 (+115% bonus AD) (+100% AP)"
+            }
+          ]
+        },
+        {
+          "key": "R",
+          "title": "Trueshot Barrage",
+          "lines": [
+            {
+              "label": "Champion Damage",
+              "old": "350 / 550 / 750 (+100% bonus AD) (+110% AP)",
+              "new": "350 / 600 / 850 (+110% bonus AD) (+120% AP)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Galio",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "W",
+          "title": "Shield of Durand",
+          "lines": [
+            {
+              "label": "Shield Amount (also affects R)",
+              "old": "7.5 / 9 / 10.5 / 12 / 13.5% of his Max Health",
+              "new": "8 / 11 / 14 / 17 / 20% of his Max Health"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 150,
+      "name": "Gnar",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "Q",
+          "title": "Boomerang Throw / Boulder Toss",
+          "lines": [
+            {
+              "label": "Mini Damage",
+              "old": "5 / 45 / 85 / 125 / 165 (+125% AD)",
+              "new": "5 / 45 / 85 / 125 / 165 (+135% AD)"
+            },
+            {
+              "label": "Mega Damage",
+              "old": "45 / 90 / 135 / 180 / 225 (+140% AD)",
+              "new": "45 / 90 / 135 / 180 / 225 (+150% AD)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 897,
+      "name": "K'Sante",
+      "kind": "mix",
+      "blocks": [
+        {
+          "key": "W",
+          "title": "Path Maker",
+          "lines": [
+            {
+              "label": "Mana Cost",
+              "old": "45 / 50 / 55 / 60 / 65",
+              "new": "45",
+              "dir": "up"
+            },
+            {
+              "label": "Base Damage",
+              "old": "45 / 75 / 105 / 135 / 165",
+              "new": "45 / 85 / 125 / 165 / 205",
+              "dir": "up"
+            },
+            {
+              "label": "All Out Charge Time Damage Increase",
+              "old": "10 / 27.5 / 45 / 62.5 / 80%",
+              "new": "10 / 26.25 / 42.5 / 58.75 / 75%",
+              "dir": "down"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "LeBlanc",
+      "kind": "down",
+      "blocks": [
+        {
+          "key": "Q",
+          "title": "Sigil of Malice",
+          "lines": [
+            {
+              "label": "Ability Power Ratio (initial hit and mark)",
+              "old": "40% AP",
+              "new": "35% AP"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "name": "Master Yi",
+      "kind": "down",
+      "blocks": [
+        {
+          "key": "Q",
+          "title": "Alpha Strike",
+          "lines": [
+            {
+              "label": "Damage",
+              "old": "20 / 40 / 60 / 80 / 100 (+70% AD)",
+              "new": "20 / 40 / 60 / 80 / 100 (+60% AD)"
+            },
+            {
+              "label": "Maximum Single Target Damage",
+              "old": "35 / 70 / 105 / 140 / 175 (+122.5% AD)",
+              "new": "35 / 70 / 105 / 140 / 175 (+105% AD)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 800,
+      "name": "Mel",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "Q",
+          "title": "Radiant Barrage",
+          "lines": [
+            {
+              "label": "Subsequent Bolt Damage",
+              "old": "5 / 10 / 15 / 20 / 25 (+8% AP)",
+              "new": "6 / 11 / 16 / 21 / 26 (+9% AP)"
+            },
+            {
+              "label": "Maximum Damage",
+              "old": "85 / 120 / 165 / 220 / 285 (+65 / 73 / 81 / 89 / 97% AP)",
+              "new": "90 / 126 / 172 / 228 / 294 (+70 / 79 / 88 / 97 / 106% AP)"
+            }
+          ]
+        },
+        {
+          "key": "W",
+          "title": "Rebuttal",
+          "lines": [
+            {
+              "label": "Shield",
+              "old": "50 / 80 / 110 / 140 / 170 (+50% AP)",
+              "new": "50 / 90 / 130 / 170 / 210 (+50% AP)"
+            },
+            {
+              "label": "Retaliation Damage",
+              "old": "35 / 40 / 45 / 50 / 55 (+10% AP)",
+              "new": "35 / 45 / 55 / 65 / 75 (+10% AP)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 134,
+      "name": "Syndra",
+      "kind": "down",
+      "blocks": [
+        {
+          "key": "E",
+          "title": "Scatter the Weak",
+          "lines": [
+            {
+              "label": "Mana Cost",
+              "old": "50",
+              "new": "60"
+            },
+            {
+              "label": "Cooldown",
+              "old": "15s",
+              "new": "17 / 16.5 / 16 / 15.5 / 15s"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 161,
+      "name": "Vel'Koz",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "R",
+          "title": "Life Form Disintegration Ray",
+          "lines": [
+            {
+              "label": "Total Damage",
+              "old": "450 / 700 / 925",
+              "new": "450 / 700 / 950"
+            },
+            {
+              "type": "desc",
+              "text": "Fixes a math error; Riot expects no real impact on his power."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 254,
+      "name": "Vi",
+      "kind": "up",
+      "blocks": [
+        {
+          "key": "E",
+          "title": "Relentless Force",
+          "lines": [
+            {
+              "label": "Damage",
+              "old": "10 / 30 / 50 / 70 / 90 (+110% AD) (+100% AP)",
+              "new": "10 / 35 / 60 / 85 / 110 (+110% AD) (+100% AP)"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "items": [
+    {
+      "id": 6699,
+      "name": "Voltaic Cyclosword",
+      "kind": "down",
+      "lines": [
+        {
+          "label": "Firmament Bonus Damage",
+          "old": "9% melee / 7% ranged of target's current health",
+          "new": "8% melee / 6% ranged of target's current health"
+        }
+      ]
+    }
+  ],
+  "aram": {
+    "note": "Four new Headliners (Arcade, Debonair, La Ilusion, Maestro), four tank augments and Turret Plating on Mayhem turrets",
+    "champions": [
+      {
+        "id": 63,
+        "name": "Brand",
+        "kind": "up",
+        "scope": "ARAM: Mayhem only",
+        "lines": [
+          {
+            "label": "Damage Taken",
+            "old": "110%",
+            "new": "105%"
+          }
+        ]
+      },
+      {
+        "id": 245,
+        "name": "Ekko",
+        "kind": "down",
+        "scope": "ARAM: Mayhem only",
+        "lines": [
+          {
+            "label": "Tenacity",
+            "old": "20%",
+            "new": "10%"
+          }
+        ]
+      },
+      {
+        "id": 887,
+        "name": "Gwen",
+        "kind": "down",
+        "scope": "ARAM: Mayhem only",
+        "lines": [
+          {
+            "label": "Damage Taken",
+            "old": "100%",
+            "new": "105%"
+          }
+        ]
+      },
+      {
+        "id": 24,
+        "name": "Jax",
+        "kind": "down",
+        "scope": "ARAM: Mayhem only",
+        "lines": [
+          {
+            "label": "Damage Taken",
+            "old": "97%",
+            "new": "100%"
+          },
+          {
+            "label": "Damage Dealt",
+            "old": "105%",
+            "new": "100%"
+          }
+        ]
+      },
+      {
+        "id": 99,
+        "name": "Lux",
+        "kind": "up",
+        "scope": "ARAM: Mayhem only",
+        "lines": [
+          {
+            "label": "Shield Modifier",
+            "old": "80%",
+            "new": "100%"
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "name": "Sivir",
+        "kind": "up",
+        "scope": "ARAM: Mayhem only",
+        "lines": [
+          {
+            "label": "Damage Dealt",
+            "old": "93%",
+            "new": "95%"
+          },
+          {
+            "label": "Damage Taken",
+            "old": "105%",
+            "new": "100%"
+          }
+        ]
+      },
+      {
+        "id": 157,
+        "name": "Yasuo",
+        "kind": "down",
+        "scope": "ARAM: Mayhem only",
+        "lines": [
+          {
+            "label": "Total Attack Speed Increase",
+            "old": "2.5%",
+            "new": "0%"
+          }
+        ]
+      },
+      {
+        "id": 777,
+        "name": "Yone",
+        "kind": "down",
+        "scope": "ARAM: Mayhem only",
+        "lines": [
+          {
+            "label": "Damage Taken",
+            "old": "97%",
+            "new": "100%"
+          },
+          {
+            "label": "Damage Dealt",
+            "old": "105%",
+            "new": "100%"
+          }
+        ]
+      },
+      {
+        "id": 904,
+        "name": "Zaahen",
+        "kind": "down",
+        "scope": "ARAM: Mayhem only",
+        "lines": [
+          {
+            "label": "Damage Taken",
+            "old": "100%",
+            "new": "105%"
+          }
+        ]
+      },
+      {
+        "id": 115,
+        "name": "Ziggs",
+        "kind": "up",
+        "scope": "ARAM: Mayhem only",
+        "lines": [
+          {
+            "label": "Damage Taken",
+            "old": "120%",
+            "new": "110%"
+          }
+        ]
+      },
+      {
+        "id": 429,
+        "name": "Kalista",
+        "kind": "down",
+        "scope": "ARAM",
+        "lines": [
+          {
+            "label": "Damage Dealt",
+            "old": "110%",
+            "new": "105%"
+          },
+          {
+            "label": "Damage Taken",
+            "old": "90%",
+            "new": "100%"
+          }
+        ]
+      }
+    ],
+    "augments": [
+      {
+        "id": 3265,
+        "name": "Fortified",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New augment: gain 20 Armor, then increase your bonus Armor by 25%."
+          }
+        ]
+      },
+      {
+        "id": 3264,
+        "name": "Mystic Guard",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New augment: gain 20 Magic Resist, then increase your bonus Magic Resist by 25%."
+          }
+        ]
+      },
+      {
+        "id": 3262,
+        "name": "Slime Time",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New augment: every few seconds, a burst of slime deals magic damage to nearby enemies; hitting a champion leaves a blob that heals you when walked over."
+          }
+        ]
+      },
+      {
+        "id": 3263,
+        "name": "Steadfaster Presence",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New augment: bonus Armor, Magic Resist and Tenacity, increased below 40% maximum Health."
+          }
+        ]
+      },
+      {
+        "id": 3078,
+        "name": "The Boom and the Bass",
+        "kind": "down",
+        "lines": [
+          {
+            "label": "Damage",
+            "old": "50 - 200 + 50% AD + 30% AP",
+            "new": "50 - 175 + 40% AD + 25% AP"
+          }
+        ]
+      },
+      {
+        "id": 3048,
+        "name": "Bouncing Bees",
+        "kind": "down",
+        "lines": [
+          {
+            "label": "Basic Attack Damage Percent",
+            "old": "50 - 100%",
+            "new": "60%"
+          }
+        ]
+      },
+      {
+        "id": 3039,
+        "name": "Salvation",
+        "kind": "up",
+        "lines": [
+          {
+            "label": "Cooldown",
+            "old": "90s",
+            "new": "70s"
+          }
+        ]
+      },
+      {
+        "id": null,
+        "name": "Arcade",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Headliner: collect Tokens from takedowns; cash in 4 Tokens to revive while dead."
+          }
+        ]
+      },
+      {
+        "id": null,
+        "name": "Debonair",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Headliner: augments grant additional gold."
+          }
+        ]
+      },
+      {
+        "id": null,
+        "name": "La Ilusion",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Headliner: allies drop a candle on death; picking it up shields you and nearby allies."
+          }
+        ]
+      },
+      {
+        "id": null,
+        "name": "Maestro",
+        "kind": "new",
+        "lines": [
+          {
+            "type": "desc",
+            "text": "New Headliner: choose from 4 augments instead of 3."
+          }
+        ]
+      },
+      {
+        "id": null,
+        "name": "True Damage",
+        "kind": "down",
+        "lines": [
+          {
+            "type": "set",
+            "label": "Headliner: Prismatic Anvil",
+            "value": "Capped at 1 per team per game"
+          }
+        ]
+      },
+      {
+        "id": null,
+        "name": "Superfans",
+        "kind": "up",
+        "lines": [
+          {
+            "label": "Headliner: Bonus Experience",
+            "old": "30%",
+            "new": "60%"
+          }
+        ]
+      }
+    ],
+    "systems": [
+      {
+        "type": "set",
+        "label": "Turret Armor and Magic Resist",
+        "value": "120, no longer lowered as the game goes on"
+      },
+      {
+        "type": "new",
+        "text": "Outer and inhibitor turrets have Turret Plating: three plates, each giving 100 gold split among nearby allies, and a Bulwark buff of 60 - 80 resists per nearby champion once a plate falls."
+      }
+    ]
+  },
+  "skins": [
+    {
+      "champion": 518,
+      "skin": 50,
+      "name": "Cafe Cuties Neeko",
+      "champions": "Neeko"
+    },
+    {
+      "champion": 142,
+      "skin": 45,
+      "name": "Cafe Cuties Zoe",
+      "champions": "Zoe"
+    },
+    {
+      "champion": 37,
+      "skin": 77,
+      "name": "DJ Sona Ultimate Remix",
+      "champions": "Sona"
+    }
+  ],
+  "chromas": [
+    "Cafe Cuties Neeko (Ruby, Aquamarine, Obsidian, Pearl, Rose Quartz, Catseye, Jasper, Peridot)",
+    "Cafe Cuties Zoe (Ruby, Catseye, Emerald, Amethyst, Sapphire, Rose Quartz, Pearl, Obsidian)"
+  ],
+  "bugs": [
+    "Illaoi's Harsh Lesson works correctly against an active spell shield.",
+    "When champ select hostaging is confirmed within 60 seconds of game start, a game termination vote is offered instead of only penalizing the offender after the match.",
+    "DJ Sona's interactive music builds layers with each ability again, resets on death and changes intensity with her ultimate at levels 6, 11 and 16; the HUD mute button works reliably."
+  ]
+}

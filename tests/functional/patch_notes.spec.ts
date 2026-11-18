@@ -1,7 +1,7 @@
 import { test } from '@japa/runner'
 
 test.group('Patch notes', () => {
-  for (const patch of ['26.20', '26.21', '26.22']) {
+  for (const patch of ['26.20', '26.21', '26.22', '26.23']) {
     test(`/patch/${patch} holds Riot's notes`, async ({ client }) => {
       const page = await client.get(`/patch/${patch}`)
       page.assertStatus(200)
@@ -16,7 +16,7 @@ test.group('Patch notes', () => {
     const notes = nav.body().patchNotes as { patch: string; published: string }[]
     assert.includeMembers(
       notes.map((n) => n.patch),
-      ['26.22', '26.21', '26.20']
+      ['26.23', '26.22', '26.21', '26.20']
     )
     const dates = notes.map((n) => n.published)
     assert.deepEqual(dates, [...dates].sort().reverse())
