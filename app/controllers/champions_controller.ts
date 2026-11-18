@@ -186,7 +186,7 @@ export default class ChampionsController {
         path,
         image: `/og/tier-list/${role ? role.slug : 'all'}.jpg`,
         version: filter?.patch ?? 'none',
-        alt: `${label} tier list on invade.lol`,
+        alt: `${label} tier list: the best champions' portraits with their tiers and win rates, and a poro holding a sign`,
       }),
       robots: !rows.length || (filter && !(await isDefault(filter))) ? 'noindex,follow' : null,
       jsonld: [
@@ -289,7 +289,9 @@ export default class ChampionsController {
         path,
         image: `/og/champion/${champion.slug}/${role.slug}.jpg`,
         version: filter?.patch ?? 'none',
-        alt: `${champion.name} ${role.label.toLowerCase()} on invade.lol`,
+        alt: stat
+          ? `${champion.name}'s splash art, ${percent(stat.win)} win rate ${role.label.toLowerCase()} with its tier, and a poro on the number`
+          : `${champion.name}'s splash art and name`,
       }),
       robots:
         !stat || stat.games < 100 || (filter && !(await isDefault(filter)))
@@ -373,7 +375,7 @@ export default class ChampionsController {
         path,
         image: `/og/champion/${champion.slug}/${role.slug}.jpg`,
         version: filter?.patch ?? 'none',
-        alt: `${title} on invade.lol`,
+        alt: `${champion.name}'s splash art and ${role.label.toLowerCase()} win rate`,
       }),
       robots: !stat || !theirs || !filter || !(await isDefault(filter)) ? 'noindex,follow' : null,
       jsonld: [

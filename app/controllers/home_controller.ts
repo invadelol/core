@@ -4,6 +4,7 @@ import homeService from '#services/home_service'
 import proService from '#services/pro_service'
 import { championSlug } from '../../inertia/lib/champions.js'
 import { DISCORD_URL, REPO_URL, X_URL } from '../../inertia/lib/links.js'
+import { RENDERER } from '#services/og/version'
 
 const SITE = 'https://invade.lol'
 
@@ -29,16 +30,19 @@ export default class HomeController {
         description: DESCRIPTION,
         url: `${SITE}/`,
         canonical: `${SITE}/`,
-        image: `${SITE}/og/home.jpg?v=${version}`,
+        image: `${SITE}/og/home.jpg?v=${RENDERER}.${version}`,
         imageType: 'image/jpeg',
-        alt: 'invade.lol: League of Legends profiles, champion stats and pros',
+        alt: 'The words “Look up any League player” over a champion’s splash art, the best pick of each role and a poro on the patch’s game count',
       },
       jsonld: [
         {
           '@context': 'https://schema.org',
           '@type': 'WebSite',
           'name': 'invade.lol',
+          'alternateName': 'Invade',
           'url': `${SITE}/`,
+          'description': DESCRIPTION,
+          'inLanguage': 'en',
           'potentialAction': {
             '@type': 'SearchAction',
             'target': { '@type': 'EntryPoint', 'urlTemplate': `${SITE}/search?q={query}` },

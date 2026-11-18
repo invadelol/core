@@ -66,9 +66,11 @@ export default class PatchNotesController {
           ? `Every change of League of Legends patch ${asked}: ${counts!.champions} champions, ${counts!.items} items, ARAM: Mayhem, skins and bug fixes, with each champion's win rate since, ${BRACKET_TEXT[stats?.bracket ?? 'emerald_plus']}.`
           : `League of Legends patch ${asked}.`,
         path: `/patch/${asked}`,
-        image: '/og/home.jpg',
+        image: notes ? `/og/patch/${asked}.jpg` : '/og/home.jpg',
         version: asked,
-        alt: `Patch ${asked} on invade.lol`,
+        alt: notes
+          ? `Patch ${asked} in large type, the portraits of the ${counts!.champions} champions it changed, buffs and nerfs`
+          : `Patch ${asked} on invade.lol`,
       }),
       jsonld: [
         breadcrumbs([

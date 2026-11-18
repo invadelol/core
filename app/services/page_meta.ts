@@ -1,4 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import { RENDERER } from '#services/og/version'
 
 /**
  * What the champion, stats and pro pages tell search engines and link previews: their `social`
@@ -35,7 +36,8 @@ export function social(opts: {
     description: opts.description,
     url,
     canonical: url,
-    image: `${ORIGIN}${opts.image}?v=${encodeURIComponent(opts.version)}`,
+    // The renderer's version rides along, so a redrawn card is fetched again by the platforms.
+    image: `${ORIGIN}${opts.image}${opts.image.includes('?') ? '&' : '?'}v=${RENDERER}.${encodeURIComponent(opts.version)}`,
     imageType: 'image/jpeg',
     alt: opts.alt,
     type: opts.type ?? 'website',

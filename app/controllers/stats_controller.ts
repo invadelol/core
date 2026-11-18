@@ -176,7 +176,7 @@ export default class StatsController {
         path,
         image: `/og/stats/${view === 'overview' ? 'all' : view}.jpg`,
         version: filter.patch,
-        alt: `${VIEW_LABELS[view]} on invade.lol`,
+        alt: `${VIEW_LABELS[view]}: the view's lead figure over a champion's splash art, with a poro`,
       }),
       robots: !rows.length || !isDefault ? 'noindex,follow' : null,
       jsonld: [

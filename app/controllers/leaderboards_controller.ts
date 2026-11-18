@@ -142,7 +142,12 @@ export default class LeaderboardsController {
       move: (e) => snapshot.history?.moves[e.puuid]?.lp ?? null,
       wr: winRate,
     })
-    const { rows: shown, page, pages, total } = pageOf(sorted, pageParam(request.input('page')), PAGE)
+    const {
+      rows: shown,
+      page,
+      pages,
+      total,
+    } = pageOf(sorted, pageParam(request.input('page')), PAGE)
     // The top five: #1 on the leader banner, #2 to #5 as small cards beside it.
     const podiumEntries = snapshot.entries.slice(0, 5)
     const [scores, podiumScores] = await Promise.all([
@@ -188,9 +193,11 @@ export default class LeaderboardsController {
           ? `${count(snapshot.entries.length)} apex players on ${server.label} ranked by LP. ${leader.gameName} leads with ${count(leader.lp)} LP.`
           : `The Solo/Duo apex ladder of ${server.label}, ranked by LP.`,
         path: `/leaderboards/solo${server.slug === DEFAULT_SERVER.slug ? '' : `?region=${server.slug}`}`,
-        image: '/og/home.jpg',
+        image: `/og/leaderboards/solo.jpg${server.slug === DEFAULT_SERVER.slug ? '' : `?region=${server.slug}`}`,
         version: today(),
-        alt: `The ${server.label} Solo/Duo ladder on invade.lol`,
+        alt: leader?.gameName
+          ? `The ${server.label} Solo/Duo ladder: ${leader.gameName} first with ${count(leader.lp)} LP, over their champion's splash art, a poro bouncer at the door`
+          : `The ${server.label} Solo/Duo ladder, a poro bouncer at the door`,
       }),
       robots: filtered ? 'noindex,follow' : null,
       jsonld: [
@@ -278,9 +285,9 @@ export default class LeaderboardsController {
         title: `Flex ladder, ${server.label}: who queues with whom`,
         description: `Ranked flex players Invade knows on ${server.label}, ranked by rank and LP, with the friends they queue with.`,
         path: `/leaderboards/flex${server.slug === DEFAULT_SERVER.slug ? '' : `?region=${server.slug}`}`,
-        image: '/og/home.jpg',
+        image: `/og/leaderboards/flex.jpg${server.slug === DEFAULT_SERVER.slug ? '' : `?region=${server.slug}`}`,
         version: today(),
-        alt: `The ${server.label} flex ladder on invade.lol`,
+        alt: `The ${server.label} flex ladder, with two poros side by side`,
       }),
       robots: filtered || !ladder.players.length ? 'noindex,follow' : null,
       jsonld: [
@@ -449,9 +456,9 @@ export default class LeaderboardsController {
         title: `One-tricks, ${server.label}: the best player of every champion`,
         description: `${count(all.length)} one-tricks in Master and above on ${server.label}: players with at least half of their ranked games on one champion.`,
         path: `/leaderboards/one-tricks${server.slug === DEFAULT_SERVER.slug ? '' : `?region=${server.slug}`}`,
-        image: '/og/home.jpg',
+        image: `/og/leaderboards/one-tricks.jpg${server.slug === DEFAULT_SERVER.slug ? '' : `?region=${server.slug}`}`,
         version: today(),
-        alt: `One-tricks on ${server.label} on invade.lol`,
+        alt: `One-tricks on ${server.label}: the best one-trick, their champion's splash art and LP`,
       }),
       robots:
         role || recent || asked || bestPage.page > 1 || sort !== 'lp' || order.dir === 'asc'
@@ -502,7 +509,12 @@ export default class LeaderboardsController {
     )
     const order = sortParam(request.input('sort'), request.input('dir'), ['rank', 'move'])
     const sorted = ordered(list, order, { move: (r) => r.move?.lp ?? null })
-    const { rows: shown, page, pages, total } = pageOf(sorted, pageParam(request.input('page')), PAGE)
+    const {
+      rows: shown,
+      page,
+      pages,
+      total,
+    } = pageOf(sorted, pageParam(request.input('page')), PAGE)
     const podium = ladder.rows.slice(0, 3)
     const ids = [...new Set([...shown, ...podium].map((r) => r.playerId))]
     const records = await proService.records(ids).catch(() => new Map())
@@ -581,9 +593,9 @@ export default class LeaderboardsController {
           ? `${count(ladder.total)} ${league ? `${league.code} ` : ''}pros in Master and above, ranked by their best account. ${podium[0].pro.name} leads with ${count(podium[0].account.lp)} LP.`
           : 'Every pro ranked by LP, with their moves of the last 24 hours.',
         path: '/leaderboards/pros',
-        image: '/og/pros/all.jpg',
+        image: `/og/pros/${league ? league.slug : 'all'}.jpg`,
         version: today(),
-        alt: 'The pro ladder on invade.lol',
+        alt: `Photos of the five best ${league ? `${league.code} ` : ''}pros by LP, with a poro holding a foam finger`,
       }),
       robots: filtered ? 'noindex,follow' : null,
       jsonld: [

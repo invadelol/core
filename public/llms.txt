@@ -1,0 +1,47 @@
+# invade.lol
+
+> invade.lol is a League of Legends statistics website and the home of Invade, a free desktop companion app for Windows and macOS. It shows player profiles (rank, match history, a 0 to 100 score for every game), champion statistics computed from its own collection of ranked games, tier lists, ladders, and professional players and teams in solo queue.
+
+All statistics come from ranked games read through Riot Games' official API and stored by invade.lol. Champion statistics default to the current patch and the Emerald+ rank group. Patch names follow Riot's current naming (patch 26.22 is game version 16.22). invade.lol is not endorsed by Riot Games.
+
+## Players
+
+- [Player profile](https://invade.lol/Name-TAG): a player's rank and LP, LP history, recent match history and champion pool. The address is the Riot ID with `#` replaced by `-` (Riot ID `Faker#KR1` is `/Faker-KR1`).
+- Profile tabs: `/Name-TAG/matches` (full match history), `/Name-TAG/champions` (champion statistics), `/Name-TAG/mastery` (champion mastery), `/Name-TAG/friends` (players they queue with), `/Name-TAG/lens` (their recent games in one role rated domain by domain: laning, farming, teamfighting, vision, objectives, survival and consistency).
+- [Match page](https://invade.lol/Name-TAG/match/EUW1_1234567890): one game seen by one of its players: scoreboard, gold, timeline, builds and the Invade score of all ten players.
+- [Search](https://invade.lol/search?q=Name%23TAG): opens a player, a champion, a pro or a team.
+- The Invade score rates one player's game from 0 to 100 against the Emerald pace of their role and against the lobby. About 41 is an average Emerald game, 60 and more is very good, 80 and more exceptional.
+
+## Champions
+
+- [Tier list](https://invade.lol/tier-list): every champion of every role ranked by tier (S+ to D) and win rate. One role: `/tier-list?role=top|jungle|mid|bot|support`.
+- [Champion page](https://invade.lol/champions/ahri): a champion's build, runes, skill order, counters and statistics in a role. Tabs: `/champions/<slug>/build`, `/runes`, `/items`, `/matchups`, `/statistics`, `/pros`. Role: `?role=mid`.
+- [Matchup](https://invade.lol/champions/ahri/matchups/zed): two champions in the same lane, side by side.
+- [Item tier list](https://invade.lol/tier-list/items), [rune tier list](https://invade.lol/tier-list/runes), [duo tier list](https://invade.lol/tier-list/duos) (bot lane; `?lane=mid` and `?lane=top` pair with the jungle), [ARAM tier list](https://invade.lol/tier-list/aram).
+- [Stats](https://invade.lol/stats): every champion of a role in one table, with views for the early game, game length, first blood, items, regions and the patch (`?view=early|length|firstblood|items|regions|patch`).
+- [Patch notes](https://invade.lol/patch): each patch's champion, item and mode changes, with how the changed champions did. One patch: `/patch/26.22`.
+
+## Ladders
+
+- [Solo/Duo ladder](https://invade.lol/leaderboards/solo): Challenger, Grandmaster and Master of a server ranked by LP. Server: `?region=euw|eune|na|kr|br|lan|las|jp|oce|tr|vn|tw|sea|me|ru`.
+- [Flex ladder](https://invade.lol/leaderboards/flex): ranked flex players and who they queue with.
+- [One-tricks](https://invade.lol/leaderboards/one-tricks): apex players with at least half of their ranked games on one champion.
+- [Pro ladder](https://invade.lol/leaderboards/pros): professional players ranked by the LP of their best solo queue account.
+
+## Esports
+
+- [Esports](https://invade.lol/esports): professional matches live and next, and the leagues.
+- [Leagues](https://invade.lol/leagues) and one league: `/league/<slug>` (for example `/league/lec`).
+- [Pros](https://invade.lol/pros): professional players with their solo queue accounts; one league: `/pros?league=lck`.
+- [Teams](https://invade.lol/teams). One pro: `/pro/<slug>`; one team: `/team/<slug>`.
+
+## Desktop app
+
+- [Invade for desktop](https://invade.lol/app): a free League of Legends companion app for Windows and macOS: objective timers and the player's pace during a game, runes set in champ select, a score for every game, and automatic clips of the best moments.
+- [Release notes](https://invade.lol/app/changelog); one version: `/app/changelog/0.3.8`.
+
+## About
+
+- [Contact](https://invade.lol/contact): the Discord server for help and feedback, and the X account for news.
+- [Privacy policy](https://invade.lol/privacy) and [legal notice and terms](https://invade.lol/legal).
+- [Sitemap](https://invade.lol/sitemap.xml).
