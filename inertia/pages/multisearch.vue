@@ -462,7 +462,7 @@ onBeforeUnmount(() => controller?.abort())
           @removed="dropped"
         >
           <Select v-model="regionValue" :options="regionOptions" width="10rem" align="right" />
-          <button class="btn lg pri" type="submit"><Icon name="search" />Scout</button>
+          <button class="btn pri ms-go" type="submit"><Icon name="search" />Scout</button>
         </LobbyField>
       </form>
 
