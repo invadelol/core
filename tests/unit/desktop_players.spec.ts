@@ -15,6 +15,7 @@ import { apiPuuid } from '#tests/fixtures/desktop'
 import { DesktopSeed, TRUSTED } from '#tests/fixtures/desktop_db'
 import type { PlayerStatus } from '#services/desktop/player_snapshot_service'
 import { forceSwitches } from '#services/desktop/switches'
+import { until } from '#tests/fixtures/until'
 
 /**
  * Player snapshots (docs/desktop-sync.md §6) against the isolated Postgres
@@ -571,8 +572,9 @@ test.group('Desktop player snapshots', (group) => {
     // An Emerald claim for a Silver player, from a device that earned trust.
     const claim = snapshot({ gameName: player.game_name })
     assert.equal(await statusOf(device, claim), 'applied')
-    assert.isTrue(playerSnapshotService.audits.has(`player:${player.puuid}:${claim.observedAt}`))
-    await new Promise((resolve) => setTimeout(resolve, 60))
+    const audit = `player:${player.puuid}:${claim.observedAt}`
+    assert.isTrue(playerSnapshotService.audits.has(audit))
+    await until(() => !playerSnapshotService.audits.has(audit))
 
     assert.deepEqual(leagueCalls, [player.puuid])
     const revoked = await DesktopDevice.findOrFail(device.id)
@@ -608,8 +610,11 @@ test.group('Desktop player snapshots', (group) => {
         ],
       },
     } as unknown as typeof client
-    assert.equal(await statusOf(device, snapshot({ gameName: player.game_name })), 'applied')
-    await new Promise((resolve) => setTimeout(resolve, 60))
+    const claim = snapshot({ gameName: player.game_name })
+    assert.equal(await statusOf(device, claim), 'applied')
+    const audit = `player:${player.puuid}:${claim.observedAt}`
+    assert.isTrue(playerSnapshotService.audits.has(audit))
+    await until(() => !playerSnapshotService.audits.has(audit))
     const kept = await DesktopDevice.findOrFail(device.id)
     assert.isNull(kept.revokedAt)
     assert.equal(kept.mismatches, 0)

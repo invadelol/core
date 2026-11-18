@@ -16,6 +16,7 @@ import { apiPuuids, makeUpload, riotMatch, UPLOADER_PARTICIPANT } from '#tests/f
 import { DesktopSeed, TRUSTED, type DeviceCounters } from '#tests/fixtures/desktop_db'
 import type { MatchUpload } from '#types/desktop'
 import { forceSwitches } from '#services/desktop/switches'
+import { until } from '#tests/fixtures/until'
 
 /**
  * The publication policy (docs/desktop-sync.md §4.2) against the isolated
@@ -195,7 +196,7 @@ test.group('Desktop publication policy', (group) => {
       const { players, duration } = uploadFacts(upload)
       return { duration, mapId: 11, players }
     }
-    await new Promise((resolve) => setTimeout(resolve, 60))
+    await until(() => !publicationService.retries.has(`audit:${upload.matchId}`))
     assert.equal(await verificationOf(upload.matchId), 'verified')
     assert.equal(await verifiedUploads(device.id), 8)
   })
@@ -304,18 +305,25 @@ test.group('Desktop publication policy', (group) => {
     assert,
   }) => {
     publicationService.budget = new RiotBudget(0)
+    // A retry every 10 ms for 3 s: the own game is still waiting whenever the budget is back,
+    // however long seeding the observed game takes.
+    publicationService.retries = new RetryScheduler(
+      Array.from({ length: 300 }, (_, i) => (i + 1) * 10)
+    )
     const own = await scenario()
+    const retry = `publish:${own.upload.matchId}:${own.device.id}`
     riot(riotMatch(own.upload, own.puuids))
     assert.equal(await statusOf(own.upload, own.device), 'deferred')
-    assert.isTrue(publicationService.retries.has(`publish:${own.upload.matchId}:${own.device.id}`))
+    assert.isTrue(publicationService.retries.has(retry))
 
     const seen = await observedScenario()
     assert.equal(await statusOf(seen.upload, seen.device), 'skipped')
     assert.deepEqual(calls.match, [])
+    assert.isTrue(publicationService.retries.has(retry))
 
     // The budget is back: the own game's retry goes through.
     publicationService.budget = new RiotBudget(1000)
-    await new Promise((resolve) => setTimeout(resolve, 40))
+    await until(() => !publicationService.retries.has(retry))
     assert.deepEqual(calls.match, [own.upload.matchId])
     assert.lengthOf(ingested.matches, 1)
   })
@@ -329,7 +337,7 @@ test.group('Desktop publication policy', (group) => {
     assert.lengthOf(ingested.matches, 0)
     assert.isTrue(publicationService.retries.has(`publish:${upload.matchId}:${device.id}`))
 
-    await new Promise((resolve) => setTimeout(resolve, 80))
+    await until(() => !publicationService.retries.has(`publish:${upload.matchId}:${device.id}`))
     assert.lengthOf(calls.match, 3)
     assert.lengthOf(ingested.matches, 1)
     const row = await db

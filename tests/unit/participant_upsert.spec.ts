@@ -3,7 +3,9 @@ import { randomUUID } from 'node:crypto'
 import db from '@adonisjs/lucid/services/db'
 import summonerService from '#services/summoner_service'
 
-const puuid = (tag: string) => `upsert-${tag}-${randomUUID()}`.padEnd(78, 'x').slice(0, 78)
+// 78 characters like a Riot PUUID, ending in random hex: the tests name players after the
+// last 6, which must differ between runs (a leftover row would hit the Riot ID constraint).
+const puuid = (tag: string) => `upsert-${tag}-`.padEnd(42, 'x') + randomUUID()
 
 test.group('Participant upsert', (group) => {
   const created: string[] = []
