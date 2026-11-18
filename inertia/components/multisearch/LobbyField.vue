@@ -4,7 +4,7 @@ import Icon from '../ui/Icon.vue'
 import RankEmblem from '../ui/RankEmblem.vue'
 import { profileIcon, regionLabel } from '../../lib/assets.js'
 import { regionFlag } from '../../lib/flags.js'
-import { rankWords, since } from '../../lib/ladders.js'
+import { rankWords } from '../../lib/ladders.js'
 import { MAX_PLAYERS, parseRiotIds, type RiotIdentity } from '../../lib/multisearch.js'
 import { recentPlayers, type RecentPlayer } from '../../lib/recent.js'
 
@@ -383,31 +383,36 @@ const capacity = computed(() => (chips.value.length > 5 ? MAX_PLAYERS : 5))
     </div>
 
     <div v-if="open" :id="listId" class="panel ms-sg" role="listbox" :aria-label="heading">
-      <div class="sg-h">{{ heading }}</div>
-      <div
-        v-for="(s, i) in suggestions"
-        :id="`${listId}-${i}`"
-        :key="s.puuid"
-        class="sg-r"
-        :class="{ act: i === active }"
-        role="option"
-        :aria-selected="i === active"
-        @mouseenter="active = i"
-        @mousedown.prevent="choose(s)"
-      >
-        <img class="ms-pi" :src="profileIcon(s.profileIconId)" alt="" decoding="async" />
-        <span class="sg-t ms-sgt">
-          <b
+      <div class="lf-h">{{ heading }}</div>
+      <div class="lf-list">
+        <div
+          v-for="(s, i) in suggestions"
+          :id="`${listId}-${i}`"
+          :key="s.puuid"
+          class="lf-r"
+          :class="{ act: i === active }"
+          role="option"
+          :aria-selected="i === active"
+          @mouseenter="active = i"
+          @mousedown.prevent="choose(s)"
+        >
+          <span class="lf-i"
+            ><img
+              :src="profileIcon(s.profileIconId)"
+              alt=""
+              width="28"
+              height="28"
+              decoding="async"
+          /></span>
+          <span class="lf-n"
             >{{ marked(s.gameName)[0] }}<mark>{{ marked(s.gameName)[1] }}</mark
-            >{{ marked(s.gameName)[2] }} <span class="t3">#{{ s.tagLine }}</span></b
+            >{{ marked(s.gameName)[2] }}<span class="lf-tag">&nbsp;#{{ s.tagLine }}</span></span
           >
-          <span v-if="rankLine(s)" class="num"
-            ><RankEmblem :tier="s.recent!.rank!.tier" :size="15" />{{ rankLine(s)
-            }}<template v-if="s.summonerLevel"
-              ><span class="t4">·</span>Level {{ s.summonerLevel }}</template
-            ></span
+          <span v-if="s.recent" class="lf-rec">Recent</span>
+          <span v-if="rankLine(s)" class="lf-m num"
+            ><RankEmblem :tier="s.recent!.rank!.tier" :size="16" />{{ rankLine(s) }}</span
           >
-          <span v-else class="num"
+          <span v-else class="lf-m num"
             ><img
               v-if="s.platform"
               :src="regionFlag(s.platform)"
@@ -418,24 +423,11 @@ const capacity = computed(() => (chips.value.length > 5 ? MAX_PLAYERS : 5))
             />{{ regionLabel(s.platform)
             }}<template v-if="s.summonerLevel">, level {{ s.summonerLevel }}</template></span
           >
-        </span>
-        <span v-if="s.recent" class="ms-rec"
-          ><Icon name="clock" :size="13" />Searched {{ since(s.recent.at) }}</span
-        >
-        <span v-if="i === active" class="ms-add" :class="{ r: s.recent }">Enter</span>
+        </div>
       </div>
       <p v-if="!suggestions.length" class="ms-none">
         No stored player named “{{ term }}”. Type the whole Name#TAG.
       </p>
-      <div class="panel-f" aria-hidden="true">
-        <span><span class="kbd">↑</span><span class="kbd">↓</span>move</span>
-        <span><span class="kbd">Enter</span>add</span>
-        <span><span class="kbd">,</span>next name</span>
-        <span><span class="kbd">⌫</span>remove the last</span>
-        <span v-if="region !== 'auto'" style="margin-left: auto"
-          >Searching {{ region.toUpperCase() }} first</span
-        >
-      </div>
     </div>
   </div>
 </template>
@@ -569,57 +561,88 @@ const capacity = computed(() => (chips.value.length > 5 ? MAX_PLAYERS : 5))
 .ms-sg .sg-r {
   cursor: pointer;
 }
-.ms-pi {
-  width: 36px;
-  height: 36px;
-  flex: none;
-  border-radius: 8px;
-  object-fit: cover;
+/* The suggestions read like the header's search: one line a player, a quiet highlight. */
+.lf-h {
+  padding: 12px 18px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--t4);
+  user-select: none;
 }
-.ms-sgt {
+.lf-list {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
-  min-width: 0;
+  padding: 0 8px 8px;
 }
-.ms-sgt > span {
+.lf-r {
   display: flex;
-  justify-content: flex-start;
   align-items: center;
-  gap: 6px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--t3);
+  gap: 12px;
+  height: 42px;
+  padding: 0 10px;
+  border-radius: 9px;
+  font-size: 14.5px;
   white-space: nowrap;
+  cursor: pointer;
+  transition: background 120ms var(--ease);
 }
-.ms-rec {
+.lf-r.act {
+  background: rgb(255 255 255 / 0.06);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
+}
+.lf-i {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--s3);
+}
+.lf-i img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.lf-n {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+  color: var(--t1);
+}
+.lf-n mark {
+  background: none;
+  color: inherit;
+  font-weight: 750;
+}
+.lf-tag {
+  font-weight: 500;
+  color: var(--t4);
+}
+.lf-rec {
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--t4);
+}
+.lf-m {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
+  flex: none;
   margin-left: auto;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--t3);
-  white-space: nowrap;
-}
-.ms-add {
-  margin-left: auto;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--v200);
-}
-.ms-add.r {
-  margin-left: 10px;
 }
 .ms-none {
   margin: 0;
   padding: 6px 18px 14px;
   font-size: 13px;
   color: var(--t3);
-}
-.ms-sg .panel-f {
-  margin-top: 8px;
 }
 .ms-spin {
   width: 14px;
@@ -659,8 +682,7 @@ const capacity = computed(() => (chips.value.length > 5 ? MAX_PLAYERS : 5))
   .ms-typed {
     min-width: 120px;
   }
-  .ms-rec,
-  .ms-sg .panel-f {
+  .lf-rec {
     display: none;
   }
 }
