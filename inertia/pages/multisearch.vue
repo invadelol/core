@@ -469,6 +469,16 @@ onBeforeUnmount(() => controller?.abort())
       <section v-if="entries.length || lobbies.length" class="sec" style="padding-top: 24px">
         <div v-if="entries.length" class="msg" :class="{ many: entries.length > 5 }">
           <div v-for="e in entries" :key="e.key" class="card msc">
+            <button
+              v-if="e.status === 'ready'"
+              class="ms-x"
+              type="button"
+              :aria-label="`Remove ${e.identity.gameName}`"
+              title="Remove"
+              @click="remove(e)"
+            >
+              <Icon name="x" :size="14" />
+            </button>
             <template v-if="e.status === 'loading'">
               <div class="top2"><Skeleton :height="120" /></div>
               <div class="sec3"><Skeleton :rows="4" /></div>
@@ -549,21 +559,12 @@ onBeforeUnmount(() => controller?.abort())
                 <span
                   v-for="t in tagsOf(e)"
                   :key="t.text"
-                  class="tagx"
+                  class="tagx ms-tag"
                   :class="{ vi: t.violet }"
-                  style="height: 24px; font-size: 12px"
                   >{{ t.text }}</span
                 >
                 <span v-if="e.syncing" class="meta">Updating</span>
                 <span v-else-if="e.note" class="meta">{{ e.note }}</span>
-                <button
-                  class="btn sm ms-x"
-                  type="button"
-                  :aria-label="`Remove ${e.summoner.gameName}`"
-                  @click="remove(e)"
-                >
-                  <Icon name="x" />
-                </button>
               </div>
             </template>
           </div>
