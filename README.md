@@ -271,6 +271,8 @@ See [docs/design.md](docs/design.md) for the tokens, themes and primitives, and
 | `DESKTOP_PLAYERS_ENABLED` | no | Desktop player reports on/off, needs uploads on (default false) |
 | `DESKTOP_RESOLVE_ENABLED` | no | Desktop Riot ID onboarding on/off (default true) |
 | `DESKTOP_MIN_APP_VERSION` | no | Oldest desktop app version told to upload (default none) |
+| `BETA_GITHUB_TOKEN` | no | Read-only token on the private repo of beta installers; unset, beta downloads answer 503 |
+| `BETA_GITHUB_REPO` | no | That repo (default `invadelol/beta`) |
 
 See `.env.example` for all defaults.
 

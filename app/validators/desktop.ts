@@ -218,3 +218,33 @@ export const crashesValidator = vine.compile(
       .maxLength(MAX_CRASH_REPORTS),
   })
 )
+
+const betaVersion = () =>
+  vine
+    .string()
+    .trim()
+    .maxLength(40)
+    .regex(/^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$/)
+
+/** `GET /beta/feed/:target` (§8). */
+export const betaFeedValidator = vine.compile(
+  vine.object({ target: vine.enum(['windows-x86_64', 'darwin-aarch64', 'darwin-x86_64']) })
+)
+
+/** `POST /beta/feedback` (§8): verdicts on a build's tests and/or a free note. */
+export const betaFeedbackValidator = vine.compile(
+  vine.object({
+    version: betaVersion(),
+    results: vine
+      .array(
+        vine.object({
+          test: vine.string().trim().minLength(1).maxLength(16),
+          verdict: vine.enum(['works', 'broken', 'skipped']),
+          note: vine.string().trim().maxLength(1000).optional(),
+        })
+      )
+      .maxLength(50)
+      .optional(),
+    note: vine.string().trim().minLength(1).maxLength(4000).optional(),
+  })
+)

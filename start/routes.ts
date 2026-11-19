@@ -32,6 +32,7 @@ const AssetsController = () => import('#controllers/assets_controller')
 const DownloadsController = () => import('#controllers/downloads_controller')
 const AppPageController = () => import('#controllers/app_page_controller')
 const DesktopController = () => import('#controllers/desktop_controller')
+const DesktopBetaController = () => import('#controllers/desktop_beta_controller')
 const HomeController = () => import('#controllers/home_controller')
 const LensController = () => import('#controllers/lens_controller')
 const RuneStatsController = () => import('#controllers/rune_stats_controller')
@@ -161,6 +162,15 @@ router
         router.post('/matches/known', [DesktopController, 'known']).use(middleware.desktopAuth())
         router.post('/players', [DesktopController, 'players']).use(middleware.desktopAuth())
         router.post('/crashes', [DesktopController, 'crashes']).use(middleware.desktopAuth())
+        router.get('/beta', [DesktopBetaController, 'show']).use(middleware.desktopAuth())
+        router
+          .get('/beta/feed/:target', [DesktopBetaController, 'feed'])
+          .use(middleware.desktopAuth())
+        router
+          .post('/beta/feedback', [DesktopBetaController, 'feedback'])
+          .use(middleware.desktopAuth())
+        // Signed by core itself (a short-lived link from the feed), not by the device.
+        router.get('/beta/download/:token', [DesktopBetaController, 'download'])
       })
       .prefix('/desktop')
   })
