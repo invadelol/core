@@ -34,6 +34,7 @@ import ChampionsTable from '../components/profile/ChampionsTable.vue'
 import { champIcon, championName } from '../lib/assets.js'
 import type { IconName } from '../lib/icons.js'
 import { profilePath } from '../lib/format.js'
+import { useStickyColumn } from '../lib/sticky_column.js'
 import '../css/profile.css'
 
 /** The match list's filters: queue, champion, role (the API's own values). */
@@ -673,10 +674,12 @@ const nav = computed(() => [
   },
   { key: 'compare', label: 'Compare', href: `${base.value}/compare`, icon: 'compare' as IconName },
 ])
-/** The Matches and Lens routes belong to the Overview. */
-const navActive = computed(() =>
-  ['matches', 'lens'].includes(section.value) ? 'overview' : section.value
-)
+/** The Matches and Lens routes belong to the Overview: they keep its summary at the left. */
+const inOverview = computed(() => ['overview', 'matches', 'lens'].includes(section.value))
+const navActive = computed(() => (inOverview.value ? 'overview' : section.value))
+/** The whole left column (rail and summary) stays in view beside the section. */
+const side = ref<HTMLElement | null>(null)
+useStickyColumn(side)
 const championOptions = computed(() => [
   { value: 0, label: 'All champions' },
   ...champions.value.map((c) => ({
@@ -704,10 +707,12 @@ function clearFilters() {
     <div class="wrap pg-pf">
       <!-- Loading: the shape of the profile that is coming -->
       <div v-if="isLoading" class="pl" aria-busy="true">
-        <aside class="pl-rail">
-          <div class="card pl-sec"><Skeleton :height="232" /></div>
-          <div class="card pl-sec"><Skeleton :rows="5" /></div>
-        </aside>
+        <div class="pl-side">
+          <aside class="pl-rail">
+            <div class="card pl-sec"><Skeleton :height="232" /></div>
+            <div class="card pl-sec"><Skeleton :rows="5" /></div>
+          </aside>
+        </div>
         <div class="pl-main">
           <div class="card pf"><Skeleton :height="260" /></div>
           <div class="card" style="padding: 16px"><Skeleton :rows="6" pic /></div>
@@ -740,43 +745,46 @@ function clearFilters() {
       </EmptyState>
 
       <div v-else-if="profile" class="pl">
-        <!-- The rail: who, where to go, the rank -->
-        <aside class="pl-rail">
-          <ProfileId
-            :summoner="profile"
-            :roles="roles"
-            :last-game-ms="lastGameMs"
-            :view-count="viewCount"
-            :is-syncing="isSyncing"
-            :sync-message="syncMessage"
-            :pro="props.pro ?? null"
-            :champion="mainChampion"
-            :compare-href="`${base}/compare`"
-            @sync="sync"
-            @share="shareOpen = true"
-          />
-          <ProfileNav :items="nav" :active="navActive" />
-          <div v-if="pending.ranks" class="card pl-sec"><Skeleton :height="96" /></div>
-          <RankedCard v-else :ranks="ranks" />
-        </aside>
+        <!-- The left column, sticky beside the section (wide screens) -->
+        <div ref="side" class="pl-side">
+          <!-- The rail: who, where to go, the rank -->
+          <aside class="pl-rail">
+            <ProfileId
+              :summoner="profile"
+              :roles="roles"
+              :last-game-ms="lastGameMs"
+              :view-count="viewCount"
+              :is-syncing="isSyncing"
+              :sync-message="syncMessage"
+              :pro="props.pro ?? null"
+              :champion="mainChampion"
+              :compare-href="`${base}/compare`"
+              @sync="sync"
+              @share="shareOpen = true"
+            />
+            <ProfileNav :items="nav" :active="navActive" />
+            <div v-if="pending.ranks" class="card pl-sec"><Skeleton :height="96" /></div>
+            <RankedCard v-else :ranks="ranks" />
+          </aside>
 
-        <!-- The Overview's own rail: LP, champions, roles, mates, activity -->
-        <aside v-if="section === 'overview'" class="pl-more" aria-label="Summary">
-          <LpCard v-if="!pending.ranks" :ranks="ranks" />
-          <div v-if="pending.champions || pending.matches" class="card pl-sec">
-            <Skeleton :rows="5" pic />
-          </div>
-          <SideCards
-            v-else
-            :champions="champions"
-            :matches="matches"
-            :teammates="teammates"
-            :puuid="profile.puuid"
-            :champions-href="`${base}/champions`"
-            :friends-href="`${base}/friends`"
-          />
-          <ActivityCard v-if="!pending.activity && activity.length" :activity="activity" />
-        </aside>
+          <!-- The Overview's own rail: LP, champions, roles, mates, activity -->
+          <aside v-if="inOverview" class="pl-more" aria-label="Summary">
+            <LpCard v-if="!pending.ranks" :ranks="ranks" />
+            <div v-if="pending.champions || pending.matches" class="card pl-sec">
+              <Skeleton :rows="5" pic />
+            </div>
+            <SideCards
+              v-else
+              :champions="champions"
+              :matches="matches"
+              :teammates="teammates"
+              :puuid="profile.puuid"
+              :champions-href="`${base}/champions`"
+              :friends-href="`${base}/friends`"
+            />
+            <ActivityCard v-if="!pending.activity && activity.length" :activity="activity" />
+          </aside>
+        </div>
 
         <div class="pl-main">
           <p v-if="failedPanels.length" class="pf-note" role="alert">
