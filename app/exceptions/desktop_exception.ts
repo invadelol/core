@@ -50,6 +50,15 @@ export class DesktopException extends Exception {
     return new DesktopException('Summoner not found', 404, 'E_SUMMONER_NOT_FOUND')
   }
 
+  /** Beta routes (§8): the device has no linked account with a live beta grant. */
+  static notBetaTester() {
+    return new DesktopException('This device is not in the beta', 403, 'E_NOT_BETA')
+  }
+
+  static noBetaBuild() {
+    return new DesktopException('No such beta build', 404, 'E_NO_BETA_BUILD')
+  }
+
   static rateLimited(retryAfter: number) {
     return new DesktopException('Too many requests', 429, 'E_RATE_LIMITED', retryAfter)
   }
