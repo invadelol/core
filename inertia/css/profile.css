@@ -10,27 +10,26 @@
   .vb .pl {
     display: grid;
     grid-template-columns: 300px minmax(0, 1fr);
-    grid-template-rows: auto 1fr;
-    grid-template-areas:
-      'rail main'
-      'more main';
+    grid-template-areas: 'side main';
     column-gap: 32px;
     row-gap: 20px;
     align-items: start;
     padding: 32px 0 8px;
   }
+  /* The whole left column holds beside the section; lib/sticky_column.ts sets its `top`, so a
+     column taller than the window still shows all of itself as the page scrolls. */
+  .vb .pl-side {
+    grid-area: side;
+    position: sticky;
+    top: 16px;
+  }
+  .vb .pl-side,
   .vb .pl-rail,
   .vb .pl-more {
     display: flex;
     flex-direction: column;
     gap: 20px;
     min-width: 0;
-  }
-  .vb .pl-rail {
-    grid-area: rail;
-  }
-  .vb .pl-more {
-    grid-area: more;
   }
   .vb .pl-main {
     grid-area: main;
@@ -885,6 +884,16 @@
         'more';
       row-gap: 24px;
       padding-top: 20px;
+    }
+    /* One column: the rail, the section, then the summary, none of them sticky. */
+    .vb .pl-side {
+      display: contents;
+    }
+    .vb .pl-rail {
+      grid-area: rail;
+    }
+    .vb .pl-more {
+      grid-area: more;
     }
     .vb .pl-rail {
       display: grid;
