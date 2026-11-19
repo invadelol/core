@@ -170,6 +170,8 @@ export function fallbackSources(kind: AssetKind, id: string, release: Release = 
       return mapSources(id, release)
     case 'mastery':
       return masterySources(id, release)
+    case 'ward':
+      return [`${root}/content/src/leagueclient/wardskinimages/wardhero_${id}.png`]
     default:
       return []
   }
@@ -331,7 +333,7 @@ export function parseManifest(kind: AssetKind, raw: any, release: Release = LATE
     if (!id || id === '-1') continue
 
     const iconPath: string | undefined =
-      row.squarePortraitPath ?? row.iconPath ?? row.augmentSmallIconPath
+      row.squarePortraitPath ?? row.iconPath ?? row.augmentSmallIconPath ?? row.wardImagePath
     const sources: string[] = []
 
     if (iconPath) sources.push(gameDataUrl(iconPath, release))

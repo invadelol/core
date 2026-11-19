@@ -45,6 +45,7 @@ live cache lifetime, which keeps the mirror bounded to six copies of the art.
 | `emblem` | tier | `rcp-fe-lol-static-assets/…/images/ranked-emblem/emblem-<tier>.png` (1280×720, crest in the middle) | — |
 | `map` | map id (`11`) | Data Dragon `cdn/<version>/img/map/map<id>.png` first | `v1/map-assets/map<id>/2dlevelminimap.png` |
 | `mastery` | champion mastery level, `0` to `10` (levels past ten wear the tenth crest) | `game/assets/ux/mastery/legendarychampionmastery/masterycrest_level<n>.png` (256×256; 0 and 4 to 10 only) | `rcp-fe-lol-shared-components/global/default/mastery-<n>.png` (800×900, crest in the middle; 1 to 10) |
+| `ward` | ward skin id (`3`) | `v1/ward-skins.json` → `wardImagePath` | `content/src/leagueclient/wardskinimages/wardhero_<id>.png` |
 
 Ids resolve through Community Dragon's manifests rather than hand-built paths,
 because the shape of the asset paths changes between patches while the
