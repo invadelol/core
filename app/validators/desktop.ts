@@ -246,5 +246,48 @@ export const betaFeedbackValidator = vine.compile(
       .maxLength(50)
       .optional(),
     note: vine.string().trim().minLength(1).maxLength(4000).optional(),
+    rating: vine.number().withoutDecimals().range([1, 5]).optional(),
+    comment: vine.string().trim().maxLength(2000).optional(),
+  })
+)
+
+/** `GET /reports/similar` (§9.1). */
+export const similarReportsValidator = vine.compile(
+  vine.object({ q: vine.string().trim().minLength(2).maxLength(120) })
+)
+
+/** `POST /reports` (§9.2): files are base64 and checked for size once decoded. */
+export const bugReportValidator = vine.compile(
+  vine.object({
+    title: vine.string().trim().maxLength(120).optional(),
+    body: vine.string().trim().minLength(1).maxLength(4000),
+    page: vine.string().trim().maxLength(40).optional(),
+    area: vine
+      .enum([
+        'Overlay',
+        'Champ select',
+        'Recording',
+        'Profile & stats',
+        'Sync',
+        'Install & updates',
+        'Website',
+        'Other',
+      ])
+      .optional(),
+    inGame: vine.string().trim().maxLength(120).optional(),
+    diagnostics: vine.string().maxLength(30000).optional(),
+    screenshot: vine.string().maxLength(4_200_000).optional(),
+    clip: vine
+      .object({
+        name: vine.string().trim().minLength(1).maxLength(160),
+        data: vine.string().maxLength(14_000_000),
+      })
+      .optional(),
+    discord: vine.boolean().optional(),
+    sameAs: vine
+      .string()
+      .trim()
+      .regex(/^[0-9]{5,25}$/)
+      .optional(),
   })
 )

@@ -719,14 +719,14 @@ after the receipt; reports older than 90 days are deleted as new ones arrive.
   usage-statistics switch. Off, nothing is sent and pending reports are deleted. Debug builds send
   only to a local core (`INVADE_CORE_URL`).
 
-## 8. Beta builds (contract v1.5)
+## 8. Beta builds (contract v1.5, v1.6)
 
 Beta builds of the app go to a few testers before a release. Who is a tester, which builds exist
 and their notes are written in the admin dashboard (`invadelol/admin`, its `admin` schema); core
 only reads them. A device is a tester while one of its linked accounts (§2.3) holds a live `beta`
-grant (`admin.active_entitlement`). Installers are releases of a **private** GitHub repo
-(`BETA_GITHUB_REPO`, default `invadelol/beta`, tag `v<version>`); core streams them, so nobody
-else can download a beta.
+grant (`admin.active_entitlement`). Since v1.6 the installers are uploaded to core by the build
+workflow (§8.6) and kept in core's object storage under a private key; core streams them, so
+nobody else can download a beta.
 
 Versions are semver with a prerelease, e.g. `0.3.5-beta.1`, ordered like semver: a beta comes
 before its release, so a tester moves to the stable `0.3.5` once it is out.
@@ -738,12 +738,13 @@ before its release, so a tester moves to the stable `0.3.5` once it is out.
   "builds": [{ "version": "0.3.5-beta.1", "title": "...", "publishedAt": "2026-10-20T10:00:00.000Z",
                "changes": [{ "text": "..." }], "tests": [{ "id": "k3f9", "title": "...", "detail": "..." }],
                "known": [{ "text": "..." }], "platforms": ["windows-x86_64", "darwin-aarch64"] }],
-  "answers": [{ "version": "0.3.5-beta.1", "test": "k3f9", "verdict": "broken", "note": "..." }] }
+  "answers": [{ "version": "0.3.5-beta.1", "test": "k3f9", "verdict": "broken", "note": "..." }],
+  "ratings": [{ "version": "0.3.5-beta.1", "rating": 4, "comment": "..." }] }
 ```
 
-Not a tester: `{ "tester": false, "label": null, "builds": [], "answers": [] }`. `builds` are the
-five newest live builds, newest first. `answers` are this device's own verdicts. Core records the
-version the app runs (from its `User-Agent`) for the admin's Beta page.
+Not a tester: `{ "tester": false, "label": null, "builds": [], "answers": [], "ratings": [] }`.
+`builds` are the five newest live builds, newest first. `answers` and `ratings` (v1.6) are this
+device's own. Core records the version the app runs (from its `User-Agent`) for the admin.
 
 ### 8.2 `GET /api/desktop/beta/feed/:target` (auth)
 
@@ -764,28 +765,72 @@ to the stable one and offers whichever is newer.
 The link is made by core (HMAC with the app key over version, target, device and expiry), valid
 30 minutes. Core checks again that the device is not revoked and still a tester, then streams the
 installer. 401 for a bad or expired link, 403 `E_NOT_BETA`, 404 `E_NO_BETA_BUILD`, 503
-`E_BETA_UNAVAILABLE` when `BETA_GITHUB_TOKEN` is not set or GitHub fails.
+`E_BETA_UNAVAILABLE` when the storage cannot be read.
 
 ### 8.4 `POST /api/desktop/beta/feedback` (auth, 60 / hour / device)
 
 ```json
 { "version": "0.3.5-beta.1",
   "results": [{ "test": "k3f9", "verdict": "works|broken|skipped", "note": "≤ 1000 chars" }],
-  "note": "≤ 4000 chars, anything else" }
+  "note": "≤ 4000 chars, anything else",
+  "rating": 4, "comment": "≤ 2000 chars" }
 ```
 
-Both parts are optional. A verdict replaces this device's earlier one on the same test; unknown
-test ids are ignored. Answers `{ "results": 1, "note": true }`; 404 `E_NO_BETA_BUILD` for a version
-that is not live.
+Every part is optional. A verdict replaces this device's earlier one on the same test; unknown
+test ids are ignored. `rating` (1 to 5, v1.6) with its optional `comment` replaces this device's
+earlier rating of the build. Answers `{ "results": 1, "note": true, "rating": true }`; 404
+`E_NO_BETA_BUILD` for a version that is not live.
 
 ### 8.5 Database grants (core's role)
 
 ```sql
 GRANT USAGE ON SCHEMA admin TO <core role>;
 GRANT SELECT ON admin.active_entitlement, admin.live_beta_build TO <core role>;
-GRANT SELECT, INSERT, UPDATE ON admin.beta_device, admin.beta_result TO <core role>;
-GRANT SELECT, INSERT ON admin.beta_note TO <core role>;
-GRANT USAGE ON SEQUENCE admin.beta_note_id_seq TO <core role>;
+GRANT SELECT, INSERT, UPDATE ON admin.beta_build, admin.beta_device, admin.beta_result, admin.beta_rating TO <core role>;
+GRANT SELECT, INSERT ON admin.beta_note, admin.bug_report, admin.bug_file TO <core role>;
+GRANT USAGE ON SEQUENCE admin.beta_note_id_seq, admin.bug_report_id_seq, admin.bug_file_id_seq TO <core role>;
 ```
 
-Without them (or without the admin schema), every device is answered as not a tester.
+Without them (or without the admin schema), every device is answered as not a tester and bug
+reports answer 503.
+
+### 8.6 `PUT /api/beta/upload?version=…&target=…&name=…` (build workflow, v1.6)
+
+`Authorization: Bearer <BETA_UPLOAD_SECRET>`, `X-Invade-Signature: <the package's .sig file, base64>`,
+the package itself as an `application/octet-stream` body (at most 200 MB). Core stores it, creates
+the build as a draft when it does not exist yet, and records the package for `target`, replacing
+an earlier upload. Answers `{ "version": "...", "target": "...", "size": 123 }`. 401 without the
+secret (or when `BETA_UPLOAD_SECRET` is not set), 422 for a bad version, target or name.
+
+## 9. Bug reports (contract v1.6)
+
+Every player can report a bug from the app: a title, what happened, an optional screenshot or clip.
+Core keeps the report for the admin and, when the player asks, posts it on the Discord server's bug
+forum through the bot, with the version, system and part of the app as tags. The diagnostics
+(version, system, recent errors) go to the admin only, never to Discord.
+
+### 9.1 `GET /api/desktop/reports/similar?q=…` (auth optional, 60 / hour / device or IP)
+
+An open post of the bug forum whose title looks like `q` (2 to 120 characters), if there is one:
+`{ "match": { "id": "<thread id>", "title": "...", "url": "https://discord.com/channels/…", "players": 3 } }`
+or `{ "match": null }`. `players` counts the people in the thread.
+
+### 9.2 `POST /api/desktop/reports` (auth optional, 10 / hour / device, 20 / hour / IP; at most 16 MB)
+
+```json
+{ "title": "≤ 120 chars", "body": "≤ 4000 chars", "page": "profile",
+  "area": "Overlay|Champ select|Recording|Profile & stats|Sync|Install & updates|Website|Other",
+  "inGame": "Ranked Solo, Ahri, 14:32 (optional, ≤ 120 chars)",
+  "diagnostics": "≤ 30000 chars, the app's Copy diagnostics text",
+  "screenshot": "<base64 JPEG or PNG, ≤ 3 MB once decoded, optional>",
+  "clip": { "name": "Ahri 14-32.mp4", "data": "<base64, ≤ 10 MB once decoded>" },
+  "discord": true, "sameAs": "<thread id from §9.1, optional>" }
+```
+
+`title` and `body` are required unless `sameAs` is set (then `body` alone). Core stores the report
+(source `app`, the device's tester label or linked Riot ID as reporter) with its files, then, when
+`discord` is true, creates a forum post (or, with `sameAs`, a reply in that post) with the title,
+the text, the version and system, the screenshot and the clip. Answers
+`{ "id": 42, "discordUrl": "https://discord.com/channels/…" }` (`discordUrl` null without
+`discord`). A failed Discord post still answers 200 with the report kept and `discordUrl: null`,
+`discordError: true`. 503 `E_REPORTS_UNAVAILABLE` when the admin schema is missing.
