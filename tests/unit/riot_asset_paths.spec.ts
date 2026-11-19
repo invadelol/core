@@ -216,6 +216,25 @@ test.group('Riot asset paths', () => {
     )
   })
 
+  test('ward skins resolve through their picture, then the conventional path', ({ assert }) => {
+    const manifest = parseManifest('ward', [
+      {
+        id: 3,
+        name: 'Widow Ward',
+        wardImagePath: '/lol-game-data/assets/content/src/LeagueClient/WardSkinImages/wardHero_3.png',
+      },
+    ])
+    assert.equal(manifest['3'].name, 'Widow Ward')
+    assert.deepEqual(manifest['3'].sources, [
+      `${CDRAGON_GAME_DATA}/content/src/leagueclient/wardskinimages/wardhero_3.png`,
+    ])
+    assert.deepEqual(fallbackSources('ward', '7'), [
+      `${CDRAGON_GAME_DATA}/content/src/leagueclient/wardskinimages/wardhero_7.png`,
+    ])
+    assert.deepEqual(parseAssetRequest('ward', '3.png'), { kind: 'ward', id: '3' })
+    assert.isNull(parseAssetRequest('ward', '../3'))
+  })
+
   test('champion art: splash, centred crop, loading screen and abilities', ({ assert }) => {
     const art = parseChampion({
       alias: 'Aatrox',
