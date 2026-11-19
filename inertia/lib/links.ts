@@ -15,3 +15,6 @@ export const X_URL = 'https://x.com/invadedotlol'
  * link to the #bug-reports forum only works for members, so new users join first.
  */
 export const BUGS_URL = DISCORD_URL
+
+/** "Become a beta tester" (`/beta`): the server, where the team hands out the beta. */
+export const BETA_URL = DISCORD_URL

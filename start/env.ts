@@ -83,10 +83,12 @@ export default await Env.create(new URL('../', import.meta.url), {
   DESKTOP_RIOT_BUDGET: Env.schema.number.optional(),
   /** Oldest app version allowed to upload, e.g. "0.2.7". Unset means any. */
   DESKTOP_MIN_APP_VERSION: Env.schema.string.optional(),
-  /** Beta builds (docs/desktop-sync.md §8): read token of the private repo holding the installers. */
-  BETA_GITHUB_TOKEN: Env.schema.string.optional(),
-  /** That repo, `owner/name`; default invadelol/beta. */
-  BETA_GITHUB_REPO: Env.schema.string.optional(),
+  /** Beta builds (docs/desktop-sync.md §8.6): the build workflow's upload secret; unset, uploads answer 401. */
+  BETA_UPLOAD_SECRET: Env.schema.string.optional(),
+  /** Bug reports (§9): the Discord bot's token; unset, reports are kept but not posted. */
+  DISCORD_BOT_TOKEN: Env.schema.string.optional(),
+  /** The Discord forum channel bug reports are posted in (default: the server's bug forum). */
+  DISCORD_BUGS_FORUM: Env.schema.string.optional(),
 
   /*
   |----------------------------------------------------------

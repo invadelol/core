@@ -93,6 +93,10 @@ export const DESKTOP_LIMITS = {
   betaDevice: { bucket: 'beta:device', limit: 120 },
   betaDownload: { bucket: 'beta:download', limit: 20 },
   betaFeedback: { bucket: 'beta:feedback', limit: 60 },
+  /** Bug reports (§9): what a device or an address may send, and the "already reported" lookups. */
+  reportsDevice: { bucket: 'reports:device', limit: 10 },
+  reportsIp: { bucket: 'reports:ip', limit: 20 },
+  similar: { bucket: 'reports:similar', limit: 60 },
 } as const
 
 export default new FixedWindowLimiter()

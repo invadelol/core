@@ -1,6 +1,7 @@
-import { createHmac, timingSafeEqual } from 'node:crypto'
-import { Readable } from 'node:stream'
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
+import type { Readable } from 'node:stream'
 import db from '@adonisjs/lucid/services/db'
+import drive from '@adonisjs/drive/services/main'
 import logger from '@adonisjs/core/services/logger'
 import env from '#start/env'
 import type DesktopDevice from '#models/desktop_device'
@@ -9,8 +10,9 @@ import type DesktopDevice from '#models/desktop_device'
  * Beta builds of the desktop app (docs/desktop-sync.md §8). The admin
  * dashboard writes the builds and the grants in its own `admin` schema; core
  * only reads them, and serves a build to a device linked to a Riot account
- * with a live `beta` grant. Installers live in a private GitHub repo and are
- * streamed through core, so nobody else can download them.
+ * with a live `beta` grant. Installers are uploaded by the build workflow into
+ * core's object storage under an unguessable key and streamed through core, so
+ * nobody else can download them.
  */
 
 /** Update targets the app asks for, as the Tauri updater names them. */
@@ -24,10 +26,19 @@ const BUILDS_SENT = 5
 
 export interface BetaAsset {
   name: string
-  assetId: number
+  /** Object storage key (since v1.6). */
+  key: string
   size: number
   signature: string
 }
+
+/** Largest package the build workflow may upload. */
+export const BETA_UPLOAD_MAX_BYTES = 200 * 1024 * 1024
+
+/** `Invade_0.3.5-beta.1_x64-setup.exe`, `Invade_aarch64.app.tar.gz`: a plain file name. */
+export const BETA_PACKAGE_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,119}$/
+
+export const BETA_VERSION = /^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$/
 
 export interface BetaBuild {
   version: string
@@ -131,6 +142,20 @@ export class BetaService {
     }
   }
 
+  /** Whether a Riot account holds a live beta grant: its profile shows "Beta tester". */
+  async isTester(puuid: string) {
+    if (!(await this.available())) return false
+    try {
+      const result = await db.rawQuery(
+        `SELECT 1 FROM admin.active_entitlement WHERE kind = 'beta' AND puuid = ? LIMIT 1`,
+        [puuid]
+      )
+      return result.rows.length > 0
+    } catch {
+      return false
+    }
+  }
+
   /** Live builds, newest first. */
   async builds(limit = BUILDS_SENT): Promise<BetaBuild[]> {
     if (!(await this.available())) return []
@@ -208,31 +233,92 @@ export class BetaService {
     }
   }
 
-  /** Streams an installer from the private repo. Null when the repo is not configured. */
-  async open(asset: BetaAsset) {
-    const token = env.get('BETA_GITHUB_TOKEN')
-    if (!token) return null
-    const repo = env.get('BETA_GITHUB_REPO') || 'invadelol/beta'
-    // GitHub answers with a redirect to a signed storage URL; fetch drops the token on that
-    // cross-origin hop.
-    const response = await fetch(
-      `https://api.github.com/repos/${repo}/releases/assets/${asset.assetId}`,
-      {
-        headers: {
-          'Accept': 'application/octet-stream',
-          'Authorization': `Bearer ${token}`,
-          'X-GitHub-Api-Version': '2022-11-28',
-          'User-Agent': 'invade-core',
-        },
-      }
-    )
-    if (!response.ok || !response.body) {
-      logger.warn({ status: response.status, asset: asset.name }, 'beta: installer download failed')
+  /** Streams an installer from object storage. Null when it cannot be read. */
+  async open(asset: BetaAsset): Promise<{ stream: Readable; length: number | null } | null> {
+    if (!asset.key) return null
+    try {
+      const disk = drive.use()
+      const stream = await disk.getStream(asset.key)
+      return { stream, length: asset.size || null }
+    } catch (error) {
+      logger.warn({ err: error, asset: asset.name }, 'beta: installer read failed')
       return null
     }
-    return {
-      stream: Readable.fromWeb(response.body as any),
-      length: Number(response.headers.get('content-length')) || asset.size || null,
+  }
+
+  /** Whether a request carries the build workflow's upload secret. */
+  uploadAllowed(header: string | undefined) {
+    const secret = env.get('BETA_UPLOAD_SECRET')
+    if (!secret || !header?.startsWith('Bearer ')) return false
+    const given = createHash('sha256').update(header.slice(7)).digest()
+    const expected = createHash('sha256').update(secret).digest()
+    return timingSafeEqual(given, expected)
+  }
+
+  /**
+   * Stores one package from the build workflow and records it on its build, which is created as
+   * a draft when the admin has not written it yet. A new upload for the same target replaces the
+   * old one (its object is removed once the row points at the new one).
+   */
+  async upload(
+    version: string,
+    target: BetaTarget,
+    name: string,
+    signature: string,
+    body: Readable
+  ) {
+    const key = `beta/${version}/${target}-${randomBytes(16).toString('hex')}/${name}`
+    // Read whole (a package is a few tens of MB): object storage wants a known length.
+    const chunks: Buffer[] = []
+    let size = 0
+    for await (const chunk of body) {
+      size += (chunk as Buffer).length
+      if (size > BETA_UPLOAD_MAX_BYTES) throw new Error('beta: package too large')
+      chunks.push(chunk as Buffer)
+    }
+    await drive.use().put(key, Buffer.concat(chunks), { contentType: 'application/octet-stream' })
+    const asset: BetaAsset = { name, key, size, signature }
+    const previous = await db.rawQuery(
+      `SELECT assets -> ? AS old FROM admin.beta_build WHERE version = ?`,
+      [target, version]
+    )
+    await db.rawQuery(
+      `INSERT INTO admin.beta_build (version, assets) VALUES (?, jsonb_build_object(?::text, ?::jsonb))
+       ON CONFLICT (version) DO UPDATE SET assets = admin.beta_build.assets || EXCLUDED.assets, updated_at = now()`,
+      [version, target, JSON.stringify(asset)]
+    )
+    const old = previous.rows[0]?.old as BetaAsset | null | undefined
+    if (old?.key && old.key !== key)
+      await drive
+        .use()
+        .delete(old.key)
+        .catch(() => {})
+    return asset
+  }
+
+  /** A tester's rating of a build (1 to 5) and its comment; a new one replaces the old one. */
+  async rate(deviceId: string, version: string, rating: number, comment: string) {
+    await db.rawQuery(
+      `INSERT INTO admin.beta_rating (build_version, device_id, rating, comment) VALUES (?, ?, ?, ?)
+       ON CONFLICT (build_version, device_id) DO UPDATE
+         SET rating = EXCLUDED.rating, comment = EXCLUDED.comment, updated_at = now()`,
+      [version, deviceId, rating, comment]
+    )
+  }
+
+  /** This device's own ratings of these builds. */
+  async ratings(deviceId: string, versions: string[]) {
+    if (!versions.length) return []
+    try {
+      const result = await db.rawQuery(
+        `SELECT build_version AS version, rating, comment FROM admin.beta_rating
+         WHERE device_id = ? AND build_version IN (${versions.map(() => '?').join(', ')})`,
+        [deviceId, ...versions]
+      )
+      return result.rows as { version: string; rating: number; comment: string }[]
+    } catch {
+      // Before the admin's ratings migration ran.
+      return []
     }
   }
 
