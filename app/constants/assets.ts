@@ -30,6 +30,7 @@ export const ASSET_KINDS = [
   'map',
   'mastery',
   'stat',
+  'ward',
 ] as const
 
 export type AssetKind = (typeof ASSET_KINDS)[number]
@@ -100,6 +101,7 @@ export const ASSET_IDS: Record<AssetKind, RegExp> = {
   'map': NUMERIC,
   'mastery': /^(?:\d|10)$/,
   'stat': new RegExp(`^(${Object.keys(STAT_ICONS).join('|')})$`),
+  'ward': NUMERIC,
 }
 
 /** A patch in a URL: `16.20`, Community Dragon's granularity. */
@@ -125,6 +127,7 @@ export const MANIFESTS: Partial<Record<AssetKind, string>> = {
   'perkstyle': 'v1/perkstyles.json',
   'profile-icon': 'v1/profile-icons.json',
   'augment': 'v1/cherry-augments.json',
+  'ward': 'v1/ward-skins.json',
 }
 
 /** How long a parsed manifest stays cached; a pinned patch's never changes. */
