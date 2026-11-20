@@ -71,6 +71,10 @@
   object-position: 50% 5%;
   transform: scale(1.25) translateY(8%);
 }
+/* New Dawn's Blitzcrank: already cropped on his eyes, only a little larger than the well. */
+.vb .sri.rd img {
+  transform: scale(1.12);
+}
 .vb .sri.ct {
   background: none;
   box-shadow: none;

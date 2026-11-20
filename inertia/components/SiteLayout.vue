@@ -2,6 +2,7 @@
 import AppHeader from './AppHeader.vue'
 import SiteFooter from './SiteFooter.vue'
 import type { SectionKey } from '../lib/site_nav.js'
+import type { SubLink } from './header/sub_art.js'
 
 /**
  * Every rebuilt page's frame (Facet): the header, the page in `<main id="main">`, the footer, all
@@ -11,7 +12,7 @@ import type { SectionKey } from '../lib/site_nav.js'
 withDefaults(
   defineProps<{
     search?: boolean
-    sub?: Array<{ label: string; href: string; on?: boolean }> | null
+    sub?: SubLink[] | null
     section?: SectionKey | null
     patchOn?: boolean
   }>(),

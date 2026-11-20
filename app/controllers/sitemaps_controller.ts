@@ -17,6 +17,7 @@ import { ROLE_OF } from '#services/champion_stats'
 import { leagueCatalog } from '#services/pro_leagues'
 import { VIEWS } from '#services/stats_explorer_service'
 import patchNotesService from '#services/patch_notes_service'
+import { NEW_DAWN, NEW_DAWN_TABS } from '../../inertia/lib/new_dawn.js'
 
 /** A section's sitemap is built at most once an hour. */
 const sections = new AnswerCache(8, 3600_000)
@@ -52,6 +53,7 @@ async function section(name: SitemapSection): Promise<SitemapUrl[]> {
       { path: '/leaderboards/one-tricks', lastmod },
       { path: '/leaderboards/pros', lastmod },
       ...patches.map((p) => ({ path: `/patch/${p}`, lastmod })),
+      ...NEW_DAWN_TABS.map((t) => ({ path: t.href, lastmod: NEW_DAWN.modified.slice(0, 10) })),
       { path: '/contact', lastmod },
     ]
   }

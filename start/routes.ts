@@ -47,6 +47,7 @@ const SynergyController = () => import('#controllers/synergy_controller')
 const LegalController = () => import('#controllers/legal_controller')
 const ContactController = () => import('#controllers/contact_controller')
 const PatchNotesController = () => import('#controllers/patch_notes_controller')
+const NewDawnController = () => import('#controllers/new_dawn_controller')
 const ChangelogController = () => import('#controllers/changelog_controller')
 const MultisearchController = () => import('#controllers/multisearch_controller')
 const ChampionsController = () => import('#controllers/champions_controller')
@@ -269,6 +270,15 @@ router.get('/terms', ({ response }) => response.redirect('/legal#terms', false, 
 
 /** The ways to reach the team, before the summoner catch-all below. */
 router.get('/contact', [ContactController, 'show'])
+
+/**
+ * New Dawn, Riot's 2027 update: one page in three tabs, each its own address, and the rumours'
+ * no-stakes votes. Before the summoner catch-all below.
+ */
+router.get('/new-dawn', [NewDawnController, 'overview'])
+router.get('/new-dawn/posts', [NewDawnController, 'posts'])
+router.get('/new-dawn/rumours', [NewDawnController, 'rumours'])
+router.post('/api/new-dawn/votes/:rumour', [NewDawnController, 'vote'])
 
 /** The community server, before the summoner catch-all below. */
 router.get('/discord', ({ response }) => response.redirect(DISCORD_URL, false, 302))

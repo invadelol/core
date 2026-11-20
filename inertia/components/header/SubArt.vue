@@ -13,7 +13,7 @@ const props = defineProps<{ art: SubPicture }>()
 
 const src = computed(() => {
   const a = props.art
-  if (a.kind === 'square' || a.kind === 'logo') return a.src
+  if (a.kind === 'square' || a.kind === 'logo' || a.kind === 'round') return a.src
   if (a.kind === 'pro') return `/cdn/pro/${a.slug}?s=48`
   if (a.kind === 'team') {
     const id = siteNav.value?.art?.teams?.[a.slug]
@@ -52,7 +52,11 @@ const gone = (event: Event) => ((event.target as HTMLImageElement).style.visibil
   <span
     v-else
     class="sri"
-    :class="{ ct: art.kind === 'logo' || art.kind === 'team', o: art.kind === 'pro' }"
+    :class="{
+      ct: art.kind === 'logo' || art.kind === 'team',
+      o: art.kind === 'pro' || art.kind === 'round',
+      rd: art.kind === 'round',
+    }"
     aria-hidden="true"
     ><img v-if="src" :src="src" alt="" width="22" height="22" decoding="async" @error="gone"
   /></span>

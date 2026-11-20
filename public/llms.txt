@@ -20,6 +20,7 @@ All statistics come from ranked games read through Riot Games' official API and 
 - [Item tier list](https://invade.lol/tier-list/items), [rune tier list](https://invade.lol/tier-list/runes), [duo tier list](https://invade.lol/tier-list/duos) (bot lane; `?lane=mid` and `?lane=top` pair with the jungle), [ARAM tier list](https://invade.lol/tier-list/aram).
 - [Stats](https://invade.lol/stats): every champion of a role in one table, with views for the early game, game length, first blood, items, regions and the patch (`?view=early|length|firstblood|items|regions|patch`).
 - [Patch notes](https://invade.lol/patch): each patch's champion, item and mode changes, with how the changed champions did. One patch: `/patch/26.22`.
+- [New Dawn](https://invade.lol/new-dawn): Riot's 2027 update to League of Legends, from Riot's own posts and videos: what the teaser showed, what changes in January, what people ask and what Riot has not answered. [Every Riot post and video](https://invade.lol/new-dawn/posts) about it, newest first, and the [leaks and rumours](https://invade.lol/new-dawn/rumours) with their sources and Riot's answers.
 
 ## Ladders
 

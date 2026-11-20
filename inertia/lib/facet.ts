@@ -69,3 +69,21 @@ export function emblemBackground(tier: string, size: number, fill = 0.92) {
   const r = (n: number) => Math.round(n * 100) / 100
   return `url(/cdn/emblem/${t}.png) ${r(x)}px ${r(y)}px / ${r(k)}px auto no-repeat`
 }
+
+/**
+ * The same crest in percentages of its box, so it stays framed at whatever size the stylesheet
+ * gives the box (a page that shrinks its emblems on a phone).
+ */
+export function emblemBackgroundFluid(tier: string, fill = 0.92) {
+  const t = tier.toLowerCase() as RankTier
+  const box = CREST_BOX[t]
+  if (!box) return null
+  const [x0, y0, x1, y1] = box
+  const ratio = 9 / 16
+  // The picture's width in box widths, and where its corner sits, as background-position reads it.
+  const k = Math.min(fill / (x1 - x0), fill / ((y1 - y0) * ratio))
+  const x = 0.5 - ((x0 + x1) / 2) * k
+  const y = 0.5 - ((y0 + y1) / 2) * ratio * k
+  const r = (n: number) => Math.round(n * 100) / 100
+  return `url(/cdn/emblem/${t}.png) ${r((x / (1 - k)) * 100)}% ${r((y / (1 - k * ratio)) * 100)}% / ${r(k * 100)}% auto no-repeat`
+}
