@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Deferred, Head, Link } from '@inertiajs/vue3'
 import '../../css/tier-lists.css'
 import SiteLayout from '../../components/SiteLayout.vue'
@@ -69,6 +69,13 @@ const metaLine = computed(() =>
     ? `Patch ${patchName(props.filter.patch)}, ${rankText.value}, ${thousands(props.games)} ranked solo games`
     : 'No ranked games stored yet'
 )
+
+/* ── Proposals for the rows' art (`?v=a|b`), read in the browser; none: the current band ── */
+const art = ref<'a' | 'b' | null>(null)
+onMounted(() => {
+  const v = new URLSearchParams(window.location.search).get('v')
+  if (v === 'a' || v === 'b') art.value = v
+})
 
 /* ── Filters ─────────────────────────────────────────────────── */
 const mainOnly = ref(false)
@@ -261,7 +268,9 @@ const since = (r: Row) => {
               >
                 <div class="tl-champ">
                   <TierChip v-if="g.t === null" :tier="r.tier" class="tl-tc" />
-                  <div class="fr s visor"><img :src="champIconUrl(r.champion)" alt="" loading="lazy" /></div>
+                  <div v-if="art === 'a'" class="tl-pp"><img :src="champIconUrl(r.champion)" alt="" loading="lazy" /></div>
+                  <div v-else-if="art === 'b'" class="tl-band"><img :src="`/cdn/loading/${r.champion}.jpg`" alt="" loading="lazy" /></div>
+                  <div v-else class="fr s visor"><img :src="champIconUrl(r.champion)" alt="" loading="lazy" /></div>
                   <div class="col" style="gap: 3px; min-width: 0">
                     <span class="h4 ell">{{ nameOf(r.champion) }}</span>
                     <span class="meta ell">{{ roleWord(r.position) }} in {{ Math.round(r.roleShare * 100) }}% of games</span>
