@@ -8,6 +8,7 @@ import ladderService, {
 import flexLadderService, { LISTED, SEEN_DAYS } from '#services/flex_ladder_service'
 import proLadderService from '#services/pro_ladder_service'
 import proService from '#services/pro_service'
+import proMatchService from '#services/pro_match_service'
 import championStatsService from '#services/champion_stats_service'
 import { leagueCatalog, leagueRef } from '#services/pro_leagues'
 import {
@@ -80,6 +81,43 @@ const sortProp = (order: { key: string | null; dir: 'asc' | 'desc' }) =>
     : { sort: order.key, dir: order.dir }
 
 const flag = (value: unknown) => ['1', 'true', 'on', 'yes'].includes(String(value ?? ''))
+
+/** A league's player as `proService.league` lists them. */
+interface LeaguePlayer {
+  slug: string
+  name: string
+  photo?: string
+  role: string | null
+  country: string | null
+  starter: boolean
+  team: {
+    id: string
+    slug: string
+    name: string
+    shortName: string | null
+    region: string | null
+  } | null
+  best: { platform: string; tier: string; division: number | null; lp: number } | null
+  record: { games: number; wins: number } | null
+  champions: { champion: number; games: number }[]
+}
+
+/** What the pros' heads sort by; `recent` (their 30 days) on a league's board only. */
+const PRO_SORTS = ['rank', 'move', 'name', 'country', 'recent'] as const
+/** A league's next games under its pros. */
+const NEXT_GAMES = 4
+
+/** A list sorted by a text (`asc` A to Z), ties in the order they came, rows without one last. */
+function sortText<T>(list: readonly T[], value: (row: T) => string | null, dir: 'asc' | 'desc') {
+  const sign = dir === 'asc' ? 1 : -1
+  return list
+    .map((row, i) => ({ row, i, v: value(row) }))
+    .sort((a, b) => {
+      if (!a.v || !b.v) return !a.v === !b.v ? a.i - b.i : a.v ? -1 : 1
+      return sign * a.v.localeCompare(b.v, 'en') || a.i - b.i
+    })
+    .map((x) => x.row)
+}
 
 const search = (value: unknown) =>
   String(value ?? '')
@@ -473,18 +511,28 @@ export default class LeaderboardsController {
     })
   }
 
-  /** `/leaderboards/pros?role=mid&league=lec&team=fnatic&server=euw&q=&sort=move&dir=asc&page=2` */
+  /**
+   * `/leaderboards/pros?role=mid&league=lec&team=fnatic&server=euw&q=&sort=move&dir=asc&page=2`:
+   * the pros' page. A league (the first one by default, as the board opens) lists every current
+   * player of its teams, starters and subs, ranked by their best solo queue account and the
+   * unranked last, with the league's next games; `league=all` ranks every pro in Master and above.
+   */
   async pros({ inertia, request }: HttpContext) {
     const server = serverOf(request.input('server'))
     const role = PRO_ROLE[String(request.input('role', '')).toLowerCase()] ?? null
     const catalog = await leagueCatalog()
-    // The first league by default (the LEC), as the board opens; `league=all` for every pro.
     const askedLeague = String(request.input('league', '')).toLowerCase()
     const league = askedLeague === 'all' ? null : (catalog.bySlug(askedLeague) ?? catalog.first)
     const team = String(request.input('team', '')).toLowerCase() || null
     const q = search(request.input('q'))
-    const scope = { platform: server?.platform ?? null, role, league: league?.slug ?? null }
-    const [ladder, servers, updated] = await Promise.all([
+    // A league's board holds all its players; every league together, those in Master and above.
+    const scope = {
+      platform: server?.platform ?? null,
+      role,
+      league: league?.slug ?? null,
+      apexOnly: !league,
+    }
+    const [ladder, servers, updated, roster, next] = await Promise.all([
       proLadderService.ladder(scope).catch(() => ({ total: 0, rows: [] })),
       proLadderService.servers(role).catch(() => []),
       db
@@ -493,33 +541,104 @@ export default class LeaderboardsController {
         )
         .then((r) => (r.rows[0]?.at ? new Date(r.rows[0].at).getTime() : null))
         .catch(() => null),
+      league ? proService.league(league.slug).catch(() => null) : null,
+      league ? proMatchService.forLeague(league.slug, NEXT_GAMES).catch(() => []) : [],
     ])
+    type Row = {
+      place: number
+      playerId: string | null
+      pro: (typeof ladder.rows)[number]['pro']
+      league: (typeof ladder.rows)[number]['league']
+      account: (typeof ladder.rows)[number]['account'] | null
+      move: (typeof ladder.rows)[number]['move']
+    }
+    // The league's own list: who starts, everyone's 30 days, and the players without a rank.
+    const leaguePlayers = (roster?.players ?? []) as LeaguePlayer[]
+    const inLeague = new Map(leaguePlayers.map((p) => [p.slug, p]))
+    // A league's board is its teams' players and subs (their staff stays on every league's).
+    const ladderRows: Row[] = league
+      ? ladder.rows.filter((r) => inLeague.has(r.pro.slug)).map((r, i) => ({ ...r, place: i + 1 }))
+      : ladder.rows
+    const ranked = new Set(ladderRows.map((r) => r.pro.slug))
+    const unranked: Row[] = server
+      ? []
+      : leaguePlayers
+          .filter((p) => !ranked.has(p.slug) && !p.best && (!role || p.role === role))
+          .map((p, i) => ({
+            place: ladderRows.length + i + 1,
+            playerId: null,
+            pro: {
+              slug: p.slug,
+              name: p.name,
+              role: p.role,
+              country: p.country,
+              staff: false,
+              team: p.team,
+              ...(p.photo ? { photo: p.photo } : {}),
+            },
+            league: league ? leagueRef(league) : null,
+            account: null,
+            move: null,
+          }))
+    const all: Row[] = [...ladderRows, ...unranked]
     const teams = new Map<
       string,
       { id: string; slug: string; name: string; shortName: string | null }
     >()
-    for (const r of ladder.rows) {
+    for (const r of all) {
       if (r.pro.team) {
         const { id, slug, name, shortName } = r.pro.team
         teams.set(slug, { id, slug, name, shortName })
       }
     }
-    const list = ladder.rows.filter(
-      (r) => (!team || r.pro.team?.slug === team) && (!q || matchesName(r.pro.name, q))
+    const list = all.filter(
+      (r) =>
+        (!team || r.pro.team?.slug === team) &&
+        (!q || matchesName(r.pro.name, q) || matchesName(r.pro.team?.name, q))
     )
-    const order = sortParam(request.input('sort'), request.input('dir'), ['rank', 'move'])
-    const sorted = ordered(list, order, { move: (r) => r.move?.lp ?? null })
+    // A league's records come with its list; every league's are read for the page shown.
+    const order = sortParam(
+      request.input('sort'),
+      request.input('dir'),
+      league ? PRO_SORTS : PRO_SORTS.filter((k) => k !== 'recent')
+    )
+    const rate = (r: Row) => {
+      const rec = inLeague.get(r.pro.slug)?.record
+      return rec?.games ? rec.wins / rec.games : null
+    }
+    const sorted =
+      order.key === 'name' || order.key === 'country'
+        ? sortText(
+            list,
+            order.key === 'name' ? (r) => r.pro.name : (r) => countryName(r.pro.country),
+            order.dir
+          )
+        : ordered(list, order as { key: 'rank' | 'move' | 'recent' | null; dir: 'asc' | 'desc' }, {
+            move: (r) => r.move?.lp ?? null,
+            recent: rate,
+          })
     const {
       rows: shown,
       page,
       pages,
       total,
     } = pageOf(sorted, pageParam(request.input('page')), PAGE)
-    const podium = ladder.rows.slice(0, 3)
-    const ids = [...new Set([...shown, ...podium].map((r) => r.playerId))]
+    const podium = ladderRows.slice(0, 3)
+    const ids = league
+      ? []
+      : [...new Set([...shown, ...podium].flatMap((r) => (r.playerId ? [r.playerId] : [])))]
     const records = await proService.records(ids).catch(() => new Map())
-    const out = (r: (typeof ladder.rows)[number]) => {
-      const rec = records.get(r.playerId)
+    const recordOf = (r: Row) => {
+      const own = inLeague.get(r.pro.slug)
+      if (own) return { record: own.record, champions: own.champions }
+      const rec = r.playerId ? records.get(r.playerId) : null
+      return {
+        record: rec ? { games: rec.games, wins: rec.wins } : null,
+        champions: (rec?.champions ?? []) as { champion: number; games: number }[],
+      }
+    }
+    const out = (r: Row) => {
+      const { record, champions } = recordOf(r)
       return {
         place: r.place,
         pro: {
@@ -538,25 +657,37 @@ export default class LeaderboardsController {
               }
             : null,
         },
+        /** A league's substitute (null when the board is not a league's). */
+        sub: inLeague.has(r.pro.slug) ? !inLeague.get(r.pro.slug)!.starter : null,
         league: r.league ? { slug: r.league.slug, code: r.league.code } : null,
-        account: {
-          platform: r.account.platform,
-          tier: r.account.tier,
-          division: r.account.division,
-          lp: r.account.lp,
-          wins: r.account.wins,
-          losses: r.account.losses,
-        },
+        account: r.account
+          ? {
+              platform: r.account.platform,
+              tier: r.account.tier,
+              division: r.account.division,
+              lp: r.account.lp,
+              wins: r.account.wins,
+              losses: r.account.losses,
+            }
+          : null,
         move: r.move,
         /** Their stored ranked games of the last 30 days, every account. */
-        record: rec ? { games: rec.games, wins: rec.wins } : null,
-        champions: (rec?.champions ?? []).slice(0, 3),
+        record,
+        champions: champions.slice(0, 3),
       }
     }
     const rows = shown.map(out)
-    const filtered = Boolean(
-      server || role || askedLeague || team || q || page > 1 || sortProp(order).sort
-    )
+    const podiumRows = podium.map(out)
+    const first = league?.slug === catalog.first?.slug
+    // A league on its own is a page of the site (the first one at the bare address).
+    const path = !league
+      ? '/leaderboards/pros?league=all'
+      : first
+        ? '/leaderboards/pros'
+        : `/leaderboards/pros?league=${league.slug}`
+    const filtered = Boolean(server || role || team || q || page > 1 || sortProp(order).sort)
+    const players = all.length
+    const lead = podium[0]
     return inertia.render('leaderboards/pros', {
       leagues: catalog.listed.map(leagueRef),
       servers: servers.map(({ slug, label, pros }) => ({ slug, label, pros })),
@@ -570,38 +701,43 @@ export default class LeaderboardsController {
         ...sortProp(order),
       },
       /** The servers the listed pros' accounts are on ("EUW and NA"). */
-      on: serverList([...new Set(ladder.rows.map((r) => r.account.platform))]),
+      on: serverList([...new Set(ladderRows.map((r) => r.account!.platform))]),
       apex: Object.fromEntries(
-        APEX_TIERS.map((t) => [t, ladder.rows.filter((r) => r.account.tier === t).length])
+        APEX_TIERS.map((t) => [t, ladderRows.filter((r) => r.account?.tier === t).length])
       ),
-      podium: podium.map(out),
+      podium: podiumRows,
       rows,
       total,
-      pros: ladder.total,
+      pros: players,
+      /** A league's board: its teams and its players' accounts, as the board counts them. */
+      counts: roster ? roster.counts : null,
       page,
       pages,
       pageSize: PAGE,
       updatedAt: updated,
+      next: league ? next.filter((m) => m.status !== 'finished') : [],
       names: await championNames(
-        [...rows, ...podium.map(out)].flatMap((r) =>
-          r.champions.map((c: { champion: number }) => c.champion)
-        )
+        [...rows, ...podiumRows].flatMap((r) => r.champions.map((c) => c.champion))
       ),
       ...meta({
-        title: 'Pro ladder: every pro ranked by LP',
-        description: podium[0]
-          ? `${count(ladder.total)} ${league ? `${league.code} ` : ''}pros in Master and above, ranked by their best account. ${podium[0].pro.name} leads with ${count(podium[0].account.lp)} LP.`
+        title: league
+          ? `${league.code} pros: solo queue ladder`
+          : 'Pro ladder: every pro ranked by LP',
+        description: lead
+          ? league
+            ? `${count(players)} ${league.code} players ranked by their best solo queue account. ${lead.pro.name} leads with ${count(lead.account!.lp)} LP.`
+            : `${count(players)} pros in Master and above, ranked by their best account. ${lead.pro.name} leads with ${count(lead.account!.lp)} LP.`
           : 'Every pro ranked by LP, with their moves of the last 24 hours.',
-        path: '/leaderboards/pros',
+        path,
         image: `/og/pros/${league ? league.slug : 'all'}.jpg`,
         version: today(),
         alt: `Photos of the five best ${league ? `${league.code} ` : ''}pros by LP, with a poro holding a foam finger`,
       }),
-      robots: filtered ? 'noindex,follow' : null,
+      robots: filtered || !players ? 'noindex,follow' : null,
       jsonld: [
         breadcrumbs([
           { name: 'Leaderboards', path: '/leaderboards/solo' },
-          { name: 'Pros', path: '/leaderboards/pros' },
+          { name: 'Pros', path },
         ]),
       ],
     })

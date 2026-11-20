@@ -9,13 +9,19 @@ import Select from '../../components/ui/Select.vue'
 import RankEmblem from '../../components/ui/RankEmblem.vue'
 import WinRate from '../../components/ui/WinRate.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
+import CardHead from '../../components/ui/CardHead.vue'
+import MatchLine from '../../components/esports/MatchLine.vue'
 import SortHead from '../../components/ui/SortHead.vue'
 import { linkSort, type SortDir } from '../../components/ui/sort.js'
 import RoleFilter from '../../components/leaderboards/RoleFilter.vue'
 import LadderPager from '../../components/leaderboards/LadderPager.vue'
+import Logo from '../../components/pros/Logo.vue'
+import ProPic from '../../components/pros/ProPic.vue'
 import { champIcon, championName } from '../../lib/assets.js'
-import { leagueLogo } from '../../lib/board.js'
+import { leagueLogo, teamLogo } from '../../lib/board.js'
+import { useTheme } from '../../lib/theme.js'
 import { laneOf, n, rankWords, roleLabel, signedN, since, withQuery } from '../../lib/ladders.js'
+import { matchList, type ProMatch } from '../../lib/pro_matches.js'
 import '../../css/leaderboards.css'
 import '../../css/esports.css'
 
@@ -36,7 +42,10 @@ interface Row {
     countryName: string | null
     team: Team | null
   }
+  /** A league's substitute; null on every league's board. */
+  sub: boolean | null
   league: { slug: string; code: string } | null
+  /** Their best account; null for a league's player without a rank. */
   account: {
     platform: string
     tier: string
@@ -44,16 +53,17 @@ interface Row {
     lp: number
     wins: number | null
     losses: number | null
-  }
+  } | null
   move: { places: number | null; lp: number } | null
   record: { games: number; wins: number } | null
   champions: { champion: number; games: number }[]
 }
 
 /**
- * `/leaderboards/pros`: pros ranked by their best solo queue account (app/services/
- * pro_ladder_service.ts), the first league by default as the board opens, every pro with
- * `league=all`. The podium, the apex tiers, the filters and the table.
+ * `/leaderboards/pros`, the pros' page: pros ranked by their best solo queue account (app/services/
+ * pro_ladder_service.ts). A league (the first by default, as the board opens) lists all its
+ * players, subs and the unranked included, with its next games; `league=all` every pro in Master
+ * and above. The podium, the apex tiers, the filters and the table.
  */
 const props = defineProps<{
   leagues: { slug: string; code: string; name: string; region: string | null }[]
@@ -73,6 +83,9 @@ const props = defineProps<{
   rows: Row[]
   total: number
   pros: number
+  /** A league's board: its teams and its players' solo queue accounts. */
+  counts: { teams: number; players: number; accounts: number } | null
+  next: ProMatch[]
   page: number
   pages: number
   pageSize: number
@@ -105,15 +118,25 @@ const league = ref(props.filters.league)
 watch(league, (slug) =>
   router.visit(href({ league: slug === props.leagues[0]?.slug ? null : slug, team: null }))
 )
+/** The selects draw one logo each: the copy for the theme in use. */
+const { resolved } = useTheme()
 const leagueOptions = computed(() => [
-  ...props.leagues.map((l) => ({ value: l.slug, label: l.code, icon: leagueLogo(l.slug, 40) })),
+  ...props.leagues.map((l) => ({
+    value: l.slug,
+    label: l.code,
+    icon: leagueLogo(l.slug, 40, resolved.value),
+  })),
   { value: 'all', label: 'Every league' },
 ])
 const team = ref(props.filters.team ?? '')
 watch(team, (slug) => router.visit(href({ team: slug || null }), { preserveScroll: true }))
 const teamOptions = computed(() => [
   { value: '', label: 'All teams' },
-  ...props.teams.map((t) => ({ value: t.slug, label: t.name, icon: `/cdn/team/${t.id}?s=40` })),
+  ...props.teams.map((t) => ({
+    value: t.slug,
+    label: t.name,
+    icon: teamLogo(t.id, 40, resolved.value),
+  })),
 ])
 const search = ref(props.filters.q ?? '')
 let typing: ReturnType<typeof setTimeout> | null = null
@@ -127,8 +150,7 @@ watch(search, (q) => {
 })
 
 const leagueCode = computed(() => props.leagues.find((l) => l.slug === props.filters.league)?.code)
-const photo = (p: Row['pro'], size: number) =>
-  p.photo ? `/cdn/pro/${p.slug}?s=${size}&v=${p.photo}` : null
+const next = computed(() => matchList(props.next))
 const short = (r: Row) =>
   [r.pro.team?.shortName ?? r.pro.team?.name, roleLabel(r.pro.role).toLowerCase()]
     .filter(Boolean)
@@ -136,7 +158,7 @@ const short = (r: Row) =>
 </script>
 
 <template>
-  <Head title="Pro ladder">
+  <Head :title="leagueCode ? `${leagueCode} pros` : 'Pro ladder'">
     <meta name="description" :content="description" />
   </Head>
   <SiteLayout>
@@ -150,8 +172,11 @@ const short = (r: Row) =>
           <div class="col mast-t">
             <h1 class="h1">Solo queue ladder</h1>
             <p class="meta">
-              {{ n(pros) }} {{ leagueCode ? `${leagueCode} ` : '' }}pros ranked by their best
-              account<template v-if="on">, {{ on }}</template
+              <template v-if="leagueCode && counts"
+                >{{ n(counts.players) }} {{ leagueCode }} players in {{ counts.teams }} teams,
+                ranked by their best solo queue account</template
+              ><template v-else>{{ n(pros) }} pros ranked by their best account</template
+              ><template v-if="on">, {{ on }}</template
               ><template v-if="updatedAt">, updated {{ since(updatedAt) }}</template>
             </p>
           </div>
@@ -159,7 +184,7 @@ const short = (r: Row) =>
       </section>
 
       <EmptyState
-        v-if="!pros"
+        v-if="!podium.length"
         icon="pro"
         title="No pro in Master and above here"
         line="Pros appear once one of their accounts reaches Master."
@@ -169,18 +194,20 @@ const short = (r: Row) =>
         <div class="pod3">
           <Link v-for="r in podium" :key="r.place" class="podc" :href="`/pro/${r.pro.slug}`">
             <span class="no3 lab">#{{ r.place }}</span>
-            <Frame :src="photo(r.pro, 240)" stage eager />
+            <Frame stage
+              ><ProPic :slug="r.pro.slug" :photo="r.pro.photo" :team="r.pro.team" :size="240" eager
+            /></Frame>
             <span class="col">
               <span class="h2">{{ r.pro.name }}</span>
               <span class="meta row" style="gap: 6px; margin-top: 3px"
-                ><img
+                ><Logo
                   v-if="r.pro.team"
-                  :src="`/cdn/team/${r.pro.team.id}?s=32`"
-                  alt=""
+                  :team="r.pro.team.id"
+                  :size="16"
                   style="width: 15px; height: 15px; object-fit: contain"
                 />{{ short(r) }}</span
               >
-              <span class="row" style="gap: 6px; margin-top: 12px">
+              <span v-if="r.account" class="row" style="gap: 6px; margin-top: 12px">
                 <RankEmblem :tier="r.account.tier" :size="24" />
                 <span class="fg-s">{{ n(r.account.lp) }}<span class="u">LP</span></span>
               </span>
@@ -215,19 +242,31 @@ const short = (r: Row) =>
         />
         <label class="field" style="flex: 1; max-width: 320px; margin-left: auto">
           <Icon name="search" />
-          <input v-model="search" type="text" placeholder="Find a pro" aria-label="Find a pro" />
+          <input
+            v-model="search"
+            type="text"
+            placeholder="Find a pro or a team"
+            aria-label="Find a pro or a team"
+          />
         </label>
       </div>
 
       <section class="card">
         <div class="lt3h">
           <span style="text-align: center">#</span>
-          <span>Pro</span>
+          <SortHead :sorter="sort" col="name" label="Pro" />
           <span>Role</span>
-          <span>Country</span>
+          <SortHead :sorter="sort" col="country" label="Country" />
           <SortHead :sorter="sort" col="rank" label="Rank" />
           <SortHead :sorter="sort" col="move" label="24 hours" title="LP won or lost in 24 hours" />
-          <span>Recent games</span>
+          <SortHead
+            v-if="counts"
+            :sorter="sort"
+            col="recent"
+            label="Recent games"
+            title="Win rate of their ranked games of 30 days"
+          />
+          <span v-else>Recent games</span>
           <span>Most played</span>
         </div>
         <EmptyState
@@ -240,14 +279,16 @@ const short = (r: Row) =>
           <span class="rk" style="text-align: center">{{ r.place }}</span>
           <span class="row" style="gap: 11px; min-width: 0">
             <span class="ppic"
-              ><img v-if="r.pro.photo" :src="photo(r.pro, 48)!" alt="" loading="lazy"
+              ><ProPic :slug="r.pro.slug" :photo="r.pro.photo" :team="r.pro.team" :size="38"
             /></span>
             <span class="col" style="min-width: 0">
-              <span class="h4 ell">{{ r.pro.name }}</span>
+              <span class="h4 ell"
+                >{{ r.pro.name }}<span v-if="r.sub" class="lb-tag">Sub</span></span
+              >
               <span v-if="r.pro.team" class="meta row" style="gap: 5px"
-                ><img
-                  :src="`/cdn/team/${r.pro.team.id}?s=32`"
-                  alt=""
+                ><Logo
+                  :team="r.pro.team.id"
+                  :size="14"
                   style="width: 14px; height: 14px; object-fit: contain"
                 />{{ r.pro.team.name }}</span
               >
@@ -263,13 +304,14 @@ const short = (r: Row) =>
             />{{ roleLabel(r.pro.role) || '–' }}</span
           >
           <span class="meta">{{ r.pro.countryName ?? '–' }}</span>
-          <span class="row" style="gap: 8px">
+          <span v-if="r.account" class="row" style="gap: 8px">
             <RankEmblem :tier="r.account.tier" :size="26" />
             <span class="col">
               <span class="h5 num">{{ n(r.account.lp) }} LP</span>
               <span class="meta">{{ rankWords(r.account.tier, r.account.division) }}</span>
             </span>
           </span>
+          <span v-else class="meta">Unranked</span>
           <span>
             <template v-if="r.move && r.move.lp">
               <span class="h5" :class="r.move.lp > 0 ? 'wn' : 'ls'"
@@ -308,6 +350,17 @@ const short = (r: Row) =>
           noun="pros"
           :href="(p) => withQuery('/leaderboards/pros', query, { page: p })"
         />
+      </section>
+
+      <section v-if="next.length && leagueCode" class="sec" style="padding-top: 24px">
+        <div class="card">
+          <CardHead
+            :title="`${leagueCode}, next games`"
+            icon="clock"
+            :more="{ label: `${leagueCode} page`, href: `/league/${filters.league}` }"
+          />
+          <MatchLine v-for="m in next" :key="m.id" :match="m" />
+        </div>
       </section>
       <p class="meta lb-note">
         Rank: each pro's best account. 24 hours: LP and places since the same time yesterday. Recent
