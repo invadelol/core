@@ -49,6 +49,7 @@ export type MenuArtName =
   | 'multi'
   | 'stats'
   | 'app'
+  | 'newdawn'
 
 export type SectionKey = 'tier-list' | 'esports' | 'leaderboards' | 'tools'
 
@@ -105,6 +106,20 @@ const exact =
 
 /** The patch notes of a patch, by the name players know (`/patch/26.22`). */
 export const patchPath = (patch: string) => `/patch/${patchName(patch)}`
+
+/**
+ * New Dawn, Riot's 2027 update: first in the Patch menu, the patch notes' sub-row, the phone's
+ * menu and the footer's Invade column.
+ */
+export const NEW_DAWN_LINK = {
+  label: 'New Dawn',
+  href: '/new-dawn',
+  art: 'newdawn' as MenuArtName,
+  line: "Riot's posts, rumours, January",
+  /** Where the menu's patch rows show their date. */
+  note: 'Reveal in Jan',
+  here: starts('/new-dawn'),
+}
 
 const ALL_SECTIONS: NavSection[] = [
   {
