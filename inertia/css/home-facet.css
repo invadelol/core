@@ -231,6 +231,9 @@
       translate var(--m) var(--ease),
       color var(--m) var(--ease);
   }
+  /* The picture is drawn twice at the same place: inside the card (cut by its edges), and above
+     it cut on the dome's round outline so the head leaves the card. Both copies always take the
+     same transform, so on hover he rises as one picture. */
   .vb .nd-e-art,
   .vb .nd-e-pop > span {
     position: absolute;
@@ -238,6 +241,8 @@
     width: 313px;
     height: 224px;
     background: url('/new-dawn-art/home-blitz.webp') 0 0 / 313px 224px no-repeat;
+    transform-origin: 156.6px 155.6px;
+    transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
   }
   .vb .nd-e-art {
     left: auto;
@@ -245,20 +250,19 @@
     top: -55.6px;
     mask-image: linear-gradient(90deg, transparent, #000 110px);
   }
+  /* Starts 44 px above the card so the rising dome is never cut; ends on the card's bottom edge. */
   .vb .nd-e-pop {
     position: absolute;
     right: 0;
-    top: -26px;
+    top: -44px;
     width: 313px;
-    height: 114px;
+    height: 132px;
     overflow: hidden;
     pointer-events: none;
     filter: drop-shadow(0 -2px 10px rgb(4 3 10 / 0.45));
-    transform-origin: 50% 100%;
-    transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
   }
   .vb .nd-e-pop > span {
-    top: -29.6px;
+    top: -11.6px;
     clip-path: circle(62.5px at 156.6px 93px);
   }
   .vb .nd-e:hover .nd-e-c,
@@ -272,16 +276,21 @@
     translate: 3px 0;
     color: var(--t1);
   }
-  .vb .nd-e:hover .nd-e-pop,
-  .vb .nd-e:focus-visible .nd-e-pop {
+  .vb .nd-e:hover .nd-e-art,
+  .vb .nd-e:hover .nd-e-pop > span,
+  .vb .nd-e:focus-visible .nd-e-art,
+  .vb .nd-e:focus-visible .nd-e-pop > span {
     transform: translateY(-9px) scale(1.04);
   }
   @media (prefers-reduced-motion: reduce) {
-    .vb .nd-e-pop {
+    .vb .nd-e-art,
+    .vb .nd-e-pop > span {
       transition: none;
     }
-    .vb .nd-e:hover .nd-e-pop,
-    .vb .nd-e:focus-visible .nd-e-pop {
+    .vb .nd-e:hover .nd-e-art,
+    .vb .nd-e:hover .nd-e-pop > span,
+    .vb .nd-e:focus-visible .nd-e-art,
+    .vb .nd-e:focus-visible .nd-e-pop > span {
       transform: none;
     }
   }
@@ -325,22 +334,28 @@
       width: 219px;
       height: 157px;
       background-size: 219px 157px;
-    }
-    .vb .nd-e-art {
-      top: -39px;
-      mask-image: linear-gradient(90deg, transparent, #000 80px);
+      transform-origin: 109.6px 108.9px;
     }
     .vb .nd-e-art {
       top: -35px;
+      mask-image: linear-gradient(90deg, transparent, #000 80px);
     }
     .vb .nd-e-pop {
-      top: -14px;
+      top: -30px;
       width: 219px;
-      height: 98px;
+      height: 114px;
     }
     .vb .nd-e-pop > span {
-      top: -20.7px;
+      top: -5px;
       clip-path: circle(43.75px at 109.6px 65.1px);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .vb .nd-e:hover .nd-e-art,
+      .vb .nd-e:hover .nd-e-pop > span,
+      .vb .nd-e:focus-visible .nd-e-art,
+      .vb .nd-e:focus-visible .nd-e-pop > span {
+        transform: translateY(-6px) scale(1.04);
+      }
     }
   }
   @media (max-width: 374px) {
