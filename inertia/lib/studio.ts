@@ -836,3 +836,9 @@ export function fmt(f: Fmt, v: number): string {
 /** A figure of `key`, written, or a dash when there is none. */
 export const fmtMetric = (key: MetricKey, v: number | null | undefined) =>
   v === null || v === undefined || Number.isNaN(v) ? '–' : fmt(METRICS[key].fmt, v)
+
+/** What a statistic without a figure says: no patch to compare with, cells not counted, or too few games. */
+export function emptyText(stat: StatDef) {
+  if (stat.key === 'change') return 'No earlier patch'
+  return METRICS[stat.key].source === 'lane' ? 'Not counted yet' : 'Too few games'
+}

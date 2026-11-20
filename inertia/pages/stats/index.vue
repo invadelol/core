@@ -1,24 +1,21 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { Deferred, Head, router, usePage } from '@inertiajs/vue3'
+import { Deferred, Head, usePage } from '@inertiajs/vue3'
 import '../../css/stats.css'
 import SiteLayout from '../../components/SiteLayout.vue'
 import Masthead from '../../components/ui/Masthead.vue'
 import Icon from '../../components/ui/Icon.vue'
-import Select from '../../components/ui/Select.vue'
 import Skeleton from '../../components/ui/Skeleton.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import StatFilters from '../../components/champions/StatFilters.vue'
 import RoleSeg from '../../components/champions/RoleSeg.vue'
-import StudioRail from '../../components/stats/StudioRail.vue'
 import StudioHub, { type Leader } from '../../components/stats/StudioHub.vue'
+import StudioNav from '../../components/stats/StudioNav.vue'
 import StatTable, { type StatRow } from '../../components/stats/StatTable.vue'
 import { type Filter } from '../../lib/champions.js'
 import { patchName } from '../../lib/patches.js'
 import { thousands } from '../../lib/tier_lists.js'
-import { useStickyColumn } from '../../lib/sticky_column.js'
 import {
-  CATEGORIES,
   METRICS,
   STATS,
   fmtMetric,
@@ -96,6 +93,7 @@ function average(key: MetricKey) {
 
 /** A champion leads a statistic of the hub from this many games (0.4 % of the list's). */
 const minGames = computed(() => Math.max(100, Math.round((props.roleGames ?? 0) * 0.004)))
+/** The champion at the top of a statistic's list (from `minGames`); undefined while it loads. */
 function leader(s: StatDef): Leader | null | undefined {
   const source = METRICS[s.key].source
   if (source !== 'role' && !(source === 'game' ? props.game : props.lane)) return undefined
@@ -103,9 +101,8 @@ function leader(s: StatDef): Leader | null | undefined {
   for (const r of props.rows) {
     if (r.games < minGames.value) continue
     const v = value(r.champion, s.key)
-    if (typeof v !== 'number' || Number.isNaN(v)) continue
-    if (!best || v > best.value)
-      best = { champion: r.champion, name: champs.value.get(r.champion)?.name ?? '', value: v }
+    if (typeof v !== 'number' || Number.isNaN(v) || (best && v <= best.value)) continue
+    best = { champion: r.champion, name: champs.value.get(r.champion)?.name ?? '', value: v }
   }
   return best
 }
@@ -135,24 +132,6 @@ const needs = computed(() => {
 })
 
 const find = ref('')
-/** The rail holds beside the list as the page scrolls (all of it reachable, however tall). */
-const side = ref<HTMLElement | null>(null)
-useStickyColumn(side)
-const picked = computed({
-  get: () => props.stat ?? '',
-  set: (slug: string) =>
-    router.visit(`/stats${slug ? `/${slug}` : ''}${query.value ? `?${query.value}` : ''}`, {
-      preserveScroll: false,
-    }),
-})
-const pickOptions = [
-  { value: '', label: 'Every statistic' },
-  ...STATS.map((s) => ({
-    value: s.slug,
-    label: s.label,
-    meta: CATEGORIES.find((c) => c.key === s.category)?.label,
-  })),
-]
 
 const where = computed(() => (role.value ? role.value.label : 'Every role'))
 const title = computed(() =>
@@ -190,15 +169,6 @@ const metaLine = computed(() => {
         </template>
         <div class="st-tools">
           <RoleSeg :value="position" all="All roles" />
-          <div v-if="def" class="st-pick">
-            <Select
-              v-model="picked"
-              :options="pickOptions"
-              searchable
-              search-placeholder="Find a statistic"
-              width="100%"
-            />
-          </div>
           <label v-if="def" class="field st-find">
             <Icon name="search" />
             <input
@@ -217,28 +187,13 @@ const metaLine = computed(() => {
         line="Too few games are stored for this patch and rank."
       />
       <StudioHub v-else-if="!def" :leader="leader" :query="query" />
-      <div v-else class="st-studio">
-        <aside ref="side" class="st-side">
-          <StudioRail :stat="stat" :query="query" />
-        </aside>
-        <div class="st-main">
-          <Deferred v-if="needs.length" :data="needs">
-            <template #fallback>
-              <div class="card st-card"><Skeleton :rows="12" pic /></div>
-            </template>
-            <article class="card st-card">
-              <StatTable
-                :key="def.slug"
-                :stat="def"
-                :rows="tableRows"
-                :value="value"
-                :average="average"
-                :heads="heads"
-                :find="find"
-              />
-            </article>
-          </Deferred>
-          <article v-else class="card st-card">
+      <div v-else class="st-body">
+        <StudioNav :stat="def" :query="query" />
+        <Deferred v-if="needs.length" :data="needs">
+          <template #fallback>
+            <div class="card st-card"><Skeleton :rows="12" pic /></div>
+          </template>
+          <article class="card st-card">
             <StatTable
               :key="def.slug"
               :stat="def"
@@ -249,7 +204,18 @@ const metaLine = computed(() => {
               :find="find"
             />
           </article>
-        </div>
+        </Deferred>
+        <article v-else class="card st-card">
+          <StatTable
+            :key="def.slug"
+            :stat="def"
+            :rows="tableRows"
+            :value="value"
+            :average="average"
+            :heads="heads"
+            :find="find"
+          />
+        </article>
       </div>
     </div>
   </SiteLayout>
