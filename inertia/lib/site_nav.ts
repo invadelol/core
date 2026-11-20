@@ -242,7 +242,7 @@ const ALL_SECTIONS: NavSection[] = [
         label: 'Flex',
         href: '/leaderboards/flex',
         art: 'flex',
-        line: () => 'The best flex players, and the groups they climb with',
+        line: () => 'The best ranked flex players Invade knows',
         here: starts('/leaderboards/flex'),
       },
       {

@@ -31,6 +31,7 @@ import OlderGames from '../components/profile/OlderGames.vue'
 import PerformanceCard from '../components/profile/PerformanceCard.vue'
 import SideCards from '../components/profile/SideCards.vue'
 import ChampionsTable from '../components/profile/ChampionsTable.vue'
+import LiveGame from '../components/profile/LiveGame.vue'
 import { champIcon, championName } from '../lib/assets.js'
 import type { IconName } from '../lib/icons.js'
 import { profilePath } from '../lib/format.js'
@@ -657,6 +658,7 @@ const ROLE_FILTERS: { value: Filters['role']; label: string; lane: Position }[] 
 const base = computed(() => profilePath(parsed.value.gameName, parsed.value.tagLine))
 const nav = computed(() => [
   { key: 'overview', label: 'Overview', href: base.value, icon: 'grid' as IconName },
+  { key: 'live', label: 'Live game', href: `${base.value}/live`, icon: 'live' as IconName },
   {
     key: 'champions',
     label: 'Champions',
@@ -674,7 +676,7 @@ const nav = computed(() => [
   },
   { key: 'compare', label: 'Compare', href: `${base.value}/compare`, icon: 'compare' as IconName },
 ])
-/** The Matches and Lens routes belong to the Overview: they keep its summary at the left. */
+/** The Matches and Lens routes belong to the Overview: its item stays lit in the nav. */
 const inOverview = computed(() => ['overview', 'matches', 'lens'].includes(section.value))
 const navActive = computed(() => (inOverview.value ? 'overview' : section.value))
 /** The whole left column (rail and summary) stays in view beside the section. */
@@ -711,6 +713,9 @@ function clearFilters() {
           <aside class="pl-rail">
             <div class="card pl-sec"><Skeleton :height="232" /></div>
             <div class="card pl-sec"><Skeleton :rows="5" /></div>
+          </aside>
+          <aside class="pl-more">
+            <div class="card pl-sec"><Skeleton :rows="5" pic /></div>
           </aside>
         </div>
         <div class="pl-main">
@@ -767,8 +772,8 @@ function clearFilters() {
             <RankedCard v-else :ranks="ranks" />
           </aside>
 
-          <!-- The Overview's own rail: LP, champions, roles, mates, activity -->
-          <aside v-if="inOverview" class="pl-more" aria-label="Summary">
+          <!-- The summary, the same on every section: LP, champions, roles, mates, activity -->
+          <aside class="pl-more" aria-label="Summary">
             <LpCard v-if="!pending.ranks" :ranks="ranks" />
             <div v-if="pending.champions || pending.matches" class="card pl-sec">
               <Skeleton :rows="5" pic />
@@ -906,6 +911,15 @@ function clearFilters() {
               />
             </section>
           </template>
+
+          <!-- ── Live: asks Riot once, when opened ─────────────────── -->
+          <LiveGame
+            v-else-if="section === 'live'"
+            :puuid="profile.puuid"
+            :game-name="profile.gameName"
+            :platform="profile.platform"
+            :last-game-ms="lastGameMs"
+          />
 
           <!-- ── Lens (no item of its own: reached from its old address) ─ -->
           <LensSection v-else-if="section === 'lens'" :puuid="profile.puuid" />

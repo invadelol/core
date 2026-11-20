@@ -1,3 +1,5 @@
+import type { Position } from '@invadelol/ui/logic'
+
 export interface Summoner {
   puuid: string
   gameName: string
@@ -239,4 +241,45 @@ export interface ChampionMastery {
   tokensEarned?: number
   source?: 'riot' | 'desktop'
   observedAt?: number | null
+}
+
+/** A profile's Live section: the game the player is in now, or `game: null` between games. */
+export interface LiveCheck {
+  game: LiveGame | null
+  /** When Riot was asked, in ms. */
+  checkedAt: number
+}
+
+export interface LiveGame {
+  gameId: number
+  /** Epoch ms; 0 while the players are still loading in. */
+  gameStartTime: number
+  gameLength: number
+  gameQueueConfigId: number
+  mapId?: number | null
+  gameMode?: string | null
+  bannedChampions: Array<{ championId: number; teamId: number }>
+  /** Team by team; a laned team comes seated Top, Jungle, Mid, Bot, Support. */
+  participants: Array<{
+    puuid?: string | null
+    riotId?: string
+    championId: number
+    teamId: number
+    bot?: boolean
+    /** Games and win rate on this champion in the player's last stored games. */
+    championStats?: { games: number; winrate: number; kda?: number | null } | null
+    rank?: {
+      tier: string
+      division: string
+      leaguePoints: number
+      wins?: number | null
+      losses?: number | null
+    } | null
+    rankStatus?: 'ranked' | 'unranked' | 'unavailable'
+    spell1Id: number
+    spell2Id: number
+    perks?: { perkIds: number[]; perkStyle: number; perkSubStyle: number }
+    /** Inferred by the server; null where the mode has no lanes. */
+    position?: Position | null
+  }>
 }

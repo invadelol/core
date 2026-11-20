@@ -373,12 +373,6 @@
     background: var(--v300);
     box-shadow: 0 0 0 3px var(--s1);
   }
-  .vb .lb-cx {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
-  }
   .vb .lb-so {
     grid-template-columns: 34px minmax(0, 1fr) 92px 158px 104px 160px 52px 106px;
   }
@@ -410,129 +404,9 @@
     background: var(--line-2);
   }
 
-  /* flex: groups */
-  .vb .lb-gc {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    height: 228px;
-    padding: 16px 20px 18px;
-    border-radius: var(--r3);
-    background: var(--s1);
-    box-shadow: inset 0 0 0 1px var(--line);
-  }
-  .vb .lb-gc .lb-gh {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .vb .lb-sz {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    height: 22px;
-    padding: 0 8px;
-    border-radius: 6px;
-    background: var(--s3);
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--t2);
-  }
-  .vb .lb-sz .i {
-    width: 13px;
-    height: 13px;
-    color: var(--t3);
-  }
-  .vb .lb-sz.v {
-    background: var(--v900);
-    color: var(--v100);
-    box-shadow: inset 0 0 0 1px rgb(var(--v-rgb) / 0.35);
-  }
-  .vb .lb-sz.v .i {
-    color: var(--v300);
-  }
-  .vb .lb-mem {
-    display: flex;
-    gap: 10px;
-  }
-  .vb .lb-mem > span {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    width: 62px;
-  }
-  .vb .lb-mem .fr {
-    width: 44px;
-    height: 44px;
-  }
-  .vb .lb-mem b {
-    font-size: 12px;
-    font-weight: 650;
-    color: var(--t2);
-    max-width: 62px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .vb .lb-mem img.r {
-    width: 13px;
-    height: 13px;
-    opacity: 0.5;
-  }
-  .vb .lb-qs {
-    display: flex;
-    gap: 2px;
-    height: 10px;
-    border-radius: 2px;
-    overflow: hidden;
-  }
-  .vb .lb-qs i {
-    display: block;
-    height: 100%;
-  }
-  .vb .lb-ql {
-    display: flex;
-    gap: 22px;
-  }
-  .vb .lb-ql span {
-    display: flex;
-    align-items: baseline;
-    gap: 6px;
-    font-size: 12.5px;
-    font-weight: 600;
-    color: var(--t3);
-  }
-  .vb .lb-ql span b {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--t1);
-    font-variant-numeric: tabular-nums;
-  }
-  .vb .lb-ql span b i {
-    width: 8px;
-    height: 8px;
-    border-radius: 2px;
-  }
+  /* flex */
   .vb .lb-fx {
-    grid-template-columns: 34px minmax(0, 1fr) 92px 158px 150px 340px 106px;
-  }
-  .vb .lb-with {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-width: 0;
-  }
-  .vb .lb-with .col {
-    min-width: 0;
-    gap: 2px;
-  }
-  .vb .lb-r.hl {
-    background: rgb(var(--v-rgb) / 0.055);
-    box-shadow: inset 3px 0 0 var(--v500);
+    grid-template-columns: 34px minmax(0, 1fr) 120px 180px 190px 120px;
   }
 
   /* one-tricks */
@@ -804,13 +678,14 @@
       display: none;
     }
     .vb .lb-fx {
-      grid-template-columns: 34px minmax(0, 1fr) 92px 150px 140px minmax(0, 1.3fr);
+      grid-template-columns: 34px minmax(0, 1fr) 100px 160px 150px 110px;
     }
-    .vb .lb-fx > :nth-child(7) {
-      display: none;
-    }
+    /* The picker above the chosen champion: its list keeps the room for each one-trick's build. */
     .vb .lb-ot {
-      grid-template-columns: 280px minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .vb .lb-pgr {
+      grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
     }
     .vb .lb-cs {
       grid-template-columns: 1fr 1fr;
@@ -1013,16 +888,6 @@
       flex-wrap: wrap;
       gap: 10px;
     }
-    .vb .lb-gc {
-      height: auto;
-    }
-    .vb .lb-mem {
-      flex-wrap: wrap;
-    }
-    .vb .lb-ql {
-      flex-wrap: wrap;
-      gap: 10px 18px;
-    }
     .vb .lb-sec {
       flex-wrap: wrap;
     }
@@ -1035,7 +900,48 @@
 /* Without the mastery column (not stored for these players). */
 @layer components {
   .vb .lb-o1.nm {
-    grid-template-columns: 28px minmax(0, 1fr) 128px 124px 110px 70px;
+    grid-template-columns: 28px minmax(0, 1fr) 124px 116px 100px 152px;
+  }
+  /* The meta line under a one-trick's name: their role (a champion played in two), KDA, second pick. */
+  .vb .lb-o1m {
+    gap: 5px;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .vb .lb-o1m .iv-role-icon {
+    flex: none;
+    opacity: 0.7;
+  }
+  .vb .lb-alt-ic {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+  }
+  /* Their build on the champion: keystone, the three items they finish most, boots. */
+  .vb .lb-bd {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .vb .lb-bd img {
+    flex: none;
+    width: 26px;
+    height: 26px;
+    border-radius: var(--r-sm, 5px);
+    background: var(--ink-0);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  .vb .lb-bd img.ks {
+    width: 24px;
+    height: 24px;
+    margin-right: 5px;
+    border-radius: 50%;
+    background: var(--ink-0);
+  }
+  .vb .lb-bd img.bt {
+    margin-left: 5px;
   }
   .vb .lb-o2.nm {
     grid-template-columns: 200px minmax(0, 1fr) 140px 130px 120px 150px;
@@ -1046,16 +952,6 @@
   .vb .lb-pgr a .fr {
     position: relative;
   }
-  .vb .lb-mem > a {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    width: 62px;
-  }
-  .vb .lb-mem .r {
-    opacity: 0.5;
-  }
   @media (max-width: 1023px) {
     .vb .lb-o2.nm {
       grid-template-columns: 180px minmax(0, 1fr) 120px 110px 100px;
@@ -1065,10 +961,24 @@
     }
   }
   @media (max-width: 767px) {
+    /* A one-trick's row: the place, who and their rank, then their build under the name. */
     .vb .lb-o1.nm {
-      grid-template-columns: 22px minmax(0, 1fr) 96px;
+      grid-template-columns: 22px minmax(0, 1fr) auto;
+      row-gap: 8px;
     }
-    .vb .lb-o1.nm > :nth-child(n + 4) {
+    .vb .lb-r.lb-o1.nm {
+      padding-top: 10px;
+      padding-bottom: 10px;
+    }
+    .vb .lb-o1.nm > :nth-child(4),
+    .vb .lb-o1.nm > :nth-child(5) {
+      display: none;
+    }
+    .vb .lb-r.lb-o1.nm > :nth-child(6) {
+      display: flex;
+      grid-column: 2 / -1;
+    }
+    .vb .lb-h.lb-o1.nm > :nth-child(6) {
       display: none;
     }
     .vb .lb-o2.nm {
