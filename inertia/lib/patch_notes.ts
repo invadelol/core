@@ -62,6 +62,51 @@ export interface PatchNotes {
   bugs: string[]
 }
 
+/** A chroma as the page draws it: its own name ("Ruby") and the client's swatch colour, if known. */
+export interface PatchChroma {
+  name: string
+  color: string | null
+}
+
+/** A new skin as the page shows it, with what the game's data says about it. */
+export interface PatchSkin {
+  champion: number
+  skin: number
+  name: string
+  /** Every champion the entry is for: one, or a set released together (Ahri, Evelynn, Kai'Sa). */
+  champions: number[]
+  /** "Epic", "Legendary", "Mythic"…; null for a standard skin or when unknown. */
+  rarity: string | null
+  /** Its skin line ("K/DA"), when known. */
+  line: string | null
+  chromas: PatchChroma[]
+}
+
+/** New chromas for a skin that is not itself new this patch. */
+export interface PatchChromaSet {
+  skin: string
+  champion: number | null
+  chromas: PatchChroma[]
+}
+
+export interface PatchSkins {
+  skins: PatchSkin[]
+  chromas: PatchChromaSet[]
+}
+
+/** "Music Fan Gragas (FIRESTARTER)": the skin and its chromas' names. */
+export function chromaSet(line: string): { skin: string; names: string[] } {
+  const m = /^(.*?)\s*\(([^()]*)\)\s*$/.exec(line.trim())
+  if (!m) return { skin: line.trim(), names: [] }
+  return {
+    skin: m[1],
+    names: m[2]
+      .split(',')
+      .map((x) => x.trim())
+      .filter(Boolean),
+  }
+}
+
 /** How a champion did on the patch, in its main role (the site's own games). */
 export interface PatchChampionStat {
   position: string

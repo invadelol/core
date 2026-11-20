@@ -37,9 +37,13 @@ export default class PatchNotesController {
     const ids = notes
       ? [...notes.champions.map((c) => c.id), ...(notes.aram?.champions ?? []).map((c) => c.id)]
       : []
-    const [stats, slugs] = notes
-      ? await Promise.all([patchNotesService.stats(version, ids), patchNotesService.slugs()])
-      : [null, {}]
+    const [stats, slugs, skins] = notes
+      ? await Promise.all([
+          patchNotesService.stats(version, ids),
+          patchNotesService.slugs(),
+          patchNotesService.skins(notes),
+        ])
+      : [null, {}, null]
     // The last two weeks by day speak of the newest patch only.
     const daily =
       stats && asked === patches[0] ? await patchNotesService.daily(stats.byChampion) : null
@@ -59,6 +63,7 @@ export default class PatchNotesController {
       daily,
       roles,
       slugs,
+      skins,
       robots: notes ? null : 'noindex,follow',
       ...meta({
         title: notes ? `Patch ${asked} notes` : `Patch ${asked}`,
