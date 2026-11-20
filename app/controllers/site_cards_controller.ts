@@ -684,7 +684,7 @@ export default class SiteCardsController {
         [server.label, C.violet],
         ['flex ladder', C.text1],
       ]
-      sub = 'Who queues with whom'
+      sub = 'Ranked flex, best rank first'
       mood = 'buddies'
       source = 'Ranked flex players Invade knows'
     }

@@ -174,12 +174,18 @@ const sort = useSort(
           <SortHead :sorter="sort" col="games" label="Games" class="n" />
           <SortHead :sorter="sort" col="win" label="Win rate" class="n" />
           <SortHead :sorter="sort" col="kda" label="KDA" class="n" />
-          <SortHead :sorter="sort" col="cs" label="CS/min" class="n hm" />
-          <SortHead :sorter="sort" col="gold" label="Gold/min" class="n hm" />
-          <SortHead :sorter="sort" col="damage" label="Dmg/min" class="n hm" />
-          <SortHead :sorter="sort" col="kills" label="Most kills" class="n hm" />
-          <SortHead :sorter="sort" col="time" label="Time played" class="n hm" />
-          <SortHead :sorter="sort" col="mastery" label="Mastery" class="n hm" />
+          <SortHead :sorter="sort" col="cs" label="CS/min" class="n c-cs" />
+          <SortHead :sorter="sort" col="gold" label="Gold/min" class="n c-gold" />
+          <SortHead
+            :sorter="sort"
+            col="damage"
+            label="Dmg/min"
+            class="n c-dmg"
+            title="Damage to champions a minute"
+          />
+          <SortHead :sorter="sort" col="kills" label="Most kills" class="n c-kills" />
+          <SortHead :sorter="sort" col="time" label="Time" class="n c-time" title="Time played" />
+          <SortHead :sorter="sort" col="mastery" label="Mastery" class="n c-ms" />
         </div>
         <button
           v-for="c in sort.rows"
@@ -190,8 +196,12 @@ const sort = useSort(
         >
           <span class="who"
             ><img class="pic" :src="champIcon(c.championId)" alt="" width="34" height="34" /><span
-              class="h5 ell"
-              >{{ championName(c.championId) }}</span
+              class="ct-nm"
+              ><span class="h5 ell">{{ championName(c.championId) }}</span
+              ><span v-if="points.get(c.championId)" class="meta ct-ms"
+                >Level {{ points.get(c.championId)!.championLevel }},
+                {{ compact(points.get(c.championId)!.championPoints) }}</span
+              ></span
             ></span
           >
           <span class="n"
@@ -200,8 +210,8 @@ const sort = useSort(
           <span class="n">
             <span class="wlc">
               <span class="num"
-                ><b>{{ pct(c) }}%</b>
-                <span class="meta">{{ c.wins }}W {{ c.games - c.wins }}L</span></span
+                ><b>{{ pct(c) }}%</b
+                ><span class="meta">{{ c.wins }}W {{ c.games - c.wins }}L</span></span
               >
               <span class="wrl"><i :style="{ width: `${pct(c)}%` }" /></span>
             </span>
@@ -211,16 +221,16 @@ const sort = useSort(
             :title="`${c.avgKills.toFixed(1)} / ${c.avgDeaths.toFixed(1)} / ${c.avgAssists.toFixed(1)} a game`"
             ><b class="num">{{ c.kda.toFixed(2) }}</b></span
           >
-          <span class="n hm">{{ c.csMin.toFixed(1) }}</span>
-          <span class="n hm">{{ Math.round(c.goldMin) }}</span>
-          <span class="n hm">{{ Math.round(c.damageMin) }}</span>
-          <span class="n hm">{{ c.maxKills }}</span>
-          <span class="n hm">{{ hours(c.duration) }}</span>
-          <span class="n hm meta">{{
-            points.get(c.championId)
-              ? `${compact(points.get(c.championId)!.championPoints)}, lv ${points.get(c.championId)!.championLevel}`
-              : '–'
-          }}</span>
+          <span class="n c-cs">{{ c.csMin.toFixed(1) }}</span>
+          <span class="n c-gold">{{ Math.round(c.goldMin) }}</span>
+          <span class="n c-dmg">{{ Math.round(c.damageMin) }}</span>
+          <span class="n c-kills">{{ c.maxKills }}</span>
+          <span class="n c-time">{{ hours(c.duration) }}</span>
+          <span v-if="points.get(c.championId)" class="n c-ms ct-mv"
+            ><b class="num">{{ compact(points.get(c.championId)!.championPoints) }}</b
+            ><span class="meta">Level {{ points.get(c.championId)!.championLevel }}</span></span
+          >
+          <span v-else class="n c-ms t4">–</span>
         </button>
         <EmptyState
           v-if="!sort.rows.length"

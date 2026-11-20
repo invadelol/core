@@ -14,7 +14,13 @@ import { linkSort, useSort, type SortDir } from '../../components/ui/sort.js'
 import RoleFilter from '../../components/leaderboards/RoleFilter.vue'
 import LadderPager from '../../components/leaderboards/LadderPager.vue'
 import LadderPlayer from '../../components/leaderboards/LadderPlayer.vue'
-import { champIcon, championSplash, profileIcon } from '../../lib/assets.js'
+import {
+  assetUrl,
+  champIcon,
+  championSplash,
+  nameOf as assetName,
+  profileIcon,
+} from '../../lib/assets.js'
 import { patchName } from '../../lib/patch.js'
 import {
   ROLES,
@@ -54,7 +60,17 @@ interface Trick {
   kda: number
   last: number
   also: { champion: number; share: number } | null
+  /** Their usual build on the chosen champion (its list only). */
+  build: {
+    games: number
+    core: number[]
+    boots: number | null
+    keystone: number | null
+    secondaryStyle: number | null
+  } | null
 }
+/** The roles a champion has one-tricks in, with how many. */
+type Roles = { position: string; oneTricks: number }[]
 
 /**
  * `/leaderboards/one-tricks`: the server's Master+ players who play one champion in at least half
@@ -74,12 +90,18 @@ const props = defineProps<{
   }
   updatedAt: number | null
   patch: string | null
-  champions: { champion: number; oneTricks: number; byTier: Record<Tier, number> }[]
+  champions: {
+    champion: number
+    oneTricks: number
+    byTier: Record<Tier, number>
+    roles: Roles
+  }[]
   selected: {
     champion: number
     position: string | null
     stat: { win: number; pick: number; tier: number | null; games: number } | null
     byTier: Record<Tier, number>
+    roles: Roles
     total: number
     rows: Trick[]
   } | null
@@ -145,23 +167,29 @@ const SORT_WORDS = {
 const regionSlug = ref(props.region.slug)
 watch(regionSlug, (slug) => router.visit(href({ region: slug === 'euw' ? null : slug })))
 
-/** The picker's own filters: a name and a role, in the browser. */
+/**
+ * The picker's own filters: a name and a role, in the browser. A role lists every champion with a
+ * one-trick in it (a champion one-tricked in two roles is in both), counted in that role.
+ */
 const find = ref('')
 const pickRole = ref<string | null>(null)
-const positionOf = computed(() => {
-  const out = new Map<number, string | null>()
-  for (const b of props.best.rows) out.set(b.champion, b.position)
-  return out
-})
 const picker = computed(() => {
   const q = find.value.trim().toLowerCase()
-  return props.champions.filter(
-    (c) =>
-      (!q || nameOf(c.champion).toLowerCase().includes(q)) &&
-      (!pickRole.value || laneOf(positionOf.value.get(c.champion)) === pickRole.value)
-  )
+  return props.champions
+    .map((c) => ({
+      ...c,
+      shown: pickRole.value
+        ? (c.roles.find((r) => laneOf(r.position) === pickRole.value)?.oneTricks ?? 0)
+        : c.oneTricks,
+    }))
+    .filter((c) => c.shown > 0 && (!q || nameOf(c.champion).toLowerCase().includes(q)))
+    .sort((a, b) => b.shown - a.shown || b.oneTricks - a.oneTricks || a.champion - b.champion)
 })
 const LOW = 3
+/** The chosen champion's one-tricks play it in more than one role: each row says theirs. */
+const manyRoles = computed(() => (props.selected?.roles.length ?? 0) > 1)
+const itemName = (id: number) => assetName('item', id) ?? ''
+const runeName = (id: number) => assetName('rune', id) ?? ''
 
 const chosenName = computed(() => (props.selected ? nameOf(props.selected.champion) : ''))
 const pct = (x: number, digits = 1) => `${(x * 100).toFixed(digits)}%`
@@ -194,7 +222,9 @@ const updated = computed(() => since(props.updatedAt))
             <Select
               v-model="regionSlug"
               label="Region"
-              :options="regions.map((r) => ({ value: r.slug, label: r.label, icon: regionFlag(r.slug) }))"
+              :options="
+                regions.map((r) => ({ value: r.slug, label: r.label, icon: regionFlag(r.slug) }))
+              "
               width="11rem"
               align="right"
             />
@@ -260,18 +290,21 @@ const updated = computed(() => since(props.updatedAt))
                 v-for="c in picker"
                 :key="c.champion"
                 :href="href({ champion: slugOf(c.champion), all: null })"
-                :class="{ on: c.champion === selected?.champion, lo: c.oneTricks < LOW }"
+                :class="{ on: c.champion === selected?.champion, lo: c.shown < LOW }"
                 preserve-scroll
+                preserve-state
                 :title="nameOf(c.champion)"
               >
                 <Frame :src="champIcon(c.champion)" size="xs" :alt="nameOf(c.champion)" />{{
-                  c.oneTricks
+                  c.shown
                 }}</Link
               >
             </div>
             <span class="more meta" style="cursor: default"
-              >{{ champions.length }} {{ champions.length === 1 ? 'champion' : 'champions' }} with a
-              one-trick</span
+              >{{ picker.length }} {{ picker.length === 1 ? 'champion' : 'champions' }} with a
+              one-trick<template v-if="pickRole">
+                in {{ ROLES.find((r) => r.lane === pickRole)?.label.toLowerCase() }}</template
+              ></span
             >
           </aside>
 
@@ -306,13 +339,13 @@ const updated = computed(() => since(props.updatedAt))
                 </span>
                 <span class="row oa-hs">
                   <span v-if="selected.stat" class="col"
-                    ><span class="fg-s">{{ (selected.stat.win * 100).toFixed(1)
-                    }}<span class="u">%</span></span
+                    ><span class="fg-s"
+                      >{{ (selected.stat.win * 100).toFixed(1) }}<span class="u">%</span></span
                     ><span class="meta">Win rate, Emerald+</span></span
                   >
                   <span v-if="selected.stat" class="col"
-                    ><span class="fg-s">{{ (selected.stat.pick * 100).toFixed(1)
-                    }}<span class="u">%</span></span
+                    ><span class="fg-s"
+                      >{{ (selected.stat.pick * 100).toFixed(1) }}<span class="u">%</span></span
                     ><span class="meta"
                       >Picked in
                       {{ (roleLabel(selected.position) || 'its role').toLowerCase() }}</span
@@ -338,9 +371,14 @@ const updated = computed(() => since(props.updatedAt))
               <span class="lb-n" style="font-weight: 650">#</span>
               <span>Player</span>
               <SortHead :sorter="chosenSort" col="rank" label="Rank" />
-              <SortHead :sorter="chosenSort" col="games" :label="`On ${chosenName}`" title="Games on the champion" />
+              <SortHead
+                :sorter="chosenSort"
+                col="games"
+                :label="`On ${chosenName}`"
+                title="Games on the champion"
+              />
               <SortHead :sorter="chosenSort" col="wr" label="Win rate on it" />
-              <span>Also plays</span>
+              <span :title="`Their keystone and most bought items on ${chosenName}`">Build</span>
             </div>
             <Link
               v-for="(r, i) in chosenSort.rows"
@@ -358,7 +396,23 @@ const updated = computed(() => since(props.updatedAt))
                       <span class="lb-tag">#{{ r.tagLine }}</span></template
                     ><span v-if="r.pro" class="lb-pro">PRO</span></span
                   >
-                  <span class="meta ell">{{ r.kda.toFixed(1) }} KDA</span>
+                  <span class="meta row lb-o1m"
+                    ><RoleIcon
+                      v-if="manyRoles && laneOf(r.position)"
+                      :lane="laneOf(r.position)!"
+                      :size="13"
+                      :title="roleLabel(r.position)"
+                    />{{ r.kda.toFixed(1) }} KDA<template v-if="r.also"
+                      ><span class="t4">·</span>also<img
+                        :src="champIcon(r.also.champion)"
+                        :alt="nameOf(r.also.champion)"
+                        :title="`${nameOf(r.also.champion)}, ${Math.round(r.also.share * 100)}% of their games`"
+                        class="lb-alt-ic"
+                        width="16"
+                        height="16"
+                      />{{ Math.round(r.also.share * 100) }}%</template
+                    ></span
+                  >
                 </span>
               </span>
               <span class="row" style="gap: 9px">
@@ -384,14 +438,37 @@ const updated = computed(() => since(props.updatedAt))
                   >{{ vs(r.vsAverage) }}</span
                 >
               </span>
-              <span v-if="r.also" class="lb-alt">
-                <Frame
-                  :src="champIcon(r.also.champion)"
-                  :width="26"
-                  size="xs"
-                  :alt="nameOf(r.also.champion)"
+              <span v-if="r.build && (r.build.core.length || r.build.keystone)" class="lb-bd">
+                <img
+                  v-if="r.build.keystone"
+                  class="ks"
+                  :src="assetUrl('rune', r.build.keystone)"
+                  :alt="runeName(r.build.keystone)"
+                  :title="runeName(r.build.keystone)"
+                  width="24"
+                  height="24"
+                  loading="lazy"
                 />
-                <span class="meta">{{ Math.round(r.also.share * 100) }}%</span>
+                <img
+                  v-for="it in r.build.core"
+                  :key="it"
+                  :src="assetUrl('item', it)"
+                  :alt="itemName(it)"
+                  :title="itemName(it)"
+                  width="26"
+                  height="26"
+                  loading="lazy"
+                />
+                <img
+                  v-if="r.build.boots"
+                  class="bt"
+                  :src="assetUrl('item', r.build.boots)"
+                  :alt="itemName(r.build.boots)"
+                  :title="itemName(r.build.boots)"
+                  width="26"
+                  height="26"
+                  loading="lazy"
+                />
               </span>
               <span v-else class="t3">–</span>
             </Link>
@@ -416,7 +493,8 @@ const updated = computed(() => since(props.updatedAt))
             <Icon name="star" />
             <h2 class="h3">The best one-trick on each champion</h2>
             <span class="meta"
-              >Ranked by {{ SORT_WORDS[filters.sort] }}{{ filters.dir === 'asc' ? ', least first' : '' }}</span
+              >Ranked by {{ SORT_WORDS[filters.sort]
+              }}{{ filters.dir === 'asc' ? ', least first' : '' }}</span
             >
             <span class="row" style="gap: 10px; margin-left: auto">
               <RoleFilter :active="filters.role" :href="(role) => href({ role })" />

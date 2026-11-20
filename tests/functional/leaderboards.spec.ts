@@ -74,6 +74,18 @@ const fake: LadderSource = {
     new Map([['test-pro-id', { slug: 'test-pro', name: 'Test Pro', team: null, league: null }]]),
   recentGames: async () => new Map(),
   matches: async () => [],
+  championGames: async (puuids, champion) =>
+    champion === 55 && puuids.includes(puuid('second'))
+      ? [1, 2, 3].map((i) => ({
+          puuid: puuid('second'),
+          items: [3020, 6655, 3157, i === 3 ? 3089 : 4645, 0, 0],
+          keystone: 8112,
+          secondaryStyle: 8300,
+          spells: [4, 14] as [number, number],
+          skillOrder: [],
+          win: i < 3,
+        }))
+      : [],
 }
 
 /** A history kept in memory, empty at first. */
@@ -209,7 +221,12 @@ test.group('Leaderboards', (group) => {
     const props = propsOf(response.text())
     assert.equal(props.oneTricks, 1)
     assert.deepEqual(props.champions, [
-      { champion: 55, oneTricks: 1, byTier: { CHALLENGER: 1, GRANDMASTER: 0, MASTER: 0 } },
+      {
+        champion: 55,
+        oneTricks: 1,
+        byTier: { CHALLENGER: 1, GRANDMASTER: 0, MASTER: 0 },
+        roles: [{ position: 'MIDDLE', oneTricks: 1 }],
+      },
     ])
     assert.equal(props.selected.champion, 55)
     const [row] = props.selected.rows
@@ -219,26 +236,28 @@ test.group('Leaderboards', (group) => {
     assert.equal(row.winRate, 0.667)
     assert.deepEqual(row.also, { champion: 7, share: 0.167 })
     assert.isNull(row.mastery)
+    assert.equal(row.build.games, 3)
+    assert.equal(row.build.keystone, 8112)
+    assert.equal(row.build.secondaryStyle, 8300)
+    // Boots apart when the patch's item kinds are stored, among the items otherwise.
+    assert.includeMembers([...row.build.core, row.build.boots], [3020, 6655, 3157])
     assert.equal(props.best.rows[0].best.gameName, 'Test Second')
     assert.deepEqual(props.rule, { minGames: 20, minShare: 0.5, windowDays: 30, recentDays: 14 })
+
+    // A role lists every champion one-tricked in it, and nothing else.
+    const mid = propsOf((await client.get('/leaderboards/one-tricks?role=mid')).text())
+    assert.deepEqual(
+      mid.best.rows.map((b: any) => [b.champion, b.position, b.oneTricks]),
+      [[55, 'MIDDLE', 1]]
+    )
+    const top = propsOf((await client.get('/leaderboards/one-tricks?role=top')).text())
+    assert.deepEqual(top.best.rows, [])
   })
 
-  test('ranks the flex players Invade knows, with who they queue with', async ({
+  test('ranks the flex players Invade knows, with their role and champions', async ({
     client,
     assert,
   }) => {
-    const side = (matchId: string, win: boolean, names: string[]) =>
-      names.map((n, i) => ({
-        matchId,
-        teamId: 100,
-        puuid: puuid(n),
-        win,
-        gameName: `Test ${n}`,
-        tagLine: 'TEST',
-        icon: 1,
-        position: ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY'][i],
-        champion: 10 + i,
-      }))
     const flex: FlexSource = {
       entries: async () => [
         {
@@ -268,11 +287,41 @@ test.group('Leaderboards', (group) => {
           at: NOW,
         },
       ],
-      games: async () => [1, 2, 3].map((i) => ({ matchId: `EUW1_${i}`, teamId: 100 })),
-      sides: async () =>
-        [1, 2, 3].flatMap((i) =>
-          side(`EUW1_${i}`, i < 3, ['flex-a', 'flex-b', `m${i}`, `n${i}`, `o${i}`])
-        ),
+      games: async () => [
+        {
+          puuid: puuid('flex-a'),
+          champion: 10,
+          position: 'TOP',
+          games: 3,
+          wins: 2,
+          kills: 0,
+          deaths: 0,
+          assists: 0,
+          last: NOW,
+        },
+        {
+          puuid: puuid('flex-a'),
+          champion: 11,
+          position: 'TOP',
+          games: 1,
+          wins: 0,
+          kills: 0,
+          deaths: 0,
+          assists: 0,
+          last: NOW,
+        },
+        {
+          puuid: puuid('flex-b'),
+          champion: 12,
+          position: 'JUNGLE',
+          games: 2,
+          wins: 1,
+          kills: 0,
+          deaths: 0,
+          assists: 0,
+          last: NOW,
+        },
+      ],
     }
     flexLadderService.source = flex
     const response = await client.get('/leaderboards/flex?region=euw')
@@ -287,11 +336,15 @@ test.group('Leaderboards', (group) => {
         [2, 'Test flex-b', 'DIAMOND', 'II'],
       ]
     )
-    assert.equal(props.rows[0].queuesWith.size, 'duo')
-    assert.equal(props.rows[0].queuesWith.mates[0].gameName, 'Test flex-b')
-    assert.equal(props.rows[0].queuesWith.games, 3)
-    assert.equal(props.rows[0].queuesWith.wins, 2)
-    assert.equal(props.shares.duo, 1)
+    assert.equal(props.rows[0].role, 'TOP')
+    assert.equal(props.rows[0].games, 4)
+    assert.deepEqual(
+      props.rows[0].champions.map((c: any) => c.champion),
+      [10, 11]
+    )
+    assert.equal(props.rows[1].role, 'JUNGLE')
+    assert.notProperty(props, 'groups')
+    assert.notProperty(props.rows[0], 'queuesWith')
   })
 
   test('answers the pro ladder from the stored pro data, the first league by default', async ({
