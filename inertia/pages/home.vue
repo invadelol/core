@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import { RoleIcon } from '@invadelol/ui'
 import SiteLayout from '../components/SiteLayout.vue'
 import SearchBar from '../components/SearchBar.vue'
 import HomeRecent from '../components/home/HomeRecent.vue'
+import BestPicks from '../components/home/BestPicks.vue'
 import DownloadApp from '../components/DownloadApp.vue'
 import ProPhoto from '../components/champions/ProPhoto.vue'
 import MatchTime from '../components/pros/MatchTime.vue'
@@ -47,6 +48,13 @@ const version = computed(
 const patch = computed(() => (version.value ? patchName(version.value) : null))
 
 const picks = computed(() => props.picks?.best ?? [])
+const splus = computed(() => props.picks?.splus ?? [])
+/** Proposals for the best picks (`?v=a|b|c`), read in the browser; none: the current cards. */
+const variant = ref<'a' | 'b' | 'c' | null>(null)
+onMounted(() => {
+  const v = new URLSearchParams(window.location.search).get('v')
+  if (v === 'a' || v === 'b' || v === 'c') variant.value = v
+})
 const bans = computed(() => (props.picks?.bans ?? []).slice(0, 5))
 const topBan = computed(() => bans.value[0]?.banRate || 1)
 const pros = computed(() => (props.pros ?? []).slice(0, 5))
@@ -266,7 +274,8 @@ const topBully = (rows: { value: number }[]) => rows[0]?.value || 1
           :meta="patch ? `Patch ${patch}, Emerald+` : 'Emerald+'"
           :more="{ label: 'Tier list', href: '/tier-list' }"
         />
-        <div class="picks">
+        <BestPicks v-if="variant" :variant="variant" :picks="picks" :splus="splus" />
+        <div v-else class="picks">
           <Link
             v-for="p in picks"
             :key="p.position"
