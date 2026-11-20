@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
 import { emblemBackground } from '../../lib/facet.js'
+import { teamLogo } from '../../lib/board.js'
+import { useTheme } from '../../lib/theme.js'
 import { loadSiteNav, siteNav } from '../../lib/site_nav.js'
 import type { SubPicture } from './sub_art.js'
 
@@ -10,14 +12,21 @@ import type { SubPicture } from './sub_art.js'
  * once the browser is idle; until then its well stays empty.
  */
 const props = defineProps<{ art: SubPicture }>()
+const { resolved } = useTheme()
+
+/** Our logos come in a copy per ground (`/cdn/team|league/…?on=light`): take the theme's. */
+const onGround = (url: string) =>
+  /^\/cdn\/(team|league)\//.test(url)
+    ? `${url}${url.includes('?') ? '&' : '?'}${resolved.value === 'light' ? 'on=light&' : ''}v=2`
+    : url
 
 const src = computed(() => {
   const a = props.art
-  if (a.kind === 'square' || a.kind === 'logo' || a.kind === 'round') return a.src
+  if (a.kind === 'square' || a.kind === 'logo' || a.kind === 'round') return onGround(a.src)
   if (a.kind === 'pro') return `/cdn/pro/${a.slug}?s=48`
   if (a.kind === 'team') {
     const id = siteNav.value?.art?.teams?.[a.slug]
-    return id ? `/cdn/team/${id}?s=48` : null
+    return id ? teamLogo(id, 48, resolved.value) : null
   }
   return null
 })

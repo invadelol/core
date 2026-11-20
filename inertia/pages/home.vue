@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive } from 'vue'
+import { computed, reactive } from 'vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import { RoleIcon } from '@invadelol/ui'
 import SiteLayout from '../components/SiteLayout.vue'
@@ -7,6 +7,7 @@ import SearchBar from '../components/SearchBar.vue'
 import HomeRecent from '../components/home/HomeRecent.vue'
 import DownloadApp from '../components/DownloadApp.vue'
 import ProPic from '../components/pros/ProPic.vue'
+import Logo from '../components/pros/Logo.vue'
 import MatchTime from '../components/pros/MatchTime.vue'
 import Glyph from '../components/ui/Glyph.vue'
 import Icon from '../components/ui/Icon.vue'
@@ -78,13 +79,8 @@ const bestOf = (m: ProMatch) =>
     : 'Best of one'
 const winner = (m: ProMatch) => (m.winner ? teamName(m.teams[m.winner - 1]) : null)
 const gameNow = (m: ProMatch) => (m.teams[0].score ?? 0) + (m.teams[1].score ?? 0) + 1
-const teamLogo = (t: ProMatch['teams'][number]) => (t.id ? `/cdn/team/${t.id}?s=96` : null)
-/** A team whose logo did not load shows its code instead (also when it failed before hydration). */
+/** A team whose logo did not load shows its code instead (`Logo` also tells after hydration). */
 const noLogo = reactive(new Set<number>())
-onMounted(() => {
-  for (const img of document.querySelectorAll<HTMLImageElement>('.lc.pro .tm img[data-side]'))
-    if (img.complete && img.naturalWidth === 0) noLogo.add(Number(img.dataset.side))
-})
 const lost = (m: ProMatch, side: 0 | 1) => finished(m) && m.winner !== null && m.winner !== side + 1
 
 /* ── Figures ─────────────────────────────────────────────────────── */
@@ -134,13 +130,11 @@ const topBully = (rows: { value: number }[]) => rows[0]?.value || 1
             <!-- The pro game of the moment: live, next, or the last result. -->
             <Link v-if="card.key === 'game'" class="lc pro" href="/esports" prefetch>
               <span class="lc-h"
-                ><img
+                ><Logo
                   v-if="card.game.league"
                   class="lg"
-                  :src="`/cdn/league/${card.game.league.slug}`"
-                  alt=""
-                  width="22"
-                  height="22"
+                  :league="card.game.league.slug"
+                  :size="22"
                 /><b class="ell">{{
                   card.game.league?.name ?? card.game.tournament ?? 'Pro game'
                 }}</b
@@ -153,14 +147,11 @@ const topBully = (rows: { value: number }[]) => rows[0]?.value || 1
                   :key="side"
                   class="tm"
                   :class="{ w: !lost(card.game, side), [`s${side}`]: true }"
-                  ><img
-                    v-if="teamLogo(card.game.teams[side]) && !noLogo.has(side)"
-                    :src="teamLogo(card.game.teams[side])!"
-                    alt=""
-                    width="68"
-                    height="68"
-                    :data-side="side"
-                    @error="noLogo.add(side)"
+                  ><Logo
+                    v-if="card.game.teams[side].id && !noLogo.has(side)"
+                    :team="card.game.teams[side].id"
+                    :size="68"
+                    @missing="noLogo.add(side)"
                   /><span v-else class="tm-ini">{{
                     (card.game.teams[side].code ?? teamName(card.game.teams[side])).slice(0, 3)
                   }}</span

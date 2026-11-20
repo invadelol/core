@@ -5,6 +5,7 @@ import { RoleIcon } from '@invadelol/ui'
 import SiteLayout from '../../components/SiteLayout.vue'
 import Icon from '../../components/ui/Icon.vue'
 import Frame from '../../components/ui/Frame.vue'
+import ProPic from '../../components/pros/ProPic.vue'
 import Select from '../../components/ui/Select.vue'
 import ScoreDial from '../../components/ui/ScoreDial.vue'
 import RankEmblem from '../../components/ui/RankEmblem.vue'
@@ -256,8 +257,14 @@ const ordinal = (place: number) => {
                 <span v-if="lead !== null" class="meta sb-hm">{{ n(lead) }} LP ahead of 2nd</span>
               </span>
               <span class="row sb-who">
-                <span v-if="leader.pro?.photo" class="lb-pp sb-pic"
-                  ><img :src="`/cdn/pro/${leader.pro.slug}?s=96&v=${leader.pro.photo}`" alt=""
+                <span v-if="leader.pro" class="lb-pp sb-pic"
+                  ><ProPic
+                    :slug="leader.pro.slug"
+                    :photo="leader.pro.photo"
+                    :team="leader.pro.team"
+                    :size="96"
+                    position="50% 8%"
+                    eager
                 /></span>
                 <Frame v-else class="sb-pic" :src="profileIcon(leader.icon)" eager />
                 <span class="col" style="gap: 4px; min-width: 0">
@@ -301,8 +308,13 @@ const ordinal = (place: number) => {
               <span class="sb-no" :class="{ hi: p.place <= 3 }"
                 >{{ p.place }}<span class="sb-ord">{{ ordinal(p.place) }}</span></span
               >
-              <span v-if="p.pro?.photo" class="lb-pp sb-sp"
-                ><img :src="`/cdn/pro/${p.pro.slug}?s=48&v=${p.pro.photo}`" alt=""
+              <span v-if="p.pro" class="lb-pp sb-sp"
+                ><ProPic
+                  :slug="p.pro.slug"
+                  :photo="p.pro.photo"
+                  :team="p.pro.team"
+                  :size="48"
+                  position="50% 8%"
               /></span>
               <Frame v-else :src="profileIcon(p.icon)" :width="40" size="s" />
               <span class="col" style="min-width: 0; gap: 2px">
