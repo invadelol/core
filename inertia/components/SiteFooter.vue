@@ -7,17 +7,14 @@ import ThemeChoice from './header/ThemeChoice.vue'
 import { prefetchOnTouch } from './header/prefetch.js'
 import { DISCORD_URL, REPO_URL, X_URL } from '../lib/links.js'
 import { FOOTER_COLUMNS, NEW_DAWN_LINK, patchPath } from '../lib/site_nav.js'
-import { patchName } from '../lib/patch.js'
 
 /**
  * The foot of every page (Facet): the mark and one line on what Invade is, the Discord and X,
  * then four columns (Tier list, Leaderboards, Esports, Invade, with New Dawn under the patch
- * notes); under a hairline, Riot's notice,
- * the policies, the theme and the patch the statistics read.
+ * notes); under a hairline, Riot's notice, the policies and the theme.
  */
 const page = usePage()
 const version = computed(() => (page.props as { patch?: string | null }).patch ?? null)
-const patch = computed(() => (version.value ? patchName(version.value) : null))
 
 const columns = computed(() => [
   ...FOOTER_COLUMNS,
@@ -107,7 +104,6 @@ const year = new Date().getFullYear()
               <a href="/legal#terms">Terms</a>
             </span>
             <ThemeChoice />
-            <span v-if="patch" class="num">Patch {{ patch }}, English</span>
           </span>
         </div>
       </div>
