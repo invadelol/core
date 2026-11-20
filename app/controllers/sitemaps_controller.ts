@@ -42,15 +42,16 @@ async function section(name: SitemapSection): Promise<SitemapUrl[]> {
       { path: '/stats', lastmod },
       ...VIEWS.filter((v) => v !== 'overview').map((v) => ({ path: `/stats?view=${v}`, lastmod })),
       { path: '/esports', lastmod },
-      { path: '/pros', lastmod },
-      ...listed.slice(1).map((l) => ({ path: `/pros?league=${l.slug}`, lastmod })),
       { path: '/leagues', lastmod },
       ...listed.map((l) => ({ path: `/league/${l.slug}`, lastmod })),
       { path: '/teams', lastmod },
       { path: '/leaderboards/solo', lastmod },
       { path: '/leaderboards/flex', lastmod },
       { path: '/leaderboards/one-tricks', lastmod },
+      // The pros' page: a league's players (the first league at the bare address), every pro.
       { path: '/leaderboards/pros', lastmod },
+      ...listed.slice(1).map((l) => ({ path: `/leaderboards/pros?league=${l.slug}`, lastmod })),
+      { path: '/leaderboards/pros?league=all', lastmod },
       ...patches.map((p) => ({ path: `/patch/${p}`, lastmod })),
       { path: '/contact', lastmod },
     ]

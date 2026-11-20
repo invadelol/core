@@ -308,6 +308,37 @@ test.group('Leaderboards', (group) => {
     assert.equal(propsOf(all.text()).filters.league, 'all')
   }).timeout(60_000)
 
+  test('the pros page leads to the pro ladder, its league kept', async ({ client, assert }) => {
+    const bare = await client.get('/pros').redirects(0)
+    bare.assertStatus(302)
+    assert.equal(bare.header('location'), '/leaderboards/pros')
+    const lfl = await client.get('/pros?league=lfl&role=mid').redirects(0)
+    lfl.assertStatus(302)
+    assert.equal(lfl.header('location'), '/leaderboards/pros?role=mid&league=lfl')
+    const ladder = await client.get('/pros?view=ladder').redirects(0)
+    ladder.assertStatus(301)
+    assert.equal(ladder.header('location'), '/leaderboards/pros?league=all')
+  }).timeout(60_000)
+
+  test("a league's board lists its players, the unranked last", async ({ client, assert }) => {
+    const board = await client.get('/leaderboards/pros')
+    board.assertStatus(200)
+    const props = propsOf(board.text())
+    const places = props.rows.map((r: { place: number }) => r.place)
+    assert.deepEqual(
+      places,
+      [...places].sort((a: number, b: number) => a - b)
+    )
+    // A league's board says who sits on the bench; every league's does not.
+    for (const r of props.rows) assert.isBoolean(r.sub)
+    const sorted = propsOf((await client.get('/leaderboards/pros?sort=name&dir=asc')).text())
+    const names = sorted.rows.map((r: { pro: { name: string } }) => r.pro.name)
+    assert.deepEqual(
+      names,
+      [...names].sort((a: string, b: string) => a.localeCompare(b, 'en'))
+    )
+  }).timeout(60_000)
+
   test('answers the esports overview from the stored pro data', async ({ client, assert }) => {
     const esports = await client.get('/esports')
     esports.assertStatus(200)
