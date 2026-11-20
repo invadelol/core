@@ -18,7 +18,14 @@ import Flag from '../../components/pros/Flag.vue'
 import SocialIcon from '../../components/pros/SocialIcon.vue'
 import GameModal from '../../components/pros/GameModal.vue'
 import { useSort } from '../../components/ui/sort.js'
-import { champIcon, assetUrl, profileIcon } from '../../lib/assets.js'
+import {
+  champIcon,
+  assetUrl,
+  championLoading,
+  championSplash,
+  profileIcon,
+} from '../../lib/assets.js'
+import { useTeamColour } from '../../lib/team_colour.js'
 import { countryName } from '../../lib/board.js'
 import { laneOf, n, rankValue, rankWords, roleLabel, winPct } from '../../lib/ladders.js'
 import { profilePath } from '../../lib/format.js'
@@ -222,6 +229,21 @@ const socials = computed(() =>
 )
 const country = computed(() => props.pro.about?.nationality ?? props.pro.country)
 
+/**
+ * Design proposals for the hero, without its figures (`?v=a|b|c`): a = their champions beside
+ * them, b = their team's colour behind them, c = the pro before their champion's art. Without
+ * `v`, the hero as it is.
+ */
+const variant = computed(() => {
+  const v = new URLSearchParams(page.url.split('?')[1] ?? '').get('v')
+  return v === 'a' || v === 'b' || v === 'c' ? v : null
+})
+/** Their most played champions of recent solo queue, most games first. */
+const signature = computed(() =>
+  [...props.pro.builds].sort((a, b) => b.games - a.games || b.wins - a.wins).slice(0, 3)
+)
+const teamRgb = useTeamColour(() => (variant.value === 'b' ? props.pro.team?.id : null))
+
 const ORDER = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT']
 const five = computed(() =>
   (props.roster?.members ?? [])
@@ -391,10 +413,39 @@ const PLATFORM: Record<string, string> = {
         </nav>
       </div>
 
-      <section class="card pp-hero">
-        <Frame class="ph5" stage
+      <section
+        class="card pp-hero"
+        :class="variant && `ph-${variant}`"
+        :style="variant === 'b' && teamRgb ? { '--team-rgb': teamRgb } : undefined"
+      >
+        <Frame v-if="variant !== 'b' && variant !== 'c'" class="ph5 ph-m" stage
           ><ProPic :slug="pro.slug" :photo="pro.photo" :team="pro.team" :size="240" eager
         /></Frame>
+        <!-- b: the photo on a stage in their team's colour, the head above its edge. -->
+        <div v-else-if="variant === 'b'" class="ph-stage ph-m" :class="{ tinted: teamRgb }">
+          <span class="ph-ground"></span>
+          <ProPic :slug="pro.slug" :photo="pro.photo" :team="pro.team" :size="240" eager />
+        </div>
+        <!-- c: the pro before the art of the champion they play most. -->
+        <Frame
+          v-else
+          class="ph-lock ph-m"
+          :class="{ bare: !signature.length }"
+          :src="signature.length ? championSplash(signature[0].champion) : null"
+          eager
+          stage
+        >
+          <ProPic :slug="pro.slug" :photo="pro.photo" :team="pro.team" :size="240" eager />
+          <Link
+            v-if="signature.length"
+            class="ph-cap"
+            :href="`/champions/${slugOf(signature[0].champion)}`"
+            ><img :src="champIcon(signature[0].champion)" alt="" />{{ nameOf(signature[0].champion)
+            }}<span
+              >{{ signature[0].games }} {{ signature[0].games === 1 ? 'game' : 'games' }}</span
+            ></Link
+          >
+        </Frame>
         <div class="col" style="justify-content: center; min-width: 0">
           <h1 class="pp-name">{{ pro.name }}</h1>
           <p v-if="realName" class="body" style="margin-top: 8px">{{ realName }}</p>
@@ -410,6 +461,11 @@ const PLATFORM: Record<string, string> = {
             >
             <span v-if="country" class="tagx"
               ><Flag :code="country" :size="18" />{{ countryName(country) }}</span
+            >
+            <span v-if="variant && best?.tier" class="tagx"
+              ><RankEmblem :tier="best.tier" :size="20" />{{
+                rankWords(best.tier, best.division)
+              }}</span
             >
           </div>
           <div class="row" style="gap: 10px; margin-top: 22px; flex-wrap: wrap">
@@ -429,7 +485,21 @@ const PLATFORM: Record<string, string> = {
             >
           </div>
         </div>
-        <div class="pp-kv">
+        <!-- a: the champions they play, as their loading screen portraits. -->
+        <div v-if="variant === 'a' && signature.length" class="ph-sig">
+          <Link
+            v-for="(b, i) in signature"
+            :key="b.champion"
+            class="ph-tile"
+            :style="{ '--i': i }"
+            :href="`/champions/${slugOf(b.champion)}`"
+          >
+            <Frame :src="championLoading(b.champion)" :alt="nameOf(b.champion)" size="m" eager />
+            <span class="h5 ell">{{ nameOf(b.champion) }}</span>
+            <span class="meta">{{ b.games }} {{ b.games === 1 ? 'game' : 'games' }}</span>
+          </Link>
+        </div>
+        <div v-if="!variant" class="pp-kv">
           <div v-if="leaguePlace && pro.league">
             <span class="lab">{{ pro.league.code }} ladder</span>
             <span
