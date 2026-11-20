@@ -18,7 +18,7 @@ import Flag from '../../components/pros/Flag.vue'
 import SocialIcon from '../../components/pros/SocialIcon.vue'
 import GameModal from '../../components/pros/GameModal.vue'
 import { useSort } from '../../components/ui/sort.js'
-import { champIcon, assetUrl } from '../../lib/assets.js'
+import { champIcon, assetUrl, profileIcon } from '../../lib/assets.js'
 import { countryName } from '../../lib/board.js'
 import { laneOf, n, rankValue, rankWords, roleLabel, winPct } from '../../lib/ladders.js'
 import { profilePath } from '../../lib/format.js'
@@ -64,6 +64,8 @@ interface Account {
   peakTier: string | null
   peakDivision: number | null
   peakLp: number | null
+  /** Its profile icon as last seen; the default icon without one. */
+  icon: number | null
 }
 interface Build {
   champion: number
@@ -749,7 +751,10 @@ const PLATFORM: Record<string, string> = {
 
       <!-- Accounts. -->
       <section v-if="tab === 'accounts'" class="sec" style="padding-top: 32px">
-        <div class="card tbl" style="--cols: minmax(0, 1fr) 70px 180px 160px 120px">
+        <div
+          class="card tbl pp-acc"
+          style="--cols: minmax(0, 1fr) 70px 200px 170px 170px; --row-h: 62px"
+        >
           <div class="tbl-h">
             <SortHead :sorter="accountSort" col="name" label="Account" />
             <SortHead :sorter="accountSort" col="server" label="Server" />
@@ -759,7 +764,7 @@ const PLATFORM: Record<string, string> = {
               :sorter="accountSort"
               col="record"
               label="Record"
-              class="n hm"
+              class="hm"
               title="Games this season"
             />
           </div>
@@ -769,9 +774,20 @@ const PLATFORM: Record<string, string> = {
             class="tbl-r"
             :href="profilePath(a.gameName, a.tagLine)"
           >
-            <span class="h5 ell"
-              >{{ a.gameName }} <span class="meta">#{{ a.tagLine }}</span></span
-            >
+            <span class="who">
+              <img
+                class="pp-ic"
+                loading="lazy"
+                decoding="async"
+                alt=""
+                width="36"
+                height="36"
+                :src="profileIcon(a.icon)"
+              />
+              <span class="h5"
+                >{{ a.gameName }} <span class="meta">#{{ a.tagLine }}</span></span
+              >
+            </span>
             <span class="meta">{{ PLATFORM[a.platform] ?? a.platform }}</span>
             <span class="row" style="gap: 8px"
               ><RankEmblem :tier="a.tier" :size="24" /><span class="h5">{{
@@ -784,9 +800,14 @@ const PLATFORM: Record<string, string> = {
                 ? `${rankWords(a.peakTier, a.peakDivision)}${a.peakLp !== null ? `, ${n(a.peakLp)} LP` : ''}`
                 : '–'
             }}</span>
-            <span class="n hm meta">{{
-              a.wins !== null && a.losses !== null ? `${a.wins}W ${a.losses}L` : '–'
-            }}</span>
+            <WinRate
+              v-if="a.wins !== null && a.losses !== null && a.wins + a.losses > 0"
+              class="hm"
+              :wins="a.wins"
+              :losses="a.losses"
+              :width="90"
+            />
+            <span v-else class="hm meta">–</span>
           </Link>
           <EmptyState
             v-if="!pro.accounts.length"

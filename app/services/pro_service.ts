@@ -52,10 +52,12 @@ const PRO_CACHE = { freshMs: 30 * 60_000, keepMs: 86_400_000 }
  * deploys and serves a stale one while its refresh runs, so a release that changes what a page
  * reads must bump it: otherwise the pages get the previous release's answers for up to a day.
  */
-export const PRO_SHAPE = 5
+export const PRO_SHAPE = 6
 /** How far back a pro's games are read. */
 const GAMES_DAYS = 30
 const CHAMPION_GAMES_DAYS = 14
+/** How far back an account's profile icon is read from its games. */
+const ICON_DAYS = 365
 const STAFF = new Set(['COACH', 'MANAGER', 'ANALYST', 'STAFF', 'OWNER', 'CEO'])
 
 export interface TeamRef {
@@ -90,6 +92,8 @@ export interface ProAccount {
   peakTier: string | null
   peakDivision: number | null
   peakLp: number | null
+  /** Its profile icon as last seen (its newest stored game, else the site's own lookup). */
+  icon: number | null
 }
 
 export interface ProGame {
@@ -195,6 +199,7 @@ const accountOf = (r: Record<string, any>): ProAccount => ({
   peakTier: r.peak_tier ?? null,
   peakDivision: r.peak_division ?? null,
   peakLp: r.peak_lp ?? null,
+  icon: null,
 })
 
 const bestOf = (r: Record<string, any>) =>
@@ -313,14 +318,23 @@ export class ProService {
         ),
         this.about(row.id),
       ])
-      const games = await this.games([row.id])
+      const [games, icons] = await Promise.all([
+        this.games([row.id]),
+        this.accountIcons(row.id).catch((error) => {
+          logger.warn({ err: error }, 'pro account icons failed')
+          return new Map<string, number>()
+        }),
+      ])
       return {
         ...tagOf(row),
         id: row.id as string,
         socials: (row.socials ?? {}) as Record<string, string>,
         league: leagueOf(row.team_slug),
         about,
-        accounts: accounts.rows.map(accountOf),
+        accounts: accounts.rows.map((r: Record<string, any>) => ({
+          ...accountOf(r),
+          icon: icons.get(r.id) ?? null,
+        })),
         teams: history.rows.map((r: Record<string, any>) => ({
           team: teamOf(r)!,
           league: leagueOf(r.team_slug),
@@ -489,6 +503,42 @@ export class ProService {
       tag_line: string
       puuid: string
     }[]
+  }
+
+  /**
+   * A player's accounts' profile icons, by account id: the icon of each account's newest stored
+   * game of the last year, else the one the site saw when someone looked the account up. Stored
+   * data only: an account seen nowhere has none.
+   */
+  async accountIcons(playerId: string): Promise<Map<string, number>> {
+    const out = new Map<string, number>()
+    const found = await this.puuids([playerId])
+    if (!found.length) return out
+    const accountOfPuuid = new Map(found.map((f) => [f.puuid, f.id]))
+    const [played, seen] = await Promise.all([
+      rows(
+        `SELECT puuid, argMax(profile_icon_id, game_start_ms) FROM participants
+         WHERE ${PRO_PLATFORMS_SQL} AND puuid IN {puuids:Array(String)}
+           AND game_start_ms >= {since:UInt64} AND profile_icon_id > 0
+         GROUP BY puuid`,
+        { puuids: [...accountOfPuuid.keys()], since: Date.now() - ICON_DAYS * 86_400_000 }
+      ),
+      db.rawQuery(
+        `SELECT puuid, profile_icon_id FROM riot_player
+         WHERE puuid = ANY(?) AND profile_icon_id IS NOT NULL`,
+        [[...accountOfPuuid.keys()]]
+      ),
+    ])
+    for (const r of seen.rows as { puuid: string; profile_icon_id: number }[]) {
+      const account = accountOfPuuid.get(r.puuid)
+      if (account && r.profile_icon_id > 0) out.set(account, r.profile_icon_id)
+    }
+    // A game is newer than a look-up: it wins.
+    for (const [puuid, icon] of played) {
+      const account = accountOfPuuid.get(String(puuid))
+      if (account && Number(icon) > 0) out.set(account, Number(icon))
+    }
+    return out
   }
 
   /** The ranked games of some players, the last 30 days, with what they add up to. */
