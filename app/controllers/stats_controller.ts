@@ -1,69 +1,47 @@
 import type { HttpContext } from '@adonisjs/core/http'
-import riotAssetsService from '#services/riot/assets'
 import championStatsService, { DEFAULT_BRACKET } from '#services/champion_stats_service'
-import statsExplorerService, {
-  LENGTHS,
-  VIEWS,
-  lengthWin,
-  type View,
-} from '#services/stats_explorer_service'
-import { ROLE_OF, positionOf, type Position } from '#services/champion_stats'
+import statsExplorerService from '#services/stats_explorer_service'
+import { ROLE_OF, positionOf } from '#services/champion_stats'
 import { latestPatch } from '#services/ranked_games_service'
-import { REGIONS } from '#services/ranked_stats'
-import { BRACKET_TEXT, breadcrumbs, count, meta } from '#services/page_meta'
+import { BRACKET_TEXT, breadcrumbs, count, meta, notFoundPage } from '#services/page_meta'
 import { onceEach, settle } from '#services/page_blocks'
 import { patchText } from '../../inertia/lib/patches.js'
+import { METRICS, STATS, oldStat, statOf, type Metrics } from '../../inertia/lib/studio.js'
 
-/** How long the page waits for its view's blocks before it is sent (see the champion page). */
+/** How long the page waits for its blocks before it is sent (see the champion page). */
 const READY_MS = 150
 
-/** The views' names, as the page and its title say them. */
-export const VIEW_LABELS: Record<View, string> = {
-  overview: 'Champion stats',
-  table: 'Champion stats table',
-  early: 'Early game',
-  length: 'Game length',
-  firstblood: 'First blood',
-  items: 'Items',
-  regions: 'Regions',
-  patch: 'Patch changes',
-}
-
-const VIEW_TEXT: Record<View, string> = {
-  overview:
-    'the best at win, pick and ban rate, KDA, CS, damage, the lead at 10 minutes and first blood',
-  table: 'win, pick and ban rates, KDA, CS, damage, gold at 10 minutes and first blood',
-  early: 'gold, CS and experience at 10 and 15 minutes against the lane opponent',
-  length: 'win rate by game length',
-  firstblood: 'how often each champion takes, helps or gives first blood',
-  items: 'how often each finished item is bought and how those games end',
-  regions: 'win rate on each server',
-  patch: 'who climbed and who fell since the previous patch',
-}
-
-/** `/stats?view=early&role=mid`: every champion of a role in one sortable table. */
+/**
+ * The stats studio. `/stats` is the hub: every statistic by category, with the champion at the
+ * top of each. `/stats/<stat>` ranks every champion of the role (`?role=`, every role without
+ * one) by that figure. The old explorer's addresses (`/stats?view=early`, `?sort=`) move to
+ * their page.
+ */
 export default class StatsController {
-  async index({ inertia, request }: HttpContext) {
-    const asked = String(request.input('view', 'overview'))
-    const known: View = (VIEWS as readonly string[]).includes(asked) ? (asked as View) : 'overview'
-    // The page shows four views (Overview, Table, Early game, Late game): the older ones' figures
-    // are all in the table.
-    const view: View = ['firstblood', 'items', 'regions', 'patch'].includes(known) ? 'table' : known
-    const askedRole = positionOf(request.input('role'))
-    const position: Position = askedRole ?? 'MIDDLE'
-    const filter = await championStatsService.filter(request.qs())
+  async index(ctx: HttpContext) {
+    const { inertia, request, response, params } = ctx
+    const query = request.qs()
+    if (!params.stat) {
+      const old = oldStat(query.view, query.sort)
+      if (old !== undefined) {
+        const { view: _view, sort: _sort, ...rest } = query
+        const search = new URLSearchParams(rest as Record<string, string>).toString()
+        return response
+          .redirect()
+          .status(301)
+          .toPath(`/stats${old ? `/${old}` : ''}${search ? `?${search}` : ''}`)
+      }
+    }
+    const stat = statOf(params.stat)
+    if (params.stat && !stat) return notFoundPage({ inertia, response })
+
+    const position = positionOf(query.role)
+    const filter = await championStatsService.filter(query)
     const [patches, champions] = await Promise.all([
       championStatsService.patches(),
       championStatsService.champions(),
     ])
-    const base = {
-      view,
-      position,
-      patches,
-      filter,
-      lengths: LENGTHS.map(([from, to]) => [from, to]),
-      regions: Object.entries(REGIONS).map(([value, r]) => ({ value, label: r.label })),
-    }
+    const base = { stat: stat?.slug ?? null, position, patches, filter }
     if (!filter) return inertia.render('stats/index', { ...base, rows: [], champions: [] })
 
     const [role, updatedAt] = await Promise.all([
@@ -72,76 +50,25 @@ export default class StatsController {
     ])
     const rows = role?.rows ?? []
     const ids = new Set(rows.map((r) => r.champion))
-    // The view's blocks: what the cache holds within a short wait is sent with the page, the rest
-    // (a cold filter's averages are a read of the role's games) follows as a deferred prop.
+    const listed = (found: { champions: Record<number, Metrics>; all: Metrics }) => ({
+      all: found.all,
+      champions: Object.fromEntries(
+        Object.entries(found.champions).filter(([c]) => ids.has(Number(c)))
+      ),
+    })
+
+    // A page reads only the sources its figures come from; the hub reads them all (each stat's
+    // leader). What the cache holds within a short wait is sent with the page, the rest follows
+    // as a deferred prop.
+    const needs = new Set(
+      stat ? [stat.key, ...stat.cols].map((k) => METRICS[k].source) : ['game', 'lane']
+    )
     const loads: Record<string, () => Promise<unknown>> = {}
-    const wide = view === 'overview' || view === 'table'
-    if (wide || view === 'length') {
-      loads.averages = async () => {
-        const averages = await statsExplorerService.averages(filter, position)
-        return Object.fromEntries(
-          Object.entries(averages)
-            .filter(([c]) => ids.has(Number(c)))
-            .map(([c, a]) => [
-              c,
-              wide
-                ? {
-                    kda: a.kda,
-                    csPerMin: a.csPerMin,
-                    damage: a.damage,
-                    early: a.byLength[0],
-                    late: a.byLength[a.byLength.length - 1],
-                    // Win rate in games under and over 25 minutes.
-                    under25: lengthWin(a.buckets, 0, 25),
-                    over25: lengthWin(a.buckets, 25, 999),
-                  }
-                : { length: a.length, byLength: a.byLength, games: a.games },
-            ])
-        )
-      }
+    if (needs.has('game')) {
+      loads.game = async () => listed(await statsExplorerService.studio(filter, position))
     }
-    if (wide || view === 'length') {
-      loads.events = async () => {
-        const events = await statsExplorerService.events(filter, position)
-        return Object.fromEntries(
-          [...ids].map((c) => {
-            const e = events.early[c]
-            const f = events.firstBlood[c]
-            return [
-              c,
-              {
-                gold: e?.at10.goldDiff ?? null,
-                cs: e?.at10.csDiff ?? null,
-                ahead: e?.ahead ?? null,
-                aheadWin: e?.aheadWin ?? null,
-                fb: f?.involved ?? null,
-              },
-            ]
-          })
-        )
-      }
-    }
-    if (view === 'early' || view === 'firstblood') {
-      loads[view === 'early' ? 'early' : 'firstBlood'] = async () => {
-        const events = await statsExplorerService.events(filter, position)
-        const of = view === 'early' ? events.early : events.firstBlood
-        return Object.fromEntries(Object.entries(of).filter(([c]) => ids.has(Number(c))))
-      }
-    }
-    if (view === 'regions') {
-      loads.byRegion = async () => {
-        const regions = await statsExplorerService.regions(filter, position)
-        return Object.fromEntries(Object.entries(regions).filter(([c]) => ids.has(Number(c))))
-      }
-    }
-    if (view === 'items') {
-      loads.items = async () => {
-        const [items, names] = await Promise.all([
-          statsExplorerService.items(filter, position),
-          riotAssetsService.names('item').catch(() => ({}) as Record<string, string>),
-        ])
-        return items.map((i) => ({ ...i, name: names[i.item] ?? null }))
-      }
+    if (needs.has('lane')) {
+      loads.lane = async () => listed(await statsExplorerService.lane(filter, position))
     }
     const blocks = onceEach(loads)
     const partial = Boolean(request.header('x-inertia-partial-data'))
@@ -149,19 +76,21 @@ export default class StatsController {
       ? { ready: {}, waiting: Object.keys(blocks) }
       : await settle(blocks, READY_MS)
     const extra: Record<string, unknown> = { ...ready }
-    for (const k of waiting) extra[k] = inertia.defer(blocks[k], 'explorer')
+    for (const k of waiting) extra[k] = inertia.defer(blocks[k], 'studio')
 
     const roleGames = rows.reduce((n, r) => n + r.games, 0)
-    const label = ROLE_OF[position].label
+    const games = role?.summary.games ?? 0
+    const where = position ? ROLE_OF[position].label.toLowerCase() : 'every role'
     const isDefault =
       filter.bracket === DEFAULT_BRACKET && !filter.region && filter.patch === (await latestPatch())
-    const path = view === 'overview' ? '/stats' : `/stats?view=${view}`
+    const path = stat ? `/stats/${stat.slug}` : '/stats'
     const byId = new Map(champions.map((c) => [c.id, c]))
+    const tail = `${BRACKET_TEXT[filter.bracket]}, ${patchText(filter.patch)}, ${count(games)} ranked games.`
     return inertia.render('stats/index', {
       ...base,
       ...extra,
       rows,
-      games: role?.summary.games ?? 0,
+      games,
       roleGames,
       previousPatch: role?.previousPatch ?? null,
       updatedAt,
@@ -170,19 +99,30 @@ export default class StatsController {
         const c = byId.get(r.champion)
         return c ? [{ id: c.id, name: c.name, slug: c.slug }] : []
       }),
-      ...meta({
-        title: `${VIEW_LABELS[view]}: ${label.toLowerCase()}, ${patchText(filter.patch)}`,
-        description: `${rows.length} ${label.toLowerCase()} champions, ${VIEW_TEXT[view]}. ${BRACKET_TEXT[filter.bracket]}, ${patchText(filter.patch)}, ${count(role?.summary.games ?? 0)} ranked games.`,
-        path,
-        image: `/og/stats/${view === 'overview' ? 'all' : view}.jpg`,
-        version: filter.patch,
-        alt: `${VIEW_LABELS[view]}: the view's lead figure over a champion's splash art, with a poro`,
-      }),
+      ...meta(
+        stat
+          ? {
+              title: `${stat.label}: ${where}, ${patchText(filter.patch)}`,
+              description: `${rows.length} champions of ${where} ranked by ${stat.label.toLowerCase()}. ${stat.about ? `${stat.about} ` : ''}${tail}`,
+              path,
+              image: `/og/stats/${stat.slug}.jpg`,
+              version: filter.patch,
+              alt: `${stat.label}: the champion at the top of the list and its figure over its splash art, with a poro`,
+            }
+          : {
+              title: `Champion stats: ${where}, ${patchText(filter.patch)}`,
+              description: `${STATS.length} statistics on ${rows.length} champions of ${where}: results, combat, damage, laning, objectives, vision, game length, pings and summoner spells. ${tail}`,
+              path,
+              image: '/og/stats/all.jpg',
+              version: filter.patch,
+              alt: 'Champion stats: the games read on the patch over a champion splash art, with a poro',
+            }
+      ),
       robots: !rows.length || !isDefault ? 'noindex,follow' : null,
       jsonld: [
         breadcrumbs([
           { name: 'Stats', path: '/stats' },
-          ...(view === 'overview' ? [] : [{ name: VIEW_LABELS[view], path }]),
+          ...(stat ? [{ name: stat.label, path }] : []),
         ]),
       ],
     })
