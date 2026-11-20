@@ -2,89 +2,54 @@
 import { computed } from 'vue'
 import { Head, Link } from '@inertiajs/vue3'
 import SiteLayout from '../../components/SiteLayout.vue'
-import Icon from '../../components/ui/Icon.vue'
-import CardHead from '../../components/ui/CardHead.vue'
 import MoreLink from '../../components/ui/MoreLink.vue'
-import RankEmblem from '../../components/ui/RankEmblem.vue'
 import MatchLine from '../../components/esports/MatchLine.vue'
-import MatchTime from '../../components/pros/MatchTime.vue'
+import MatchHero from '../../components/esports/MatchHero.vue'
+import ProLineup from '../../components/esports/ProLineup.vue'
+import ChampionBand from '../../components/esports/ChampionBand.vue'
+import ClimberList from '../../components/esports/ClimberList.vue'
+import RosterMoves from '../../components/esports/RosterMoves.vue'
 import Logo from '../../components/pros/Logo.vue'
-import ProPic from '../../components/pros/ProPic.vue'
-import { n } from '../../lib/ladders.js'
-import {
-  bestOfText,
-  isLive,
-  matchList,
-  stageOf,
-  teamName,
-  type ProMatch,
-} from '../../lib/pro_matches.js'
+import { matchList, type ProMatch } from '../../lib/pro_matches.js'
+import type { Climber, LastEvent, LineupCard, RosterMove } from '../../lib/esports_landing.js'
 import '../../css/esports.css'
-
-interface League {
-  slug: string
-  code: string
-  name: string
-  region: string | null
-  tier?: number
-}
+import '../../css/esports-landing.css'
 
 /**
- * `/esports`: the match to watch now, the leagues, one league's games around now with its teams by
- * their starters' solo queue, and its pros at the top of solo queue (app/services/
- * esports_service.ts). Standings, split results and power rankings are not stored: not shown.
+ * `/esports`: the pros lead, all year. A centred title over the best pro of each league in solo
+ * queue (tall portraits, each with its league's crest), the leagues under them. Then the event of
+ * the moment: the match on now or next with the games after it in season, the last international
+ * champion and the five who won it between seasons. Then the pros who won the most LP today next
+ * to the games (or the roster moves), and the roster moves (app/services/esports_service.ts,
+ * app/services/esports_landing_service.ts).
  */
 const props = defineProps<{
   headline: (ProMatch & { leagues: [string | null, string | null]; game: number | null }) | null
   live: ProMatch[]
   next: ProMatch[]
   /** Between seasons (nothing planned): the last two weeks' results. */
-  results?: ProMatch[]
-  leagues: League[]
-  focus: {
-    league: League
-    next: ProMatch[]
-    results: ProMatch[]
-    teams: {
-      id: string
-      slug: string
-      name: string
-      shortName: string | null
-      players: number
-      lp: number | null
-    }[]
-    counts: { teams: number; players: number; accounts: number } | null
-  } | null
-  ladder: {
-    total: number
-    rows: {
-      place: number
-      pro: {
-        slug: string
-        name: string
-        photo?: string
-        role: string | null
-        team: { id: string; slug: string; name: string; shortName: string | null } | null
-      }
-      account: { platform: string; tier: string; division: number | null; lp: number }
-    }[]
-  } | null
+  results: ProMatch[]
+  leagues: { slug: string; code: string; name: string; region: string | null }[]
+  leaders: LineupCard[]
+  event: LastEvent | null
+  climbers: Climber[]
+  moves: RosterMove[]
   description: string
 }>()
 
 const head = computed(() => props.headline)
-/** "grand final, Bo5": the stage in lower case, the format as written. */
-const headStage = computed(() => {
-  const h = props.headline
-  if (!h) return ''
-  return [stageOf(h)?.toLowerCase(), bestOfText(h)].filter(Boolean).join(', ')
-})
+/** A match on now or still to come: the season is on. */
+const playing = computed(() => Boolean(head.value && head.value.status !== 'finished'))
 const live = computed(() => matchList(props.live))
 const next = computed(() => matchList(props.next))
-const results = computed(() => matchList(props.results))
-const focusMatches = computed(() =>
-  props.focus ? [...matchList(props.focus.next), ...matchList(props.focus.results)] : []
-)
+/** Between seasons: the last results, the headline first unless the champion's band shows it. */
+const latest = computed(() => {
+  const h = head.value
+  const first = h && !playing.value && h.id !== props.event?.final.id ? [h] : []
+  return [...first, ...matchList(props.results)].slice(0, 6)
+})
+/** The games beside today's climbers: next ones, else the latest results; none in season. */
+const games = computed(() => (playing.value ? [] : next.value.length ? next.value : latest.value))
 </script>
 
 <template>
@@ -92,192 +57,58 @@ const focusMatches = computed(() =>
     <meta name="description" :content="description" />
   </Head>
   <SiteLayout>
-    <div class="wrap pg-es">
-      <div class="mast">
-        <div class="crumbs"><span class="t1">Esports</span></div>
-        <div class="mast-r">
-          <div>
-            <h1 class="h1">Esports</h1>
-            <p v-if="focus?.counts" class="meta" style="margin-top: 8px">
-              Live and next games, every league, and the solo queue of {{ n(focus.counts.players) }}
-              {{ focus.league.code }} players
-            </p>
-          </div>
-        </div>
-      </div>
+    <div class="wrap pg-es el-pg">
+      <header class="el-bh">
+        <h1 class="el-d0">Esports</h1>
+        <p v-if="leaders.length" class="el-lead">The best of each league in solo queue</p>
+        <ProLineup v-if="leaders.length" :cards="leaders" />
+        <nav class="el-crest" aria-label="Leagues">
+          <Link v-for="l in leagues" :key="l.slug" :href="`/league/${l.slug}`" :title="l.name"
+            ><Logo :league="l.slug" :size="32" class="el-lg28" /><span>{{ l.code }}</span></Link
+          >
+        </nav>
+      </header>
 
-      <section v-if="head" class="card es-hd">
-        <div class="tm r">
-          <span class="col">
-            <component
-              :is="head.teams[0].slug ? Link : 'span'"
-              :href="head.teams[0].slug ? `/team/${head.teams[0].slug}` : undefined"
-              class="h2"
-              >{{ teamName(head.teams[0]) }}</component
-            >
-            <span v-if="head.leagues[0]" class="meta">{{ head.leagues[0] }}</span>
-          </span>
-          <Logo :team="head.teams[0].id" :size="96" />
-        </div>
-        <div class="mid">
-          <span class="row" style="gap: 8px; justify-content: center"
-            ><Logo
-              v-if="head.league"
-              :league="head.league.slug"
-              :size="24"
-              style="width: 22px; height: 22px; object-fit: contain"
-            /><span class="h5"
-              >{{ head.league?.name ?? head.tournament
-              }}<template v-if="headStage">, {{ headStage }}</template></span
-            ></span
-          >
-          <div class="fg-xl" style="margin-top: 12px">
-            <template v-if="head.status === 'finished' || isLive(head)"
-              >{{ head.teams[0].score ?? 0 }} – {{ head.teams[1].score ?? 0 }}</template
-            >
-            <template v-else>vs</template>
-          </div>
-          <span v-if="isLive(head)" class="live" style="margin-top: 10px"
-            >Live<template v-if="head.game">, game {{ head.game }}</template></span
-          >
-          <span
-            v-else-if="head.status === 'finished'"
-            class="meta"
-            style="display: block; margin-top: 10px"
-            >Final</span
-          >
-          <span v-else class="meta" style="display: block; margin-top: 10px"
-            ><MatchTime :at="head.at"
-          /></span>
-          <div v-if="head.stream && isLive(head)" style="margin-top: 14px">
-            <a class="btn pri" :href="head.stream" target="_blank" rel="noreferrer"
-              ><Icon name="play" />Watch</a
-            >
+      <section v-if="playing && head" class="sec">
+        <div class="sec-h"><h2 class="h2">Live and next</h2></div>
+        <div class="card lit el-hero">
+          <MatchHero :match="head" :leagues="head.leagues" />
+          <div v-if="next.length || live.length" class="el-hero-next">
+            <MatchLine v-for="m in [...live, ...next].slice(0, 4)" :key="m.id" :match="m" league />
           </div>
         </div>
-        <div class="tm">
-          <Logo :team="head.teams[1].id" :size="96" />
-          <span class="col">
-            <component
-              :is="head.teams[1].slug ? Link : 'span'"
-              :href="head.teams[1].slug ? `/team/${head.teams[1].slug}` : undefined"
-              class="h2"
-              >{{ teamName(head.teams[1]) }}</component
-            >
-            <span v-if="head.leagues[1]" class="meta">{{ head.leagues[1] }}</span>
-          </span>
+      </section>
+      <ChampionBand v-else-if="event" :event="event" />
+
+      <section v-if="climbers.length || games.length || moves.length" class="sec el-2">
+        <div v-if="climbers.length" class="card">
+          <div class="card-h">
+            <h2 class="h3">LP won in 24 hours</h2>
+            <MoreLink href="/leaderboards/pros?league=all" label="Pro ladder" />
+          </div>
+          <ClimberList :rows="climbers" />
+        </div>
+        <div v-if="games.length" class="card">
+          <div class="card-h">
+            <h2 class="h3">{{ next.length ? 'Next games' : 'Latest results' }}</h2>
+          </div>
+          <MatchLine v-for="m in games" :key="m.id" :match="m" league />
+        </div>
+        <div v-else-if="moves.length" class="card">
+          <div class="card-h">
+            <h2 class="h3">Roster moves</h2>
+            <MoreLink href="/teams" label="Teams" />
+          </div>
+          <RosterMoves :moves="moves" />
         </div>
       </section>
 
-      <section class="sec side2" style="padding-top: 24px">
-        <div class="stk">
-          <div class="card">
-            <CardHead
-              title="Leagues"
-              icon="trophy"
-              :more="{ label: 'All leagues', href: '/leagues' }"
-            />
-            <div class="es-lgs">
-              <Link v-for="l in leagues" :key="l.slug" :href="`/league/${l.slug}`" class="lrow">
-                <Logo :league="l.slug" :size="36" />
-                <span class="col">
-                  <span class="h4">{{ l.code }}</span>
-                  <span class="meta">{{ l.region ?? l.name }}</span>
-                </span>
-              </Link>
-            </div>
-          </div>
-
-          <div v-if="focus && focusMatches.length">
-            <div class="sec-h">
-              <Logo
-                :league="focus.league.slug"
-                :size="24"
-                style="width: 22px; height: 22px; object-fit: contain"
-              />
-              <h2 class="h2">{{ focus.league.code }}, games around now</h2>
-              <MoreLink
-                :href="`/league/${focus.league.slug}`"
-                :label="`${focus.league.code} page`"
-              />
-            </div>
-            <div class="card">
-              <MatchLine v-for="m in focusMatches" :key="m.id" :match="m" />
-            </div>
-          </div>
-
-          <div v-if="ladder && ladder.rows.length" class="card">
-            <CardHead
-              title="Top of the solo queue"
-              icon="chart"
-              :more="{
-                label: 'Ladder',
-                href: `/leaderboards/pros${focus ? `?league=${focus.league.slug}` : ''}`,
-              }"
-            />
-            <Link
-              v-for="r in ladder.rows"
-              :key="r.pro.slug"
-              class="lrow"
-              :href="`/pro/${r.pro.slug}`"
-            >
-              <span class="rk">{{ r.place }}</span>
-              <span class="es-pp"
-                ><ProPic :slug="r.pro.slug" :photo="r.pro.photo" :team="r.pro.team" :size="38"
-              /></span>
-              <span class="col grow">
-                <span class="h4">{{ r.pro.name }}</span>
-                <span v-if="r.pro.team" class="meta row" style="gap: 5px"
-                  ><Logo class="es-tl" :team="r.pro.team.id" :size="14" />{{
-                    r.pro.team.name
-                  }}</span
-                >
-              </span>
-              <span class="row" style="gap: 6px">
-                <RankEmblem :tier="r.account.tier" :size="22" />
-                <span class="fg-xs num">{{ n(r.account.lp) }}</span>
-              </span>
-            </Link>
-          </div>
+      <section v-if="games.length && moves.length" class="sec">
+        <div class="sec-h">
+          <h2 class="h2">Roster moves</h2>
+          <MoreLink href="/teams" label="Teams" />
         </div>
-
-        <div class="stk">
-          <div v-if="live.length" class="card">
-            <CardHead title="Live now" icon="live" />
-            <MatchLine v-for="m in live" :key="m.id" :match="m" league />
-          </div>
-          <div v-if="next.length" class="card">
-            <CardHead title="Next games" icon="clock" meta="Every league" />
-            <MatchLine v-for="m in next" :key="m.id" :match="m" league />
-          </div>
-          <div v-else-if="results.length" class="card">
-            <CardHead title="Latest results" icon="list" />
-            <MatchLine v-for="m in results" :key="m.id" :match="m" league />
-          </div>
-          <div v-if="focus && focus.teams.length" class="card">
-            <CardHead
-              :title="`${focus.league.code} teams`"
-              icon="shield"
-              meta="Starters' average LP"
-            />
-            <Link
-              v-for="(t, i) in focus.teams"
-              :key="t.id"
-              class="lrow"
-              style="min-height: 46px"
-              :href="`/team/${t.slug}`"
-            >
-              <span class="rk">{{ i + 1 }}</span>
-              <Logo
-                :team="t.id"
-                :size="24"
-                style="width: 24px; height: 24px; object-fit: contain"
-              />
-              <span class="h5 grow">{{ t.name }}</span>
-              <span class="fg-xs num">{{ t.lp === null ? '–' : n(t.lp) }}</span>
-            </Link>
-          </div>
-        </div>
+        <div class="card"><RosterMoves :moves="moves" /></div>
       </section>
     </div>
   </SiteLayout>
