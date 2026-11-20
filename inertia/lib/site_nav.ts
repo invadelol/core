@@ -162,7 +162,7 @@ const ALL_SECTIONS: NavSection[] = [
         label: 'Duos',
         href: '/tier-list/duos',
         art: 'duos',
-        line: () => 'Bot lane pairs, ranked by how often they win together',
+        line: () => 'Any two roles, ranked by how often they win together',
         here: starts('/tier-list/duos'),
       },
       {
