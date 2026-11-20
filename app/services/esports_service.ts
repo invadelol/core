@@ -70,16 +70,20 @@ export class EsportsService {
     })
   }
 
-  /** The international events' and major leagues' finished matches of the last three days. */
-  recentResults(limit = 6): Promise<ProMatch[]> {
-    return this.#answers.get(`recent:${limit}`, async () => {
+  /**
+   * The international events' and major leagues' finished matches of the last `days` days (three
+   * by default, the home's; the overview reads the table's two weeks), the events first.
+   */
+  recentResults(limit = 6, days = 3): Promise<ProMatch[]> {
+    return this.#answers.get(`recent:${limit}:${days}`, async () => {
       try {
         const { rows } = await db.rawQuery(
           `${SELECT}
-           WHERE l.tier <= 1 AND m.status = 'finished' AND m.begin_at >= now() - interval '3 days'
+           WHERE l.tier <= 1 AND m.status = 'finished'
+             AND m.begin_at >= now() - make_interval(days => ?)
            ORDER BY l.tier, m.begin_at DESC, m.external_id DESC
            LIMIT ?`,
-          [limit]
+          [days, limit]
         )
         return (rows as Record<string, any>[]).map(matchOf)
       } catch (error) {
@@ -111,7 +115,7 @@ export class EsportsService {
     const [international, upcoming, recent, next, results, ladder, standing] = await Promise.all([
       proMatchService.international(6),
       proMatchService.headline(6),
-      this.recentResults(6),
+      this.recentResults(8, 15),
       league ? proMatchService.forLeague(league.slug, 5) : Promise.resolve([]),
       league ? this.results(league.slug, 5) : Promise.resolve([]),
       league
@@ -123,14 +127,24 @@ export class EsportsService {
     const headline = this.headline(
       headlineOf(live, [...international.next, ...upcoming], [...international.results, ...recent])
     )
+    const coming = dedupe([...international.next, ...upcoming])
+      .filter((m) => !isLive(m) && m.id !== headline?.id)
+      .slice(0, 6)
     return {
       headline,
       /** Matches running now, international events first. */
       live: dedupe(live).filter((m) => m.id !== headline?.id),
       /** The next matches of the international events and major leagues. */
-      next: dedupe([...international.next, ...upcoming])
-        .filter((m) => !isLive(m) && m.id !== headline?.id)
-        .slice(0, 6),
+      next: coming,
+      /**
+       * While nothing is planned (between seasons), their results of the last two weeks, the
+       * international events first, without the headline.
+       */
+      results: coming.length
+        ? []
+        : dedupe([...international.results, ...recent])
+            .filter((m) => m.id !== headline?.id)
+            .slice(0, 6),
       leagues: leagues.listed.map((l) => ({ ...leagueRef(l), tier: l.tier })),
       focus: league
         ? {

@@ -6,13 +6,19 @@ import Icon from '../../components/ui/Icon.vue'
 import CardHead from '../../components/ui/CardHead.vue'
 import MoreLink from '../../components/ui/MoreLink.vue'
 import RankEmblem from '../../components/ui/RankEmblem.vue'
-import EmptyState from '../../components/ui/EmptyState.vue'
 import MatchLine from '../../components/esports/MatchLine.vue'
 import MatchTime from '../../components/pros/MatchTime.vue'
 import Logo from '../../components/pros/Logo.vue'
 import ProPic from '../../components/pros/ProPic.vue'
 import { n } from '../../lib/ladders.js'
-import { isLive, matchList, stageLine, teamName, type ProMatch } from '../../lib/pro_matches.js'
+import {
+  bestOfText,
+  isLive,
+  matchList,
+  stageOf,
+  teamName,
+  type ProMatch,
+} from '../../lib/pro_matches.js'
 import '../../css/esports.css'
 
 interface League {
@@ -32,6 +38,8 @@ const props = defineProps<{
   headline: (ProMatch & { leagues: [string | null, string | null]; game: number | null }) | null
   live: ProMatch[]
   next: ProMatch[]
+  /** Between seasons (nothing planned): the last two weeks' results. */
+  results?: ProMatch[]
   leagues: League[]
   focus: {
     league: League
@@ -65,8 +73,15 @@ const props = defineProps<{
 }>()
 
 const head = computed(() => props.headline)
+/** "grand final, Bo5": the stage in lower case, the format as written. */
+const headStage = computed(() => {
+  const h = props.headline
+  if (!h) return ''
+  return [stageOf(h)?.toLowerCase(), bestOfText(h)].filter(Boolean).join(', ')
+})
 const live = computed(() => matchList(props.live))
 const next = computed(() => matchList(props.next))
+const results = computed(() => matchList(props.results))
 const focusMatches = computed(() =>
   props.focus ? [...matchList(props.focus.next), ...matchList(props.focus.results)] : []
 )
@@ -113,9 +128,7 @@ const focusMatches = computed(() =>
               style="width: 22px; height: 22px; object-fit: contain"
             /><span class="h5"
               >{{ head.league?.name ?? head.tournament
-              }}<template v-if="stageLine(head)"
-                >, {{ stageLine(head).toLowerCase() }}</template
-              ></span
+              }}<template v-if="headStage">, {{ headStage }}</template></span
             ></span
           >
           <div class="fg-xl" style="margin-top: 12px">
@@ -175,7 +188,7 @@ const focusMatches = computed(() =>
             </div>
           </div>
 
-          <div v-if="focus">
+          <div v-if="focus && focusMatches.length">
             <div class="sec-h">
               <Logo
                 :league="focus.league.slug"
@@ -190,12 +203,6 @@ const focusMatches = computed(() =>
             </div>
             <div class="card">
               <MatchLine v-for="m in focusMatches" :key="m.id" :match="m" />
-              <EmptyState
-                v-if="!focusMatches.length"
-                compact
-                icon="clock"
-                :title="`No ${focus.league.code} game in the last two weeks or the next three`"
-              />
             </div>
           </div>
 
@@ -239,15 +246,13 @@ const focusMatches = computed(() =>
             <CardHead title="Live now" icon="live" />
             <MatchLine v-for="m in live" :key="m.id" :match="m" league />
           </div>
-          <div class="card">
+          <div v-if="next.length" class="card">
             <CardHead title="Next games" icon="clock" meta="Every league" />
             <MatchLine v-for="m in next" :key="m.id" :match="m" league />
-            <EmptyState
-              v-if="!next.length"
-              compact
-              icon="clock"
-              title="No game planned in the next week"
-            />
+          </div>
+          <div v-else-if="results.length" class="card">
+            <CardHead title="Latest results" icon="list" />
+            <MatchLine v-for="m in results" :key="m.id" :match="m" league />
           </div>
           <div v-if="focus && focus.teams.length" class="card">
             <CardHead
