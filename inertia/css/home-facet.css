@@ -188,7 +188,7 @@
     align-items: center;
     gap: 9px;
     height: 52px;
-    margin-bottom: 2px;
+    margin-bottom: 6px;
     border-bottom: 1px solid var(--line);
   }
   .vb .lc-h b {
@@ -304,11 +304,17 @@
   .vb .lc.bully .lc-r + .lc-r {
     border-top: 0;
   }
+  /* Each figure's bar sits under its own row's words (the words lifted, the portrait centred on
+     words and bar together), so the space after every bar, the last one included, is the same. */
+  .vb .lc.bully .lc-r .tx,
+  .vb .lc.bully .lc-r .gv {
+    margin-bottom: 8px;
+  }
   .vb .gb {
     position: absolute;
     left: 39px;
     right: 0;
-    bottom: 0;
+    bottom: 10px;
     height: 2px;
     border-radius: 2px;
     background: var(--line);
@@ -471,9 +477,23 @@
     display: flex;
     align-items: center;
     gap: 14px;
-    min-height: 64px;
-    padding: 6px 20px 14px;
+    padding: 6px 20px;
     border-top: 1px solid var(--line);
+  }
+  /* The bars part the rows (as on the lane cards): no hairline between them, the rows still on
+     the pros' beside them. */
+  .vb .bn + .bn {
+    border-top-color: transparent;
+  }
+  /* The words, the rank and the share stand on the words' line; the bar 6 px under them, then
+     the same 12 px before the next row's words as before the card's foot. */
+  .vb .bn-n,
+  .vb .bn-t,
+  .vb .bn-v {
+    padding-bottom: 8px;
+  }
+  .vb .hm-bans {
+    padding-bottom: 6px;
   }
   .vb .bn-n {
     width: 14px;
@@ -495,9 +515,9 @@
   }
   .vb .bn-l {
     position: absolute;
-    left: 88px;
+    left: 106px;
     right: 20px;
-    bottom: 10px;
+    bottom: 6px;
     height: 2px;
     border-radius: 2px;
     background: var(--line);
@@ -532,9 +552,10 @@
   }
 
   /* Discord and X. */
+  /* Discord, where the players talk, takes two thirds; X a third. */
   .vb .cm {
     display: grid;
-    grid-template-columns: 1.2fr 1fr;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
     gap: 24px;
     padding-top: 24px;
   }
