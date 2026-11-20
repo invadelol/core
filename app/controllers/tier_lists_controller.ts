@@ -5,7 +5,7 @@ import { ROLE_OF, positionOf, type Filter } from '#services/champion_stats'
 import { latestPatch } from '#services/ranked_games_service'
 import { REGIONS } from '#services/ranked_stats'
 import { CLASSES, classOf } from '#services/tier_lists'
-import { DUO_LANES, duoLaneOf } from '#services/duo_tier_list'
+import { DUO_LANES, duoLaneOf, duoTitle } from '#services/duo_tier_list'
 import { ARAM_MODES, aramModeOf } from '#services/aram_tier_list'
 import { BRACKET_TEXT, breadcrumbs, meta } from '#services/page_meta'
 import { onceEach, settle } from '#services/page_blocks'
@@ -27,12 +27,6 @@ const CLASS_LABEL: Record<string, string> = {
   marksman: 'Marksman',
   tank: 'Tank',
   support: 'Support',
-}
-
-const DUO_LABEL: Record<string, string> = {
-  bot: 'Bot lane duos',
-  mid: 'Mid and jungle duos',
-  top: 'Top and jungle duos',
 }
 
 /** Whether the filter is the default one (newest patch, default rank, every region). */
@@ -119,18 +113,19 @@ export default class TierListsController {
     return this.render(ctx, 'tier_lists/duos', {
       filter,
       load: (f) => tierListsService.duos(f, lane),
-      props: { lane, lanes: Object.keys(DUO_LANES) },
+      props: { lane, lanes: DUO_LANES },
       meta: {
-        title: `${DUO_LABEL[lane]} tier list${filter ? `, ${patchText(filter.patch)}` : ''}`,
-        description: `${DUO_LABEL[lane]} ranked by their win rate together from our own ranked games${filter ? `, ${BRACKET_TEXT[filter.bracket]}, ${patchText(filter.patch)}` : ''}, with how much better they do together than apart.`,
+        title: `${duoTitle(lane)} tier list${filter ? `, ${patchText(filter.patch)}` : ''}`,
+        description: `${duoTitle(lane)} ranked by their win rate together from our own ranked games${filter ? `, ${BRACKET_TEXT[filter.bracket]}, ${patchText(filter.patch)}` : ''}, with how much better they do together than apart.`,
         path,
       },
       crumb: 'Duos',
       image: {
         path: `/og/tier-list/duos${lane === 'bot' ? '' : `-${lane}`}.jpg`,
-        alt: `The best ${DUO_LABEL[lane].toLowerCase()} as pairs of champion portraits with their win rate together, with two poros`,
+        alt: `The best ${duoTitle(lane).toLowerCase()} as pairs of champion portraits with their win rate together, with two poros`,
       },
-      indexable: true,
+      // A duo read from its other role is the same pairs: only one way round is indexed.
+      indexable: DUO_LANES.includes(lane),
     })
   }
 

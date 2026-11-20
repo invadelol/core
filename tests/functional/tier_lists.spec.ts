@@ -70,6 +70,11 @@ test.group('Tier lists of items, runes, duos and ARAM', (group) => {
       : []),
     ['/tier-list/duos?lane=mid', 'tier_lists/duos', ['duos', 'emerald_plus', 'mid']],
     ['/tier-list/duos?lane=aram', 'tier_lists/duos', ['duos', 'emerald_plus', 'bot']],
+    [
+      '/tier-list/duos?lane=support-jungle',
+      'tier_lists/duos',
+      ['duos', 'emerald_plus', 'support-jungle'],
+    ],
     // ARAM has no rank: every stored game counts, whatever the address says.
     ['/tier-list/aram?mode=mayhem&rank=gold', 'tier_lists/aram', ['aram', 'all', 'mayhem']],
   ] as const

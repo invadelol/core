@@ -231,10 +231,12 @@
 
 /* A sorted table runs as one list: each row carries its tier chip before the picture. */
 .vb .tl-tc, .vb .tx-tc { flex: none; }
-/* The duos' lane filter: each pair of roles as its two role icons. */
-.vb .du-lanes > * { gap: 3px; padding: 0 10px; }
-.vb .du-lanes svg { width: 18px; height: 18px; opacity: 0.55; flex: none; }
-.vb .du-lanes > .on svg, .vb .du-lanes > :hover svg { opacity: 1; }
+
+/* The duo: the role the list is read from, "with", the role played with it (its own role off). */
+.vb .du-pick { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.vb .du-with { font-size: 13px; font-weight: 600; color: var(--t3); }
+.vb .role-seg-ic > .off { display: inline-flex; align-items: center; justify-content: center; }
+.vb .role-seg-ic > .off svg { opacity: 0.22; }
 @media (max-width: 767px) {
   /* On a phone the sorted rows' chip sits on the picture's corner, so the name keeps its room. */
   .vb .tl-champ:has(.tl-tc), .vb .tx-name:has(.tx-tc) { position: relative; }
