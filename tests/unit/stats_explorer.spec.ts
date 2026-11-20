@@ -1,7 +1,7 @@
 import { test } from '@japa/runner'
 import { LENGTHS, lengthWin, studioRows } from '#services/stats_explorer_service'
 import type { RoleStat } from '#services/champion_stats'
-import { METRICS, STATS, fmt, oldStat, statOf } from '../../inertia/lib/studio.js'
+import { METRICS, STATS, emptyText, fmt, oldStat, statOf } from '../../inertia/lib/studio.js'
 
 const role = (
   champion: number,
@@ -86,6 +86,12 @@ test.group('Stats studio', () => {
       assert.equal(statOf(s.slug), s)
     }
     assert.isNull(statOf('nope'))
+  })
+
+  test('says why a statistic has no figure', ({ assert }) => {
+    assert.equal(emptyText(statOf('patch-change')!), 'No earlier patch')
+    assert.equal(emptyText(statOf('gold-lead-10')!), 'Not counted yet')
+    assert.equal(emptyText(statOf('kda')!), 'Too few games')
   })
 
   test('writes figures as the page shows them', ({ assert }) => {
