@@ -234,8 +234,9 @@ router.get('/tier-list/items', [TierListsController, 'items'])
 router.get('/tier-list/runes', [TierListsController, 'runes'])
 router.get('/tier-list/duos', [TierListsController, 'duos'])
 router.get('/tier-list/aram', [TierListsController, 'aram'])
-/** Every champion of a role in one table, and its views (`?view=early`). */
+/** The stats studio: its hub, and one page per statistic (`/stats/kda`). */
 router.get('/stats', [StatsController, 'index'])
+router.get('/stats/:stat', [StatsController, 'index']).where('stat', /^[a-z0-9-]{1,40}$/)
 
 /** Professional players and teams, before the summoner catch-all below. */
 router.get('/pros', [ProsController, 'index'])

@@ -46,15 +46,13 @@ export async function warmStats() {
     const best = main.get(r.champion)
     if (!best || r.games > best.games) main.set(r.champion, r)
   }
-  // The stats explorer's tables of every role (one read of the role's games each), and the
-  // pros' league pages.
-  for (const position of POSITIONS) {
+  // The stats studio of every role and of all of them (one read of the role's games each), and
+  // the pros' league pages.
+  for (const position of [null, ...POSITIONS]) {
     await Promise.all([
-      statsExplorerService.averages(filter, position),
+      statsExplorerService.studio(filter, position),
       statsExplorerService.events(filter, position),
-      statsExplorerService.items(filter, position),
-      statsExplorerService.regions(filter, position),
-    ]).catch((error) => logger.warn({ err: error, position }, 'stats explorer warm-up failed'))
+    ]).catch((error) => logger.warn({ err: error, position }, 'stats studio warm-up failed'))
   }
   // The item, rune and duo tier lists of the newest two patches, every rank and every region
   // (each blob a read of a patch at every rank, through the background queue, one at a time),
