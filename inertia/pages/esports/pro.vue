@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import { RoleIcon } from '@invadelol/ui'
 import SiteLayout from '../../components/SiteLayout.vue'
@@ -16,12 +16,14 @@ import Logo from '../../components/pros/Logo.vue'
 import ProPic from '../../components/pros/ProPic.vue'
 import Flag from '../../components/pros/Flag.vue'
 import SocialIcon from '../../components/pros/SocialIcon.vue'
+import GameModal from '../../components/pros/GameModal.vue'
 import { useSort } from '../../components/ui/sort.js'
 import { champIcon, assetUrl } from '../../lib/assets.js'
 import { countryName } from '../../lib/board.js'
 import { laneOf, n, rankValue, rankWords, roleLabel, winPct } from '../../lib/ladders.js'
 import { profilePath } from '../../lib/format.js'
 import { rememberPro } from '../../lib/recent.js'
+import type { Match } from '../../lib/types.js'
 import '../../css/esports.css'
 
 interface ProTag {
@@ -129,6 +131,8 @@ const props = defineProps<{
   leaguePlace: { place: number; total: number } | null
   ladder: { place: number; total: number } | null
   names: Record<number, [string, string]>
+  /** Their recent games as stored matches, with their side in each: what a game opens on. */
+  games: { match: Match; puuid: string; gameName: string; tagLine: string }[]
   description: string
 }>()
 
@@ -246,6 +250,71 @@ const gamePath = (g: Game) => {
     ? `${profilePath(g.account.slice(0, at), g.account.slice(at + 1))}/match/${g.matchId}`
     : null
 }
+
+/* ── A game opens over the page (`?game=<id>` in the address); Back closes it ── */
+const stored = computed(() => new Map(props.games.map((g) => [g.match.matchId, g])))
+const openId = ref<string | null>(null)
+/** Whether the open game added its own entry to the history (Back then closes it). */
+let pushed = false
+const withGame = (id: string | null) => {
+  const url = new URL(location.href)
+  if (id) url.searchParams.set('game', id)
+  else url.searchParams.delete('game')
+  return url.pathname + url.search + url.hash
+}
+/** A plain click opens the game here; any other (a new tab) follows the link to its page. */
+function openGame(event: MouseEvent, g: Game) {
+  if (!stored.value.has(g.matchId)) return
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+  event.preventDefault()
+  openId.value = g.matchId
+  // The page's own history entry, copied: Back returns to the page as it was, game closed.
+  history.pushState(history.state, '', withGame(g.matchId))
+  pushed = true
+}
+function closeGame() {
+  if (pushed) return history.back()
+  openId.value = null
+  history.replaceState(history.state, '', withGame(null))
+}
+/**
+ * Back and Forward draw the page again from its entry: the address says which game is open, and
+ * an entry this page added (its router state still names the page without the game) is left by
+ * Back when the game closes.
+ */
+function fromAddress() {
+  const id = new URL(location.href).searchParams.get('game')
+  openId.value = id && stored.value.has(id) ? id : null
+  const own = history.state?.page?.url
+  pushed =
+    Boolean(openId.value) &&
+    typeof own === 'string' &&
+    !new URL(own, location.origin).searchParams.has('game')
+}
+onMounted(() => {
+  fromAddress()
+  window.addEventListener('popstate', fromAddress)
+})
+onBeforeUnmount(() => window.removeEventListener('popstate', fromAddress))
+const opened = computed(() => {
+  const g = openId.value ? props.pro.games.find((x) => x.matchId === openId.value) : null
+  const game = openId.value ? stored.value.get(openId.value) : null
+  return g && game
+    ? {
+        game,
+        line: {
+          champion: g.champion,
+          championName: nameOf(g.champion),
+          win: g.win,
+          kills: g.kills,
+          deaths: g.deaths,
+          assists: g.assists,
+          duration: clock(g.durationSec),
+        },
+      }
+    : null
+})
+
 const year = (v: string | Date | null) => (v ? new Date(v).getUTCFullYear() : null)
 const span = (t: {
   current: boolean
@@ -457,7 +526,8 @@ const PLATFORM: Record<string, string> = {
 
       <section
         v-if="tab === 'overview' || tab === 'solo'"
-        class="sec pp-g"
+        class="sec"
+        :class="{ 'pp-g': tab === 'overview' }"
         :style="tab === 'solo' ? 'padding-top: 32px' : undefined"
       >
         <div class="card">
@@ -479,12 +549,13 @@ const PLATFORM: Record<string, string> = {
             <span><i class="en"></i>Pro against them</span>
           </div>
           <component
-            :is="gamePath(g) ? Link : 'div'"
+            :is="gamePath(g) ? 'a' : 'div'"
             v-for="g in shownGames"
             :key="g.matchId"
             class="sq"
-            :class="g.win ? 'w' : 'l'"
+            :class="[g.win ? 'w' : 'l', { wide: tab === 'solo' }]"
             :href="gamePath(g) ?? undefined"
+            @click="openGame($event, g)"
           >
             <Frame :src="champIcon(g.champion)" size="s" :alt="nameOf(g.champion)" />
             <span class="col">
@@ -507,6 +578,15 @@ const PLATFORM: Record<string, string> = {
               >
             </span>
             <span class="h5 num">{{ clock(g.durationSec) }}</span>
+            <span v-if="tab === 'solo'" class="sq-it">
+              <template v-for="(it, k) in g.items.slice(0, 6)" :key="k"
+                ><img v-if="it" :src="assetUrl('item', it)" alt="" loading="lazy" /><i v-else></i
+              ></template>
+            </span>
+            <span v-if="tab === 'solo' && g.pros?.length" class="sq-who meta ell">{{
+              g.pros.map((p) => p.pro.name).join(', ')
+            }}</span>
+            <span v-else-if="tab === 'solo'"></span>
             <span class="faces2">
               <span
                 v-for="p in g.pros ?? []"
@@ -753,6 +833,13 @@ const PLATFORM: Record<string, string> = {
           <EmptyState v-if="!pro.teams.length" compact icon="trophy" title="No team known" />
         </div>
       </section>
+      <GameModal
+        v-if="opened"
+        :game="opened.game"
+        :line="opened.line"
+        :pro="pro.name"
+        @close="closeGame"
+      />
       <p v-if="tab !== 'accounts'" class="meta" style="margin-top: 14px">
         Solo queue: the games Invade stored of their accounts in the last 30 days.
       </p>
