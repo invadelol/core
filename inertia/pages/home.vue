@@ -6,14 +6,13 @@ import SiteLayout from '../components/SiteLayout.vue'
 import SearchBar from '../components/SearchBar.vue'
 import HomeRecent from '../components/home/HomeRecent.vue'
 import NewDawnLine from '../components/home/NewDawnLine.vue'
+import BestPicks from '../components/home/BestPicks.vue'
 import DownloadApp from '../components/DownloadApp.vue'
 import ProPic from '../components/pros/ProPic.vue'
 import Logo from '../components/pros/Logo.vue'
 import MatchTime from '../components/pros/MatchTime.vue'
 import Glyph from '../components/ui/Glyph.vue'
 import Icon from '../components/ui/Icon.vue'
-import TierChip from '../components/ui/TierChip.vue'
-import Frame from '../components/ui/Frame.vue'
 import SectionHead from '../components/ui/SectionHead.vue'
 import CardHead from '../components/ui/CardHead.vue'
 import { championHref, positionOf } from '../components/header/sections.js'
@@ -49,6 +48,7 @@ const version = computed(
 const patch = computed(() => (version.value ? patchName(version.value) : null))
 
 const picks = computed(() => props.picks?.best ?? [])
+const splus = computed(() => props.picks?.splus ?? [])
 const bans = computed(() => (props.picks?.bans ?? []).slice(0, 5))
 const topBan = computed(() => bans.value[0]?.banRate || 1)
 const pros = computed(() => (props.pros ?? []).slice(0, 5))
@@ -258,35 +258,7 @@ const topBully = (rows: { value: number }[]) => rows[0]?.value || 1
           :meta="patch ? `Patch ${patch}, Emerald+` : 'Emerald+'"
           :more="{ label: 'Tier list', href: '/tier-list' }"
         />
-        <div class="picks">
-          <Link
-            v-for="p in picks"
-            :key="p.position"
-            class="pick"
-            :href="championHref(p.slug, p.position)"
-            prefetch
-          >
-            <Frame
-              :src="`/cdn/loading/${p.championId}.jpg`"
-              :alt="p.name"
-              size="l"
-              position="50% 18%"
-            />
-            <span class="rl2"
-              ><RoleIcon :lane="positionOf(p.position).lane" :size="15" />{{
-                positionOf(p.position).label
-              }}</span
-            >
-            <span class="nm3"
-              ><span class="h3 hm-name">{{ p.name }}</span
-              ><TierChip :tier="p.tier"
-            /></span>
-            <span class="wr4"
-              ><span class="fg-m num">{{ pct1(p.winRate) }}<span class="u">%</span></span
-              ><span class="meta">win rate</span></span
-            >
-          </Link>
-        </div>
+        <BestPicks :picks="picks" :splus="splus" />
       </section>
 
       <section v-if="pros.length || bans.length" class="sec hm-two">

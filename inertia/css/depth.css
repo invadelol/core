@@ -250,7 +250,7 @@
 }
 
 /* ── The pages' own sheets take the same material ─────────────── */
-.vb :is(.podc, .pick, .mate, .bestr a, .ov-g a, .pn-aug, .lb-gc, .lb-you, .lc, .lns, .sg, .sb-s) {
+.vb :is(.podc, .mate, .bestr a, .ov-g a, .pn-aug, .lb-gc, .lb-you, .lc, .lns, .sg, .sb-s) {
   border-color: transparent;
   background: var(--d-sheen), var(--d-sf1);
   box-shadow: var(--d-lit), var(--d-drop);

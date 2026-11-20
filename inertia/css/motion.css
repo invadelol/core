@@ -35,10 +35,10 @@
 }
 
 /* ── Sheets that are links: a shade brighter, never raised ───── */
-.vb :is(.pick, .lc, .cm-d, .cm-x, .ov-g a, .sb-s, .ct-card, a.card) {
+.vb :is(.lc, .cm-d, .cm-x, .ov-g a, .sb-s, .ct-card, a.card) {
   transition: background var(--m) var(--ease);
 }
-.vb :is(.pick, .lc, .cm-d, .cm-x, .ov-g a, .sb-s, .ct-card, a.card):hover {
+.vb :is(.lc, .cm-d, .cm-x, .ov-g a, .sb-s, .ct-card, a.card):hover {
   background: var(--hover-sheet);
 }
 /* The button a whole card answers to wakes with it. */
