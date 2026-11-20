@@ -444,6 +444,7 @@
   .vb .ct {
     padding: 14px 0 6px;
     border-top: 1px solid var(--line);
+    container-type: inline-size;
   }
   .vb .ct:first-child {
     padding-top: 0;
@@ -640,6 +641,14 @@
   }
   .vb .ct-chips {
     margin: 0 0 6px 216px;
+  }
+  /* A narrow column has no room beside the rank table: the rest of the value goes under it. */
+  @container (max-width: 700px) {
+    .vb .ct-l.tab .ct-x {
+      grid-column: 2 / -1;
+      margin-top: 0;
+      padding-left: 0;
+    }
   }
 
   /* What the patch did: one strip under the tables */
