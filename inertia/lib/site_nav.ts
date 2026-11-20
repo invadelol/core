@@ -1,6 +1,7 @@
 import { shallowRef } from 'vue'
 import type { SiteNav } from './home.js'
 import { patchName } from './patch.js'
+import { SHOW_RUNES } from './features.js'
 
 /**
  * What the header's menus show beside their links (`/api/site/nav`): the tier list's sample, the
@@ -154,13 +155,14 @@ const ALL_SECTIONS: NavSection[] = [
         art: 'runes',
         line: () => 'Keystones, secondary trees and shards, with their win rates',
         here: starts('/tier-list/runes'),
+        hidden: !SHOW_RUNES,
       },
       {
         key: 'duos',
         label: 'Duos',
         href: '/tier-list/duos',
         art: 'duos',
-        line: () => 'Bot lane pairs, ranked by how often they win together',
+        line: () => 'Any two roles, ranked by how often they win together',
         here: starts('/tier-list/duos'),
       },
       {
@@ -215,12 +217,13 @@ const ALL_SECTIONS: NavSection[] = [
       {
         key: 'pros',
         label: 'Pros',
-        href: '/pros',
+        // The pros are found on their ladder; a pro's own page still belongs to Esports.
+        href: '/leaderboards/pros',
         art: 'pros',
         line: ({ nav }) =>
           nav?.pros?.counts
-            ? `${n(nav.pros.counts.players)} pros, their solo queue accounts and the champions they play`
-            : 'Pros, their solo queue accounts and the champions they play',
+            ? `${n(nav.pros.counts.players)} pros by their best solo queue account, and the champions they play`
+            : 'Pros by their best solo queue account, and the champions they play',
         here: starts('/pros', '/pro'),
       },
     ],

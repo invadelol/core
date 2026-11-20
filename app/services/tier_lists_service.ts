@@ -54,6 +54,7 @@ import {
   type AramView,
 } from '#services/aram_tier_list'
 import { patchValue, previousRange } from '../../inertia/lib/patches.js'
+import { SHOW_RUNES } from '../../inertia/lib/features.js'
 
 /**
  * The tier lists of items, runes, duos and ARAM (`/tier-list/items`, `/runes`, `/duos`,
@@ -143,7 +144,7 @@ export class TierListsService {
   // A patch's blobs: a role's items hold a few MB of rows, the rest tens of kB.
   #items = statsCache('tier-items-v2', 12)
   #runes = statsCache('tier-runes-v3', 12)
-  #duos = statsCache('tier-duos-v2', 6)
+  #duos = statsCache('tier-duos-v3', 6)
   #aram = statsCache('tier-aram', 8)
   /** Views built from the blobs, a few minutes, so a busy page sums them once. */
   #views = new AnswerCache(256, 5 * 60_000)
@@ -224,7 +225,7 @@ export class TierListsService {
     }
   }
 
-  /** One patch's duo pairs in a region (every lane pair and seed tier). */
+  /** One patch's duo pairs in a region (every pair of roles and seed tier). */
   duoBlob(patch: string, region: string | null): Want<DuoBlob> {
     return {
       cache: this.#duos,
@@ -419,7 +420,7 @@ export class TierListsService {
 
   /* ── Duos ──────────────────────────────────────────────────── */
 
-  /** The duo tier list of a lane pair (bot and support, mid and jungle, top and jungle). */
+  /** The duo tier list of two roles (bot and support, mid and jungle, jungle and support…). */
   async duos(filter: Filter, lane: DuoLane): Promise<DuoTierList | Computing> {
     const wait = { ahead: 0 as number | null }
     const before = await this.previous(filter)
@@ -517,14 +518,15 @@ export class TierListsService {
 
   /**
    * Every blob of `patches` for every region in `regions` (`null`: every region): items and
-   * runes of each role, the duos, in that order. Each is a read of a patch at every rank.
+   * runes of each role (runes while their page is shown), the duos, in that order. Each is a read
+   * of a patch at every rank.
    */
   warmWants(patches: string[], regions: (string | null)[]) {
     const wants: Want<unknown>[] = []
     for (const region of regions) {
       for (const patch of patches) {
         for (const role of POSITIONS) wants.push(this.itemBlob(patch, region, role))
-        for (const role of POSITIONS) wants.push(this.runeBlob(patch, region, role))
+        if (SHOW_RUNES) for (const role of POSITIONS) wants.push(this.runeBlob(patch, region, role))
         wants.push(this.duoBlob(patch, region))
       }
     }

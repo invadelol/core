@@ -119,61 +119,6 @@
     font-size: 56px;
     letter-spacing: -0.03em;
   }
-  .vb .hb-r {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 10px;
-    min-width: 0;
-  }
-  .vb .hb-sn {
-    margin-left: 8px;
-    text-transform: none;
-    letter-spacing: 0;
-  }
-  .vb .hb-th {
-    display: flex;
-    gap: 8px;
-  }
-  .vb .skt {
-    display: block;
-    width: 96px;
-    height: 54px;
-    padding: 0;
-    border: 0;
-    border-radius: 8px;
-    overflow: hidden;
-    background: var(--s2);
-    box-shadow: inset 0 0 0 1px var(--line-2);
-    opacity: 0.72;
-    cursor: pointer;
-    transition: opacity var(--m) var(--ease);
-  }
-  .vb .skt img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: 50% 25%;
-    display: block;
-  }
-  .vb .skt:hover {
-    opacity: 1;
-  }
-  .vb .skt.on {
-    opacity: 1;
-    box-shadow:
-      0 0 0 2px var(--ink-1),
-      0 0 0 4px var(--v400);
-  }
-  .vb .hb-ch {
-    display: -webkit-box;
-    max-width: 440px;
-    overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    text-align: right;
-  }
   .vb .pa-date {
     display: flex;
     flex-wrap: wrap;
@@ -867,6 +812,164 @@
     transform: rotate(180deg);
   }
 
+  /* ── The skins: a gallery closing the page ──────────────────── */
+  .vb .sk {
+    scroll-margin-top: 80px;
+  }
+  /* The Also-in lists above it keep a section's gap, not the page's end. */
+  .vb .pb-last:has(+ .sk) {
+    padding-bottom: 0;
+  }
+  .vb .sk-g {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 28px 20px;
+  }
+  .vb .sk-c {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    margin: 0;
+  }
+  .vb .sk-a {
+    display: block;
+    height: 248px;
+  }
+  .vb .sk-a img {
+    object-position: 50% 30%;
+    transition: transform var(--m-slow) var(--ease);
+  }
+  .vb .sk-c:hover .sk-a img {
+    transform: scale(1.02);
+  }
+  .vb .sk-t {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    padding-top: 14px;
+  }
+  .vb .sk-n {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 20px;
+    letter-spacing: -0.005em;
+    color: var(--t1);
+  }
+  .vb .sk-m {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--t3);
+  }
+  .vb .sk-cs {
+    display: inline-flex;
+  }
+  .vb .sk-cs img {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 0 0 2px var(--ink-1);
+  }
+  .vb .sk-cs img + img {
+    margin-left: -5px;
+  }
+  /* Chromas: the client's own swatch colours, their names on hover or a tap. */
+  .vb .sk-ch {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    cursor: pointer;
+  }
+  .vb .sk-sw {
+    display: inline-flex;
+    gap: 4px;
+  }
+  .vb .sk-sw i {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    box-shadow:
+      inset 0 0 0 1px rgb(255 255 255 / 0.16),
+      0 0 0 1px var(--line-2);
+  }
+  .vb .sk-sw i.none {
+    background: none;
+    box-shadow: inset 0 0 0 1px var(--line-3);
+  }
+  .vb .sk-cn {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--t3);
+    transition: color var(--m) var(--ease);
+  }
+  .vb .sk-ch:hover .sk-cn,
+  .vb .sk-ch[aria-expanded='true'] .sk-cn {
+    color: var(--t1);
+  }
+  @media (pointer: coarse) {
+    .vb .sk-ch {
+      min-height: 40px;
+      margin-top: 0;
+    }
+  }
+  .vb .sk-names {
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--t2);
+  }
+  /* Older skins' new chromas: one quiet row each. */
+  .vb .sk-o {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: 40px;
+    margin-top: 36px;
+  }
+  .vb .sk-o > .lab {
+    grid-column: 1 / -1;
+    padding-bottom: 8px;
+  }
+  .vb .sk-or {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--line);
+    font-size: 13.5px;
+  }
+  .vb .sk-or > b {
+    font-weight: 600;
+    color: var(--t1);
+  }
+  .vb .sk-oi {
+    width: 28px;
+    height: 28px;
+    flex: none;
+    border-radius: var(--r2);
+    overflow: hidden;
+    background: var(--s3);
+  }
+  .vb .sk-oi img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scale(1.1);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .vb .sk-c:hover .sk-a img {
+      transform: none;
+    }
+  }
+
   /* ── Narrower screens ───────────────────────────────────────── */
   @media (max-width: 1180px) {
     .vb .msh-g {
@@ -898,17 +1001,20 @@
       grid-template-columns: minmax(0, 1fr);
       gap: 32px;
     }
+    .vb .sk-c {
+      grid-column: span 3 !important;
+    }
+    .vb .sk-o {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .vb .sk-a {
+      height: 220px;
+    }
     .vb .hb-in {
       flex-direction: column;
       align-items: flex-start;
       justify-content: flex-end;
       gap: 20px;
-    }
-    .vb .hb-r {
-      align-items: flex-start;
-    }
-    .vb .hb-ch {
-      text-align: left;
     }
   }
   @media (max-width: 767px) {
@@ -931,18 +1037,15 @@
     .vb .pa-c i {
       margin: 0 7px;
     }
-    .vb .hb-r {
-      width: 100%;
+    .vb .sk-g {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 24px;
     }
-    .vb .hb-th {
-      width: 100%;
-      overflow-x: auto;
-      scrollbar-width: none;
+    .vb .sk-c {
+      grid-column: auto !important;
     }
-    .vb .skt {
-      flex: none;
-      width: 84px;
-      height: 48px;
+    .vb .sk-a {
+      height: 196px;
     }
     .vb .pn-tabs {
       overflow-x: auto;

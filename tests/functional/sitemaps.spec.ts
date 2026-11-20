@@ -1,5 +1,6 @@
 import { test } from '@japa/runner'
 import { sitemapPlayers, SITEMAP_PAGE_SIZE } from '#services/sitemap'
+import { SHOW_RUNES } from '../../inertia/lib/features.js'
 
 test.group('Player sitemap', (group) => {
   const count = sitemapPlayers.count
@@ -43,6 +44,7 @@ test.group('Player sitemap', (group) => {
       '/tier-list?role=mid',
       '/tier-list/items',
       '/tier-list/duos',
+      '/tier-list/duos?lane=jungle-support',
       '/stats',
       '/stats?view=early',
       '/leaderboards/pros',
@@ -52,6 +54,9 @@ test.group('Player sitemap', (group) => {
     }
     // The old champion directory leads to the tier list.
     assert.notInclude(response.text(), '<loc>https://invade.lol/champions</loc>')
+    // A page put away is not listed.
+    if (!SHOW_RUNES)
+      assert.notInclude(response.text(), '<loc>https://invade.lol/tier-list/runes</loc>')
     const unknown = await client.get('/sitemap.xml?section=nope')
     unknown.assertStatus(404)
   })

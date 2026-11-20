@@ -62,6 +62,51 @@ export interface PatchNotes {
   bugs: string[]
 }
 
+/** A chroma as the page draws it: its own name ("Ruby") and the client's swatch colour, if known. */
+export interface PatchChroma {
+  name: string
+  color: string | null
+}
+
+/** A new skin as the page shows it, with what the game's data says about it. */
+export interface PatchSkin {
+  champion: number
+  skin: number
+  name: string
+  /** Every champion the entry is for: one, or a set released together (Ahri, Evelynn, Kai'Sa). */
+  champions: number[]
+  /** "Epic", "Legendary", "Mythic"…; null for a standard skin or when unknown. */
+  rarity: string | null
+  /** Its skin line ("K/DA"), when known. */
+  line: string | null
+  chromas: PatchChroma[]
+}
+
+/** New chromas for a skin that is not itself new this patch. */
+export interface PatchChromaSet {
+  skin: string
+  champion: number | null
+  chromas: PatchChroma[]
+}
+
+export interface PatchSkins {
+  skins: PatchSkin[]
+  chromas: PatchChromaSet[]
+}
+
+/** "Music Fan Gragas (FIRESTARTER)": the skin and its chromas' names. */
+export function chromaSet(line: string): { skin: string; names: string[] } {
+  const m = /^(.*?)\s*\(([^()]*)\)\s*$/.exec(line.trim())
+  if (!m) return { skin: line.trim(), names: [] }
+  return {
+    skin: m[1],
+    names: m[2]
+      .split(',')
+      .map((x) => x.trim())
+      .filter(Boolean),
+  }
+}
+
 /** How a champion did on the patch, in its main role (the site's own games). */
 export interface PatchChampionStat {
   position: string
@@ -176,4 +221,44 @@ export function rankTable(before: string, after: string) {
   if (old.length !== next.length || (a[2] ?? '') !== (b[2] ?? '')) return null
   const unit = (b[2] ?? '').trim() === 'seconds' ? 's' : (b[2] ?? '').trim()
   return { old, new: next, unit, restOld: a[3].trim(), restNew: b[3].trim() }
+}
+
+/* ── The patch's biggest buff ────────────────────────────────── */
+
+/** A change's size: each number's relative move, at most 1 (a doubled value), averaged. */
+function lineSize(line: NoteLine): number {
+  if (line.type === 'new') return 0.3
+  if (line.type === 'set') return 0.15
+  if (line.type === 'desc') return 0.05
+  const before = (line.old.match(NUM) ?? []).map(parseFloat)
+  const after = (line.new.match(NUM) ?? []).map(parseFloat)
+  if (!before.length || !after.length) return 0.1
+  const moved = (x: number, y: number) => (x > 0 ? Math.min(1, Math.abs(y - x) / x) : 0)
+  if (before.length === after.length) {
+    const sizes = before.map((x, i) => moved(x, after[i]))
+    return sizes.reduce((a, b) => a + b, 0) / sizes.length
+  }
+  // One value become a list (or the reverse): their averages.
+  const mean = (v: number[]) => v.reduce((a, b) => a + b, 0) / v.length
+  return moved(mean(before), mean(after))
+}
+
+/**
+ * The champion the notes buffed the most: of the champions marked as buffed, the one whose
+ * numbers moved the most (each line's average relative change, summed over its lines; a nerf
+ * line inside the buff counts against it). Null when the patch buffed no champion.
+ */
+export function biggestBuff(
+  notes: Pick<PatchNotes, 'champions'>
+): { id: number; name: string } | null {
+  let best: { id: number; name: string; size: number } | null = null
+  for (const c of notes.champions) {
+    if (c.kind !== 'up') continue
+    let size = 0
+    for (const block of c.blocks)
+      for (const line of block.lines)
+        size += ('dir' in line && line.dir === 'down' ? -1 : 1) * lineSize(line)
+    if (!best || size > best.size) best = { id: c.id, name: c.name, size }
+  }
+  return best && { id: best.id, name: best.name }
 }

@@ -18,6 +18,7 @@ import riotAssets from '#services/riot/assets'
 import summonerService from '#services/summoner_service'
 import teamLogoService, { forDarkWell } from '#services/team_logo_service'
 import tierListsService from '#services/tier_lists_service'
+import { duoLaneOf, duoTitle, type DuoLane } from '#services/duo_tier_list'
 import { desktopReleases } from '#services/desktop_release'
 import { BRACKET_TEXT } from '#services/page_meta'
 import { C, RENDERER, type Mood, type Role, type Run } from '#services/og/kit'
@@ -241,8 +242,11 @@ export default class SiteCardsController {
   async tierList(ctx: HttpContext) {
     const name = nameOf(ctx.params.file)?.toLowerCase() ?? null
     if (name === 'items' || name === 'runes' || name === 'aram') return this.otherList(ctx, name)
-    const duo = /^duos(?:-(mid|top))?$/.exec(name ?? '')
-    if (duo) return this.otherList(ctx, 'duos', (duo[1] as 'mid' | 'top' | undefined) ?? 'bot')
+    const duo = /^duos(?:-([a-z-]+))?$/.exec(name ?? '')
+    if (duo) {
+      const lane = duo[1] ? duoLaneOf(duo[1]) : 'bot'
+      return lane ? this.otherList(ctx, 'duos', lane) : this.missing(ctx)
+    }
     const role = roleOf(name)
     if (!role) return this.missing(ctx)
     const f = await filter()
@@ -289,7 +293,7 @@ export default class SiteCardsController {
   private async otherList(
     ctx: HttpContext,
     list: 'items' | 'runes' | 'duos' | 'aram',
-    lane: 'bot' | 'mid' | 'top' = 'bot'
+    lane: DuoLane = 'bot'
   ) {
     const f = await filter(list === 'aram' ? 'all' : DEFAULT_BRACKET)
     if (!f) return this.missing(ctx)
@@ -343,16 +347,13 @@ export default class SiteCardsController {
           winRate: r.win,
         }))
       )
-      title =
-        lane === 'bot'
-          ? [
-              ['Bot lane', C.violet],
-              ['duos', C.text1],
-            ]
-          : [
-              [lane === 'mid' ? 'Mid' : 'Top', C.violet],
-              ['and jungle duos', C.text1],
-            ]
+      // "Bot lane" or the first role in violet, the rest after it.
+      const words = duoTitle(lane)
+      const cut = lane === 'bot' ? 'Bot lane'.length : words.indexOf(' and ')
+      title = [
+        [words.slice(0, cut), C.violet],
+        [words.slice(cut + 1), C.text1],
+      ]
       kind = 'pair'
       mood = 'buddies'
       source = 'Win rate together'

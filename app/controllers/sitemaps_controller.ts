@@ -18,6 +18,8 @@ import { leagueCatalog } from '#services/pro_leagues'
 import { VIEWS } from '#services/stats_explorer_service'
 import patchNotesService from '#services/patch_notes_service'
 import { NEW_DAWN, NEW_DAWN_TABS } from '../../inertia/lib/new_dawn.js'
+import { SHOW_RUNES } from '../../inertia/lib/features.js'
+import { DUO_LANES } from '#services/duo_tier_list'
 
 /** A section's sitemap is built at most once an hour. */
 const sections = new AnswerCache(8, 3600_000)
@@ -38,8 +40,14 @@ async function section(name: SitemapSection): Promise<SitemapUrl[]> {
       { path: '/app/changelog', lastmod },
       { path: '/tier-list', lastmod },
       ...Object.values(ROLE_OF).map((r) => ({ path: `/tier-list?role=${r.slug}`, lastmod })),
-      ...['items', 'runes', 'duos'].map((list) => ({ path: `/tier-list/${list}`, lastmod })),
-      ...['mid', 'top'].map((lane) => ({ path: `/tier-list/duos?lane=${lane}`, lastmod })),
+      ...['items', ...(SHOW_RUNES ? ['runes'] : []), 'duos'].map((list) => ({
+        path: `/tier-list/${list}`,
+        lastmod,
+      })),
+      ...DUO_LANES.filter((lane) => lane !== 'bot').map((lane) => ({
+        path: `/tier-list/duos?lane=${lane}`,
+        lastmod,
+      })),
       { path: '/stats', lastmod },
       ...VIEWS.filter((v) => v !== 'overview').map((v) => ({ path: `/stats?view=${v}`, lastmod })),
       { path: '/esports', lastmod },

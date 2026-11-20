@@ -243,4 +243,6 @@ export interface NavPatchNotes {
   published: string
   champions: number
   items: number
+  /** The champion the notes buffed the most, when they buffed one. */
+  buff?: { id: number; name: string } | null
 }

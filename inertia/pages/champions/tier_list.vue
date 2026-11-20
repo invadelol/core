@@ -14,6 +14,7 @@ import StatFilters from '../../components/champions/StatFilters.vue'
 import RoleSeg from '../../components/champions/RoleSeg.vue'
 import MovedCard, { type Moved } from '../../components/champions/MovedCard.vue'
 import Fig from '../../components/champions/Fig.vue'
+import WinPickPlot, { type PlotChampion } from '../../components/champions/WinPickPlot.vue'
 import { BRACKETS, TIERS, champIconUrl, roleOf } from '../../lib/champions.js'
 import { patchName } from '../../lib/patches.js'
 import { barWidth, movers, p1, sparkPaths, thousands } from '../../lib/tier_lists.js'
@@ -91,35 +92,22 @@ const shown = computed(() => {
 })
 
 /* ── Win rate against pick rate ──────────────────────────────── */
-const plot = computed(() => {
+/** The 20 most picked; named first: the three most picked, the two best and the worst win rate. */
+const plotPoints = computed<PlotChampion[]>(() => {
   const top = [...shown.value].sort((a, b) => b.pick - a.pick).slice(0, 20)
-  if (top.length < 3) return null
-  const picks = top.map((r) => r.pick * 100)
-  const wins = top.map((r) => r.win * 100)
-  const xlo = Math.log(Math.max(0.2, Math.min(...picks) * 0.8))
-  const xhi = Math.log(Math.max(...picks) * 1.15)
-  const ylo = Math.floor(Math.min(...wins) - 0.4)
-  const yhi = Math.ceil(Math.max(...wins) + 0.4)
-  const x = (p: number) => ((Math.log(Math.max(p, 0.2)) - xlo) / (xhi - xlo)) * 100
-  const y = (w: number) => 100 - ((w - ylo) / (yhi - ylo)) * 100
-  const step = yhi - ylo > 6 ? 2 : 1
-  const gy = []
-  for (let v = Math.ceil(ylo); v <= yhi; v += step) {
-    gy.push({ y: y(v), t: `${v}%`, mid: v === 50 })
-  }
-  const gx = [0.5, 1, 2, 3, 5, 7, 10, 15, 20, 30]
-    .filter((v) => x(v) > 4 && x(v) < 96)
-    .map((v) => ({ x: x(v), t: `${v}%` }))
-  // Labelled: the three most picked, the two best and the worst win rates.
+  if (top.length < 3) return []
   const byWin = [...top].sort((a, b) => b.win - a.win)
-  const labelled = new Set([...top.slice(0, 3), ...byWin.slice(0, 2), byWin[byWin.length - 1]])
-  const pts = top.map((r) => ({
-    r,
-    x: x(r.pick * 100),
-    y: y(r.win * 100),
-    label: labelled.has(r),
+  const first = [...top.slice(0, 3), ...byWin.slice(0, 2), byWin[byWin.length - 1]]
+  const order = [...new Set([...first, ...top])]
+  return order.map((r) => ({
+    key: `${r.champion}:${r.position}`,
+    champion: r.champion,
+    name: nameOf(r.champion),
+    role: props.position ? null : roleWord(r.position),
+    href: href(r),
+    win: r.win,
+    pick: r.pick,
   }))
-  return { gy, gx, pts }
 })
 
 /* ── Moved since the patch before ────────────────────────────── */
@@ -225,32 +213,8 @@ const since = (r: Row) => {
               icon="chart"
               :meta="`The top ${Math.min(20, shown.length)} of ${role ? role.label.toLowerCase() : 'every role'}`"
             />
-            <template v-if="plot">
-              <div class="tl-plot">
-                <div v-for="g in plot.gy" :key="`y${g.t}`" class="gy" :class="{ mid: g.mid }" :style="{ top: `${g.y}%` }">
-                  <span>{{ g.t }}</span>
-                </div>
-                <div v-for="g in plot.gx" :key="`x${g.t}`" class="gx" :style="{ left: `${g.x}%` }">
-                  <span>{{ g.t }}</span>
-                </div>
-                <Link
-                  v-for="p in plot.pts"
-                  :key="`p${p.r.champion}${p.r.position}`"
-                  class="tl-pt"
-                  :href="href(p.r)"
-                  :style="{ left: `${p.x}%`, top: `${p.y}%` }"
-                  :aria-label="nameOf(p.r.champion)"
-                  :title="`${nameOf(p.r.champion)}: ${p1(p.r.win)}% win, ${p1(p.r.pick)}% pick`"
-                  ><img :src="champIconUrl(p.r.champion)" alt="" loading="lazy"
-                /></Link>
-                <span
-                  v-for="p in plot.pts.filter((q) => q.label)"
-                  :key="`l${p.r.champion}${p.r.position}`"
-                  class="tl-lab"
-                  :style="{ left: `${p.x}%`, top: `${p.y}%` }"
-                  >{{ nameOf(p.r.champion) }}</span
-                >
-              </div>
+            <template v-if="plotPoints.length">
+              <WinPickPlot :points="plotPoints" />
               <div class="tl-axis">
                 <span>Picked less</span><span>Pick rate</span><span>Picked more</span>
               </div>

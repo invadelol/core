@@ -34,6 +34,7 @@ import {
   type ChampionText,
   type Manifest,
   type Release,
+  type SkinArt,
 } from '#services/riot/asset_paths'
 
 /** A champion of the live patch (Community Dragon's champion summary). */
@@ -203,6 +204,26 @@ export class RiotAssetsService {
     return (art?.skins ?? []).map(({ num, name }) => ({ num, name }))
   }
 
+  /** A champion's skins on the live patch with their rarity, lines and chromas. Empty when unknown. */
+  async skinFacts(championId: string): Promise<SkinArt[]> {
+    const art = await this.champion(championId, await this.live())
+    return art?.skins ?? []
+  }
+
+  /** Skin line names by id, on the live patch (`v1/skinlines.json`); empty while unreachable. */
+  async skinLines(): Promise<Record<number, string>> {
+    const release = await this.live()
+    const key = `riot:skinlines:v1:${release.cdragon}`
+    const lines = await this.cached(key, release, 'v1/skinlines.json', (raw) => {
+      if (!Array.isArray(raw)) return null
+      const out: Record<number, string> = {}
+      for (const l of raw)
+        if (Number.isInteger(l?.id) && typeof l?.name === 'string' && l.name) out[l.id] = l.name
+      return Object.keys(out).length ? out : null
+    })
+    return lines ?? {}
+  }
+
   /**
    * A champion's title and the names of its passive and abilities on the live patch (its own
    * file, as its art is read), or null while game data is unreachable.
@@ -329,8 +350,9 @@ export class RiotAssetsService {
 
   /** The art paths in one champion's own file, shared by its splashes and abilities. */
   private champion(id: string, release: Release): Promise<ChampionArt | null> {
-    // v2: the file's skins are kept too (a skin's splash, the share card's skin list).
-    const key = `riot:champion:v2:${release.cdragon}:${id}`
+    // v2: the file's skins are kept too (a skin's splash, the share card's skin list); v3: with
+    // their rarity, lines and chromas (the patch notes' skins).
+    const key = `riot:champion:v3:${release.cdragon}:${id}`
     return this.cached(key, release, `v1/champions/${id}.json`, parseChampion)
   }
 
