@@ -405,7 +405,7 @@
 .vb .mate .nm4 { margin: 2px 6px 0; font-size: 17px; font-weight: 700; }
 .vb .mate .rk5 { display: flex; align-items: center; gap: 6px; margin: 4px 6px 0; font-size: 12.5px; font-weight: 600; color: var(--t2); }
 .vb .mate .rk5 img { width: 18px; height: 18px; object-fit: contain; }
-.vb .pp-g { display: grid; grid-template-columns: minmax(0, 1fr) 384px; gap: 24px; align-items: start; }
+.vb .pp-g { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 32px; align-items: start; }
 .vb .sq { display: grid; grid-template-columns: 48px 110px 120px 120px 64px minmax(0, 1fr); align-items: center; gap: 16px; padding: 12px 20px 12px 22px; border-top: 1px solid var(--line); position: relative; }
 .vb .sq::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 0 3px 3px 0; background: var(--win); }
 .vb .sq.l::before { background: var(--loss); }
