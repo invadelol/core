@@ -128,6 +128,106 @@ test.group('Automatic Riot routing', () => {
     }
   }
 
+  test('lands on the server the account plays on, not the first one that answers', async ({
+    assert,
+  }) => {
+    // An old NA summoner next to the EUW one, as with an account moved years ago.
+    const calls: string[] = []
+    const result = await resolvePlayer(
+      {
+        account: async () => ({ puuid: 'player' }),
+        summoner: async (platform) => {
+          calls.push(platform)
+          return platform === 'NA1' || platform === 'EUW1' ? details : missing()
+        },
+        region: async () => 'euw1',
+      },
+      'Player',
+      '1996'
+    )
+    assert.equal(result.platform, 'EUW1')
+    assert.deepEqual(calls, ['EUW1'])
+  })
+
+  test("the account's server beats the stored one and the tag", async ({ assert }) => {
+    const calls: string[] = []
+    const result = await resolvePlayer(
+      {
+        account: async () => ({ puuid: 'player' }),
+        summoner: async (platform) => {
+          calls.push(platform)
+          return details
+        },
+        region: async () => 'kr',
+      },
+      'Player',
+      'EUW',
+      undefined,
+      'NA1'
+    )
+    assert.equal(result.platform, 'KR')
+    assert.deepEqual(calls, ['KR'])
+  })
+
+  test('asks for the server on the cluster that found the account', async ({ assert }) => {
+    const asked: string[] = []
+    await resolvePlayer(
+      {
+        account: async (region) => (region === 'americas' ? { puuid: 'player' } : missing()),
+        summoner: async () => details,
+        region: async (region) => {
+          asked.push(region)
+          return 'na1'
+        },
+      },
+      'Player',
+      'EUW'
+    )
+    assert.deepEqual(asked, ['americas'])
+  })
+
+  for (const [label, region] of [
+    ['an error', async () => Promise.reject({ status: 503 })],
+    ['a server Invade does not know', async () => 'pbe1'],
+  ] as const) {
+    test(`falls back to the probes when the server lookup gives ${label}`, async ({ assert }) => {
+      const calls: string[] = []
+      const result = await resolvePlayer(
+        {
+          account: async () => ({ puuid: 'player' }),
+          summoner: async (platform) => {
+            calls.push(platform)
+            return platform === 'EUW1' ? details : missing()
+          },
+          region,
+        },
+        'Player',
+        'custom'
+      )
+      assert.equal(result.platform, 'EUW1')
+      assert.deepEqual(calls.slice(0, 2), ['NA1', 'BR1'])
+    })
+  }
+
+  test('an explicit platform is never second-guessed', async ({ assert }) => {
+    let asked = 0
+    const result = await resolvePlayer(
+      {
+        account: async () => ({ puuid: 'player' }),
+        summoner: async () => details,
+        region: async () => {
+          asked++
+          return 'euw1'
+        },
+      },
+      'Player',
+      'tag',
+      'na'
+    )
+    assert.equal(result.platform, 'NA1')
+    assert.equal(asked, 0)
+  })
+
   test('an unknown Riot ID never probes platforms', async ({ assert }) => {
     let calls = 0
     await assert.rejects(

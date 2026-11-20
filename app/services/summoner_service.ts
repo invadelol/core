@@ -198,6 +198,7 @@ class SummonerService {
             region: region.toLowerCase() as RiotAPITypes.LoLRegion,
             puuid,
           }),
+        region: (region, puuid) => riotApiService.accountRegion(region, puuid),
       },
       normalized.gameName,
       normalized.tagLine,

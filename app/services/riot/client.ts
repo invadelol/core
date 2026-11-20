@@ -116,6 +116,20 @@ function keepReservoirRefills() {
 
 keepReservoirRefills()
 
+/**
+ * Account-v1's "which server does this account play League on" is newer than the SDK. Added to
+ * the SDK's method table (the one it builds paths and rate-limiter keys from), it goes through
+ * the same limiters, queue caps and request sharing as every other call.
+ */
+export const ACCOUNT_REGION_METHOD = 'ACCOUNT.GET_REGION_BY_GAME'
+
+function registerAccountRegion() {
+  const { METHODS } = createRequire(import.meta.url)('@fightmegg/riot-rate-limiter')
+  METHODS.ACCOUNT.GET_REGION_BY_GAME ??= '/riot/account/v1/region/by-game/:game/by-puuid/:puuid'
+}
+
+registerAccountRegion()
+
 /** Share identical reads before they enter the SDK's Bottleneck queues, and bound those queues. */
 export class CoalescingRiotAPI extends RiotAPI {
   private requests = new SyncGuard()
