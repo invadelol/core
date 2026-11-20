@@ -261,7 +261,7 @@ const since = (r: Row) => {
               >
                 <div class="tl-champ">
                   <TierChip v-if="g.t === null" :tier="r.tier" class="tl-tc" />
-                  <div class="fr s visor"><img :src="champIconUrl(r.champion)" alt="" loading="lazy" /></div>
+                  <div class="tl-pp"><img :src="champIconUrl(r.champion)" alt="" loading="lazy" /></div>
                   <div class="col" style="gap: 3px; min-width: 0">
                     <span class="h4 ell">{{ nameOf(r.champion) }}</span>
                     <span class="meta ell">{{ roleWord(r.position) }} in {{ Math.round(r.roleShare * 100) }}% of games</span>
