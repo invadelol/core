@@ -21,7 +21,9 @@
 .vb .tl-row:hover { background:rgb(var(--v-rgb)/.04) }
 .vb .tl-row.me { background:rgb(var(--v-rgb)/.06) }
 .vb .tl-champ { display:flex;align-items:center;gap:16px;min-width:0 }
-.vb .tl-champ .fr { width:84px;height:44px;flex:none }
+/* A champion: its square portrait, Riot's rim cropped, a hairline ring. */
+.vb .tl-pp { flex: none; width: 44px; height: 44px; border-radius: var(--r2); overflow: hidden; background: var(--s3); box-shadow: 0 0 0 1px var(--line-2); }
+.vb .tl-pp img { width: 100%; height: 100%; object-fit: cover; transform: scale(1.1); }
 .vb .tl-fig { display:flex;flex-direction:column;gap:6px }
 .vb .tl-fig .bar { width:96px }
 .vb .tl-grp { display:flex;align-items:center;gap:14px;height:60px;padding:0 24px;border-top:1px solid var(--line);background:var(--ink-1) }
@@ -185,7 +187,6 @@
   .vb .tl-head, .vb .tl-row { grid-template-columns: minmax(0, 1fr) 72px 64px; }
   .vb .tl-head > :nth-child(n + 3):not(:last-child), .vb .tl-row > :nth-child(n + 3):not(:last-child) { display: none; }
   .vb .tl-champ { gap: 10px; }
-  .vb .tl-champ .fr { width: 44px; height: 44px; }
   .vb .tx-fig .bar, .vb .tl-fig .bar { width: 64px; }
   .vb .tl-axis { margin: 30px 12px 16px 44px; }
   .vb .tx-mv, .vb .tl-mv { grid-template-columns: 28px minmax(0, 1fr) 72px 40px; padding: 0 16px; }
