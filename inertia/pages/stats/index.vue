@@ -148,7 +148,7 @@ const metaLine = computed(() => {
 </script>
 
 <template>
-  <Head :title="def ? `${def.label}: ${where}` : title" />
+  <Head :title="def ? `${def.label} by champion, ${where.toLowerCase()}` : title" />
   <SiteLayout>
     <div class="wrap st-page">
       <Masthead

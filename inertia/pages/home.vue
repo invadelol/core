@@ -96,7 +96,7 @@ const topBully = (rows: { value: number }[]) => rows[0]?.value || 1
 </script>
 
 <template>
-  <Head title="Find a player" />
+  <Head title="League of Legends stats, builds and tier list" />
   <SiteLayout :search="false">
     <div class="wrap">
       <section class="hp" aria-labelledby="hp-title">

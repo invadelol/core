@@ -176,7 +176,7 @@ const since = (r: Row) => {
 </script>
 
 <template>
-  <Head :title="title" />
+  <Head :title="`LoL ${title.toLowerCase()}`" />
   <SiteLayout>
     <div class="wrap">
       <Masthead

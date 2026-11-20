@@ -704,7 +704,7 @@ function clearFilters() {
 </script>
 
 <template>
-  <Head :title="`${parsed.gameName}#${parsed.tagLine}`" />
+  <Head :title="`${parsed.gameName}#${parsed.tagLine}: LoL profile and match history`" />
   <SiteLayout>
     <div class="wrap pg-pf">
       <!-- Loading: the shape of the profile that is coming -->

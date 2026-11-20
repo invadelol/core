@@ -442,15 +442,7 @@ onBeforeUnmount(() => controller?.abort())
 </script>
 
 <template>
-  <Head title="Multisearch">
-    <meta
-      name="description"
-      :content="
-        description ??
-        'Scout a whole League of Legends lobby at once: rank, recent games, main role and champions of every player side by side.'
-      "
-    />
-  </Head>
+  <Head title="LoL multisearch: scout your lobby" />
   <SiteLayout section="tools">
     <div class="wrap pg-ms">
       <Masthead

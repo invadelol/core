@@ -9,6 +9,8 @@ export default function render(page: any) {
   return createInertiaApp({
     page,
     render: renderToString,
+    // The same template as the browser (app.ts), so search engines read the full title.
+    title: (title: string) => (title ? `${title} | invade.lol` : 'invade.lol'),
     resolve: (name: string) => {
       const pages = import.meta.glob<DefineComponent>('../pages/**/*.vue', { eager: true })
       return pages[`../pages/${name}.vue`]

@@ -196,9 +196,7 @@ const ordinal = (place: number) => {
 </script>
 
 <template>
-  <Head :title="`Solo/Duo ladder, ${region.label}`">
-    <meta name="description" :content="description" />
-  </Head>
+  <Head :title="`Solo/Duo ladder, ${region.label}`" />
   <SiteLayout>
     <div class="wrap">
       <section class="mast">

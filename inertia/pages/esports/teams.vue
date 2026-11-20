@@ -67,9 +67,7 @@ const fresh = computed(() => all.value.some((t) => t.five.some((p) => p.fresh)))
 </script>
 
 <template>
-  <Head title="Teams">
-    <meta name="description" :content="description" />
-  </Head>
+  <Head title="LoL esports teams" />
   <SiteLayout>
     <div class="wrap pg-es el-pg">
       <Masthead

@@ -407,6 +407,11 @@ router.get('/:summoner/:section?', async ({ inertia, params, request, response }
     section,
     initialProfile,
     social: initialProfile ? profileSocial(initialProfile, section, request) : null,
+    description: initialProfile
+      ? `${initialProfile.gameName}#${initialProfile.tagLine}: League of Legends rank, match history, champion pool and recent performance.`
+      : undefined,
+    // A Riot ID we hold nothing for is a shell until the client looks it up: not a page for search.
+    robots: initialProfile ? undefined : 'noindex, follow',
     jsonld: initialProfile ? profileJsonLd(initialProfile) : [],
     panels: ANALYTICS_PANELS,
     preload,

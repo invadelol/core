@@ -16,9 +16,7 @@
       content="{{ page.props.description || 'League of Legends statistics: match timelines, lobby-relative scoring and rank history, with nothing in the way.' }}"
     />
 
-    <title inertia>
-      invade.lol
-    </title>
+    {{-- The page's <title> comes from its <Head> through @inertiaHead() below: one title, not two. --}}
 
     {{--
       The stored theme has to be on <html> before the first paint, or a
