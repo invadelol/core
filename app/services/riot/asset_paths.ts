@@ -233,6 +233,12 @@ export interface SkinArt {
   splash?: string
   centered?: string
   loading?: string
+  /** Riot's rarity (`kEpic`, `kLegendary`…; absent for a standard skin). */
+  rarity?: string
+  /** The skin lines it belongs to (`v1/skinlines.json` ids). */
+  lines?: number[]
+  /** Its chromas: the full name ("K/DA FIRESTARTER Ahri (Ruby)") and the client's swatch colours. */
+  chromas?: { name: string; colors: string[] }[]
 }
 
 /** What one champion's own file (`v1/champions/<id>.json`) says about its art. */
@@ -244,7 +250,7 @@ export interface ChampionArt {
   centered?: string
   loading?: string
   abilities: Partial<Record<(typeof ABILITY_KEYS)[number], string>>
-  /** Every skin with art, base first; chromas are left out (they have no splash of their own). */
+  /** Every skin with art, base first; chromas are kept on their skin (no splash of their own). */
   skins?: SkinArt[]
 }
 
@@ -265,12 +271,32 @@ export function parseChampion(raw: any): ChampionArt | null {
   for (const skin of skins) {
     const id = Number(skin?.id)
     if (!Number.isInteger(id) || id < 0 || typeof skin.splashPath !== 'string') continue
+    const chromas = (Array.isArray(skin.chromas) ? skin.chromas : []).flatMap((c: any) =>
+      typeof c?.name === 'string' && c.name
+        ? [
+            {
+              name: c.name,
+              colors: (Array.isArray(c.colors) ? c.colors : []).filter(
+                (x: unknown): x is string => typeof x === 'string' && /^#[0-9a-f]{6}$/i.test(x)
+              ),
+            },
+          ]
+        : []
+    )
+    const lines = (Array.isArray(skin.skinLines) ? skin.skinLines : [])
+      .map((l: any) => Number(l?.id))
+      .filter((n: number) => Number.isInteger(n) && n > 0)
     list.push({
       num: skin === base ? 0 : id % 1000,
       name: typeof skin.name === 'string' && skin.name ? skin.name : String(id % 1000),
       splash: skin.uncenteredSplashPath,
       centered: skin.splashPath,
       loading: skin.loadScreenPath,
+      ...(typeof skin.rarity === 'string' && skin.rarity !== 'kNoRarity'
+        ? { rarity: skin.rarity }
+        : {}),
+      ...(lines.length ? { lines } : {}),
+      ...(chromas.length ? { chromas } : {}),
     })
   }
   list.sort((a, b) => a.num - b.num)
