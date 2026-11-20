@@ -589,7 +589,7 @@ const PLATFORM: Record<string, string> = {
             <CardHead
               title="Champions"
               icon="grid"
-              meta="Recent solo queue"
+              meta="Solo queue"
               :more="{ label: 'Builds', href: `${base}?tab=champions` }"
             />
             <Link
