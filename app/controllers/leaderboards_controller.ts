@@ -9,6 +9,7 @@ import ladderService, {
 import flexLadderService, { LISTED, SEEN_DAYS } from '#services/flex_ladder_service'
 import proLadderService from '#services/pro_ladder_service'
 import proService from '#services/pro_service'
+import proPhotoService from '#services/pro_photo_service'
 import proMatchService from '#services/pro_match_service'
 import championStatsService from '#services/champion_stats_service'
 import { leagueCatalog, leagueRef } from '#services/pro_leagues'
@@ -718,6 +719,8 @@ export default class LeaderboardsController {
         APEX_TIERS.map((t) => [t, ladderRows.filter((r) => r.account?.tier === t).length])
       ),
       podium: podiumRows,
+      /** Whether the leader's photo is a cutout, which rises above their stage. */
+      leaderCutout: lead?.pro.photo ? await proPhotoService.cutout(lead.pro.slug) : false,
       rows,
       total,
       pros: players,
