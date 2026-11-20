@@ -1,7 +1,8 @@
 /* ──────────────────────────────────────────────────────────────
    The profile (pages/summoner.vue, components/profile): the live
-   layout, a rail at the left (who, the sections, the rank, and on
-   the Overview a summary) with the section at the right. Sheets,
+   layout, a rail at the left (who, the sections, the rank, then the
+   summary: LP, champions, roles, mates, activity), the same on every
+   section, with the section at the right. Sheets,
    buttons, wells and rows take their materials from depth.css;
    this file lays them out. Components layer, scoped under `.vb`.
    ────────────────────────────────────────────────────────────── */
@@ -819,9 +820,11 @@
   .vb .cp-r .r {
     text-align: right;
   }
+  /* The table answers to its own width (the column beside the rail, or the whole page under it):
+     the columns that matter least leave first, and nothing is ever cut. */
   .vb .tbl.ct-t {
-    --cols: minmax(132px, 1fr) 52px 104px 56px 56px 64px 64px 72px 84px 84px;
-    overflow: hidden;
+    container: ct / inline-size;
+    --cols: minmax(150px, 1fr) 52px 116px 52px 60px 70px 70px 76px 64px 72px;
     padding-bottom: 6px;
   }
   .vb .ct-t .tbl-h {
@@ -841,13 +844,80 @@
     cursor: pointer;
   }
   .vb .ct-t .who .pic {
+    flex: none;
     width: 34px;
     height: 34px;
     border-radius: 8px;
   }
+  .vb .ct-t .who > .ct-nm {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .vb .ct-t .ct-ms {
+    display: none;
+    overflow: hidden;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .vb .ct-t .ct-mv {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+  }
+  .vb .ct-t .ct-mv .meta {
+    font-size: 12px;
+  }
   .vb .ct-t .tbl-r b {
     color: var(--t1);
     font-weight: 700;
+  }
+  @container ct (max-width: 959px) {
+    .vb .ct-t :is(.tbl-h, .tbl-r) {
+      --cols: minmax(150px, 1fr) 52px 116px 52px 60px 70px 70px 64px 72px;
+    }
+    .vb .ct-t .c-kills {
+      display: none;
+    }
+  }
+  @container ct (max-width: 819px) {
+    .vb .ct-t :is(.tbl-h, .tbl-r) {
+      --cols: minmax(150px, 1fr) 52px 116px 52px 60px 70px 72px;
+    }
+    .vb .ct-t :is(.c-gold, .c-time) {
+      display: none;
+    }
+  }
+  @container ct (max-width: 679px) {
+    .vb .ct-t :is(.tbl-h, .tbl-r) {
+      --cols: minmax(140px, 1fr) 52px 116px 52px 72px;
+    }
+    .vb .ct-t :is(.c-cs, .c-dmg) {
+      display: none;
+    }
+  }
+  /* A phone: the champion, its games, win rate and KDA; the mastery under the name. */
+  @container ct (max-width: 519px) {
+    .vb .ct-t :is(.tbl-h, .tbl-r) {
+      --cols: minmax(0, 1fr) 40px 64px 44px;
+      padding-left: 14px;
+      padding-right: 14px;
+    }
+    .vb .ct-t .c-ms {
+      display: none;
+    }
+    .vb .ct-t .ct-ms {
+      display: block;
+    }
+    .vb .ct-t .wlc .wrl {
+      width: 56px;
+    }
+    .vb .ct-t .wlc .meta {
+      display: none;
+    }
   }
   .vb .wlc {
     display: inline-flex;
@@ -859,19 +929,15 @@
   .vb .wlc .wrl {
     width: 92px;
   }
+  .vb .wlc .meta {
+    margin-left: 6px;
+  }
 
   /* ── Tablet ────────────────────────────────────────────────── */
   @media (max-width: 1279px) {
     .vb .pl {
       grid-template-columns: 280px minmax(0, 1fr);
       column-gap: 24px;
-    }
-    .vb .tbl.ct-t {
-      --cols: minmax(132px, 1fr) 52px 104px 56px 56px 64px 64px;
-    }
-    .vb .ct-t .tbl-h > :nth-child(n + 8),
-    .vb .ct-t .tbl-r > :nth-child(n + 8) {
-      display: none;
     }
   }
   @media (max-width: 1023px) {
@@ -1002,24 +1068,6 @@
       height: 44px;
     }
     .vb .cp-r .wrl {
-      display: none;
-    }
-    .vb .tbl.ct-t {
-      --cols: minmax(0, 1fr) 32px 72px 48px !important;
-    }
-    .vb .ct-t .tbl-h,
-    .vb .ct-t .tbl-r {
-      padding-left: 14px;
-      padding-right: 14px;
-    }
-    .vb .ct-t .tbl-h > :nth-child(n + 5),
-    .vb .ct-t .tbl-r > :nth-child(n + 5) {
-      display: none;
-    }
-    .vb .wlc .wrl {
-      width: 64px;
-    }
-    .vb .wlc .meta {
       display: none;
     }
   }
