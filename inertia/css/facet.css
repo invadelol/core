@@ -414,9 +414,8 @@
 .vb .sq.w .res { color: var(--win); }
 .vb .sq.l .res { color: var(--loss); }
 .vb .faces2 { display: flex; justify-content: flex-end; }
-.vb .faces2 span { width: 34px; height: 34px; border-radius: 50%; margin-left: -8px; overflow: hidden; background: var(--v900); box-shadow: 0 0 0 2px var(--s1), 0 0 0 4px var(--win); }
-.vb .faces2 span.en { box-shadow: 0 0 0 2px var(--s1), 0 0 0 4px var(--loss); }
-.vb .faces2 img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 8%; }
+.vb .faces2 > span { flex: none; width: 34px; height: 34px; border-radius: 50%; margin-left: -8px; overflow: hidden; background: var(--v900); box-shadow: 0 0 0 2px var(--s1), 0 0 0 4px var(--win); }
+.vb .faces2 > span.en { box-shadow: 0 0 0 2px var(--s1), 0 0 0 4px var(--loss); }
 .vb .lgd { display: flex; gap: 16px; justify-content: flex-end; font-size: 12px; font-weight: 600; color: var(--t3); }
 .vb .lgd i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; box-shadow: inset 0 0 0 2px var(--win); vertical-align: -1px; }
 .vb .lgd i.en { box-shadow: inset 0 0 0 2px var(--loss); }

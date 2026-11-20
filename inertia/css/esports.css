@@ -435,6 +435,18 @@
 }
 
 @layer components {
+  /* A pro's game opened in place, as on a profile: its line lit, the detail under it as one block. */
+  .vb .sq-g > .sq {
+    cursor: pointer;
+  }
+  .vb .sq-g.open > .sq {
+    background: var(--d-sf2);
+  }
+  .vb .sq-g > .iv-md {
+    background: var(--d-sf1);
+    border-top: 1px solid var(--line);
+  }
+
   /* A pro's Solo queue tab: the games over the page's width, with their items and the other pros
      by name beside their faces. */
   .vb .sq.wide {
