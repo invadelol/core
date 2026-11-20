@@ -45,7 +45,7 @@ const shows = computed(() =>
 </script>
 
 <template>
-  <span class="pro-pic" :class="`is-${shows}`" aria-hidden="true">
+  <span class="pro-pic" :class="[`is-${shows}`, { big: size >= 96 }]" aria-hidden="true">
     <img
       v-if="shows === 'photo'"
       ref="img"
