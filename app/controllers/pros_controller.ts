@@ -2,7 +2,7 @@ import type { HttpContext } from '@adonisjs/core/http'
 import proService from '#services/pro_service'
 import championStatsService from '#services/champion_stats_service'
 import proLadderService from '#services/pro_ladder_service'
-import teamLogoService, { logoSize } from '#services/team_logo_service'
+import teamLogoService, { groundOf, logoSize } from '#services/team_logo_service'
 import proPhotoService, { photoSize } from '#services/pro_photo_service'
 import proMatchService, { split, type ProMatch } from '#services/pro_match_service'
 import { leagueCatalog, leagueRef } from '#services/pro_leagues'
@@ -472,21 +472,33 @@ export default class ProsController {
     return response.ok(found)
   }
 
-  /** `/cdn/team/:id?s=40`: a team's logo, from our own origin, at a served size or as stored. */
+  /**
+   * `/cdn/team/:id?s=40`: a team's logo, from our own origin, at a served size or full size, for
+   * the dark ground (`?on=light` for the light one: a logo drawn in ink lost there is redrawn).
+   */
   async logo({ params, request, response }: HttpContext) {
-    const logo = await teamLogoService.get(String(params.id), logoSize(request.input('s')))
+    const logo = await teamLogoService.get(
+      String(params.id),
+      logoSize(request.input('s')),
+      groundOf(request.input('on'))
+    )
     if (!logo) return response.notFound()
     response.header('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800')
     return this.send(response, logo)
   }
 
   /**
-   * `/cdn/league/:slug?s=40`: a league's logo. The repository's files only change with a new
-   * address; a stored logo can change, so it is kept a day.
+   * `/cdn/league/:slug?s=40`: a league's logo, for the dark ground or the light one (`?on=light`),
+   * as a team's. The repository's files only change with a new address; a stored logo can
+   * change, so it is kept a day.
    */
   async leagueLogo({ params, request, response }: HttpContext) {
     const slug = String(params.slug).replace(/\.webp$/, '')
-    const logo = await teamLogoService.league(slug, logoSize(request.input('s')))
+    const logo = await teamLogoService.league(
+      slug,
+      logoSize(request.input('s')),
+      groundOf(request.input('on'))
+    )
     if (!logo) return response.notFound()
     response.header(
       'Cache-Control',
