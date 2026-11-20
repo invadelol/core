@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, shallowRef, watch } from 'vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import { RoleIcon } from '@invadelol/ui'
 import SiteLayout from '../../components/SiteLayout.vue'
@@ -16,12 +16,13 @@ import Logo from '../../components/pros/Logo.vue'
 import ProPic from '../../components/pros/ProPic.vue'
 import Flag from '../../components/pros/Flag.vue'
 import SocialIcon from '../../components/pros/SocialIcon.vue'
-import GameModal from '../../components/pros/GameModal.vue'
+import GameDetail from '../../components/profile/GameDetail.vue'
 import { useSort } from '../../components/ui/sort.js'
 import { champIcon, assetUrl, championSplash, profileIcon } from '../../lib/assets.js'
 import { countryName } from '../../lib/board.js'
 import { laneOf, n, rankValue, rankWords, roleLabel, winPct } from '../../lib/ladders.js'
 import { profilePath } from '../../lib/format.js'
+import { afterPaint } from '../../lib/after_paint.js'
 import { rememberPro } from '../../lib/recent.js'
 import type { Match } from '../../lib/types.js'
 import '../../css/esports.css'
@@ -261,69 +262,32 @@ const gamePath = (g: Game) => {
     : null
 }
 
-/* ── A game opens over the page (`?game=<id>` in the address); Back closes it ── */
+/* ── A game opens in place under its line, like a profile's games ── */
 const stored = computed(() => new Map(props.games.map((g) => [g.match.matchId, g])))
-const openId = ref<string | null>(null)
-/** Whether the open game added its own entry to the history (Back then closes it). */
-let pushed = false
-const withGame = (id: string | null) => {
-  const url = new URL(location.href)
-  if (id) url.searchParams.set('game', id)
-  else url.searchParams.delete('game')
-  return url.pathname + url.search + url.hash
-}
-/** A plain click opens the game here; any other (a new tab) follows the link to its page. */
+const open = shallowRef<string | null>(null)
+/**
+ * The game whose detail is drawn. It follows `open` once the tapped line has painted open: the
+ * scoreboard is heavy, and a phone would otherwise hold the tap until it is built.
+ */
+const shown = shallowRef<string | null>(null)
+/** A plain click opens or closes a stored game here; any other (a new tab) follows the link. */
 function openGame(event: MouseEvent, g: Game) {
   if (!stored.value.has(g.matchId)) return
   if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
   event.preventDefault()
-  openId.value = g.matchId
-  // The page's own history entry, copied: Back returns to the page as it was, game closed.
-  history.pushState(history.state, '', withGame(g.matchId))
-  pushed = true
+  const next = open.value === g.matchId ? null : g.matchId
+  open.value = next
+  if (!next) return void (shown.value = null)
+  afterPaint(() => open.value === next && (shown.value = next))
 }
-function closeGame() {
-  if (pushed) return history.back()
-  openId.value = null
-  history.replaceState(history.state, '', withGame(null))
-}
-/**
- * Back and Forward draw the page again from its entry: the address says which game is open, and
- * an entry this page added (its router state still names the page without the game) is left by
- * Back when the game closes.
- */
-function fromAddress() {
-  const id = new URL(location.href).searchParams.get('game')
-  openId.value = id && stored.value.has(id) ? id : null
-  const own = history.state?.page?.url
-  pushed =
-    Boolean(openId.value) &&
-    typeof own === 'string' &&
-    !new URL(own, location.origin).searchParams.has('game')
-}
-onMounted(() => {
-  fromAddress()
-  window.addEventListener('popstate', fromAddress)
-})
-onBeforeUnmount(() => window.removeEventListener('popstate', fromAddress))
-const opened = computed(() => {
-  const g = openId.value ? props.pro.games.find((x) => x.matchId === openId.value) : null
-  const game = openId.value ? stored.value.get(openId.value) : null
-  return g && game
-    ? {
-        game,
-        line: {
-          champion: g.champion,
-          championName: nameOf(g.champion),
-          win: g.win,
-          kills: g.kills,
-          deaths: g.deaths,
-          assists: g.assists,
-          duration: clock(g.durationSec),
-        },
-      }
-    : null
-})
+/* Another pro: nothing stays open. */
+watch(
+  () => props.pro.slug,
+  () => {
+    open.value = null
+    shown.value = null
+  }
+)
 
 const year = (v: string | Date | null) => (v ? new Date(v).getUTCFullYear() : null)
 const span = (t: {
@@ -533,55 +497,68 @@ const PLATFORM: Record<string, string> = {
             <span><i></i>Pro on their side</span>
             <span><i class="en"></i>Pro against them</span>
           </div>
-          <component
-            :is="gamePath(g) ? 'a' : 'div'"
+          <div
             v-for="g in shownGames"
             :key="g.matchId"
-            class="sq"
-            :class="[g.win ? 'w' : 'l', { wide: tab === 'solo' }]"
-            :href="gamePath(g) ?? undefined"
-            @click="openGame($event, g)"
+            class="sq-g"
+            :class="{ open: open === g.matchId }"
           >
-            <Frame :src="champIcon(g.champion)" size="s" :alt="nameOf(g.champion)" />
-            <span class="col">
-              <span class="res">{{ g.win ? 'Win' : 'Loss' }}</span>
-              <span class="meta">{{ when(g.startMs) }}</span>
-            </span>
-            <span class="col">
-              <span class="kda"
-                >{{ g.kills }}<span class="sl">/</span><span class="d">{{ g.deaths }}</span
-                ><span class="sl">/</span>{{ g.assists }}</span
-              >
-              <span class="meta">{{ kda(g) }} KDA</span>
-            </span>
-            <span class="col">
-              <span class="h5 num"
-                >{{ g.durationSec ? (g.cs / (g.durationSec / 60)).toFixed(1) : '–' }} CS/min</span
-              >
-              <span v-if="g.opponent" class="meta ell"
-                >{{ g.opponentPro?.name ?? nameOf(g.opponent) }} opposite</span
-              >
-            </span>
-            <span class="h5 num">{{ clock(g.durationSec) }}</span>
-            <span v-if="tab === 'solo'" class="sq-it">
-              <template v-for="(it, k) in g.items.slice(0, 6)" :key="k"
-                ><img v-if="it" :src="assetUrl('item', it)" alt="" loading="lazy" /><i v-else></i
-              ></template>
-            </span>
-            <span v-if="tab === 'solo' && g.pros?.length" class="sq-who meta ell">{{
-              g.pros.map((p) => p.pro.name).join(', ')
-            }}</span>
-            <span v-else-if="tab === 'solo'"></span>
-            <span class="faces2">
-              <span
-                v-for="p in g.pros ?? []"
-                :key="p.pro.slug"
-                :class="{ en: !p.ally }"
-                :title="p.pro.name"
-                ><ProPic :slug="p.pro.slug" :photo="p.pro.photo" :team="p.pro.team" :size="34"
-              /></span>
-            </span>
-          </component>
+            <component
+              :is="gamePath(g) ? 'a' : 'div'"
+              class="sq"
+              :class="[g.win ? 'w' : 'l', { wide: tab === 'solo' }]"
+              :href="gamePath(g) ?? undefined"
+              :aria-expanded="stored.has(g.matchId) ? open === g.matchId : undefined"
+              @click="openGame($event, g)"
+            >
+              <Frame :src="champIcon(g.champion)" size="s" :alt="nameOf(g.champion)" />
+              <span class="col">
+                <span class="res">{{ g.win ? 'Win' : 'Loss' }}</span>
+                <span class="meta">{{ when(g.startMs) }}</span>
+              </span>
+              <span class="col">
+                <span class="kda"
+                  >{{ g.kills }}<span class="sl">/</span><span class="d">{{ g.deaths }}</span
+                  ><span class="sl">/</span>{{ g.assists }}</span
+                >
+                <span class="meta">{{ kda(g) }} KDA</span>
+              </span>
+              <span class="col">
+                <span class="h5 num"
+                  >{{ g.durationSec ? (g.cs / (g.durationSec / 60)).toFixed(1) : '–' }} CS/min</span
+                >
+                <span v-if="g.opponent" class="meta ell"
+                  >{{ g.opponentPro?.name ?? nameOf(g.opponent) }} opposite</span
+                >
+              </span>
+              <span class="h5 num">{{ clock(g.durationSec) }}</span>
+              <span v-if="tab === 'solo'" class="sq-it">
+                <template v-for="(it, k) in g.items.slice(0, 6)" :key="k"
+                  ><img v-if="it" :src="assetUrl('item', it)" alt="" loading="lazy" /><i v-else></i
+                ></template>
+              </span>
+              <span v-if="tab === 'solo' && g.pros?.length" class="sq-who meta ell">{{
+                g.pros.map((p) => p.pro.name).join(', ')
+              }}</span>
+              <span v-else-if="tab === 'solo'"></span>
+              <span class="faces2">
+                <span
+                  v-for="p in g.pros ?? []"
+                  :key="p.pro.slug"
+                  :class="{ en: !p.ally }"
+                  :title="p.pro.name"
+                  ><ProPic :slug="p.pro.slug" :photo="p.pro.photo" :team="p.pro.team" :size="34"
+                /></span>
+              </span>
+            </component>
+            <GameDetail
+              v-if="shown === g.matchId && stored.get(g.matchId)"
+              :match="stored.get(g.matchId)!.match"
+              :puuid="stored.get(g.matchId)!.puuid"
+              :game-name="stored.get(g.matchId)!.gameName"
+              :tag-line="stored.get(g.matchId)!.tagLine"
+            />
+          </div>
           <EmptyState
             v-if="!shownGames.length"
             compact
@@ -837,13 +814,6 @@ const PLATFORM: Record<string, string> = {
           <EmptyState v-if="!pro.teams.length" compact icon="trophy" title="No team known" />
         </div>
       </section>
-      <GameModal
-        v-if="opened"
-        :game="opened.game"
-        :line="opened.line"
-        :pro="pro.name"
-        @close="closeGame"
-      />
       <p v-if="tab !== 'accounts'" class="meta" style="margin-top: 14px">
         Solo queue: the games Invade stored of their accounts in the last 30 days.
       </p>

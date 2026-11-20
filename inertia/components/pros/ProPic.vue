@@ -5,7 +5,7 @@ import '../../css/pro_pics.css'
 
 /**
  * A pro's picture, one rule everywhere: their photo; without one (or when it fails), their
- * current team's logo; without a team, a quiet bust in the site's faceted line. Never their
+ * current team's logo; without a team (or a logo), a quiet person silhouette. Never their
  * initials. It fills the box it is put in (a `.fr` frame, a round face, a row's square), which
  * keeps its own size, ground and corners.
  */
@@ -29,6 +29,8 @@ const props = withDefaults(
 /** Served photo sizes (`/cdn/pro/:slug?s=`), CSS px; the server draws them at twice the size. */
 const SIZES = [24, 32, 40, 48, 64, 96, 144, 240]
 const failed = ref(false)
+/** Their team has no logo we can serve: the bust stands in. */
+const noLogo = ref(false)
 const img = ref<HTMLImageElement | null>(null)
 // A photo that failed before the page hydrated never fires the handler.
 onMounted(() => {
@@ -40,7 +42,7 @@ const src = computed(() => {
   return `/cdn/pro/${encodeURIComponent(props.slug)}?s=${size}&v=${encodeURIComponent(props.photo)}`
 })
 const shows = computed(() =>
-  src.value && !failed.value ? 'photo' : props.team?.id ? 'team' : 'none'
+  src.value && !failed.value ? 'photo' : props.team?.id && !noLogo.value ? 'team' : 'none'
 )
 </script>
 
@@ -60,10 +62,15 @@ const shows = computed(() =>
       :style="position ? { objectPosition: position } : undefined"
       @error="failed = true"
     />
-    <Logo v-else-if="shows === 'team'" :team="team!.id" :size="Math.round(size * 0.56)" />
+    <Logo
+      v-else-if="shows === 'team'"
+      :team="team!.id"
+      :size="Math.round(size * 0.56)"
+      @missing="noLogo = true"
+    />
     <svg v-else viewBox="0 0 100 100" preserveAspectRatio="xMidYMax meet">
-      <path d="M50 21 64 30v16l-14 9-14-9V30Z" />
-      <path d="M15 100 27 69h46l12 31Z" />
+      <circle cx="50" cy="40" r="17" />
+      <path d="M14 100c0-21 16-35 36-35s36 14 36 35Z" />
     </svg>
   </span>
 </template>
