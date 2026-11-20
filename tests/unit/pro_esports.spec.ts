@@ -1,7 +1,8 @@
 import { test } from '@japa/runner'
 import { FALLBACK_LEAGUES, LeagueCatalog, type League } from '#services/pro_leagues'
 import { isLive, isNext, matchOf, split, type ProMatch } from '#services/pro_match_service'
-import { photoSize, photoVersion } from '#services/pro_photo_service'
+import sharp from 'sharp'
+import { isCutout, photoSize, photoVersion } from '#services/pro_photo_service'
 import { matchList, teamLabel, utcTime } from '../../inertia/lib/pro_matches.js'
 
 const league = (slug: string, teams: string[], extra: Partial<League> = {}): League => ({
@@ -122,5 +123,22 @@ test.group('Pro photos', () => {
     assert.equal(photoSize('x'), 240)
     assert.notEqual(photoVersion('https://a/1.png'), photoVersion('https://a/2.png'))
     assert.lengthOf(photoVersion('https://a/1.png'), 8)
+  })
+
+  test('a figure on transparency is a cutout, a picture with a room behind is not', async ({
+    assert,
+  }) => {
+    // A bust: a head and shoulders on nothing, as the leagues publish them.
+    const bust = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96">
+      <circle cx="48" cy="34" r="18" fill="#c89070"/><rect x="14" y="58" width="68" height="38" fill="#203060"/>
+    </svg>`
+    const png = async (svg: string) =>
+      new Uint8Array(await sharp(Buffer.from(svg)).png().toBuffer())
+    assert.isTrue(await isCutout(await png(bust)))
+    const room = bust.replace('<circle', '<rect width="96" height="96" fill="#556070"/><circle')
+    assert.isFalse(await isCutout(await png(room)))
+    // A photo in a format without transparency at all.
+    const jpeg = new Uint8Array(await sharp(Buffer.from(bust)).flatten().jpeg().toBuffer())
+    assert.isFalse(await isCutout(jpeg))
   })
 })
