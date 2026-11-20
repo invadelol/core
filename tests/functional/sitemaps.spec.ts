@@ -44,7 +44,8 @@ test.group('Player sitemap', (group) => {
       '/tier-list/items',
       '/tier-list/duos',
       '/stats',
-      '/stats?view=early',
+      '/stats/gold-lead-10',
+      '/stats/kda',
       '/leaderboards/pros',
       '/league/lec',
     ]) {
@@ -52,6 +53,8 @@ test.group('Player sitemap', (group) => {
     }
     // The old champion directory leads to the tier list.
     assert.notInclude(response.text(), '<loc>https://invade.lol/champions</loc>')
+    // The old explorer views moved to the studio's pages.
+    assert.notInclude(response.text(), '/stats?view=')
     const unknown = await client.get('/sitemap.xml?section=nope')
     unknown.assertStatus(404)
   })
