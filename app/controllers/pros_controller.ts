@@ -2,15 +2,13 @@ import type { HttpContext } from '@adonisjs/core/http'
 import proService from '#services/pro_service'
 import championStatsService from '#services/champion_stats_service'
 import proLadderService from '#services/pro_ladder_service'
-import teamLogoService, { logoSize } from '#services/team_logo_service'
+import teamLogoService, { groundOf, logoSize } from '#services/team_logo_service'
 import proPhotoService, { photoSize } from '#services/pro_photo_service'
 import proMatchService, { split, type ProMatch } from '#services/pro_match_service'
 import { leagueCatalog, leagueRef } from '#services/pro_leagues'
 import { ORIGIN, breadcrumbs, count, meta, notFoundPage, percent, today } from '#services/page_meta'
 import esportsService from '#services/esports_service'
 
-/** Games in each strip of next games on `/pros` (one row on wide screens). */
-const STRIP_GAMES = 4
 /** What the league pages read of a league's players (`proService.league`). */
 interface LeaguePlayer {
   slug: string
@@ -98,67 +96,31 @@ async function championNames() {
 /** Professional players and teams: the leagues, the ladder, a pro's page, a team's page, logos. */
 export default class ProsController {
   /**
-   * `/pros`: a league (`?league=lec`, the first one by default) with its teams and players, every
-   * team by league (`?view=teams`), or the ladder of every pro by LP (`?view=ladder`).
+   * `/pros`: the pros' page is the pro ladder now (`/leaderboards/pros`), a league's players there
+   * as they were here (`?league=lec`, the first one by default, a moved league where its teams
+   * play now); `?view=teams` is `/teams`.
    */
-  async index({ inertia, request, response }: HttpContext) {
+  async index({ request, response }: HttpContext) {
     const view = String(request.input('view', ''))
-    const catalog = await leagueCatalog()
-    const leagues = catalog.listed.map(leagueRef)
-    const version = today()
-    // The ladder and the teams have their own pages now.
-    if (view === 'ladder') {
-      const q = new URLSearchParams()
-      for (const key of ['role', 'server', 'page']) {
-        const v = request.input(key)
-        if (v) q.set(key, String(v))
-      }
-      q.set('league', String(request.input('league', '')) || 'all')
-      return response.redirect().status(301).toPath(`/leaderboards/pros?${q}`)
-    }
     if (view === 'teams') return response.redirect().status(301).toPath('/teams')
-    const asked = request.input('league')
-    const found = asked ? catalog.bySlug(asked) : catalog.first
-    // An event without teams of its own (Worlds) has its games on the first league's page.
-    if (found && !found.teams.length) return response.redirect().toPath('/pros')
-    const league = found
-    if (!league) {
-      // A league that moved to another address (its code, or where its teams play now).
-      const moved = catalog.successor(asked)
-      if (moved) {
-        const to = moved.slug === catalog.first?.slug ? '/pros' : `/pros?league=${moved.slug}`
-        return response.redirect().status(301).toPath(to)
-      }
-      return notFoundPage({ inertia, response })
+    const catalog = await leagueCatalog()
+    const q = new URLSearchParams()
+    for (const key of ['role', 'server', 'team', 'q', 'page']) {
+      const v = request.input(key)
+      if (v) q.set(key, String(v))
     }
-    const [data, next, international] = await Promise.all([
-      proService.league(league.slug),
-      proMatchService.forLeague(league.slug, STRIP_GAMES),
-      proMatchService.international(STRIP_GAMES),
-    ])
-    if (!data) return notFoundPage({ inertia, response })
-    const first = data.players[0]
-    const path = league.slug === catalog.first?.slug ? '/pros' : `/pros?league=${league.slug}`
-    return inertia.render('esports/pros', {
-      leagues,
-      data,
-      matches: { league: next, international },
-      ...meta({
-        title: `${league.code} pros and teams in solo queue`,
-        description: `${league.name}: ${data.counts.teams} teams, ${data.counts.players} players and ${data.counts.accounts} ranked accounts${first?.best ? `, led by ${first.name} at ${count(first.best.lp)} LP` : ''}.`,
-        path,
-        image: `/og/pros/${league.slug}.jpg`,
-        version,
-        alt: `Photos of the five best ${league.code} pros by LP, the league's logo and a poro with a foam finger`,
-      }),
-      robots: data.players.length ? null : 'noindex,follow',
-      jsonld: [
-        breadcrumbs([
-          { name: 'Pros', path: '/pros' },
-          { name: league.code, path },
-        ]),
-      ],
-    })
+    const asked = String(request.input('league', '') || '').toLowerCase()
+    const league =
+      asked === 'all' ? null : asked ? (catalog.bySlug(asked) ?? catalog.successor(asked)) : null
+    if (asked === 'all' || view === 'ladder') q.set('league', league?.slug ?? 'all')
+    else if (league && league.teams.length && league.slug !== catalog.first?.slug) {
+      q.set('league', league.slug)
+    }
+    const query = q.toString()
+    return response
+      .redirect()
+      .status(view === 'ladder' ? 301 : 302)
+      .toPath(`/leaderboards/pros${query ? `?${query}` : ''}`)
   }
 
   /** `/leagues`: every league, its teams and players, and its next game. */
@@ -472,21 +434,33 @@ export default class ProsController {
     return response.ok(found)
   }
 
-  /** `/cdn/team/:id?s=40`: a team's logo, from our own origin, at a served size or as stored. */
+  /**
+   * `/cdn/team/:id?s=40`: a team's logo, from our own origin, at a served size or full size, for
+   * the dark ground (`?on=light` for the light one: a logo drawn in ink lost there is redrawn).
+   */
   async logo({ params, request, response }: HttpContext) {
-    const logo = await teamLogoService.get(String(params.id), logoSize(request.input('s')))
+    const logo = await teamLogoService.get(
+      String(params.id),
+      logoSize(request.input('s')),
+      groundOf(request.input('on'))
+    )
     if (!logo) return response.notFound()
     response.header('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800')
     return this.send(response, logo)
   }
 
   /**
-   * `/cdn/league/:slug?s=40`: a league's logo. The repository's files only change with a new
-   * address; a stored logo can change, so it is kept a day.
+   * `/cdn/league/:slug?s=40`: a league's logo, for the dark ground or the light one (`?on=light`),
+   * as a team's. The repository's files only change with a new address; a stored logo can
+   * change, so it is kept a day.
    */
   async leagueLogo({ params, request, response }: HttpContext) {
     const slug = String(params.slug).replace(/\.webp$/, '')
-    const logo = await teamLogoService.league(slug, logoSize(request.input('s')))
+    const logo = await teamLogoService.league(
+      slug,
+      logoSize(request.input('s')),
+      groundOf(request.input('on'))
+    )
     if (!logo) return response.notFound()
     response.header(
       'Cache-Control',

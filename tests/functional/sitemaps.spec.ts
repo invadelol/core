@@ -48,10 +48,13 @@ test.group('Player sitemap', (group) => {
       '/stats',
       '/stats?view=early',
       '/leaderboards/pros',
+      '/leaderboards/pros?league=all',
       '/league/lec',
     ]) {
       response.assertTextIncludes(`<loc>https://invade.lol${path.replace('&', '&amp;')}</loc>`)
     }
+    // The pros' page is the pro ladder.
+    assert.notInclude(response.text(), '<loc>https://invade.lol/pros</loc>')
     // The old champion directory leads to the tier list.
     assert.notInclude(response.text(), '<loc>https://invade.lol/champions</loc>')
     // A page put away is not listed.

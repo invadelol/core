@@ -3,7 +3,7 @@ import { Head, Link } from '@inertiajs/vue3'
 import SiteLayout from '../../components/SiteLayout.vue'
 import Masthead from '../../components/ui/Masthead.vue'
 import MoreLink from '../../components/ui/MoreLink.vue'
-import { leagueLogo } from '../../lib/board.js'
+import Logo from '../../components/pros/Logo.vue'
 import { n } from '../../lib/ladders.js'
 import '../../css/esports.css'
 
@@ -39,9 +39,9 @@ const total = props.groups.reduce((s, g) => s + g.teams.length, 0)
       <div class="stk">
         <section v-for="g in groups" :id="g.league.slug" :key="g.league.slug" class="card">
           <div class="card-h">
-            <img
-              :src="leagueLogo(g.league.slug, 40)"
-              alt=""
+            <Logo
+              :league="g.league.slug"
+              :size="20"
               style="width: 20px; height: 20px; object-fit: contain"
             />
             <h2 class="h3">{{ g.league.code }}</h2>
@@ -50,7 +50,7 @@ const total = props.groups.reduce((s, g) => s + g.teams.length, 0)
           </div>
           <div class="es-tg">
             <Link v-for="t in g.teams" :key="t.id" :href="`/team/${t.slug}`">
-              <img :src="`/cdn/team/${t.id}?s=96`" alt="" />
+              <Logo :team="t.id" :size="48" />
               <span class="h5">{{ t.name }}</span>
               <span class="meta">{{
                 t.lp === null ? `${t.players} players` : `${n(t.lp)} LP average`

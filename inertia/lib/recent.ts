@@ -23,7 +23,13 @@ export interface RecentPlayer {
    * A pro's page rather than a Riot ID: `gameName` is their name, `tagLine` is empty, and the
    * entry opens `/pro/:slug` with their photo (its version, when they have one).
    */
-  pro?: { slug: string; photo?: string | null; staff?: boolean }
+  pro?: {
+    slug: string
+    photo?: string | null
+    staff?: boolean
+    /** Their team when they were seen: its logo stands in for a missing photo. */
+    team?: { id: string; name: string } | null
+  }
   /** A champion's page: `gameName` is its name, `tagLine` is empty, the entry opens `/champions/:slug`. */
   champion?: { id: number; slug: string }
   /** A team's page: `gameName` is its name, `tagLine` is empty, the entry opens `/team/:slug`. */
@@ -73,13 +79,19 @@ export function rememberPro(pro: {
   name: string
   photo?: string | null
   staff?: boolean
+  team?: { id: string; name: string } | null
 }) {
   if (!pro.slug || !pro.name) return
   remember({
     gameName: pro.name,
     tagLine: '',
     profileIconId: null,
-    pro: { slug: pro.slug, photo: pro.photo ?? null, staff: pro.staff || undefined },
+    pro: {
+      slug: pro.slug,
+      photo: pro.photo ?? null,
+      staff: pro.staff || undefined,
+      ...(pro.team ? { team: { id: pro.team.id, name: pro.team.name } } : {}),
+    },
   })
 }
 

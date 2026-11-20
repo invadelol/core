@@ -4,7 +4,7 @@ import SiteLayout from '../../components/SiteLayout.vue'
 import Masthead from '../../components/ui/Masthead.vue'
 import RankEmblem from '../../components/ui/RankEmblem.vue'
 import MatchLine from '../../components/esports/MatchLine.vue'
-import { leagueLogo } from '../../lib/board.js'
+import Logo from '../../components/pros/Logo.vue'
 import { n } from '../../lib/ladders.js'
 import { matchOrNull, type ProMatch } from '../../lib/pro_matches.js'
 import '../../css/esports.css'
@@ -43,7 +43,7 @@ defineProps<{
       <div class="es-lgc">
         <section v-for="l in leagues" :key="l.slug" class="card">
           <Link :href="`/league/${l.slug}`" class="es-lgh">
-            <img :src="leagueLogo(l.slug, 96)" alt="" />
+            <Logo :league="l.slug" :size="48" />
             <span class="col" style="min-width: 0">
               <span class="h2">{{ l.code }}</span>
               <span class="meta ell">{{ l.name }}</span>

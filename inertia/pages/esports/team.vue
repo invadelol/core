@@ -9,8 +9,11 @@ import CardHead from '../../components/ui/CardHead.vue'
 import RankEmblem from '../../components/ui/RankEmblem.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import MatchLine from '../../components/esports/MatchLine.vue'
+import Logo from '../../components/pros/Logo.vue'
+import ProPic from '../../components/pros/ProPic.vue'
+import Flag from '../../components/pros/Flag.vue'
 import { champIcon } from '../../lib/assets.js'
-import { countryName, leagueLogo } from '../../lib/board.js'
+import { countryName } from '../../lib/board.js'
 import { laneOf, n, rankWords, roleLabel } from '../../lib/ladders.js'
 import { profilePath } from '../../lib/format.js'
 import { rememberTeam } from '../../lib/recent.js'
@@ -28,7 +31,8 @@ interface Member {
   joinedAt: string | Date | null
   leftAt: string | Date | null
   best: { tier: string; division: number | null; lp: number } | null
-  now: { slug: string; name: string } | null
+  /** Where a former player plays now. */
+  now: { id: string; slug: string; name: string } | null
 }
 interface Game {
   matchId: string
@@ -41,7 +45,7 @@ interface Game {
   assists: number
   cs: number
   durationSec: number
-  pro?: { slug: string; name: string; photo?: string }
+  pro?: { slug: string; name: string; photo?: string; team?: { id: string } | null }
 }
 
 /**
@@ -172,9 +176,9 @@ const wonBy = (m: ProMatch) => (m.winner ? m.teams[m.winner - 1].id === props.te
           size="l"
           style="height: 220px; display: grid; place-items: center; background: var(--v900)"
         >
-          <img
-            :src="`/cdn/team/${team.id}?s=240`"
-            alt=""
+          <Logo
+            :team="team.id"
+            :size="96"
             style="width: 120px; height: 120px; object-fit: contain"
           />
         </Frame>
@@ -182,7 +186,7 @@ const wonBy = (m: ProMatch) => (m.winner ? m.teams[m.winner - 1].id === props.te
           <h1 class="pp-name">{{ team.name }}</h1>
           <div class="row" style="gap: 8px; margin-top: 16px; flex-wrap: wrap">
             <Link v-if="team.league" class="tagx" :href="`/league/${team.league.slug}`"
-              ><img :src="leagueLogo(team.league.slug, 32)" alt="" />{{ team.league.code }}</Link
+              ><Logo :league="team.league.slug" :size="16" />{{ team.league.code }}</Link
             >
             <span v-if="team.league?.region ?? team.region" class="tagx">{{
               team.league?.region ?? team.region
@@ -265,14 +269,15 @@ const wonBy = (m: ProMatch) => (m.winner ? m.teams[m.winner - 1].id === props.te
             class="mate"
             :href="m.slug ? `/pro/${m.slug}` : undefined"
           >
-            <Frame
-              :src="m.photo && m.slug ? `/cdn/pro/${m.slug}?s=240&v=${m.photo}` : null"
-              stage
-            />
+            <Frame stage
+              ><ProPic :slug="m.slug" :photo="m.photo" :team="team" :size="240" position="50% 0"
+            /></Frame>
             <span class="rl3"
               ><RoleIcon v-if="laneOf(m.role)" :lane="laneOf(m.role)!" :size="13" />{{
                 roleLabel(m.role)
-              }}<template v-if="m.country">, {{ countryName(m.country) }}</template></span
+              }}<template v-if="m.country"
+                >, <Flag :code="m.country" :size="16" />{{ countryName(m.country) }}</template
+              ></span
             >
             <span class="nm4">{{ m.name }}</span>
             <span class="rk5"
@@ -303,7 +308,7 @@ const wonBy = (m: ProMatch) => (m.winner ? m.teams[m.winner - 1].id === props.te
                 :key="m.id"
                 :href="opponentOf(m).slug ? `/team/${opponentOf(m).slug}` : undefined"
               >
-                <img v-if="opponentOf(m).id" :src="`/cdn/team/${opponentOf(m).id}?s=48`" alt="" />
+                <Logo :team="opponentOf(m).id" :size="32" />
                 <span class="wl" :class="{ w: wonBy(m) }">{{ wonBy(m) ? 'W' : 'L' }}</span>
                 <span class="meta">{{ opponentOf(m).code ?? opponentOf(m).name }}</span>
               </component>
@@ -328,10 +333,7 @@ const wonBy = (m: ProMatch) => (m.winner ? m.teams[m.winner - 1].id === props.te
               style="min-height: 58px"
             >
               <span class="es-pp" style="width: 36px; height: 36px"
-                ><img
-                  v-if="g.pro?.photo"
-                  :src="`/cdn/pro/${g.pro.slug}?s=48&v=${g.pro.photo}`"
-                  alt=""
+                ><ProPic :slug="g.pro?.slug" :photo="g.pro?.photo" :team="team" :size="36"
               /></span>
               <span class="col" style="width: 110px">
                 <span class="h5 ell">{{ g.pro?.name ?? '' }}</span>
@@ -359,10 +361,7 @@ const wonBy = (m: ProMatch) => (m.winner ? m.teams[m.winner - 1].id === props.te
             <div v-for="p in pools" :key="p.m.slug!">
               <span class="row h4" style="gap: 8px; margin-bottom: 6px"
                 ><span class="es-pp" style="width: 28px; height: 28px; border-radius: 7px"
-                  ><img
-                    v-if="p.m.photo"
-                    :src="`/cdn/pro/${p.m.slug}?s=32&v=${p.m.photo}`"
-                    alt="" /></span
+                  ><ProPic :slug="p.m.slug" :photo="p.m.photo" :team="team" :size="28" /></span
                 >{{ p.m.name }}</span
               >
               <div
@@ -384,10 +383,9 @@ const wonBy = (m: ProMatch) => (m.winner ? m.teams[m.winner - 1].id === props.te
             <CardHead title="Former players" icon="trophy" />
             <div class="alum">
               <Link v-for="f in former" :key="f.m.slug!" :href="`/pro/${f.m.slug}`">
-                <Frame
-                  :src="f.m.photo ? `/cdn/pro/${f.m.slug}?s=144&v=${f.m.photo}` : null"
-                  stage
-                />
+                <Frame stage
+                  ><ProPic :slug="f.m.slug" :photo="f.m.photo" :team="f.m.now" :size="144"
+                /></Frame>
                 <span class="h5">{{ f.m.name }}</span>
                 <span class="meta">{{ f.years }}</span>
               </Link>
@@ -399,28 +397,16 @@ const wonBy = (m: ProMatch) => (m.winner ? m.teams[m.winner - 1].id === props.te
           <div v-if="staff.length" class="card">
             <CardHead title="Staff" icon="users" />
             <div v-for="m in staff" :key="m.name" class="lrow" style="min-height: 50px">
-              <span v-if="m.photo && m.slug" class="es-pp" style="width: 34px; height: 34px"
-                ><img :src="`/cdn/pro/${m.slug}?s=48&v=${m.photo}`" alt=""
+              <span class="es-pp" style="width: 34px; height: 34px"
+                ><ProPic :slug="m.slug" :photo="m.photo" :team="team" :size="34"
               /></span>
-              <span
-                v-else
-                class="es-pp"
-                style="
-                  width: 34px;
-                  height: 34px;
-                  background: var(--s3);
-                  display: grid;
-                  place-items: center;
-                  font-weight: 700;
-                  color: var(--t3);
-                "
-                >{{ m.name.slice(0, 2) }}</span
-              >
               <span class="col grow">
                 <span class="h5">{{ m.name }}</span>
                 <span class="meta"
                   >{{ m.role ? m.role.charAt(0) + m.role.slice(1).toLowerCase() : 'Staff'
-                  }}<template v-if="m.country">, {{ countryName(m.country) }}</template></span
+                  }}<template v-if="m.country"
+                    >, <Flag :code="m.country" :size="16" /> {{ countryName(m.country) }}</template
+                  ></span
                 >
               </span>
               <span v-if="m.joinedAt" class="meta">since {{ year(m.joinedAt) }}</span>
@@ -440,9 +426,9 @@ const wonBy = (m: ProMatch) => (m.winner ? m.teams[m.winner - 1].id === props.te
               "
             >
               <span class="rk">{{ i + 1 }}</span>
-              <img
-                :src="`/cdn/team/${t.id}?s=48`"
-                alt=""
+              <Logo
+                :team="t.id"
+                :size="24"
                 style="width: 22px; height: 22px; object-fit: contain"
               />
               <span class="h5 grow">{{ t.name }}</span>

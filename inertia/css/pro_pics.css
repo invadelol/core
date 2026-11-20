@@ -1,0 +1,90 @@
+/*
+ * Team and league logos (`components/pros/Logo.vue`) and pros' pictures (`ProPic.vue`), imported
+ * by the components themselves. Outside the layers on purpose: a page's own `img` rules (sizes,
+ * `object-fit: cover` for photos) must not reach inside a picture.
+ */
+
+/* A logo comes as two lazy images, one per ground; the theme hides the other, which is then never
+   fetched. Dark is the default theme, `system` follows the device. */
+:root:not([data-theme='light']):not([data-theme='system']) img.lg-light,
+:root[data-theme='light'] img.lg-dark {
+  display: none !important;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='system'] img.lg-light {
+    display: none !important;
+  }
+}
+@media (prefers-color-scheme: light) {
+  :root[data-theme='system'] img.lg-dark {
+    display: none !important;
+  }
+}
+/* A team without a logo keeps its place, empty. */
+img.lg-x {
+  visibility: hidden;
+}
+
+/* A pro's picture fills the box it is put in; the box keeps its size, ground and corners. */
+.pro-pic {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.pro-pic.pro-pic > img {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+}
+.pro-pic.is-photo > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* The face high in the box; in the layer, so a page's own framing of its photos still applies. */
+@layer components {
+  .pro-pic.is-photo > img {
+    object-position: 50% 8%;
+  }
+}
+/* Their team's logo, centred on the box's ground. */
+.pro-pic.is-team > img {
+  width: 56%;
+  height: 56%;
+  object-fit: contain;
+}
+/* No photo and no team: a bust in the glyph's facets, standing on the box's floor. */
+.pro-pic.is-none {
+  align-items: end;
+}
+.pro-pic.is-none > svg {
+  display: block;
+  width: 84%;
+  height: 84%;
+  fill: rgb(var(--v-rgb) / 0.42);
+}
+/* In a large frame it stays a quiet stand-in, not a figure. */
+.pro-pic.is-none.big > svg {
+  width: 66%;
+  height: 66%;
+  fill: rgb(var(--v-rgb) / 0.26);
+}
+.pro-pic.is-team.big > img {
+  width: 46%;
+  height: 46%;
+}
+
+/* A country's flag (`components/pros/Flag.vue`): a small card, a hairline holding white flags. */
+img.flag {
+  flex: none;
+  display: inline-block;
+  object-fit: cover;
+  border-radius: 2px;
+  outline: 1px solid rgb(127 127 127 / 0.22);
+  outline-offset: -1px;
+  vertical-align: -2px;
+  opacity: 1;
+}
