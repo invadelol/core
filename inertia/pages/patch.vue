@@ -13,6 +13,7 @@ import ChangeMark from '../components/patch/ChangeMark.vue'
 import ChangeTable from '../components/patch/ChangeTable.vue'
 import NoteLines from '../components/patch/NoteLines.vue'
 import { POSITION, positionOf } from '../components/header/sections.js'
+import { patchSubRow } from '../components/header/sub_art.js'
 import { champIcon, championSplash, skinSplash } from '../lib/assets.js'
 import { patchName } from '../lib/patch.js'
 import {
@@ -61,9 +62,7 @@ const RANK: Record<string, string> = {
 }
 const rank = computed(() => RANK[props.stats?.bracket ?? 'emerald_plus'] ?? 'Emerald+')
 const counts = computed(() => (props.notes ? noteCounts(props.notes) : null))
-const sub = computed(() =>
-  props.patches.slice(0, 6).map((p) => ({ label: p, href: `/patch/${p}`, on: p === props.current }))
-)
+const sub = computed(() => patchSubRow(props.patches, `/patch/${props.current}`))
 const patchModel = computed({
   get: () => props.current,
   set: (v: string) => router.visit(`/patch/${v}`),
@@ -290,7 +289,7 @@ onBeforeUnmount(() => observer?.disconnect())
 
 <template>
   <Head :title="notes ? `Patch ${current} notes` : `Patch ${current}`" />
-  <SiteLayout :sub="sub.length ? sub : null" patch-on>
+  <SiteLayout :sub="sub" patch-on>
     <div class="pnb">
       <section v-if="notes" class="hb">
         <img v-if="banner" :key="banner" class="hb-img" :src="banner" alt="" fetchpriority="high" />

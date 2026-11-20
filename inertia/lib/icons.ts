@@ -126,6 +126,32 @@ export const ICONS = {
     },
     { d: 'M7.5 15.5c-2 .5-3-.5-3.5-1.5' },
   ],
+  /** A video to start (a play triangle on its own). */
+  triangle: [{ d: 'M7 4.5v11l8.5-5.5Z' }],
+  /** A video on YouTube. */
+  youtube: [
+    {
+      d: 'M2.5 6.5c0-1.4 1-2.5 2.4-2.6C6.6 3.8 8.3 3.7 10 3.7s3.4.1 5.1.2c1.4.1 2.4 1.2 2.4 2.6v7c0 1.4-1 2.5-2.4 2.6-1.7.1-3.4.2-5.1.2s-3.4-.1-5.1-.2c-1.4-.1-2.4-1.2-2.4-2.6Z',
+    },
+    { d: 'm8.5 7.5 4 2.5-4 2.5Z' },
+  ],
+  /** A comment on Reddit. */
+  reddit: [
+    { d: 'M10 7.5c3.6 0 6.5 2 6.5 4.5S13.6 16.5 10 16.5 3.5 14.5 3.5 12 6.4 7.5 10 7.5Z' },
+    { d: 'M10 7.5 11 3.5l3 .8' },
+    { d: 'M7.5 11.5h.01M12.5 11.5h.01M8 14c1.2.7 2.8.7 4 0' },
+  ],
+  /** An article or a web page. */
+  page: [{ d: 'M4.5 3.5h11v13h-11Z' }, { d: 'M4.5 7h11M7 10h6M7 13h4' }],
+  film: [{ d: 'M3.5 5.5h13v9h-13Z' }, { d: 'm8.5 8 3.5 2-3.5 2Z' }],
+  chat: [{ d: 'M3.5 4.5h13v9H9l-3.5 3v-3h-2Z' }],
+  question: [
+    { d: 'M7.5 7.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.5v.7' },
+    { d: 'M10 14.5v.5' },
+    { d: 'M10 2.5a7.5 7.5 0 1 1 0 15 7.5 7.5 0 0 1 0-15Z' },
+  ],
+  /** Half right: a disc, its right half filled (the first path takes the fill). */
+  half: [{ d: 'M10 3a7 7 0 1 1 0 14Z' }, { d: 'M10 3a7 7 0 1 0 0 14' }],
 } satisfies Record<string, { d: string; transform?: string }[]>
 
 export type IconName = keyof typeof ICONS

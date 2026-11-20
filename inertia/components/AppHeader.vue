@@ -18,7 +18,7 @@ import PatchMenu from './header/PatchMenu.vue'
 import { DISCORD_URL } from '../lib/links.js'
 import { profileIcon } from '../lib/assets.js'
 import SubArt from './header/SubArt.vue'
-import { SUB_ART, type SubPicture } from './header/sub_art.js'
+import { SUB_ART, type SubLink } from './header/sub_art.js'
 import '../css/subrow.css'
 import {
   SECTIONS,
@@ -52,7 +52,7 @@ const props = withDefaults(
     /** Hides the search field, for pages where the search is the page itself. */
     search?: boolean
     /** A sub-row of the page's own (the patch notes list their patches), instead of the section's. */
-    sub?: Array<{ label: string; href: string; on?: boolean }> | null
+    sub?: SubLink[] | null
     /** Lights a section up when the address alone does not say (a page shared by two). */
     section?: SectionKey | null
     /** Lights the patch pill up (the patch notes). */
@@ -75,10 +75,11 @@ const place = computed(() => placeOf(path.value))
 const current = computed<SectionKey | null>(() => props.section ?? place.value?.section.key ?? null)
 /**
  * The sub-row: the section's links, each with its small League picture (header/sub_art.ts), or a
- * page's own row (the patch notes' patches, the newest one marked with a violet dot). Tools has none.
+ * page's own row (the patch notes: New Dawn, then the patches, the newest one marked with a violet
+ * dot). Tools has none.
  */
 const subRow = computed<SubLink[] | null>(() => {
-  if (props.sub) return props.sub.map((l, i) => ({ ...l, dot: i === 0 }))
+  if (props.sub) return props.sub
   if (current.value === 'tools') return null
   const section = SECTIONS.find((s) => s.key === current.value)
   if (!section || section.noSubRow) return null
@@ -89,13 +90,6 @@ const subRow = computed<SubLink[] | null>(() => {
     art: SUB_ART[l.key],
   }))
 })
-interface SubLink {
-  label: string
-  href: string
-  on?: boolean
-  art?: SubPicture
-  dot?: boolean
-}
 
 /* ── Section menus ─────────────────────────────────────────────────── */
 
@@ -201,7 +195,7 @@ function showPatch() {
   loadSiteNav()
   clearTimeout(leaveTimer)
   const left = el.getBoundingClientRect().left - wrap.getBoundingClientRect().left
-  menuLeft.value = Math.max(0, Math.min(left, wrap.clientWidth - 300))
+  menuLeft.value = Math.max(0, Math.min(left, wrap.clientWidth - 400))
   open.value = 'patch'
 }
 
