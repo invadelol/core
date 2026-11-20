@@ -4,6 +4,7 @@ import ladderService, {
   SCORE_GAMES,
   WINDOW_DAYS,
   type LadderSnapshot,
+  type OneTrickBuild,
 } from '#services/ladder_service'
 import flexLadderService, { LISTED, SEEN_DAYS } from '#services/flex_ladder_service'
 import proLadderService from '#services/pro_ladder_service'
@@ -329,15 +330,22 @@ export default class LeaderboardsController {
       Object.fromEntries(
         APEX_TIERS.map((t) => [t, list.filter((x) => x.entry.tier === t).length])
       ) as Record<(typeof APEX_TIERS)[number], number>
+    /** Each role a champion has one-tricks in, with how many: a champion is listed in every one. */
+    const rolesOf = (list: { trick: OneTrick }[]) =>
+      LADDER_ROLES.map((position) => ({
+        position,
+        oneTricks: list.filter((t) => t.trick.position === position).length,
+      })).filter((r) => r.oneTricks > 0)
     const champions = [...byChampion]
       .map(([champion, list]) => ({
         champion,
         oneTricks: list.length,
         byTier: tierCounts(list),
+        roles: rolesOf(list),
       }))
       .sort((a, b) => b.oneTricks - a.oneTricks || a.champion - b.champion)
 
-    const row = (t: { entry: ApexEntry; trick: OneTrick }) => {
+    const row = (t: { entry: ApexEntry; trick: OneTrick }, build: OneTrickBuild | null = null) => {
       const [base] = ladderService.rowsOf(snapshot, [t.entry])
       const stat = statOf(t.trick.champion, t.trick.position)
       const winRate = t.trick.games ? Math.round((t.trick.wins / t.trick.games) * 1000) / 1000 : 0
@@ -363,6 +371,8 @@ export default class LeaderboardsController {
         also: t.trick.also,
         /** Champion mastery is not stored for these players. */
         mastery: null,
+        /** Their usual build on it, for the chosen champion's list. */
+        build,
       }
     }
 
@@ -373,14 +383,25 @@ export default class LeaderboardsController {
     const chosenList = chosen ? (byChampion.get(chosen) ?? []) : []
     const chosenPosition = mostCommon(chosenList.map((t) => t.trick.position))
     const chosenStat = chosen ? statOf(chosen, chosenPosition) : null
+    const chosenShown = chosenList.slice(0, full ? ALL_ROWS : CHAMPION_ROWS)
+    const chosenBuilds = chosen
+      ? await ladderService.builds(
+          server.platform,
+          chosen,
+          chosenShown.map((t) => t.entry)
+        )
+      : new Map<string, OneTrickBuild>()
 
-    // The best one-trick of each champion.
+    // The best one-trick of each champion; with a role, of each champion one-tricked in it, among
+    // its one-tricks in that role.
     const bestOf = (list: { entry: ApexEntry; trick: OneTrick }[]) =>
       sort === 'games' ? [...list].sort((a, b) => b.trick.games - a.trick.games) : list
     const byPlace = [...byChampion]
-      .map(([champion, list]) => {
+      .map(([champion, all]) => {
+        const list = role ? all.filter((t) => t.trick.position === role) : all
+        if (!list.length) return null
         const top = bestOf(list)[0]
-        const position = mostCommon(list.map((t) => t.trick.position))
+        const position = role ?? mostCommon(list.map((t) => t.trick.position))
         const stat = statOf(champion, position)
         return {
           champion,
@@ -394,7 +415,7 @@ export default class LeaderboardsController {
             .map((t) => row(t).icon),
         }
       })
-      .filter((b) => !role || b.position === role)
+      .filter((b) => b !== null)
       .sort((a, b) =>
         sort === 'games' ? b.best.games - a.best.games : a.best.place - b.best.place
       )
@@ -432,8 +453,9 @@ export default class LeaderboardsController {
                 }
               : null,
             byTier: tierCounts(chosenList),
+            roles: rolesOf(chosenList),
             total: chosenList.length,
-            rows: chosenList.slice(0, full ? ALL_ROWS : CHAMPION_ROWS).map(row),
+            rows: chosenShown.map((t) => row(t, chosenBuilds.get(t.entry.puuid) ?? null)),
           }
         : null,
       best: { ...bestPage, pageSize: BEST_PAGE },

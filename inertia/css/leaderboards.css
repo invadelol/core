@@ -680,8 +680,12 @@
     .vb .lb-fx {
       grid-template-columns: 34px minmax(0, 1fr) 100px 160px 150px 110px;
     }
+    /* The picker above the chosen champion: its list keeps the room for each one-trick's build. */
     .vb .lb-ot {
-      grid-template-columns: 280px minmax(0, 1fr);
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .vb .lb-pgr {
+      grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
     }
     .vb .lb-cs {
       grid-template-columns: 1fr 1fr;
@@ -896,7 +900,48 @@
 /* Without the mastery column (not stored for these players). */
 @layer components {
   .vb .lb-o1.nm {
-    grid-template-columns: 28px minmax(0, 1fr) 128px 124px 110px 70px;
+    grid-template-columns: 28px minmax(0, 1fr) 124px 116px 100px 152px;
+  }
+  /* The meta line under a one-trick's name: their role (a champion played in two), KDA, second pick. */
+  .vb .lb-o1m {
+    gap: 5px;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .vb .lb-o1m .iv-role-icon {
+    flex: none;
+    opacity: 0.7;
+  }
+  .vb .lb-alt-ic {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+  }
+  /* Their build on the champion: keystone, the three items they finish most, boots. */
+  .vb .lb-bd {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .vb .lb-bd img {
+    flex: none;
+    width: 26px;
+    height: 26px;
+    border-radius: var(--r-sm, 5px);
+    background: var(--ink-0);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  .vb .lb-bd img.ks {
+    width: 24px;
+    height: 24px;
+    margin-right: 5px;
+    border-radius: 50%;
+    background: var(--ink-0);
+  }
+  .vb .lb-bd img.bt {
+    margin-left: 5px;
   }
   .vb .lb-o2.nm {
     grid-template-columns: 200px minmax(0, 1fr) 140px 130px 120px 150px;
@@ -916,10 +961,24 @@
     }
   }
   @media (max-width: 767px) {
+    /* A one-trick's row: the place, who and their rank, then their build under the name. */
     .vb .lb-o1.nm {
-      grid-template-columns: 22px minmax(0, 1fr) 96px;
+      grid-template-columns: 22px minmax(0, 1fr) auto;
+      row-gap: 8px;
     }
-    .vb .lb-o1.nm > :nth-child(n + 4) {
+    .vb .lb-r.lb-o1.nm {
+      padding-top: 10px;
+      padding-bottom: 10px;
+    }
+    .vb .lb-o1.nm > :nth-child(4),
+    .vb .lb-o1.nm > :nth-child(5) {
+      display: none;
+    }
+    .vb .lb-r.lb-o1.nm > :nth-child(6) {
+      display: flex;
+      grid-column: 2 / -1;
+    }
+    .vb .lb-h.lb-o1.nm > :nth-child(6) {
       display: none;
     }
     .vb .lb-o2.nm {
