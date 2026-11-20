@@ -450,6 +450,46 @@
 }
 
 @layer components {
+  /* A pro's Solo queue tab: the games over the page's width, with their items and the other pros
+     by name beside their faces. */
+  .vb .sq.wide {
+    grid-template-columns: 48px 110px 120px 150px 56px auto minmax(0, 1fr) auto;
+  }
+  .vb .sq-it {
+    display: flex;
+    gap: 3px;
+  }
+  .vb .sq-it > img,
+  .vb .sq-it > i {
+    width: 26px;
+    height: 26px;
+    border-radius: 5px;
+    flex: none;
+  }
+  .vb .sq-it > i {
+    background: var(--s2);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  .vb .sq-who {
+    text-align: right;
+  }
+  /* A pro's accounts: each with its profile icon. */
+  .vb .pp-acc .pp-ic {
+    width: 36px;
+    height: 36px;
+    flex: none;
+    border-radius: var(--r-sm);
+    background: var(--s2);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  @media (max-width: 1199px) {
+    .vb .sq.wide {
+      grid-template-columns: 48px 110px 120px 150px 56px auto minmax(0, 1fr);
+    }
+    .vb .sq.wide .sq-who {
+      display: none;
+    }
+  }
   .vb .es-lgc > .card {
     min-width: 0;
   }

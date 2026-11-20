@@ -8,7 +8,10 @@ import Tabs from '../../components/ui/Tabs.vue'
 import CardHead from '../../components/ui/CardHead.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import MatchLine from '../../components/esports/MatchLine.vue'
+import Logo from '../../components/pros/Logo.vue'
+import ProPic from '../../components/pros/ProPic.vue'
 import { leagueLogo } from '../../lib/board.js'
+import { useTheme } from '../../lib/theme.js'
 import { n, signedN } from '../../lib/ladders.js'
 import { isLive, matchList, stageLine, teamLabel, type ProMatch } from '../../lib/pro_matches.js'
 import '../../css/esports.css'
@@ -55,6 +58,15 @@ const props = defineProps<{
 
 const slug = ref(props.league.slug)
 watch(slug, (s) => router.visit(`/league/${s}`))
+/** The select draws one logo per league: the copy for the theme in use. */
+const { resolved } = useTheme()
+const leagueOptions = computed(() =>
+  props.leagues.map((l) => ({
+    value: l.slug,
+    label: l.code,
+    icon: leagueLogo(l.slug, 40, resolved.value),
+  }))
+)
 const games = computed(() => [...matchList(props.next), ...matchList(props.results)])
 const world = computed(() => matchList(props.international)[0] ?? null)
 const tabs = computed(() => [
@@ -62,15 +74,10 @@ const tabs = computed(() => [
   {
     key: 'pros',
     label: 'Pros',
-    href: `/pros?league=${props.league.slug}`,
+    href: `/leaderboards/pros?league=${props.league.slug}`,
     count: props.counts.players,
   },
   { key: 'teams', label: 'Teams', href: `/teams#${props.league.slug}`, count: props.counts.teams },
-  {
-    key: 'ladder',
-    label: 'Solo queue ladder',
-    href: `/leaderboards/pros?league=${props.league.slug}`,
-  },
 ])
 const columns = computed(() => [
   {
@@ -106,9 +113,9 @@ const columns = computed(() => [
       </div>
       <section class="card lq3-hd">
         <div class="row" style="gap: 18px">
-          <img
-            :src="leagueLogo(league.slug, 112)"
-            alt=""
+          <Logo
+            :league="league.slug"
+            :size="56"
             style="width: 56px; height: 56px; object-fit: contain"
           />
           <span class="col">
@@ -121,14 +128,7 @@ const columns = computed(() => [
               style="gap: 8px; padding-right: 14px; border-right: 1px solid var(--line)"
               >{{ counts.teams }} teams, {{ n(counts.players) }} players</span
             >
-            <Select
-              v-model="slug"
-              :options="
-                leagues.map((l) => ({ value: l.slug, label: l.code, icon: leagueLogo(l.slug, 40) }))
-              "
-              width="12rem"
-              align="right"
-            />
+            <Select v-model="slug" :options="leagueOptions" width="12rem" align="right" />
           </span>
         </div>
         <Tabs :items="tabs" active="overview" label="League" style="margin-top: 18px; border: 0" />
@@ -157,12 +157,12 @@ const columns = computed(() => [
                 style="padding: 6px 0; border: 0"
               >
                 <span class="es-pp" style="width: 36px; height: 36px"
-                  ><img v-if="p.photo" :src="`/cdn/pro/${p.slug}?s=48&v=${p.photo}`" alt=""
+                  ><ProPic :slug="p.slug" :photo="p.photo" :team="p.team" :size="36"
                 /></span>
                 <span class="col grow" style="min-width: 0">
                   <span class="h5 ell">{{ p.name }}</span>
                   <span v-if="p.team" class="meta row" style="gap: 5px"
-                    ><img class="es-tl" :src="`/cdn/team/${p.team.id}?s=32`" alt="" />{{
+                    ><Logo class="es-tl" :team="p.team.id" :size="14" />{{
                       p.team.shortName ?? p.team.name
                     }}</span
                   >
@@ -181,9 +181,9 @@ const columns = computed(() => [
             />
             <div class="tgrid">
               <Link v-for="t in teams" :key="t.id" :href="`/team/${t.slug}`">
-                <img
-                  :src="`/cdn/team/${t.id}?s=96`"
-                  alt=""
+                <Logo
+                  :team="t.id"
+                  :size="48"
                   style="width: 48px; height: 48px; object-fit: contain"
                 />
                 <span class="h5">{{ t.name }}</span>
@@ -197,10 +197,10 @@ const columns = computed(() => [
         <div class="stk">
           <div v-if="world" class="card">
             <div class="card-h">
-              <img
+              <Logo
                 v-if="world.league"
-                :src="leagueLogo(world.league.slug, 40)"
-                alt=""
+                :league="world.league.slug"
+                :size="20"
                 style="width: 20px; height: 20px; object-fit: contain"
               />
               <span class="h3"
@@ -213,10 +213,9 @@ const columns = computed(() => [
             </div>
             <div class="row" style="justify-content: space-between; padding: 0 20px 18px">
               <span class="row h4" style="gap: 8px"
-                ><img
-                  v-if="world.teams[0].id"
-                  :src="`/cdn/team/${world.teams[0].id}?s=48`"
-                  alt=""
+                ><Logo
+                  :team="world.teams[0].id"
+                  :size="32"
                   style="width: 30px; height: 30px; object-fit: contain"
                 />{{ teamLabel(world.teams[0]) }}</span
               >
@@ -225,10 +224,9 @@ const columns = computed(() => [
               >
               <span class="row h4" style="gap: 8px"
                 >{{ teamLabel(world.teams[1])
-                }}<img
-                  v-if="world.teams[1].id"
-                  :src="`/cdn/team/${world.teams[1].id}?s=48`"
-                  alt=""
+                }}<Logo
+                  :team="world.teams[1].id"
+                  :size="32"
                   style="width: 30px; height: 30px; object-fit: contain"
               /></span>
             </div>
@@ -243,9 +241,9 @@ const columns = computed(() => [
               :href="`/team/${t.slug}`"
             >
               <span class="rk">{{ i + 1 }}</span>
-              <img
-                :src="`/cdn/team/${t.id}?s=48`"
-                alt=""
+              <Logo
+                :team="t.id"
+                :size="24"
                 style="width: 22px; height: 22px; object-fit: contain"
               />
               <span class="h5 grow">{{ t.name }}</span>

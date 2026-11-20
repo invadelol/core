@@ -6,7 +6,7 @@ import SiteLayout from '../components/SiteLayout.vue'
 import SearchBar from '../components/SearchBar.vue'
 import HomeRecent from '../components/home/HomeRecent.vue'
 import DownloadApp from '../components/DownloadApp.vue'
-import ProPhoto from '../components/champions/ProPhoto.vue'
+import ProPic from '../components/pros/ProPic.vue'
 import MatchTime from '../components/pros/MatchTime.vue'
 import Glyph from '../components/ui/Glyph.vue'
 import Icon from '../components/ui/Icon.vue'
@@ -91,7 +91,6 @@ const lost = (m: ProMatch, side: 0 | 1) => finished(m) && m.winner !== null && m
 
 const pct1 = (x: number) => (x * 100).toFixed(1)
 const lp = (n: number | null) => (n === null ? '' : n.toLocaleString('en-US'))
-const initials = (name: string) => name.slice(0, 2)
 const moved = (lpChange: number) => `${lpChange > 0 ? '+' : '−'}${Math.abs(lpChange)} LP today`
 const thousands = (n: number) => n.toLocaleString('en-US')
 /** The stream opens beside the page (the card itself leads to the esports page). */
@@ -308,10 +307,9 @@ const topBully = (rows: { value: number }[]) => rows[0]?.value || 1
           />
           <Link v-for="(p, i) in pros" :key="p.slug" class="lrow" :href="`/pro/${p.slug}`" prefetch>
             <span class="rk">{{ i + 1 }}</span>
-            <span v-if="p.photo" class="fr s stage hm-pro"
-              ><ProPhoto :slug="p.slug" :photo="p.photo" :width="44" :height="44"
+            <span class="fr s stage hm-pro"
+              ><ProPic :slug="p.slug" :photo="p.photo" :team="p.team" :size="44"
             /></span>
-            <span v-else class="fr s hm-pro hm-ini">{{ initials(p.name) }}</span>
             <span class="col grow"
               ><span class="h4 ell">{{ p.name }}</span
               ><span class="meta ell">{{ p.team?.name ?? 'Free agent' }}</span></span

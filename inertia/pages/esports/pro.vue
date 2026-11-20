@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import { RoleIcon } from '@invadelol/ui'
 import SiteLayout from '../../components/SiteLayout.vue'
@@ -12,12 +12,18 @@ import WinRate from '../../components/ui/WinRate.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import FormStrip from '../../components/ui/FormStrip.vue'
 import SortHead from '../../components/ui/SortHead.vue'
+import Logo from '../../components/pros/Logo.vue'
+import ProPic from '../../components/pros/ProPic.vue'
+import Flag from '../../components/pros/Flag.vue'
+import SocialIcon from '../../components/pros/SocialIcon.vue'
+import GameModal from '../../components/pros/GameModal.vue'
 import { useSort } from '../../components/ui/sort.js'
-import { champIcon, assetUrl } from '../../lib/assets.js'
-import { countryName, leagueLogo } from '../../lib/board.js'
+import { champIcon, assetUrl, profileIcon } from '../../lib/assets.js'
+import { countryName } from '../../lib/board.js'
 import { laneOf, n, rankValue, rankWords, roleLabel, winPct } from '../../lib/ladders.js'
 import { profilePath } from '../../lib/format.js'
 import { rememberPro } from '../../lib/recent.js'
+import type { Match } from '../../lib/types.js'
 import '../../css/esports.css'
 
 interface ProTag {
@@ -58,6 +64,8 @@ interface Account {
   peakTier: string | null
   peakDivision: number | null
   peakLp: number | null
+  /** Its profile icon as last seen; the default icon without one. */
+  icon: number | null
 }
 interface Build {
   champion: number
@@ -125,6 +133,8 @@ const props = defineProps<{
   leaguePlace: { place: number; total: number } | null
   ladder: { place: number; total: number } | null
   names: Record<number, [string, string]>
+  /** Their recent games as stored matches, with their side in each: what a game opens on. */
+  games: { match: Match; puuid: string; gameName: string; tagLine: string }[]
   description: string
 }>()
 
@@ -145,6 +155,7 @@ onMounted(() =>
         name: props.pro.name,
         photo: props.pro.photo ?? null,
         staff: props.pro.teams.some((t) => t.current && t.title === 'staff') || undefined,
+        team: props.pro.team ? { id: props.pro.team.id, name: props.pro.team.name } : null,
       }),
     { immediate: true }
   )
@@ -170,10 +181,46 @@ const peak = computed(() => {
   const peaks = props.pro.accounts.map((a) => a.peakLp ?? 0).filter(Boolean)
   return peaks.length ? Math.max(...peaks) : null
 })
-const twitch = computed(() => props.pro.socials.twitch ?? null)
-const twitchName = computed(() =>
-  twitch.value ? twitch.value.replace(/\/$/, '').split('/').pop() : null
+/** Where a pro streams and posts, as stored: a handle, or an address on that network. */
+const SOCIALS = [
+  { key: 'twitch', name: 'Twitch', hosts: ['twitch.tv'], home: 'https://www.twitch.tv/' },
+  { key: 'twitter', name: 'X', hosts: ['x.com', 'twitter.com'], home: 'https://x.com/' },
+  {
+    key: 'instagram',
+    name: 'Instagram',
+    hosts: ['instagram.com'],
+    home: 'https://www.instagram.com/',
+  },
+] as const
+/** Each network's handle ("vladilol_") and address; anything else stored is left out. */
+const socials = computed(() =>
+  SOCIALS.flatMap((s) => {
+    const raw = String(props.pro.socials[s.key] ?? '').trim()
+    let handle = raw.replace(/^@/, '')
+    if (/^https?:\/\//i.test(raw)) {
+      try {
+        const url = new URL(raw)
+        const host = url.hostname.replace(/^www\./, '').toLowerCase()
+        handle = (s.hosts as readonly string[]).includes(host)
+          ? (url.pathname.split('/').filter(Boolean)[0] ?? '')
+          : ''
+      } catch {
+        handle = ''
+      }
+    }
+    if (!/^[\w.]{1,40}$/.test(handle)) return []
+    return [
+      {
+        key: s.key,
+        icon: s.key === 'twitter' ? ('x' as const) : s.key,
+        name: s.name,
+        handle,
+        href: `${s.home}${handle}`,
+      },
+    ]
+  })
 )
+const country = computed(() => props.pro.about?.nationality ?? props.pro.country)
 
 const ORDER = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT']
 const five = computed(() =>
@@ -205,6 +252,71 @@ const gamePath = (g: Game) => {
     ? `${profilePath(g.account.slice(0, at), g.account.slice(at + 1))}/match/${g.matchId}`
     : null
 }
+
+/* ── A game opens over the page (`?game=<id>` in the address); Back closes it ── */
+const stored = computed(() => new Map(props.games.map((g) => [g.match.matchId, g])))
+const openId = ref<string | null>(null)
+/** Whether the open game added its own entry to the history (Back then closes it). */
+let pushed = false
+const withGame = (id: string | null) => {
+  const url = new URL(location.href)
+  if (id) url.searchParams.set('game', id)
+  else url.searchParams.delete('game')
+  return url.pathname + url.search + url.hash
+}
+/** A plain click opens the game here; any other (a new tab) follows the link to its page. */
+function openGame(event: MouseEvent, g: Game) {
+  if (!stored.value.has(g.matchId)) return
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+  event.preventDefault()
+  openId.value = g.matchId
+  // The page's own history entry, copied: Back returns to the page as it was, game closed.
+  history.pushState(history.state, '', withGame(g.matchId))
+  pushed = true
+}
+function closeGame() {
+  if (pushed) return history.back()
+  openId.value = null
+  history.replaceState(history.state, '', withGame(null))
+}
+/**
+ * Back and Forward draw the page again from its entry: the address says which game is open, and
+ * an entry this page added (its router state still names the page without the game) is left by
+ * Back when the game closes.
+ */
+function fromAddress() {
+  const id = new URL(location.href).searchParams.get('game')
+  openId.value = id && stored.value.has(id) ? id : null
+  const own = history.state?.page?.url
+  pushed =
+    Boolean(openId.value) &&
+    typeof own === 'string' &&
+    !new URL(own, location.origin).searchParams.has('game')
+}
+onMounted(() => {
+  fromAddress()
+  window.addEventListener('popstate', fromAddress)
+})
+onBeforeUnmount(() => window.removeEventListener('popstate', fromAddress))
+const opened = computed(() => {
+  const g = openId.value ? props.pro.games.find((x) => x.matchId === openId.value) : null
+  const game = openId.value ? stored.value.get(openId.value) : null
+  return g && game
+    ? {
+        game,
+        line: {
+          champion: g.champion,
+          championName: nameOf(g.champion),
+          win: g.win,
+          kills: g.kills,
+          deaths: g.deaths,
+          assists: g.assists,
+          duration: clock(g.durationSec),
+        },
+      }
+    : null
+})
+
 const year = (v: string | Date | null) => (v ? new Date(v).getUTCFullYear() : null)
 const span = (t: {
   current: boolean
@@ -227,8 +339,6 @@ function share() {
     setTimeout(() => (shared.value = false), 1600)
   })
 }
-const photo = (slug: string | null, v: string | undefined, size: number) =>
-  slug && v ? `/cdn/pro/${slug}?s=${size}&v=${v}` : null
 /** The accounts, best rank first as they come; the heads sort them. */
 const accountSort = useSort(
   () => props.pro.accounts,
@@ -282,30 +392,40 @@ const PLATFORM: Record<string, string> = {
       </div>
 
       <section class="card pp-hero">
-        <Frame class="ph5" :src="photo(pro.slug, pro.photo, 240)" stage eager />
+        <Frame class="ph5" stage
+          ><ProPic :slug="pro.slug" :photo="pro.photo" :team="pro.team" :size="240" eager
+        /></Frame>
         <div class="col" style="justify-content: center; min-width: 0">
           <h1 class="pp-name">{{ pro.name }}</h1>
           <p v-if="realName" class="body" style="margin-top: 8px">{{ realName }}</p>
           <div class="row" style="gap: 8px; margin-top: 18px; flex-wrap: wrap">
             <Link v-if="pro.team" class="tagx" :href="`/team/${pro.team.slug}`"
-              ><img :src="`/cdn/team/${pro.team.id}?s=32`" alt="" />{{ pro.team.name }}</Link
+              ><Logo :team="pro.team.id" :size="16" />{{ pro.team.name }}</Link
             >
             <Link v-if="pro.league" class="tagx" :href="`/league/${pro.league.slug}`"
-              ><img :src="leagueLogo(pro.league.slug, 32)" alt="" />{{ pro.league.code }}</Link
+              ><Logo :league="pro.league.slug" :size="16" />{{ pro.league.code }}</Link
             >
             <span v-if="laneOf(pro.role)" class="tagx"
               ><RoleIcon :lane="laneOf(pro.role)!" :size="15" />{{ roleLabel(pro.role) }}</span
             >
-            <span v-if="pro.about?.nationality ?? pro.country" class="tagx">{{
-              countryName(pro.about?.nationality ?? pro.country)
-            }}</span>
+            <span v-if="country" class="tagx"
+              ><Flag :code="country" :size="18" />{{ countryName(country) }}</span
+            >
           </div>
           <div class="row" style="gap: 10px; margin-top: 22px; flex-wrap: wrap">
             <button class="btn" type="button" @click="share">
               <Icon name="share" />{{ shared ? 'Link copied' : 'Share' }}
             </button>
-            <a v-if="twitch" class="btn ghost" :href="twitch" target="_blank" rel="noreferrer"
-              ><Icon name="live" />{{ twitchName }} on Twitch</a
+            <a
+              v-for="x in socials"
+              :key="x.key"
+              class="btn ghost"
+              :href="x.href"
+              target="_blank"
+              rel="noreferrer"
+              :aria-label="`${x.handle} on ${x.name}`"
+              :title="x.name"
+              ><SocialIcon :name="x.icon" />{{ x.handle }}</a
             >
           </div>
         </div>
@@ -359,9 +479,9 @@ const PLATFORM: Record<string, string> = {
         style="padding-top: 36px"
       >
         <div class="sec-h">
-          <img
-            :src="`/cdn/team/${roster.team.id}?s=48`"
-            alt=""
+          <Logo
+            :team="roster.team.id"
+            :size="32"
             style="width: 26px; height: 26px; object-fit: contain"
           />
           <h2 class="h2">{{ roster.team.name }}</h2>
@@ -381,7 +501,14 @@ const PLATFORM: Record<string, string> = {
             :class="{ me: m.slug === pro.slug }"
             :href="m.slug ? `/pro/${m.slug}` : undefined"
           >
-            <Frame :src="photo(m.slug, m.photo, 240)" stage />
+            <Frame stage
+              ><ProPic
+                :slug="m.slug"
+                :photo="m.photo"
+                :team="roster.team"
+                :size="240"
+                position="50% 0"
+            /></Frame>
             <span class="rl3"
               ><RoleIcon v-if="laneOf(m.role)" :lane="laneOf(m.role)!" :size="13" />{{
                 roleLabel(m.role)
@@ -401,7 +528,8 @@ const PLATFORM: Record<string, string> = {
 
       <section
         v-if="tab === 'overview' || tab === 'solo'"
-        class="sec pp-g"
+        class="sec"
+        :class="{ 'pp-g': tab === 'overview' }"
         :style="tab === 'solo' ? 'padding-top: 32px' : undefined"
       >
         <div class="card">
@@ -423,12 +551,13 @@ const PLATFORM: Record<string, string> = {
             <span><i class="en"></i>Pro against them</span>
           </div>
           <component
-            :is="gamePath(g) ? Link : 'div'"
+            :is="gamePath(g) ? 'a' : 'div'"
             v-for="g in shownGames"
             :key="g.matchId"
             class="sq"
-            :class="g.win ? 'w' : 'l'"
+            :class="[g.win ? 'w' : 'l', { wide: tab === 'solo' }]"
             :href="gamePath(g) ?? undefined"
+            @click="openGame($event, g)"
           >
             <Frame :src="champIcon(g.champion)" size="s" :alt="nameOf(g.champion)" />
             <span class="col">
@@ -451,13 +580,22 @@ const PLATFORM: Record<string, string> = {
               >
             </span>
             <span class="h5 num">{{ clock(g.durationSec) }}</span>
+            <span v-if="tab === 'solo'" class="sq-it">
+              <template v-for="(it, k) in g.items.slice(0, 6)" :key="k"
+                ><img v-if="it" :src="assetUrl('item', it)" alt="" loading="lazy" /><i v-else></i
+              ></template>
+            </span>
+            <span v-if="tab === 'solo' && g.pros?.length" class="sq-who meta ell">{{
+              g.pros.map((p) => p.pro.name).join(', ')
+            }}</span>
+            <span v-else-if="tab === 'solo'"></span>
             <span class="faces2">
               <span
                 v-for="p in g.pros ?? []"
                 :key="p.pro.slug"
                 :class="{ en: !p.ally }"
                 :title="p.pro.name"
-                ><img v-if="p.pro.photo" :src="photo(p.pro.slug, p.pro.photo, 48)!" alt=""
+                ><ProPic :slug="p.pro.slug" :photo="p.pro.photo" :team="p.pro.team" :size="34"
               /></span>
             </span>
           </component>
@@ -517,9 +655,9 @@ const PLATFORM: Record<string, string> = {
               :href="`/team/${t.team.slug}`"
             >
               <span style="width: 36px; height: 36px; display: grid; place-items: center"
-                ><img
-                  :src="`/cdn/team/${t.team.id}?s=48`"
-                  alt=""
+                ><Logo
+                  :team="t.team.id"
+                  :size="32"
                   style="width: 30px; height: 30px; object-fit: contain"
               /></span>
               <span class="col grow">
@@ -613,13 +751,22 @@ const PLATFORM: Record<string, string> = {
 
       <!-- Accounts. -->
       <section v-if="tab === 'accounts'" class="sec" style="padding-top: 32px">
-        <div class="card tbl" style="--cols: minmax(0, 1fr) 70px 180px 160px 120px">
+        <div
+          class="card tbl pp-acc"
+          style="--cols: minmax(0, 1fr) 70px 200px 170px 170px; --row-h: 62px"
+        >
           <div class="tbl-h">
             <SortHead :sorter="accountSort" col="name" label="Account" />
             <SortHead :sorter="accountSort" col="server" label="Server" />
             <SortHead :sorter="accountSort" col="rank" label="Rank" />
             <SortHead :sorter="accountSort" col="peak" label="Peak" class="hm" />
-            <SortHead :sorter="accountSort" col="record" label="Record" class="n hm" title="Games this season" />
+            <SortHead
+              :sorter="accountSort"
+              col="record"
+              label="Record"
+              class="hm"
+              title="Games this season"
+            />
           </div>
           <Link
             v-for="a in accountSort.rows"
@@ -627,9 +774,20 @@ const PLATFORM: Record<string, string> = {
             class="tbl-r"
             :href="profilePath(a.gameName, a.tagLine)"
           >
-            <span class="h5 ell"
-              >{{ a.gameName }} <span class="meta">#{{ a.tagLine }}</span></span
-            >
+            <span class="who">
+              <img
+                class="pp-ic"
+                loading="lazy"
+                decoding="async"
+                alt=""
+                width="36"
+                height="36"
+                :src="profileIcon(a.icon)"
+              />
+              <span class="h5"
+                >{{ a.gameName }} <span class="meta">#{{ a.tagLine }}</span></span
+              >
+            </span>
             <span class="meta">{{ PLATFORM[a.platform] ?? a.platform }}</span>
             <span class="row" style="gap: 8px"
               ><RankEmblem :tier="a.tier" :size="24" /><span class="h5">{{
@@ -642,9 +800,14 @@ const PLATFORM: Record<string, string> = {
                 ? `${rankWords(a.peakTier, a.peakDivision)}${a.peakLp !== null ? `, ${n(a.peakLp)} LP` : ''}`
                 : '–'
             }}</span>
-            <span class="n hm meta">{{
-              a.wins !== null && a.losses !== null ? `${a.wins}W ${a.losses}L` : '–'
-            }}</span>
+            <WinRate
+              v-if="a.wins !== null && a.losses !== null && a.wins + a.losses > 0"
+              class="hm"
+              :wins="a.wins"
+              :losses="a.losses"
+              :width="90"
+            />
+            <span v-else class="hm meta">–</span>
           </Link>
           <EmptyState
             v-if="!pro.accounts.length"
@@ -670,9 +833,9 @@ const PLATFORM: Record<string, string> = {
             :href="`/team/${t.team.slug}`"
           >
             <span style="width: 36px; height: 36px; display: grid; place-items: center"
-              ><img
-                :src="`/cdn/team/${t.team.id}?s=48`"
-                alt=""
+              ><Logo
+                :team="t.team.id"
+                :size="32"
                 style="width: 30px; height: 30px; object-fit: contain"
             /></span>
             <span class="col grow">
@@ -691,6 +854,13 @@ const PLATFORM: Record<string, string> = {
           <EmptyState v-if="!pro.teams.length" compact icon="trophy" title="No team known" />
         </div>
       </section>
+      <GameModal
+        v-if="opened"
+        :game="opened.game"
+        :line="opened.line"
+        :pro="pro.name"
+        @close="closeGame"
+      />
       <p v-if="tab !== 'accounts'" class="meta" style="margin-top: 14px">
         Solo queue: the games Invade stored of their accounts in the last 30 days.
       </p>

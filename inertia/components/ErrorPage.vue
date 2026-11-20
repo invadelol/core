@@ -24,7 +24,12 @@ const NEXT: { href: string; label: string; line: string; art: MenuArtName }[] = 
     line: 'The best players of each region',
     art: 'solo',
   },
-  { href: '/pros', label: 'Pros', line: 'Their teams and solo queue accounts', art: 'pros' },
+  {
+    href: '/leaderboards/pros',
+    label: 'Pros',
+    line: 'Their teams and solo queue accounts',
+    art: 'pros',
+  },
   { href: '/app', label: 'Desktop app', line: 'Free, Windows and macOS', art: 'app' },
 ]
 </script>
