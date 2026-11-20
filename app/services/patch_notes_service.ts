@@ -3,7 +3,12 @@ import app from '@adonisjs/core/services/app'
 import logger from '@adonisjs/core/services/logger'
 import championStatsService, { DEFAULT_BRACKET } from '#services/champion_stats_service'
 import type { Position } from '#services/champion_stats'
-import type { PatchChampionStat, PatchDaily, PatchNotes } from '../../inertia/lib/patch_notes.js'
+import {
+  biggestBuff,
+  type PatchChampionStat,
+  type PatchDaily,
+  type PatchNotes,
+} from '../../inertia/lib/patch_notes.js'
 import type { NavPatchNotes } from '../../inertia/lib/home.js'
 
 /** A patch as players name it: "26.22". */
@@ -65,7 +70,7 @@ class PatchNotesService {
     return found
   }
 
-  /** Every patch with notes, newest first, as the header's Patch menu lists them. */
+  /** Every patch with notes, newest first, as the header's Patch menu lists them (with its biggest buff). */
   async summaries(): Promise<NavPatchNotes[]> {
     const patches = await this.list()
     const notes = await Promise.all(patches.map((p) => this.get(p)))
@@ -77,6 +82,7 @@ class PatchNotesService {
               published: n.published,
               champions: n.champions.length,
               items: n.items.length,
+              buff: biggestBuff(n),
             },
           ]
         : []
