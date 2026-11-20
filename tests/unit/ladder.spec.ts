@@ -13,7 +13,6 @@ import {
   type GamesRow,
   type TierRead,
 } from '#services/ladder'
-import { flexGroups, sizeOf, type SideRow } from '#services/flex_groups'
 import { averageScores } from '#services/ladder_service'
 import {
   baselineOf,
@@ -200,53 +199,6 @@ test.group('Apex ladder', () => {
   test('averages scores over scored games only', ({ assert }) => {
     const out = averageScores([], new Map([[puuid('none'), ['EUW1_1', 'EUW1_2']]]))
     assert.equal(out.size, 0)
-  })
-})
-
-test.group('Flex groups', () => {
-  function side(matchId: string, team: number, win: boolean, names: string[]): SideRow[] {
-    return names.map((n) => ({ matchId, teamId: team, puuid: puuid(n), win }))
-  }
-
-  test('sizes groups the way flex queues', ({ assert }) => {
-    assert.deepEqual([1, 2, 3, 4, 5].map(sizeOf), ['solo', 'duo', 'three', 'five', 'five'])
-  })
-
-  test('finds who queues together, alone and as a group', ({ assert }) => {
-    const rows: SideRow[] = []
-    // A duo seen in four games (three won), each time with strangers.
-    for (let i = 0; i < 4; i++) {
-      rows.push(...side(`EUW1_${i}`, 100, i < 3, ['duo-a', 'duo-b', `x${i}`, `y${i}`, `z${i}`]))
-    }
-    // A solo player, once on the duo's side and twice elsewhere.
-    rows.push(...side('EUW1_0', 100, true, ['loner']).map((r) => r))
-    rows.push(...side('EUW1_8', 200, false, ['loner', 'p', 'q', 'r', 's']))
-    rows.push(...side('EUW1_9', 200, true, ['loner', 't', 'u', 'v', 'w']))
-    const listed = new Set([puuid('duo-a'), puuid('duo-b'), puuid('loner')])
-    const found = flexGroups(rows, listed, 2)
-
-    const a = found.players.get(puuid('duo-a'))!
-    assert.equal(a.size, 'duo')
-    assert.deepEqual(
-      a.mates.map((m) => m.puuid),
-      [puuid('duo-b')]
-    )
-    assert.equal(a.games, 4)
-    assert.equal(a.wins, 3)
-    assert.equal(a.share, 1)
-
-    const loner = found.players.get(puuid('loner'))!
-    assert.equal(loner.size, 'solo')
-    assert.deepEqual(loner.mates, [])
-    assert.equal(loner.games, 3)
-    assert.equal(loner.total, 3)
-
-    // The duo once, counted from one side only.
-    assert.deepEqual(found.groups, [
-      { members: [puuid('duo-a'), puuid('duo-b')].sort(), size: 'duo', games: 4, wins: 3 },
-    ])
-    assert.equal(found.shares.duo + found.shares.solo, 1)
-    assert.equal(found.shares.duo, 0.727)
   })
 })
 
