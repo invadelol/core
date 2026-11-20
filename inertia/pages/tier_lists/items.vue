@@ -206,7 +206,7 @@ const statIcon = (stat: string) => STAT_ICON.find(([re]) => re.test(stat.trim())
           <StatFilters :filter="filter" :patches="patches" />
         </template>
         <div class="tx-filters">
-          <RoleSeg :value="position" all="All roles" />
+          <RoleSeg :value="position" all="All roles" icons />
           <ClassSeg :options="classOptions" :value="props.class" param="class" label="Item class" />
           <label class="field tx-q sm">
             <Icon name="search" />

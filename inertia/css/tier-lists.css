@@ -158,6 +158,13 @@
 .vb .tx-sub { display: flex; align-items: center; min-width: 0; }
 .vb .role-seg svg { width: 16px; height: 16px; opacity: 0.6; flex: none; }
 .vb .role-seg > .on svg { opacity: 1; }
+/* Glyphs only (the items' tier list): square keys, the role's name in the tooltip. */
+.vb .role-seg-ic > * { justify-content: center; width: 38px; padding: 0; }
+.vb .role-seg-ic svg { width: 18px; height: 18px; opacity: 0.7; transition: opacity var(--m) var(--ease); }
+.vb .role-seg-ic > :hover svg, .vb .role-seg-ic > .on svg { opacity: 1; }
+@media (pointer: coarse) {
+  .vb .role-seg-ic > * { width: 42px; height: 40px; }
+}
 .vb .stat-filters { gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .vb .stat-filters .sel-root { width: auto; }
 .vb .moved { display: flex; flex-direction: column; }
