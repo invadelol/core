@@ -102,7 +102,7 @@
   flex: none;
 }
 
-/* The Patch pill's menu: the patches with notes, each on the day Riot published them. */
+/* The Patch pill's menu: the patches with notes, each led by its biggest buff's portrait. */
 .vb .hx-nav > .ppill.open {
   box-shadow: 0 0 0 3px rgb(var(--v-rgb) / 0.28);
 }
@@ -119,7 +119,7 @@
   margin: 4px 10px;
   background: var(--line);
 }
-/* New Dawn, first: its picture in place of a date, "Reveal in Jan" where the patches say Newest. */
+/* New Dawn, first: its own picture, "Reveal in Jan" where the patches say Newest. */
 .vb .pm-r.pm-nd {
   padding: 10px 14px 10px 6px;
   background: rgb(var(--v-rgb) / 0.08);
@@ -144,37 +144,44 @@
 .vb .pm-r.on {
   background: rgb(var(--v-rgb) / 0.08);
 }
-.vb .pm-d {
+.vb .pm-c {
+  position: relative;
   flex: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
   width: 44px;
   height: 44px;
   border-radius: var(--r2);
   background: var(--s2);
   box-shadow: inset 0 0 0 1px var(--line);
-  font-size: 10.5px;
-  font-weight: 700;
-  line-height: 12px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   color: var(--t3);
 }
-.vb .pm-d b {
-  font-size: 17px;
-  line-height: 19px;
-  letter-spacing: -0.01em;
-  color: var(--t1);
+.vb .pm-p {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  overflow: hidden;
 }
-.vb .pm-r.new .pm-d {
-  background: var(--v900);
-  box-shadow: inset 0 0 0 1px rgb(var(--v-rgb) / 0.35);
-  color: var(--v200);
+/* Riot's square portraits carry a dark rim: cropped. */
+.vb .pm-p img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.1);
 }
-.vb .pm-r.new .pm-d b {
-  color: var(--v100);
+/* A small violet key on the portrait's corner: buffed. */
+.vb .pm-up {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  background: var(--v600);
+  box-shadow: 0 0 0 2px var(--s1);
+  color: #fff;
 }
 .vb .pm-new {
   margin-left: auto;
