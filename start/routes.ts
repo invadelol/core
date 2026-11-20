@@ -76,6 +76,8 @@ router
     router.get('/summoners/:platform/:summoner', [SummonersController, 'show'])
 
     router.get('/summoners/puuid/:puuid/mastery', [PlayerInsightsController, 'mastery'])
+    /** The live game, for a profile's Live section only: no page or timer asks it. */
+    router.get('/summoners/puuid/:puuid/live', [PlayerInsightsController, 'live'])
 
     // PUUID-based routes
     router
@@ -362,11 +364,10 @@ router.get('/:summoner/:section?', async ({ inertia, params, request, response }
   const section = params.section ?? 'overview'
   if (section === 'history')
     return response.redirect(`/${encodeURIComponent(params.summoner)}/matches`)
-  // The live game page is gone; links to it (the desktop app's Discord presence) open the profile.
-  if (section === 'live')
-    return response.redirect(`/${encodeURIComponent(params.summoner)}`, true, 302)
   if (
-    !['overview', 'matches', 'lens', 'champions', 'mastery', 'friends', 'compare'].includes(section)
+    !['overview', 'matches', 'lens', 'live', 'champions', 'mastery', 'friends', 'compare'].includes(
+      section
+    )
   )
     return response.notFound()
   const { default: summonerService } = await import('#services/summoner_service')
