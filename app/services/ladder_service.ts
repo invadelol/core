@@ -6,6 +6,7 @@ import { RANKED_SOLO } from '#services/ranked_stats'
 import { StatsCache } from '#services/stats_cache'
 import matchRepository from '#services/analytics/match_repository'
 import proPhotoService from '#services/pro_photo_service'
+import { buildsOf, itemKinds } from '#services/pro_service'
 import { catalog, leagueCatalog } from '#services/pro_leagues'
 import { isRemake, scoreLobby, REMAKE_SECONDS } from '../../inertia/lib/match.js'
 import type { Match } from '../../inertia/lib/types.js'
@@ -54,6 +55,8 @@ export const SCORE_GAMES = 20
 /** A tier's read counts as full from this many entries (other rows are single updates). */
 const FULL_READ = 20
 const SOLO_QUEUE = 'RANKED_SOLO_5x5'
+/** A one-trick's newest games on their champion read for their build. */
+const BUILD_GAMES = 40
 const DAY_MS = 86_400_000
 const FRESH_MS = 20 * 60_000
 const KEEP_MS = 12 * 3_600_000
@@ -110,6 +113,30 @@ export interface LadderSource {
   proTags(playerIds: string[]): Promise<Map<string, LadderPro>>
   recentGames(puuids: string[], count: number): Promise<Map<string, string[]>>
   matches(ids: string[], since: number): Promise<Match[]>
+  /** Some players' stored ranked games of the window on one champion: what they built. */
+  championGames(puuids: string[], champion: number, windowStart: number): Promise<BuildGame[]>
+}
+
+/** One stored game of a player on a champion, as far as their build goes. */
+export interface BuildGame {
+  puuid: string
+  items: number[]
+  keystone: number
+  secondaryStyle: number
+  spells: [number, number]
+  skillOrder: number[]
+  win: boolean
+}
+
+/** A one-trick's usual build on their champion, from their stored games of the window. */
+export interface OneTrickBuild {
+  /** Games it was read from. */
+  games: number
+  /** Their three most bought finished items, most bought first. */
+  core: number[]
+  boots: number | null
+  keystone: number | null
+  secondaryStyle: number | null
 }
 
 const num = (v: unknown) => {
@@ -325,6 +352,34 @@ export const clickhouseSource: LadderSource = {
     return out
   },
 
+  async championGames(puuids, champion, windowStart) {
+    if (!puuids.length) return []
+    const found = await rows(
+      `SELECT puuid, item0, item1, item2, item3, item4, item5, spell1, spell2, keystone,
+              secondary_style, skill_order, win
+       FROM (
+         SELECT puuid, match_id, game_start_ms, item0, item1, item2, item3, item4, item5, spell1,
+                spell2, keystone, secondary_style, skill_order, win
+         FROM participants
+         WHERE puuid IN {puuids:Array(String)} AND champion_id = {champion:UInt16}
+           AND queue_id = ${RANKED_SOLO} AND game_start_ms >= {windowStart:UInt64}
+         LIMIT 1 BY puuid, match_id
+       )
+       ORDER BY game_start_ms DESC
+       LIMIT ${BUILD_GAMES} BY puuid`,
+      { puuids, champion, windowStart }
+    )
+    return found.map((r) => ({
+      puuid: String(r[0]),
+      items: r.slice(1, 7).map(num),
+      spells: [num(r[7]), num(r[8])] as [number, number],
+      keystone: num(r[9]),
+      secondaryStyle: num(r[10]),
+      skillOrder: ((r[11] as unknown[] | null) ?? []).map(num),
+      win: num(r[12]) === 1,
+    }))
+  },
+
   async matches(ids, since) {
     const chunks: string[][] = []
     for (let i = 0; i < ids.length; i += 100) chunks.push(ids.slice(i, i + 100))
@@ -381,6 +436,11 @@ export class LadderService {
     keepMs: KEEP_MS,
     maxLocal: 256,
   })
+  #builds = new StatsCache(`ladder-builds@${SHAPE}`, {
+    freshMs: FRESH_MS,
+    keepMs: KEEP_MS,
+    maxLocal: 256,
+  })
 
   /** A server's apex ladder now, read once and kept. */
   snapshot(platform: string): Promise<LadderSnapshot> {
@@ -391,6 +451,7 @@ export class LadderService {
   clear() {
     this.#snapshots.clear()
     this.#scores.clear()
+    this.#builds.clear()
   }
 
   private async read(platform: string, now = Date.now()): Promise<LadderSnapshot> {
@@ -534,6 +595,36 @@ export class LadderService {
   }
 
   /**
+   * What each entry usually builds on `champion` (their three most bought finished items, their
+   * boots and keystone), from their stored ranked games of the window on it, by PUUID; read in one
+   * query for the whole list and kept like the ladder.
+   */
+  async builds(
+    platform: string,
+    champion: number,
+    entries: ApexEntry[]
+  ): Promise<Map<string, OneTrickBuild>> {
+    const puuids = entries.map((e) => e.puuid)
+    if (!puuids.length) return new Map()
+    const key = createHash('sha1')
+      .update(`${platform}:${champion}:${puuids.join(',')}`)
+      .digest('base64url')
+    const found = await this.#builds
+      .get(key, async () => {
+        const [games, kinds] = await Promise.all([
+          this.source.championGames(puuids, champion, Date.now() - WINDOW_DAYS * DAY_MS),
+          itemKinds(),
+        ])
+        return Object.fromEntries(oneTrickBuilds(games, champion, kinds))
+      })
+      .catch((error) => {
+        logger.warn({ err: error, platform, champion }, 'one-trick builds failed')
+        return {} as Record<string, OneTrickBuild>
+      })
+    return new Map(Object.entries(found))
+  }
+
+  /**
    * The server's one-tricks (`ONE_TRICK_RULE` over their stored games of the window), best
    * ladder place first, each with their entry.
    */
@@ -546,6 +637,37 @@ export class LadderService {
     }
     return out
   }
+}
+
+/** Each player's build on `champion` out of their games on it (`buildsOf`, as for a pro). */
+export function oneTrickBuilds(
+  games: BuildGame[],
+  champion: number,
+  kinds: { legendary: Set<number>; boots: Set<number> }
+) {
+  const byPlayer = new Map<string, BuildGame[]>()
+  for (const g of games) {
+    const list = byPlayer.get(g.puuid) ?? []
+    list.push(g)
+    byPlayer.set(g.puuid, list)
+  }
+  const out = new Map<string, OneTrickBuild>()
+  for (const [puuid, list] of byPlayer) {
+    const [build] = buildsOf(
+      list.map((g) => ({ ...g, champion })),
+      kinds,
+      [{ champion, games: list.length, wins: list.filter((g) => g.win).length, kda: 0 }]
+    )
+    if (!build) continue
+    out.set(puuid, {
+      games: list.length,
+      core: build.core,
+      boots: build.boots,
+      keystone: build.keystone,
+      secondaryStyle: build.secondaryStyle,
+    })
+  }
+  return out
 }
 
 /** Each player's average score over their scored games among `matches`. */
