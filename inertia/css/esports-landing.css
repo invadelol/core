@@ -1,0 +1,687 @@
+/* ──────────────────────────────────────────────────────────────
+   The esports overview (the pros' line-up, the match of the
+   moment or the last champion, today's climbers, roster moves)
+   and the teams ranking. Weights 400 and 500 (600 for the display
+   title and names only), two text colours (--t1, --t3), the site's
+   one card. Components layer, scoped under `.vb`.
+   ────────────────────────────────────────────────────────────── */
+@layer components {
+  /* ── Text ─────────────────────────────────────────────────────── */
+  .vb .el-nm {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--t1);
+  }
+  .vb .el-sub {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--t3);
+    min-width: 0;
+  }
+  .vb .el-v {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--t1);
+  }
+  .vb .el-d0 {
+    font-size: 64px;
+    line-height: 1;
+    font-weight: 600;
+    letter-spacing: -0.035em;
+  }
+  .vb .el-d2 {
+    font-size: 28px;
+    line-height: 1.1;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .vb .el-lead {
+    margin-top: 14px;
+    font-size: 17px;
+    font-weight: 400;
+    color: var(--t3);
+    text-align: center;
+  }
+
+  /* ── Logos and faces ──────────────────────────────────────────── */
+  .vb :is(.el-lg24, .el-lg28, .el-lg40, .el-lg64, .el-lg96) {
+    flex: none;
+    object-fit: contain;
+  }
+  .vb .el-lg24 {
+    width: 22px;
+    height: 22px;
+  }
+  .vb .el-lg28 {
+    width: 28px;
+    height: 28px;
+  }
+  .vb .el-lg40 {
+    width: 40px;
+    height: 40px;
+  }
+  .vb .el-lg64 {
+    width: 64px;
+    height: 64px;
+  }
+  .vb .el-lg96 {
+    width: 96px;
+    height: 96px;
+  }
+  .vb .el-tbd {
+    border-radius: var(--r2);
+    background: var(--s2);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  .vb .el-tl {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    flex: none;
+  }
+  .vb :is(.el-pf, .el-face, .el-pf56) {
+    flex: none;
+    overflow: hidden;
+    border-radius: var(--r2);
+    background: var(--v900);
+  }
+  .vb .el-pf {
+    width: 40px;
+    height: 40px;
+  }
+  .vb .el-pf56 {
+    width: 56px;
+    height: 56px;
+  }
+  .vb .el-face {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+  }
+  .vb .el-empty-slot {
+    background: var(--s2);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  .vb .el-new {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    flex: none;
+    margin-left: 6px;
+    vertical-align: 2px;
+    border-radius: 50%;
+    background: var(--v300);
+  }
+  .vb .el-key {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 13px;
+    color: var(--t3);
+  }
+  .vb .el-key .el-new {
+    margin: 0 6px 0 0;
+  }
+
+  /* ── The line-up: the best of each league ─────────────────────── */
+  .vb .el-bh {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 56px;
+  }
+  .vb .el-bh .el-d0 {
+    text-align: center;
+  }
+  .vb .el-lu {
+    display: grid;
+    grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr));
+    gap: 12px;
+    width: 100%;
+    margin-top: 40px;
+  }
+  .vb .el-lu-c {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .vb .el-lu-f {
+    display: block;
+    height: 220px !important;
+    margin-bottom: 12px;
+  }
+  .vb .el-lu-lg {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+  }
+  .vb .el-lu-n {
+    font-size: 17px;
+    font-weight: 500;
+  }
+  .vb .el-lu-lp {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .vb .el-crest {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 28px;
+    margin-top: 40px;
+  }
+  .vb .el-crest a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--t3);
+    transition: color var(--m) var(--ease);
+  }
+  .vb .el-crest a:hover {
+    color: var(--t1);
+  }
+
+  /* ── A match face to face ─────────────────────────────────────── */
+  .vb .el-hero {
+    padding: 28px 32px;
+  }
+  .vb .el-mh-top {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .vb .el-mh-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px minmax(0, 1fr);
+    align-items: center;
+    gap: 24px;
+    margin-top: 20px;
+  }
+  .vb .el-mh-t {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    min-width: 0;
+  }
+  .vb .el-mh-t.r {
+    justify-content: flex-end;
+    text-align: right;
+  }
+  .vb .el-mh-t.r .col {
+    align-items: flex-end;
+  }
+  .vb .el-mh-n {
+    font-size: 28px;
+    line-height: 1.1;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .vb .el-mh-t.lost .el-mh-n {
+    color: var(--t3);
+  }
+  .vb .el-mh-s {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .vb .el-mh-sc {
+    font-size: 56px;
+    line-height: 1;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+  }
+  .vb .el-mh-sc i {
+    font-style: normal;
+    margin: 0 14px;
+    color: var(--t3);
+  }
+  .vb .el-mh-sc.vs {
+    font-size: 32px;
+    color: var(--t3);
+  }
+  .vb .el-hero-next {
+    margin: 24px -32px -28px;
+  }
+
+  /* ── The last champion ────────────────────────────────────────── */
+  .vb .el-evb {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 32px;
+    padding: 28px 32px;
+  }
+  .vb .el-evb-t {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    min-width: 0;
+  }
+  .vb .el-evb-t .col {
+    gap: 4px;
+    min-width: 0;
+  }
+  .vb .el-evb-s b {
+    font-weight: 500;
+    color: var(--t1);
+    margin: 0 4px 0 2px;
+  }
+  .vb .el-evb-f {
+    display: flex;
+    gap: 20px;
+  }
+  .vb .el-evb-p {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 72px;
+    text-align: center;
+  }
+  .vb .el-evb-p .el-nm {
+    max-width: 100%;
+  }
+
+  /* ── Two lists side by side; one alone takes the width ────────── */
+  .vb .el-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    align-items: start;
+  }
+  .vb .el-2:has(> :only-child) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .vb .el-pr {
+    min-height: 60px;
+  }
+
+  /* ── Roster moves ─────────────────────────────────────────────── */
+  .vb .el-mv {
+    container-type: inline-size;
+  }
+  .vb .el-mvr {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr) minmax(0, 300px);
+    align-items: center;
+    gap: 16px;
+    min-height: 60px;
+    padding: 8px 20px;
+    border-top: 1px solid var(--line);
+  }
+  .vb .el-mvd {
+    font-size: 13px;
+    color: var(--t3);
+  }
+  .vb .el-mvp {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+  .vb .el-faces {
+    display: flex;
+    gap: 4px;
+    flex: none;
+  }
+  .vb .el-mvt {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: var(--r2);
+    background: var(--s2);
+  }
+  .vb .el-tm {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .vb .el-tm img {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    flex: none;
+  }
+  .vb .el-tm.el-none {
+    color: var(--t4);
+  }
+  .vb .el-arr {
+    color: var(--t3);
+  }
+  /* In a narrow card (or on a phone) the move goes under the player. */
+  @container (max-width: 660px) {
+    .vb .el-mvr {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas: 'p d' 't t';
+      gap: 8px 12px;
+      padding: 12px 20px;
+    }
+    .vb .el-mvd {
+      grid-area: d;
+    }
+    .vb .el-mvp {
+      grid-area: p;
+    }
+    .vb .el-mvt {
+      grid-area: t;
+    }
+  }
+
+  /* ── The teams ranking ────────────────────────────────────────── */
+  .vb .el-jump {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 22px;
+    margin-top: 20px;
+  }
+  .vb .el-jump button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--t3);
+    transition: color var(--m) var(--ease);
+  }
+  .vb .el-jump button:hover,
+  .vb .el-jump button.on {
+    color: var(--t1);
+  }
+  .vb .el-jump button.on {
+    box-shadow: inset 0 -2px 0 var(--v400);
+  }
+  .vb .el-jump .el-key {
+    margin-left: auto;
+  }
+  .vb .el-rk-c {
+    margin-top: 8px;
+  }
+  .vb .el-rk-h,
+  .vb .el-rk {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 260px) minmax(0, 1fr) 120px 110px;
+    align-items: center;
+    gap: 20px;
+    padding: 0 20px;
+  }
+  .vb .el-rk-h {
+    min-height: 40px;
+    font-size: 13px;
+    color: var(--t3);
+  }
+  .vb .el-rk {
+    min-height: 76px;
+    border-top: 1px solid var(--line);
+    transition: background var(--m) var(--ease);
+  }
+  .vb .el-rk:hover {
+    background: var(--hover-row);
+  }
+  .vb .el-rk-n {
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--t3);
+    text-align: right;
+  }
+  .vb .el-rk-t {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+  }
+  .vb .el-rk-tn {
+    font-size: 15px;
+  }
+  .vb .el-rk-5 {
+    display: flex;
+    gap: 14px;
+    min-width: 0;
+  }
+  .vb .el-rk-p {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+  }
+  .vb .el-rk-p .el-face {
+    width: 36px;
+    height: 36px;
+  }
+  .vb .el-rk-p .col {
+    min-width: 0;
+  }
+  .vb .el-rk-pn {
+    font-size: 13px;
+  }
+  .vb .el-rk-r {
+    text-align: right;
+  }
+  .vb .el-rk-a {
+    justify-content: flex-end;
+  }
+
+  /* ── Tablet and phone ─────────────────────────────────────────── */
+  @media (max-width: 1199px) {
+    .vb .el-rk-h,
+    .vb .el-rk {
+      grid-template-columns: 30px minmax(0, 220px) minmax(0, 1fr) 100px;
+    }
+    .vb .el-rk-h > :nth-child(5),
+    .vb .el-rk > :nth-child(5) {
+      display: none;
+    }
+  }
+  @media (max-width: 1023px) {
+    .vb .el-2 {
+      grid-template-columns: 1fr;
+    }
+    .vb .el-lu {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .vb .el-evb {
+      grid-template-columns: 1fr;
+    }
+    /* The five stack: each face over its name, the role left to the order. */
+    .vb .el-rk-5 {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .vb .el-rk-p {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+    }
+    .vb .el-rk-p .col {
+      width: 100%;
+    }
+    .vb .el-rk-p .el-sub {
+      display: none;
+    }
+  }
+  @media (max-width: 767px) {
+    .vb .el-d0 {
+      font-size: 44px;
+    }
+    .vb .el-d2 {
+      font-size: 22px;
+    }
+    .vb .el-lead {
+      font-size: 15px;
+    }
+    .vb .el-bh {
+      padding-top: 32px;
+    }
+    .vb .el-hero,
+    .vb .el-evb {
+      padding: 20px;
+    }
+    .vb .el-hero-next {
+      margin: 20px -20px -20px;
+    }
+    .vb .el-mh-row {
+      grid-template-columns: minmax(0, 1fr) 96px minmax(0, 1fr);
+      gap: 10px;
+    }
+    .vb .el-mh-t,
+    .vb .el-mh-t.r {
+      flex-direction: column;
+      justify-content: flex-start;
+      text-align: center;
+      gap: 10px;
+    }
+    .vb .el-mh-t.r {
+      flex-direction: column-reverse;
+    }
+    .vb .el-mh-t .col,
+    .vb .el-mh-t.r .col {
+      align-items: center;
+    }
+    .vb .el-mh-t .el-lg96 {
+      width: 56px;
+      height: 56px;
+    }
+    .vb .el-mh-n {
+      font-size: 16px;
+    }
+    .vb .el-mh-sc {
+      font-size: 34px;
+    }
+    .vb .el-mh-sc i {
+      margin: 0 6px;
+    }
+    .vb .el-lu {
+      grid-template-columns: repeat(var(--n, 5), minmax(136px, 1fr));
+      overflow-x: auto;
+      margin: 28px -16px 0;
+      padding: 0 16px 4px;
+      width: calc(100% + 32px);
+      scrollbar-width: none;
+    }
+    .vb .el-lu-f {
+      height: 180px !important;
+    }
+    .vb .el-crest {
+      gap: 8px 18px;
+      margin-top: 28px;
+    }
+    .vb .el-evb-f {
+      overflow-x: auto;
+      gap: 12px;
+      margin: 0 -20px;
+      padding: 0 20px;
+      scrollbar-width: none;
+    }
+    .vb .el-jump {
+      gap: 4px 18px;
+    }
+    .vb .el-jump .el-key {
+      margin-left: 0;
+      width: 100%;
+    }
+    .vb .el-rk-h {
+      display: none;
+    }
+    .vb .el-rk {
+      grid-template-columns: 22px minmax(0, 1fr) auto;
+      grid-template-areas: 'n t r' 'n f f';
+      gap: 10px 12px;
+      padding: 12px 16px;
+    }
+    .vb .el-rk > :nth-child(1) {
+      grid-area: n;
+      align-self: start;
+      padding-top: 8px;
+    }
+    .vb .el-rk > :nth-child(2) {
+      grid-area: t;
+    }
+    .vb .el-rk > :nth-child(3) {
+      grid-area: f;
+    }
+    .vb .el-rk > :nth-child(4) {
+      grid-area: r;
+    }
+    .vb .el-rk-5 .el-face {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 1;
+    }
+    .vb .el-rk-pn {
+      font-size: 12px;
+    }
+  }
+  @media (pointer: coarse) {
+    .vb :is(.el-jump button, .el-crest a) {
+      min-height: 40px;
+    }
+  }
+}
+
+/* The line-up's entrance, once per view: the title, its line and the portraits rise 14 px and fade
+   in, one after the other. Transforms and opacity only; static for reduced motion. */
+@keyframes el-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@layer components {
+  @media (prefers-reduced-motion: no-preference) {
+    .vb :is(.el-bh > .el-d0, .el-lead, .el-lu > *) {
+      animation: el-rise 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    .vb .el-lead {
+      animation-delay: 70ms;
+    }
+    .vb .el-lu > :nth-child(1) {
+      animation-delay: 120ms;
+    }
+    .vb .el-lu > :nth-child(2) {
+      animation-delay: 170ms;
+    }
+    .vb .el-lu > :nth-child(3) {
+      animation-delay: 220ms;
+    }
+    .vb .el-lu > :nth-child(4) {
+      animation-delay: 270ms;
+    }
+    .vb .el-lu > :nth-child(5) {
+      animation-delay: 320ms;
+    }
+    .vb .el-lu > :nth-child(6) {
+      animation-delay: 370ms;
+    }
+    .vb .el-lu > :nth-child(7) {
+      animation-delay: 420ms;
+    }
+    .vb .el-lu > :nth-child(n + 8) {
+      animation-delay: 470ms;
+    }
+  }
+}

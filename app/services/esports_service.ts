@@ -3,14 +3,14 @@ import logger from '@adonisjs/core/services/logger'
 import { AnswerCache } from '#services/ranked_stats'
 import proMatchService, { isLive, matchOf, type ProMatch } from '#services/pro_match_service'
 import proLadderService from '#services/pro_ladder_service'
-import proService from '#services/pro_service'
-import { catalog, leagueCatalog, leagueRef, type League } from '#services/pro_leagues'
+import { catalog, leagueCatalog, leagueRef } from '#services/pro_leagues'
 
 /**
- * The esports overview: the match to watch now, the leagues, one league's games around now and its
- * pros at the top of solo queue. Every figure comes from the stored pro data (`pro_league`,
- * `pro_team`, `pro_match`: about two weeks back and three ahead, refreshed every 15 minutes) and the
- * pro ladder. Nothing here is a standing or a season result: those are not stored.
+ * The esports overview's matches: the match to watch now, the next ones, the last results between
+ * seasons, and the leagues; a league's results; a pro's place on their league's ladder. Every
+ * figure comes from the stored pro data (`pro_league`, `pro_team`, `pro_match`: refreshed every 15
+ * minutes, three weeks ahead and 30 days back) and the pro ladder. Nothing here is a standing or a
+ * season result: those are not stored.
  */
 
 /** A match with each team's league, for the headline. */
@@ -105,23 +105,13 @@ export class EsportsService {
     }
   }
 
-  /**
-   * Everything the overview shows. `focus` is the league it opens on (a slug, the first listed
-   * league by default).
-   */
-  async overview(focus?: string | null) {
+  /** The overview's matches: live, next, or between seasons the last results, and the leagues. */
+  async overview() {
     const leagues = await leagueCatalog()
-    const league: League | null = (focus && leagues.bySlug(focus)) || leagues.first
-    const [international, upcoming, recent, next, results, ladder, standing] = await Promise.all([
+    const [international, upcoming, recent] = await Promise.all([
       proMatchService.international(6),
       proMatchService.headline(6),
       this.recentResults(8, 15),
-      league ? proMatchService.forLeague(league.slug, 5) : Promise.resolve([]),
-      league ? this.results(league.slug, 5) : Promise.resolve([]),
-      league
-        ? proLadderService.ladder({ league: league.slug, limit: 5 }).catch(() => null)
-        : Promise.resolve(null),
-      league ? proService.league(league.slug).catch(() => null) : Promise.resolve(null),
     ])
     const live = [...international.next, ...upcoming].filter((m) => isLive(m))
     const headline = this.headline(
@@ -145,44 +135,7 @@ export class EsportsService {
         : dedupe([...international.results, ...recent])
             .filter((m) => m.id !== headline?.id)
             .slice(0, 6),
-      leagues: leagues.listed.map((l) => ({ ...leagueRef(l), tier: l.tier })),
-      focus: league
-        ? {
-            league: leagueRef(league),
-            next,
-            results,
-            teams: standing?.teams ?? [],
-            counts: standing?.counts ?? null,
-          }
-        : null,
-      ladder: ladder
-        ? {
-            total: ladder.total,
-            rows: ladder.rows.map((r) => ({
-              place: r.place,
-              pro: {
-                slug: r.pro.slug,
-                name: r.pro.name,
-                ...(r.pro.photo ? { photo: r.pro.photo } : {}),
-                role: r.pro.role,
-                team: r.pro.team
-                  ? {
-                      id: r.pro.team.id,
-                      slug: r.pro.team.slug,
-                      name: r.pro.team.name,
-                      shortName: r.pro.team.shortName,
-                    }
-                  : null,
-              },
-              account: {
-                platform: r.account.platform,
-                tier: r.account.tier,
-                division: r.account.division,
-                lp: r.account.lp,
-              },
-            })),
-          }
-        : null,
+      leagues: leagues.listed.map(leagueRef),
     }
   }
 

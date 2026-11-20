@@ -420,9 +420,15 @@ test.group('Leaderboards', (group) => {
       'headline',
       'live',
       'next',
+      'results',
       'leagues',
-      'focus',
-      'ladder',
+      'leaders',
+      'event',
+      'climbers',
+      'moves',
     ])
+    const teams = await client.get('/teams?league=lec')
+    teams.assertStatus(200)
+    assert.containsSubset(Object.keys(propsOf(teams.text())), ['boards'])
   }).timeout(60_000)
 })
