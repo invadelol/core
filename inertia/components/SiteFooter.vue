@@ -6,12 +6,13 @@ import Icon from './ui/Icon.vue'
 import ThemeChoice from './header/ThemeChoice.vue'
 import { prefetchOnTouch } from './header/prefetch.js'
 import { DISCORD_URL, REPO_URL, X_URL } from '../lib/links.js'
-import { FOOTER_COLUMNS, patchPath } from '../lib/site_nav.js'
+import { FOOTER_COLUMNS, NEW_DAWN_LINK, patchPath } from '../lib/site_nav.js'
 import { patchName } from '../lib/patch.js'
 
 /**
  * The foot of every page (Facet): the mark and one line on what Invade is, the Discord and X,
- * then four columns (Tier list, Leaderboards, Esports, Invade); under a hairline, Riot's notice,
+ * then four columns (Tier list, Leaderboards, Esports, Invade, with New Dawn under the patch
+ * notes); under a hairline, Riot's notice,
  * the policies, the theme and the patch the statistics read.
  */
 const page = usePage()
@@ -24,6 +25,7 @@ const columns = computed(() => [
     title: 'Invade',
     links: [
       ...(version.value ? [{ label: 'Patch notes', href: patchPath(version.value) }] : []),
+      { label: NEW_DAWN_LINK.label, href: NEW_DAWN_LINK.href },
       { label: 'Desktop app', href: '/app' },
       { label: 'Changelog', href: '/app/changelog' },
       { label: 'Contact', href: '/contact' },

@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
+import MenuArt from './MenuArt.vue'
 import type { NavPatchNotes } from '../../lib/home.js'
+import { NEW_DAWN_LINK } from '../../lib/site_nav.js'
 
 /**
- * The Patch pill's menu: every patch the site has notes for, newest first, each with the day Riot
- * published them and how many champions and items changed. Until the menus' data lands it lists
- * the newest patch alone.
+ * The Patch pill's menu: New Dawn first (Riot's 2027 update, with its own picture), then every
+ * patch the site has notes for, newest first, each with the day Riot published them and how many
+ * champions and items changed. Until the menus' data lands it lists the newest patch alone.
  */
 const props = defineProps<{
   notes: NavPatchNotes[] | null
@@ -15,6 +17,9 @@ const props = defineProps<{
   path: string
 }>()
 defineEmits<{ close: [] }>()
+
+const nd = NEW_DAWN_LINK
+const ndOn = computed(() => nd.here(props.path))
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -44,6 +49,21 @@ const rows = computed(() => {
 <template>
   <div class="hx-menu dm pm">
     <div class="dm-l">
+      <Link
+        class="dm-r pm-r pm-nd"
+        :class="{ on: ndOn }"
+        :href="nd.href"
+        :aria-current="ndOn ? 'page' : undefined"
+        prefetch
+        @click="$emit('close')"
+      >
+        <span class="dm-i"><MenuArt :name="nd.art" :size="56" /></span>
+        <span class="dm-t"
+          ><b>{{ nd.label }}</b><span>{{ nd.line }}</span></span
+        >
+        <span class="pm-rv">{{ nd.note }}</span>
+      </Link>
+      <div class="dm-sep" role="separator" />
       <Link
         v-for="(r, i) in rows"
         :key="r.patch"

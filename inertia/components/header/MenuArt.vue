@@ -5,9 +5,9 @@ import { siteNav, type MenuArtName } from '../../lib/site_nav.js'
  * The pictures of the header's menus: small compositions of League art (champion portraits, items,
  * runes, rank emblems, pro photos, league and team logos, all from /cdn) with Invade's own pieces
  * (tier tiles, LP chips, the score dial, the glyph). Each is drawn on a 144 px
- * stage, as the design made them, and scaled to `size`. The one piece /cdn has no art for (the
- * Mayhem augment of ARAM) is a small file in public/menu-art. Team logos are drawn once the menus'
- * data has named the teams' ids.
+ * stage, as the design made them, and scaled to `size`. The pieces /cdn has no art for (the
+ * Mayhem augment of ARAM, New Dawn's Blitzcrank from Riot's key art) are small files in
+ * public/menu-art. Team logos are drawn once the menus' data has named the teams' ids.
  */
 withDefaults(defineProps<{ name: MenuArtName; size?: number }>(), { size: 56 })
 
@@ -775,6 +775,43 @@ const team = (slug: string) => {
             background-position: 50% 40%;
           "
         ></div
+      ></template>
+      <template v-else-if="name === 'newdawn'"
+        ><div
+          class="ma-rp ma-nd"
+          style="
+            left: 3px;
+            top: 2px;
+            width: 114px;
+            height: 114px;
+            background-image: url(/menu-art/new-dawn.webp);
+            background-position: 46% 52%;
+            background-size: 150%;
+          "
+        ></div>
+        <div
+          class="ma-key ma-ndk"
+          style="
+            left: 90px;
+            top: 88px;
+            width: 50px;
+            height: 50px;
+            border-radius: 14px;
+            transform: rotate(-7deg);
+          "
+        >
+          <svg
+            viewBox="0 0 20 20"
+            style="width: 24px; height: 24px"
+            fill="none"
+            stroke="#fff"
+            stroke-width="2.1"
+            stroke-linecap="round"
+          >
+            <path d="M2.5 14.5h15" />
+            <path d="M5.6 14.5a4.4 4.4 0 0 1 8.8 0" />
+            <path d="M10 4.6v2.3M4.4 7.7l1.6 1.6M15.6 7.7 14 9.3" />
+          </svg></div
       ></template>
       <template v-else-if="name === 'app'"
         ><div class="ma-sl" style="left: 8px; top: 12px; width: 108px; height: 84px">
