@@ -12,6 +12,7 @@ import TierChip from '../../components/ui/TierChip.vue'
 import Skeleton from '../../components/ui/Skeleton.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import SortHead from '../../components/ui/SortHead.vue'
+import ProPic from '../../components/pros/ProPic.vue'
 import { useSort } from '../../components/ui/sort.js'
 import StatFilters from '../../components/champions/StatFilters.vue'
 import { nameOf } from '../../lib/assets.js'
@@ -764,7 +765,7 @@ const ago = (ms: number) => {
               </div>
               <div v-for="g in proSort.rows" :key="g.matchId + g.account" class="tbl-r">
                 <Link class="who" :href="g.pro ? `/pro/${g.pro.slug}` : '#'"
-                  ><img :src="g.pro ? `/cdn/pro/${g.pro.slug}${g.pro.photo ? `?v=${g.pro.photo}` : ''}` : champIconUrl(champion.id)" alt="" loading="lazy" /><span class="col" style="min-width: 0"
+                  ><span v-if="g.pro" class="cp-pp"><ProPic :slug="g.pro.slug" :photo="g.pro.photo" :team="g.pro.team" :size="32" /></span><img v-else :src="champIconUrl(champion.id)" alt="" loading="lazy" /><span class="col" style="min-width: 0"
                     ><span class="h5 ell">{{ g.pro?.name ?? 'Pro' }}</span><span class="meta ell">{{ g.pro?.team?.name ?? g.league?.name ?? '' }}</span></span
                   ></Link
                 >

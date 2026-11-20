@@ -5,6 +5,8 @@ import Icon from '../ui/Icon.vue'
 import MenuArt from './MenuArt.vue'
 import type { NavContext, NavSection } from '../../lib/site_nav.js'
 import { teamLabel } from '../../lib/pro_matches.js'
+import { teamLogo } from '../../lib/board.js'
+import { useTheme } from '../../lib/theme.js'
 
 /**
  * A section's menu under its trigger (352 px): one row per page, a League-art picture, the title
@@ -12,6 +14,7 @@ import { teamLabel } from '../../lib/pro_matches.js'
  * being played now, when there is one.
  */
 const props = defineProps<{ section: NavSection; ctx: NavContext; path: string }>()
+const { resolved } = useTheme()
 defineEmits<{ close: [] }>()
 
 const gone = (event: Event) => ((event.target as HTMLImageElement).style.visibility = 'hidden')
@@ -52,7 +55,7 @@ const liveTitle = computed(() => {
       <span class="r2">
         <img
           v-if="live.teams[0].id"
-          :src="`/cdn/team/${live.teams[0].id}?s=32`"
+          :src="teamLogo(live.teams[0].id, 32, resolved)"
           alt=""
           data-fallback="applied"
           @error="gone"
@@ -61,7 +64,7 @@ const liveTitle = computed(() => {
         >{{ teamLabel(live.teams[1])
         }}<img
           v-if="live.teams[1].id"
-          :src="`/cdn/team/${live.teams[1].id}?s=32`"
+          :src="teamLogo(live.teams[1].id, 32, resolved)"
           alt=""
           data-fallback="applied"
           @error="gone"

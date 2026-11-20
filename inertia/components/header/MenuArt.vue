@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { siteNav, type MenuArtName } from '../../lib/site_nav.js'
+import { leagueLogo, teamLogo } from '../../lib/board.js'
+import { useTheme } from '../../lib/theme.js'
 
 /**
  * The pictures of the header's menus: small compositions of League art (champion portraits, items,
@@ -14,10 +16,13 @@ withDefaults(defineProps<{ name: MenuArtName; size?: number }>(), { size: 56 })
 /** A logo the server cannot serve leaves its badge empty rather than show a placeholder. */
 const gone = (event: Event) => ((event.target as HTMLImageElement).style.visibility = 'hidden')
 
+const { resolved } = useTheme()
+/** Our logos come in a copy per ground: take the theme's. */
 const team = (slug: string) => {
   const id = siteNav.value?.art?.teams?.[slug]
-  return id ? `/cdn/team/${id}?s=64` : null
+  return id ? teamLogo(id, 64, resolved.value) : null
 }
+const league = (slug: string) => leagueLogo(slug, 72, resolved.value)
 </script>
 
 <!-- Generated from the design's compositions (gen/menu_art): keep the numbers as they are. -->
@@ -339,7 +344,7 @@ const team = (slug: string) => {
         >
           <img
             class="ma-ab"
-            :src="'/cdn/league/lck'"
+            :src="league('lck')"
             style="
               left: 50%;
               top: 10px;
@@ -365,7 +370,7 @@ const team = (slug: string) => {
         >
           <img
             class="ma-ab"
-            :src="'/cdn/league/lpl'"
+            :src="league('lpl')"
             style="
               left: 50%;
               top: 10px;
@@ -391,7 +396,7 @@ const team = (slug: string) => {
         >
           <img
             class="ma-ab"
-            :src="'/cdn/league/lec'"
+            :src="league('lec')"
             style="
               left: 50%;
               top: 10px;

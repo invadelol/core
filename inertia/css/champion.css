@@ -87,7 +87,8 @@
 .vb .cp-det { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border-top: 1px solid var(--line); }
 .vb .cp-det > div { display: flex; flex-direction: column; gap: 6px; padding: 16px 20px; background: var(--s1); }
 .vb .cp-pro { --cols: minmax(0, 1fr) 160px 120px 96px 88px; }
-.vb .cp-pro .who img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: var(--s3); }
+.vb .cp-pro .who > img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: var(--s3); }
+.vb .cp-pro .who .cp-pp { width: 32px; height: 32px; flex: none; border-radius: 50%; overflow: hidden; background: var(--s3); }
 
 /* ── Phone ─────────────────────────────────────────────────── */
 @media (max-width: 1023px) {

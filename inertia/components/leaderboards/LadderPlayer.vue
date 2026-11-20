@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import Frame from '../ui/Frame.vue'
+import Logo from '../pros/Logo.vue'
+import ProPic from '../pros/ProPic.vue'
 import { profileIcon } from '../../lib/assets.js'
 
-/** A ladder's player cell: profile icon, name and tag, the level under it (or a pro's team). */
+/**
+ * A ladder's player cell: profile icon, name and tag, the level under it (or a pro's team). A pro
+ * shows their picture by the site's one rule (photo, team logo, quiet bust), never an account icon.
+ */
 defineProps<{
   gameName: string | null
   tagLine: string | null
@@ -19,8 +24,8 @@ defineProps<{
 
 <template>
   <span class="row" style="gap: 12px; min-width: 0">
-    <span v-if="pro?.photo" class="lb-pp"
-      ><img :src="`/cdn/pro/${pro.slug}?s=48&v=${pro.photo}`" alt="" loading="lazy"
+    <span v-if="pro" class="lb-pp"
+      ><ProPic :slug="pro.slug" :photo="pro.photo" :team="pro.team" :size="38" position="50% 8%"
     /></span>
     <Frame v-else :src="profileIcon(icon)" size="s" class="lb-pi" />
     <span class="col" style="min-width: 0; gap: 1px">
@@ -32,9 +37,7 @@ defineProps<{
         ></span
       >
       <span v-if="pro?.team" class="meta ell row" style="gap: 5px"
-        ><img class="lb-team" :src="`/cdn/team/${pro.team.id}?s=32`" alt="" />{{
-          pro.team.name
-        }}</span
+        ><Logo class="lb-team" :team="pro.team.id" :size="14" />{{ pro.team.name }}</span
       >
       <span v-else-if="pro" class="meta ell"
         >{{ gameName }}<template v-if="tagLine"> #{{ tagLine }}</template></span
