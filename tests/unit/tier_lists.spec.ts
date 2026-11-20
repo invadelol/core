@@ -32,8 +32,11 @@ import {
   duoBlob,
   duoCounts,
   duoLaneOf,
+  duoPositions,
   duoRowsSql,
+  duoTitle,
   duoView,
+  DUO_LANES,
   type DuoRow,
 } from '#services/duo_tier_list'
 import {
@@ -391,8 +394,23 @@ test.group('Tier lists: duos', () => {
     assert.include(sql, "(a.3 = 'BOTTOM' AND x.3 = 'UTILITY')")
     assert.include(sql, "(a.3 = 'MIDDLE' AND x.3 = 'JUNGLE')")
     assert.include(sql, 'match_lineups FINAL')
+    assert.include(sql, "(a.3 = 'JUNGLE' AND x.3 = 'UTILITY')")
+    assert.include(sql, "(a.3 = 'TOP' AND x.3 = 'MIDDLE')")
     assert.equal(duoLaneOf('MID'), 'mid')
+    assert.equal(duoLaneOf('bot-support'), 'bot')
+    assert.equal(duoLaneOf('support-jungle'), 'support-jungle')
     assert.isNull(duoLaneOf('aram'))
+    assert.isNull(duoLaneOf('mid-mid'))
+    assert.isNull(duoLaneOf('top-mid-bot'))
+  })
+
+  test('lists every pair of roles once', ({ assert }) => {
+    assert.lengthOf(DUO_LANES, 10)
+    assert.includeMembers(DUO_LANES, ['bot', 'mid', 'top', 'jungle-support', 'top-mid'])
+    assert.deepEqual(duoPositions('bot'), ['BOTTOM', 'UTILITY'])
+    assert.deepEqual(duoPositions('support-jungle'), ['UTILITY', 'JUNGLE'])
+    assert.equal(duoTitle('bot'), 'Bot lane duos')
+    assert.equal(duoTitle('jungle-support'), 'Jungle and support duos')
   })
 
   test('ranks pairs with their synergy, share and grid', ({ assert }) => {
@@ -401,13 +419,18 @@ test.group('Tier lists: duos', () => {
       ['EMERALD', 'BOTTOM', 'UTILITY', JINX, LULU, 1000, 480],
       ['EMERALD', 'BOTTOM', 'UTILITY', 51, THRESH, 8, 4],
       ['EMERALD', 'MIDDLE', 'JUNGLE', AHRI, 64, 500, 260],
-      // Not a duo of the list.
-      ['EMERALD', 'TOP', 'UTILITY', AHRI, THRESH, 500, 260],
+      ['EMERALD', 'JUNGLE', 'UTILITY', 64, THRESH, 500, 260],
+      // Not a pair of two roles.
+      ['EMERALD', 'TOP', 'TOP', AHRI, THRESH, 500, 260],
     ]
     const counts = duoCounts([duoBlob(rows)], bracketTiers('emerald_plus'))
-    assert.lengthOf(counts.bot!, 3)
-    assert.lengthOf(counts.mid!, 1)
-    assert.isUndefined(counts.top)
+    assert.lengthOf(Object.keys(counts), 3)
+    assert.lengthOf(duoView(counts, null, 'mid', () => 0.5).rows, 1)
+    // Read from the support's side: the supports first, their junglers second.
+    const fromSupport = duoView(counts, null, 'support-jungle', () => 0.5)
+    assert.deepEqual([fromSupport.rows[0].a, fromSupport.rows[0].b], [THRESH, 64])
+    assert.deepEqual(fromSupport.positions, ['UTILITY', 'JUNGLE'])
+    assert.lengthOf(duoView(counts, null, 'top', () => 0.5).rows, 0)
     const roleWin = (champion: number) =>
       ({ [JINX]: 0.52, [THRESH]: 0.5, [LULU]: 0.49 })[champion] ?? null
     const view = duoView(counts, null, 'bot', roleWin)

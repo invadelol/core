@@ -322,7 +322,7 @@ const topBully = (rows: { value: number }[]) => rows[0]?.value || 1
             <span class="fg-xs num hm-lp">{{ lp(p.lp) }}<span class="u">LP</span></span>
           </Link>
         </div>
-        <div v-if="bans.length" class="card">
+        <div v-if="bans.length" class="card hm-bans">
           <CardHead
             title="Most banned"
             icon="ban"

@@ -1,6 +1,13 @@
 import type { Position } from '#services/champion_stats'
 import { RANKED_SOLO, round } from '#services/ranked_stats'
 import {
+  DUO_ROLES,
+  duoLane,
+  duoPositions,
+  type DuoLane,
+  type DuoRole,
+} from '../../inertia/lib/duos.js'
+import {
   bump,
   delta,
   gate,
@@ -12,24 +19,45 @@ import {
 
 /**
  * The duo tier list (`/tier-list/duos`), the pure half of `tier_lists_service.ts`: champions
- * played together on one team in two roles (bot and support, mid and jungle, top and jungle),
- * from each crawled game's lineup (`match_lineups`, as a champion's teammates are read), every
- * pair at once. A pair's synergy is its win rate together against what both champions win
- * overall in their role (`summary`).
+ * played together on one team in any two roles (the ten pairs: bot and support, mid and jungle,
+ * top and jungle, jungle and support…), from each crawled game's lineup (`match_lineups`, as a
+ * champion's teammates are read), every pair at once. A pair's synergy is its win rate together
+ * against what both champions win overall in their role (`summary`).
  */
 
-/** The lane pairs a duo can be, as the address names them. */
-export const DUO_LANES = {
-  bot: ['BOTTOM', 'UTILITY'],
-  mid: ['MIDDLE', 'JUNGLE'],
-  top: ['TOP', 'JUNGLE'],
-} as const satisfies Record<string, readonly [Position, Position]>
-export type DuoLane = keyof typeof DUO_LANES
+export {
+  DUO_ROLES,
+  duoLaneOf,
+  duoPositions,
+  duoRoles,
+  duoTitle,
+  type DuoLane,
+  type DuoRole,
+} from '../../inertia/lib/duos.js'
 
-export function duoLaneOf(value: unknown): DuoLane | null {
-  const s = String(value ?? '').toLowerCase()
-  return s in DUO_LANES ? (s as DuoLane) : null
-}
+/**
+ * The ten pairs as each game's lineup is read, the first role first. The first three keep their
+ * place (a stored patch's blob numbers its pairs in this order).
+ */
+const STORED: readonly (readonly [Position, Position])[] = [
+  ['BOTTOM', 'UTILITY'],
+  ['MIDDLE', 'JUNGLE'],
+  ['TOP', 'JUNGLE'],
+  ['JUNGLE', 'UTILITY'],
+  ['MIDDLE', 'UTILITY'],
+  ['TOP', 'UTILITY'],
+  ['BOTTOM', 'JUNGLE'],
+  ['TOP', 'MIDDLE'],
+  ['TOP', 'BOTTOM'],
+  ['MIDDLE', 'BOTTOM'],
+]
+
+/** Every duo, each pair once, as the filter lists them. */
+export const DUO_LANES: DuoLane[] = STORED.map(([a, b]) => {
+  const slug = (p: Position) =>
+    (Object.keys(DUO_ROLES) as DuoRole[]).find((r) => DUO_ROLES[r] === p)!
+  return duoLane(slug(a), slug(b))
+})
 
 /** A pair is listed from this share of the filter's games (and `MIN_PAIR_GAMES`). */
 const PAIR_SHARE = 0.0003
@@ -49,9 +77,7 @@ const GRID = 8
  * sum of them, and a range of patches a sum of patches.
  */
 export function duoRowsSql(region: string | null) {
-  const pairs = Object.values(DUO_LANES)
-    .map(([a, b]) => `(a.3 = '${a}' AND x.3 = '${b}')`)
-    .join(' OR ')
+  const pairs = STORED.map(([a, b]) => `(a.3 = '${a}' AND x.3 = '${b}')`).join(' OR ')
   return `
     SELECT s.seed_tier AS tier, a.3 AS pa, b.3 AS pb, a.4 AS ca, b.4 AS cb, count(),
            sum(if(a.2 = 100, m.t1_win, m.t2_win))
@@ -73,45 +99,57 @@ export function duoRowsSql(region: string | null) {
 /** One row of `duoRowsSql`: tier, first role, second role, champions, games, wins. */
 export type DuoRow = [string, string, string, number, number, number, number]
 
-/** One patch's pairs per seed tier (cached as they are): tier, lane pair, champion, champion, games, wins. */
+/**
+ * One patch's pairs per seed tier (cached as they are): tier, pair (its place in the stored
+ * order), champion in the first role, champion in the second, games, wins.
+ */
 export type DuoBlob = [number, number, number, number, number, number][]
-
-const LANES = Object.keys(DUO_LANES) as DuoLane[]
 
 export function duoBlob(rows: DuoRow[]): DuoBlob {
   const out: DuoBlob = []
   for (const [name, pa, pb, a, b, games, wins] of rows) {
     const t = tierIndex(name)
-    const lane = LANES.findIndex((k) => DUO_LANES[k][0] === pa && DUO_LANES[k][1] === pb)
-    if (t >= 0 && lane >= 0) out.push([t, lane, a, b, games, wins])
+    const pair = STORED.findIndex(([x, y]) => x === pa && y === pb)
+    if (t >= 0 && pair >= 0) out.push([t, pair, a, b, games, wins])
   }
   return out
 }
 
-/** The counts of a filter: per lane pair, champion, champion, games, wins. */
-export type DuoCounts = Partial<Record<DuoLane, [number, number, number, number][]>>
+/** The counts of a filter: per stored pair, champion, champion, games, wins. */
+export type DuoCounts = Partial<Record<number, [number, number, number, number][]>>
+
+/** A duo's pairs from the counts, its first role's champion first. */
+function pairsOf(counts: DuoCounts | null, lane: DuoLane) {
+  const [pa, pb] = duoPositions(lane)
+  const straight = STORED.findIndex(([x, y]) => x === pa && y === pb)
+  if (straight >= 0) return counts?.[straight] ?? []
+  const flipped = STORED.findIndex(([x, y]) => x === pb && y === pa)
+  return (counts?.[flipped] ?? []).map(
+    ([a, b, g, w]) => [b, a, g, w] as [number, number, number, number]
+  )
+}
 
 /** A filter's pairs: its patches' blobs summed over the bracket's seed tiers. */
 export function duoCounts(blobs: DuoBlob[], tiers: Set<number>): DuoCounts {
   const sums = new Map<string, [number, number, number, number, number]>()
   for (const blob of blobs) {
-    for (const [t, lane, a, b, g, w] of blob) {
+    for (const [t, pair, a, b, g, w] of blob) {
       if (!tiers.has(t)) continue
-      const at = `${lane}:${a}:${b}`
-      const r = sums.get(at) ?? [lane, a, b, 0, 0]
+      const at = `${pair}:${a}:${b}`
+      const r = sums.get(at) ?? [pair, a, b, 0, 0]
       r[3] += g
       r[4] += w
       sums.set(at, r)
     }
   }
   const out: DuoCounts = {}
-  for (const [lane, a, b, g, w] of sums.values()) (out[LANES[lane]] ??= []).push([a, b, g, w])
+  for (const [pair, a, b, g, w] of sums.values()) (out[pair] ??= []).push([a, b, g, w])
   return out
 }
 
 /** A pair as the tier list shows it. */
 export interface DuoTierRow {
-  /** The champion in the first role (the bot, the mid, the top) and in the second. */
+  /** The champion in the duo's first role (the bot, the mid, the top…) and in its second. */
   a: number
   b: number
   games: number
@@ -151,10 +189,10 @@ export function duoView(
   lane: DuoLane,
   roleWin: (champion: number, position: Position) => number | null
 ): DuoView {
-  const positions = DUO_LANES[lane]
-  const pairs = counts[lane] ?? []
+  const positions = duoPositions(lane)
+  const pairs = pairsOf(counts, lane)
   const was = new Map(
-    (previous?.[lane] ?? []).map(([a, b, games, wins]) => [`${a}:${b}`, { games, wins }])
+    pairsOf(previous, lane).map(([a, b, games, wins]) => [`${a}:${b}`, { games, wins }])
   )
   const games = pairs.reduce((n, p) => n + p[2], 0)
   const minGames = gate(games, PAIR_SHARE, MIN_PAIR_GAMES)

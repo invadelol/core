@@ -20,8 +20,15 @@ import Computing from '../../components/champions/Computing.vue'
 import { BRACKETS, TIERS, champIconUrl } from '../../lib/champions.js'
 import { patchName } from '../../lib/patches.js'
 import { barWidth, movers, p1, sgn, thousands, withQuery } from '../../lib/tier_lists.js'
+import {
+  ROLE_PEOPLE,
+  duoLane,
+  duoRoles,
+  duoTitle,
+  type DuoLane,
+  type DuoRole,
+} from '../../lib/duos.js'
 
-type Lane = 'bot' | 'mid' | 'top'
 interface Row {
   a: number
   b: number
@@ -49,25 +56,35 @@ interface List {
 
 const props = defineProps<{
   list?: List | null
-  lane: Lane
+  lane: DuoLane
   filter: { patch: string; bracket: string; region: string | null } | null
   patches: { patch: string; games: number }[]
 }>()
 
-const LANES: Record<Lane, { title: string; a: string; b: string; pa: string; pb: string }> = {
-  bot: { title: 'Bot lane duos', a: 'bot', b: 'support', pa: 'bot', pb: 'support' },
-  mid: { title: 'Mid and jungle duos', a: 'mid', b: 'jungle', pa: 'mid', pb: 'jungle' },
-  top: { title: 'Top and jungle duos', a: 'top', b: 'jungle', pa: 'top', pb: 'jungle' },
-}
-/** The lane filter: each pair of roles as its two role icons (the words are its name). */
-const laneOptions = [
-  { value: null, label: 'Bot and support', icons: ['ADC', 'SUPPORT'] },
-  { value: 'mid', label: 'Mid and jungle', icons: ['MID', 'JUNGLE'] },
-  { value: 'top', label: 'Top and jungle', icons: ['TOP', 'JUNGLE'] },
+/** The duo's two roles, the one the list is read from first. */
+const roles = computed(() => duoRoles(props.lane))
+const L = computed(() => {
+  const [a, b] = roles.value
+  return { title: duoTitle(props.lane), a: ROLE_PEOPLE[a], b: ROLE_PEOPLE[b], pa: a, pb: b }
+})
+/**
+ * The filter: the role the list is read from, then the one it is played with, each a glyph. A
+ * first role that is the partner's swaps the two.
+ */
+const ROLE_LIST = [
+  { slug: 'top', lane: 'TOP', label: 'Top' },
+  { slug: 'jungle', lane: 'JUNGLE', label: 'Jungle' },
+  { slug: 'mid', lane: 'MID', label: 'Mid' },
+  { slug: 'bot', lane: 'ADC', label: 'Bot' },
+  { slug: 'support', lane: 'SUPPORT', label: 'Support' },
 ] as const
 const page = usePage()
-const laneOn = (value: string | null) => (value ?? 'bot') === props.lane
-const L = computed(() => LANES[props.lane])
+const laneHref = (a: DuoRole, b: DuoRole) => {
+  const lane = duoLane(a, b)
+  return withQuery(page.url, { lane: lane === 'bot' ? null : lane })
+}
+const firstHref = (r: DuoRole) =>
+  laneHref(r, r === roles.value[1] ? roles.value[0] : roles.value[1])
 const ready = computed(() => (props.list && !props.list.computing ? props.list : null))
 const rankText = computed(() => {
   const b = BRACKETS.find((x) => x.value === props.filter?.bracket)
@@ -85,7 +102,6 @@ const champHref = (id: number, role: string) => {
   const c = champs.value.get(id)
   return c ? `/champions/${c.slug}?role=${role}` : '#'
 }
-const ROLE_SLUG: Record<string, string> = { bot: 'bot', support: 'support', mid: 'mid', jungle: 'jungle', top: 'top' }
 
 /* ── Filters ─────────────────────────────────────────────────── */
 const query = ref('')
@@ -166,19 +182,39 @@ const shareMax = computed(() => Math.max(0.2, ...shown.value.map((r) => r.share)
           <StatFilters :filter="filter" :patches="patches" />
         </template>
         <div class="tx-filters">
-          <nav class="seg du-lanes" aria-label="Lanes">
-            <Link
-              v-for="o in laneOptions"
-              :key="o.value ?? 'bot'"
-              :href="withQuery(page.url, { lane: o.value })"
-              :class="{ on: laneOn(o.value) }"
-              :aria-current="laneOn(o.value) ? 'page' : undefined"
-              :aria-label="o.label"
-              :title="o.label"
-              preserve-scroll
-              ><RoleIcon :lane="o.icons[0]" :size="18" /><RoleIcon :lane="o.icons[1]" :size="18"
-            /></Link>
-          </nav>
+          <div class="du-pick" role="group" aria-label="Duo">
+            <nav class="seg role-seg role-seg-ic" aria-label="Role">
+              <Link
+                v-for="r in ROLE_LIST"
+                :key="r.slug"
+                :href="firstHref(r.slug)"
+                :class="{ on: roles[0] === r.slug }"
+                :aria-current="roles[0] === r.slug ? 'page' : undefined"
+                :aria-label="r.label"
+                :title="r.label"
+                preserve-scroll
+                ><RoleIcon :lane="r.lane" :size="18"
+              /></Link>
+            </nav>
+            <span class="du-with">with</span>
+            <nav class="seg role-seg role-seg-ic" aria-label="Played with">
+              <template v-for="r in ROLE_LIST" :key="r.slug">
+                <span v-if="r.slug === roles[0]" class="off" aria-hidden="true"
+                  ><RoleIcon :lane="r.lane" :size="18"
+                /></span>
+                <Link
+                  v-else
+                  :href="laneHref(roles[0], r.slug)"
+                  :class="{ on: roles[1] === r.slug }"
+                  :aria-current="roles[1] === r.slug ? 'page' : undefined"
+                  :aria-label="`With ${r.label.toLowerCase()}`"
+                  :title="`With ${r.label.toLowerCase()}`"
+                  preserve-scroll
+                  ><RoleIcon :lane="r.lane" :size="18"
+                /></Link>
+              </template>
+            </nav>
+          </div>
           <label v-if="ready" class="chk" @click.prevent="hideFew = !hideFew">
             <span class="switch" :class="{ on: hideFew }" role="switch" :aria-checked="hideFew" />
             Hide pairs under {{ thousands(hideUnder) }} games
@@ -203,14 +239,14 @@ const shareMax = computed(() => Math.max(0.2, ...shown.value.map((r) => r.share)
         <template v-else>
           <section class="g12" style="align-items: stretch">
             <article class="card du-grid" style="grid-column: span 8">
-              <CardHead title="Win rate together" icon="grid" :meta="`The eight most played ${L.a}s and ${L.b}s`" />
+              <CardHead title="Win rate together" icon="grid" :meta="`The eight most played ${L.a.many} and ${L.b.many}`" />
               <div class="du-mx" :style="{ gridTemplateColumns: `132px repeat(${ready.grid.b.length}, minmax(0, 1fr))` }">
                 <span />
-                <Link v-for="b in ready.grid.b" :key="`h${b}`" class="ch" :href="champHref(b, ROLE_SLUG[L.pb])"
+                <Link v-for="b in ready.grid.b" :key="`h${b}`" class="ch" :href="champHref(b, L.pb)"
                   ><span class="fr xs"><img :src="champIconUrl(b)" alt="" /></span><span class="ell">{{ nm(b) }}</span></Link
                 >
                 <template v-for="(a, i) in ready.grid.a" :key="`r${a}`">
-                  <Link class="rh" :href="champHref(a, ROLE_SLUG[L.pa])"
+                  <Link class="rh" :href="champHref(a, L.pa)"
                     ><span class="fr xs"><img :src="champIconUrl(a)" alt="" /></span><span class="ell">{{ nm(a) }}</span></Link
                   >
                   <template v-for="(c, j) in ready.grid.cells[i]" :key="`c${a}:${j}`">
@@ -249,7 +285,7 @@ const shareMax = computed(() => Math.max(0.2, ...shown.value.map((r) => r.share)
                 <SortHead :sorter="sort" col="name" label="Duo" />
                 <SortHead :sorter="sort" col="win" label="Win rate" />
                 <SortHead :sorter="sort" col="synergy" label="Synergy" />
-                <SortHead :sorter="sort" col="share" :label="`Of the ${L.a}’s duo games`" />
+                <SortHead :sorter="sort" col="share" :label="`Of the ${L.a.one}’s duo games`" />
                 <SortHead :sorter="sort" col="games" label="Games" class="r" />
                 <SortHead
                   :sorter="sort"
@@ -268,8 +304,8 @@ const shareMax = computed(() => Math.max(0.2, ...shown.value.map((r) => r.share)
                   <div class="tx-name">
                     <TierChip v-if="g.t === null" :tier="r.tier" class="tx-tc" />
                     <span class="du-pair"
-                      ><Link class="fr s" :href="champHref(r.a, ROLE_SLUG[L.pa])"><img :src="champIconUrl(r.a)" alt="" loading="lazy" /></Link
-                      ><Link class="fr s" :href="champHref(r.b, ROLE_SLUG[L.pb])"><img :src="champIconUrl(r.b)" alt="" loading="lazy" /></Link
+                      ><Link class="fr s" :href="champHref(r.a, L.pa)"><img :src="champIconUrl(r.a)" alt="" loading="lazy" /></Link
+                      ><Link class="fr s" :href="champHref(r.b, L.pb)"><img :src="champIconUrl(r.b)" alt="" loading="lazy" /></Link
                     ></span>
                     <div class="col">
                       <span class="h4 ell">{{ nm(r.a) }} and {{ nm(r.b) }}</span>

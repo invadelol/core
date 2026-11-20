@@ -22,17 +22,21 @@ import {
   type ChangeKind,
   type NoteLine,
   type PatchChampionStat,
+  chromaSet,
   type PatchDaily,
   type PatchNotes,
+  type PatchSkin,
+  type PatchSkins,
 } from '../lib/patch_notes.js'
 import '../css/patch.css'
 
 /**
  * `/patch/:version`: one patch's changes, from Riot's notes in the repository's data file. The
- * patch's new skin across the top; the changed champions sorted into their main lane like a
+ * patch's first new skin across the top; the changed champions sorted into their main lane like a
  * champion select grid; picking one fills the stage below with its art, Riot's tables and what
  * the patch did to it in our games (tier, place in the role, win rate, the last two weeks by
- * day). Items, ARAM: Mayhem and bug fixes close the page as short lists. Buffs read green,
+ * day). Items, ARAM: Mayhem and bug fixes follow as short lists, and the new skins close the page
+ * as a gallery (art, name, line and rarity, chromas as swatches). Buffs read green,
  * nerfs red, both violet. A patch without a data file says so.
  */
 const props = defineProps<{
@@ -51,6 +55,8 @@ const props = defineProps<{
   /** Main roles from the newest statistics, when the patch has none of its own. */
   roles?: Record<number, string>
   slugs: Record<number, string>
+  /** The new skins with the game's facts (rarity, line, chromas), when the server had them. */
+  skins?: PatchSkins | null
 }>()
 
 const RANK: Record<string, string> = {
@@ -100,14 +106,61 @@ const aramCount = computed(() =>
     : 0
 )
 
-/* ── The banner: the patch's new skins ─────────────────────────── */
-const skin = ref(0)
+/* ── The banner: the patch's first new skin ────────────────────── */
 const banner = computed(() => {
-  const s = props.notes?.skins[skin.value]
+  const s = props.notes?.skins[0]
   if (s) return skinSplash(s.champion, s.skin)
   const first = props.notes?.champions[0]
   return first ? championSplash(first.id) : null
 })
+
+/* ── The skins: a gallery of the new ones, then older skins' new chromas ── */
+/** The game's facts when the server had them, else the notes' own names. */
+const skinView = computed<PatchSkins>(() => {
+  if (props.skins) return props.skins
+  const sets = (props.notes?.chromas ?? []).map(chromaSet)
+  return {
+    skins: (props.notes?.skins ?? []).map((s) => ({
+      ...s,
+      champions: [s.champion],
+      rarity: null,
+      line: null,
+      chromas: (sets.find((c) => c.skin === s.name)?.names ?? []).map((name) => ({
+        name,
+        color: null,
+      })),
+    })),
+    chromas: sets
+      .filter((c) => c.names.length && !props.notes?.skins.some((s) => s.name === c.skin))
+      .map((c) => ({
+        skin: c.skin,
+        champion: null,
+        chromas: c.names.map((name) => ({ name, color: null })),
+      })),
+  }
+})
+/**
+ * Rows of three across a 6-column grid; a row of two stretches over the whole width (never a
+ * lone card on the last row: four are two rows of two, seven 3 + 2 + 2).
+ */
+const skinCards = computed(() => {
+  const list = skinView.value.skins
+  const n = list.length
+  const rows: number[] = []
+  for (let left = n; left > 0; left -= rows[rows.length - 1])
+    rows.push(left === 4 || left === 2 ? 2 : left === 1 ? 1 : 3)
+  let i = 0
+  return rows.flatMap((size) => list.slice(i, (i += size)).map((s) => ({ s, span: 6 / size })))
+})
+const chromaCount = computed(
+  () =>
+    skinView.value.skins.reduce((n, s) => n + s.chromas.length, 0) +
+    skinView.value.chromas.reduce((n, c) => n + c.chromas.length, 0)
+)
+/** On touch, a skin's chromas name themselves on a tap. */
+const chromaOpen = ref<string | null>(null)
+const skinKey = (s: { champion: number; skin: number }) => `${s.champion}-${s.skin}`
+const skinMeta = (s: PatchSkin) => [s.line, s.rarity].filter(Boolean).join(', ')
 
 /* ── The lanes: each changed champion in its main role ─────────── */
 const LANES = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY'] as const
@@ -260,8 +313,8 @@ const TABS = computed(() => {
     { id: 'champions', label: 'Champions', n: notes.champions.length },
     { id: 'items', label: 'Items', n: notes.items.length },
     { id: 'aram', label: 'ARAM: Mayhem', n: aramCount.value },
-    { id: 'skins', label: 'Skins', n: notes.skins.length },
     { id: 'bugs', label: 'Bug fixes', n: notes.bugs.length },
+    { id: 'skins', label: 'Skins', n: notes.skins.length || skinView.value.chromas.length },
   ].filter((t) => t.n > 0)
 })
 const active = ref('champions')
@@ -349,29 +402,6 @@ onBeforeUnmount(() => observer?.disconnect())
                 ></template
               >
             </p>
-          </div>
-          <div v-if="notes.skins.length" id="skins" class="hb-r">
-            <span class="lab"
-              >New skins<span class="t3 hb-sn">{{ notes.skins[skin].name }}</span></span
-            >
-            <div class="hb-th">
-              <button
-                v-for="(s, k) in notes.skins"
-                :key="`${s.champion}-${s.skin}`"
-                type="button"
-                class="skt"
-                :class="{ on: k === skin }"
-                :title="s.name"
-                :aria-label="s.name"
-                :aria-pressed="k === skin"
-                @click="skin = k"
-              >
-                <img :src="skinSplash(s.champion, s.skin)" alt="" loading="lazy" />
-              </button>
-            </div>
-            <span v-if="notes.chromas.length" class="meta hb-ch" :title="notes.chromas.join(', ')"
-              >Chromas: {{ notes.chromas.join(', ') }}</span
-            >
           </div>
         </div>
       </section>
@@ -681,6 +711,91 @@ onBeforeUnmount(() => observer?.disconnect())
                   {{ bugsOpen ? 'Fewer' : `${notes.bugs.length - BUGS_SHOWN} more`
                   }}<Icon name="chev" :size="13" :class="{ flip: bugsOpen }" />
                 </button>
+              </div>
+            </div>
+          </section>
+
+          <section
+            v-if="skinView.skins.length || skinView.chromas.length"
+            id="skins"
+            class="sec pb-last sk"
+            aria-labelledby="pn-skins"
+          >
+            <div class="sec-h">
+              <h2 id="pn-skins" class="h2">Skins</h2>
+              <span class="meta"
+                >{{
+                  skinView.skins.length
+                    ? `${skinView.skins.length} new ${skinView.skins.length === 1 ? 'skin' : 'skins'}`
+                    : 'New chromas'
+                }}<template v-if="skinView.skins.length && chromaCount"
+                  >, {{ chromaCount }} {{ chromaCount === 1 ? 'chroma' : 'chromas' }}</template
+                ></span
+              >
+            </div>
+            <div v-if="skinCards.length" class="sk-g">
+              <figure
+                v-for="{ s, span } in skinCards"
+                :key="skinKey(s)"
+                class="sk-c"
+                :style="{ gridColumn: `span ${span}` }"
+              >
+                <span class="fr l sk-a"
+                  ><img :src="skinSplash(s.champion, s.skin)" alt="" loading="lazy"
+                /></span>
+                <figcaption class="sk-t">
+                  <b class="sk-n">{{ s.name }}</b>
+                  <span v-if="s.champions.length > 1 || skinMeta(s)" class="sk-m">
+                    <span v-if="s.champions.length > 1" class="sk-cs"
+                      ><img
+                        v-for="c in s.champions"
+                        :key="c"
+                        :src="champIcon(c)"
+                        alt=""
+                        loading="lazy" /></span
+                    >{{ skinMeta(s) }}</span
+                  >
+                  <button
+                    v-if="s.chromas.length"
+                    type="button"
+                    class="sk-ch"
+                    :aria-expanded="chromaOpen === skinKey(s)"
+                    :aria-label="`${s.chromas.length} ${s.chromas.length === 1 ? 'chroma' : 'chromas'}: ${s.chromas.map((c) => c.name).join(', ')}`"
+                    @click="chromaOpen = chromaOpen === skinKey(s) ? null : skinKey(s)"
+                  >
+                    <span class="sk-sw"
+                      ><i
+                        v-for="c in s.chromas"
+                        :key="c.name"
+                        :class="{ none: !c.color }"
+                        :style="c.color ? { background: c.color } : undefined"
+                        :title="c.name"
+                    /></span>
+                    <span class="sk-cn">{{
+                      s.chromas.length === 1 ? s.chromas[0].name : `${s.chromas.length} chromas`
+                    }}</span>
+                  </button>
+                  <span v-if="chromaOpen === skinKey(s)" class="sk-names">{{
+                    s.chromas.map((c) => c.name).join(', ')
+                  }}</span>
+                </figcaption>
+              </figure>
+            </div>
+            <div v-if="skinView.chromas.length" class="sk-o">
+              <span class="lab">New chromas for older skins</span>
+              <div v-for="c in skinView.chromas" :key="c.skin" class="sk-or">
+                <span class="sk-oi"
+                  ><img v-if="c.champion" :src="champIcon(c.champion)" alt="" loading="lazy"
+                /></span>
+                <b>{{ c.skin }}</b>
+                <span class="sk-sw"
+                  ><i
+                    v-for="x in c.chromas"
+                    :key="x.name"
+                    :class="{ none: !x.color }"
+                    :style="x.color ? { background: x.color } : undefined"
+                /></span>
+                <span class="t3">{{ c.chromas.map((x) => x.name).join(', ') }}</span>
               </div>
             </div>
           </section>
