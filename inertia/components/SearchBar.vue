@@ -7,7 +7,7 @@ import { regionFlag } from '../lib/flags.js'
 import { championSlug } from '../lib/champions.js'
 import { recentHref, recentPlayers, type RecentPlayer } from '../lib/recent.js'
 import { positionOf } from './header/sections.js'
-import ProPhoto from './champions/ProPhoto.vue'
+import ProPic from './pros/ProPic.vue'
 import TeamLogo from './champions/TeamLogo.vue'
 import {
   MAX_PLAYERS,
@@ -376,6 +376,9 @@ function recentEntry(r: RecentPlayer): Entry {
       href: recentHref(r),
       title: r.gameName,
       ...(r.pro.photo ? { photo: { slug: r.pro.slug, v: r.pro.photo } } : {}),
+      ...(r.pro.team
+        ? { team: { id: r.pro.team.id, name: r.pro.team.name }, detail: r.pro.team.name }
+        : {}),
       badge: r.pro.staff ? 'Staff' : 'Pro',
     }
   if (r.team)
@@ -822,7 +825,7 @@ const badgeOf = (entry: Entry) => entry.badge ?? (entry.proName ? 'Pro' : null)
 /** A pro's team logo leads their details. */
 const teamOf = (entry: Entry) => (entry.kind === 'pro' && entry.team ? entry.team : null)
 
-/** A pro or team without a picture: two letters in its tile. */
+/** A team without a logo: two letters in its tile (a pro always has a picture: `ProPic`). */
 const initialsOf = (entry: Entry) => (entry.title ?? '').slice(0, 2).toUpperCase()
 
 /** A champion's page and its matchups, from a result. */
@@ -961,10 +964,13 @@ function submit() {
           <span v-else-if="entry.kind === 'champion' && entry.champion" class="sx-i ch"
             ><img :src="champIcon(entry.champion)" alt="" width="28" height="28"
           /></span>
-          <span v-else-if="entry.kind === 'pro' && entry.photo" class="sx-i pr"
-            ><ProPhoto :slug="entry.photo.slug" :photo="entry.photo.v" :width="28" :height="28"
+          <span v-else-if="entry.kind === 'pro'" class="sx-i pr"
+            ><ProPic
+              :slug="entry.photo?.slug"
+              :photo="entry.photo?.v"
+              :team="entry.team"
+              :size="28"
           /></span>
-          <span v-else-if="entry.kind === 'pro'" class="sx-i pr ini">{{ initialsOf(entry) }}</span>
           <span v-else-if="entry.kind && entry.team" class="sx-i tm"
             ><TeamLogo :team="entry.team" :size="22"
           /></span>
@@ -1151,14 +1157,13 @@ function submit() {
             class="result-icon portrait-28"
             @load="shown"
           />
-          <ProPhoto
-            v-else-if="entry.kind === 'pro' && entry.photo"
-            :slug="entry.photo.slug"
-            :photo="entry.photo.v"
-            :width="28"
-            :height="28"
-            class="result-photo"
-          />
+          <span v-else-if="entry.kind === 'pro'" class="result-photo"
+            ><ProPic
+              :slug="entry.photo?.slug"
+              :photo="entry.photo?.v"
+              :team="entry.team"
+              :size="28"
+          /></span>
           <TeamLogo
             v-else-if="entry.kind && entry.team"
             :team="entry.team"
@@ -1361,6 +1366,17 @@ function submit() {
   object-fit: cover;
   background: var(--well);
   box-shadow: var(--portrait-sm);
+}
+
+/* A pro: round, on violet ink, as in the header's list. */
+.result-photo {
+  display: block;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--sx-pro, var(--v900));
 }
 
 /* A logo is drawn on transparency: it sits in a well, inset so its edges breathe. */

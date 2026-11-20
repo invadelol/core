@@ -9,7 +9,8 @@ import RankEmblem from '../../components/ui/RankEmblem.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import MatchLine from '../../components/esports/MatchLine.vue'
 import MatchTime from '../../components/pros/MatchTime.vue'
-import { leagueLogo } from '../../lib/board.js'
+import Logo from '../../components/pros/Logo.vue'
+import ProPic from '../../components/pros/ProPic.vue'
 import { n } from '../../lib/ladders.js'
 import { isLive, matchList, stageLine, teamName, type ProMatch } from '../../lib/pro_matches.js'
 import '../../css/esports.css'
@@ -69,7 +70,6 @@ const next = computed(() => matchList(props.next))
 const focusMatches = computed(() =>
   props.focus ? [...matchList(props.focus.next), ...matchList(props.focus.results)] : []
 )
-const logo = (id: string | null, size = 96) => (id ? `/cdn/team/${id}?s=${size}` : null)
 </script>
 
 <template>
@@ -102,14 +102,14 @@ const logo = (id: string | null, size = 96) => (id ? `/cdn/team/${id}?s=${size}`
             >
             <span v-if="head.leagues[0]" class="meta">{{ head.leagues[0] }}</span>
           </span>
-          <img v-if="logo(head.teams[0].id)" :src="logo(head.teams[0].id)!" alt="" />
+          <Logo :team="head.teams[0].id" :size="96" />
         </div>
         <div class="mid">
           <span class="row" style="gap: 8px; justify-content: center"
-            ><img
+            ><Logo
               v-if="head.league"
-              :src="leagueLogo(head.league.slug, 48)"
-              alt=""
+              :league="head.league.slug"
+              :size="24"
               style="width: 22px; height: 22px; object-fit: contain"
             /><span class="h5"
               >{{ head.league?.name ?? head.tournament
@@ -143,7 +143,7 @@ const logo = (id: string | null, size = 96) => (id ? `/cdn/team/${id}?s=${size}`
           </div>
         </div>
         <div class="tm">
-          <img v-if="logo(head.teams[1].id)" :src="logo(head.teams[1].id)!" alt="" />
+          <Logo :team="head.teams[1].id" :size="96" />
           <span class="col">
             <component
               :is="head.teams[1].slug ? Link : 'span'"
@@ -166,7 +166,7 @@ const logo = (id: string | null, size = 96) => (id ? `/cdn/team/${id}?s=${size}`
             />
             <div class="es-lgs">
               <Link v-for="l in leagues" :key="l.slug" :href="`/league/${l.slug}`" class="lrow">
-                <img :src="leagueLogo(l.slug, 72)" alt="" />
+                <Logo :league="l.slug" :size="36" />
                 <span class="col">
                   <span class="h4">{{ l.code }}</span>
                   <span class="meta">{{ l.region ?? l.name }}</span>
@@ -177,9 +177,9 @@ const logo = (id: string | null, size = 96) => (id ? `/cdn/team/${id}?s=${size}`
 
           <div v-if="focus">
             <div class="sec-h">
-              <img
-                :src="leagueLogo(focus.league.slug, 48)"
-                alt=""
+              <Logo
+                :league="focus.league.slug"
+                :size="24"
                 style="width: 22px; height: 22px; object-fit: contain"
               />
               <h2 class="h2">{{ focus.league.code }}, games around now</h2>
@@ -216,15 +216,12 @@ const logo = (id: string | null, size = 96) => (id ? `/cdn/team/${id}?s=${size}`
             >
               <span class="rk">{{ r.place }}</span>
               <span class="es-pp"
-                ><img
-                  v-if="r.pro.photo"
-                  :src="`/cdn/pro/${r.pro.slug}?s=48&v=${r.pro.photo}`"
-                  alt=""
+                ><ProPic :slug="r.pro.slug" :photo="r.pro.photo" :team="r.pro.team" :size="38"
               /></span>
               <span class="col grow">
                 <span class="h4">{{ r.pro.name }}</span>
                 <span v-if="r.pro.team" class="meta row" style="gap: 5px"
-                  ><img class="es-tl" :src="`/cdn/team/${r.pro.team.id}?s=32`" alt="" />{{
+                  ><Logo class="es-tl" :team="r.pro.team.id" :size="14" />{{
                     r.pro.team.name
                   }}</span
                 >
@@ -266,9 +263,9 @@ const logo = (id: string | null, size = 96) => (id ? `/cdn/team/${id}?s=${size}`
               :href="`/team/${t.slug}`"
             >
               <span class="rk">{{ i + 1 }}</span>
-              <img
-                :src="`/cdn/team/${t.id}?s=48`"
-                alt=""
+              <Logo
+                :team="t.id"
+                :size="24"
                 style="width: 24px; height: 24px; object-fit: contain"
               />
               <span class="h5 grow">{{ t.name }}</span>

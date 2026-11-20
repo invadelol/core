@@ -12,9 +12,11 @@ import WinRate from '../../components/ui/WinRate.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import FormStrip from '../../components/ui/FormStrip.vue'
 import SortHead from '../../components/ui/SortHead.vue'
+import Logo from '../../components/pros/Logo.vue'
+import ProPic from '../../components/pros/ProPic.vue'
 import { useSort } from '../../components/ui/sort.js'
 import { champIcon, assetUrl } from '../../lib/assets.js'
-import { countryName, leagueLogo } from '../../lib/board.js'
+import { countryName } from '../../lib/board.js'
 import { laneOf, n, rankValue, rankWords, roleLabel, winPct } from '../../lib/ladders.js'
 import { profilePath } from '../../lib/format.js'
 import { rememberPro } from '../../lib/recent.js'
@@ -145,6 +147,7 @@ onMounted(() =>
         name: props.pro.name,
         photo: props.pro.photo ?? null,
         staff: props.pro.teams.some((t) => t.current && t.title === 'staff') || undefined,
+        team: props.pro.team ? { id: props.pro.team.id, name: props.pro.team.name } : null,
       }),
     { immediate: true }
   )
@@ -227,8 +230,6 @@ function share() {
     setTimeout(() => (shared.value = false), 1600)
   })
 }
-const photo = (slug: string | null, v: string | undefined, size: number) =>
-  slug && v ? `/cdn/pro/${slug}?s=${size}&v=${v}` : null
 /** The accounts, best rank first as they come; the heads sort them. */
 const accountSort = useSort(
   () => props.pro.accounts,
@@ -282,16 +283,18 @@ const PLATFORM: Record<string, string> = {
       </div>
 
       <section class="card pp-hero">
-        <Frame class="ph5" :src="photo(pro.slug, pro.photo, 240)" stage eager />
+        <Frame class="ph5" stage
+          ><ProPic :slug="pro.slug" :photo="pro.photo" :team="pro.team" :size="240" eager
+        /></Frame>
         <div class="col" style="justify-content: center; min-width: 0">
           <h1 class="pp-name">{{ pro.name }}</h1>
           <p v-if="realName" class="body" style="margin-top: 8px">{{ realName }}</p>
           <div class="row" style="gap: 8px; margin-top: 18px; flex-wrap: wrap">
             <Link v-if="pro.team" class="tagx" :href="`/team/${pro.team.slug}`"
-              ><img :src="`/cdn/team/${pro.team.id}?s=32`" alt="" />{{ pro.team.name }}</Link
+              ><Logo :team="pro.team.id" :size="16" />{{ pro.team.name }}</Link
             >
             <Link v-if="pro.league" class="tagx" :href="`/league/${pro.league.slug}`"
-              ><img :src="leagueLogo(pro.league.slug, 32)" alt="" />{{ pro.league.code }}</Link
+              ><Logo :league="pro.league.slug" :size="16" />{{ pro.league.code }}</Link
             >
             <span v-if="laneOf(pro.role)" class="tagx"
               ><RoleIcon :lane="laneOf(pro.role)!" :size="15" />{{ roleLabel(pro.role) }}</span
@@ -359,9 +362,9 @@ const PLATFORM: Record<string, string> = {
         style="padding-top: 36px"
       >
         <div class="sec-h">
-          <img
-            :src="`/cdn/team/${roster.team.id}?s=48`"
-            alt=""
+          <Logo
+            :team="roster.team.id"
+            :size="32"
             style="width: 26px; height: 26px; object-fit: contain"
           />
           <h2 class="h2">{{ roster.team.name }}</h2>
@@ -381,7 +384,14 @@ const PLATFORM: Record<string, string> = {
             :class="{ me: m.slug === pro.slug }"
             :href="m.slug ? `/pro/${m.slug}` : undefined"
           >
-            <Frame :src="photo(m.slug, m.photo, 240)" stage />
+            <Frame stage
+              ><ProPic
+                :slug="m.slug"
+                :photo="m.photo"
+                :team="roster.team"
+                :size="240"
+                position="50% 0"
+            /></Frame>
             <span class="rl3"
               ><RoleIcon v-if="laneOf(m.role)" :lane="laneOf(m.role)!" :size="13" />{{
                 roleLabel(m.role)
@@ -457,7 +467,7 @@ const PLATFORM: Record<string, string> = {
                 :key="p.pro.slug"
                 :class="{ en: !p.ally }"
                 :title="p.pro.name"
-                ><img v-if="p.pro.photo" :src="photo(p.pro.slug, p.pro.photo, 48)!" alt=""
+                ><ProPic :slug="p.pro.slug" :photo="p.pro.photo" :team="p.pro.team" :size="34"
               /></span>
             </span>
           </component>
@@ -517,9 +527,9 @@ const PLATFORM: Record<string, string> = {
               :href="`/team/${t.team.slug}`"
             >
               <span style="width: 36px; height: 36px; display: grid; place-items: center"
-                ><img
-                  :src="`/cdn/team/${t.team.id}?s=48`"
-                  alt=""
+                ><Logo
+                  :team="t.team.id"
+                  :size="32"
                   style="width: 30px; height: 30px; object-fit: contain"
               /></span>
               <span class="col grow">
@@ -619,7 +629,13 @@ const PLATFORM: Record<string, string> = {
             <SortHead :sorter="accountSort" col="server" label="Server" />
             <SortHead :sorter="accountSort" col="rank" label="Rank" />
             <SortHead :sorter="accountSort" col="peak" label="Peak" class="hm" />
-            <SortHead :sorter="accountSort" col="record" label="Record" class="n hm" title="Games this season" />
+            <SortHead
+              :sorter="accountSort"
+              col="record"
+              label="Record"
+              class="n hm"
+              title="Games this season"
+            />
           </div>
           <Link
             v-for="a in accountSort.rows"
@@ -670,9 +686,9 @@ const PLATFORM: Record<string, string> = {
             :href="`/team/${t.team.slug}`"
           >
             <span style="width: 36px; height: 36px; display: grid; place-items: center"
-              ><img
-                :src="`/cdn/team/${t.team.id}?s=48`"
-                alt=""
+              ><Logo
+                :team="t.team.id"
+                :size="32"
                 style="width: 30px; height: 30px; object-fit: contain"
             /></span>
             <span class="col grow">

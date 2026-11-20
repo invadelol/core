@@ -3,8 +3,15 @@
  * formats, role and rank labels, and the sorting of a table.
  */
 
-export const teamLogo = (id: string, size: number) => `/cdn/team/${id}?s=${size}`
-export const leagueLogo = (slug: string, size: number) => `/cdn/league/${slug}?s=${size}&v=1`
+/**
+ * A logo's address for a ground: the dark theme's copy, or the light one's (`on=light`), where a
+ * logo drawn in ink lost on that ground is redrawn. `components/pros/Logo.vue` draws both and lets
+ * the theme pick; a single address (a select's icon) follows `useTheme().resolved`.
+ */
+export const teamLogo = (id: string, size: number, on: 'dark' | 'light' = 'dark') =>
+  `/cdn/team/${id}?s=${size}${on === 'light' ? '&on=light' : ''}&v=2`
+export const leagueLogo = (slug: string, size: number, on: 'dark' | 'light' = 'dark') =>
+  `/cdn/league/${slug}?s=${size}${on === 'light' ? '&on=light' : ''}&v=2`
 
 /** "52.1%", "-" when unknown. */
 export const pct = (x: number | null | undefined, digits = 1) =>
