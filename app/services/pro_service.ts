@@ -795,15 +795,6 @@ export class ProService {
     })
   }
 
-  /** Every league with its teams (logo, players, average LP of the starters in Master and above). */
-  async leagueTeams() {
-    const { listed } = await leagueCatalog()
-    const all = await Promise.all(listed.map((l) => this.league(l.slug)))
-    return all
-      .filter((l): l is NonNullable<typeof l> => Boolean(l))
-      .map((l) => ({ league: l.league, teams: l.teams }))
-  }
-
   /**
    * Each player's ranked record of the last 30 days and the champions they played most, from one
    * read of their accounts' games (`participants` is keyed by player).
