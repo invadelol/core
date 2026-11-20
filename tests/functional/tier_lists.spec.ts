@@ -2,6 +2,7 @@ import { test } from '@japa/runner'
 import championStatsService from '#services/champion_stats_service'
 import tierListsService from '#services/tier_lists_service'
 import type { Filter } from '#services/champion_stats'
+import { SHOW_RUNES } from '../../inertia/lib/features.js'
 
 const PATCHES = [
   { patch: '16.21', games: 2_700_000 },
@@ -58,11 +59,15 @@ test.group('Tier lists of items, runes, duos and ARAM', (group) => {
       ['items', 'emerald_plus', 'MIDDLE', 'mage'],
     ],
     ['/tier-list/items?class=bogus', 'tier_lists/items', ['items', 'emerald_plus', null, null]],
-    [
-      '/tier-list/runes?role=support&rank=diamond_plus',
-      'tier_lists/runes',
-      ['runes', 'diamond_plus', 'UTILITY'],
-    ],
+    ...(SHOW_RUNES
+      ? ([
+          [
+            '/tier-list/runes?role=support&rank=diamond_plus',
+            'tier_lists/runes',
+            ['runes', 'diamond_plus', 'UTILITY'],
+          ],
+        ] as const)
+      : []),
     ['/tier-list/duos?lane=mid', 'tier_lists/duos', ['duos', 'emerald_plus', 'mid']],
     ['/tier-list/duos?lane=aram', 'tier_lists/duos', ['duos', 'emerald_plus', 'bot']],
     // ARAM has no rank: every stored game counts, whatever the address says.
@@ -90,11 +95,23 @@ test.group('Tier lists of items, runes, duos and ARAM', (group) => {
     })
   }
 
+  test('the rune tier list leads to the champions’ while it is put away', async ({
+    client,
+    assert,
+  }) => {
+    const asked = stub()
+    const page = await client.get('/tier-list/runes?role=support').redirects(0)
+    if (SHOW_RUNES) return page.assertStatus(200)
+    page.assertStatus(302)
+    page.assertHeader('location', '/tier-list')
+    assert.lengthOf(asked, 0)
+  })
+
   test('a filter other than the default is not indexed', async ({ client, assert }) => {
     stub()
-    const first = await client.get('/tier-list/runes')
+    const first = await client.get('/tier-list/items')
     const page = await client
-      .get('/tier-list/runes?rank=gold')
+      .get('/tier-list/items?rank=gold')
       .header('x-inertia', 'true')
       .header('x-inertia-version', versionOf(first.text()))
     page.assertStatus(200)

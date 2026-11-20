@@ -54,6 +54,7 @@ import {
   type AramView,
 } from '#services/aram_tier_list'
 import { patchValue, previousRange } from '../../inertia/lib/patches.js'
+import { SHOW_RUNES } from '../../inertia/lib/features.js'
 
 /**
  * The tier lists of items, runes, duos and ARAM (`/tier-list/items`, `/runes`, `/duos`,
@@ -517,14 +518,15 @@ export class TierListsService {
 
   /**
    * Every blob of `patches` for every region in `regions` (`null`: every region): items and
-   * runes of each role, the duos, in that order. Each is a read of a patch at every rank.
+   * runes of each role (runes while their page is shown), the duos, in that order. Each is a read
+   * of a patch at every rank.
    */
   warmWants(patches: string[], regions: (string | null)[]) {
     const wants: Want<unknown>[] = []
     for (const region of regions) {
       for (const patch of patches) {
         for (const role of POSITIONS) wants.push(this.itemBlob(patch, region, role))
-        for (const role of POSITIONS) wants.push(this.runeBlob(patch, region, role))
+        if (SHOW_RUNES) for (const role of POSITIONS) wants.push(this.runeBlob(patch, region, role))
         wants.push(this.duoBlob(patch, region))
       }
     }

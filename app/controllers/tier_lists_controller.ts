@@ -10,6 +10,7 @@ import { ARAM_MODES, aramModeOf } from '#services/aram_tier_list'
 import { BRACKET_TEXT, breadcrumbs, meta } from '#services/page_meta'
 import { onceEach, settle } from '#services/page_blocks'
 import { patchText } from '../../inertia/lib/patches.js'
+import { SHOW_RUNES } from '../../inertia/lib/features.js'
 
 /**
  * How long a page waits for its list before it is sent: a list the stats cache holds comes back
@@ -84,7 +85,9 @@ export default class TierListsController {
 
   /** `/tier-list/runes?role=support`: keystones ranked against each other, trees, shards and pages. */
   async runes(ctx: HttpContext) {
-    const { request } = ctx
+    const { request, response } = ctx
+    // Put away for now (lib/features.ts): the champions' tier list stands in for it.
+    if (!SHOW_RUNES) return response.redirect('/tier-list', false, 302)
     const filter = await championStatsService.filter(request.qs())
     const position = positionOf(request.input('role'))
     const role = position ? ROLE_OF[position].label : null
