@@ -17,6 +17,7 @@ import RoleFilter from '../../components/leaderboards/RoleFilter.vue'
 import LadderPager from '../../components/leaderboards/LadderPager.vue'
 import Logo from '../../components/pros/Logo.vue'
 import ProPic from '../../components/pros/ProPic.vue'
+import Flag from '../../components/pros/Flag.vue'
 import { champIcon, championName } from '../../lib/assets.js'
 import { leagueLogo, teamLogo } from '../../lib/board.js'
 import { useTheme } from '../../lib/theme.js'
@@ -303,7 +304,11 @@ const short = (r: Row) =>
               style="opacity: 0.6"
             />{{ roleLabel(r.pro.role) || '–' }}</span
           >
-          <span class="meta">{{ r.pro.countryName ?? '–' }}</span>
+          <span class="row meta" style="gap: 7px; min-width: 0"
+            ><Flag :code="r.pro.country" :size="18" /><span class="ell">{{
+              r.pro.countryName ?? '–'
+            }}</span></span
+          >
           <span v-if="r.account" class="row" style="gap: 8px">
             <RankEmblem :tier="r.account.tier" :size="26" />
             <span class="col">

@@ -11,6 +11,7 @@ import EmptyState from '../../components/ui/EmptyState.vue'
 import MatchLine from '../../components/esports/MatchLine.vue'
 import Logo from '../../components/pros/Logo.vue'
 import ProPic from '../../components/pros/ProPic.vue'
+import Flag from '../../components/pros/Flag.vue'
 import { champIcon } from '../../lib/assets.js'
 import { countryName } from '../../lib/board.js'
 import { laneOf, n, rankWords, roleLabel } from '../../lib/ladders.js'
@@ -274,7 +275,9 @@ const wonBy = (m: ProMatch) => (m.winner ? m.teams[m.winner - 1].id === props.te
             <span class="rl3"
               ><RoleIcon v-if="laneOf(m.role)" :lane="laneOf(m.role)!" :size="13" />{{
                 roleLabel(m.role)
-              }}<template v-if="m.country">, {{ countryName(m.country) }}</template></span
+              }}<template v-if="m.country"
+                >, <Flag :code="m.country" :size="16" />{{ countryName(m.country) }}</template
+              ></span
             >
             <span class="nm4">{{ m.name }}</span>
             <span class="rk5"
@@ -401,7 +404,9 @@ const wonBy = (m: ProMatch) => (m.winner ? m.teams[m.winner - 1].id === props.te
                 <span class="h5">{{ m.name }}</span>
                 <span class="meta"
                   >{{ m.role ? m.role.charAt(0) + m.role.slice(1).toLowerCase() : 'Staff'
-                  }}<template v-if="m.country">, {{ countryName(m.country) }}</template></span
+                  }}<template v-if="m.country"
+                    >, <Flag :code="m.country" :size="16" /> {{ countryName(m.country) }}</template
+                  ></span
                 >
               </span>
               <span v-if="m.joinedAt" class="meta">since {{ year(m.joinedAt) }}</span>
