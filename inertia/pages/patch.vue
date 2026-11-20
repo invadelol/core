@@ -303,7 +303,7 @@ onBeforeUnmount(() => observer?.disconnect())
               >
             </nav>
             <h1 class="d1 hb-t">Patch {{ current }}</h1>
-            <p class="pa-date">
+            <div class="pa-date">
               <span v-if="published">Published {{ published }}</span>
               <a :href="notes.source" target="_blank" rel="noreferrer"
                 >Riot's notes<Icon name="external" :size="13"
@@ -316,7 +316,7 @@ onBeforeUnmount(() => observer?.disconnect())
                 width="9rem"
                 class="pn-sel"
               />
-            </p>
+            </div>
             <p v-if="counts" class="pa-c">
               <span class="up"
                 ><b class="num">{{ counts.up }}</b
