@@ -445,9 +445,9 @@
   margin: 2px 0 0;
 }
 .vb .nw-rr .hero .nw-emb {
-  width: 236px;
-  height: 236px;
-  margin: -20px -14px -22px -18px;
+  width: 168px;
+  height: 168px;
+  margin: -14px -10px -16px -13px;
   filter: drop-shadow(0 14px 18px rgb(3 2 10 / 0.6));
 }
 .vb .nw-rr .hero h3 {
@@ -2118,9 +2118,9 @@
     padding: 18px;
   }
   .vb .nw-rr .hero .nw-emb {
-    width: 150px;
-    height: 150px;
-    margin: -12px -10px -14px -14px;
+    width: 116px;
+    height: 116px;
+    margin: -9px -8px -11px -11px;
   }
   .vb .nw-rr .hero h3 {
     font-size: 26px;
