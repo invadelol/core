@@ -1,10 +1,10 @@
 /* ──────────────────────────────────────────────────────────────
-   The stats studio: the role filter and the search under the
-   masthead, the statistics as a side list by category (like the
-   profile's sections) beside the hub (each category a card, one
-   row per statistic with its leader) or one statistic's table
+   The stats studio: the role filter and the champion search
+   under the masthead; the hub's tiles (one per category, under
+   the art of the champion leading its first statistic, `.fr` of
+   facet.css); a statistic's page with the categories as tabs,
+   the category's statistics as a segmented row, and its list
    (`.tbl`, ui.css: one violet bar per row, `.bar` of facet.css).
-   Below 1024 px the side list gives way to a menu of statistics.
    ────────────────────────────────────────────────────────────── */
 
 .vb .st-tools {
@@ -21,153 +21,133 @@
 .vb .st-find input {
   min-width: 0;
 }
-.vb .st-pick {
-  display: none;
-}
-
-.vb .st-studio {
-  display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 32px;
-  align-items: start;
-  padding: 16px 0 64px;
-}
-.vb .st-side {
-  position: sticky;
-  top: 16px;
-}
-
-/* ── Side list ─────────────────────────────────────────────── */
-.vb .st-rail {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.vb .st-rl {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 32px;
-  padding: 0 12px;
-  border-radius: var(--r2);
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--t2);
-  transition:
-    background 140ms var(--ease),
-    color 140ms var(--ease);
-}
-.vb .st-rl:hover {
-  color: var(--t1);
-  background: var(--s1);
-}
-.vb .st-rl.on {
-  color: var(--t1);
-  font-weight: 600;
-  background: var(--key, var(--s2));
-  box-shadow: var(--key-sh, none);
-}
-.vb .st-home {
-  min-height: 40px;
-  font-weight: 600;
-}
-.vb .st-home .i {
-  color: var(--t3);
-  flex: none;
-}
-.vb .st-home.on .i {
-  color: var(--v300);
-}
-[data-theme='light'] .vb .st-home.on .i {
-  color: var(--v500);
-}
-.vb .st-rg {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-top: 18px;
-}
-.vb .st-rgh {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 12px 6px;
-  font-size: 12px;
-  font-weight: 650;
-  color: var(--t3);
-}
-.vb .st-rgh .i {
-  flex: none;
-}
 
 /* ── Hub ───────────────────────────────────────────────────── */
-.vb .st-hub {
-  columns: 2;
+.vb .st-tiles {
+  columns: 3;
   column-gap: 24px;
   padding: 16px 0 40px;
 }
-.vb .st-cat {
+.vb .st-tile {
   break-inside: avoid;
   margin-bottom: 24px;
+  padding: 8px;
 }
-.vb .st-hr {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 148px) 64px;
-  align-items: center;
-  gap: 12px;
-  min-height: 48px;
-  padding: 0 20px;
-  border-top: 1px solid var(--line);
-  transition: background 160ms var(--ease);
+.vb .st-art {
+  display: block;
+  height: 128px;
+  --cut: 14px;
 }
-.vb .st-hr:hover {
-  background: rgb(var(--v-rgb) / 0.04);
+.vb .st-art img {
+  object-position: 50% 22%;
 }
-.vb .st-hr:last-child {
-  border-bottom-left-radius: inherit;
-  border-bottom-right-radius: inherit;
+.vb .st-tb {
+  padding: 16px 12px 8px;
 }
-.vb .st-hl {
-  min-width: 0;
-}
-.vb .st-ld {
+.vb .st-th {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+.vb .st-th .i {
+  color: var(--v300);
+}
+[data-theme='light'] .vb .st-th .i {
+  color: var(--v500);
+}
+.vb .st-top {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 10px 0 14px;
+  border-bottom: 1px solid var(--line);
+}
+.vb .st-tile:not(:has(.st-links)) .st-top {
+  border-bottom: 0;
+  padding-bottom: 8px;
+}
+.vb .st-lead {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
   min-width: 0;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--t2);
-}
-.vb .st-ld.meta {
-  grid-column: 2 / -1;
-  justify-content: flex-end;
-}
-.vb .st-hv {
-  text-align: right;
+  min-height: 30px;
   font-size: 14px;
-  font-weight: 600;
+}
+.vb .st-lead b {
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
   color: var(--t1);
 }
-.vb .st-wait {
-  grid-column: 2 / -1;
-  justify-content: flex-end;
-  gap: 12px;
+.vb .st-top:hover .st-lead b {
+  color: var(--v300);
 }
-.vb .st-wait i {
+[data-theme='light'] .vb .st-top:hover .st-lead b {
+  color: var(--v500);
+}
+.vb .st-lead.none {
+  align-items: center;
+  font-weight: 500;
+  color: var(--t3);
+}
+.vb .st-lead.wait {
+  align-items: center;
+}
+.vb .st-lead.wait i {
   display: block;
-  height: 10px;
-  border-radius: 3px;
+  width: 120px;
+  height: 14px;
+  border-radius: var(--r1);
   background: var(--s3);
 }
-.vb .st-wait i:first-child {
-  width: 96px;
+.vb .st-links {
+  display: flex;
+  flex-direction: column;
+  padding-top: 6px;
 }
-.vb .st-wait i:last-child {
-  width: 40px;
+.vb .st-links a {
+  padding: 7px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--t2);
+  transition: color 140ms var(--ease);
+}
+.vb .st-links a:hover {
+  color: var(--t1);
 }
 
-/* ── One statistic ─────────────────────────────────────────── */
+/* ── A statistic's page ────────────────────────────────────── */
+.vb .st-body {
+  padding: 8px 0 64px;
+}
+.vb .st-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.vb .st-cats,
+.vb .st-stats {
+  position: relative;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.vb .st-cats::-webkit-scrollbar,
+.vb .st-stats::-webkit-scrollbar {
+  display: none;
+}
+.vb .st-cats {
+  gap: 24px;
+}
+.vb .st-cats > a {
+  flex: none;
+}
+.vb .st-stats {
+  align-self: flex-start;
+}
 .vb .st-card {
   overflow: hidden;
 }
@@ -222,25 +202,9 @@
   padding: 16px 20px 20px;
 }
 
-@media (max-width: 1279px) {
-  .vb .st-studio {
-    grid-template-columns: 196px minmax(0, 1fr);
-    gap: 24px;
-  }
-}
 @media (max-width: 1023px) {
-  .vb .st-studio {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .vb .st-side {
-    display: none;
-  }
-  .vb .st-pick {
-    display: block;
-    width: 280px;
-  }
-  .vb .st-find {
-    width: 240px;
+  .vb .st-tiles {
+    columns: 2;
   }
 }
 @media (max-width: 767px) {
@@ -252,7 +216,6 @@
     overflow-x: auto;
     scrollbar-width: none;
   }
-  .vb .st-pick,
   .vb .st-find {
     width: 100%;
     margin-left: 0;
@@ -260,14 +223,24 @@
   .vb .st-find input {
     font-size: 16px;
   }
-  .vb .st-hub {
+  .vb .st-tiles {
     columns: 1;
+    padding-top: 8px;
   }
-  .vb .st-hr {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 120px) 56px;
-    gap: 10px;
-    padding: 0 14px;
-    min-height: 52px;
+  .vb .st-tile {
+    margin-bottom: 16px;
+  }
+  .vb .st-art {
+    height: 112px;
+  }
+  /* The rows run past the screen's edge: a short fade says there is more. */
+  .vb .st-cats,
+  .vb .st-stats {
+    mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+    padding-right: 28px;
+  }
+  .vb .st-stats > * {
+    height: 34px;
   }
   .vb .st-tbl {
     --cols: 18px minmax(0, 1fr) 156px;

@@ -1,11 +1,14 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
-import CardHead from '../ui/CardHead.vue'
-import { CATEGORIES, METRICS, STATS, fmtMetric, type StatDef } from '../../lib/studio.js'
+import Icon from '../ui/Icon.vue'
+import { championSplash } from '../../lib/assets.js'
+import { CATEGORIES, STATS, emptyText, fmtMetric, type StatDef } from '../../lib/studio.js'
 
 /**
- * The studio's hub: each category a card, each statistic a row with the champion at the top of
- * its list and its figure, the row leading to the statistic's page.
+ * The stats studio's hub: each category a tile under the art of the champion at the top of its
+ * first statistic, that figure large, then the category's other statistics as links. Every
+ * statistic is one click away.
  */
 export interface Leader {
   champion: number
@@ -14,49 +17,64 @@ export interface Leader {
 }
 
 const props = defineProps<{
-  /** The champion at the top of a statistic's list; undefined while its figures load. */
+  /** The champion at the top of a statistic's list: undefined while it loads, null without one. */
   leader: (stat: StatDef) => Leader | null | undefined
   query: string
 }>()
 const href = (slug: string) => `/stats/${slug}${props.query ? `?${props.query}` : ''}`
-const groups = CATEGORIES.map((c) => ({
-  ...c,
-  stats: STATS.filter((s) => s.category === c.key && !s.wide),
-}))
+/** The champion's art at about the width the tile shows it (the proxy resizes it once). */
+const art = (champion: number, width: number) => `${championSplash(champion)}?w=${width}`
+const tiles = computed(() =>
+  CATEGORIES.map((c) => {
+    const stats = STATS.filter((s) => s.category === c.key)
+    const first = stats.find((s) => !s.wide) ?? stats[0]
+    return { ...c, first, rest: stats.filter((s) => s !== first), lead: props.leader(first) }
+  })
+)
 </script>
 
 <template>
-  <div class="st-hub">
-    <section v-for="g in groups" :key="g.key" class="card st-cat">
-      <CardHead :title="g.label" :icon="g.icon" />
-      <Link v-for="s in g.stats" :key="s.slug" class="st-hr" :href="href(s.slug)">
-        <span class="h5 st-hl">{{ s.label }}</span>
-        <template v-if="leader(s)">
-          <span class="st-ld">
-            <img
-              class="pic xs"
-              loading="lazy"
-              decoding="async"
-              width="22"
-              height="22"
-              alt=""
-              :src="`/cdn/champion/${leader(s)!.champion}.png`"
-            />
-            <span class="ell">{{ leader(s)!.name }}</span>
-          </span>
-          <span class="num st-hv">{{ fmtMetric(s.key, leader(s)!.value) }}</span>
-        </template>
-        <span v-else-if="leader(s) === undefined" class="st-ld st-wait" aria-hidden="true"
-          ><i /><i
-        /></span>
-        <span v-else class="st-ld meta">{{
-          s.key === 'change'
-            ? 'No earlier patch'
-            : METRICS[s.key].source === 'lane'
-              ? 'Not counted yet'
-              : 'Too few games'
-        }}</span>
+  <div class="st-tiles">
+    <section v-for="t in tiles" :key="t.key" class="card st-tile" :aria-labelledby="`st-${t.key}`">
+      <Link
+        v-if="t.lead !== null"
+        class="fr st-art"
+        :href="href(t.first.slug)"
+        tabindex="-1"
+        aria-hidden="true"
+      >
+        <img
+          v-if="t.lead"
+          loading="lazy"
+          decoding="async"
+          fetchpriority="low"
+          width="960"
+          height="540"
+          alt=""
+          sizes="(max-width: 767px) calc(100vw - 48px), (max-width: 1023px) calc(50vw - 48px), 380px"
+          :srcset="`${art(t.lead.champion, 480)} 480w, ${art(t.lead.champion, 960)} 960w`"
+          :src="art(t.lead.champion, 480)"
+        />
       </Link>
+      <div class="st-tb">
+        <h2 :id="`st-${t.key}`" class="h3 st-th">
+          <Icon :name="t.icon" :size="16" />{{ t.label }}
+        </h2>
+        <Link class="st-top" :href="href(t.first.slug)">
+          <span class="meta">{{ t.first.label }}</span>
+          <span v-if="t.lead" class="st-lead">
+            <b class="num">{{ fmtMetric(t.first.key, t.lead.value) }}</b>
+            <span class="t2 ell">{{ t.lead.name }}</span>
+          </span>
+          <span v-else-if="t.lead === undefined" class="st-lead wait" aria-hidden="true"
+            ><i
+          /></span>
+          <span v-else class="st-lead none">{{ emptyText(t.first) }}</span>
+        </Link>
+        <nav v-if="t.rest.length" class="st-links" :aria-label="t.label">
+          <Link v-for="s in t.rest" :key="s.slug" :href="href(s.slug)">{{ s.label }}</Link>
+        </nav>
+      </div>
     </section>
   </div>
 </template>

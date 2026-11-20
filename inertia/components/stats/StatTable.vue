@@ -3,8 +3,9 @@ import { computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { RoleIcon } from '@invadelol/ui'
 import SortHead from '../ui/SortHead.vue'
+import EmptyState from '../ui/EmptyState.vue'
 import { useSort, type SortValue } from '../ui/sort.js'
-import { METRICS, fmtMetric, type MetricKey, type StatDef } from '../../lib/studio.js'
+import { METRICS, emptyText, fmtMetric, type MetricKey, type StatDef } from '../../lib/studio.js'
 
 /**
  * One statistic of the studio as a table: every champion of the list, ranked by the figure,
@@ -35,6 +36,15 @@ const cols = computed(() =>
   props.stat.wide ? [props.stat.key, ...props.stat.cols] : props.stat.cols
 )
 const main = computed(() => props.stat.key)
+/** No champion has the figure on this filter: the card says why instead of a column of dashes. */
+const empty = computed(
+  () => !props.rows.some((r) => typeof props.value(r.champion, main.value) === 'number')
+)
+const EMPTY_LINE: Record<string, string> = {
+  'No earlier patch': 'The change shows once the patch before is stored for this rank.',
+  'Not counted yet': "This patch's early game is not counted for this rank yet.",
+  'Too few games': 'Too few games carry this figure on this patch and rank.',
+}
 const signed = computed(() => Boolean(METRICS[main.value].signed))
 
 const columns = computed(() => {
@@ -95,7 +105,14 @@ const grid = computed(() =>
 </script>
 
 <template>
+  <EmptyState
+    v-if="empty"
+    :title="emptyText(stat)"
+    :line="EMPTY_LINE[emptyText(stat)]"
+    icon="chart"
+  />
   <div
+    v-else
     class="tbl st-tbl"
     :class="{ wide: stat.wide }"
     :style="{ '--st-cols': grid }"

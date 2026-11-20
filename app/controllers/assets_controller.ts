@@ -1,7 +1,10 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import logger from '@adonisjs/core/services/logger'
+import sharp from 'sharp'
 
-import riotAssetsService from '#services/riot/assets'
-import { cacheControl, parseAssetRequest } from '#services/riot/asset_paths'
+import riotAssetsService, { type AssetPayload } from '#services/riot/assets'
+import { artWidth, cacheControl, parseAssetRequest, resizedEtag } from '#services/riot/asset_paths'
+import { ByteCache } from '#utils/byte_cache'
 import { EncodedPayloadCache, negotiatePayload } from '#services/encoded_payload'
 import { MANIFESTS, NAMES_CACHE_SECONDS, type AssetKind } from '#constants/assets'
 /**
@@ -11,6 +14,35 @@ import { MANIFESTS, NAMES_CACHE_SECONDS, type AssetKind } from '#constants/asset
  * same work for the same answer, so it is done once per hour instead.
  */
 const namePayloads = new EncodedPayloadCache(NAMES_CACHE_SECONDS * 1000)
+
+/**
+ * Champion art asked at a width (`?w=480`), resized once per original (keyed by its validator)
+ * and kept a while: a page of art tiles weighs a fraction of the full 1280 px pictures.
+ */
+const resized = new ByteCache<Uint8Array>(48 * 1024 * 1024, 2000)
+const resizing = new Map<string, Promise<Uint8Array>>()
+const RESIZED_MS = 6 * 3600_000
+
+function resize(served: AssetPayload, width: number): Promise<Uint8Array> {
+  const key = `${served.etag}:${width}`
+  const kept = resized.get(key)
+  if (kept) return Promise.resolve(kept)
+  let pending = resizing.get(key)
+  if (!pending) {
+    pending = sharp(served.body)
+      .resize({ width, withoutEnlargement: true })
+      .jpeg({ quality: 78, mozjpeg: true })
+      .toBuffer()
+      .then((buffer) => {
+        const bytes = new Uint8Array(buffer)
+        resized.set(key, bytes, bytes.byteLength, RESIZED_MS)
+        return bytes
+      })
+      .finally(() => resizing.delete(key))
+    resizing.set(key, pending)
+  }
+  return pending
+}
 
 /**
  * Proxies Riot's game art through our own origin (docs/cdn.md).
@@ -27,6 +59,21 @@ export default class AssetsController {
     if (!asset) return response.notFound()
 
     const served = await riotAssetsService.get(asset.kind, asset.id, asset.patch)
+    // A width is only honoured on real art (a placeholder is a small drawing already).
+    const width =
+      served.placeholder || !served.etag ? null : artWidth(asset.kind, request.input('w'))
+    let body = served.body
+    let contentType = served.contentType
+    let etag = served.etag
+    if (width && etag) {
+      try {
+        body = await resize(served, width)
+        contentType = 'image/jpeg'
+        etag = resizedEtag(etag, width)
+      } catch (error) {
+        logger.warn({ err: error, kind: asset.kind, id: asset.id, width }, 'art resize failed')
+      }
+    }
 
     response.header('Cache-Control', cacheControl(served))
     response.header('X-Asset-Source', served.placeholder ? 'placeholder' : 'riot')
@@ -40,14 +87,14 @@ export default class AssetsController {
     response.header('Access-Control-Allow-Origin', '*')
     response.header('Cross-Origin-Resource-Policy', 'cross-origin')
 
-    if (served.etag) {
-      response.header('ETag', served.etag)
+    if (etag) {
+      response.header('ETag', etag)
       response.header('Last-Modified', served.modified!.toUTCString())
-      if (request.header('if-none-match') === served.etag) return response.status(304).send(null)
+      if (request.header('if-none-match') === etag) return response.status(304).send(null)
     }
 
-    response.header('Content-Type', served.contentType)
-    return response.send(Buffer.from(served.body))
+    response.header('Content-Type', contentType)
+    return response.send(Buffer.from(body))
   }
 
   /**
