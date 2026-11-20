@@ -64,7 +64,7 @@ interface Row {
  * `/leaderboards/pros`, the pros' page: pros ranked by their best solo queue account (app/services/
  * pro_ladder_service.ts). A league (the first by default, as the board opens) lists all its
  * players, subs and the unranked included, with its next games; `league=all` every pro in Master
- * and above. The podium, the apex tiers, the filters and the table.
+ * and above. The leader and the next two beside the apex tiers, the filters and the table.
  */
 const props = defineProps<{
   leagues: { slug: string; code: string; name: string; region: string | null }[]
@@ -81,6 +81,8 @@ const props = defineProps<{
   }
   apex: Record<'CHALLENGER' | 'GRANDMASTER' | 'MASTER', number>
   podium: Row[]
+  /** Whether the leader's photo is a cutout, which rises above their stage. */
+  leaderCutout: boolean
   rows: Row[]
   total: number
   pros: number
@@ -152,6 +154,19 @@ watch(search, (q) => {
 
 const leagueCode = computed(() => props.leagues.find((l) => l.slug === props.filters.league)?.code)
 const next = computed(() => matchList(props.next))
+/** "st", "nd", "rd", "th" after a place. */
+const ord = (place: number) =>
+  place % 100 >= 11 && place % 100 <= 13 ? 'th' : (['th', 'st', 'nd', 'rd'][place % 10] ?? 'th')
+/** The leader's LP lead on the second, and every other's gap to the leader. */
+const gapLine = (r: Row) => {
+  const [first, second] = props.podium
+  if (!r.account || !first?.account) return ''
+  if (r === first) {
+    return second?.account ? `${n(first.account.lp - second.account.lp)} LP ahead` : ''
+  }
+  return `${n(first.account.lp - r.account.lp)} LP behind`
+}
+const APEX = ['CHALLENGER', 'GRANDMASTER', 'MASTER'] as const
 const short = (r: Row) =>
   [r.pro.team?.shortName ?? r.pro.team?.name, roleLabel(r.pro.role).toLowerCase()]
     .filter(Boolean)
@@ -191,45 +206,88 @@ const short = (r: Row) =>
         line="Pros appear once one of their accounts reaches Master."
       />
 
-      <template v-else>
-        <div class="pod3">
-          <Link v-for="r in podium" :key="r.place" class="podc" :href="`/pro/${r.pro.slug}`">
-            <span class="no3 lab">#{{ r.place }}</span>
-            <Frame stage
+      <!-- The leader, the next two under them, the apex tiers beside, in one sheet. -->
+      <div v-else class="pl-top">
+        <div>
+          <Link
+            v-for="r in podium.slice(0, 1)"
+            :key="r.place"
+            class="pl-lead"
+            :href="`/pro/${r.pro.slug}`"
+          >
+            <span class="pl-no"
+              >{{ r.place }}<sup>{{ ord(r.place) }}</sup></span
+            >
+            <span class="pl-cut" :class="{ flat: r.pro.photo && !leaderCutout }"
               ><ProPic :slug="r.pro.slug" :photo="r.pro.photo" :team="r.pro.team" :size="240" eager
-            /></Frame>
-            <span class="col">
-              <span class="h2">{{ r.pro.name }}</span>
-              <span class="meta row" style="gap: 6px; margin-top: 3px"
+            /></span>
+            <span class="col" style="min-width: 0">
+              <span class="pl-nm ell">{{ r.pro.name }}</span>
+              <span class="meta row" style="gap: 6px; margin-top: 4px; min-width: 0"
                 ><Logo
                   v-if="r.pro.team"
                   :team="r.pro.team.id"
                   :size="16"
-                  style="width: 15px; height: 15px; object-fit: contain"
-                />{{ short(r) }}</span
+                  style="width: 15px; height: 15px; object-fit: contain" /><span class="ell">{{
+                  [r.pro.team?.name ?? 'No team', roleLabel(r.pro.role).toLowerCase()]
+                    .filter(Boolean)
+                    .join(', ')
+                }}</span
+                ><Flag
+                  v-if="r.pro.country"
+                  :code="r.pro.country"
+                  :size="16"
+                  style="margin-left: 4px"
+                  :title="r.pro.countryName ?? undefined"
+              /></span>
+            </span>
+            <span v-if="r.account" class="pl-lp">
+              <span class="row" style="gap: 8px; justify-content: flex-end"
+                ><RankEmblem :tier="r.account.tier" :size="30" /><span class="fg-l"
+                  >{{ n(r.account.lp) }}<span class="u">LP</span></span
+                ></span
               >
-              <span v-if="r.account" class="row" style="gap: 6px; margin-top: 12px">
-                <RankEmblem :tier="r.account.tier" :size="24" />
-                <span class="fg-s">{{ n(r.account.lp) }}<span class="u">LP</span></span>
-              </span>
+              <span class="meta">{{ gapLine(r) }}</span>
             </span>
           </Link>
-          <div class="card">
-            <div class="card-h"><span class="h3">Apex tiers</span></div>
-            <div
-              v-for="t in ['CHALLENGER', 'GRANDMASTER', 'MASTER'] as const"
-              :key="t"
-              class="lrow"
-              style="min-height: 46px"
+          <Link
+            v-for="r in podium.slice(1)"
+            :key="r.place"
+            class="pl-ln"
+            :href="`/pro/${r.pro.slug}`"
+          >
+            <span class="pl-no sm"
+              >{{ r.place }}<sup>{{ ord(r.place) }}</sup></span
             >
-              <RankEmblem :tier="t" :size="26" />
-              <span class="h5 grow">{{ rankWords(t) }}</span>
-              <span class="fg-xs">{{ apex[t] }}</span>
-              <span class="meta">pros</span>
-            </div>
+            <span class="ppic"
+              ><ProPic :slug="r.pro.slug" :photo="r.pro.photo" :team="r.pro.team" :size="40"
+            /></span>
+            <span class="col" style="min-width: 0">
+              <span class="h4 ell">{{ r.pro.name }}</span>
+              <span class="meta row" style="gap: 5px; min-width: 0"
+                ><Logo
+                  v-if="r.pro.team"
+                  :team="r.pro.team.id"
+                  :size="14"
+                  style="width: 14px; height: 14px; object-fit: contain"
+                /><span class="ell">{{ short(r) }}</span></span
+              >
+            </span>
+            <span v-if="r.account" class="h5 num">{{ n(r.account.lp) }} LP</span>
+            <span v-else></span>
+            <span class="meta pl-gap">{{ gapLine(r) }}</span>
+          </Link>
+        </div>
+        <div class="pl-tiers">
+          <span class="lab">Apex tiers</span>
+          <div v-for="t in APEX" :key="t" class="pl-tier">
+            <RankEmblem :tier="t" :size="26" />
+            <span class="h5 grow">{{ rankWords(t) }}</span>
+            <span class="fg-xs">{{ apex[t] }}</span>
+            <span class="meta">pros</span>
           </div>
         </div>
-      </template>
+      </div>
 
       <div class="bar-f" style="margin: 24px 0 16px">
         <RoleFilter :active="filters.role" :href="(role) => href({ role })" />

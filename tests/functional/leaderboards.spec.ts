@@ -4,6 +4,7 @@ import ladderService, { clickhouseSource, type LadderSource } from '#services/la
 import { redisHistory, type HistoryPoint, type HistoryStore } from '#services/ladder_history'
 import flexLadderService, { postgresSource, type FlexSource } from '#services/flex_ladder_service'
 import type { ApexEntry, GamesRow } from '#services/ladder'
+import { SIGNATURE_GAMES } from '#services/pro_service'
 
 /** Made-up players only: the repository is public. A PUUID is 78 characters. */
 const puuid = (name: string) => `test-board-${name}-`.padEnd(78, 'x')
@@ -363,6 +364,23 @@ test.group('Leaderboards', (group) => {
     all.assertStatus(200)
     assert.equal(propsOf(all.text()).filters.league, 'all')
   }).timeout(60_000)
+
+  test("a pro's page stands them before a champion they play, never a one-game pick", async ({
+    client,
+    assert,
+  }) => {
+    const board = propsOf((await client.get('/leaderboards/pros')).text())
+    for (const r of board.rows.slice(0, 5)) {
+      const page = await client.get(`/pro/${r.pro.slug}`)
+      page.assertStatus(200)
+      const props = propsOf(page.text())
+      assert.notProperty(props, 'ladder')
+      if (props.signature === null) continue
+      assert.isAbove(props.signature.champion, 0)
+      assert.isAtLeast(props.signature.games, SIGNATURE_GAMES)
+      assert.isAtMost(props.signature.wins, props.signature.games)
+    }
+  }).timeout(120_000)
 
   test('the pros page leads to the pro ladder, its league kept', async ({ client, assert }) => {
     const bare = await client.get('/pros').redirects(0)

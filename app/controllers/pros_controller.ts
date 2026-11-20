@@ -1,7 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import proService from '#services/pro_service'
 import championStatsService from '#services/champion_stats_service'
-import proLadderService from '#services/pro_ladder_service'
 import teamLogoService, { groundOf, logoSize } from '#services/team_logo_service'
 import proPhotoService, { photoSize } from '#services/pro_photo_service'
 import proMatchService, { split, type ProMatch } from '#services/pro_match_service'
@@ -270,14 +269,13 @@ export default class ProsController {
     if (pro.team) crumbs.push({ name: pro.team.name, path: `/team/${pro.team.slug}` })
     crumbs.push({ name: pro.name, path: `/pro/${pro.slug}` })
     // Its games as stored matches, drawn and opened like a profile's; their team's roster and
-    // where they stand on the pro ladder.
-    const [games, team, ladder, leaguePlace] = await Promise.all([
+    // the champion they play most, which the hero stands them before.
+    const [games, team, signature, cutout] = await Promise.all([
       proService.recentMatches(pro.games),
       pro.team ? proService.team(pro.team.slug).catch(() => null) : null,
-      proLadderService.ladder().catch(() => ({ total: 0, rows: [] })),
-      esportsService.leaguePlace(pro.slug, pro.league?.slug).catch(() => null),
+      proService.signature(pro.id),
+      pro.photo ? proPhotoService.cutout(pro.slug) : false,
     ])
-    const onLadder = ladder.rows.find((r) => r.pro.slug === pro.slug)
     const roster = team
       ? {
           team: {
@@ -304,9 +302,9 @@ export default class ProsController {
       pro: shown,
       games,
       roster,
-      ladder: onLadder ? { place: onLadder.place, total: ladder.total } : null,
-      /** Their place among their league's pros ("#1 of 55 ranked pros"). */
-      leaguePlace,
+      signature,
+      /** Whether their photo is a cutout, which can stand before the champion's art. */
+      cutout,
       matches: { next: matches?.next[0] ?? null, last: matches?.results[0] ?? null },
       now: Date.now(),
       names: await championNames(),

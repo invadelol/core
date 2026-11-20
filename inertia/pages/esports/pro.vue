@@ -18,7 +18,7 @@ import Flag from '../../components/pros/Flag.vue'
 import SocialIcon from '../../components/pros/SocialIcon.vue'
 import GameModal from '../../components/pros/GameModal.vue'
 import { useSort } from '../../components/ui/sort.js'
-import { champIcon, assetUrl, profileIcon } from '../../lib/assets.js'
+import { champIcon, assetUrl, championSplash, profileIcon } from '../../lib/assets.js'
 import { countryName } from '../../lib/board.js'
 import { laneOf, n, rankValue, rankWords, roleLabel, winPct } from '../../lib/ladders.js'
 import { profilePath } from '../../lib/format.js'
@@ -85,9 +85,9 @@ interface Build {
 type Tab = 'overview' | 'solo' | 'champions' | 'accounts' | 'career'
 
 /**
- * `/pro/:slug`: a pro, as the board draws them: the hero with their place on their league's ladder,
- * best account and recent record; tabs for their team, solo queue, champions, accounts and career.
- * The tab is in the address (`?tab=accounts`).
+ * `/pro/:slug`: a pro, as the board draws them: the hero stands them before the art of the
+ * champion they play most, with who they are and where they post; tabs for their team, solo
+ * queue, champions, accounts and career. The tab is in the address (`?tab=accounts`).
  */
 const props = defineProps<{
   pro: {
@@ -130,8 +130,13 @@ const props = defineProps<{
       best: { tier: string; division: number | null; lp: number } | null
     }[]
   } | null
-  leaguePlace: { place: number; total: number } | null
-  ladder: { place: number; total: number } | null
+  /**
+   * The champion they play most in solo queue over months, once they played it a few times
+   * (app/services/pro_service.ts, `signatureOf`); null without one, and the hero keeps its stage.
+   */
+  signature: { champion: number; games: number; wins: number } | null
+  /** Whether their photo is a cutout (a figure on transparency), which can stand before art. */
+  cutout: boolean
   names: Record<number, [string, string]>
   /** Their recent games as stored matches, with their side in each: what a game opens on. */
   games: { match: Match; puuid: string; gameName: string; tagLine: string }[]
@@ -177,10 +182,13 @@ const realName = computed(() =>
   [props.pro.about?.firstName, props.pro.about?.lastName].filter(Boolean).join(' ')
 )
 const best = computed(() => props.pro.accounts.find((a) => a.tier) ?? null)
-const peak = computed(() => {
-  const peaks = props.pro.accounts.map((a) => a.peakLp ?? 0).filter(Boolean)
-  return peaks.length ? Math.max(...peaks) : null
-})
+/**
+ * The champion art the hero stands them before: only with a figure to stand there, their cutout
+ * or, without a photo, their team's logo. A plain photo (a room behind them) fills its own frame.
+ */
+const art = computed(() =>
+  props.cutout || (!props.pro.photo && props.pro.team) ? props.signature : null
+)
 /** Where a pro streams and posts, as stored: a handle, or an address on that network. */
 const SOCIALS = [
   { key: 'twitch', name: 'Twitch', hosts: ['twitch.tv'], home: 'https://www.twitch.tv/' },
@@ -391,10 +399,19 @@ const PLATFORM: Record<string, string> = {
         </nav>
       </div>
 
-      <section class="card pp-hero">
-        <Frame class="ph5" stage
-          ><ProPic :slug="pro.slug" :photo="pro.photo" :team="pro.team" :size="240" eager
-        /></Frame>
+      <section class="card pp-hero pp-pro" :class="{ plain: !art }">
+        <!-- The pro before the art of the champion they play most; else on their stage. -->
+        <Frame class="pp-art" :src="art ? championSplash(art.champion) : null" eager stage>
+          <ProPic :slug="pro.slug" :photo="pro.photo" :team="pro.team" :size="240" eager />
+          <Link
+            v-if="art"
+            class="pp-cap"
+            :href="`/champions/${slugOf(art.champion)}`"
+            title="Their most played champion in solo queue, last four months"
+            ><img :src="champIcon(art.champion)" alt="" />{{ nameOf(art.champion)
+            }}<span>{{ n(art.games) }} games</span></Link
+          >
+        </Frame>
         <div class="col" style="justify-content: center; min-width: 0">
           <h1 class="pp-name">{{ pro.name }}</h1>
           <p v-if="realName" class="body" style="margin-top: 8px">{{ realName }}</p>
@@ -411,6 +428,11 @@ const PLATFORM: Record<string, string> = {
             <span v-if="country" class="tagx"
               ><Flag :code="country" :size="18" />{{ countryName(country) }}</span
             >
+            <span v-if="best?.tier" class="tagx"
+              ><RankEmblem :tier="best.tier" :size="20" />{{
+                rankWords(best.tier, best.division)
+              }}</span
+            >
           </div>
           <div class="row" style="gap: 10px; margin-top: 22px; flex-wrap: wrap">
             <button class="btn" type="button" @click="share">
@@ -426,45 +448,6 @@ const PLATFORM: Record<string, string> = {
               :aria-label="`${x.handle} on ${x.name}`"
               :title="x.name"
               ><SocialIcon :name="x.icon" />{{ x.handle }}</a
-            >
-          </div>
-        </div>
-        <div class="pp-kv">
-          <div v-if="leaguePlace && pro.league">
-            <span class="lab">{{ pro.league.code }} ladder</span>
-            <span
-              ><span class="fg-l">#{{ leaguePlace.place }}</span>
-              <span class="meta">of {{ leaguePlace.total }} ranked pros</span></span
-            >
-          </div>
-          <div v-else-if="ladder">
-            <span class="lab">Pro ladder</span>
-            <span
-              ><span class="fg-l">#{{ n(ladder.place) }}</span>
-              <span class="meta">of {{ n(ladder.total) }} ranked pros</span></span
-            >
-          </div>
-          <div>
-            <span class="lab">Solo queue</span>
-            <span v-if="best?.tier"
-              ><span class="fg-l gd">{{
-                best.lp !== null ? n(best.lp) : rankWords(best.tier, best.division)
-              }}</span>
-              <span class="meta">{{
-                ['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(best.tier)
-                  ? `LP${peak ? `, peak ${n(peak)}` : ''}`
-                  : `LP, ${rankWords(best.tier, best.division)}`
-              }}</span></span
-            >
-            <span v-else class="meta">Unranked</span>
-          </div>
-          <div v-if="pro.record.games">
-            <span class="lab">Last {{ pro.record.games }} games</span>
-            <span
-              ><span class="fg-l">{{ winPct(pro.record.wins, pro.record.games) }}</span>
-              <span class="meta"
-                >{{ pro.record.wins }}W {{ pro.record.games - pro.record.wins }}L</span
-              ></span
             >
           </div>
         </div>
