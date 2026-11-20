@@ -575,6 +575,12 @@
   .vb .pp-art > img {
     object-position: 50% 28%;
   }
+  /* Behind the pro, their main stays quiet, like a profile's: faded, and gone toward the pro. */
+  .vb .pg-es .pp-pro:not(.plain) .pp-art > img {
+    opacity: 0.5;
+    -webkit-mask-image: radial-gradient(115% 135% at 100% 15%, #000 30%, transparent 82%);
+    mask-image: radial-gradient(115% 135% at 100% 15%, #000 30%, transparent 82%);
+  }
   .vb .pp-art > .pro-pic {
     position: absolute;
     inset: 0;
