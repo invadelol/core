@@ -21,6 +21,12 @@ upstream's. The desktop app pins the patch of its bundled data, so its URLs
 never change within a release and never need revalidating. The site follows
 the live patch.
 
+Champion art (`splash`, `centered`, `loading`) can be asked at a width:
+`?w=480` or `?w=960` (any other value is ignored). The proxy resizes the real
+art once per original (JPEG, kept a few hours in memory, an `ETag` of its own)
+under the same `Cache-Control`; a placeholder is served as it is. A page of art
+tiles fetches about the size it shows instead of the 1280 px picture.
+
 A pinned patch must be one of the last six on Data Dragon's version list. An
 older one (an app left un-updated for months) is served the live art under the
 live cache lifetime, which keeps the mirror bounded to six copies of the art.
