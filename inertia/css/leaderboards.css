@@ -143,163 +143,6 @@
     margin-left: -10px;
   }
 
-  /* solo: the leader banner (#1 with the art of their main champion), #2 to #5, the cutoffs */
-  .vb .sb-ban {
-    position: relative;
-    display: block;
-    height: 248px;
-    border-radius: var(--r3);
-    background: var(--s1);
-    box-shadow: inset 0 0 0 1px var(--line);
-    overflow: hidden;
-  }
-  .vb .sb-art {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 62%;
-    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 46%);
-    mask-image: linear-gradient(90deg, transparent 0%, #000 46%);
-  }
-  .vb .sb-art img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: 62% 22%;
-    filter: saturate(0.85) brightness(0.82);
-    transition: transform var(--m-slow) var(--ease);
-  }
-  .vb .sb-ban:hover .sb-art img {
-    transform: scale(1.02);
-  }
-  .vb .sb-art::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      0deg,
-      color-mix(in srgb, var(--s1) 75%, transparent),
-      transparent 45%
-    );
-  }
-  .vb .sb-in {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    height: 100%;
-    padding: 24px 28px;
-  }
-  .vb .sb-l1 {
-    gap: 12px;
-  }
-  .vb .sb-k {
-    display: inline-flex;
-    align-items: center;
-    height: 24px;
-    padding: 0 9px;
-    border-radius: 6px;
-    background: var(--v100);
-    font-size: 12px;
-    font-weight: 800;
-    color: var(--ink-1);
-  }
-  .vb .sb-who {
-    gap: 16px;
-    min-width: 0;
-  }
-  .vb .sb-pic {
-    width: 72px;
-    height: 72px;
-    flex: none;
-    border-radius: 12px;
-  }
-  .vb .sb-nm {
-    font-size: 30px;
-    line-height: 1.1;
-    font-weight: 650;
-    letter-spacing: -0.02em;
-  }
-  .vb .sb-fig {
-    gap: 12px;
-  }
-  .vb .sb-chs {
-    gap: 22px;
-  }
-  .vb .sb-sc {
-    gap: 8px;
-    margin-left: 12px;
-  }
-  .vb .sb-row {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 12px;
-    margin-top: 12px;
-  }
-  .vb .sb-s {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-width: 0;
-    padding: 14px 16px;
-    border-radius: var(--r3);
-    background: var(--s1);
-    box-shadow: inset 0 0 0 1px var(--line);
-    transition: background 160ms var(--ease);
-  }
-  .vb .sb-s:hover {
-    background: var(--s2);
-  }
-  .vb .sb-m {
-    gap: 6px;
-    white-space: nowrap;
-  }
-  .vb .sb-sp {
-    width: 40px;
-    height: 40px;
-  }
-  /* The place, as read: "2nd", "3rd" bright, "4th", "5th" grey. */
-  .vb .sb-no {
-    flex: none;
-    min-width: 30px;
-    font-size: 17px;
-    font-weight: 800;
-    color: var(--t3);
-    font-variant-numeric: tabular-nums;
-    letter-spacing: -0.01em;
-  }
-  .vb .sb-no.hi {
-    color: var(--t1);
-  }
-  .vb .sb-ord {
-    margin-left: 1px;
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--t3);
-    vertical-align: 5px;
-  }
-  .vb .sb-cut {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-    margin-top: 12px;
-    padding: 12px 18px;
-    border-radius: var(--r3);
-    background: var(--ink-1);
-    box-shadow: inset 0 0 0 1px var(--line);
-    font-size: 14px;
-  }
-  .vb .sb-cut b {
-    font-weight: 700;
-  }
-  .vb .sb-ct {
-    gap: 8px;
-  }
-  .vb .sb-nx {
-    margin-left: auto;
-  }
   .vb .lb-cs {
     display: grid;
     grid-template-columns: 236px 236px minmax(0, 1fr) 200px;
@@ -702,12 +545,6 @@
     }
   }
   @media (max-width: 1023px) {
-    .vb .sb-row {
-      grid-template-columns: 1fr 1fr;
-    }
-    .vb .sb-sc {
-      display: none;
-    }
     .vb .lb-ot {
       grid-template-columns: 1fr;
     }
@@ -775,77 +612,6 @@
     .vb .lb-cs > div + div {
       border-left: 0;
       border-top: 1px solid var(--line);
-    }
-    /* The banner: the art over its top, fading down; the figures under it. */
-    .vb .sb-ban {
-      height: auto;
-      min-height: 236px;
-    }
-    .vb .sb-art {
-      width: 100%;
-      -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.2) 100%);
-      mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.2) 100%);
-    }
-    .vb .sb-art img {
-      object-position: 70% 20%;
-    }
-    .vb .sb-in {
-      justify-content: flex-end;
-      gap: 12px;
-      min-height: 236px;
-      padding: 16px;
-    }
-    .vb .sb-l1 {
-      flex-wrap: wrap;
-      gap: 8px 12px;
-    }
-    .vb .sb-pic {
-      width: 52px;
-      height: 52px;
-    }
-    .vb .sb-nm {
-      font-size: 22px;
-    }
-    .vb .sb-fig {
-      flex-wrap: wrap;
-      gap: 6px 10px;
-    }
-    .vb .sb-fig .fg-l {
-      font-size: 24px;
-    }
-    .vb .sb-chs,
-    .vb .sb-hm {
-      display: none;
-    }
-    .vb .sb-row {
-      gap: 8px;
-      margin-top: 8px;
-    }
-    .vb .sb-s {
-      padding: 10px 12px;
-      gap: 10px;
-    }
-    .vb .sb-no {
-      min-width: 26px;
-      font-size: 15px;
-    }
-    .vb .sb-s .h4 {
-      font-size: 14px;
-    }
-    .vb .sb-s .fr,
-    .vb .sb-s .sb-sp {
-      width: 32px !important;
-      height: 32px !important;
-    }
-    .vb .sb-cut {
-      flex-wrap: wrap;
-      gap: 8px 18px;
-      margin-top: 8px;
-      padding: 12px 14px;
-    }
-    .vb .sb-nx {
-      margin-left: 0;
-      flex-basis: 100%;
     }
     /* The header: the art over its top, fading down; the plate a line of three. */
     .vb .oa {
@@ -1011,6 +777,224 @@
     }
     .vb .lb-sec > .row {
       width: 100%;
+    }
+  }
+}
+
+/* ── Solo/Duo: the leaders and what each apex tier takes, one sheet (`sl-`, solo.vue) ── */
+@layer components {
+  .vb .sl {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    overflow: hidden;
+  }
+  .vb .sl-lead {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  /* The place as read: a large figure, "st/nd/rd" set small beside it; #1 bright, #2 and #3 grey. */
+  .vb .sl-no {
+    flex: none;
+    font-size: 28px;
+    line-height: 1;
+    font-weight: 650;
+    letter-spacing: -0.03em;
+    color: var(--t3);
+    font-variant-numeric: tabular-nums;
+  }
+  .vb .sl-no.hi {
+    color: var(--t1);
+  }
+  .vb .sl-ord {
+    margin-left: 1px;
+    font-size: 0.42em;
+    font-weight: 600;
+    letter-spacing: 0;
+    vertical-align: 0.95em;
+    color: var(--t3);
+  }
+  .vb .sl .u {
+    margin-left: 2px;
+    font-size: 0.55em;
+    font-weight: 600;
+    color: var(--t3);
+  }
+
+  /* #1: a short banner, their champion's art between their name and their LP */
+  .vb .sl-one {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-height: 112px;
+    padding: 20px 24px;
+    overflow: hidden;
+    transition: background 160ms var(--ease);
+  }
+  .vb .sl-art {
+    position: absolute;
+    inset: 0 20% 0 34%;
+    pointer-events: none;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 40%, #000 72%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 40%, #000 72%, transparent);
+    opacity: 0.6;
+  }
+  .vb .sl-art img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 60% 22%;
+    filter: saturate(0.8) brightness(0.75);
+  }
+  /* On a white sheet the art keeps its light: dimmed, it reads as a grey smear. */
+  [data-theme='light'] .vb .sl-art {
+    opacity: 0.75;
+  }
+  [data-theme='light'] .vb .sl-art img {
+    filter: saturate(0.9);
+  }
+  .vb .sl-one > :not(.sl-art) {
+    position: relative;
+  }
+  .vb .sl-pic {
+    width: 56px;
+    height: 56px;
+    flex: none;
+    border-radius: 12px;
+  }
+  .vb .sl-who {
+    flex: 1;
+    gap: 4px;
+    min-width: 0;
+  }
+  .vb .sl-nm {
+    font-size: 22px;
+    line-height: 1.15;
+    font-weight: 650;
+    letter-spacing: -0.015em;
+  }
+  .vb .sl-mt {
+    gap: 6px;
+    min-width: 0;
+  }
+  .vb .sl-mt .iv-role-icon {
+    flex: none;
+  }
+  .vb .sl-lp {
+    flex: none;
+    align-items: flex-end;
+    gap: 4px;
+    margin-left: auto;
+  }
+
+  /* #2 and #3: a line each */
+  .vb .sl-r {
+    display: grid;
+    grid-template-columns: 40px 32px minmax(0, 1fr) 72px 92px 76px;
+    align-items: center;
+    gap: 12px;
+    min-height: 52px;
+    padding: 0 24px;
+    border-top: 1px solid var(--line);
+    transition: background 160ms var(--ease);
+  }
+  .vb .sl-r:hover,
+  .vb .sl-one:hover {
+    background: rgb(var(--v-rgb) / 0.04);
+  }
+  .vb .sl-r .sl-no {
+    font-size: 20px;
+  }
+  .vb .sl-sp {
+    width: 32px;
+    height: 32px;
+  }
+  .vb .sl-rl {
+    gap: 6px;
+  }
+  .vb .sl-rv {
+    text-align: right;
+  }
+
+  /* What Challenger and Grandmaster take now */
+  .vb .sl-cut {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px 22px;
+    border-left: 1px solid var(--line);
+  }
+  .vb .sl-t {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .vb .sl-tv {
+    flex: none;
+    align-items: flex-end;
+    gap: 2px;
+    margin-left: auto;
+  }
+  .vb .sl-nx {
+    margin-top: auto;
+  }
+
+  @media (max-width: 1023px) {
+    .vb .sl {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .vb .sl-cut {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 12px 24px;
+      border-left: 0;
+      border-top: 1px solid var(--line);
+    }
+    .vb .sl-cut > .lab,
+    .vb .sl-nx {
+      grid-column: 1 / -1;
+    }
+  }
+  @media (max-width: 767px) {
+    .vb .sl-one {
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 16px;
+    }
+    /* The art over the whole banner, behind the name: quieter, fading down. */
+    .vb .sl-art {
+      inset: 0;
+      opacity: 0.4;
+      -webkit-mask-image: linear-gradient(180deg, #000, transparent);
+      mask-image: linear-gradient(180deg, #000, transparent);
+    }
+    [data-theme='light'] .vb .sl-art {
+      opacity: 0.28;
+    }
+    .vb .sl-pic {
+      width: 48px;
+      height: 48px;
+    }
+    .vb .sl-nm {
+      font-size: 19px;
+    }
+    .vb .sl-lp {
+      align-items: flex-start;
+      margin-left: 0;
+      flex-basis: 100%;
+    }
+    .vb .sl-r {
+      grid-template-columns: 32px 28px minmax(0, 1fr) auto;
+      padding: 0 16px;
+    }
+    .vb .sl-rl,
+    .vb .sl-gap {
+      display: none;
+    }
+    .vb .sl-cut {
+      grid-template-columns: minmax(0, 1fr);
+      padding: 16px;
     }
   }
 }
