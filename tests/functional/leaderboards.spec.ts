@@ -171,11 +171,14 @@ test.group('Leaderboards', (group) => {
         ['GRANDMASTER', 1500, 1],
       ]
     )
-    // The top five when the ladder has them: this one has three.
-    assert.equal(props.podium.length, 3)
-    // A first read: no moves and no cutoff line yet, nothing made up in their place.
+    // The head of the page: the first three, in ladder order.
+    assert.deepEqual(
+      props.podium.map((r: any) => r.place),
+      [1, 2, 3]
+    )
+    // A first read: no moves yet, nothing made up in their place.
     assert.isNull(props.movesSince)
-    assert.deepEqual(props.cutoffLines, { CHALLENGER: [], GRANDMASTER: [] })
+    assert.isNull(props.cutoffs[0].change)
     assert.isNull(props.rows[0].move)
     assert.equal(props.region.platform, 'EUW1')
   })

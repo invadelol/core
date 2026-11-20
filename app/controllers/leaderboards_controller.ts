@@ -186,20 +186,14 @@ export default class LeaderboardsController {
       pages,
       total,
     } = pageOf(sorted, pageParam(request.input('page')), PAGE)
-    // The top five: #1 on the leader banner, #2 to #5 as small cards beside it.
-    const podiumEntries = snapshot.entries.slice(0, 5)
-    const [scores, podiumScores] = await Promise.all([
-      ladderService.scores(shown),
-      ladderService.scores(podiumEntries),
-    ])
-    const scored = (entries: ApexEntry[], found: typeof scores) =>
-      ladderService.rowsOf(snapshot, entries).map((r, i) => {
-        const s = found.get(entries[i].puuid)
-        return { ...r, score: s?.score ?? null, scoreGames: s?.games ?? 0 }
-      })
-    const rows = scored(shown, scores)
-    const podium = scored(podiumEntries, podiumScores)
-    const overview = ladderService.overview(snapshot)
+    const scores = await ladderService.scores(shown)
+    const rows = ladderService.rowsOf(snapshot, shown).map((r, i) => {
+      const s = scores.get(shown[i].puuid)
+      return { ...r, score: s?.score ?? null, scoreGames: s?.games ?? 0 }
+    })
+    // The head of the page: #1 on a short banner, #2 and #3 in a line each.
+    const podium = ladderService.rowsOf(snapshot, snapshot.entries.slice(0, 3))
+    const { cutoffs, movesSince, roles, updatedAt } = ladderService.overview(snapshot)
     const filtered = Boolean(role || tier || prosOnly || q || page > 1 || sortProp(order).sort)
     const leader = podium[0]
 
@@ -213,7 +207,10 @@ export default class LeaderboardsController {
         ...sortProp(order),
       },
       podium,
-      ...overview,
+      cutoffs,
+      movesSince,
+      roles,
+      updatedAt,
       rows,
       total,
       players: snapshot.entries.length,
