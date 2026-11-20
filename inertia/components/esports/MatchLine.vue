@@ -1,23 +1,23 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
 import MatchTime from '../pros/MatchTime.vue'
+import Logo from '../pros/Logo.vue'
 import { isLive, stageLine, teamLabel, type ProMatch } from '../../lib/pro_matches.js'
-import { leagueLogo } from '../../lib/board.js'
 
 /**
  * One pro match on a line (`.lrow`): the league, both teams with their logos, the score once it
  * started (the winner white, the other grey) or its time, and a Watch link while it is live.
  */
 defineProps<{ match: ProMatch; league?: boolean }>()
-const logo = (t: ProMatch['teams'][number]) => (t.id ? `/cdn/team/${t.id}?s=48` : null)
 </script>
 
 <template>
   <div class="lrow es-ml">
-    <img
+    <Logo
       v-if="league && match.league"
       class="es-lg"
-      :src="leagueLogo(match.league.slug, 40)"
+      :league="match.league.slug"
+      :size="24"
       :alt="match.league.code"
       :title="match.league.name"
     />
@@ -29,7 +29,7 @@ const logo = (t: ProMatch['teams'][number]) => (t.id ? `/cdn/team/${t.id}?s=48` 
         :class="{ t3: match.winner === 2 }"
         >{{ teamLabel(match.teams[0]) }}</component
       >
-      <img v-if="logo(match.teams[0])" :src="logo(match.teams[0])!" alt="" />
+      <Logo v-if="match.teams[0].id" :team="match.teams[0].id" :size="28" />
       <i v-else></i>
     </span>
     <span class="es-sc">
@@ -46,7 +46,7 @@ const logo = (t: ProMatch['teams'][number]) => (t.id ? `/cdn/team/${t.id}?s=48` 
       </template>
     </span>
     <span class="es-t">
-      <img v-if="logo(match.teams[1])" :src="logo(match.teams[1])!" alt="" />
+      <Logo v-if="match.teams[1].id" :team="match.teams[1].id" :size="28" />
       <i v-else></i>
       <component
         :is="match.teams[1].slug ? Link : 'span'"
