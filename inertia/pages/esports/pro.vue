@@ -14,6 +14,8 @@ import FormStrip from '../../components/ui/FormStrip.vue'
 import SortHead from '../../components/ui/SortHead.vue'
 import Logo from '../../components/pros/Logo.vue'
 import ProPic from '../../components/pros/ProPic.vue'
+import Flag from '../../components/pros/Flag.vue'
+import SocialIcon from '../../components/pros/SocialIcon.vue'
 import { useSort } from '../../components/ui/sort.js'
 import { champIcon, assetUrl } from '../../lib/assets.js'
 import { countryName } from '../../lib/board.js'
@@ -173,10 +175,46 @@ const peak = computed(() => {
   const peaks = props.pro.accounts.map((a) => a.peakLp ?? 0).filter(Boolean)
   return peaks.length ? Math.max(...peaks) : null
 })
-const twitch = computed(() => props.pro.socials.twitch ?? null)
-const twitchName = computed(() =>
-  twitch.value ? twitch.value.replace(/\/$/, '').split('/').pop() : null
+/** Where a pro streams and posts, as stored: a handle, or an address on that network. */
+const SOCIALS = [
+  { key: 'twitch', name: 'Twitch', hosts: ['twitch.tv'], home: 'https://www.twitch.tv/' },
+  { key: 'twitter', name: 'X', hosts: ['x.com', 'twitter.com'], home: 'https://x.com/' },
+  {
+    key: 'instagram',
+    name: 'Instagram',
+    hosts: ['instagram.com'],
+    home: 'https://www.instagram.com/',
+  },
+] as const
+/** Each network's handle ("vladilol_") and address; anything else stored is left out. */
+const socials = computed(() =>
+  SOCIALS.flatMap((s) => {
+    const raw = String(props.pro.socials[s.key] ?? '').trim()
+    let handle = raw.replace(/^@/, '')
+    if (/^https?:\/\//i.test(raw)) {
+      try {
+        const url = new URL(raw)
+        const host = url.hostname.replace(/^www\./, '').toLowerCase()
+        handle = (s.hosts as readonly string[]).includes(host)
+          ? (url.pathname.split('/').filter(Boolean)[0] ?? '')
+          : ''
+      } catch {
+        handle = ''
+      }
+    }
+    if (!/^[\w.]{1,40}$/.test(handle)) return []
+    return [
+      {
+        key: s.key,
+        icon: s.key === 'twitter' ? ('x' as const) : s.key,
+        name: s.name,
+        handle,
+        href: `${s.home}${handle}`,
+      },
+    ]
+  })
 )
+const country = computed(() => props.pro.about?.nationality ?? props.pro.country)
 
 const ORDER = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT']
 const five = computed(() =>
@@ -299,16 +337,24 @@ const PLATFORM: Record<string, string> = {
             <span v-if="laneOf(pro.role)" class="tagx"
               ><RoleIcon :lane="laneOf(pro.role)!" :size="15" />{{ roleLabel(pro.role) }}</span
             >
-            <span v-if="pro.about?.nationality ?? pro.country" class="tagx">{{
-              countryName(pro.about?.nationality ?? pro.country)
-            }}</span>
+            <span v-if="country" class="tagx"
+              ><Flag :code="country" :size="18" />{{ countryName(country) }}</span
+            >
           </div>
           <div class="row" style="gap: 10px; margin-top: 22px; flex-wrap: wrap">
             <button class="btn" type="button" @click="share">
               <Icon name="share" />{{ shared ? 'Link copied' : 'Share' }}
             </button>
-            <a v-if="twitch" class="btn ghost" :href="twitch" target="_blank" rel="noreferrer"
-              ><Icon name="live" />{{ twitchName }} on Twitch</a
+            <a
+              v-for="x in socials"
+              :key="x.key"
+              class="btn ghost"
+              :href="x.href"
+              target="_blank"
+              rel="noreferrer"
+              :aria-label="`${x.handle} on ${x.name}`"
+              :title="x.name"
+              ><SocialIcon :name="x.icon" />{{ x.handle }}</a
             >
           </div>
         </div>

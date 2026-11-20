@@ -66,3 +66,15 @@ img.lg-x {
   height: 80%;
   fill: rgb(var(--v-rgb) / 0.3);
 }
+
+/* A country's flag (`components/pros/Flag.vue`): a small card, a hairline holding white flags. */
+img.flag {
+  flex: none;
+  display: inline-block;
+  object-fit: cover;
+  border-radius: 2px;
+  outline: 1px solid rgb(127 127 127 / 0.22);
+  outline-offset: -1px;
+  vertical-align: -2px;
+  opacity: 1;
+}
