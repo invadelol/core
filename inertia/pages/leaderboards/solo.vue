@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import { RoleIcon } from '@invadelol/ui'
 import SiteLayout from '../../components/SiteLayout.vue'
@@ -155,9 +155,13 @@ const movesHead = computed(() => {
   return h <= 30 ? '24 hours' : `Since ${dayMonth(props.movesSince)}`
 })
 
-/** The UTC midnight the cutoffs move at, as "in 6 h 12 min" from now (the browser's clock). */
+/**
+ * The UTC midnight the cutoffs move at, as "in 6 h 12 min" from now (the browser's clock), set once
+ * the page is mounted so the server's HTML and the first client render agree.
+ */
 const nextReset = ref('')
-if (typeof window !== 'undefined') {
+let resetTimer: ReturnType<typeof setInterval> | undefined
+onMounted(() => {
   const tick = () => {
     const now = new Date()
     const next = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1)
@@ -165,8 +169,9 @@ if (typeof window !== 'undefined') {
     nextReset.value = `in ${Math.floor(min / 60)} h ${min % 60} min`
   }
   tick()
-  setInterval(tick, 60_000)
-}
+  resetTimer = setInterval(tick, 60_000)
+})
+onBeforeUnmount(() => clearInterval(resetTimer))
 
 /* ── The leader banner: #1 with the art of the champion they play most, #2 to #5 beside ── */
 const leader = computed(() => props.podium[0] ?? null)
@@ -332,7 +337,9 @@ const ordinal = (place: number) => {
             >Challenger cutoff
             <span :class="{ vi: lineGain > 0 }">{{ signedN(lineGain) }} LP</span> in 30 days</span
           >
-          <span class="meta sb-nx">Next move at 00:00 UTC, {{ nextReset }}</span>
+          <span class="meta sb-nx"
+            >Next move at 00:00 UTC<template v-if="nextReset">, {{ nextReset }}</template></span
+          >
         </div>
 
         <div class="lb-filt">
