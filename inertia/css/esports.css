@@ -550,3 +550,557 @@
     }
   }
 }
+
+/* ── Proposals for a pro's hero, without its figures (`?v=a|b|c` on /pro/:slug) ── */
+@layer components {
+  @keyframes ph-rise {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  .vb .pg-es .pp-hero:is(.ph-a, .ph-b, .ph-c) .ph-m {
+    animation: ph-rise 700ms var(--ease) both;
+  }
+  /* a: their champions beside them, as loading screen portraits. */
+  .vb .pg-es .pp-hero.ph-a {
+    grid-template-columns: 300px minmax(0, 1fr) auto;
+  }
+  .vb .ph-sig {
+    display: grid;
+    grid-template-columns: repeat(3, 112px);
+    gap: 12px;
+    align-self: center;
+  }
+  .vb .ph-tile {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    animation: ph-rise 600ms var(--ease) both;
+    animation-delay: calc(var(--i, 0) * 70ms + 160ms);
+  }
+  .vb .ph-tile .fr {
+    width: 112px;
+    height: 204px;
+    --cut: 12px;
+    border-radius: var(--r2);
+  }
+  .vb .ph-tile .fr > img {
+    object-position: 50% 12%;
+    transition: transform var(--m-slow) var(--ease);
+  }
+  .vb .ph-tile:hover .fr > img {
+    transform: scale(1.03);
+  }
+  .vb .ph-tile .h5 {
+    margin-top: 10px;
+  }
+  .vb .ph-tile:hover .h5 {
+    color: var(--t1);
+  }
+  /* b: the photo on a stage in their team's colour, the head above its edge. */
+  .vb .pg-es .pp-hero.ph-b {
+    grid-template-columns: 340px minmax(0, 1fr);
+    padding-top: 0;
+  }
+  .vb .ph-stage {
+    position: relative;
+    height: 324px;
+    align-self: end;
+  }
+  .vb .ph-ground {
+    position: absolute;
+    inset: auto 0 0;
+    height: 252px;
+    --cut: 22px;
+    border-radius: var(--r2);
+    background: var(--v900);
+    clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
+    transition: background var(--m-slow) var(--ease);
+  }
+  .vb .ph-stage.tinted .ph-ground {
+    background: color-mix(in oklab, rgb(var(--team-rgb)) 46%, var(--ink-1));
+  }
+  .vb .ph-stage > .pro-pic {
+    position: absolute;
+    inset: 0;
+    border-radius: 0 0 var(--r2) var(--r2);
+  }
+  .vb .ph-stage > .pro-pic:not(.is-photo) {
+    inset: auto 0 0;
+    height: 252px;
+  }
+  .vb .pg-es .pp-hero.ph-b > .col {
+    padding-top: 24px;
+  }
+  /* c: the pro before the art of the champion they play most. */
+  .vb .pg-es .pp-hero.ph-c {
+    grid-template-columns: 520px minmax(0, 1fr);
+  }
+  .vb .ph-lock {
+    height: 300px;
+    --cut: 22px;
+  }
+  .vb .ph-lock > img {
+    object-position: 50% 30%;
+  }
+  .vb .ph-lock > .pro-pic {
+    position: absolute;
+    inset: 0 auto 0 0;
+  }
+  .vb .ph-cap {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 32px;
+    padding: 0 10px 0 4px;
+    border-radius: var(--r2);
+    background: var(--solid-2);
+    box-shadow: var(--d-drop);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--t1);
+  }
+  .vb .ph-cap img {
+    width: 24px;
+    height: 24px;
+    border-radius: 5px;
+  }
+  .vb .ph-cap span {
+    color: var(--t3);
+    font-weight: 500;
+  }
+  @media (max-width: 1199px) {
+    .vb .pg-es .pp-hero.ph-c {
+      grid-template-columns: 420px minmax(0, 1fr);
+    }
+  }
+  @media (max-width: 1023px) {
+    .vb .pg-es .pp-hero:is(.ph-a, .ph-b, .ph-c) {
+      grid-template-columns: 260px minmax(0, 1fr);
+    }
+    .vb .pg-es .pp-hero.ph-a > .ph-sig {
+      grid-column: 1 / -1;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .vb .pg-es .pp-hero.ph-a .ph-tile .fr {
+      width: 100%;
+      height: 220px;
+    }
+    .vb .ph-lock {
+      height: 260px;
+    }
+  }
+  @media (max-width: 767px) {
+    .vb .pg-es .pp-hero:is(.ph-a, .ph-b, .ph-c) {
+      grid-template-columns: 1fr;
+      padding: 16px;
+      gap: 18px;
+    }
+    .vb .pg-es .pp-hero.ph-a .ph-tile .fr {
+      height: 168px;
+    }
+    .vb .pg-es .pp-hero.ph-b {
+      padding-top: 0;
+    }
+    .vb .ph-stage {
+      height: 270px;
+    }
+    .vb .ph-ground,
+    .vb .ph-stage > .pro-pic:not(.is-photo) {
+      height: 210px;
+    }
+    .vb .pg-es .pp-hero.ph-b > .col {
+      padding-top: 0;
+    }
+    .vb .ph-lock {
+      height: 220px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .vb .pg-es .pp-hero .ph-m,
+    .vb .ph-tile {
+      animation: none;
+    }
+    .vb .ph-tile .fr > img {
+      transition: none;
+    }
+  }
+}
+
+/* Outside the layers, like pro_pics.css: the whole cutout, standing on the frame's floor. */
+.vb .pg-es :is(.ph-stage, .ph-lock) > .pro-pic.is-photo > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: 50% 100%;
+}
+.vb .pg-es .ph-lock:not(.bare) > .pro-pic {
+  width: 62%;
+}
+.vb .pg-es .ph-lock > .pro-pic.is-photo > img {
+  filter: drop-shadow(0 10px 24px rgb(0 0 0 / 0.45));
+}
+
+/* ── Proposals for the pro ladder's top three (`?v=a|b|c` on /leaderboards/pros) ── */
+@layer components {
+  .vb :is(.pz-c, .pz-b, .pz-kc) {
+    background: var(--d-sheen), var(--d-sf1);
+    box-shadow: var(--d-lit), var(--d-drop);
+    border-radius: var(--r3);
+  }
+  .vb :is(.pz-c, .pz-kc) {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 8px 8px 16px;
+    transition: background var(--m) var(--ease);
+  }
+  .vb :is(.pz-c, .pz-kc):hover {
+    background: var(--hover-sheet);
+  }
+  .vb .pz-no {
+    display: inline-flex;
+    align-items: flex-start;
+    font-size: 40px;
+    line-height: 1;
+    font-weight: 650;
+    letter-spacing: -0.03em;
+    font-variant-numeric: lining-nums;
+    color: var(--t1);
+  }
+  .vb .pz-no sup {
+    position: static;
+    margin: 3px 0 0 2px;
+    font-size: 14px;
+    line-height: 1;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--t3);
+  }
+  .vb .pz-no.sm {
+    font-size: 24px;
+    color: var(--t2);
+  }
+  .vb .pz-no.sm sup {
+    margin-top: 2px;
+    font-size: 11px;
+  }
+  /* a: a podium, second, first, third; the apex tiers in the masthead. */
+  .vb .pz-apex {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin-top: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--t3);
+  }
+  .vb .pz-apex > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .vb .pz-apex b {
+    font-weight: 600;
+    color: var(--t1);
+    font-variant-numeric: tabular-nums;
+  }
+  .vb .pz-a {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: end;
+    gap: 16px;
+  }
+  .vb .pz-c.p1 {
+    order: 2;
+  }
+  .vb .pz-c.p2 {
+    order: 1;
+  }
+  .vb .pz-c.p3 {
+    order: 3;
+  }
+  .vb .pz-c .pz-ph {
+    height: 172px;
+    --cut: 16px;
+  }
+  .vb .pz-c.p1 .pz-ph {
+    height: 232px;
+  }
+  .vb .pz-c:not(.p1) .pz-no {
+    color: var(--t2);
+  }
+  .vb .pz-id {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 8px 0;
+  }
+  .vb .pz-lp {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 14px 8px 0;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+  }
+  .vb .pz-lp .meta {
+    margin-left: auto;
+  }
+  /* b: the leader, the next two under them, the apex tiers beside, in one sheet. */
+  .vb .pz-b {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    overflow: hidden;
+  }
+  .vb .pz-lead {
+    display: grid;
+    grid-template-columns: 56px 156px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 22px;
+    min-height: 156px;
+    padding: 0 28px 0 24px;
+    transition: background var(--m) var(--ease);
+  }
+  .vb .pz-cut {
+    position: relative;
+    align-self: end;
+    height: 146px;
+  }
+  .vb .pz-cut::before {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    height: 108px;
+    --cut: 14px;
+    border-radius: var(--r2) var(--r2) 0 0;
+    background: var(--v900);
+    clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
+  }
+  .vb .pz-nm {
+    font-size: 28px;
+    line-height: 1.1;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+  }
+  .vb .pz-lpb {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+  }
+  .vb .pz-ln {
+    display: grid;
+    grid-template-columns: 56px 40px minmax(0, 1fr) 100px 120px;
+    align-items: center;
+    gap: 22px;
+    min-height: 64px;
+    padding: 0 28px 0 24px;
+    border-top: 1px solid var(--line);
+    transition: background var(--m) var(--ease);
+  }
+  .vb :is(.pz-lead, .pz-ln):hover {
+    background: var(--hover-row);
+  }
+  .vb .pz-ln .ppic {
+    width: 40px;
+    height: 40px;
+    overflow: hidden;
+    border-radius: var(--r2);
+    background: var(--v900);
+  }
+  .vb .pz-ln .h5 {
+    text-align: right;
+  }
+  .vb .pz-gap {
+    text-align: right;
+  }
+  .vb .pz-tiers {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 18px 22px;
+    border-left: 1px solid var(--line);
+  }
+  .vb .pz-tiers .lab {
+    margin-bottom: 6px;
+  }
+  .vb .pz-tier {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 48px;
+    border-top: 1px solid var(--line);
+  }
+  .vb .pz-tiers .lab + .pz-tier {
+    border-top: 0;
+  }
+  /* c: each pro before the art of the champion they play most. */
+  .vb .pz-art {
+    height: 178px;
+    --cut: 16px;
+  }
+  .vb .pz-art > img {
+    object-position: 50% 28%;
+  }
+  .vb .pz-art > .pro-pic {
+    position: absolute;
+    inset: 0 auto 0 0;
+  }
+  .vb .pz-chip {
+    position: absolute;
+    left: 8px;
+    top: 8px;
+    display: inline-flex;
+    align-items: flex-start;
+    height: 28px;
+    padding: 5px 8px 0;
+    border-radius: var(--r2);
+    background: var(--solid-2);
+    box-shadow: var(--d-drop);
+    font-size: 17px;
+    line-height: 1;
+    font-weight: 650;
+    color: var(--t1);
+  }
+  .vb .pz-chip sup {
+    position: static;
+    margin: 1px 0 0 1px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--t3);
+  }
+  .vb .pz-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 8px 0;
+  }
+  @media (max-width: 1023px) {
+    .vb .pz-b {
+      grid-template-columns: 1fr;
+    }
+    .vb .pz-tiers {
+      border-left: 0;
+      border-top: 1px solid var(--line);
+    }
+  }
+  @media (max-width: 767px) {
+    .vb .pz-a {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .vb .pz-c.pz-c {
+      order: 0;
+      display: grid;
+      grid-template-columns: 112px minmax(0, 1fr);
+      grid-template-rows: auto auto;
+      column-gap: 14px;
+      padding: 8px 14px 8px 8px;
+    }
+    .vb .pz-c .pz-ph,
+    .vb .pz-c.p1 .pz-ph {
+      grid-row: 1 / 3;
+      height: 128px;
+    }
+    .vb .pz-id {
+      padding: 8px 0 0;
+      gap: 10px;
+    }
+    .vb .pz-id .pz-no {
+      font-size: 30px;
+    }
+    .vb .pz-lp {
+      margin: 10px 0 0;
+      padding-top: 10px;
+    }
+    .vb .pz-lead {
+      grid-template-columns: 34px 104px minmax(0, 1fr);
+      gap: 12px;
+      min-height: 0;
+      padding: 14px 14px 0 12px;
+    }
+    .vb .pz-lead .pz-no {
+      grid-area: 1 / 1 / 3;
+      font-size: 30px;
+      align-self: start;
+    }
+    .vb .pz-cut {
+      grid-area: 1 / 2 / 3;
+      height: 120px;
+    }
+    .vb .pz-lead > .col {
+      grid-area: 1 / 3;
+      align-self: end;
+    }
+    .vb .pz-cut::before {
+      height: 88px;
+    }
+    .vb .pz-nm {
+      font-size: 22px;
+    }
+    .vb .pz-lpb {
+      grid-area: 2 / 3;
+      align-items: flex-start;
+      padding-bottom: 14px;
+    }
+    .vb .pz-lpb .fg-l {
+      font-size: 24px;
+    }
+    .vb .pz-ln {
+      grid-template-columns: 34px 40px minmax(0, 1fr) auto;
+      gap: 12px;
+      padding: 0 14px 0 12px;
+    }
+    .vb .pz-ln .pz-gap {
+      display: none;
+    }
+  }
+}
+
+/* Outside the layers, like pro_pics.css: the whole cutout, standing on its floor. */
+.vb .pg-es :is(.pz-cut, .pz-art) > .pro-pic {
+  position: absolute;
+}
+.vb .pg-es .pz-cut > .pro-pic {
+  inset: 0;
+}
+.vb .pg-es .pz-cut > .pro-pic:not(.is-photo) {
+  inset: auto 0 0;
+  height: 108px;
+}
+.vb .pg-es .pz-art:not(.bare) > .pro-pic {
+  inset: 0 auto 0 0;
+  width: 60%;
+}
+.vb .pg-es .pz-ph > .pro-pic.is-photo {
+  position: absolute;
+  inset: 0;
+}
+.vb .pg-es :is(.pz-cut, .pz-art, .pz-ph) > .pro-pic.is-photo > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: 50% 100%;
+}
+.vb .pg-es .pz-art > .pro-pic.is-photo > img {
+  filter: drop-shadow(0 8px 18px rgb(0 0 0 / 0.45));
+}
+/* The podium's busts a little larger than their frame: the shoulders fill it. */
+.vb .pg-es .pz-ph > .pro-pic.is-photo > img {
+  inset: auto 0 0;
+  height: 110%;
+}
