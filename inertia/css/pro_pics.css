@@ -62,9 +62,9 @@ img.lg-x {
 }
 .pro-pic.is-none > svg {
   display: block;
-  width: 80%;
-  height: 80%;
-  fill: rgb(var(--v-rgb) / 0.3);
+  width: 84%;
+  height: 84%;
+  fill: rgb(var(--v-rgb) / 0.42);
 }
 
 /* A country's flag (`components/pros/Flag.vue`): a small card, a hairline holding white flags. */

@@ -10,7 +10,8 @@ defineOptions({ inheritAttrs: false })
  * copy per ground (a black logo is redrawn light for the dark theme, a white one dark for the
  * light theme: `/cdn/team/:id?on=light`), so this draws both, lazy, and the theme hides one
  * (`pro_pics.css`): a hidden lazy image is never fetched, so a visitor loads one copy. Classes and
- * styles given to it land on both images, so a page styles it as a plain `<img>`.
+ * styles given to it land on both images, so a page styles it as a plain `<img>`. `loading` comes
+ * before `src` in the template: an image built in the browser starts loading once `src` is set.
  */
 const props = withDefaults(
   defineProps<{
@@ -56,15 +57,15 @@ onMounted(() => {
       v-for="on in grounds"
       :key="on"
       ref="imgs"
+      loading="lazy"
+      decoding="async"
       v-bind="$attrs"
       :class="[ground ? null : `lg-${on}`, { 'lg-x': failed }]"
-      :src="url(on)!"
       :alt="alt"
       :width="size"
       :height="size"
-      loading="lazy"
-      decoding="async"
       data-fallback="applied"
+      :src="url(on)!"
       @error="failed = true"
     />
   </template>

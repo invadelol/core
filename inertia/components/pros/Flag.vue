@@ -18,13 +18,13 @@ const src = () =>
   <img
     v-if="src() && !failed"
     class="flag"
-    :src="src()!"
+    loading="lazy"
+    decoding="async"
     alt=""
     :width="size"
     :height="Math.round((size * 3) / 4)"
     :style="{ width: `${size}px`, height: `${(size * 3) / 4}px` }"
-    loading="lazy"
-    decoding="async"
+    :src="src()!"
     data-fallback="applied"
     @error="failed = true"
   />
