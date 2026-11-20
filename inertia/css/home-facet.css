@@ -635,25 +635,6 @@
   .vb .hm-s {
     padding-top: 80px;
   }
-  .vb .pick {
-    position: relative;
-    overflow: hidden;
-  }
-  /* The splash drifts in, slowly and barely. */
-  .vb .pick .fr img {
-    transition: transform var(--m-slow) var(--ease);
-  }
-  .vb .pick:hover .fr img {
-    transform: scale(1.025);
-  }
-  .vb .pick .rl2 svg {
-    width: 15px;
-    height: 15px;
-    opacity: 0.6;
-  }
-  .vb .hm-name {
-    font-size: 19px;
-  }
 
   /* Pros and bans. */
   .vb .hm-pro {
@@ -855,17 +836,8 @@
     padding-bottom: 8px;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    .vb .pick:hover .fr img {
-      transform: none;
-    }
-  }
-
   /* ── Narrower screens ── */
   @media (max-width: 1100px) {
-    .vb .picks {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
     .vb .hc3,
     .vb .hc3.n2 {
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -946,20 +918,6 @@
     }
     .vb .hm-s {
       padding-top: 48px;
-    }
-    .vb .picks {
-      grid-template-columns: repeat(5, 200px);
-      overflow-x: auto;
-      margin: 0 -16px;
-      padding: 0 16px 4px;
-      scroll-snap-type: x mandatory;
-      scrollbar-width: none;
-    }
-    .vb .pick {
-      scroll-snap-align: start;
-    }
-    .vb .pick .fr {
-      height: 190px;
     }
     .vb .card-h .meta,
     .vb .lrow .stat2 {
