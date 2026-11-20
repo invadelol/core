@@ -199,9 +199,7 @@ const updated = computed(() => since(props.updatedAt))
 </script>
 
 <template>
-  <Head :title="`One-tricks, ${region.label}`">
-    <meta name="description" :content="description" />
-  </Head>
+  <Head :title="`One-tricks, ${region.label}`" />
   <SiteLayout>
     <div class="wrap">
       <section class="mast">

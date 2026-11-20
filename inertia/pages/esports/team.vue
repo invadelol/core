@@ -155,9 +155,7 @@ const wonBy = (m: ProMatch) => (m.winner ? m.teams[m.winner - 1].id === props.te
 </script>
 
 <template>
-  <Head :title="team.name">
-    <meta name="description" :content="description" />
-  </Head>
+  <Head :title="`${team.name}: roster and soloqueue accounts`" />
   <SiteLayout>
     <div class="wrap pg-es">
       <div class="mast" style="padding-bottom: 16px">

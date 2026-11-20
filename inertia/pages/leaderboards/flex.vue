@@ -108,9 +108,7 @@ const apex = computed(() =>
 </script>
 
 <template>
-  <Head :title="`Flex ladder, ${region.label}`">
-    <meta name="description" :content="description" />
-  </Head>
+  <Head :title="`Flex ladder, ${region.label}`" />
   <SiteLayout>
     <div class="wrap">
       <section class="mast">

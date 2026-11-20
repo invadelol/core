@@ -343,9 +343,7 @@ const PLATFORM: Record<string, string> = {
 </script>
 
 <template>
-  <Head :title="pro.name">
-    <meta name="description" :content="description" />
-  </Head>
+  <Head :title="`${pro.name}: soloqueue accounts and stats`" />
   <SiteLayout>
     <div class="wrap pg-es">
       <div class="mast" style="padding-bottom: 16px">

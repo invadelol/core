@@ -99,9 +99,7 @@ const columns = computed(() => [
 </script>
 
 <template>
-  <Head :title="`${league.code}`">
-    <meta name="description" :content="description" />
-  </Head>
+  <Head :title="`${league.code}: teams, players and results`" />
   <SiteLayout>
     <div class="wrap pg-es">
       <div class="mast" style="padding-bottom: 16px">

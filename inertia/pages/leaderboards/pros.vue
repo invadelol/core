@@ -174,9 +174,7 @@ const short = (r: Row) =>
 </script>
 
 <template>
-  <Head :title="leagueCode ? `${leagueCode} pros` : 'Pro ladder'">
-    <meta name="description" :content="description" />
-  </Head>
+  <Head :title="leagueCode ? `${leagueCode} pros in soloqueue` : 'Pro soloqueue ladder'" />
   <SiteLayout>
     <div class="wrap pg-es">
       <section class="mast">

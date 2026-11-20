@@ -137,7 +137,7 @@ const tabs = computed(() => [
 </script>
 
 <template>
-  <Head :title="`${champion.name} vs ${opponent.name}`" />
+  <Head :title="`${champion.name} vs ${opponent.name}: matchup, build and runes`" />
   <SiteLayout>
     <div class="wrap">
       <div class="mast mu-mast">

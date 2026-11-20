@@ -356,7 +356,7 @@ const ago = (ms: number) => {
 </script>
 
 <template>
-  <Head :title="`${champion.name} ${role.label.toLowerCase()}`" />
+  <Head :title="`${champion.name} ${role.label} build, runes and counters`" />
   <SiteLayout>
     <div class="wrap">
       <section id="build" class="cp-head cp-sec">

@@ -53,9 +53,7 @@ const games = computed(() => (playing.value ? [] : next.value.length ? next.valu
 </script>
 
 <template>
-  <Head title="Esports">
-    <meta name="description" :content="description" />
-  </Head>
+  <Head title="LoL esports: live matches, leagues and pros" />
   <SiteLayout>
     <div class="wrap pg-es el-pg">
       <header class="el-bh">

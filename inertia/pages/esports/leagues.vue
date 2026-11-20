@@ -30,9 +30,7 @@ defineProps<{
 </script>
 
 <template>
-  <Head title="Leagues">
-    <meta name="description" :content="description" />
-  </Head>
+  <Head title="LoL esports leagues" />
   <SiteLayout>
     <div class="wrap pg-es">
       <Masthead
