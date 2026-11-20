@@ -51,6 +51,19 @@ export interface AssetRequest {
   patch?: string
 }
 
+/** The widths champion art can be asked at (`?w=`), so a page fetches about the size it shows. */
+export const ART_WIDTHS = [480, 960] as const
+
+/** The width a `/cdn` request asks its champion art at, or null (the asset as it is). */
+export function artWidth(kind: AssetKind, value: unknown): (typeof ART_WIDTHS)[number] | null {
+  if (kind !== 'centered' && kind !== 'splash' && kind !== 'loading') return null
+  const width = Number(value)
+  return ART_WIDTHS.find((w) => w === width) ?? null
+}
+
+/** The validator of a resized copy: the original's, marked with its width. */
+export const resizedEtag = (etag: string, width: number) => etag.replace(/"?$/, `-w${width}"`)
+
 /**
  * Validates the path segments of a `/cdn` URL. Anything that isn't an allowed
  * kind with an id of that kind's exact shape is refused here, so the proxy

@@ -2,6 +2,7 @@ import { test } from '@japa/runner'
 
 import {
   LATEST,
+  artWidth,
   cacheControl,
   championSources,
   contentTypeOf,
@@ -19,6 +20,7 @@ import {
   placeholderSvg,
   rankSources,
   recentReleases,
+  resizedEtag,
 } from '#services/riot/asset_paths'
 import { ASSET_KINDS, CDRAGON, DDRAGON, PINNED_PATCHES } from '#constants/assets'
 
@@ -237,7 +239,8 @@ test.group('Riot asset paths', () => {
       {
         id: 3,
         name: 'Widow Ward',
-        wardImagePath: '/lol-game-data/assets/content/src/LeagueClient/WardSkinImages/wardHero_3.png',
+        wardImagePath:
+          '/lol-game-data/assets/content/src/LeagueClient/WardSkinImages/wardHero_3.png',
       },
     ])
     assert.equal(manifest['3'].name, 'Widow Ward')
@@ -469,4 +472,14 @@ test.group('Riot asset placeholder', () => {
     assert.notInclude(svg, '<script>')
     assert.notInclude(svg, '"><')
   })
+})
+
+test('resizes champion art only, at the widths it knows', ({ assert }) => {
+  assert.equal(artWidth('centered', '480'), 480)
+  assert.equal(artWidth('splash', 960), 960)
+  assert.equal(artWidth('loading', '960'), 960)
+  assert.isNull(artWidth('centered', '500'))
+  assert.isNull(artWidth('centered', undefined))
+  assert.isNull(artWidth('champion', '480'))
+  assert.equal(resizedEtag('"abc"', 480), '"abc-w480"')
 })
