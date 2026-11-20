@@ -167,6 +167,197 @@
   .vb .hc3.n2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  /* New Dawn, between the search and the cards: a slim card lit from Blitzcrank's side, his head
+     from Riot's key art on the right, the dome rising out of the card's top edge (cut on its own
+     round outline). On hover he pops up a little, the light warms and the chevron moves. */
+  .vb .nd-e {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 760px;
+    max-width: 100%;
+    height: 88px;
+    margin: 52px auto 0;
+    text-align: left;
+  }
+  .vb .nd-e + .hc3 {
+    margin-top: 40px;
+  }
+  .vb .nd-e-c {
+    position: relative;
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding-left: 26px;
+    overflow: hidden;
+    border-radius: 16px;
+    background:
+      radial-gradient(52% 150% at 80% 62%, rgb(var(--v-rgb) / 0.17), rgb(var(--v-rgb) / 0) 75%),
+      var(--d-sheen), var(--d-sf1);
+    box-shadow: var(--d-lit), var(--d-drop);
+    transition: background var(--m) var(--ease);
+  }
+  .vb .nd-e-t {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+    padding-right: 220px;
+  }
+  .vb .nd-e-t b {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 19px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    color: var(--t1);
+  }
+  .vb .nd-e-t span {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--t3);
+  }
+  .vb .nd-e-t .nd-e-short {
+    display: none;
+  }
+  .vb .nd-e-i {
+    flex: none;
+    color: var(--t3);
+    transition:
+      translate var(--m) var(--ease),
+      color var(--m) var(--ease);
+  }
+  .vb .nd-e-art,
+  .vb .nd-e-pop > span {
+    position: absolute;
+    left: 0;
+    width: 313px;
+    height: 224px;
+    background: url('/new-dawn-art/home-blitz.webp') 0 0 / 313px 224px no-repeat;
+  }
+  .vb .nd-e-art {
+    left: auto;
+    right: 0;
+    top: -55.6px;
+    mask-image: linear-gradient(90deg, transparent, #000 110px);
+  }
+  .vb .nd-e-pop {
+    position: absolute;
+    right: 0;
+    top: -26px;
+    width: 313px;
+    height: 114px;
+    overflow: hidden;
+    pointer-events: none;
+    filter: drop-shadow(0 -2px 10px rgb(4 3 10 / 0.45));
+    transform-origin: 50% 100%;
+    transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .vb .nd-e-pop > span {
+    top: -29.6px;
+    clip-path: circle(62.5px at 156.6px 93px);
+  }
+  .vb .nd-e:hover .nd-e-c,
+  .vb .nd-e:focus-visible .nd-e-c {
+    background:
+      radial-gradient(52% 150% at 80% 62%, rgb(var(--v-rgb) / 0.26), rgb(var(--v-rgb) / 0) 75%),
+      var(--hover-sheet);
+  }
+  .vb .nd-e:hover .nd-e-i,
+  .vb .nd-e:focus-visible .nd-e-i {
+    translate: 3px 0;
+    color: var(--t1);
+  }
+  .vb .nd-e:hover .nd-e-pop,
+  .vb .nd-e:focus-visible .nd-e-pop {
+    transform: translateY(-9px) scale(1.04);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .vb .nd-e-pop {
+      transition: none;
+    }
+    .vb .nd-e:hover .nd-e-pop,
+    .vb .nd-e:focus-visible .nd-e-pop {
+      transform: none;
+    }
+  }
+  @media (max-width: 639px) {
+    .vb .nd-e {
+      height: 84px;
+      margin-top: 40px;
+    }
+    .vb .nd-e + .hc3 {
+      margin-top: 28px;
+    }
+    .vb .nd-e-c {
+      padding-left: 16px;
+      border-radius: 14px;
+    }
+    .vb .nd-e-t {
+      gap: 4px;
+      padding-right: 160px;
+    }
+    .vb .nd-e-t b {
+      display: block;
+      font-size: 15px;
+      line-height: 1.25;
+    }
+    .vb .nd-e-i {
+      display: inline-block;
+      margin-left: 3px;
+      vertical-align: -3px;
+    }
+    .vb .nd-e-t span {
+      font-size: 12.5px;
+    }
+    .vb .nd-e-t .nd-e-long {
+      display: none;
+    }
+    .vb .nd-e-t .nd-e-short {
+      display: block;
+    }
+    .vb .nd-e-art,
+    .vb .nd-e-pop > span {
+      width: 219px;
+      height: 157px;
+      background-size: 219px 157px;
+    }
+    .vb .nd-e-art {
+      top: -39px;
+      mask-image: linear-gradient(90deg, transparent, #000 80px);
+    }
+    .vb .nd-e-art {
+      top: -35px;
+    }
+    .vb .nd-e-pop {
+      top: -14px;
+      width: 219px;
+      height: 98px;
+    }
+    .vb .nd-e-pop > span {
+      top: -20.7px;
+      clip-path: circle(43.75px at 109.6px 65.1px);
+    }
+  }
+  @media (max-width: 374px) {
+    .vb .nd-e-art,
+    .vb .nd-e-pop {
+      right: -36px;
+    }
+    .vb .nd-e-t {
+      padding-right: 122px;
+    }
+    .vb .nd-e-t b {
+      font-size: 14px;
+    }
+    .vb .nd-e-t span {
+      font-size: 12px;
+    }
+  }
   .vb .hc3.n1 {
     grid-template-columns: minmax(0, 1fr);
     max-width: 1000px;

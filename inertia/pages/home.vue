@@ -5,6 +5,7 @@ import { RoleIcon } from '@invadelol/ui'
 import SiteLayout from '../components/SiteLayout.vue'
 import SearchBar from '../components/SearchBar.vue'
 import HomeRecent from '../components/home/HomeRecent.vue'
+import NewDawnLine from '../components/home/NewDawnLine.vue'
 import DownloadApp from '../components/DownloadApp.vue'
 import ProPhoto from '../components/champions/ProPhoto.vue'
 import MatchTime from '../components/pros/MatchTime.vue'
@@ -129,6 +130,7 @@ const topBully = (rows: { value: number }[]) => rows[0]?.value || 1
           short-placeholder="Riot ID, champion or pro"
         />
         <HomeRecent />
+        <NewDawnLine />
 
         <div v-if="cards.length" class="hc3" :class="`n${cards.length}`">
           <template v-for="card in cards" :key="card.key">
