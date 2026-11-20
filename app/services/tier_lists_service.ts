@@ -144,7 +144,7 @@ export class TierListsService {
   // A patch's blobs: a role's items hold a few MB of rows, the rest tens of kB.
   #items = statsCache('tier-items-v2', 12)
   #runes = statsCache('tier-runes-v3', 12)
-  #duos = statsCache('tier-duos-v2', 6)
+  #duos = statsCache('tier-duos-v3', 6)
   #aram = statsCache('tier-aram', 8)
   /** Views built from the blobs, a few minutes, so a busy page sums them once. */
   #views = new AnswerCache(256, 5 * 60_000)
@@ -225,7 +225,7 @@ export class TierListsService {
     }
   }
 
-  /** One patch's duo pairs in a region (every lane pair and seed tier). */
+  /** One patch's duo pairs in a region (every pair of roles and seed tier). */
   duoBlob(patch: string, region: string | null): Want<DuoBlob> {
     return {
       cache: this.#duos,
@@ -420,7 +420,7 @@ export class TierListsService {
 
   /* ── Duos ──────────────────────────────────────────────────── */
 
-  /** The duo tier list of a lane pair (bot and support, mid and jungle, top and jungle). */
+  /** The duo tier list of two roles (bot and support, mid and jungle, jungle and support…). */
   async duos(filter: Filter, lane: DuoLane): Promise<DuoTierList | Computing> {
     const wait = { ahead: 0 as number | null }
     const before = await this.previous(filter)

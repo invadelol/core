@@ -44,6 +44,7 @@ test.group('Player sitemap', (group) => {
       '/tier-list?role=mid',
       '/tier-list/items',
       '/tier-list/duos',
+      '/tier-list/duos?lane=jungle-support',
       '/stats',
       '/stats?view=early',
       '/leaderboards/pros',
