@@ -23,7 +23,6 @@ import {
   type LadderRole,
   type OneTrick,
 } from '#services/ladder'
-import { GROUP_SIZES, type GroupSize } from '#services/flex_groups'
 import { breadcrumbs, count, meta, today } from '#services/page_meta'
 import { SERVERS, serverList } from '#constants/riot'
 
@@ -239,30 +238,23 @@ export default class LeaderboardsController {
     })
   }
 
-  /** `/leaderboards/flex?region=euw&role=mid&group=five&q=&sort=wr&dir=asc&page=2` */
+  /** `/leaderboards/flex?region=euw&role=mid&q=&sort=wr&dir=asc&page=2` */
   async flex({ inertia, request }: HttpContext) {
     const server = serverOf(request.input('region')) ?? DEFAULT_SERVER
     const role = ROLE_PARAM[String(request.input('role', '')).toLowerCase()] ?? null
-    const askedGroup = String(request.input('group', '')).toLowerCase()
-    const group = (GROUP_SIZES as string[]).includes(askedGroup) ? (askedGroup as GroupSize) : null
     const q = search(request.input('q'))
     const ladder = await flexLadderService.ladder(server.platform).catch(() => ({
       platform: server.platform,
       players: [],
-      groups: [],
-      shares: null,
       tiers: [],
     }))
     const list = ladder.players.filter(
-      (p) =>
-        (!role || p.role === role) &&
-        (!group || p.queuesWith?.size === group) &&
-        (!q || matchesName(p.gameName, q))
+      (p) => (!role || p.role === role) && (!q || matchesName(p.gameName, q))
     )
     const order = sortParam(request.input('sort'), request.input('dir'), ['rank', 'wr'])
     const sorted = ordered(list, order, { wr: winRate })
     const { rows, page, pages, total } = pageOf(sorted, pageParam(request.input('page')), PAGE)
-    const filtered = Boolean(role || group || q || page > 1 || sortProp(order).sort)
+    const filtered = Boolean(role || q || page > 1 || sortProp(order).sort)
     return inertia.render('leaderboards/flex', {
       ...regionProps(server),
       /**
@@ -270,10 +262,8 @@ export default class LeaderboardsController {
        * or saw in the desktop app on this server in the last `seenDays` days.
        */
       scope: { kind: 'tracked', seenDays: SEEN_DAYS, listed: LISTED },
-      filters: { role: role ? roleSlug(role) : null, group, q: q || null, ...sortProp(order) },
+      filters: { role: role ? roleSlug(role) : null, q: q || null, ...sortProp(order) },
       tiers: ladder.tiers,
-      groups: ladder.groups.slice(0, 3),
-      shares: ladder.shares,
       rows,
       total,
       players: ladder.players.length,
@@ -282,8 +272,8 @@ export default class LeaderboardsController {
       pageSize: PAGE,
       names: await championNames(rows.flatMap((r) => r.champions.map((c) => c.champion))),
       ...meta({
-        title: `Flex ladder, ${server.label}: who queues with whom`,
-        description: `Ranked flex players Invade knows on ${server.label}, ranked by rank and LP, with the friends they queue with.`,
+        title: `Flex ladder, ${server.label}: the best ranked flex players`,
+        description: `Ranked flex players Invade knows on ${server.label}, ranked by rank and LP, with their role and the champions they play.`,
         path: `/leaderboards/flex${server.slug === DEFAULT_SERVER.slug ? '' : `?region=${server.slug}`}`,
         image: `/og/leaderboards/flex.jpg${server.slug === DEFAULT_SERVER.slug ? '' : `?region=${server.slug}`}`,
         version: today(),
