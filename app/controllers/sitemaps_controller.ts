@@ -15,7 +15,7 @@ import championStatsService from '#services/champion_stats_service'
 import { AnswerCache } from '#services/ranked_stats'
 import { ROLE_OF } from '#services/champion_stats'
 import { leagueCatalog } from '#services/pro_leagues'
-import { VIEWS } from '#services/stats_explorer_service'
+import { STATS } from '../../inertia/lib/studio.js'
 import patchNotesService from '#services/patch_notes_service'
 import { NEW_DAWN, NEW_DAWN_TABS } from '../../inertia/lib/new_dawn.js'
 import { SHOW_RUNES } from '../../inertia/lib/features.js'
@@ -49,7 +49,7 @@ async function section(name: SitemapSection): Promise<SitemapUrl[]> {
         lastmod,
       })),
       { path: '/stats', lastmod },
-      ...VIEWS.filter((v) => v !== 'overview').map((v) => ({ path: `/stats?view=${v}`, lastmod })),
+      ...STATS.map((s) => ({ path: `/stats/${s.slug}`, lastmod })),
       { path: '/esports', lastmod },
       { path: '/leagues', lastmod },
       ...listed.map((l) => ({ path: `/league/${l.slug}`, lastmod })),

@@ -21,6 +21,8 @@ import tierListsService from '#services/tier_lists_service'
 import { duoLaneOf, duoTitle, type DuoLane } from '#services/duo_tier_list'
 import { desktopReleases } from '#services/desktop_release'
 import { BRACKET_TEXT } from '#services/page_meta'
+import statsExplorerService, { type StudioRow } from '#services/stats_explorer_service'
+import { METRICS, fmtMetric, statOf, type StatDef } from '../../inertia/lib/studio.js'
 import { C, RENDERER, type Mood, type Role, type Run } from '#services/og/kit'
 import {
   appCard,
@@ -387,6 +389,8 @@ export default class SiteCardsController {
   /** `/og/stats/<view>.jpg`: the view's name and the figure it leads with. */
   async stats(ctx: HttpContext) {
     const view = nameOf(ctx.params.file)?.toLowerCase() as StatsView | undefined
+    const stat = view && !(view in STATS_VIEWS) ? statOf(view) : null
+    if (stat) return this.studioStat(ctx, stat)
     if (!view || !(view in STATS_VIEWS)) return this.missing(ctx)
     const [picks, lanes] = await Promise.all([
       homeService.picks(),
@@ -449,6 +453,57 @@ export default class SiteCardsController {
           }
     }
     const key = `stats:${view}:${card.value}:${card.caption}:${card.champion}`
+    return this.send(ctx, key, async () => {
+      const splash = card.champion ? await art('centered', card.champion) : undefined
+      const body = await figureCard({ ...card, splash })
+      return { body, complete: Boolean(splash) || !card.champion }
+    })
+  }
+
+  /**
+   * `/og/stats/<stat>.jpg`: a page of the stats studio, with the champion at the top of its list
+   * (every role, default rank, newest patch) and its figure.
+   */
+  private async studioStat(ctx: HttpContext, stat: StatDef) {
+    const f = await filter()
+    if (!f) return this.missing(ctx)
+    const source = METRICS[stat.key].source
+    const [role, champions, block] = await Promise.all([
+      statsExplorerService.roleRows(f, null),
+      championStatsService.champions(),
+      source === 'game'
+        ? statsExplorerService.studio(f, null)
+        : source === 'lane'
+          ? statsExplorerService.lane(f, null)
+          : null,
+    ])
+    const valueOf = (r: StudioRow): number | null | undefined => {
+      if (block) return block.champions[r.champion]?.[stat.key]
+      if (stat.key === 'change') return r.before ? (r.win - r.before.win) * 100 : null
+      return r[stat.key as 'games' | 'win' | 'pick' | 'ban']
+    }
+    // As the hub: a champion leads from 0.4 % of the list's games.
+    const min = Math.max(100, Math.round(role.rows.reduce((n, r) => n + r.games, 0) * 0.004))
+    let best: { champion: number; value: number } | null = null
+    for (const r of role.rows) {
+      const v = valueOf(r)
+      if (r.games < min || typeof v !== 'number' || Number.isNaN(v)) continue
+      if (!best || v > best.value) best = { champion: r.champion, value: v }
+    }
+    const name = best && champions.find((c) => c.id === best.champion)?.name
+    const text = best ? fmtMetric(stat.key, best.value) : compact(role.summary.games)
+    const unit = text.endsWith('%') ? '%' : ''
+    const card = {
+      title: [[stat.label, C.text1]] as Run[],
+      sub: `Patch ${patchName(f.patch)}, Emerald+`,
+      value: unit ? text.slice(0, -1) : text,
+      unit,
+      // The title names the figure: the caption names the champion.
+      caption: best && name ? name : 'Ranked games read on this patch',
+      champion: best?.champion ?? null,
+      mood: (best ? 'cheeky' : 'peace') as Mood,
+    }
+    const key = `studio:${stat.slug}:${f.patch}:${card.value}:${card.caption}:${card.champion}`
     return this.send(ctx, key, async () => {
       const splash = card.champion ? await art('centered', card.champion) : undefined
       const body = await figureCard({ ...card, splash })

@@ -46,7 +46,8 @@ test.group('Player sitemap', (group) => {
       '/tier-list/duos',
       '/tier-list/duos?lane=jungle-support',
       '/stats',
-      '/stats?view=early',
+      '/stats/gold-lead-10',
+      '/stats/kda',
       '/leaderboards/pros',
       '/leaderboards/pros?league=all',
       '/league/lec',
@@ -60,6 +61,8 @@ test.group('Player sitemap', (group) => {
     // A page put away is not listed.
     if (!SHOW_RUNES)
       assert.notInclude(response.text(), '<loc>https://invade.lol/tier-list/runes</loc>')
+    // The old explorer views moved to the studio's pages.
+    assert.notInclude(response.text(), '/stats?view=')
     const unknown = await client.get('/sitemap.xml?section=nope')
     unknown.assertStatus(404)
   })
