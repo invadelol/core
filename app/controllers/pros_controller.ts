@@ -8,6 +8,7 @@ import proMatchService, { split, type ProMatch } from '#services/pro_match_servi
 import { leagueCatalog, leagueRef } from '#services/pro_leagues'
 import { ORIGIN, breadcrumbs, count, meta, notFoundPage, percent, today } from '#services/page_meta'
 import esportsService from '#services/esports_service'
+import esportsLandingService from '#services/esports_landing_service'
 
 /** What the league pages read of a league's players (`proService.league`). */
 interface LeaguePlayer {
@@ -221,15 +222,15 @@ export default class ProsController {
     })
   }
 
-  /** `/teams`: every league's teams, by their starters' solo queue. */
+  /** `/teams`: every league's teams in one ranking by their starters' solo queue, with their five. */
   async teams({ inertia }: HttpContext) {
-    const groups = await proService.leagueTeams().catch(() => [])
-    const teams = groups.reduce((n, g) => n + g.teams.length, 0)
+    const boards = await esportsLandingService.teams().catch(() => [])
+    const teams = boards.reduce((n, b) => n + b.teams.length, 0)
     return inertia.render('esports/teams', {
-      groups,
+      boards,
       ...meta({
         title: 'Pro teams: rosters and solo queue',
-        description: `${teams} teams in ${groups.length} leagues, with their rosters and how their players rank in solo queue.`,
+        description: `${teams} teams in ${boards.length} leagues ranked by their starters' solo queue LP, each with its starting five.`,
         path: '/teams',
         image: '/og/pros/all.jpg',
         version: today(),
