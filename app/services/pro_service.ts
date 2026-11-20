@@ -58,6 +58,26 @@ const GAMES_DAYS = 30
 const CHAMPION_GAMES_DAYS = 14
 /** How far back an account's profile icon is read from its games. */
 const ICON_DAYS = 365
+/**
+ * A pro's signature champion: the one they played most in solo queue over the last four months,
+ * once they played it this many times. Off-season a pro may have one or two stored games, which
+ * say nothing about them.
+ */
+const SIGNATURE_DAYS = 120
+export const SIGNATURE_GAMES = 5
+
+/** The champion a pro plays most, from `[champion, games, wins]` rows; null under the bar. */
+export function signatureOf(counted: unknown[][], least = SIGNATURE_GAMES) {
+  const [best] = counted
+    .map(([champion, games, wins]) => ({
+      champion: Number(champion),
+      games: Number(games),
+      wins: Number(wins),
+    }))
+    .filter((c) => c.champion > 0)
+    .sort((a, b) => b.games - a.games || b.wins - a.wins || a.champion - b.champion)
+  return best && best.games >= least ? best : null
+}
 const STAFF = new Set(['COACH', 'MANAGER', 'ANALYST', 'STAFF', 'OWNER', 'CEO'])
 
 export interface TeamRef {
@@ -539,6 +559,32 @@ export class ProService {
       if (account && Number(icon) > 0) out.set(account, Number(icon))
     }
     return out
+  }
+
+  /** A pro's signature champion (`signatureOf`), from their stored solo queue games. */
+  async signature(playerId: string) {
+    return this.#games
+      .get(`signature:${playerId}`, async () => {
+        const puuids = [...new Set((await this.puuids([playerId])).map((f) => f.puuid))]
+        if (!puuids.length) return null
+        const counted = await rows(
+          `SELECT champion_id, count() AS games, countIf(win) AS wins
+           FROM (
+             SELECT match_id, champion_id, win FROM participants
+             WHERE queue_id = ${RANKED_SOLO} AND ${PRO_PLATFORMS_SQL}
+               AND puuid IN {puuids:Array(String)} AND game_start_ms >= {since:UInt64}
+               AND ${notRemake(puuids)}
+             LIMIT 1 BY match_id
+           )
+           GROUP BY champion_id ORDER BY games DESC LIMIT 3`,
+          { puuids, since: Date.now() - SIGNATURE_DAYS * 86_400_000 }
+        )
+        return signatureOf(counted)
+      })
+      .catch((error) => {
+        logger.warn({ err: error }, 'pro signature failed')
+        return null
+      })
   }
 
   /** The ranked games of some players, the last 30 days, with what they add up to. */

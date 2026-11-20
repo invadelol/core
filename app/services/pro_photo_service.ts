@@ -39,6 +39,32 @@ export function photoSize(asked: unknown): number {
   return PHOTO_SIZES.find((s) => s >= n) ?? largest
 }
 
+/**
+ * Whether a photo is a cutout: a figure on transparency, as the leagues publish them, rather than
+ * a picture with a room behind it. Its two top corners (an eighth of its side each way) are then
+ * mostly see-through, beside the head.
+ */
+export async function isCutout(body: Uint8Array): Promise<boolean> {
+  const side = 48
+  const { data } = await sharp(body)
+    .resize(side, side, { fit: 'fill' })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+  const corner = side / 8
+  let clear = 0
+  let seen = 0
+  for (let y = 0; y < corner; y++) {
+    for (const x0 of [0, side - corner]) {
+      for (let x = x0; x < x0 + corner; x++) {
+        seen++
+        if (data[(y * side + x) * 4 + 3] < 32) clear++
+      }
+    }
+  }
+  return clear >= seen * 0.8
+}
+
 /** A short version of a source address: a new photo gets a new image address. */
 export const photoVersion = (url: string) =>
   createHash('sha1').update(url).digest('base64url').slice(0, 8)
@@ -51,6 +77,7 @@ class ProPhotoService {
   #fetching = 0
   #waiting: (() => void)[] = []
   #index = new Map<string, string>()
+  #cutouts = new Map<string, { at: number; cutout: boolean }>()
   #indexAt = 0
   #indexing: Promise<Map<string, string>> | null = null
 
@@ -84,6 +111,30 @@ class ProPhotoService {
   /** A pro's photo version (for its address), or null when they have none: as last read. */
   of(slug: string | null | undefined): string | null {
     return (slug && this.#index.get(slug)) || null
+  }
+
+  /**
+   * Whether a pro's photo is a cutout (`isCutout`): one can stand before art or rise above a
+   * stage, a plain picture only fills its frame. Read from the served photo, kept a day. A first
+   * read slower than `waitMs` (the photo still being fetched) answers false, a plain frame, and
+   * is there for the next page.
+   */
+  cutout(slug: string, waitMs = 1500): Promise<boolean> {
+    const known = this.#cutouts.get(slug)
+    if (known && Date.now() - known.at < 24 * HOUR) return Promise.resolve(known.cutout)
+    const reading = this.get(slug, PHOTO_SIZES[PHOTO_SIZES.length - 1])
+      .then(async (photo) => {
+        if (!photo) return false
+        const cutout = await isCutout(photo.body)
+        this.#cutouts.set(slug, { at: Date.now(), cutout })
+        return cutout
+      })
+      .catch(() => false)
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const late = new Promise<boolean>((resolve) => {
+      timer = setTimeout(() => resolve(false), waitMs)
+    })
+    return Promise.race([reading, late]).finally(() => clearTimeout(timer))
   }
 
   /** A pro's photo at a served size (`photoSize`), or null. */

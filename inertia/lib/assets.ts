@@ -31,8 +31,6 @@ export const championSplash = (id: number) => assetUrl('splash', id)
 export const skinSplash = (id: number, skin: number) =>
   skin ? `/cdn/${PATHS.splash}/${id}-${skin}.jpg` : championSplash(id)
 export const champIcon = (id: number) => assetUrl('champion', id)
-/** A champion's loading screen portrait (308 × 560), the base skin. */
-export const championLoading = (id: number) => `/cdn/loading/${id}.jpg`
 
 /** A champion mastery crest: levels past ten wear the tenth (docs/cdn.md, `mastery`). */
 export const masteryCrest = (level: number) =>
