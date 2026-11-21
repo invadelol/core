@@ -5,6 +5,7 @@ import {
   matchesName,
   oneTrickOf,
   pageOf,
+  placeOf,
   roleShares,
   sortParam,
   sortRows,
@@ -307,5 +308,20 @@ test.group('Ladder history', () => {
       { at: NOW - 30 * H, lp: 2000 },
       { at: NOW - H, lp: 2100 },
     ])
+  })
+
+  test('finds a place on the ladder by Riot ID, whatever the case', ({ assert }) => {
+    const entries = [
+      entry('a', 'CHALLENGER', 1500, NOW),
+      entry('b', 'GRANDMASTER', 900, NOW),
+      entry('c', 'MASTER', 300, NOW),
+    ]
+    const identities = {
+      [puuid('a')]: { gameName: 'Briar Signal', tagLine: 'EUW' },
+      [puuid('c')]: { gameName: 'Moss Lantern', tagLine: 'ZEN' },
+    }
+    assert.equal(placeOf(entries, identities, 'briar signal', 'euw'), 1)
+    assert.equal(placeOf(entries, identities, 'Moss Lantern', 'ZEN'), 3)
+    assert.isNull(placeOf(entries, identities, 'Moss Lantern', 'EUW'))
   })
 })
