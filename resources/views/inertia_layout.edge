@@ -22,15 +22,20 @@
       The stored theme has to be on <html> before the first paint, or a
       dark-theme visitor gets a white flash on every navigation. This is
       the one script that must run synchronously, ahead of the stylesheet.
-      Without a choice the page is dark, the reference look; `system` follows the device. The season's
-      winter light is painted the same way.
+      Without a choice the page is dark, the reference look. Auto (`system`) is resolved here to the
+      device's dark or light, so `data-theme` only ever says dark or light and every stylesheet
+      follows Auto without a block of its own (inertia/lib/theme.ts keeps it in step afterwards).
+      The season's winter light is painted the same way.
     --}}
     <script>
       (function () {
         try {
           var t = localStorage.getItem('invade-theme')
           if (t === 'light' || t === 'dark' || t === 'system') {
-            document.documentElement.setAttribute('data-theme', t)
+            var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+            var on = t === 'system' ? (dark ? 'dark' : 'light') : t
+            document.documentElement.setAttribute('data-theme', on)
+            document.documentElement.setAttribute('data-theme-choice', t)
             document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) {
               var s = t === 'system' ? (m.media.indexOf('dark') >= 0 ? 'dark' : 'light') : t
               m.content = s === 'dark' ? '#08070d' : '#ffffff'
