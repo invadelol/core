@@ -1,8 +1,9 @@
 /* ──────────────────────────────────────────────────────────────
    The profile (pages/summoner.vue, components/profile): the live
-   layout, a rail at the left (who, the sections, the rank, then the
-   summary: LP, champions, roles, mates, activity), the same on every
-   section, with the section at the right. Sheets,
+   layout, a rail at the left (who, the sections, a card per ranked
+   queue with its LP, then the summary on the ground: champions,
+   roles, mates, activity), the same on every section, with the
+   section at the right. Sheets,
    buttons, wells and rows take their materials from depth.css;
    this file lays them out. Components layer, scoped under `.vb`.
    ────────────────────────────────────────────────────────────── */
@@ -283,6 +284,13 @@
   .vb .pl-sec-h .r {
     margin-left: auto;
   }
+  /* the ranked cards, one per queue, as one block */
+  .vb .pl-rank {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0;
+  }
   .vb .pl-rk {
     display: grid;
     grid-template-columns: 56px minmax(0, 1fr) auto;
@@ -296,14 +304,6 @@
   .vb .pl-tier {
     font-size: 19px;
   }
-  .vb .pl-rk.sm {
-    margin-top: 14px;
-    padding-top: 14px;
-    border-top: 1px solid var(--line);
-  }
-  .vb .pl-rk.sm .rk-emb {
-    margin: 0 8px;
-  }
   .vb .pl-rk .u {
     font-size: 0.6em;
     font-weight: 600;
@@ -314,6 +314,29 @@
     height: 110px;
     margin-top: 16px;
   }
+  /* The summary under the rank (champions, roles, mates, activity): sections on the page ground,
+     a hairline between them, no sheet per block. Their rows sit on the ground too, a wash on
+     hover. */
+  .vb .pl-gs {
+    min-width: 0;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+  }
+  .vb .pl-gs .pl-sec-h {
+    margin-bottom: 10px;
+  }
+  .vb .pl-gs .pl-cr {
+    margin: 0 -8px;
+    padding: 6px 8px;
+    border-radius: var(--r-sm);
+    transition: background-color 140ms var(--ease);
+  }
+  .vb .pl-gs a.pl-cr:hover {
+    background: var(--s1);
+  }
+  .vb .pl-gs-more {
+    margin-top: 6px;
+  }
   .vb .pl-cr {
     display: grid;
     grid-template-columns: 36px minmax(0, 1fr) auto;
@@ -321,7 +344,7 @@
     gap: 12px;
     padding: 7px 0;
   }
-  .vb .pl-cr + .pl-cr {
+  .vb .pl-sec .pl-cr + .pl-cr {
     border-top: 1px solid var(--line);
   }
   .vb .pl-cr .pic {
@@ -411,22 +434,6 @@
   .vb .pl-heat i.h4,
   .vb .pl-heat-k i.h4 {
     background: var(--v300);
-  }
-  [data-theme='light'] .vb .pl-heat i.h1,
-  [data-theme='light'] .vb .pl-heat-k i.h1 {
-    background: var(--v100);
-  }
-  [data-theme='light'] .vb .pl-heat i.h2,
-  [data-theme='light'] .vb .pl-heat-k i.h2 {
-    background: var(--v200);
-  }
-  [data-theme='light'] .vb .pl-heat i.h3,
-  [data-theme='light'] .vb .pl-heat-k i.h3 {
-    background: var(--v400);
-  }
-  [data-theme='light'] .vb .pl-heat i.h4,
-  [data-theme='light'] .vb .pl-heat-k i.h4 {
-    background: var(--v600);
   }
   .vb .pl-heat-f {
     justify-content: space-between;
@@ -700,12 +707,22 @@
      detail read as one sheet. */
   .vb .mh-it .iv-mr {
     background:
-      linear-gradient(90deg, var(--tint), var(--tint-end) 45%), var(--d-sheen), var(--d-sf1);
+      linear-gradient(90deg, var(--tint), var(--tint-end) 55%), var(--d-sheen), var(--d-sf1);
     box-shadow: var(--d-row);
   }
   .vb .mh-it .iv-mr.open {
     background:
-      linear-gradient(90deg, var(--tint), var(--tint-end) 45%), var(--d-sheen), var(--d-sf2);
+      linear-gradient(90deg, var(--tint), var(--tint-end) 55%), var(--d-sheen), var(--d-sf2);
+  }
+  /* A win and a loss read at a glance: a clear blue or red ground that holds across the whole row,
+     under the full-strength edge. */
+  .vb .mh-it .iv-mr.win {
+    --tint: rgb(var(--win-rgb) / 0.22);
+    --tint-end: rgb(var(--win-rgb) / 0.07);
+  }
+  .vb .mh-it .iv-mr.loss {
+    --tint: rgb(var(--loss-rgb) / 0.2);
+    --tint-end: rgb(var(--loss-rgb) / 0.065);
   }
   .vb .mh-it .iv-mr:focus-visible {
     box-shadow: var(--d-row), var(--focus);
@@ -992,6 +1009,34 @@
     }
     .vb .pl-nav .n {
       margin-left: 2px;
+    }
+  }
+  /* A tablet: the player's card with Flex under it beside Solo/Duo, so neither card stretches
+     empty, then the sections in a row. */
+  @media (min-width: 768px) and (max-width: 1023px) {
+    .vb .pl-rail {
+      grid-template-areas:
+        'id solo'
+        'flex solo'
+        'nav nav';
+      grid-template-rows: auto 1fr auto;
+      align-items: start;
+    }
+    .vb .pl-rail > .pl-id {
+      grid-area: id;
+    }
+    .vb .pl-rail > .pl-nav {
+      grid-area: nav;
+      grid-row: 3;
+    }
+    .vb .pl-rank {
+      display: contents;
+    }
+    .vb .pl-rank > .pl-q:first-child {
+      grid-area: solo;
+    }
+    .vb .pl-rank > .pl-q + .pl-q {
+      grid-area: flex;
     }
   }
 

@@ -313,3 +313,22 @@ export function matchesName(gameName: string | null | undefined, q: string) {
   if (!term) return true
   return (gameName ?? '').toLowerCase().includes(term)
 }
+
+/**
+ * A player's place on a ladder (1 is its top), found by Riot ID: the ladder's entries carry the
+ * crawler's PUUIDs, which are not the site's, and the name is what both sides share. Null off it.
+ */
+export function placeOf(
+  entries: ApexEntry[],
+  identities: Record<string, { gameName: string; tagLine: string } | undefined>,
+  gameName: string,
+  tagLine: string
+) {
+  const name = gameName.trim().toLowerCase()
+  const tag = tagLine.trim().toLowerCase()
+  const index = entries.findIndex((e) => {
+    const id = identities[e.puuid]
+    return id && id.gameName.toLowerCase() === name && id.tagLine.toLowerCase() === tag
+  })
+  return index < 0 ? null : index + 1
+}

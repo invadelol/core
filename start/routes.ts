@@ -102,6 +102,10 @@ router
       .use(middleware.httpCache())
 
     router
+      .get('/summoners/puuid/:puuid/ladder', [SummonersController, 'ladder'])
+      .use(middleware.httpCache())
+
+    router
       .get('/summoners/puuid/:puuid/stats', [SummonersController, 'stats'])
       .use(middleware.httpCache())
 

@@ -1,18 +1,19 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { RoleIcon } from '@invadelol/ui'
 import { positionOf, type Position } from '@invadelol/ui/logic'
 import Icon from '../ui/Icon.vue'
+import ShowMore from '../ShowMore.vue'
 import { champIcon, championName, profileIcon } from '../../lib/assets.js'
 import { isRemake } from '../../lib/match.js'
 import { profilePath } from '../../lib/format.js'
 import type { ChampionStats, Match, Teammate } from '../../lib/types.js'
 
 /**
- * The Overview rail under the rank: the five most played champions with their win rate, the
- * roles of the latest games, and who the player queues with (a win rate only from five games
- * together).
+ * The Overview rail under the rank, on the page ground with a hairline between sections: the most
+ * played champions with their win rate (five, then all of them on a tap), the roles of the latest
+ * games, and who the player queues with (five, then all; a win rate only from five games together).
  */
 const props = defineProps<{
   champions: ChampionStats[]
@@ -23,7 +24,11 @@ const props = defineProps<{
   friendsHref: string
 }>()
 
-const top = computed(() => props.champions.slice(0, 5))
+/** Rows shown before "Show all". */
+const LIST = 5
+const championsOpen = ref(false)
+const matesOpen = ref(false)
+const top = computed(() => (championsOpen.value ? props.champions : props.champions.slice(0, LIST)))
 const pct = (wins: number, games: number) => (games ? Math.round((wins / games) * 100) : 0)
 
 const ROLES: Array<[Position, string]> = [
@@ -58,11 +63,11 @@ const roles = computed(() => {
 
 /** Five games together before a win rate means anything. */
 const MIN = 5
-const mates = computed(() => props.teammates.slice(0, 3))
+const mates = computed(() => (matesOpen.value ? props.teammates : props.teammates.slice(0, LIST)))
 </script>
 
 <template>
-  <section v-if="top.length" class="card pl-sec">
+  <section v-if="top.length" class="pl-gs">
     <div class="pl-sec-h">
       <h2 class="h4">Champions</h2>
       <Link class="more r" :href="championsHref"
@@ -74,7 +79,7 @@ const mates = computed(() => props.teammates.slice(0, 3))
       <span class="col" style="gap: 4px; min-width: 0">
         <span class="h5 ell">{{ championName(c.championId) }}</span>
         <span class="meta num"
-          >{{ c.games }} {{ c.games === 1 ? 'game' : 'games' }} · {{ c.kda.toFixed(1) }} KDA</span
+          >{{ c.games }} {{ c.games === 1 ? 'game' : 'games' }}, {{ c.kda.toFixed(1) }} KDA</span
         >
       </span>
       <span class="v">
@@ -82,9 +87,10 @@ const mates = computed(() => props.teammates.slice(0, 3))
         <span class="meta num">{{ c.wins }}W {{ c.games - c.wins }}L</span>
       </span>
     </Link>
+    <ShowMore v-model="championsOpen" class="pl-gs-more" :total="champions.length" :limit="LIST" />
   </section>
 
-  <section v-if="roles.laned" class="card pl-sec">
+  <section v-if="roles.laned" class="pl-gs">
     <div class="pl-sec-h">
       <h2 class="h4">Roles</h2>
       <span class="meta num"
@@ -102,7 +108,7 @@ const mates = computed(() => props.teammates.slice(0, 3))
     </div>
   </section>
 
-  <section v-if="mates.length" class="card pl-sec">
+  <section v-if="mates.length" class="pl-gs">
     <div class="pl-sec-h">
       <h2 class="h4">Played with</h2>
       <Link class="more r" :href="friendsHref"
@@ -130,5 +136,6 @@ const mates = computed(() => props.teammates.slice(0, 3))
         ><span class="meta num">{{ m.wins }}W {{ m.games - m.wins }}L</span></span
       >
     </Link>
+    <ShowMore v-model="matesOpen" class="pl-gs-more" :total="teammates.length" :limit="LIST" />
   </section>
 </template>
