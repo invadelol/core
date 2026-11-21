@@ -32,6 +32,8 @@ interface Row {
   championCount: number
   classes: Cls[]
   delta: number | null
+  /** Its tier on the patch before (same role and class), null when it was not ranked then. */
+  tierBefore: number | null
 }
 interface List {
   computing?: boolean
@@ -176,6 +178,25 @@ const order = computed(() => {
   return o && o.components.length > 1 ? o : undefined
 })
 const mainSlot = (r: Row) => r.slots.indexOf(Math.max(...r.slots))
+
+/** How an item's tier moved since the patch before; null without that patch to compare. */
+function moveOf(r: Row) {
+  const before = ready.value?.previousPatch
+  if (!before || r.tier === null) return null
+  const patch = patchName(before)
+  if (r.tierBefore === null) return { kind: 'new', text: `Not ranked on ${patch}` }
+  if (r.tierBefore === r.tier) return { kind: 'eq', text: `Same tier as on ${patch}` }
+  const up = r.tier < r.tierBefore
+  return {
+    kind: up ? 'up' : 'dn',
+    text: `${up ? 'Up' : 'Down'} from ${TIERS[r.tierBefore]} since ${patch}`,
+  }
+}
+/** The tiles mark only the items that changed tier. */
+const moved = (r: Row) => {
+  const m = moveOf(r)
+  return m && (m.kind === 'up' || m.kind === 'dn') ? m : null
+}
 const classLabel = (r: Row) => (r.classes[0] ? CLASS_LABEL[r.classes[0]] : null)
 
 /** The game's stat icons (`/cdn/stat/<name>`), by the stat's words; others get a small diamond. */
@@ -246,17 +267,27 @@ const statIcon = (stat: string) => STAT_ICON.find(([re]) => re.test(stat.trim())
                     class="ib-t"
                     :class="{ on: open?.item === r.item }"
                     :aria-pressed="open?.item === r.item"
-                    :title="nameOf(r.item)"
+                    :title="
+                      moved(r)
+                        ? `${nameOf(r.item)}, ${moved(r)!.text.toLowerCase()}`
+                        : nameOf(r.item)
+                    "
                     @click="pick(r.item)"
                   >
-                    <img
-                      class="tb-ic"
-                      :src="itemUrl(r.item)"
-                      alt=""
-                      width="48"
-                      height="48"
-                      loading="lazy"
-                    />
+                    <span class="ib-ic"
+                      ><img
+                        class="tb-ic"
+                        :src="itemUrl(r.item)"
+                        alt=""
+                        width="48"
+                        height="48"
+                        loading="lazy"
+                      /><i v-if="moved(r)" class="ib-mv" :class="moved(r)!.kind"
+                        ><Icon name="arrow" :size="12" :stroke-width="2" /><span class="sr-only">{{
+                          moved(r)!.text
+                        }}</span></i
+                      ></span
+                    >
                     <span class="n">{{ nameOf(r.item) }}</span>
                     <span class="wr">{{ p1(r.win) }}%</span>
                   </button>
@@ -290,6 +321,13 @@ const statIcon = (stat: string) => STAT_ICON.find(([re]) => re.test(stat.trim())
                     >
                     <span class="gd">{{ thousands(detail.gold) }} gold</span>
                   </span>
+                  <span v-if="moveOf(open)" class="ip-mv" :class="moveOf(open)!.kind"
+                    ><Icon
+                      v-if="moveOf(open)!.kind === 'up' || moveOf(open)!.kind === 'dn'"
+                      name="arrow"
+                      :size="14"
+                    />{{ moveOf(open)!.text }}</span
+                  >
                 </div>
                 <button type="button" class="ip-x" aria-label="Close" @click="sheet = false">
                   <Icon name="x" />

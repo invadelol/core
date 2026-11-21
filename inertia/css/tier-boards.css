@@ -25,6 +25,12 @@
 .vb .ib-t.on { background: var(--v950); box-shadow: inset 0 0 0 1px rgb(var(--v-rgb) / 0.55); }
 .vb .ib-t.on .n { color: var(--t1); }
 .vb .ib-none { padding: 28px 24px; }
+/* An item that changed tier since the patch before: an arrow on its icon's corner, violet up, grey down. */
+.vb .ib-ic { position: relative; display: block; }
+.vb .ib-mv { position: absolute; top: -5px; right: -6px; display: grid; place-items: center; width: 18px; height: 18px; border-radius: var(--r1); background: var(--s2); box-shadow: 0 0 0 1px var(--line-2); color: var(--v200); }
+.vb .ib-mv .i { transform: rotate(-90deg); }
+.vb .ib-mv.dn { color: var(--t2); }
+.vb .ib-mv.dn .i { transform: rotate(90deg); }
 
 /* The item panel */
 .vb .ip { position: sticky; top: 16px; overflow: hidden; }
@@ -32,6 +38,10 @@
 .vb .ip-h .tb-ic { border-radius: 10px; box-shadow: 0 0 0 1px var(--line-3); }
 .vb .ip-h .col { gap: 6px; min-width: 0; }
 .vb .ip-h .h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vb .ip-mv { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--t3); }
+.vb .ip-mv.up { color: var(--v200); }
+.vb .ip-mv.up .i { transform: rotate(-90deg); }
+.vb .ip-mv.dn .i { transform: rotate(90deg); }
 .vb .ip-x { display: none; }
 .vb .ip-sec { padding: 16px 22px; border-top: 1px solid var(--line); }
 .vb .ip-sec > .lab { display: block; margin-bottom: 12px; }

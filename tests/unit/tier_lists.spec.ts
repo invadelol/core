@@ -7,6 +7,7 @@ import {
   placeTiers,
   shrunk,
 } from '#services/tier_lists'
+import { tierOf } from '#services/champion_stats'
 import {
   ITEM_KINDS,
   itemBlob,
@@ -234,6 +235,11 @@ test.group('Tier lists: items', () => {
     const moved = itemView(counts, before, 'MIDDLE', null, classes, legendary)
     const was = moved.rows.find((r) => r.item === LUDENS)!
     assert.equal(was.delta, Math.round((570 / 1100 - 0.5) * 10000) / 10000)
+    // Its tier then, ranked the same way among that patch's items (alone, it leads them).
+    assert.equal(was.tierBefore, tierOf(0, 1))
+    // An item not ranked on the patch before has no tier then; without that patch, none has.
+    assert.isNull(moved.rows.find((r) => r.item === RABADON)!.tierBefore)
+    assert.isTrue(view.rows.every((r) => r.tierBefore === null))
   })
 
   test('sums a bracket’s seed tiers and a range’s patches', ({ assert }) => {
