@@ -7,7 +7,8 @@ import { withQuery } from '../../lib/tier_lists.js'
  * The role filter of a statistics page (`.seg`): each role is an address (`?role=`), every role
  * first when `all` names it ("All roles"). `value` is the role the page shows (null: every role).
  * With `icons`, each option is its glyph alone (every role: four squares, as "all" reads on
- * League sites), its name in the label and the tooltip.
+ * League sites), its name in the label and the tooltip. On a phone the words give way to the
+ * glyphs anyway, so the six options fit the width instead of running off its edge.
  */
 withDefaults(
   defineProps<{
@@ -38,12 +39,12 @@ const ROLES = [
       :href="withQuery(page.url, { [param]: null })"
       :class="{ on: !value }"
       :aria-current="!value ? 'page' : undefined"
-      :aria-label="icons ? all : undefined"
+      :aria-label="all"
       :title="icons ? all : undefined"
       preserve-scroll
       ><svg
-        v-if="icons"
         class="iv-role-icon"
+        :class="{ 'rs-g': !icons }"
         width="18"
         height="18"
         viewBox="0 0 34 34"
@@ -51,7 +52,7 @@ const ROLES = [
       >
         <path fill="currentColor" d="M4 4h11v11H4Zm15 15h11v11H19Z" />
         <path fill="currentColor" opacity=".5" d="M19 4h11v11H19ZM4 19h11v11H4Z" /></svg
-      ><template v-else>{{ all }}</template></Link
+      ><span v-if="!icons" class="rs-l">{{ all }}</span></Link
     >
     <Link
       v-for="r in ROLES"
@@ -59,12 +60,31 @@ const ROLES = [
       :href="withQuery(page.url, { [param]: r.slug })"
       :class="{ on: value === r.position }"
       :aria-current="value === r.position ? 'page' : undefined"
-      :aria-label="icons ? r.label : undefined"
+      :aria-label="r.label"
       :title="icons ? r.label : undefined"
       preserve-scroll
-      ><RoleIcon :lane="r.lane" :size="icons ? 18 : 16" /><template v-if="!icons">{{
+      ><RoleIcon :lane="r.lane" :size="icons ? 18 : 16" /><span v-if="!icons" class="rs-l">{{
         r.label
-      }}</template></Link
+      }}</span></Link
     >
   </nav>
 </template>
+
+<style scoped>
+.rs-g {
+  display: none;
+}
+@media (max-width: 560px) {
+  .role-seg:not(.role-seg-ic) > * {
+    justify-content: center;
+    min-width: 44px;
+    padding: 0 10px;
+  }
+  .rs-l {
+    display: none;
+  }
+  .rs-g {
+    display: block;
+  }
+}
+</style>
