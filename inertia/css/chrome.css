@@ -612,12 +612,12 @@
   object-position: 50% 10%;
 }
 .vb .sx-i.gl,
-.vb .sx-i.tm {
+.vb .sx-i.sx-tm {
   background: var(--s2);
   box-shadow: inset 0 0 0 1px var(--line);
   color: var(--t2);
 }
-.vb .sx-i.tm .cs-logo {
+.vb .sx-i.sx-tm .cs-logo {
   background: none;
 }
 .vb .sx-i.ini {
