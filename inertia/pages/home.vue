@@ -32,6 +32,7 @@ import { patchPath } from '../lib/site_nav.js'
 import { DISCORD_URL, X_URL } from '../lib/links.js'
 import type { HomePage } from '../lib/home.js'
 import '../css/home-facet.css'
+import '../css/home-desk.css'
 
 /**
  * `/`: a title and one normal-size search at the centre, one quiet line of this browser's recent
@@ -352,23 +353,26 @@ const topBully = (rows: { value: number }[]) => rows[0]?.value || 1
         </div>
       </section>
 
+      <!-- The desktop app: a line a player says, two things the app does, the window at its size -->
       <section class="sec" aria-labelledby="hm-app">
-        <div class="promo">
+        <div class="promo dk">
           <div class="hm-promo">
-            <Glyph :h="44" />
-            <h2 id="hm-app" class="h1">Invade for desktop</h2>
-            <p class="body">
-              It opens with League, brings the build into champion select and scores each of your
-              games out of 100.
+            <Glyph :h="36" />
+            <h2 id="hm-app" class="dk-h">Stop copying runes from a website.</h2>
+            <p class="dk-p">
+              Invade opens with League. It sets <b>your runes and build in champion select</b>, and
+              after each game it gives you <b>a score out of 100</b>.
             </p>
             <DownloadApp track="home" />
-            <p class="meta hm-free">Free, no account needed.</p>
+            <p class="meta hm-free">Free on Windows and macOS, no account needed.</p>
           </div>
-          <span class="fr l shot"
+          <span class="fr l shot dk-shot"
             ><img
               :src="'/app-page/home-1280.webp'"
               :srcset="'/app-page/home-1280.webp 1280w, /app-page/home-2560.webp 2560w'"
-              sizes="(max-width: 767px) 100vw, 640px"
+              sizes="(max-width: 767px) 150vw, 1000px"
+              width="1280"
+              height="800"
               alt="The Invade desktop app's Home: rank and LP, the match history scored out of 100, clips and champions"
               loading="lazy"
               decoding="async"

@@ -417,19 +417,11 @@
       width: 40px;
       height: 40px;
     }
-    .vb .pg-es .pp-g {
-      grid-template-columns: 1fr;
-    }
     .vb .pg-es .pp-name {
       font-size: 44px;
     }
     .vb .pg-es .tbl-scroll {
       overflow-x: auto;
-    }
-  }
-  @media (max-width: 1023px) {
-    .vb .pg-es .pp-g {
-      grid-template-columns: 1fr;
     }
   }
 }
@@ -447,11 +439,7 @@
     border-top: 1px solid var(--line);
   }
 
-  /* A pro's Solo queue tab: the games over the page's width, with their items and the other pros
-     by name beside their faces. */
-  .vb .sq.wide {
-    grid-template-columns: 48px 110px 120px 150px 56px auto minmax(0, 1fr) auto;
-  }
+  /* A game's items, in a pro's game lines. */
   .vb .sq-it {
     display: flex;
     gap: 3px;
@@ -467,9 +455,6 @@
     background: var(--s2);
     box-shadow: inset 0 0 0 1px var(--line);
   }
-  .vb .sq-who {
-    text-align: right;
-  }
   /* A pro's accounts: each with its profile icon. */
   .vb .pp-acc .pp-ic {
     width: 36px;
@@ -478,14 +463,6 @@
     border-radius: var(--r-sm);
     background: var(--s2);
     box-shadow: inset 0 0 0 1px var(--line);
-  }
-  @media (max-width: 1199px) {
-    .vb .sq.wide {
-      grid-template-columns: 48px 110px 120px 150px 56px auto minmax(0, 1fr);
-    }
-    .vb .sq.wide .sq-who {
-      display: none;
-    }
   }
   .vb .es-lgc > .card {
     min-width: 0;
@@ -560,13 +537,6 @@
       transform: none;
     }
   }
-  .vb .pg-es .pp-hero.pp-pro {
-    grid-template-columns: 520px minmax(0, 1fr);
-  }
-  /* Without a signature champion: the pro on their stage, square. */
-  .vb .pg-es .pp-hero.pp-pro.plain {
-    grid-template-columns: 300px minmax(0, 1fr);
-  }
   .vb .pp-art {
     height: 300px;
     --cut: 22px;
@@ -617,16 +587,7 @@
     font-weight: 500;
     color: var(--t3);
   }
-  @media (max-width: 1199px) {
-    .vb .pg-es .pp-hero.pp-pro {
-      grid-template-columns: 420px minmax(0, 1fr);
-    }
-  }
   @media (max-width: 1023px) {
-    .vb .pg-es .pp-hero.pp-pro,
-    .vb .pg-es .pp-hero.pp-pro.plain {
-      grid-template-columns: 1fr;
-    }
     .vb .pp-art {
       height: 280px;
     }
@@ -643,183 +604,11 @@
   }
 }
 
-/* ── The pro ladder's top three: the leader, the next two under them, the apex tiers beside ── */
-@layer components {
-  .vb .pl-top {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 280px;
-    overflow: hidden;
-    border-radius: var(--r3);
-    background: var(--d-sheen), var(--d-sf1);
-    box-shadow: var(--d-lit), var(--d-drop);
-  }
-  .vb .pl-no {
-    display: inline-flex;
-    align-items: flex-start;
-    font-size: 40px;
-    line-height: 1;
-    font-weight: 650;
-    letter-spacing: -0.03em;
-    font-variant-numeric: lining-nums;
-    color: var(--t1);
-  }
-  .vb .pl-no sup {
-    position: static;
-    margin: 3px 0 0 2px;
-    font-size: 14px;
-    line-height: 1;
-    font-weight: 600;
-    letter-spacing: 0;
-    color: var(--t3);
-  }
-  .vb .pl-no.sm {
-    font-size: 24px;
-    color: var(--t2);
-  }
-  .vb .pl-no.sm sup {
-    margin-top: 2px;
-    font-size: 11px;
-  }
-  .vb .pl-lead {
-    display: grid;
-    grid-template-columns: 56px 156px minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 22px;
-    min-height: 156px;
-    padding: 0 28px 0 24px;
-  }
-  /* The leader stands on a small stage, their head above its edge. */
-  .vb .pl-cut {
-    --stage-h: 108px;
-    position: relative;
-    align-self: end;
-    height: 146px;
-  }
-  .vb .pl-cut::before {
-    content: '';
-    position: absolute;
-    inset: auto 0 0;
-    height: var(--stage-h);
-    --cut: 14px;
-    border-radius: var(--r2) var(--r2) 0 0;
-    background: var(--v900);
-    clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%);
-  }
-  .vb .pl-nm {
-    font-size: 28px;
-    line-height: 1.1;
-    font-weight: 650;
-    letter-spacing: -0.02em;
-  }
-  .vb .pl-lp {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 6px;
-  }
-  .vb .pl-ln {
-    display: grid;
-    grid-template-columns: 56px 40px minmax(0, 1fr) 100px 120px;
-    align-items: center;
-    gap: 22px;
-    min-height: 64px;
-    padding: 0 28px 0 24px;
-    border-top: 1px solid var(--line);
-  }
-  .vb :is(.pl-lead, .pl-ln) {
-    transition: background var(--m) var(--ease);
-  }
-  .vb :is(.pl-lead, .pl-ln):hover {
-    background: var(--hover-row);
-  }
-  .vb .pl-ln .ppic {
-    width: 40px;
-    height: 40px;
-    overflow: hidden;
-    border-radius: var(--r2);
-    background: var(--v900);
-  }
-  .vb .pl-ln .h5,
-  .vb .pl-gap {
-    text-align: right;
-  }
-  .vb .pl-tiers {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    padding: 18px 22px;
-    border-left: 1px solid var(--line);
-  }
-  .vb .pl-tiers .lab {
-    margin-bottom: 6px;
-  }
-  .vb .pl-tier {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-height: 48px;
-    border-top: 1px solid var(--line);
-  }
-  .vb .pl-tiers .lab + .pl-tier {
-    border-top: 0;
-  }
-  @media (max-width: 1023px) {
-    .vb .pl-top {
-      grid-template-columns: 1fr;
-    }
-    .vb .pl-tiers {
-      border-left: 0;
-      border-top: 1px solid var(--line);
-    }
-  }
-  @media (max-width: 767px) {
-    .vb .pl-lead {
-      grid-template-columns: 34px 104px minmax(0, 1fr);
-      gap: 12px;
-      min-height: 0;
-      padding: 14px 14px 0 12px;
-    }
-    .vb .pl-lead .pl-no {
-      grid-area: 1 / 1 / 3;
-      align-self: start;
-      font-size: 30px;
-    }
-    .vb .pl-cut {
-      --stage-h: 88px;
-      grid-area: 1 / 2 / 3;
-      height: 120px;
-    }
-    .vb .pl-lead > .col {
-      grid-area: 1 / 3;
-      align-self: end;
-    }
-    .vb .pl-nm {
-      font-size: 22px;
-    }
-    .vb .pl-lp {
-      grid-area: 2 / 3;
-      align-items: flex-start;
-      padding-bottom: 14px;
-    }
-    .vb .pl-lp .fg-l {
-      font-size: 24px;
-    }
-    .vb .pl-ln {
-      grid-template-columns: 34px 40px minmax(0, 1fr) auto;
-      gap: 12px;
-      padding: 0 14px 0 12px;
-    }
-    .vb .pl-ln .pl-gap {
-      display: none;
-    }
-  }
-}
-
 /*
  * Outside the layers, like pro_pics.css (whose unlayered rules would win otherwise): a pro's
- * cutout stands whole on its frame's floor, in the hero and on the leader's stage.
+ * cutout stands whole on its frame's floor, in the hero.
  */
-.vb .pg-es :is(.pp-art, .pl-cut:not(.flat)) > .pro-pic.is-photo > img {
+.vb .pg-es .pp-art > .pro-pic.is-photo > img {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -836,18 +625,4 @@
 }
 .vb .pg-es .pp-pro:not(.plain) .pp-art > .pro-pic.is-team > img {
   filter: drop-shadow(0 6px 18px rgb(0 0 0 / 0.5));
-}
-/* On the leader's stage, a logo, the stand-in or a plain photo sits on the stage, not above it. */
-.vb .pg-es .pl-cut > .pro-pic {
-  position: absolute;
-  inset: 0;
-}
-.vb .pg-es .pl-cut > .pro-pic:not(.is-photo),
-.vb .pg-es .pl-cut.flat > .pro-pic {
-  inset: auto 0 0;
-  height: var(--stage-h);
-}
-.vb .pg-es .pl-cut.flat > .pro-pic {
-  border-radius: var(--r2) var(--r2) 0 0;
-  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
 }

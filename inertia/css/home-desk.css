@@ -1,0 +1,98 @@
+/* The home's desktop card (home.vue): a short line in a player's words, two things the app does
+   with their words in the primary ink, and the app's window drawn at its own size, larger than
+   its frame and cut by the card's right and bottom edges. */
+@layer components {
+  .vb .promo.dk {
+    grid-template-columns: 380px minmax(0, 1fr);
+    gap: 44px;
+    padding: 48px 0 0 48px;
+  }
+  .vb .dk .hm-promo {
+    align-self: center;
+    padding-bottom: 48px;
+  }
+  .vb .dk-h {
+    margin-top: 20px;
+    font-size: 32px;
+    line-height: 1.12;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    color: var(--t1);
+    text-wrap: balance;
+  }
+  .vb .dk-p {
+    max-width: 440px;
+    margin-top: 14px;
+    font-size: 15.5px;
+    line-height: 1.55;
+    color: var(--t3);
+  }
+  .vb .dk-p b {
+    font-weight: 600;
+    color: var(--t1);
+  }
+  .vb .dk .hm-promo .dl-app {
+    margin-top: 24px;
+  }
+  .vb .promo.dk .shot {
+    height: 500px;
+  }
+  /* Read at the app's own size: the window wider than its frame, cut at the right. */
+  .vb .promo.dk .shot img {
+    width: 136%;
+    max-width: none;
+    height: auto;
+  }
+
+  @media (max-width: 1199px) {
+    .vb .promo.dk {
+      grid-template-columns: 320px minmax(0, 1fr);
+      gap: 32px;
+      padding: 40px 0 0 40px;
+    }
+    .vb .dk-h {
+      font-size: 28px;
+    }
+    .vb .promo.dk .shot {
+      height: 440px;
+    }
+    .vb .promo.dk .shot img {
+      width: 160%;
+    }
+  }
+  @media (max-width: 1023px) {
+    .vb .promo.dk {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 28px;
+      padding: 36px 28px 0;
+    }
+    .vb .dk .hm-promo {
+      padding-bottom: 0;
+    }
+    .vb .promo.dk .shot {
+      height: 380px;
+      border-radius: 12px 12px 0 0;
+    }
+    .vb .promo.dk .shot img {
+      width: 130%;
+    }
+  }
+  @media (max-width: 767px) {
+    .vb .promo.dk {
+      padding: 26px 20px 0;
+      gap: 22px;
+    }
+    .vb .dk-h {
+      font-size: 26px;
+    }
+    .vb .dk-p {
+      font-size: 15px;
+    }
+    .vb .promo.dk .shot {
+      height: 260px;
+    }
+    .vb .promo.dk .shot img {
+      width: 190%;
+    }
+  }
+}

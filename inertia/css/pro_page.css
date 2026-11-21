@@ -1,0 +1,384 @@
+/* A pro's page (pages/esports/pro.vue, components/esports/pro): the header with the pro before
+   their champion's art, their rank card and their team in one line; then accounts and career,
+   their recent games and their champions side by side, all in the first screen. */
+@layer components {
+  /* ── The header ── */
+  .vb .pp-head {
+    padding: 20px;
+  }
+  .vb .pp-head-g {
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr) 300px;
+    gap: 28px;
+    align-items: center;
+  }
+  .vb .pp-head .pp-art {
+    height: 196px;
+  }
+  .vb .pp-who {
+    min-width: 0;
+  }
+  .vb .pp-head .pp-name {
+    font-size: 48px;
+    overflow-wrap: anywhere;
+  }
+  .vb .pp-tags {
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .vb .pp-links {
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 14px;
+  }
+  .vb .pp-links .btn {
+    max-width: 100%;
+  }
+  .vb .pp-rc {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    align-self: stretch;
+    justify-content: center;
+    padding-left: 28px;
+    border-left: 1px solid var(--line);
+  }
+  .vb .pp-rank {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .vb .pp-fig {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+  .vb .pp-fig .fg-s,
+  .vb .pp-fig .fg-l {
+    white-space: nowrap;
+  }
+  .vb .pp-tier {
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .vb .pp-rc-figs {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+  }
+  .vb .pp-rc-figs .meta {
+    white-space: nowrap;
+  }
+
+  /* The team, in one line at the header's foot. */
+  .vb .pp-strip {
+    display: grid;
+    grid-template-columns: 200px repeat(var(--n, 5), minmax(0, 1fr));
+    margin: 20px -20px -20px;
+    border-top: 1px solid var(--line);
+  }
+  .vb .pp-strip > * {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    min-height: 64px;
+    padding: 10px 16px;
+    transition: background 160ms var(--ease);
+  }
+  .vb .pp-strip > * + * {
+    border-left: 1px solid var(--line);
+  }
+  .vb .pp-strip > a:hover {
+    background: rgb(var(--v-rgb) / 0.04);
+  }
+  .vb .pp-strip-t img {
+    width: 32px;
+    height: 32px;
+    flex: none;
+    object-fit: contain;
+  }
+  .vb .pp-sm.me {
+    background: rgb(var(--v-rgb) / 0.07);
+  }
+  .vb .pp-face {
+    display: block;
+    flex: none;
+    width: 40px;
+    height: 40px;
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--v900);
+  }
+
+  /* ── The overview: three columns ── */
+  .vb .pp-cols {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr) 280px;
+    gap: 20px;
+    align-items: start;
+    padding-top: 20px;
+  }
+  .vb .pp-cols.no-champs {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+  .vb .pp-cols > .col {
+    gap: 20px;
+    min-width: 0;
+  }
+  .vb .pp-more {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    padding: 12px;
+    border-top: 1px solid var(--line);
+  }
+
+  /* A recent game, one line; it opens in place. */
+  .vb .pp-games .card-h {
+    flex-wrap: wrap;
+  }
+  .vb .pp-sq {
+    grid-template-columns: 40px 92px 92px minmax(64px, 1fr) auto;
+    gap: 14px;
+    padding: 10px 16px 10px 20px;
+  }
+  .vb .pp-sq.it {
+    grid-template-columns: 40px 104px 104px 96px auto minmax(0, 1fr);
+  }
+  .vb .pp-sq .fr {
+    width: 40px;
+    height: 40px;
+  }
+  .vb .pp-sq .kda {
+    font-size: 15px;
+  }
+  .vb .pp-sq .faces2 {
+    align-items: center;
+  }
+  .vb .pp-sq .faces2 > span {
+    width: 30px;
+    height: 30px;
+  }
+  .vb .pp-plus {
+    margin-left: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--t3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* An account, a career line, a champion: one quiet line. */
+  .vb :is(.pp-ac, .pp-ch) {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 52px;
+    padding: 8px 16px 8px 20px;
+    border-top: 1px solid var(--line);
+    transition: background 160ms var(--ease);
+  }
+  .vb :is(a.pp-ac, a.pp-ch):hover {
+    background: rgb(var(--v-rgb) / 0.04);
+  }
+  .vb .pp-ac > .col {
+    flex: 1;
+  }
+  .vb .pp-aic {
+    width: 28px;
+    height: 28px;
+    flex: none;
+    border-radius: var(--r-sm);
+    background: var(--s2);
+  }
+  .vb .pp-rk {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex: none;
+    max-width: 100%;
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--t1);
+    font-variant-numeric: tabular-nums;
+  }
+  .vb .pp-rk.sm {
+    gap: 4px;
+    font-size: 12px;
+    color: var(--t2);
+  }
+  .vb .pp-rk.un {
+    font-weight: 500;
+    color: var(--t3);
+  }
+  .vb .pp-rk > :is(img, svg, .rk-emb) {
+    flex: none;
+  }
+
+  /* The champion they play most, and how they build it. */
+  .vb .pp-main .card-h .fr {
+    flex: none;
+  }
+  .vb .pp-bkv {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 48px;
+    padding: 8px 20px;
+    border-top: 1px solid var(--line);
+  }
+  .vb .pp-its {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .vb .pp-its img {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--r-sm);
+    background: var(--ink-0);
+  }
+  .vb .pp-its img.r {
+    border-radius: 50%;
+  }
+  .vb .pp-its img.sm {
+    width: 20px;
+    height: 20px;
+  }
+
+  .vb .pg-es .tabs > a {
+    white-space: nowrap;
+  }
+
+  /* ── Narrower ── */
+  @media (max-width: 1199px) {
+    .vb .pp-head-g {
+      grid-template-columns: 280px minmax(0, 1fr);
+    }
+    .vb .pp-rc {
+      grid-column: 1 / -1;
+      padding: 16px 0 0;
+      border-left: 0;
+      border-top: 1px solid var(--line);
+      flex-direction: row;
+      align-items: center;
+      gap: 28px;
+    }
+    .vb .pp-rc-figs {
+      flex: 1;
+      padding: 0 0 0 28px;
+      border-top: 0;
+      border-left: 1px solid var(--line);
+    }
+    .vb .pp-cols,
+    .vb .pp-cols.no-champs {
+      grid-template-columns: 260px minmax(0, 1fr);
+    }
+    .vb .pp-strip {
+      grid-template-columns: 150px repeat(var(--n, 5), minmax(0, 1fr));
+    }
+    .vb .pp-strip > * {
+      gap: 8px;
+      padding: 10px 12px;
+    }
+    .vb .pp-strip .pp-rl {
+      display: none;
+    }
+    .vb .pp-cols > .col:nth-child(3) {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start;
+    }
+  }
+  @media (max-width: 1023px) {
+    .vb .pp-head-g {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .vb .pp-head .pp-art {
+      height: 240px;
+    }
+    .vb .pp-strip {
+      grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr));
+    }
+    .vb .pp-strip-t {
+      grid-column: 1 / -1;
+      border-bottom: 1px solid var(--line);
+    }
+    .vb .pp-strip > :nth-child(2) {
+      border-left: 0;
+    }
+    .vb .pp-strip > .pp-sm {
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 4px;
+      text-align: center;
+    }
+    .vb .pp-strip > .pp-sm > .col {
+      align-items: center;
+      max-width: 100%;
+    }
+    .vb .pp-cols,
+    .vb .pp-cols.no-champs,
+    .vb .pp-cols > .col:nth-child(3) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    /* One column: the games first, then accounts and career, then the champions. */
+    .vb .pp-cols > .pp-games {
+      order: -1;
+    }
+  }
+  @media (max-width: 767px) {
+    .vb .pp-head {
+      padding: 16px;
+    }
+    .vb .pp-head .pp-art {
+      height: 220px;
+    }
+    .vb .pp-head .pp-name {
+      font-size: 36px;
+    }
+    .vb .pp-rc {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 14px;
+    }
+    .vb .pp-rc-figs {
+      padding: 14px 0 0;
+      border-left: 0;
+      border-top: 1px solid var(--line);
+    }
+    .vb .pp-strip {
+      margin: 16px -16px -16px;
+    }
+    .vb .pp-strip .pp-rk {
+      font-size: 11px;
+    }
+    .vb .pp-strip .pp-rk .rk-emb {
+      display: none;
+    }
+    /* A phone: the champion, the result and the KDA; the other pros' faces wait in the game. */
+    .vb .pp-sq,
+    .vb .pp-sq.it {
+      grid-template-columns: 40px minmax(0, 1fr) 96px;
+      padding: 10px 12px 10px 16px;
+    }
+    .vb .pp-sq > .faces2 {
+      display: none;
+    }
+    .vb .pp-sq > :nth-child(4) {
+      display: none;
+    }
+    .vb .pp-sq.it > :nth-child(5) {
+      display: none;
+    }
+  }
+}
