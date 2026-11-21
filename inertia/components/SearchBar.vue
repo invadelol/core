@@ -971,7 +971,7 @@ function submit() {
               :team="entry.team"
               :size="28"
           /></span>
-          <span v-else-if="entry.kind && entry.team" class="sx-i tm"
+          <span v-else-if="entry.kind && entry.team" class="sx-i sx-tm"
             ><TeamLogo :team="entry.team" :size="22"
           /></span>
           <span v-else-if="entry.kind" class="sx-i gl ini">{{ initialsOf(entry) }}</span>

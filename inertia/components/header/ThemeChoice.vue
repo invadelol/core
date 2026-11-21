@@ -5,8 +5,8 @@ import { useTheme, type ThemeChoice } from '../../lib/theme.js'
 
 /**
  * The theme as one icon button that turns Dark → Light → Auto (the device's) → Dark, its icon the
- * theme in use (the account menu, the phone's menu, the footer). Its words live in its label and
- * its tooltip, never on it.
+ * theme in use (the phone's menu, the footer; the header's own button is ThemeToggle). Its words
+ * live in its label and its tooltip, never on it.
  */
 const { choice, setTheme } = useTheme()
 
@@ -16,12 +16,16 @@ const ORDER: { id: ThemeChoice; label: string; icon: 'moon' | 'sun' | 'monitor' 
   { id: 'system', label: 'Auto', icon: 'monitor' },
 ]
 
-const at = computed(() => Math.max(0, ORDER.findIndex((o) => o.id === choice.value)))
+const at = computed(() =>
+  Math.max(
+    0,
+    ORDER.findIndex((o) => o.id === choice.value)
+  )
+)
 const now = computed(() => ORDER[at.value])
 const next = computed(() => ORDER[(at.value + 1) % ORDER.length])
 const tip = computed(
-  () =>
-    `Theme: ${now.value.label}${now.value.id === 'system' ? ' (follows your device)' : ''}`
+  () => `Theme: ${now.value.label}${now.value.id === 'system' ? ' (follows your device)' : ''}`
 )
 </script>
 

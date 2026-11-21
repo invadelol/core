@@ -75,13 +75,13 @@
 .vb .sri.rd img {
   transform: scale(1.12);
 }
-.vb .sri.ct {
+.vb .sri.sri-ct {
   background: none;
   box-shadow: none;
   border-radius: 0;
   overflow: visible;
 }
-.vb .sri.ct img {
+.vb .sri.sri-ct img {
   object-fit: contain;
 }
 .vb .sri.duo {

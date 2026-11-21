@@ -13,10 +13,11 @@ import Glyph from './ui/Glyph.vue'
 import Icon from './ui/Icon.vue'
 import SearchBar from './SearchBar.vue'
 import NavMenu from './header/NavMenu.vue'
-import AccountMenu from './header/AccountMenu.vue'
 import PatchMenu from './header/PatchMenu.vue'
+import ThemeToggle from './header/ThemeToggle.vue'
+import DiscordMark from './header/DiscordMark.vue'
 import { DISCORD_URL } from '../lib/links.js'
-import { profileIcon } from '../lib/assets.js'
+import { SITE_STAGE } from '../lib/site_stage.js'
 import SubArt from './header/SubArt.vue'
 import { SUB_ART, type SubLink } from './header/sub_art.js'
 import '../css/subrow.css'
@@ -33,9 +34,10 @@ import { season, startSeason } from '../lib/season.js'
 import { patchName } from '../lib/patch.js'
 
 /**
- * The site's header, on every page (Facet): one bar with the mark, the four sections and their
- * small menus, the patch pill, the search (a field with its region; its results drop under it),
- * the desktop app and the account corner; under it, the plain-text row of the section you are in.
+ * The site's header, on every page (Facet): one bar with the mark and its stage (Beta), the four
+ * sections and their small menus, the patch pill, the search (a field with its region; its results
+ * drop under it), the desktop app, Discord and the theme; under it, the plain-text row of the
+ * section you are in.
  * Under 1024 px the sections fold into the phone's sheet; under 640 px the search is a button.
  *
  * Nothing here fetches on load: a menu opens in the frame of its hover, click or key, and its
@@ -93,7 +95,7 @@ const subRow = computed<SubLink[] | null>(() => {
 
 /* ── Section menus ─────────────────────────────────────────────────── */
 
-const open = ref<SectionKey | 'account' | 'patch' | null>(null)
+const open = ref<SectionKey | 'patch' | null>(null)
 const root = ref<HTMLElement>()
 const bar = ref<HTMLElement>()
 const triggers = ref<Record<string, HTMLElement | null>>({})
@@ -126,8 +128,7 @@ function close(focusTrigger = false) {
   clearTimeout(leaveTimer)
   open.value = null
   if (!focusTrigger || !was) return
-  if (was === 'account') accountButton.value?.focus()
-  else if (was === 'patch') patchPill.value?.$el.focus()
+  if (was === 'patch') patchPill.value?.$el.focus()
   else triggers.value[was]?.focus()
 }
 
@@ -141,7 +142,7 @@ function onEnter(key: SectionKey, event: PointerEvent) {
   clearTimeout(leaveTimer)
   clearTimeout(hoverTimer)
   if (open.value === key) return
-  if (open.value && open.value !== 'account') {
+  if (open.value) {
     return show(key)
   }
   hoverTimer = setTimeout(() => show(key), 110)
@@ -150,7 +151,7 @@ function onEnter(key: SectionKey, event: PointerEvent) {
 function onLeave(event: PointerEvent) {
   if (event.pointerType !== 'mouse') return
   clearTimeout(hoverTimer)
-  if (open.value && open.value !== 'account') leaveTimer = setTimeout(() => close(), 220)
+  if (open.value) leaveTimer = setTimeout(() => close(), 220)
 }
 
 function onMenuEnter() {
@@ -205,7 +206,7 @@ function onPatchEnter(event: PointerEvent) {
   clearTimeout(leaveTimer)
   clearTimeout(hoverTimer)
   if (open.value === 'patch') return
-  if (open.value && open.value !== 'account') return showPatch()
+  if (open.value) return showPatch()
   hoverTimer = setTimeout(showPatch, 110)
 }
 
@@ -219,15 +220,6 @@ function onPatchKey(event: KeyboardEvent) {
     event.preventDefault()
     close(true)
   }
-}
-
-/* ── Account ───────────────────────────────────────────────────────── */
-
-const accountButton = ref<HTMLElement>()
-function toggleAccount() {
-  if (open.value === 'account') return close()
-  clearTimeout(leaveTimer)
-  open.value = 'account'
 }
 
 /* ── Search ────────────────────────────────────────────────────────── */
@@ -361,15 +353,21 @@ function skip(event: MouseEvent) {
 
       <div class="hx-main">
         <div ref="bar" class="wrap" @focusout="onFocusOut">
-          <Link class="brand" href="/" aria-label="Invade home" prefetch>
-            <Glyph :h="26" /><span class="wm">Invade</span>
+          <Link
+            class="brand"
+            href="/"
+            :aria-label="SITE_STAGE ? `Invade (${SITE_STAGE}) home` : 'Invade home'"
+            prefetch
+          >
+            <Glyph :h="26" /><span class="wm">Invade</span
+            ><span v-if="SITE_STAGE" class="hx-stage">{{ SITE_STAGE }}</span>
           </Link>
 
           <nav class="hx-nav" aria-label="Site">
             <Link
               v-for="s in SECTIONS"
               :key="s.key"
-              :ref="(el) => (triggers[s.key] = ((el as { $el?: HTMLElement } | null)?.$el ?? null))"
+              :ref="(el) => (triggers[s.key] = (el as { $el?: HTMLElement } | null)?.$el ?? null)"
               :href="s.links[0].href"
               :class="{ on: current === s.key && open !== s.key, open: open === s.key }"
               aria-haspopup="true"
@@ -464,19 +462,9 @@ function skip(event: MouseEvent) {
               rel="noreferrer"
               data-track="header_discord"
               aria-label="Discord"
-              ><Icon name="discord" :size="17" /></a
-            >
-            <button
-              ref="accountButton"
-              type="button"
-              class="hx-me"
-              :class="{ open: open === 'account' }"
-              aria-label="Settings"
-              :aria-expanded="open === 'account'"
-              @click="toggleAccount"
-            >
-              <img class="av" :src="profileIcon(3521)" alt="" width="32" height="32" />
-            </button>
+              ><DiscordMark :size="19"
+            /></a>
+            <ThemeToggle />
             <button
               ref="menuButton"
               type="button"
@@ -490,8 +478,6 @@ function skip(event: MouseEvent) {
               <Icon :name="mobileOpen ? 'x' : 'menu'" :size="20" />
             </button>
           </span>
-
-          <AccountMenu v-if="open === 'account'" @close="close()" />
         </div>
       </div>
 
