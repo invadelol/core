@@ -121,7 +121,8 @@
       <script>window.__pageStyles = {{{ styles }}}</script>
     @end
 
-    @vite(['inertia/app/app.ts', `inertia/pages/${page.component}.vue`])
+    {{-- `@vite` without its repeated tags (start/view.ts): the page's stylesheet after the site's. --}}
+    {{{ await viteTags(['inertia/app/app.ts', `inertia/pages/${page.component}.vue`]) }}}
     @inertiaHead()
     @stack('dumper')
   </head>
