@@ -194,6 +194,25 @@ export default class LeaderboardsController {
     })
     // The head of the page: #1 on a short banner, #2 and #3 in a line each.
     const podium = ladderService.rowsOf(snapshot, snapshot.entries.slice(0, 3))
+    // The head's other readings: the first ten's LP (the race) and each role's first three.
+    const race = ladderService
+      .rowsOf(snapshot, snapshot.entries.slice(0, 10))
+      .map(({ place, lp, tier, gameName, tagLine, icon, pro }) => ({
+        place,
+        lp,
+        tier,
+        gameName,
+        tagLine,
+        icon,
+        pro,
+      }))
+    const byRole = LADDER_ROLES.map((r) => ({
+      role: r,
+      rows: ladderService.rowsOf(
+        snapshot,
+        snapshot.entries.filter((e) => snapshot.players[e.puuid]?.role === r).slice(0, 3)
+      ),
+    }))
     const { cutoffs, movesSince, roles, updatedAt } = ladderService.overview(snapshot)
     const filtered = Boolean(role || tier || prosOnly || q || page > 1 || sortProp(order).sort)
     const leader = podium[0]
@@ -208,6 +227,8 @@ export default class LeaderboardsController {
         ...sortProp(order),
       },
       podium,
+      race,
+      byRole,
       cutoffs,
       movesSince,
       roles,
@@ -222,6 +243,7 @@ export default class LeaderboardsController {
       names: await championNames([
         ...rows.flatMap((r) => r.champions.map((c) => c.champion)),
         ...podium.flatMap((r) => r.champions.map((c) => c.champion)),
+        ...byRole.flatMap((g) => g.rows.flatMap((r) => r.champions.map((c) => c.champion))),
       ]),
       ...meta({
         title: `Solo/Duo ladder, ${server.label}: Challenger, Grandmaster and Master`,
@@ -634,9 +656,20 @@ export default class LeaderboardsController {
       total,
     } = pageOf(sorted, pageParam(request.input('page')), PAGE)
     const podium = ladderRows.slice(0, 3)
+    const PRO_ROLES = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT']
+    const roleTops = PRO_ROLES.map((r) => ({
+      role: r,
+      rows: ladderRows.filter((x) => x.pro.role === r).slice(0, 3),
+    }))
     const ids = league
       ? []
-      : [...new Set([...shown, ...podium].flatMap((r) => (r.playerId ? [r.playerId] : [])))]
+      : [
+          ...new Set(
+            [...shown, ...ladderRows.slice(0, 10), ...roleTops.flatMap((g) => g.rows)].flatMap(
+              (r) => (r.playerId ? [r.playerId] : [])
+            )
+          ),
+        ]
     const records = await proService.records(ids).catch(() => new Map())
     const recordOf = (r: Row) => {
       const own = inLeague.get(r.pro.slug)
@@ -688,6 +721,9 @@ export default class LeaderboardsController {
     }
     const rows = shown.map(out)
     const podiumRows = podium.map(out)
+    // The head's other readings: the first ten's LP (the race) and each role's first three.
+    const race = ladderRows.slice(0, 10).map(out)
+    const byRole = roleTops.map((g) => ({ role: g.role, rows: g.rows.map(out) }))
     const first = league?.slug === catalog.first?.slug
     // A league on its own is a page of the site (the first one at the bare address).
     const path = !league
@@ -716,6 +752,8 @@ export default class LeaderboardsController {
         APEX_TIERS.map((t) => [t, ladderRows.filter((r) => r.account?.tier === t).length])
       ),
       podium: podiumRows,
+      race,
+      byRole,
       /** Whether the leader's photo is a cutout, which rises above their stage. */
       leaderCutout: lead?.pro.photo ? await proPhotoService.cutout(lead.pro.slug) : false,
       rows,
@@ -729,7 +767,9 @@ export default class LeaderboardsController {
       updatedAt: updated,
       next: league ? next.filter((m) => m.status !== 'finished') : [],
       names: await championNames(
-        [...rows, ...podiumRows].flatMap((r) => r.champions.map((c) => c.champion))
+        [...rows, ...podiumRows, ...byRole.flatMap((g) => g.rows)].flatMap((r) =>
+          r.champions.map((c) => c.champion)
+        )
       ),
       ...meta({
         title: league

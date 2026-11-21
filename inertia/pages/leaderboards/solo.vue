@@ -30,7 +30,12 @@ import {
   withQuery,
 } from '../../lib/ladders.js'
 import { regionFlag } from '../../lib/flags.js'
+import TopPodium from '../../components/leaderboards/top/TopPodium.vue'
+import TopRace from '../../components/leaderboards/top/TopRace.vue'
+import TopRoles from '../../components/leaderboards/top/TopRoles.vue'
+import type { TopPlayer } from '../../components/leaderboards/top/types.js'
 import '../../css/leaderboards.css'
+import '../../css/ladder-top.css'
 
 interface Row {
   place: number
@@ -77,6 +82,10 @@ const props = defineProps<{
     dir: SortDir | null
   }
   podium: Leader[]
+  /** The first ten, for the race. */
+  race: Pick<Leader, 'place' | 'lp' | 'tier' | 'gameName' | 'tagLine' | 'icon' | 'pro'>[]
+  /** Each role's first three, in lane order. */
+  byRole: { role: string; rows: Leader[] }[]
   cutoffs: {
     tier: 'CHALLENGER' | 'GRANDMASTER'
     lp: number | null
@@ -187,6 +196,39 @@ const tagOf = (r: Leader) =>
 const record = (r: Leader) =>
   `${winPct(r.wins, r.wins + r.losses)} of ${n(r.wins + r.losses)} games`
 
+/* ── The head's readings behind `?v=a|b|c`: the podium, the race, each role's first three ── */
+const v = ref<'a' | 'b' | 'c' | null>(null)
+onMounted(() => {
+  const q = new URLSearchParams(window.location.search).get('v')
+  v.value = q === 'a' || q === 'b' || q === 'c' ? q : null
+})
+const toTop = (
+  r: Partial<Leader> &
+    Pick<Leader, 'place' | 'lp' | 'tier' | 'gameName' | 'tagLine' | 'icon' | 'pro'>
+): TopPlayer => ({
+  place: r.place,
+  name: r.pro?.name ?? r.gameName ?? 'Unknown player',
+  tag: r.pro ? (r.pro.team?.name ?? null) : r.tagLine ? `#${r.tagLine}` : null,
+  riot: !r.pro,
+  href: (r.pro ? `/pro/${r.pro.slug}` : playerPath(r.gameName, r.tagLine)) ?? '#',
+  pro: r.pro ? { slug: r.pro.slug, photo: r.pro.photo, team: r.pro.team } : null,
+  icon: r.icon,
+  tier: r.tier,
+  lp: r.lp,
+  role: r.role ?? null,
+  champions: r.champions ?? [],
+  record:
+    r.wins !== undefined && r.losses !== undefined
+      ? { wins: r.wins, games: r.wins + r.losses, span: 'this season' }
+      : null,
+  hot: r.hotStreak,
+})
+const podiumTop = computed(() => props.podium.map(toTop))
+const raceTop = computed(() => props.race.map(toTop))
+const roleTop = computed(() =>
+  props.byRole.map((g) => ({ role: g.role, players: g.rows.map(toTop) }))
+)
+
 /** "2nd", "3rd", "4th": the place as words read. */
 const ordinal = (place: number) => {
   const t = place % 100
@@ -236,7 +278,34 @@ const ordinal = (place: number) => {
 
       <template v-else>
         <!-- The leaders and what each apex tier takes, on one sheet -->
-        <section v-if="leader" class="card lit sl">
+        <!-- The head's readings behind ?v=, the apex cutoffs in one line under each. -->
+        <template v-if="leader && v">
+          <TopPodium v-if="v === 'a'" :players="podiumTop" />
+          <section
+            class="card"
+            :class="{ lit: v === 'b' }"
+            :style="v === 'a' ? 'margin-top: 16px' : undefined"
+          >
+            <TopRace v-if="v === 'b'" :players="raceTop" />
+            <TopRoles v-else-if="v === 'c'" :groups="roleTop" />
+            <div class="tl-cut" :style="v === 'a' ? 'border-top: 0' : undefined">
+              <span v-for="c in cutoffs" :key="c.tier"
+                ><RankEmblem :tier="c.tier" :size="22" /><span class="h5">{{
+                  tierWord(c.tier)
+                }}</span
+                ><span class="meta"
+                  >{{ c.lp === null ? 'not read yet' : `from ${n(c.lp)} LP` }}, {{ n(c.players) }}
+                  {{ c.players === 1 ? 'player' : 'players' }}</span
+                ></span
+              >
+              <span class="grow"></span>
+              <span class="meta"
+                >Moves at 00:00 UTC<template v-if="nextReset">, {{ nextReset }}</template></span
+              >
+            </div>
+          </section>
+        </template>
+        <section v-if="leader && !v" class="card lit sl">
           <div class="sl-lead">
             <Link class="sl-one" :href="whereTo(leader)">
               <span v-if="topChampion(leader)" class="sl-art"

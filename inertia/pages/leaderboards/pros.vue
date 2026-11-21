@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import { RoleIcon } from '@invadelol/ui'
 import SiteLayout from '../../components/SiteLayout.vue'
@@ -24,7 +24,12 @@ import { useTheme } from '../../lib/theme.js'
 import { laneOf, n, rankWords, roleLabel, signedN, since, withQuery } from '../../lib/ladders.js'
 import { matchList, type ProMatch } from '../../lib/pro_matches.js'
 import '../../css/leaderboards.css'
+import TopPodium from '../../components/leaderboards/top/TopPodium.vue'
+import TopRace from '../../components/leaderboards/top/TopRace.vue'
+import TopRoles from '../../components/leaderboards/top/TopRoles.vue'
+import type { TopPlayer } from '../../components/leaderboards/top/types.js'
 import '../../css/esports.css'
+import '../../css/ladder-top.css'
 
 interface Team {
   id: string
@@ -81,6 +86,10 @@ const props = defineProps<{
   }
   apex: Record<'CHALLENGER' | 'GRANDMASTER' | 'MASTER', number>
   podium: Row[]
+  /** The first ten, for the race. */
+  race: Row[]
+  /** Each role's first three, in lane order. */
+  byRole: { role: string; rows: Row[] }[]
   /** Whether the leader's photo is a cutout, which rises above their stage. */
   leaderCutout: boolean
   rows: Row[]
@@ -167,6 +176,33 @@ const gapLine = (r: Row) => {
   return `${n(first.account.lp - r.account.lp)} LP behind`
 }
 const APEX = ['CHALLENGER', 'GRANDMASTER', 'MASTER'] as const
+
+/* ── The head's readings behind `?v=a|b|c`: the podium, the race, each role's first three ── */
+const v = ref<'a' | 'b' | 'c' | null>(null)
+onMounted(() => {
+  const q = new URLSearchParams(window.location.search).get('v')
+  v.value = q === 'a' || q === 'b' || q === 'c' ? q : null
+})
+const toTop = (r: Row): TopPlayer => ({
+  place: r.place,
+  name: r.pro.name,
+  tag: r.pro.team?.name ?? null,
+  riot: false,
+  href: `/pro/${r.pro.slug}`,
+  pro: { slug: r.pro.slug, photo: r.pro.photo, team: r.pro.team },
+  icon: null,
+  tier: r.account?.tier ?? null,
+  lp: r.account?.lp ?? null,
+  role: r.pro.role,
+  country: r.pro.country,
+  champions: r.champions,
+  record: r.record ? { wins: r.record.wins, games: r.record.games, span: 'last 30 days' } : null,
+})
+const podiumTop = computed(() => props.podium.map(toTop))
+const raceTop = computed(() => props.race.map(toTop))
+const roleTop = computed(() =>
+  props.byRole.map((g) => ({ role: g.role, players: g.rows.map(toTop) }))
+)
 const short = (r: Row) =>
   [r.pro.team?.shortName ?? r.pro.team?.name, roleLabel(r.pro.role).toLowerCase()]
     .filter(Boolean)
@@ -205,6 +241,24 @@ const short = (r: Row) =>
       />
 
       <!-- The leader, the next two under them, the apex tiers beside, in one sheet. -->
+      <!-- The head's readings behind ?v=, the apex tiers in one line under each. -->
+      <template v-else-if="v">
+        <TopPodium v-if="v === 'a'" :players="podiumTop" />
+        <section
+          class="card"
+          :class="{ lit: v === 'b' }"
+          :style="v === 'a' ? 'margin-top: 16px' : undefined"
+        >
+          <TopRace v-if="v === 'b'" :players="raceTop" />
+          <TopRoles v-else-if="v === 'c'" :groups="roleTop" />
+          <div class="tl-cut" :style="v === 'a' ? 'border-top: 0' : undefined">
+            <span v-for="t in APEX" :key="t"
+              ><RankEmblem :tier="t" :size="22" /><span class="h5">{{ rankWords(t) }}</span
+              ><span class="meta">{{ apex[t] }} {{ apex[t] === 1 ? 'pro' : 'pros' }}</span></span
+            >
+          </div>
+        </section>
+      </template>
       <div v-else class="pl-top">
         <div>
           <Link

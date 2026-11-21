@@ -1,0 +1,491 @@
+/* The head of a ladder (Solo/Duo and pros): a podium, the race on one LP line, or each role's
+   first three. Shared by solo.vue and pros.vue. */
+@layer components {
+  /* ── A: the podium ── */
+  .vb .tp-pod {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    align-items: end;
+  }
+  .vb .tp-card {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    border-radius: var(--r3);
+    background: var(--d-sheen), var(--d-sf1);
+    box-shadow: var(--d-lit), var(--d-drop);
+    transition: background 160ms var(--ease);
+  }
+  .vb .tp-card.one {
+    background:
+      radial-gradient(70% 100% at 100% 0%, var(--d-glow), rgb(var(--v-rgb) / 0) 75%),
+      var(--d-sheen), var(--d-sf1);
+  }
+  .vb .tp-art {
+    height: 132px;
+    border-radius: 0;
+    --cut: 18px;
+  }
+  .vb .tp-card.one .tp-art {
+    height: 172px;
+  }
+  .vb .tp-art > img:first-child {
+    opacity: 0.55;
+    object-position: 50% 22%;
+    -webkit-mask-image: radial-gradient(120% 140% at 100% 0%, #000 35%, transparent 85%);
+    mask-image: radial-gradient(120% 140% at 100% 0%, #000 35%, transparent 85%);
+  }
+  .vb .tp-pic {
+    position: absolute;
+    left: 18px;
+    bottom: 0;
+    width: 76px;
+    height: 76px;
+    border-radius: var(--r2) var(--r2) 0 0;
+    background: var(--s2);
+    object-fit: cover;
+  }
+  .vb .tp-pic {
+    overflow: hidden;
+  }
+  .vb .tp-pic:not(.pro) > img,
+  .vb .trl-pic:not(.pro) > img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .vb .tp-pic.pro {
+    width: 112px;
+    height: 112px;
+    overflow: hidden;
+    background: transparent;
+  }
+  .vb .tp-card.one .tp-pic.pro {
+    width: 150px;
+    height: 150px;
+  }
+  .vb .tp-no {
+    position: absolute;
+    right: 16px;
+    bottom: 12px;
+    font-size: 32px;
+    line-height: 1;
+    font-weight: 650;
+    letter-spacing: -0.03em;
+    color: var(--t1);
+    font-variant-numeric: lining-nums;
+  }
+  .vb .tp-card:not(.one) .tp-no {
+    font-size: 26px;
+    color: var(--t2);
+  }
+  .vb .tp-no sup {
+    margin-left: 1px;
+    font-size: 0.42em;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--t3);
+  }
+  .vb .tp-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px 18px 16px;
+    min-width: 0;
+  }
+  .vb .tp-nm {
+    font-size: 18px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+  }
+  .vb .tp-card.one .tp-nm {
+    font-size: 22px;
+  }
+  .vb .tp-nm .lb-tag {
+    margin-left: 0.3em;
+  }
+  .vb .tp-mt {
+    gap: 6px;
+    min-width: 0;
+  }
+  .vb .tp-mt .tp-lg {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+    margin-left: 6px;
+  }
+  .vb .tp-lp {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 6px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .vb .tp-lp .u {
+    margin-left: 2px;
+    font-size: 0.55em;
+    font-weight: 600;
+    color: var(--t3);
+  }
+  .vb .tp-pool {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 0 2px;
+  }
+  .vb .tp-ch {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 32px;
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+  .vb .tp-ch .fr {
+    flex: none;
+  }
+  .vb .tp-wr {
+    width: 40px;
+    text-align: right;
+  }
+  .vb .tp-ft {
+    min-height: 18px;
+  }
+
+  /* ── B: the race on one LP line ── */
+  .vb .tr {
+    padding: 22px 24px 18px;
+  }
+  .vb .tr-cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .vb .tr-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    padding: 8px 12px 8px 8px;
+    border-radius: var(--r2);
+    transition: background 160ms var(--ease);
+  }
+  .vb .tr-card:hover {
+    background: rgb(var(--v-rgb) / 0.05);
+  }
+  .vb .tr-no {
+    flex: none;
+    width: 52px;
+    font-size: 28px;
+    line-height: 1;
+    font-weight: 650;
+    letter-spacing: -0.03em;
+    color: var(--t3);
+    font-variant-numeric: lining-nums;
+  }
+  .vb .tr-card.one .tr-no {
+    color: var(--t1);
+  }
+  .vb .tr-no sup {
+    margin-left: 1px;
+    font-size: 0.42em;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--t3);
+  }
+  .vb .tr-face {
+    display: block;
+    flex: none;
+    width: 44px;
+    height: 44px;
+    overflow: hidden;
+    border-radius: var(--r2);
+    background: var(--v900);
+    object-fit: cover;
+  }
+  .vb .tr-track {
+    --lift: 0px;
+    position: relative;
+    height: calc(124px + var(--lift));
+    margin: 16px 8px 0;
+  }
+  .vb .tr-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(64px + var(--lift));
+    height: 2px;
+    border-radius: 1px;
+    background: linear-gradient(90deg, var(--line-2), rgb(var(--v-rgb) / 0.7));
+  }
+  .vb .tr-dot {
+    position: absolute;
+    top: calc(59px + var(--lift));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    transform: translateX(-50%);
+  }
+  .vb .tr-dot i {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--s3);
+    box-shadow:
+      0 0 0 2px var(--d-sf1),
+      inset 0 0 0 1px var(--line-3);
+  }
+  .vb .tr-dot span {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--t3);
+    font-variant-numeric: tabular-nums;
+  }
+  .vb .tr-dot:hover span {
+    color: var(--t1);
+  }
+  .vb .tr-pin {
+    position: absolute;
+    top: var(--lift);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: translateX(-50%);
+  }
+  .vb .tr-pf {
+    display: block;
+    width: 40px;
+    height: 40px;
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--v900);
+    box-shadow: 0 0 0 2px var(--line-3);
+    object-fit: cover;
+  }
+  .vb .tr-pin.l0 .tr-pf {
+    box-shadow: 0 0 0 2px var(--v400);
+  }
+  .vb .tr-pin i {
+    width: 2px;
+    height: var(--stem, 18px);
+    background: var(--line-3);
+  }
+  .vb .tr-pin.l0 i {
+    background: var(--v400);
+  }
+  .vb .tr-pin::after {
+    content: '';
+    width: 14px;
+    height: 14px;
+    margin-top: -1px;
+    border-radius: 50%;
+    background: var(--t2);
+    box-shadow: 0 0 0 3px var(--d-sf1);
+  }
+  .vb .tr-pin.l0::after {
+    background: var(--v400);
+  }
+  .vb .tr-end {
+    position: absolute;
+    top: calc(102px + var(--lift));
+    font-size: 12px;
+  }
+  .vb .tr-end.lo {
+    left: 0;
+  }
+  .vb .tr-end.hi {
+    right: 0;
+  }
+  .vb .tr-cap {
+    margin-top: 4px;
+    text-align: center;
+  }
+
+  /* ── C: each role's first three ── */
+  .vb .trl {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .vb .trl-col {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 16px 14px 12px;
+  }
+  .vb .trl-col + .trl-col {
+    border-left: 1px solid var(--line);
+  }
+  .vb .trl-h {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0 4px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--t2);
+  }
+  .vb .trl-one {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border-radius: var(--r2);
+    overflow: hidden;
+    transition: background 160ms var(--ease);
+  }
+  .vb .trl-one:hover,
+  .vb .trl-r:hover {
+    background: rgb(var(--v-rgb) / 0.05);
+  }
+  .vb .trl-art {
+    height: 112px;
+    --cut: 14px;
+  }
+  .vb .trl-art > img:first-child {
+    opacity: 0.55;
+    object-position: 50% 22%;
+    -webkit-mask-image: radial-gradient(120% 140% at 100% 0%, #000 35%, transparent 85%);
+    mask-image: radial-gradient(120% 140% at 100% 0%, #000 35%, transparent 85%);
+  }
+  .vb .trl-pic {
+    position: absolute;
+    left: 10px;
+    bottom: 0;
+    width: 60px;
+    height: 60px;
+    border-radius: var(--r2) var(--r2) 0 0;
+    object-fit: cover;
+    background: var(--s2);
+  }
+  .vb .trl-pic {
+    overflow: hidden;
+  }
+  .vb .trl-pic.pro {
+    width: 96px;
+    height: 96px;
+    overflow: hidden;
+    background: transparent;
+  }
+  .vb .trl-no {
+    position: absolute;
+    right: 10px;
+    bottom: 8px;
+    font-size: 22px;
+    line-height: 1;
+    font-weight: 650;
+    letter-spacing: -0.03em;
+    color: var(--t2);
+  }
+  .vb .trl-no.top {
+    color: var(--t1);
+  }
+  .vb :is(.trl-no, .trl-rn) sup {
+    margin-left: 1px;
+    font-size: 0.48em;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--t3);
+  }
+  .vb .trl-b {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 10px 4px 12px;
+    min-width: 0;
+  }
+  .vb .trl-main {
+    gap: 6px;
+    min-width: 0;
+  }
+  .vb .trl-r {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 4px;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+  }
+  .vb .trl-rn {
+    width: 34px;
+    flex: none;
+    font-size: 14px;
+    font-weight: 650;
+    color: var(--t3);
+  }
+  .vb .trl-face {
+    display: block;
+    flex: none;
+    width: 24px;
+    height: 24px;
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--v900);
+    object-fit: cover;
+  }
+  .vb .trl-none {
+    padding: 24px 4px;
+  }
+
+  /* The apex tiers, in one line under a head that left its column. */
+  .vb .tl-cut {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 24px;
+    padding: 14px 24px;
+    border-top: 1px solid var(--line);
+  }
+  .vb .tl-cut > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .vb .tl-cut .grow {
+    flex: 1;
+  }
+
+  @media (max-width: 1023px) {
+    .vb .tp-pod {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .vb .tp-pod > .one {
+      order: -1;
+    }
+    .vb .tp-card .tp-art,
+    .vb .tp-card.one .tp-art {
+      height: 132px;
+    }
+    .vb .tp-card.one .tp-pic.pro {
+      width: 120px;
+      height: 120px;
+    }
+    .vb .trl {
+      grid-template-columns: repeat(5, 240px);
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+    }
+    .vb .trl-col {
+      scroll-snap-align: start;
+    }
+  }
+  @media (max-width: 767px) {
+    .vb .tr {
+      padding: 16px 14px 14px;
+    }
+    .vb .tr-cards {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 2px;
+    }
+    .vb .tr-track {
+      margin: 12px 18px 0;
+    }
+    .vb .trl {
+      grid-template-columns: repeat(5, 78%);
+    }
+  }
+}
