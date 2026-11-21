@@ -73,21 +73,7 @@ const views = (n: number) => `${n.toLocaleString('en-US')} ${n === 1 ? 'view' : 
         :title="copied ? 'Copied' : 'Copy'"
         @click="copy"
       >
-        <Icon v-if="copied" name="check" :size="14" />
-        <svg
-          v-else
-          class="i"
-          width="14"
-          height="14"
-          viewBox="0 0 20 20"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.6"
-          aria-hidden="true"
-        >
-          <rect x="7" y="7" width="10" height="10" rx="2" />
-          <path d="M13 4H5a1 1 0 0 0-1 1v8" />
-        </svg>
+        <Icon :name="copied ? 'check' : 'copy'" :size="14" />
       </button>
     </div>
     <div class="pl-tags">

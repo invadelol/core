@@ -217,14 +217,14 @@ const STATS = computed(() => {
   if (!b || !r) return []
   const vision = (id: number) => sideOf(id).reduce((s, p) => s + p.vision, 0)
   return [
-    { label: 'Kills', a: b.kills, b: r.kills, f: n },
-    { label: 'Gold', a: b.gold, b: r.gold, f: k },
-    { label: 'Damage to champions', a: b.damage, b: r.damage, f: k },
-    { label: 'Towers', a: b.towers, b: r.towers, f: n },
-    { label: 'Dragons', a: b.dragons, b: r.dragons, f: n },
-    { label: 'Barons', a: b.barons, b: r.barons, f: n },
-    { label: 'Vision score', a: vision(100), b: vision(200), f: n },
-  ]
+    { label: 'Kills', icon: 'riotKda', a: b.kills, b: r.kills, f: n },
+    { label: 'Gold', icon: 'riotGold', a: b.gold, b: r.gold, f: k },
+    { label: 'Damage to champions', icon: 'riotDamage', a: b.damage, b: r.damage, f: k },
+    { label: 'Towers', icon: 'riotTower', a: b.towers, b: r.towers, f: n },
+    { label: 'Dragons', icon: 'riotDragon', a: b.dragons, b: r.dragons, f: n },
+    { label: 'Barons', icon: 'riotBaron', a: b.barons, b: r.barons, f: n },
+    { label: 'Vision score', icon: 'riotVision', a: vision(100), b: vision(200), f: n },
+  ] as const
 })
 
 /** The shared views keep the score on 0–10; the dial reads 0–100. */
@@ -495,8 +495,8 @@ async function copy() {
               <div v-for="s in STATS" :key="s.label" class="cmp3">
                 <span class="fg-xs num">{{ s.f(s.a) }}</span>
                 <span class="m4"
-                  >{{ s.label
-                  }}<span class="sp3"
+                  ><span class="m4-l"><Icon :name="s.icon" :size="14" />{{ s.label }}</span
+                  ><span class="sp3"
                     ><i :style="{ flex: s.a || 0.001 }"></i
                     ><i :style="{ flex: s.b || 0.001 }"></i></span
                 ></span>
@@ -512,9 +512,19 @@ async function copy() {
                 <span class="meta">{{ t.win ? 'Victory' : 'Defeat' }}</span>
               </div>
               <div class="sbh">
-                <span></span><span>Player</span><span>K / D / A</span><span>Damage</span>
-                <span style="text-align: right">CS</span><span style="text-align: right">Gold</span
-                ><span style="text-align: right">Vision</span> <span>Items</span><span>Score</span>
+                <span></span><span>Player</span
+                ><span class="sbh-s"><Icon name="riotKda" :size="13" />K / D / A</span
+                ><span class="sbh-s"><Icon name="riotDamage" :size="13" />Damage</span
+                ><!-- The narrow figures keep Riot's glyph alone, the name in a tooltip. --><span
+                  class="sbh-s r"
+                  title="CS"
+                  ><Icon name="riotCs" :size="14" /><span class="vh">CS</span></span
+                ><span class="sbh-s r" title="Gold"
+                  ><Icon name="riotGold" :size="14" /><span class="vh">Gold</span></span
+                ><span class="sbh-s r" title="Vision score"
+                  ><Icon name="riotVision" :size="14" /><span class="vh">Vision score</span></span
+                >
+                <span>Items</span><span>Score</span>
               </div>
               <component
                 :is="playerHref(p) ? Link : 'div'"
@@ -640,10 +650,10 @@ async function copy() {
               </div>
             </div>
             <div v-if="events.length" class="card">
-              <CardHead title="Objectives" icon="flag" />
+              <CardHead title="Objectives" icon="riotTower" />
               <div v-for="(e, i) in events" :key="i" class="ev2">
                 <span class="meta">{{ clock(e.t) }}</span>
-                <Icon v-if="e.icon === 'flame'" name="flame" />
+                <Icon v-if="e.icon === 'flame'" name="blood" />
                 <ObjectiveIcon v-else :name="e.icon" :size="16" />
                 <span><span :class="e.team === 100 ? 'dotb' : 'dotr'"></span> {{ e.text }}</span>
               </div>

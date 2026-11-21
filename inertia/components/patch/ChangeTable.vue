@@ -25,7 +25,7 @@ const rows = computed(() =>
     t: l.type === undefined ? rankTable(l.old, l.new) : null,
   }))
 )
-const ICON = { up: 'up', down: 'down', mix: 'compare', new: 'plus' } as const
+const ICON = { up: 'up', down: 'down', mix: 'updown', new: 'plus' } as const
 </script>
 
 <template>

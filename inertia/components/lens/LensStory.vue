@@ -32,14 +32,14 @@ const props = defineProps<{
 
 const open = ref(false)
 
-/** Each domain's line icon in the card head. */
+/** Each domain's icon in the card head: Riot's own glyph where the game draws one. */
 const ICONS: Record<string, IconName> = {
   laning: 'route',
-  farming: 'coin',
-  fighting: 'swords',
-  vision: 'eye',
-  objectives: 'flag',
-  survival: 'shield',
+  farming: 'riotCs',
+  fighting: 'riotKda',
+  vision: 'riotVision',
+  objectives: 'riotTower',
+  survival: 'riotTaken',
   consistency: 'chart',
 }
 

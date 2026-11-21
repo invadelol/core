@@ -666,7 +666,7 @@ const nav = computed(() => [
     icon: 'swords' as IconName,
     count: champions.value.length || undefined,
   },
-  { key: 'mastery', label: 'Mastery', href: `${base.value}/mastery`, icon: 'trophy' as IconName },
+  { key: 'mastery', label: 'Mastery', href: `${base.value}/mastery`, icon: 'crown' as IconName },
   {
     key: 'friends',
     label: 'Friends',
