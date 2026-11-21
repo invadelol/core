@@ -15,9 +15,10 @@ import Glyph from '../components/ui/Glyph.vue'
 import Icon from '../components/ui/Icon.vue'
 import SectionHead from '../components/ui/SectionHead.vue'
 import CardHead from '../components/ui/CardHead.vue'
+import RankTag from '../components/ui/RankTag.vue'
 import { championHref, positionOf } from '../components/header/sections.js'
 import { champIcon } from '../lib/assets.js'
-import { headlineGame, homeCards, patchMoves } from '../lib/home_cards.js'
+import { headlineGame, homeCards, patchChanges, type PatchChanges } from '../lib/home_cards.js'
 import {
   isLive,
   matchList,
@@ -34,7 +35,7 @@ import '../css/home-facet.css'
 
 /**
  * `/`: a title and one normal-size search at the centre, one quiet line of this browser's recent
- * lookups under it, then three live cards (the pro game, where the patch moved champions, a lane
+ * lookups under it, then three live cards (the pro game, the patch's buffs and nerfs, a lane
  * figure), then what invade.lol reads from its own games (the best pick of each role, the pros'
  * ladder, the patch's bans), the desktop app, Discord and X. A block is left out when its data
  * could not be read; the search always stands.
@@ -62,11 +63,24 @@ const game = computed<ProMatch | null>(() =>
 const cards = computed(() =>
   homeCards({
     game: game.value,
-    moves: patchMoves(props.picks?.moves, notes.value?.changes),
-    previousPatch: props.picks?.moves?.previousPatch ?? null,
+    changes: notes.value ? patchChanges(notes.value.changes) : null,
+    patch: notes.value?.patch ?? null,
     lanes: props.lanes,
   })
 )
+
+/** The changes card's groups, each under its word; the first says what the figures are. */
+const CHANGE_GROUPS = [
+  { kind: 'up', label: 'Buffs', icon: 'up' },
+  { kind: 'down', label: 'Nerfs', icon: 'down' },
+  { kind: 'mix', label: 'Adjusted', icon: 'compare' },
+] as const
+const changeGroups = (c: PatchChanges) =>
+  CHANGE_GROUPS.map((g) => ({ ...g, rows: c[g.kind] })).filter((g) => g.rows.length)
+const ranked = (c: PatchChanges) =>
+  [...c.up, ...c.down, ...c.mix].some((r) => r.rank !== null && r.rank !== undefined)
+const abilityIcon = (champion: number, key: string) =>
+  `/cdn/ability/${champion}-${key.toLowerCase()}.png`
 
 const live = (m: ProMatch) => isLive(m)
 const finished = (m: ProMatch) => m.status === 'finished'
@@ -190,37 +204,50 @@ const topBully = (rows: { value: number }[]) => rows[0]?.value || 1
               ></span>
             </Link>
 
-            <!-- Where the patch moved champions in their role. -->
+            <!-- The patch's buffs and nerfs: each champion with what changed and, quieter, its
+                 place in its main role since the patch before. -->
             <Link
-              v-else-if="card.key === 'moves'"
-              class="lc"
-              :href="version ? patchPath(version) : '/tier-list'"
+              v-else-if="card.key === 'changes'"
+              class="lc chg"
+              :href="version ? patchPath(version) : '/patch'"
               prefetch
             >
               <span class="lc-h"
-                ><Icon name="news" :size="16" /><b>Where {{ patch }} moved them</b
-                ><span class="lc-m"
-                  ><span class="lc-long">Rank in role since</span
-                  ><span class="lc-short">Since</span> {{ patchName(card.previousPatch) }}</span
-                ></span
+                ><Icon name="chart" :size="16" /><b>Patch changes</b
+                ><span class="lc-m">{{ card.patch }}</span></span
               >
-              <span v-for="m in card.rows" :key="`${m.championId}-${m.position}`" class="lc-r">
-                <span class="ic s"><img :src="champIcon(m.championId)" alt="" /></span>
-                <span class="tx"
-                  ><b>{{ m.name }}</b
-                  ><span class="hrl">{{ positionOf(m.position).label }}</span></span
+              <template v-for="(g, gi) in changeGroups(card.changes)" :key="g.kind">
+                <span class="lc-lab" :class="g.kind"
+                  ><Icon :name="g.icon" :size="12" />{{ g.label
+                  }}<span v-if="gi === 0 && ranked(card.changes)" class="lc-lab-r"
+                    >Rank in role</span
+                  ></span
                 >
-                <span v-if="m.kind === 'up' || m.kind === 'down'" class="pt" :class="m.kind"
-                  ><Icon :name="m.kind" :size="11" />{{
-                    m.kind === 'up' ? 'Buffed' : 'Nerfed'
-                  }}</span
-                >
-                <span v-else-if="m.kind" class="pt mix">Adjusted</span>
-                <span class="mv num" :class="{ up: m.to < m.from }"
-                  ><span>#{{ m.from }}</span
-                  ><Icon name="arrow" :size="12" /><b>#{{ m.to }}</b></span
-                >
-              </span>
+                <span v-for="c in g.rows" :key="c.championId" class="lc-r">
+                  <span class="ic s"><img :src="champIcon(c.championId)" alt="" /></span>
+                  <span class="tx"
+                    ><b>{{ c.name }}</b
+                    ><span v-if="c.position" class="hrl">{{
+                      positionOf(c.position).label
+                    }}</span></span
+                  >
+                  <span class="lc-ab" :aria-label="`Changed: ${(c.keys ?? []).join(', ')}`"
+                    ><template v-for="k in c.keys ?? []" :key="k"
+                      ><span v-if="k === 'base'" class="lc-ai base" title="Base stats"
+                        ><Icon name="sliders" :size="12" /></span
+                      ><span v-else class="lc-ai" :title="k === 'P' ? 'Passive' : k"
+                        ><img :src="abilityIcon(c.championId, k)" alt="" /><i>{{ k }}</i></span
+                      ></template
+                    ></span
+                  >
+                  <span class="lc-mv num"
+                    ><template v-if="c.rank && c.prevRank"
+                      ><span>#{{ c.prevRank }}</span
+                      ><Icon name="arrow" :size="11" /></template
+                    ><b v-if="c.rank">#{{ c.rank }}</b></span
+                  >
+                </span>
+              </template>
             </Link>
 
             <!-- A lane figure from the patch's games. -->
@@ -255,9 +282,12 @@ const topBully = (rows: { value: number }[]) => rows[0]?.value || 1
           id="hm-picks"
           title="Best picks"
           icon="trophy"
-          :meta="patch ? `Patch ${patch}, Emerald+` : 'Emerald+'"
           :more="{ label: 'Tier list', href: '/tier-list' }"
-        />
+        >
+          <template #meta
+            ><template v-if="patch">Patch {{ patch }}, </template><RankTag bracket="emerald_plus"
+          /></template>
+        </SectionHead>
         <BestPicks :picks="picks" :splus="splus" />
       </section>
 

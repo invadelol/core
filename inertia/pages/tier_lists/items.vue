@@ -5,6 +5,7 @@ import '../../css/tier-lists.css'
 import '../../css/tier-boards.css'
 import SiteLayout from '../../components/SiteLayout.vue'
 import Masthead from '../../components/ui/Masthead.vue'
+import RankTag from '../../components/ui/RankTag.vue'
 import Icon from '../../components/ui/Icon.vue'
 import TierChip from '../../components/ui/TierChip.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
@@ -14,7 +15,7 @@ import RoleSeg from '../../components/champions/RoleSeg.vue'
 import ClassSeg from '../../components/champions/ClassSeg.vue'
 import Computing from '../../components/champions/Computing.vue'
 import RecipeTree, { type RecipeNode } from '../../components/champions/RecipeTree.vue'
-import { BRACKETS, TIERS, champIconUrl, compact, itemUrl, roleOf } from '../../lib/champions.js'
+import { TIERS, champIconUrl, compact, itemUrl, roleOf } from '../../lib/champions.js'
 import { patchName } from '../../lib/patches.js'
 import { ordinal, p1, points, thousands } from '../../lib/tier_lists.js'
 
@@ -93,20 +94,15 @@ const title = computed(() => {
   const text = words.filter(Boolean).join(' ')
   return text.charAt(0).toUpperCase() + text.slice(1)
 })
-const rankText = computed(() => {
-  const b = BRACKETS.find((x) => x.value === props.filter?.bracket)
-  if (!b || b.value === 'all') return 'every rank'
-  return b.label.endsWith('+') ? `${b.label.slice(0, -1)} and above` : b.label
-})
 const ready = computed(() => (props.list && !props.list.computing ? props.list : null))
-const metaLine = computed(() => {
-  if (!props.filter) return 'No ranked games stored yet'
+/** What follows the rank filter in the masthead's line ("Patch 26.22, Emerald+, …"). */
+const metaTail = computed(() => {
   const n = ready.value?.rows.length
   const what = [props.class ? CLASS_LABEL[props.class].toLowerCase() : null, 'items']
     .filter(Boolean)
     .join(' ')
   const where = roleWord.value ? `in ${roleWord.value} builds` : 'in every role'
-  return `Patch ${patchName(props.filter.patch)}, ${rankText.value}${n !== undefined ? `, ${n} ${what} ${where}` : ''}`
+  return n !== undefined ? `, ${n} ${what} ${where}` : ''
 })
 
 const nameOf = (id: number) => ready.value?.details[id]?.name ?? ready.value?.names[id] ?? ''
@@ -221,8 +217,13 @@ const statIcon = (stat: string) => STAT_ICON.find(([re]) => re.test(stat.trim())
       <Masthead
         :title="title"
         :crumbs="[{ label: 'Tier list', href: '/tier-list' }, { label: 'Items' }]"
-        :meta="metaLine"
+        meta="No ranked games stored yet"
       >
+        <template v-if="filter" #meta
+          >Patch {{ patchName(filter.patch) }}, <RankTag :bracket="filter.bracket" />{{
+            metaTail
+          }}</template
+        >
         <template #end>
           <StatFilters :filter="filter" :patches="patches" />
         </template>

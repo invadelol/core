@@ -178,6 +178,53 @@ export function valueParts(value: string, before?: string): ValuePart[] {
   return parts
 }
 
+type Run = { ratio: boolean; parts: ValuePart[] }
+const runText = (r: Run) =>
+  r.parts.map((p) => (p.kind === 'stat' ? p.stat.toUpperCase() : p.text)).join('')
+
+/**
+ * The same parts in runs: each bracketed ratio ("(+110% AD)") is one run the page can keep on
+ * one line, so a value breaks between its ratios rather than inside one. When both sides have the
+ * same runs, each ratio is compared with its own old self ("(+90% AP)" to "(+100% AP)" changed,
+ * even though the old AD ratio was 100%).
+ */
+export function valueRuns(value: string, before?: string): Run[] {
+  const runs = splitRuns(valueParts(value, before))
+  if (before === undefined) return runs
+  const old = splitRuns(valueParts(before))
+  if (old.length !== runs.length || old.some((r, i) => r.ratio !== runs[i].ratio)) return runs
+  return runs.map((r, i) => {
+    const changed = changedNumbers(runText(old[i]), runText(r))
+    let n = 0
+    return {
+      ratio: r.ratio,
+      parts: r.parts.map((p) => (p.kind === 'num' ? { ...p, changed: changed[n++] ?? false } : p)),
+    }
+  })
+}
+
+function splitRuns(parts: ValuePart[]): Run[] {
+  const runs: Run[] = []
+  let open: Run | null = null
+  const push = (part: ValuePart) => {
+    if (!open) runs.push((open = { ratio: false, parts: [] }))
+    open.parts.push(part)
+  }
+  for (const part of parts) {
+    if (part.kind !== 'text') {
+      push(part)
+      continue
+    }
+    for (const piece of part.text.split(/(?=\()|(?<=\))/)) {
+      if (!piece) continue
+      if (piece.startsWith('(')) runs.push((open = { ratio: true, parts: [] }))
+      push({ kind: 'text', text: piece })
+      if (piece.endsWith(')') && open?.ratio) open = null
+    }
+  }
+  return runs
+}
+
 /** The stat icon of a line's label (a cooldown, health, armor…), as /cdn/stat names it. */
 const LABEL_STATS: [RegExp, string][] = [
   [/\bCooldown\b/, 'haste'],

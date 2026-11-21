@@ -6,6 +6,7 @@ import '../../css/tier-lists.css'
 import '../../css/tier-boards.css'
 import SiteLayout from '../../components/SiteLayout.vue'
 import Masthead from '../../components/ui/Masthead.vue'
+import RankTag from '../../components/ui/RankTag.vue'
 import Icon from '../../components/ui/Icon.vue'
 import TierChip from '../../components/ui/TierChip.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
@@ -13,7 +14,7 @@ import Skeleton from '../../components/ui/Skeleton.vue'
 import StatFilters from '../../components/champions/StatFilters.vue'
 import RoleSeg from '../../components/champions/RoleSeg.vue'
 import Computing from '../../components/champions/Computing.vue'
-import { BRACKETS, champIconUrl, perkUrl, roleOf, styleUrl } from '../../lib/champions.js'
+import { champIconUrl, perkUrl, roleOf, styleUrl } from '../../lib/champions.js'
 import { patchName } from '../../lib/patches.js'
 import { p1, points, thousands } from '../../lib/tier_lists.js'
 
@@ -75,22 +76,14 @@ const props = defineProps<{
 const ready = computed(() => (props.list && !props.list.computing ? props.list : null))
 const role = computed(() => (props.position ? roleOf(props.position) : null))
 const title = computed(() => (role.value ? `${role.value.label} rune tier list` : 'Rune tier list'))
-const rankText = computed(() => {
-  const b = BRACKETS.find((x) => x.value === props.filter?.bracket)
-  if (!b || b.value === 'all') return 'every rank'
-  return b.label.endsWith('+') ? `${b.label.slice(0, -1)} and above` : b.label
-})
 const where = computed(() =>
   role.value ? `in ${role.value.label.toLowerCase()}` : 'in every role'
 )
-const metaLine = computed(() =>
-  props.filter
-    ? `Patch ${patchName(props.filter.patch)}, ${rankText.value}${
-        ready.value
-          ? `, ${ready.value.rows.length} keystones, ${thousands(ready.value.games)} games ${where.value}`
-          : ''
-      }`
-    : 'No ranked games stored yet'
+/** What follows the rank filter in the masthead's line ("Patch 26.22, Emerald+, …"). */
+const metaTail = computed(() =>
+  ready.value
+    ? `, ${ready.value.rows.length} keystones, ${thousands(ready.value.games)} games ${where.value}`
+    : ''
 )
 const name = (id: number) => ready.value?.names[id] ?? ''
 const champs = computed(() => new Map((ready.value?.champions ?? []).map((c) => [c.id, c])))
@@ -167,8 +160,13 @@ const SHARD_ROWS = ['Offense', 'Flex', 'Defense']
       <Masthead
         :title="title"
         :crumbs="[{ label: 'Tier list', href: '/tier-list' }, { label: 'Runes' }]"
-        :meta="metaLine"
+        meta="No ranked games stored yet"
       >
+        <template v-if="filter" #meta
+          >Patch {{ patchName(filter.patch) }}, <RankTag :bracket="filter.bracket" />{{
+            metaTail
+          }}</template
+        >
         <template #end>
           <StatFilters :filter="filter" :patches="patches" />
         </template>

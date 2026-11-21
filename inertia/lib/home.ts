@@ -163,7 +163,20 @@ export interface HomePatchNotes {
   buffs: number
   nerfs: number
   /** Each champion the notes change, and which way. */
-  changes: Array<{ championId: number; kind: 'up' | 'down' | 'mix' | 'new' }>
+  changes: HomePatchChange[]
+}
+
+/** A champion the newest notes change, as the home's "Patch changes" card shows it. */
+export interface HomePatchChange {
+  championId: number
+  kind: 'up' | 'down' | 'mix' | 'new'
+  name?: string
+  /** What the notes changed: its abilities' keys ("Q", "W", "P" its passive) or "base" stats. */
+  keys?: string[]
+  /** Its main role on the patch, and its place there on the patch and on the one before. */
+  position?: string | null
+  rank?: number | null
+  prevRank?: number | null
 }
 
 /** The home page's sections, each null when it could not be read. */

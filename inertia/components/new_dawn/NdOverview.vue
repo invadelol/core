@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import Icon from '../ui/Icon.vue'
 import NdText from './NdText.vue'
 import NdPostPic from './NdPostPic.vue'
 import NdVote from './NdVote.vue'
+import NdPlayer from './NdPlayer.vue'
+import { currentOf, playInView, playing } from './teaser.js'
 import { DISCORD_URL } from '../../lib/links.js'
 import { champIcon } from '../../lib/assets.js'
 import { emblemBackgroundFluid } from '../../lib/facet.js'
 import {
   CAST,
+  CAST_END,
   FACES,
   FAQ,
   ITEMS,
@@ -58,6 +61,16 @@ const firstSentence = (text: string) => `${text.split('. ')[0].replace(/\.$/, ''
 const rumours = RUMOURS_CARD.map((id) => RUMOURS.find((r) => r.id === id)!)
 /** A tier's crest from /cdn/emblem, filling its box at any size. */
 const crest = (tier: string) => ({ background: emblemBackgroundFluid(tier, 1) ?? '' })
+/** The champion on screen while the teaser plays its cast. */
+const castNow = computed(() => {
+  const now = playing()
+  return now !== null && now < CAST_END ? currentOf(CAST.map((c) => c.second)) : null
+})
+const player = ref<HTMLElement>()
+/** Plays the teaser from a moment, the player brought into view when it is out of sight. */
+const seek = (second: number) =>
+  playInView(second, player.value?.querySelector<HTMLElement>('.nw-vid'))
+
 /** `→` in an item's line: an arrow between its two halves. */
 const halves = (line: string) => line.split('→')
 
@@ -104,15 +117,18 @@ onBeforeUnmount(() => observer?.disconnect())
         >Watch on YouTube<Icon name="external" :size="13"
       /></a>
     </div>
+    <div ref="player"><NdPlayer /></div>
     <div class="nw-cast">
       <a
         v-for="c in CAST"
         :key="c.key"
         class="nw-c"
-        :class="`nw-c-${c.key}`"
+        :class="[`nw-c-${c.key}`, { on: castNow === c.second }]"
         :href="teaserAt(c.second)"
+        :aria-label="`${c.name}, play the teaser from ${c.time}`"
         target="_blank"
         rel="noreferrer"
+        @click.prevent="seek(c.second)"
         ><span class="fr"
           ><img
             :src="ndImage(`teaser-${c.key}`)"
@@ -178,6 +194,7 @@ onBeforeUnmount(() => observer?.disconnect())
           :href="teaserAt(s.second)"
           target="_blank"
           rel="noreferrer"
+          @click.prevent="seek(s.second)"
           ><span class="fr"
             ><img :src="ndImage(s.pic)" :alt="s.alt" width="320" height="180" loading="lazy" /><span
               class="tc"
@@ -356,7 +373,11 @@ onBeforeUnmount(() => observer?.disconnect())
         </div>
         <b>{{ VICTORIOUS.title }}</b>
         <p>{{ VICTORIOUS.line }}</p>
-        <span class="meta">{{ VICTORIOUS.note }}</span>
+        <span class="meta"
+          >{{ VICTORIOUS.note }}
+          <a class="nw-ext" :href="VICTORIOUS.noteSource.href" target="_blank" rel="noreferrer"
+            >{{ VICTORIOUS.noteSource.label }}<Icon name="external" :size="12" /></a
+        ></span>
       </article>
 
       <article class="card nw-b nw-may">

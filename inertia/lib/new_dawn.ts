@@ -34,6 +34,11 @@ const MEDDLER_NOV_16 = `${X}RiotMeddler/status/2122139728287818230`
 const MEDDLER_DEC_18 = `${X}RiotMeddler/status/2001780724853276988`
 const MEDDLER_JUN_12_ENGINE = `${X}RiotMeddler/status/2065519045911429321`
 const MEDDLER_JUN_12_WORLDS = `${X}RiotMeddler/status/2065529735866904851`
+const WORLDS_VENUE_URL =
+  'https://lolesports.com/en-US/lolesports/news/worlds-2026-venue-event-policies'
+const VICTORIOUS_WIKI_URL = 'https://wiki.leagueoflegends.com/en-us/Victorious'
+/** A video at a second, as YouTube links it. */
+const at = (url: string, second: number) => `${url}&t=${second}s`
 
 /** A link to a source, as the page writes it. */
 export interface Source {
@@ -64,7 +69,7 @@ export const NEW_DAWN = {
   /** The same, for search engines (`dateModified`). */
   modified: '2026-11-16T18:10:00Z',
   lead: [
-    "Riot's 2027 update to League, with a client built into the game and a new Summoner's Rift. ",
+    "Riot's 2027 update to League: a modernized client built into the game and a visually revamped Summoner's Rift. ",
     'Full reveal in early January',
     ', launch later in 2027.',
   ] as Parts,
@@ -76,31 +81,69 @@ export const NEW_DAWN = {
   ] as Parts,
   next: {
     title: 'The full reveal, early January',
-    line: 'Day not announced. It lands on this page within the hour.',
-    lineShort: 'Day not announced. It lands here within the hour.',
+    line: 'Riot gave no day on 16 Nov. It lands on this page within the hour.',
+    lineShort: 'No day given yet. It lands here within the hour.',
   },
 } as const
 
 /* ── In the teaser ──────────────────────────────────────────────── */
 
-/** The teaser's cast, in order, with the second each one appears. */
+/**
+ * The teaser's cast, in order, with the second each one first shows (checked frame by frame on the
+ * video, 21 Nov 2026). Their stills are later frames of the same shots.
+ */
 export const CAST = [
-  { key: 'blitzcrank', name: 'Blitzcrank', time: '1:00', second: 60 },
-  { key: 'lux', name: 'Lux', time: '1:06', second: 66 },
-  { key: 'leona', name: 'Leona', time: '1:08', second: 68 },
-  { key: 'sett', name: 'Sett', time: '1:12', second: 72 },
-  { key: 'ekko', name: 'Ekko', time: '1:18', second: 78 },
-  { key: 'jhin', name: 'Jhin', time: '1:28', second: 88 },
-  { key: 'ahri', name: 'Ahri', time: '1:34', second: 94 },
+  { key: 'blitzcrank', name: 'Blitzcrank', time: '0:50', second: 50 },
+  { key: 'lux', name: 'Lux', time: '1:04', second: 64 },
+  { key: 'leona', name: 'Leona', time: '1:07', second: 67 },
+  { key: 'sett', name: 'Sett', time: '1:09', second: 69 },
+  { key: 'ekko', name: 'Ekko', time: '1:16', second: 76 },
+  { key: 'jhin', name: 'Jhin', time: '1:24', second: 84 },
+  { key: 'ahri', name: 'Ahri', time: '1:30', second: 90 },
 ] as const
+/** The cast's shots end where the lobby begins. */
+export const CAST_END = 98
 
-export const teaserAt = (second: number) => `${TEASER_URL}&t=${second}s`
+export const teaserAt = (second: number) => at(TEASER_URL, second)
+/** m:ss of a second in the teaser. */
+export const clock = (second: number) =>
+  `${Math.floor(second / 60)}:${String(Math.floor(second % 60)).padStart(2, '0')}`
+
+/** A moment of the teaser, from its English captions (quotes) and its frames. */
+export interface Moment {
+  second: number
+  label: string
+  /** Who says the quote. */
+  who?: string
+}
 
 export const TEASER = {
   length: '2:01',
-  meta: '2:01, shown at the Worlds final, 2,137,614 views',
+  meta: '2:01, aired at the Worlds final in Brooklyn on 14 Nov, 2,137,614 views on 19 Nov',
+  /** The Worlds final's venue and day (lolesports.com). */
+  venue: { label: 'Worlds final, Barclays Center, 14 Nov', href: WORLDS_VENUE_URL } as Source,
+  /** The teaser apart from the cast, in order (the cast runs from 0:50 to 1:37). */
+  moments: [
+    { second: 0, label: 'Pabro and Meddler' },
+    { second: 26, label: '"The client, for one, has to be better"', who: 'Pabro' },
+    { second: 29, label: '"Next year we\'re releasing a modernized client"', who: 'Pabro' },
+    {
+      second: 34,
+      label: '"Visually revamping Summoner\'s Rift, evolving its gameplay"',
+      who: 'Meddler',
+    },
+    { second: 45, label: 'The dawn' },
+    { second: 50, label: 'Seven champions, a new look' },
+    { second: 98, label: 'A lobby of five' },
+    { second: 99, label: 'Blitzcrank picks God Hand' },
+    { second: 100, label: 'Vayne dashes through a wall' },
+    { second: 106, label: 'New minions' },
+    { second: 109, label: 'Baron Nashor' },
+    { second: 118, label: '"Full reveal in January"' },
+  ] as Moment[],
   godHand: {
-    text: "A Blitzcrank player picks an option called God Hand, then fights up close. Vayne dashes through a wall. Riot hasn't said what these choices are yet.",
+    second: 99,
+    text: 'At 1:39 a Blitzcrank player picks an option called God Hand, then fights up close; at 1:40 Vayne dashes through a wall. Riot had not explained these choices by 21 Nov.',
     sources: [
       { label: 'PC Gamer', href: PCG_URL },
       { label: 'Inven Global', href: INVEN_URL },
@@ -118,7 +161,7 @@ export const TEASER = {
       time: '1:38',
       second: 98,
       title: 'A first look at the client',
-      text: 'Five champions in a lobby, seen as a first glimpse of the "modernized client".',
+      text: 'Five champions in a lobby. Pabro at 0:29: "So next year we\'re releasing a modernized client."',
       faces: [
         { id: 39, name: 'Irelia' },
         { id: 103, name: 'Ahri' },
@@ -133,7 +176,7 @@ export const TEASER = {
       time: '1:46',
       second: 106,
       title: 'The Rift, redrawn',
-      text: 'New minions, new ability effects, a reworked Baron Nashor and Elder Dragon.',
+      text: 'New minions at 1:46 and a new Baron Nashor at 1:49, new ability effects from 1:40.',
       faces: [],
     },
   ],
@@ -205,12 +248,13 @@ export const VICTORIOUS = {
   ],
   title: 'Past Victorious skins, again',
   line: 'New variants, unlocked with Timeless Tokens, without waiting for the end of the year.',
-  note: '22 Victorious skins exist. Which ones come back is not said.',
+  note: '22 Victorious skins exist. Riot has not said which return, or for how many Timeless Tokens.',
+  noteSource: { label: 'League wiki', href: VICTORIOUS_WIKI_URL } as Source,
 } as const
 
 export const MAYHEM = {
   title: 'ARAM: Mayhem breaks more rules',
-  line: 'Augments can overload, one makes your inventory bigger. Players vote old augments back, the first vote shortly after the update.',
+  line: 'Augments can overload, one makes your inventory bigger. Players vote old augments back, the first one "shortly after the update".',
 } as const
 
 /* ── Riot's posts ───────────────────────────────────────────────── */
@@ -262,7 +306,7 @@ export const POSTS: Post[] = [
     title: 'Season 1 2027 dev update',
     by: { face: 'pabro', name: 'Pabro and Meddler' },
     speakers: ['pabro', 'meddler'],
-    said: 'The reveal moves to January in place of the season start, playtests follow it, and the launch comes later in 2027 with the season cinematic. Then January: Ranked Rush, two Keystones, the on-hit overhaul, Mayhem.',
+    said: 'At 0:17, a full reveal "in early January, in place of the usual Season Start moment", broader playtesting "shortly after that reveal", the launch later in 2027 with the Season Start cinematic. Then January: two Keystones and the on-hit overhaul, Ranked Rush at 3:49, Mayhem at 4:32.',
     count: { value: 1273879, unit: 'views' },
     link: { label: 'Watch on YouTube', href: DEV_UPDATE_URL },
     chapters: [
@@ -332,7 +376,7 @@ export const POSTS: Post[] = [
     title: 'League of Legends: New Dawn teaser',
     by: { face: 'pabro', name: 'Pabro and Meddler' },
     speakers: ['pabro', 'meddler'],
-    said: 'Shown during the Worlds final in Brooklyn. "The client, for one, has to be better", then a new look for Blitzcrank, Lux, Leona, Sett, Ekko, Jhin and Ahri, and a few seconds of new gameplay.',
+    said: 'Shown during the Worlds final at Barclays Center, Brooklyn. At 0:26, "The client, for one, has to be better"; from 0:50 a new look for Blitzcrank, Lux, Leona, Sett, Ekko, Jhin and Ahri; from 1:38, 12 seconds of new gameplay.',
     count: { value: 2137614, unit: 'views' },
     link: { label: 'Watch on YouTube', href: TEASER_URL },
     short: 'Teaser',
@@ -540,7 +584,7 @@ export const RUMOURS: Rumour[] = [
     title: 'Runes swapped for three champion loadouts',
     claim:
       "Runes removed; each champion gets three loadouts instead, one letting Jinx's ultimate hit turrets.",
-    pic: { src: ndImage('teaser-blitzcrank'), caption: 'God Hand, teaser 1:4x' },
+    pic: { src: ndImage('teaser-blitzcrank'), caption: 'Blitzcrank at 1:00; God Hand at 1:39' },
     reportedBy: [
       {
         label: 'Reddit user Local_Anything191',
@@ -706,10 +750,12 @@ export const VOTABLE = RUMOURS.filter((r) => r.vote).map((r) => r.id)
 /* ── What people ask ────────────────────────────────────────────── */
 
 const S_X16 = { label: 'Meddler on X, 16 Nov', href: MEDDLER_NOV_16 }
-const S_DEV = { label: 'Dev update, 16 Nov', href: DEV_UPDATE_URL }
+const S_DEV = { label: 'Dev update, 16 Nov, at 0:17', href: at(DEV_UPDATE_URL, 17) }
 const S_TLDW = { label: 'TL;DW, 16 Nov', href: TLDW_2027_URL }
 const S_SHORT = { label: 'Pabro, 18 Dec 2025', href: SHORT_URL }
-const S_TEASER = { label: 'Teaser, 14 Nov', href: TEASER_URL }
+const S_TEASER = { label: 'Teaser, 14 Nov, at 0:26', href: at(TEASER_URL, 26) }
+const S_TEASER_RIFT = { label: 'Teaser, 14 Nov, at 0:34', href: at(TEASER_URL, 34) }
+const S_TEASER_GOD_HAND = { label: 'Teaser, 14 Nov, at 1:39', href: at(TEASER_URL, 99) }
 const S_JUN = { label: 'Meddler on X, 12 Jun', href: MEDDLER_JUN_12_ENGINE }
 const S_DEC = { label: 'Meddler on X, 18 Dec 2025', href: MEDDLER_DEC_18 }
 
@@ -743,11 +789,11 @@ export const FAQ: Question[] = [
     a: [
       'Riot shows it in full in ',
       'early January',
-      ', in place of the usual season start. ',
-      'Playtests',
-      ' follow shortly after; the ',
+      ', "in place of the usual Season Start moment". Broader ',
+      'playtests',
+      ' follow "shortly after that reveal"; the ',
       'launch is later in 2027',
-      ', with the season cinematic.',
+      ', with the Season Start cinematic.',
     ],
     sources: [S_DEV, S_TLDW],
     visual: { kind: 'still', pic: 'dawn-1280' },
@@ -781,23 +827,21 @@ export const FAQ: Question[] = [
   {
     q: "What changes on Summoner's Rift?",
     a: [
-      'A ',
-      'full visual overhaul',
-      ' and ',
-      'gameplay changes',
-      " tied to it. Some of January's changes are built to carry over.",
+      '"',
+      "Visually revamping Summoner's Rift, evolving its gameplay",
+      '", Meddler says in the teaser. Some of January\'s changes are built to carry over into New Dawn.',
     ],
-    sources: [S_DEC, S_TLDW],
+    sources: [S_TEASER_RIFT, S_DEC, S_TLDW],
     visual: { kind: 'still', pic: 'teaser-minions' },
   },
   {
     q: 'What is God Hand?',
     a: [
-      'A choice a Blitzcrank player picks in the teaser before fighting up close. ',
-      "Riot hasn't explained it yet",
-      '; Meddler hints at new content that adds complexity.',
+      'A choice a Blitzcrank player picks at 1:39 in the teaser before fighting up close. ',
+      'Riot had not explained it by 21 Nov',
+      '; on 16 Nov Meddler hinted at new content that "adds complexity".',
     ],
-    sources: [S_TEASER, { label: 'Meddler on Reddit, 16 Nov', href: IG_RUNES_URL }],
+    sources: [S_TEASER_GOD_HAND, { label: 'Meddler on Reddit, 16 Nov', href: IG_RUNES_URL }],
     visual: { kind: 'still', pic: 'teaser-blitzcrank' },
   },
   {
@@ -805,7 +849,7 @@ export const FAQ: Question[] = [
     a: [
       '',
       "Sign up on Riot's New Dawn page.",
-      ' Playtests start shortly after the January reveal. Regions, dates and numbers are not given.',
+      ' Playtests start "shortly after" the January reveal. Regions, dates and numbers were not given by 21 Nov.',
     ],
     sources: [S_TLDW, { label: "Riot's New Dawn page", href: RIOT_PAGE_URL }],
     visual: { kind: 'still', pic: 'video-season-2027' },
@@ -842,7 +886,7 @@ export const NEW_DAWN_META: Record<NewDawnTab, { title: string; description: str
   overview: {
     title: 'New Dawn: what Riot said about League in 2027',
     description:
-      "New Dawn, Riot's 2027 update to League of Legends: a client built into the game, a new Summoner's Rift, the full reveal in early January and the launch later in 2027. What the teaser showed, what changes in January, and what people ask, with Riot's sources.",
+      "New Dawn, Riot's 2027 update to League of Legends: a modernized client built into the game, a visually revamped Summoner's Rift, the full reveal in early January and the launch later in 2027. What the teaser showed, what changes in January, and what people ask, with Riot's sources.",
   },
   posts: {
     title: 'New Dawn: every Riot post and video',

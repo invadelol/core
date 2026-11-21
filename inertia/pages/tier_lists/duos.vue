@@ -5,6 +5,7 @@ import { RoleIcon } from '@invadelol/ui'
 import '../../css/tier-lists.css'
 import SiteLayout from '../../components/SiteLayout.vue'
 import Masthead from '../../components/ui/Masthead.vue'
+import RankTag from '../../components/ui/RankTag.vue'
 import CardHead from '../../components/ui/CardHead.vue'
 import Icon from '../../components/ui/Icon.vue'
 import TierChip from '../../components/ui/TierChip.vue'
@@ -17,7 +18,7 @@ import MovedCard, { type Moved } from '../../components/champions/MovedCard.vue'
 import Fig from '../../components/champions/Fig.vue'
 import SinceCell from '../../components/champions/SinceCell.vue'
 import Computing from '../../components/champions/Computing.vue'
-import { BRACKETS, TIERS, champIconUrl } from '../../lib/champions.js'
+import { TIERS, champIconUrl } from '../../lib/champions.js'
 import { patchName } from '../../lib/patches.js'
 import { barWidth, movers, p1, sgn, thousands, withQuery } from '../../lib/tier_lists.js'
 import {
@@ -86,15 +87,9 @@ const laneHref = (a: DuoRole, b: DuoRole) => {
 const firstHref = (r: DuoRole) =>
   laneHref(r, r === roles.value[1] ? roles.value[0] : roles.value[1])
 const ready = computed(() => (props.list && !props.list.computing ? props.list : null))
-const rankText = computed(() => {
-  const b = BRACKETS.find((x) => x.value === props.filter?.bracket)
-  if (!b || b.value === 'all') return 'every rank'
-  return b.label.endsWith('+') ? `${b.label.slice(0, -1)} and above` : b.label
-})
-const metaLine = computed(() =>
-  props.filter
-    ? `Patch ${patchName(props.filter.patch)}, ${rankText.value}${ready.value ? `, ${ready.value.rows.length} pairs played together at least ${thousands(ready.value.minGames)} times` : ''}`
-    : 'No ranked games stored yet'
+/** What follows the rank filter in the masthead's line ("Patch 26.22, Emerald+, …"). */
+const metaTail = computed(() =>
+  ready.value ? `, ${ready.value.rows.length} pairs played together at least ${thousands(ready.value.minGames)} times` : ''
 )
 const champs = computed(() => new Map((ready.value?.champions ?? []).map((c) => [c.id, c])))
 const nm = (id: number) => champs.value.get(id)?.name ?? ''
@@ -176,8 +171,11 @@ const shareMax = computed(() => Math.max(0.2, ...shown.value.map((r) => r.share)
       <Masthead
         :title="L.title"
         :crumbs="[{ label: 'Tier list', href: '/tier-list' }, { label: 'Duos' }]"
-        :meta="metaLine"
+        meta="No ranked games stored yet"
       >
+        <template v-if="filter" #meta
+          >Patch {{ patchName(filter.patch) }}, <RankTag :bracket="filter.bracket" />{{ metaTail }}</template
+        >
         <template #end>
           <StatFilters :filter="filter" :patches="patches" />
         </template>

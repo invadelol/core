@@ -8,6 +8,7 @@ import Select from '../components/ui/Select.vue'
 import EmptyState from '../components/ui/EmptyState.vue'
 import Frame from '../components/ui/Frame.vue'
 import TierChip from '../components/ui/TierChip.vue'
+import RankTag from '../components/ui/RankTag.vue'
 import WinRate from '../components/ui/WinRate.vue'
 import ChangeMark from '../components/patch/ChangeMark.vue'
 import ChangeTable from '../components/patch/ChangeTable.vue'
@@ -59,14 +60,6 @@ const props = defineProps<{
   skins?: PatchSkins | null
 }>()
 
-const RANK: Record<string, string> = {
-  emerald_plus: 'Emerald+',
-  platinum_plus: 'Platinum+',
-  diamond_plus: 'Diamond+',
-  master_plus: 'Master+',
-  all: 'all ranks',
-}
-const rank = computed(() => RANK[props.stats?.bracket ?? 'emerald_plus'] ?? 'Emerald+')
 const counts = computed(() => (props.notes ? noteCounts(props.notes) : null))
 const sub = computed(() => patchSubRow(props.patches, `/patch/${props.current}`))
 const patchModel = computed({
@@ -422,9 +415,6 @@ onBeforeUnmount(() => observer?.disconnect())
           <section id="champions" class="sec pb-first" aria-labelledby="pn-champions">
             <div class="sec-h">
               <h2 id="pn-champions" class="h2">Champions by lane</h2>
-              <span class="meta">{{
-                stats ? `Each champion in its main role, ${rank}` : 'Each champion in its main role'
-              }}</span>
               <div v-if="byLane" class="more lp" role="group" aria-label="Lane">
                 <button type="button" :class="{ on: lane === 'all' }" @click="pickLane('all')">
                   All<span class="n num">{{ notes.champions.length }}</span>
@@ -444,7 +434,12 @@ onBeforeUnmount(() => observer?.disconnect())
             </div>
 
             <div class="lns" :class="{ one: shownLanes.length === 1 }">
-              <div v-for="l in shownLanes" :key="l.key" class="ln">
+              <div
+                v-for="l in shownLanes"
+                :key="l.key"
+                class="lnc"
+                :class="{ many: l.champions.length > 3 }"
+              >
                 <div class="ln-h">
                   <RoleIcon v-if="l.lane" :lane="l.lane" :size="16" /><b>{{ l.label }}</b
                   ><span class="t4 num">{{ l.champions.length }}</span>
@@ -454,18 +449,18 @@ onBeforeUnmount(() => observer?.disconnect())
                     v-for="c in l.champions"
                     :key="c.id"
                     :href="`#c${c.id}`"
-                    class="pt"
+                    class="lnp"
                     :class="{ on: champion?.id === c.id }"
                     :aria-current="champion?.id === c.id ? 'true' : undefined"
                     @click.prevent="pick(c.id)"
-                    ><span class="pt-i"
+                    ><span class="lnp-i"
                       ><Frame
                         :src="champIcon(c.id)"
-                        :width="64"
+                        width="var(--pt)"
                         :alt="c.name"
                         size="s" /><ChangeMark :kind="c.kind" /></span
                     ><b>{{ c.name }}</b
-                    ><span class="pt-k">{{
+                    ><span class="lnp-k">{{
                       c.blocks.map((b) => keyName(b.key)).join(' ')
                     }}</span></a
                   >
@@ -516,7 +511,7 @@ onBeforeUnmount(() => observer?.disconnect())
 
               <div class="sg-b">
                 <div class="sg-ch">
-                  <div v-for="b in champion.blocks" :key="b.key + b.title" class="ct">
+                  <div v-for="b in champion.blocks" :key="b.key + b.title" class="ctb">
                     <div class="ct-h">
                       <span v-if="b.key === 'base'" class="ct-ai base"
                         ><Icon name="sliders" :size="16"
@@ -548,7 +543,8 @@ onBeforeUnmount(() => observer?.disconnect())
                 <div v-if="stat(champion.id)" class="msh">
                   <span class="ms-t"
                     >Since the patch<span class="meta"
-                      >{{ rank }}, {{ positionOf(stat(champion.id)!.position).label }}</span
+                      ><RankTag :bracket="stats?.bracket" />,
+                      {{ positionOf(stat(champion.id)!.position).label }}</span
                     ></span
                   >
                   <div class="msh-g">
