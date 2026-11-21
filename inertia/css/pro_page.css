@@ -281,6 +281,16 @@
     .vb .pp-cols.no-champs {
       grid-template-columns: 260px minmax(0, 1fr);
     }
+    .vb .pp-strip {
+      grid-template-columns: 150px repeat(var(--n, 5), minmax(0, 1fr));
+    }
+    .vb .pp-strip > * {
+      gap: 8px;
+      padding: 10px 12px;
+    }
+    .vb .pp-strip .pp-rl {
+      display: none;
+    }
     .vb .pp-cols > .col:nth-child(3) {
       grid-column: 1 / -1;
       display: grid;

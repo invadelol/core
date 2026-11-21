@@ -56,11 +56,14 @@ const rank = (m: RosterMember) =>
       <span class="col" style="min-width: 0">
         <span class="h5 ell">{{ m.name }}</span>
         <span class="pp-rk sm" :class="{ un: !m.best }"
-          ><RoleIcon v-if="laneOf(m.role)" :lane="laneOf(m.role)!" :size="12" /><RankEmblem
-            v-if="m.best"
-            :tier="m.best.tier"
-            :size="16"
-          /><span class="ell">{{ rank(m) }}</span></span
+          ><RoleIcon
+            v-if="laneOf(m.role)"
+            class="pp-rl"
+            :lane="laneOf(m.role)!"
+            :size="12"
+          /><RankEmblem v-if="m.best" :tier="m.best.tier" :size="16" /><span class="ell">{{
+            rank(m)
+          }}</span></span
         >
       </span>
     </component>
