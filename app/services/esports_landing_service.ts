@@ -2,7 +2,7 @@ import db from '@adonisjs/lucid/services/db'
 import logger from '@adonisjs/core/services/logger'
 import { AnswerCache } from '#services/ranked_stats'
 import { matchOf } from '#services/pro_match_service'
-import proLadderService, { rankScore, type LadderRow } from '#services/pro_ladder_service'
+import proLadderService, { type LadderRow } from '#services/pro_ladder_service'
 import proService from '#services/pro_service'
 import proPhotoService from '#services/pro_photo_service'
 import { catalog, leagueCatalog, leagueRef, type LeagueRef } from '#services/pro_leagues'
@@ -296,7 +296,7 @@ class EsportsLandingService {
   /**
    * Every listed league's teams with their starting five (one per role, by their best account;
    * the players who joined in the last weeks marked), each team's country, its starters' average
-   * LP in Master and above and how many of them are there.
+   * LP against Master 0 LP (team_lp.ts) and how many starters it counts.
    */
   teams() {
     return this.#answers.get('teams', async () => {
@@ -340,7 +340,6 @@ class EsportsLandingService {
                     ...(p.photo ? { photo: p.photo } : {}),
                     role,
                     fresh: fresh.has(p.slug),
-                    apex: (rankScore(p.best?.tier, null, p.best?.lp) ?? 0) >= 2800,
                   },
                 ]
               : []
@@ -351,8 +350,9 @@ class EsportsLandingService {
             name: t.name,
             country: byTeam.get(t.id)?.location ?? null,
             lp: t.lp,
-            apex: five.filter((p) => p.apex).length,
-            five: five.map(({ apex, ...p }) => (void apex, p)),
+            counted: t.counted,
+            starters: t.starters,
+            five,
           }
         })
         return [{ league, teams }]

@@ -72,9 +72,11 @@ export interface TeamBoard {
   slug: string
   name: string
   country: string | null
+  /** The starters' average LP against Master 0 LP (Diamond counts below it). */
   lp: number | null
-  /** Starters in Master and above. */
-  apex: number
+  /** The starters the average counts (Diamond IV and above), of `starters`. */
+  counted: number
+  starters: number
   five: TeamStarter[]
 }
 
@@ -103,3 +105,7 @@ const ROLE_ORDER = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'] as const
 /** A team's five places by role, each with its starter or null. */
 export const slots = (t: Pick<TeamBoard, 'five'>) =>
   ROLE_ORDER.map((role) => ({ role, p: t.five.find((x) => x.role === role) ?? null }))
+
+/** A team's average LP with a true minus sign below Master 0 LP: "2,029", "−50". */
+export const lpText = (v: number) =>
+  v < 0 ? `−${Math.round(-v).toLocaleString('en-US')}` : Math.round(v).toLocaleString('en-US')
