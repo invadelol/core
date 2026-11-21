@@ -21,7 +21,7 @@ import { areEventsCounted } from '#services/stats_cells'
 import { escapeClickhouseString } from '#utils/clickhouse'
 import { detailOf, isRemake, scoreLobby } from '../../inertia/lib/match.js'
 import { patchName } from '../../inertia/lib/patch.js'
-import type { PatchNotes } from '../../inertia/lib/patch_notes.js'
+import type { PatchChampionStat, PatchNotes } from '../../inertia/lib/patch_notes.js'
 import type { Match } from '../../inertia/lib/types.js'
 import type {
   BestGame,
@@ -239,10 +239,26 @@ export function otherSplus(
     .slice(0, limit)
 }
 
-/** How many champions a patch's notes buff and nerf, and each changed champion's direction. */
-export function patchNotesOf(notes: PatchNotes | null): HomePatchNotes | null {
+/**
+ * How many champions a patch's notes buff and nerf, and each changed champion: which way, what
+ * changed (its abilities' keys, "base" for its base stats) and, with `stats`, its main role and
+ * its place there on the patch and on the one before.
+ */
+export function patchNotesOf(
+  notes: PatchNotes | null,
+  stats?: Record<number, PatchChampionStat> | null
+): HomePatchNotes | null {
   if (!notes) return null
-  const changes = notes.champions.map((c) => ({ championId: c.id, kind: c.kind }))
+  const changes = notes.champions.map((c) => {
+    const s = stats?.[c.id]
+    return {
+      championId: c.id,
+      kind: c.kind,
+      name: c.name,
+      keys: [...new Set(c.blocks.map((b) => b.key))],
+      ...(s ? { position: s.position, rank: s.rank, prevRank: s.prevRank } : {}),
+    }
+  })
   return {
     patch: notes.patch,
     buffs: changes.filter((c) => c.kind === 'up').length,
@@ -906,8 +922,21 @@ export class HomeService {
       capped(this.section('best', TTL.best, () => this.bestGames())),
       capped(esportsService.recentResults(1)),
     ])
+    // The patch's changes, each champion with its place in its main role before and after.
     const notes = picks
-      ? await capped(patchNotesService.get(patchName(picks.patch)).then(patchNotesOf))
+      ? await capped(
+          patchNotesService.get(patchName(picks.patch)).then(async (found) => {
+            const stats = found
+              ? await capped(
+                  patchNotesService.stats(
+                    picks.patch,
+                    found.champions.map((c) => c.id)
+                  )
+                )
+              : null
+            return patchNotesOf(found, stats?.byChampion)
+          })
+        )
       : null
     return {
       picks: picks && {
@@ -916,7 +945,6 @@ export class HomeService {
         splus: picks.splus ?? [],
         bans: picks.bans,
         brackets: picks.brackets,
-        moves: picks.moves,
       },
       patchNotes: notes,
       result: games?.length ? null : (results?.[0] ?? null),

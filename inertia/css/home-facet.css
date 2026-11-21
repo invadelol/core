@@ -425,9 +425,6 @@
     color: var(--t3);
     white-space: nowrap;
   }
-  .vb .lc-short {
-    display: none;
-  }
   .vb .lc-r {
     position: relative;
     display: flex;
@@ -452,51 +449,86 @@
     white-space: nowrap;
     text-overflow: ellipsis;
   }
-  .vb .pt {
-    display: inline-flex;
+  /* The patch's changes: a quiet word over each side, then what each champion had changed, its
+     abilities in Riot's icons, and its place in its role, quieter, at the end. */
+  .vb .lc-lab {
+    display: flex;
     align-items: center;
-    gap: 3px;
-    flex: none;
-    height: 20px;
-    padding: 0 7px 0 5px;
-    border-radius: 6px;
-    font-size: 11.5px;
-    font-weight: 700;
-  }
-  .vb .pt.up {
-    background: var(--v900);
-    color: var(--v200);
-  }
-  .vb .pt.down,
-  .vb .pt.mix {
-    background: var(--s3);
-    color: var(--t3);
-  }
-  .vb .pt.mix {
-    padding-left: 7px;
-  }
-  .vb .mv {
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 6px;
-    flex: none;
-    width: 88px;
-    font-size: 14px;
+    gap: 5px;
+    height: 26px;
+    margin-top: 2px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--t3);
   }
-  .vb .mv .i {
+  .vb .lc-lab.up .i {
+    color: var(--v300);
+  }
+  .vb .lc-lab-r {
+    margin-left: auto;
+    font-weight: 500;
     color: var(--t4);
   }
-  .vb .mv b {
-    min-width: 28px;
-    font-weight: 750;
-    color: var(--t1);
-    text-align: right;
+  .vb .lc.chg .lc-r {
+    height: 44px;
   }
-  .vb .mv.up b {
-    color: var(--v200);
+  .vb .lc-lab + .lc-r {
+    border-top: 0;
+  }
+  .vb .lc-ab {
+    display: inline-flex;
+    gap: 4px;
+    flex: none;
+  }
+  .vb .lc-ai {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: var(--s3);
+    color: var(--t2);
+  }
+  .vb .lc-ai img {
+    width: 100%;
+    height: 100%;
+    border-radius: 6px;
+    object-fit: cover;
+  }
+  .vb .lc-ai i {
+    position: absolute;
+    right: -4px;
+    bottom: -4px;
+    min-width: 13px;
+    height: 13px;
+    padding: 0 2px;
+    border-radius: 4px;
+    background: var(--ink-0);
+    color: var(--t1);
+    font-size: 9px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: 13px;
+    text-align: center;
+  }
+  .vb .lc-mv {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 4px;
+    flex: none;
+    min-width: 66px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--t4);
+  }
+  .vb .lc-mv .i {
+    color: var(--t4);
+  }
+  .vb .lc-mv b {
+    font-weight: 600;
+    color: var(--t2);
   }
   .vb .gv {
     flex: none;
@@ -901,12 +933,6 @@
     .vb .hc3 {
       gap: 14px;
       margin-top: 28px;
-    }
-    .vb .lc-long {
-      display: none;
-    }
-    .vb .lc-short {
-      display: inline;
     }
     .vb .tm img,
     .vb .tm-ini {

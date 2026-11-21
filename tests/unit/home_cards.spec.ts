@@ -1,26 +1,22 @@
 import { test } from '@japa/runner'
-import { headlineGame, homeCards, patchMoves } from '../../inertia/lib/home_cards.js'
-import type { HomeLaneRow, HomeMover, HomeMoves } from '../../inertia/lib/home.js'
+import { headlineGame, homeCards, patchChanges } from '../../inertia/lib/home_cards.js'
+import type { HomeLaneRow, HomePatchChange } from '../../inertia/lib/home.js'
 import type { ProMatch } from '../../inertia/lib/pro_matches.js'
 
 /** Made-up champions and matches: every figure here is the test's own. */
-const mover = (championId: number, position: string, from: number, to: number): HomeMover => ({
+const change = (
+  championId: number,
+  kind: HomePatchChange['kind'],
+  prevRank: number | null = null,
+  rank: number | null = null
+): HomePatchChange => ({
   championId,
+  kind,
   name: `Champion ${championId}`,
-  slug: `champion-${championId}`,
-  position,
-  from,
-  to,
-  winRate: 0.5,
-})
-
-const moves = (rows: HomeMover[]): HomeMoves => ({
-  previousPatch: '16.21',
-  roles: ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY'].map((position) => ({
-    position,
-    up: rows.filter((m) => m.position === position && m.to < m.from),
-    down: rows.filter((m) => m.position === position && m.to > m.from),
-  })),
+  keys: ['Q'],
+  position: 'MIDDLE',
+  rank,
+  prevRank,
 })
 
 const match = (id: number, status: ProMatch['status']): ProMatch => ({
@@ -47,42 +43,49 @@ const lane = (championId: number, value: number): HomeLaneRow => ({
   value,
 })
 
-test.group('Home cards | where the patch moved them', () => {
-  test('puts the champions the notes changed first, climbs before falls', ({ assert }) => {
-    const rows = patchMoves(
-      moves([
-        mover(1, 'TOP', 23, 6),
-        mover(2, 'MIDDLE', 10, 37),
-        mover(3, 'JUNGLE', 40, 10),
-        mover(4, 'BOTTOM', 20, 12),
-      ]),
-      [
-        { championId: 1, kind: 'up' },
-        { championId: 2, kind: 'down' },
-        { championId: 4, kind: 'up' },
-      ],
-      3
+test.group('Home cards | the patch changes', () => {
+  test('buffs then nerfs, both sides kept, the biggest moves first', ({ assert }) => {
+    const c = patchChanges([
+      change(1, 'up', 30, 28),
+      change(2, 'up', 40, 10),
+      change(3, 'up', 12, 9),
+      change(4, 'down', 5, 9),
+      change(5, 'down', 3, 30),
+      change(6, 'down', 8, 12),
+      change(7, 'mix', 20, 18),
+    ])
+    assert.deepEqual(
+      c.up.map((r) => r.championId),
+      [2, 3]
     )
     assert.deepEqual(
-      rows.map((r) => [r.championId, r.kind]),
-      [
-        [1, 'up'],
-        [4, 'up'],
-        [2, 'down'],
-      ]
+      c.down.map((r) => r.championId),
+      [5, 4]
     )
+    assert.deepEqual(c.mix, [])
   })
 
-  test('keeps one line per champion, in the role where it sits near the top', ({ assert }) => {
-    const rows = patchMoves(moves([mover(1, 'TOP', 23, 6), mover(1, 'MIDDLE', 51, 24)]))
+  test('fills the room with one side or the adjusted ones when the other is short', ({
+    assert,
+  }) => {
+    const onlyBuffs = patchChanges([change(1, 'up'), change(2, 'up'), change(3, 'mix')])
+    assert.deepEqual([onlyBuffs.up.length, onlyBuffs.down.length, onlyBuffs.mix.length], [2, 0, 1])
+    const oneBuff = patchChanges([
+      change(1, 'up'),
+      change(2, 'down'),
+      change(3, 'down'),
+      change(4, 'down'),
+      change(5, 'down'),
+    ])
+    assert.deepEqual([oneBuff.up.length, oneBuff.down.length], [1, 3])
+  })
+
+  test('keeps the notes order for champions without a place in their role', ({ assert }) => {
+    const c = patchChanges([change(1, 'up'), change(2, 'up', 20, 10), change(3, 'up')])
     assert.deepEqual(
-      rows.map((r) => r.position),
-      ['TOP']
+      c.up.map((r) => r.championId),
+      [2, 1, 3]
     )
-  })
-
-  test('is empty without a patch to compare', ({ assert }) => {
-    assert.deepEqual(patchMoves(null), [])
   })
 })
 
@@ -101,8 +104,8 @@ test.group('Home cards | which cards show', () => {
     const rows = [lane(1, 600), lane(2, 400), lane(3, 300)]
     const cards = homeCards({
       game: null,
-      moves: [],
-      previousPatch: null,
+      changes: null,
+      patch: null,
       lanes: { bullies: rows, firstBlood: rows },
     })
     assert.deepEqual(
@@ -115,23 +118,21 @@ test.group('Home cards | which cards show', () => {
     const rows = [lane(1, 600), lane(2, 400), lane(3, 300)]
     const cards = homeCards({
       game: match(1, 'running'),
-      moves: patchMoves(
-        moves([mover(1, 'TOP', 23, 6), mover(2, 'TOP', 30, 9), mover(3, 'TOP', 4, 19)])
-      ),
-      previousPatch: '16.21',
+      changes: patchChanges([change(1, 'up'), change(2, 'up'), change(3, 'down')]),
+      patch: '26.22',
       lanes: { bullies: rows, firstBlood: rows },
     })
     assert.deepEqual(
       cards.map((c) => c.key),
-      ['game', 'moves', 'bullies']
+      ['game', 'changes', 'bullies']
     )
   })
 
   test('needs three lines for a list card', ({ assert }) => {
     const cards = homeCards({
       game: null,
-      moves: [],
-      previousPatch: '16.21',
+      changes: patchChanges([change(1, 'up'), change(2, 'down')]),
+      patch: '26.22',
       lanes: { bullies: [lane(1, 600)], firstBlood: [] },
     })
     assert.deepEqual(cards, [])
