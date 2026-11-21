@@ -303,14 +303,6 @@
   .vb .pl-tier {
     font-size: 19px;
   }
-  .vb .pl-rk.sm {
-    margin-top: 14px;
-    padding-top: 14px;
-    border-top: 1px solid var(--line);
-  }
-  .vb .pl-rk.sm .rk-emb {
-    margin: 0 8px;
-  }
   .vb .pl-rk .u {
     font-size: 0.6em;
     font-weight: 600;
@@ -1032,6 +1024,34 @@
     }
     .vb .pl-nav .n {
       margin-left: 2px;
+    }
+  }
+  /* A tablet: the player's card with Flex under it beside Solo/Duo, so neither card stretches
+     empty, then the sections in a row. */
+  @media (min-width: 768px) and (max-width: 1023px) {
+    .vb .pl-rail {
+      grid-template-areas:
+        'id solo'
+        'flex solo'
+        'nav nav';
+      grid-template-rows: auto 1fr auto;
+      align-items: start;
+    }
+    .vb .pl-rail > .pl-id {
+      grid-area: id;
+    }
+    .vb .pl-rail > .pl-nav {
+      grid-area: nav;
+      grid-row: 3;
+    }
+    .vb .pl-rank {
+      display: contents;
+    }
+    .vb .pl-rank > .pl-q:first-child {
+      grid-area: solo;
+    }
+    .vb .pl-rank > .pl-q + .pl-q {
+      grid-area: flex;
     }
   }
 

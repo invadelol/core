@@ -68,7 +68,15 @@ const dayMonth = (t: number) =>
     month: 'short',
     ...(new Date(t).getFullYear() !== thisYear ? { year: 'numeric' } : {}),
   })
-const signedLp = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : '±'}${Math.abs(n)} LP`
+const lp = (n: number) => n.toLocaleString('en-US')
+const signedLp = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : '±'}${lp(Math.abs(n))} LP`
+/** What a range with no change says it covered. */
+const SPANS: Record<LpRange, string> = {
+  '30d': 'the last 30 days',
+  '120d': 'the last 120 days',
+  '1y': 'the last year',
+  'all': 'everything stored',
+}
 
 const line = computed(() => {
   const drawn = inRange(points.value, range.value)
@@ -90,7 +98,7 @@ const line = computed(() => {
         month: 'short',
         ...(new Date(p.t).getFullYear() !== thisYear ? { year: 'numeric' } : {}),
       }),
-      name: `${label(p.rank)} ${p.rank.leaguePoints} LP`,
+      name: `${label(p.rank)} ${lp(p.rank.leaguePoints)} LP`,
       delta: i ? p.v - drawn[i - 1].v : null,
     })),
     start: dayMonth(drawn[0].t),
@@ -149,7 +157,7 @@ const ordinal = (n: number) => {
           >{{ ordinal(ladder.position) }} on {{ ladder.server }}</span
         >
       </div>
-      <span v-if="rank" class="fg-s num">{{ rank.leaguePoints }}<span class="u">LP</span></span>
+      <span v-if="rank" class="fg-s num">{{ lp(rank.leaguePoints) }}<span class="u">LP</span></span>
     </div>
 
     <template v-if="line">
@@ -211,9 +219,7 @@ const ordinal = (n: number) => {
         <span>{{ line.end }}</span>
       </div>
     </template>
-    <p v-else-if="auto" class="meta lpg-none">
-      No LP change stored in {{ rangeName.toLowerCase() }}
-    </p>
+    <p v-else-if="auto" class="meta lpg-none">No LP change stored in {{ SPANS[range] }}</p>
 
     <div v-if="peak" class="pl-q-f">
       <div class="pl-q-s">
@@ -222,7 +228,7 @@ const ordinal = (n: number) => {
           ><RankEmblem :tier="peak.rank.tier" :size="20" /><b
             :style="{ color: tierVar(peak.rank.tier) }"
             >{{ label(peak.rank) }}</b
-          >{{ ' ' }}{{ peak.rank.leaguePoints }} LP</span
+          >{{ ' ' }}{{ lp(peak.rank.leaguePoints) }} LP</span
         >
       </div>
       <div v-if="line" class="pl-q-s r">
