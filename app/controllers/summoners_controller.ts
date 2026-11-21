@@ -26,7 +26,11 @@ import homeService from '#services/home_service'
 import { firstViewInWindow } from '#services/profile_views'
 import deviceService from '#services/desktop/device_service'
 import playerSnapshotService from '#services/desktop/player_snapshot_service'
-import type Summoner from '#models/summoner'
+import Summoner from '#models/summoner'
+import Rank from '#models/rank'
+import ladderService from '#services/ladder_service'
+import { isApex, placeOf } from '#services/ladder'
+import { serverLabel } from '#constants/riot'
 import { DEFAULT_MATCH_COUNT } from '#config/constants'
 
 /** The website's Update skips league-v4 when the ranks were known current this recently (§6.5). */
@@ -210,6 +214,42 @@ export default class SummonersController {
     const { puuid } = params
     const ranks = await summonerService.getRanks(puuid)
     return response.ok(ranks)
+  }
+
+  /**
+   * The player's place on their server's Solo/Duo apex ladder (Master and up), as the Leaderboards
+   * page ranks it, from the stored league reads: no request to Riot. Only asked for a player whose
+   * stored Solo/Duo rank is Master or higher; `position` is null off the ladder.
+   * @paramPath puuid - Summoner PUUID
+   * @responseBody 200 - { position: number | null, server: string, players: number }
+   */
+  async ladder({ request, params, response }: HttpContext) {
+    await request.validateUsing(puuidParamsValidator, { data: params })
+    const { puuid } = params
+    const [summoner, solo] = await Promise.all([
+      Summoner.find(puuid),
+      Rank.query()
+        .where('puuid', puuid)
+        .where('queueType', 'RANKED_SOLO_5x5')
+        .orderBy('fetchedAt', 'desc')
+        .first(),
+    ])
+    if (!summoner) return response.notFound({ error: 'Summoner not found' })
+    const server = serverLabel(summoner.platform)
+    if (!solo?.tier || !isApex(solo.tier))
+      return response.ok({ position: null, server, players: 0 })
+    const snapshot = await ladderService.snapshot(summoner.platform).catch((error) => {
+      logger.warn({ err: error, platform: summoner.platform }, 'ladder unreadable for a profile')
+      return null
+    })
+    if (!snapshot) return response.ok({ position: null, server, players: 0 })
+    const position = placeOf(
+      snapshot.entries,
+      snapshot.identities,
+      summoner.gameName,
+      summoner.tagLine
+    )
+    return response.ok({ position, server, players: snapshot.entries.length })
   }
 
   /**

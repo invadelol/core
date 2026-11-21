@@ -24,7 +24,6 @@ import EmptyState from '../components/ui/EmptyState.vue'
 import ProfileId from '../components/profile/ProfileId.vue'
 import ProfileNav from '../components/profile/ProfileNav.vue'
 import RankedCard from '../components/profile/RankedCard.vue'
-import LpCard from '../components/profile/LpCard.vue'
 import ActivityCard from '../components/profile/ActivityCard.vue'
 import MatchRows from '../components/profile/MatchRows.vue'
 import OlderGames from '../components/profile/OlderGames.vue'
@@ -715,7 +714,7 @@ function clearFilters() {
             <div class="card pl-sec"><Skeleton :rows="5" /></div>
           </aside>
           <aside class="pl-more">
-            <div class="card pl-sec"><Skeleton :rows="5" pic /></div>
+            <div class="pl-gs"><Skeleton :rows="5" pic /></div>
           </aside>
         </div>
         <div class="pl-main">
@@ -769,13 +768,12 @@ function clearFilters() {
             />
             <ProfileNav :items="nav" :active="navActive" />
             <div v-if="pending.ranks" class="card pl-sec"><Skeleton :height="96" /></div>
-            <RankedCard v-else :ranks="ranks" />
+            <RankedCard v-else :ranks="ranks" :puuid="profile.puuid" />
           </aside>
 
-          <!-- The summary, the same on every section: LP, champions, roles, mates, activity -->
+          <!-- The summary, the same on every section: champions, roles, mates, activity -->
           <aside class="pl-more" aria-label="Summary">
-            <LpCard v-if="!pending.ranks" :ranks="ranks" />
-            <div v-if="pending.champions || pending.matches" class="card pl-sec">
+            <div v-if="pending.champions || pending.matches" class="pl-gs">
               <Skeleton :rows="5" pic />
             </div>
             <SideCards

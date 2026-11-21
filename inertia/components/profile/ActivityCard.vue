@@ -71,7 +71,7 @@ function tip(cell: { key: string; games: number; wins: number }) {
 </script>
 
 <template>
-  <section class="card pl-sec">
+  <section class="pl-gs">
     <div class="pl-sec-h">
       <h2 class="h4">Activity</h2>
       <span class="meta">Last {{ WEEKS }} weeks</span>
