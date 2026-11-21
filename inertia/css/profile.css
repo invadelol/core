@@ -700,12 +700,22 @@
      detail read as one sheet. */
   .vb .mh-it .iv-mr {
     background:
-      linear-gradient(90deg, var(--tint), var(--tint-end) 45%), var(--d-sheen), var(--d-sf1);
+      linear-gradient(90deg, var(--tint), var(--tint-end) 55%), var(--d-sheen), var(--d-sf1);
     box-shadow: var(--d-row);
   }
   .vb .mh-it .iv-mr.open {
     background:
-      linear-gradient(90deg, var(--tint), var(--tint-end) 45%), var(--d-sheen), var(--d-sf2);
+      linear-gradient(90deg, var(--tint), var(--tint-end) 55%), var(--d-sheen), var(--d-sf2);
+  }
+  /* A win and a loss read at a glance: a clear blue or red ground that holds across the whole row,
+     under the full-strength edge. */
+  .vb .mh-it .iv-mr.win {
+    --tint: rgb(var(--win-rgb) / 0.22);
+    --tint-end: rgb(var(--win-rgb) / 0.07);
+  }
+  .vb .mh-it .iv-mr.loss {
+    --tint: rgb(var(--loss-rgb) / 0.2);
+    --tint-end: rgb(var(--loss-rgb) / 0.065);
   }
   .vb .mh-it .iv-mr:focus-visible {
     box-shadow: var(--d-row), var(--focus);
