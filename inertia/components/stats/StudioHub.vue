@@ -58,7 +58,7 @@ const tiles = computed(() =>
       </Link>
       <div class="st-tb">
         <h2 :id="`st-${t.key}`" class="h3 st-th">
-          <Icon :name="t.icon" :size="16" />{{ t.label }}
+          <Icon :name="t.icon" :size="16" tone="auto" />{{ t.label }}
         </h2>
         <Link class="st-top" :href="href(t.first.slug)">
           <span class="meta">{{ t.first.label }}</span>

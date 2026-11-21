@@ -226,9 +226,11 @@ const topBully = (rows: { value: number }[]) => rows[0]?.value || 1
             <!-- A lane figure from the patch's games. -->
             <Link v-else class="lc bully" href="/stats" prefetch>
               <span class="lc-h"
-                ><Icon :name="card.key === 'bullies' ? 'swords' : 'flame'" :size="16" /><b>{{
-                  card.key === 'bullies' ? 'Lane bullies' : 'First bloods'
-                }}</b
+                ><Icon
+                  :name="card.key === 'bullies' ? 'riotGold' : 'blood'"
+                  :size="18"
+                  tone="auto"
+                /><b>{{ card.key === 'bullies' ? 'Lane bullies' : 'First bloods' }}</b
                 ><span class="lc-m">{{
                   card.key === 'bullies' ? 'Gold ahead at 10 min' : 'Share of games'
                 }}</span></span

@@ -405,6 +405,8 @@
   }
   .vb .lc-h > .i {
     flex: none;
+    width: 18px;
+    height: 18px;
     color: var(--v300);
   }
   /* League logos are drawn for dark grounds: a small dark tile keeps them on a light page. */

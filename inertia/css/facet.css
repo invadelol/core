@@ -66,14 +66,14 @@
 .vb .grow { flex: 1; min-width: 0; }
 .vb .sec { padding-top: 56px; }
 .vb .sec-h { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
-.vb .sec-h .i { width: 18px; height: 18px; color: var(--v300); }
+.vb .sec-h .i { width: 20px; height: 20px; color: var(--v300); flex: none; }
 .vb .sec-h .meta { margin-left: 2px; }
 .vb .sec-h .more { margin-left: auto; }
 
 /* ---------- surfaces ---------- */
 .vb .card { background: var(--s1); border: 1px solid var(--line); border-radius: var(--r3); }
 .vb .card-h { display: flex; align-items: center; gap: 10px; padding: 18px 20px 12px; }
-.vb .card-h .i { width: 16px; height: 16px; color: var(--v300); flex: none; }
+.vb .card-h .i { width: 18px; height: 18px; color: var(--v300); flex: none; }
 .vb .card-h .more { margin-left: auto; }
 .vb .more { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--t2); }
 .vb .more .i { width: 14px; height: 14px; color: var(--t3); }
