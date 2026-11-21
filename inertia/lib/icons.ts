@@ -1,157 +1,230 @@
+import type { Component } from 'vue'
+import type { ObjectiveIconName, StatIconName } from '@invadelol/ui'
+import {
+  AppWindow,
+  ArrowDown,
+  ArrowLeftRight,
+  ArrowRight,
+  ArrowUp,
+  ArrowUpDown,
+  Ban,
+  Bell,
+  ChartLine,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  CircleHelp,
+  Clock,
+  Coins,
+  Copy,
+  CornerDownLeft,
+  Crown,
+  Download,
+  Droplet,
+  ExternalLink,
+  Eye,
+  FileText,
+  Film,
+  Flag,
+  Flame,
+  Globe,
+  Heart,
+  House,
+  Keyboard,
+  Layers,
+  LayoutGrid,
+  List,
+  LogOut,
+  Map as MapIcon,
+  Menu,
+  MessageSquare,
+  Minus,
+  Monitor,
+  Moon,
+  Newspaper,
+  Play,
+  Plus,
+  Radio,
+  RefreshCw,
+  Route,
+  ScrollText,
+  Search,
+  Settings,
+  Share2,
+  Shield,
+  SlidersHorizontal,
+  Sparkles,
+  Square,
+  Star,
+  Sun,
+  Swords,
+  Target,
+  TrendingUp,
+  Trophy,
+  User,
+  Users,
+  X,
+} from 'lucide-vue-next'
+
 /**
- * The canvas's line icons: a 20 px grid, 1.6 px strokes, mitred corners, no rounded caps
- * (components/ui/Icon.vue draws them). Named as the design names them.
+ * The site's icons, in the line family invade.lol has always drawn with: Lucide's glyphs (24 px
+ * grid, 2 px strokes, round caps and joins), the set the profile, the search and the header used
+ * before the redesign. A game concept takes Riot's own glyph instead (`riot*` names, from
+ * @invadelol/ui: the client's post-game stat icons and match-history objectives), and a brand
+ * keeps its own mark (`paths`). Components/ui/Icon.vue draws every kind from its name, so a page
+ * only ever picks a name.
  */
+
+/** A brand mark or a shape Lucide has no glyph for, drawn on the old 20 px grid. */
+type Paths = { paths: { d: string; transform?: string }[] }
+/** Riot's own glyph for a game concept. */
+type Riot = { stat: StatIconName } | { objective: ObjectiveIconName }
+export type IconDef = Component | Paths | Riot
+
 export const ICONS = {
-  search: [
-    {
-      d: 'M8.6 3.2 13.6 5.4 15.8 10.4 13.6 15.4 8.6 17.6 3.6 15.4 1.4 10.4 3.6 5.4Z',
-      transform: 'translate(.6 -1.2) scale(.82)',
-    },
-    { d: 'M13.2 13.2 18 18' },
-  ],
-  home: [{ d: 'M3 9 10 3l7 6v8h-5v-5H8v5H3Z' }],
-  list: [{ d: 'M7 5h10M7 10h10M7 15h10' }, { d: 'M3 4h2v2H3zM3 9h2v2H3zM3 14h2v2H3z' }],
-  grid: [{ d: 'M3 3h6v6H3zM11 3h6v6h-6zM3 11h6v6H3zM11 11h6v6h-6z' }],
-  pro: [
-    { d: 'M10 2.5 12 7h4.5l-3.6 3 1.4 4.8L10 12l-4.3 2.8L7.1 10 3.5 7H8Z' },
-    { d: 'M6 17.5h8' },
-  ],
-  trophy: [
-    { d: 'M6 3h8v5a4 4 0 0 1-8 0Z' },
-    { d: 'M6 5H3v1.5A3 3 0 0 0 6 9.5M14 5h3v1.5a3 3 0 0 1-3 3M10 12v3M6.5 17.5h7l-1-2.5h-5Z' },
-  ],
-  chart: [{ d: 'M3 3v14h14' }, { d: 'M6 13l3.5-4 3 2.5L17 6' }],
-  live: [
-    { d: 'M10 8.5 11.5 10 10 11.5 8.5 10Z' },
-    {
-      d: 'M6.5 6.5a5 5 0 0 0 0 7M13.5 6.5a5 5 0 0 1 0 7M4 4a8.5 8.5 0 0 0 0 12M16 4a8.5 8.5 0 0 1 0 12',
-    },
-  ],
-  play: [{ d: 'M2.5 4.5h15v11h-15Z' }, { d: 'M8.5 7.5v5l4-2.5Z' }],
-  layers: [{ d: 'M10 3 17.5 7 10 11 2.5 7Z' }, { d: 'M2.5 10.5 10 14.5l7.5-4M2.5 14 10 18l7.5-4' }],
-  user: [{ d: 'M10 3 13 5.5 13 8.5 10 11 7 8.5 7 5.5Z' }, { d: 'M3.5 17.5 6 13h8l2.5 4.5' }],
-  users: [
-    { d: 'M8 3.5 10.5 5.5v2.5L8 10 5.5 8V5.5Z' },
-    { d: 'M2 17l2-4h8l2 4M13 4l2.5 1.8v2.4L13 10M15 13h1.5l2 4' },
-  ],
-  sliders: [{ d: 'M3 5.5h8M15 5.5h2M3 14.5h2M9 14.5h8' }, { d: 'M11 3.5h4v4h-4zM5 12.5h4v4H5z' }],
-  download: [{ d: 'M10 2.5v10M5.5 8.5 10 13l4.5-4.5M3 17.5h14' }],
-  arrow: [{ d: 'M3.5 10h12M11 5.5l4.5 4.5-4.5 4.5' }],
-  up: [{ d: 'M10 16V4.5M5 9.5l5-5 5 5' }],
-  down: [{ d: 'M10 4v11.5M5 10.5l5 5 5-5' }],
-  chev: [{ d: 'm5.5 8 4.5 4.5L14.5 8' }],
-  chevr: [{ d: 'm8 5.5 4.5 4.5L8 14.5' }],
-  bell: [{ d: 'M5 14V8.5L7.5 4h5L15 8.5V14l1.5 2h-13Z' }, { d: 'M8.5 18h3' }],
-  clock: [
-    { d: 'M10 2.5 15.3 4.7 17.5 10 15.3 15.3 10 17.5 4.7 15.3 2.5 10 4.7 4.7Z' },
-    { d: 'M10 6v4.5l3 2' },
-  ],
-  swords: [
-    { d: 'M3 3h3.5L15 11.5 16.5 10 18 11.5 15 14.5l2 2.5-1 1-2.5-2L10.5 18.5 9 17l1.5-1.5L3 6.5Z' },
-  ],
-  flame: [
-    {
-      d: 'M10 2.5c1 3 4.5 5 4.5 9a4.5 4.5 0 0 1-9 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3.5C9 8 9.5 5 10 2.5Z',
-    },
-  ],
-  ban: [
-    { d: 'M10 2.5 15.3 4.7 17.5 10 15.3 15.3 10 17.5 4.7 15.3 2.5 10 4.7 4.7Z' },
-    { d: 'M5 5l10 10' },
-  ],
-  shield: [{ d: 'M10 2.5 16.5 5v5c0 4-3 6.5-6.5 7.5C6.5 16.5 3.5 14 3.5 10V5Z' }],
-  route: [{ d: 'M4 16.5 9 11.5 12 13.5 16.5 4' }, { d: 'M12.5 4H16.5V8' }],
-  star: [
-    {
-      d: 'M10 2.5 12.2 7.3 17.5 7.8 13.5 11.3 14.7 16.5 10 13.8 5.3 16.5 6.5 11.3 2.5 7.8 7.8 7.3Z',
-    },
-  ],
-  external: [{ d: 'M11 3.5h5.5V9M16.5 3.5 9 11M14 12v4.5H3.5V6H8' }],
-  share: [{ d: 'M10 2.5v10M6 6.5l4-4 4 4M4 10v7.5h12V10' }],
-  refresh: [{ d: 'M16.5 4v4.5H12' }, { d: 'M16 8.5A6.5 6.5 0 1 0 16.5 12' }],
-  eye: [{ d: 'M1.5 10 5.5 5h9l4 5-4 5h-9Z' }, { d: 'M10 7.5 12.5 10 10 12.5 7.5 10Z' }],
-  target: [
-    { d: 'M10 2.5 15.3 4.7 17.5 10 15.3 15.3 10 17.5 4.7 15.3 2.5 10 4.7 4.7Z' },
-    { d: 'M10 6.5 13.5 10 10 13.5 6.5 10Z' },
-  ],
-  coin: [{ d: 'M10 2.5 16.5 6.25v7.5L10 17.5 3.5 13.75v-7.5Z' }, { d: 'M10 6.5v7' }],
-  window: [{ d: 'M2.5 3.5h15v13h-15ZM2.5 7h15' }],
-  discord: [
-    { d: 'M5 5.5 8 4.5l.5 1h3l.5-1 3 1 2 6.5-3.5 3-1-1.5h-5l-1 1.5L3 12Z' },
-    { d: 'M7.5 9.5h1M11.5 9.5h1' },
-  ],
-  heart: [{ d: 'M10 17 3 10V5.5L5.5 3H8l2 2 2-2h2.5L17 5.5V10Z' }],
-  x: [{ d: 'M4.5 4.5l11 11M15.5 4.5l-11 11' }],
-  back: [{ d: 'M12 5.5 7.5 10l4.5 4.5' }],
-  plus: [{ d: 'M10 4v12M4 10h12' }],
+  search: Search,
+  home: House,
+  list: List,
+  grid: LayoutGrid,
+  /** A pro: the star the pro ladder and the home's pros card wear. */
+  pro: Star,
+  trophy: Trophy,
+  crown: Crown,
+  /** A chart: the site's charts are one line. */
+  chart: ChartLine,
+  /** A rise: what a patch moved, a climb. */
+  trend: TrendingUp,
+  live: Radio,
+  play: Play,
+  layers: Layers,
+  user: User,
+  users: Users,
+  sliders: SlidersHorizontal,
+  download: Download,
+  arrow: ArrowRight,
+  up: ArrowUp,
+  down: ArrowDown,
+  chev: ChevronDown,
+  chevr: ChevronRight,
+  bell: Bell,
+  clock: Clock,
+  swords: Swords,
+  flame: Flame,
+  /** First blood. */
+  blood: Droplet,
+  ban: Ban,
+  shield: Shield,
+  route: Route,
+  star: Star,
+  external: ExternalLink,
+  share: Share2,
+  refresh: RefreshCw,
+  copy: Copy,
+  eye: Eye,
+  target: Target,
+  coin: Coins,
+  window: AppWindow,
+  heart: Heart,
+  x: X,
+  back: ChevronLeft,
+  plus: Plus,
   /** The Enter key, on the search's highlighted row. */
-  enter: [{ d: 'M16 4.5v6.5H5' }, { d: 'M8.5 7.5 5 11l3.5 3.5' }],
-  check: [{ d: 'M4 10.5 8 14.5 16 5.5' }],
-  minimap: [{ d: 'M3 3h14v14H3Z' }, { d: 'M3 17 17 3M3 7.5 7.5 3M12.5 17 17 12.5' }],
-  scroll: [{ d: 'M5 3h10v14H5Z' }, { d: 'M8 7h4M8 10h4M8 13h2' }],
-  keyboard: [{ d: 'M2.5 5.5h15v9h-15Z' }, { d: 'M5.5 8.5h1M9.5 8.5h1M13.5 8.5h1M6.5 11.5h7' }],
-  flag: [{ d: 'M4.5 18V3M4.5 3.5h11l-2.5 3.5 2.5 3.5h-11' }],
-  globe: [
-    { d: 'M10 2.5 15.3 4.7 17.5 10 15.3 15.3 10 17.5 4.7 15.3 2.5 10 4.7 4.7Z' },
-    { d: 'M2.5 10h15M10 2.5c2 2 3 4.5 3 7.5s-1 5.5-3 7.5c-2-2-3-4.5-3-7.5s1-5.5 3-7.5Z' },
-  ],
-  compare: [{ d: 'M6.5 3v14M13.5 3v14M3 6.5 6.5 3 10 6.5M10 13.5l3.5 3.5 3.5-3.5' }],
-  logout: [{ d: 'M8 3.5H3.5v13H8M12.5 6.5 16 10l-3.5 3.5M16 10H7.5' }],
-  settings: [
-    { d: 'M10 2.5 15.3 4.7 17.5 10 15.3 15.3 10 17.5 4.7 15.3 2.5 10 4.7 4.7Z' },
-    { d: 'M10 7.5 12.5 10 10 12.5 7.5 10Z' },
-  ],
-  news: [{ d: 'M3.5 4.5h10v11h-10Z' }, { d: 'M13.5 7.5h3v8h-3M6 7.5h5M6 10.5h5M6 13h3' }],
-  spark: [
-    { d: 'M10 2v5M10 13v5M2 10h5M13 10h5M5 5l2.5 2.5M12.5 12.5 15 15M15 5l-2.5 2.5M7.5 12.5 5 15' },
-  ],
-  min: [{ d: 'M5 10h10' }],
-  max: [{ d: 'M5 5h10v10H5Z' }],
-  fwd: [{ d: 'm8 5.5 4.5 4.5L8 14.5' }],
-  // Added for the site, drawn on the same grid.
-  menu: [{ d: 'M3 5.5h14M3 10h14M3 14.5h14' }],
-  sun: [
-    { d: 'M10 6.5 12.5 7.5 13.5 10 12.5 12.5 10 13.5 7.5 12.5 6.5 10 7.5 7.5Z' },
-    {
-      d: 'M10 1.5v2.5M10 16v2.5M1.5 10h2.5M16 10h2.5M4 4l1.8 1.8M14.2 14.2 16 16M16 4l-1.8 1.8M5.8 14.2 4 16',
-    },
-  ],
-  moon: [
-    { d: 'M11.5 2.5 6.5 3.8 3.3 7.5 2.8 12l2.7 3.8 4.5 1.7 4.6-1 2.9-3.2-4.6-.3-3.1-2.6-.9-4.1Z' },
-  ],
-  monitor: [{ d: 'M2.5 3.5h15v10h-15Z' }, { d: 'M7 17.5h6M10 13.5v4' }],
-  github: [
-    {
-      d: 'M7.5 17.5v-3l-1-1.5C3.5 12.5 3 10.5 3 8.5l1-2.5-.3-2.5 2.6 1h5.4l2.6-1-.3 2.5 1 2.5c0 2-.5 4-3.5 4.5l-1 1.5v3',
-    },
-    { d: 'M7.5 15.5c-2 .5-3-.5-3.5-1.5' },
-  ],
+  enter: CornerDownLeft,
+  check: Check,
+  minimap: MapIcon,
+  scroll: ScrollText,
+  keyboard: Keyboard,
+  flag: Flag,
+  globe: Globe,
+  compare: ArrowLeftRight,
+  /** Both ways at once: a change that buffs and nerfs. */
+  updown: ArrowUpDown,
+  logout: LogOut,
+  settings: Settings,
+  news: Newspaper,
+  spark: Sparkles,
+  min: Minus,
+  max: Square,
+  fwd: ChevronRight,
+  menu: Menu,
+  sun: Sun,
+  moon: Moon,
+  monitor: Monitor,
   /** A video to start (a play triangle on its own). */
-  triangle: [{ d: 'M7 4.5v11l8.5-5.5Z' }],
-  /** A video on YouTube. */
-  youtube: [
-    {
-      d: 'M2.5 6.5c0-1.4 1-2.5 2.4-2.6C6.6 3.8 8.3 3.7 10 3.7s3.4.1 5.1.2c1.4.1 2.4 1.2 2.4 2.6v7c0 1.4-1 2.5-2.4 2.6-1.7.1-3.4.2-5.1.2s-3.4-.1-5.1-.2c-1.4-.1-2.4-1.2-2.4-2.6Z',
-    },
-    { d: 'm8.5 7.5 4 2.5-4 2.5Z' },
-  ],
-  /** A comment on Reddit. */
-  reddit: [
-    { d: 'M10 7.5c3.6 0 6.5 2 6.5 4.5S13.6 16.5 10 16.5 3.5 14.5 3.5 12 6.4 7.5 10 7.5Z' },
-    { d: 'M10 7.5 11 3.5l3 .8' },
-    { d: 'M7.5 11.5h.01M12.5 11.5h.01M8 14c1.2.7 2.8.7 4 0' },
-  ],
+  triangle: Play,
   /** An article or a web page. */
-  page: [{ d: 'M4.5 3.5h11v13h-11Z' }, { d: 'M4.5 7h11M7 10h6M7 13h4' }],
-  film: [{ d: 'M3.5 5.5h13v9h-13Z' }, { d: 'm8.5 8 3.5 2-3.5 2Z' }],
-  chat: [{ d: 'M3.5 4.5h13v9H9l-3.5 3v-3h-2Z' }],
-  question: [
-    { d: 'M7.5 7.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.5v.7' },
-    { d: 'M10 14.5v.5' },
-    { d: 'M10 2.5a7.5 7.5 0 1 1 0 15 7.5 7.5 0 0 1 0-15Z' },
-  ],
+  page: FileText,
+  film: Film,
+  chat: MessageSquare,
+  question: CircleHelp,
+
+  // Riot's glyphs, for what the game itself draws.
+  riotKda: { stat: 'kda' },
+  riotDamage: { stat: 'damage' },
+  riotTaken: { stat: 'taken' },
+  riotGold: { stat: 'gold' },
+  riotCs: { stat: 'cs' },
+  riotVision: { stat: 'vision' },
+  riotTower: { objective: 'tower' },
+  riotInhib: { objective: 'inhib' },
+  riotDragon: { objective: 'dragon' },
+  riotBaron: { objective: 'baron' },
+  riotHerald: { objective: 'herald' },
+  riotGrubs: { objective: 'grubs' },
+
+  // Brand marks and shapes of our own.
+  discord: {
+    paths: [
+      { d: 'M5 5.5 8 4.5l.5 1h3l.5-1 3 1 2 6.5-3.5 3-1-1.5h-5l-1 1.5L3 12Z' },
+      { d: 'M7.5 9.5h1M11.5 9.5h1' },
+    ],
+  },
+  github: {
+    paths: [
+      {
+        d: 'M7.5 17.5v-3l-1-1.5C3.5 12.5 3 10.5 3 8.5l1-2.5-.3-2.5 2.6 1h5.4l2.6-1-.3 2.5 1 2.5c0 2-.5 4-3.5 4.5l-1 1.5v3',
+      },
+      { d: 'M7.5 15.5c-2 .5-3-.5-3.5-1.5' },
+    ],
+  },
+  /** A video on YouTube. */
+  youtube: {
+    paths: [
+      {
+        d: 'M2.5 6.5c0-1.4 1-2.5 2.4-2.6C6.6 3.8 8.3 3.7 10 3.7s3.4.1 5.1.2c1.4.1 2.4 1.2 2.4 2.6v7c0 1.4-1 2.5-2.4 2.6-1.7.1-3.4.2-5.1.2s-3.4-.1-5.1-.2c-1.4-.1-2.4-1.2-2.4-2.6Z',
+      },
+      { d: 'm8.5 7.5 4 2.5-4 2.5Z' },
+    ],
+  },
+  /** A comment on Reddit. */
+  reddit: {
+    paths: [
+      { d: 'M10 7.5c3.6 0 6.5 2 6.5 4.5S13.6 16.5 10 16.5 3.5 14.5 3.5 12 6.4 7.5 10 7.5Z' },
+      { d: 'M10 7.5 11 3.5l3 .8' },
+      { d: 'M7.5 11.5h.01M12.5 11.5h.01M8 14c1.2.7 2.8.7 4 0' },
+    ],
+  },
   /** Half right: a disc, its right half filled (the first path takes the fill). */
-  half: [{ d: 'M10 3a7 7 0 1 1 0 14Z' }, { d: 'M10 3a7 7 0 1 0 0 14' }],
-} satisfies Record<string, { d: string; transform?: string }[]>
+  half: { paths: [{ d: 'M10 3a7 7 0 1 1 0 14Z' }, { d: 'M10 3a7 7 0 1 0 0 14' }] },
+} satisfies Record<string, IconDef>
 
 export type IconName = keyof typeof ICONS
+
+/**
+ * The colour an icon carries in a section or card head, where it says what the section is about
+ * (`tone="auto"` on Icon.vue): gold for the best, the pros and gold itself, red for bans and
+ * first blood. Every other head icon stays violet.
+ */
+export type IconTone = 'gold' | 'red'
+
+export const ICON_TONES: Partial<Record<IconName, IconTone>> = {
+  trophy: 'gold',
+  crown: 'gold',
+  star: 'gold',
+  pro: 'gold',
+  coin: 'gold',
+  riotGold: 'gold',
+  ban: 'red',
+  blood: 'red',
+}

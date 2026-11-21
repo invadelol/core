@@ -20,10 +20,10 @@ address there (`here`) if it should light up a section.
 
 | Component | Props | Use |
 | --- | --- | --- |
-| `SectionHead.vue` | `title`, `icon?` (an icon name), `meta?`, `more?` (`{ label, href }`), `id?`, `as?`; default slot for controls | A section's head outside cards (`.sec-h`, h2 20 px). Put it in `<section class="sec">` (56 px above). |
-| `CardHead.vue` | `title`, `icon?`, `meta?`, `more?`, `id?`, `as?`; default slot replaces the "more" link | A card's head (`.card-h`, 16 px) inside `<div class="card">`. |
+| `SectionHead.vue` | `title`, `icon?` (an icon name), `meta?`, `more?` (`{ label, href }`), `id?`, `as?`; default slot for controls | A section's head outside cards (`.sec-h`, h2 20 px, a 20 px icon in its meaning colour). Put it in `<section class="sec">` (56 px above). |
+| `CardHead.vue` | `title`, `icon?`, `meta?`, `more?`, `id?`, `as?`; default slot replaces the "more" link | A card's head (`.card-h`, 16 px, an 18 px icon in its meaning colour) inside `<div class="card">`. |
 | `MoreLink.vue` | `href`, `label`, `external?` | The quiet "All 98 ›" link. |
-| `Icon.vue` | `name` (see `lib/icons.ts`), `size?` (16), `strokeWidth?` | The canvas's line icons (20 px grid, mitred). Not lucide. |
+| `Icon.vue` | `name` (see `lib/icons.ts`), `size?` (16), `strokeWidth?` (2), `tone?` (`auto`, `gold`, `red`) | Every icon of the site, by name: Lucide's line glyphs (24 px grid, 2 px strokes, round caps; the set invade.lol always used), Riot's own glyph for a game concept (`riotKda`, `riotGold`, `riotTower`…: the client's stat and objective icons), or a brand mark. `tone="auto"` colours a head icon by meaning: gold for the best, pros and gold, red for bans and first blood, violet otherwise. |
 | `Glyph.vue` | `h?` (24) | Invade's mark. |
 
 ## Navigation and filters
