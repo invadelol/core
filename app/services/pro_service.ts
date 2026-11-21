@@ -80,6 +80,14 @@ export function signatureOf(counted: unknown[][], least = SIGNATURE_GAMES) {
 }
 const STAFF = new Set(['COACH', 'MANAGER', 'ANALYST', 'STAFF', 'OWNER', 'CEO'])
 
+/** What a pro plays over a span of days (`ProService.pools`). */
+export interface ProPool {
+  days: number
+  games: number
+  wins: number
+  champions: { champion: number; games: number; wins: number }[]
+}
+
 export interface TeamRef {
   id: string
   slug: string
@@ -839,6 +847,71 @@ export class ProService {
         },
       }
     })
+  }
+
+  /**
+   * What a few pros play, for a ladder's podium: their record and champions (games and wins) over
+   * the last 30 days, or over the last four months (`SIGNATURE_DAYS`) when the month holds fewer
+   * than three champions, as off-season it often does. One read of their accounts' games.
+   */
+  async pools(playerIds: string[]) {
+    const out = new Map<string, ProPool>()
+    if (!playerIds.length) return out
+    const found = await this.puuids(playerIds).catch(() => [])
+    if (!found.length) return out
+    const playerOf = new Map(found.map((f) => [f.puuid, f.player_id]))
+    const now = Date.now()
+    const counted = await rows(
+      `SELECT puuid, champion_id, count(), sum(win), countIf(game_start_ms >= {month:UInt64}),
+              sumIf(win, game_start_ms >= {month:UInt64})
+       FROM (
+         SELECT match_id, puuid, champion_id, win, game_start_ms FROM participants
+         WHERE puuid IN {puuids:Array(String)} AND queue_id = ${RANKED_SOLO}
+           AND ${PRO_PLATFORMS_SQL} AND game_start_ms >= {since:UInt64}
+           AND ${notRemake([...playerOf.keys()])}
+         LIMIT 1 BY match_id, puuid
+       )
+       GROUP BY puuid, champion_id`,
+      {
+        puuids: [...playerOf.keys()],
+        since: now - SIGNATURE_DAYS * 86_400_000,
+        month: now - GAMES_DAYS * 86_400_000,
+      }
+    ).catch((error) => {
+      logger.warn({ err: error }, 'pro pools failed')
+      return []
+    })
+    const spans = new Map<
+      string,
+      { month: Map<number, [number, number]>; long: Map<number, [number, number]> }
+    >()
+    for (const [puuid, champion, games, wins, monthGames, monthWins] of counted) {
+      const player = playerOf.get(String(puuid))
+      if (!player) continue
+      const span = spans.get(player) ?? { month: new Map(), long: new Map() }
+      const add = (m: Map<number, [number, number]>, g: number, w: number) => {
+        if (!g) return
+        const [g0, w0] = m.get(Number(champion)) ?? [0, 0]
+        m.set(Number(champion), [g0 + g, w0 + w])
+      }
+      add(span.long, Number(games), Number(wins))
+      add(span.month, Number(monthGames), Number(monthWins))
+      spans.set(player, span)
+    }
+    for (const [player, span] of spans) {
+      const long = span.month.size < 3
+      const pick = long ? span.long : span.month
+      const champions = [...pick]
+        .map(([champion, [games, wins]]) => ({ champion, games, wins }))
+        .sort((a, b) => b.games - a.games || b.wins - a.wins)
+      out.set(player, {
+        days: long ? SIGNATURE_DAYS : GAMES_DAYS,
+        games: champions.reduce((n, c) => n + c.games, 0),
+        wins: champions.reduce((n, c) => n + c.wins, 0),
+        champions: champions.slice(0, 3),
+      })
+    }
+    return out
   }
 
   /**

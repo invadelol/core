@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import { RoleIcon } from '@invadelol/ui'
 import SiteLayout from '../../components/SiteLayout.vue'
@@ -24,12 +24,10 @@ import { useTheme } from '../../lib/theme.js'
 import { laneOf, n, rankWords, roleLabel, signedN, since, withQuery } from '../../lib/ladders.js'
 import { matchList, type ProMatch } from '../../lib/pro_matches.js'
 import '../../css/leaderboards.css'
-import TopPodium from '../../components/leaderboards/top/TopPodium.vue'
-import TopRace from '../../components/leaderboards/top/TopRace.vue'
-import TopRoles from '../../components/leaderboards/top/TopRoles.vue'
-import type { TopPlayer } from '../../components/leaderboards/top/types.js'
+import LadderPodium from '../../components/leaderboards/LadderPodium.vue'
+import type { PodiumPlayer } from '../../components/leaderboards/podium.js'
 import '../../css/esports.css'
-import '../../css/ladder-top.css'
+import '../../css/ladder-podium.css'
 
 interface Team {
   id: string
@@ -69,7 +67,8 @@ interface Row {
  * `/leaderboards/pros`, the pros' page: pros ranked by their best solo queue account (app/services/
  * pro_ladder_service.ts). A league (the first by default, as the board opens) lists all its
  * players, subs and the unranked included, with its next games; `league=all` every pro in Master
- * and above. The leader and the next two beside the apex tiers, the filters and the table.
+ * and above. The first three as a podium (their champions and record), the apex tiers in one
+ * line, the filters and the table.
  */
 const props = defineProps<{
   leagues: { slug: string; code: string; name: string; region: string | null }[]
@@ -85,13 +84,19 @@ const props = defineProps<{
     dir: SortDir | null
   }
   apex: Record<'CHALLENGER' | 'GRANDMASTER' | 'MASTER', number>
-  podium: Row[]
-  /** The first ten, for the race. */
-  race: Row[]
-  /** Each role's first three, in lane order. */
-  byRole: { role: string; rows: Row[] }[]
-  /** Whether the leader's photo is a cutout, which rises above their stage. */
-  leaderCutout: boolean
+  /**
+   * The first three, each with what they play over the last 30 days or, when the month holds
+   * fewer than three champions, the last four months (`pool`), and whether their photo is a cutout.
+   */
+  podium: (Row & {
+    pool: {
+      days: number
+      games: number
+      wins: number
+      champions: { champion: number; games: number; wins: number }[]
+    } | null
+    cutout: boolean
+  })[]
   rows: Row[]
   total: number
   pros: number
@@ -163,50 +168,38 @@ watch(search, (q) => {
 
 const leagueCode = computed(() => props.leagues.find((l) => l.slug === props.filters.league)?.code)
 const next = computed(() => matchList(props.next))
-/** "st", "nd", "rd", "th" after a place. */
-const ord = (place: number) =>
-  place % 100 >= 11 && place % 100 <= 13 ? 'th' : (['th', 'st', 'nd', 'rd'][place % 10] ?? 'th')
-/** The leader's LP lead on the second, and every other's gap to the leader. */
-const gapLine = (r: Row) => {
-  const [first, second] = props.podium
-  if (!r.account || !first?.account) return ''
-  if (r === first) {
-    return second?.account ? `${n(first.account.lp - second.account.lp)} LP ahead` : ''
-  }
-  return `${n(first.account.lp - r.account.lp)} LP behind`
-}
 const APEX = ['CHALLENGER', 'GRANDMASTER', 'MASTER'] as const
 
-/* ── The head's readings behind `?v=a|b|c`: the podium, the race, each role's first three ── */
-const v = ref<'a' | 'b' | 'c' | null>(null)
-onMounted(() => {
-  const q = new URLSearchParams(window.location.search).get('v')
-  v.value = q === 'a' || q === 'b' || q === 'c' ? q : null
-})
-const toTop = (r: Row): TopPlayer => ({
-  place: r.place,
-  name: r.pro.name,
-  tag: r.pro.team?.name ?? null,
-  riot: false,
-  href: `/pro/${r.pro.slug}`,
-  pro: { slug: r.pro.slug, photo: r.pro.photo, team: r.pro.team },
-  icon: null,
-  tier: r.account?.tier ?? null,
-  lp: r.account?.lp ?? null,
-  role: r.pro.role,
-  country: r.pro.country,
-  champions: r.champions,
-  record: r.record ? { wins: r.record.wins, games: r.record.games, span: 'last 30 days' } : null,
-})
-const podiumTop = computed(() => props.podium.map(toTop))
-const raceTop = computed(() => props.race.map(toTop))
-const roleTop = computed(() =>
-  props.byRole.map((g) => ({ role: g.role, players: g.rows.map(toTop) }))
+/** "in 30 days", "in 4 months": the span a podium pool counts. */
+const spanOf = (days: number) =>
+  days >= 60 ? `in ${Math.round(days / 30)} months` : `in ${days} days`
+/* ── The head: the first three as a podium, with what they play and their record ── */
+const podium = computed<PodiumPlayer[]>(() =>
+  props.podium.map((r) => {
+    const span = spanOf(r.pool?.days ?? 30)
+    return {
+      place: r.place,
+      name: r.pro.name,
+      tag: null,
+      riot: false,
+      href: `/pro/${r.pro.slug}`,
+      pro: { slug: r.pro.slug, photo: r.pro.photo, team: r.pro.team },
+      cutout: r.cutout,
+      icon: null,
+      tier: r.account?.tier ?? null,
+      lp: r.account?.lp ?? null,
+      role: r.pro.role,
+      country: r.pro.country,
+      champions: r.pool?.champions ?? r.champions,
+      span,
+      record: r.pool
+        ? { wins: r.pool.wins, games: r.pool.games, span }
+        : r.record
+          ? { wins: r.record.wins, games: r.record.games, span }
+          : null,
+    }
+  })
 )
-const short = (r: Row) =>
-  [r.pro.team?.shortName ?? r.pro.team?.name, roleLabel(r.pro.role).toLowerCase()]
-    .filter(Boolean)
-    .join(', ')
 </script>
 
 <template>
@@ -241,105 +234,16 @@ const short = (r: Row) =>
       />
 
       <!-- The leader, the next two under them, the apex tiers beside, in one sheet. -->
-      <!-- The head's readings behind ?v=, the apex tiers in one line under each. -->
-      <template v-else-if="v">
-        <TopPodium v-if="v === 'a'" :players="podiumTop" />
-        <section
-          class="card"
-          :class="{ lit: v === 'b' }"
-          :style="v === 'a' ? 'margin-top: 16px' : undefined"
-        >
-          <TopRace v-if="v === 'b'" :players="raceTop" />
-          <TopRoles v-else-if="v === 'c'" :groups="roleTop" />
-          <div class="tl-cut" :style="v === 'a' ? 'border-top: 0' : undefined">
-            <span v-for="t in APEX" :key="t"
-              ><RankEmblem :tier="t" :size="22" /><span class="h5">{{ rankWords(t) }}</span
-              ><span class="meta">{{ apex[t] }} {{ apex[t] === 1 ? 'pro' : 'pros' }}</span></span
-            >
-          </div>
+      <!-- The first three as a podium, then the apex tiers in one line. -->
+      <template v-else>
+        <LadderPodium :players="podium" />
+        <section class="card pod-cut" aria-label="Pros in each apex tier">
+          <span v-for="t in APEX" :key="t"
+            ><RankEmblem :tier="t" :size="22" /><span class="h5">{{ rankWords(t) }}</span
+            ><span class="meta">{{ n(apex[t]) }} {{ apex[t] === 1 ? 'pro' : 'pros' }}</span></span
+          >
         </section>
       </template>
-      <div v-else class="pl-top">
-        <div>
-          <Link
-            v-for="r in podium.slice(0, 1)"
-            :key="r.place"
-            class="pl-lead"
-            :href="`/pro/${r.pro.slug}`"
-          >
-            <span class="pl-no"
-              >{{ r.place }}<sup>{{ ord(r.place) }}</sup></span
-            >
-            <span class="pl-cut" :class="{ flat: r.pro.photo && !leaderCutout }"
-              ><ProPic :slug="r.pro.slug" :photo="r.pro.photo" :team="r.pro.team" :size="240" eager
-            /></span>
-            <span class="col" style="min-width: 0">
-              <span class="pl-nm ell">{{ r.pro.name }}</span>
-              <span class="meta row" style="gap: 6px; margin-top: 4px; min-width: 0"
-                ><Logo
-                  v-if="r.pro.team"
-                  :team="r.pro.team.id"
-                  :size="16"
-                  style="width: 15px; height: 15px; object-fit: contain" /><span class="ell">{{
-                  [r.pro.team?.name ?? 'No team', roleLabel(r.pro.role).toLowerCase()]
-                    .filter(Boolean)
-                    .join(', ')
-                }}</span
-                ><Flag
-                  v-if="r.pro.country"
-                  :code="r.pro.country"
-                  :size="16"
-                  style="margin-left: 4px"
-                  :title="r.pro.countryName ?? undefined"
-              /></span>
-            </span>
-            <span v-if="r.account" class="pl-lp">
-              <span class="row" style="gap: 8px; justify-content: flex-end"
-                ><RankEmblem :tier="r.account.tier" :size="30" /><span class="fg-l"
-                  >{{ n(r.account.lp) }}<span class="u">LP</span></span
-                ></span
-              >
-              <span class="meta">{{ gapLine(r) }}</span>
-            </span>
-          </Link>
-          <Link
-            v-for="r in podium.slice(1)"
-            :key="r.place"
-            class="pl-ln"
-            :href="`/pro/${r.pro.slug}`"
-          >
-            <span class="pl-no sm"
-              >{{ r.place }}<sup>{{ ord(r.place) }}</sup></span
-            >
-            <span class="ppic"
-              ><ProPic :slug="r.pro.slug" :photo="r.pro.photo" :team="r.pro.team" :size="40"
-            /></span>
-            <span class="col" style="min-width: 0">
-              <span class="h4 ell">{{ r.pro.name }}</span>
-              <span class="meta row" style="gap: 5px; min-width: 0"
-                ><Logo
-                  v-if="r.pro.team"
-                  :team="r.pro.team.id"
-                  :size="14"
-                  style="width: 14px; height: 14px; object-fit: contain"
-                /><span class="ell">{{ short(r) }}</span></span
-              >
-            </span>
-            <span v-if="r.account" class="h5 num">{{ n(r.account.lp) }} LP</span>
-            <span v-else></span>
-            <span class="meta pl-gap">{{ gapLine(r) }}</span>
-          </Link>
-        </div>
-        <div class="pl-tiers">
-          <span class="lab">Apex tiers</span>
-          <div v-for="t in APEX" :key="t" class="pl-tier">
-            <RankEmblem :tier="t" :size="26" />
-            <span class="h5 grow">{{ rankWords(t) }}</span>
-            <span class="fg-xs">{{ apex[t] }}</span>
-            <span class="meta">pros</span>
-          </div>
-        </div>
-      </div>
 
       <div class="bar-f" style="margin: 24px 0 16px">
         <RoleFilter :active="filters.role" :href="(role) => href({ role })" />
