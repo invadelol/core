@@ -25,7 +25,12 @@ import { profilePath } from '../../lib/format.js'
 import { afterPaint } from '../../lib/after_paint.js'
 import { rememberPro } from '../../lib/recent.js'
 import type { Match } from '../../lib/types.js'
+import ProGames from '../../components/esports/pro/ProGames.vue'
+import ProAccounts from '../../components/esports/pro/ProAccounts.vue'
+import ProRoster from '../../components/esports/pro/ProRoster.vue'
+import ProMain from '../../components/esports/pro/ProMain.vue'
 import '../../css/esports.css'
+import '../../css/pro-v.css'
 
 interface ProTag {
   slug: string
@@ -145,6 +150,12 @@ const props = defineProps<{
 }>()
 
 const page = usePage()
+/** The first screen's proposal (`?v=a|b|c`), read in the browser. */
+const v = ref<'a' | 'b' | 'c' | null>(null)
+onMounted(() => {
+  const q = new URLSearchParams(window.location.search).get('v')
+  v.value = q === 'a' || q === 'b' || q === 'c' ? q : null
+})
 const TABS: Tab[] = ['overview', 'solo', 'champions', 'accounts', 'career']
 const tab = computed<Tab>(() => {
   const q = new URLSearchParams(page.url.split('?')[1] ?? '').get('tab')
@@ -183,6 +194,50 @@ const realName = computed(() =>
   [props.pro.about?.firstName, props.pro.about?.lastName].filter(Boolean).join(' ')
 )
 const best = computed(() => props.pro.accounts.find((a) => a.tier) ?? null)
+/** Their best peak over every account. */
+const peak = computed(() =>
+  props.pro.accounts.reduce<Account | null>(
+    (top, a) =>
+      a.peakTier &&
+      (!top ||
+        (rankValue(a.peakTier, a.peakDivision, a.peakLp) ?? 0) >
+          (rankValue(top.peakTier, top.peakDivision, top.peakLp) ?? 0))
+        ? a
+        : top,
+    null
+  )
+)
+const tierColor = (tier: string | null | undefined) =>
+  tier ? { color: `var(--tier-${tier.toLowerCase()})` } : undefined
+const lpOf = (a: Account | null) => (a?.tier && a.lp !== null ? `${n(a.lp)}` : null)
+const peakWords = computed(() =>
+  peak.value?.peakTier
+    ? `${rankWords(peak.value.peakTier, peak.value.peakDivision)}${['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(peak.value.peakTier) && peak.value.peakLp !== null ? ` ${n(peak.value.peakLp)}` : ''}`
+    : null
+)
+/** The last 30 days, every account: games, record, KDA, last ten as a strip. */
+const rec = computed(() => {
+  const r = props.pro.record
+  return {
+    games: r.games,
+    wins: r.wins,
+    losses: r.games - r.wins,
+    rate: r.games ? Math.round((r.wins / r.games) * 100) : null,
+    kda: r.games ? ((r.kills + r.assists) / Math.max(1, r.deaths)).toFixed(2) : null,
+    avg: r.games
+      ? `${(r.kills / r.games).toFixed(1)} / ${(r.deaths / r.games).toFixed(1)} / ${(r.assists / r.games).toFixed(1)}`
+      : null,
+    form: props.pro.games
+      .slice(0, 10)
+      .map((g) => g.win)
+      .reverse(),
+  }
+})
+const csMin = computed(() => {
+  const gs = props.pro.games.filter((g) => g.durationSec > 0)
+  if (!gs.length) return null
+  return (gs.reduce((s, g) => s + g.cs / (g.durationSec / 60), 0) / gs.length).toFixed(1)
+})
 /**
  * The champion art the hero stands them before: only with a figure to stand there, their cutout
  * or, without a photo, their team's logo. A plain photo (a room behind them) fills its own frame.
@@ -345,7 +400,7 @@ const PLATFORM: Record<string, string> = {
 <template>
   <Head :title="`${pro.name}: soloqueue accounts and stats`" />
   <SiteLayout>
-    <div class="wrap pg-es">
+    <div class="wrap pg-es" :class="{ 'pv-c': v === 'c' }">
       <div class="mast" style="padding-bottom: 16px">
         <nav class="crumbs" aria-label="Breadcrumb">
           <Link href="/esports">Esports</Link><Icon name="chevr" />
@@ -361,7 +416,11 @@ const PLATFORM: Record<string, string> = {
         </nav>
       </div>
 
-      <section class="card pp-hero pp-pro" :class="{ plain: !art }">
+      <section
+        v-if="v !== 'b' && v !== 'c'"
+        class="card pp-hero pp-pro"
+        :class="{ 'plain': !art, 'pv-a': v === 'a' }"
+      >
         <!-- The pro before the art of the champion they play most; else on their stage. -->
         <Frame class="pp-art" :src="art ? championSplash(art.champion) : null" eager stage>
           <ProPic :slug="pro.slug" :photo="pro.photo" :team="pro.team" :size="240" eager />
@@ -413,13 +472,302 @@ const PLATFORM: Record<string, string> = {
             >
           </div>
         </div>
+        <!-- A: the figures at the hero's foot. -->
+        <div v-if="v === 'a'" class="pv-band">
+          <div class="pv-rank">
+            <RankEmblem :tier="best?.tier" :size="52" />
+            <span class="pv-fig">
+              <span v-if="best?.tier" class="fg-m num"
+                >{{ lpOf(best) ?? '-' }}<span class="u">LP</span></span
+              >
+              <span v-else class="fg-s">Unranked</span>
+              <span class="meta ell"
+                ><span v-if="best?.tier" class="pv-tier" :style="tierColor(best.tier)">{{
+                  rankWords(best.tier, best.division)
+                }}</span
+                >{{ best ? `, ${PLATFORM[best.platform] ?? best.platform}` : ''
+                }}{{ peakWords ? `, peak ${peakWords}` : '' }}</span
+              >
+            </span>
+          </div>
+          <div class="pv-fig">
+            <span class="fg-m num">{{ rec.games }}</span>
+            <span class="meta">Games, 30 days</span>
+          </div>
+          <div class="pv-fig">
+            <span class="fg-m num"
+              >{{ rec.rate ?? '-' }}<span v-if="rec.rate !== null" class="u">%</span></span
+            >
+            <span class="meta">{{ rec.wins }}W {{ rec.losses }}L</span>
+          </div>
+          <div class="pv-fig">
+            <span class="fg-m num">{{ rec.kda ?? '-' }}</span>
+            <span class="meta ell">{{ rec.avg ? `KDA, ${rec.avg}` : 'KDA' }}</span>
+          </div>
+          <div class="pv-fig">
+            <FormStrip v-if="rec.form.length" :results="rec.form" tall />
+            <span v-else class="fg-m">-</span>
+            <span class="meta">Last {{ rec.form.length || '' }} games</span>
+          </div>
+        </div>
       </section>
 
-      <Tabs :items="tabs" :active="tab" label="Pro" preserve-scroll style="margin-top: 24px" />
+      <!-- B: a compact header, the rank card beside the name, the team in one line. -->
+      <section v-if="v === 'b'" class="card pv-head pp-pro" :class="{ plain: !art }">
+        <div class="pv-head-g">
+          <Frame class="pp-art" :src="art ? championSplash(art.champion) : null" eager stage>
+            <ProPic :slug="pro.slug" :photo="pro.photo" :team="pro.team" :size="240" eager />
+            <Link
+              v-if="art"
+              class="pp-cap"
+              :href="`/champions/${slugOf(art.champion)}`"
+              title="Their most played champion in solo queue, last four months"
+              ><img :src="champIcon(art.champion)" alt="" />{{ nameOf(art.champion)
+              }}<span>{{ n(art.games) }} games</span></Link
+            >
+          </Frame>
+          <div class="col" style="min-width: 0">
+            <h1 class="pp-name">{{ pro.name }}</h1>
+            <p v-if="realName" class="body" style="margin-top: 6px">{{ realName }}</p>
+            <div class="row" style="gap: 8px; margin-top: 16px; flex-wrap: wrap">
+              <Link v-if="pro.team" class="tagx" :href="`/team/${pro.team.slug}`"
+                ><Logo :team="pro.team.id" :size="16" />{{ pro.team.name }}</Link
+              >
+              <span v-if="laneOf(pro.role)" class="tagx"
+                ><RoleIcon :lane="laneOf(pro.role)!" :size="15" />{{ roleLabel(pro.role) }}</span
+              >
+              <span v-if="country" class="tagx"
+                ><Flag :code="country" :size="18" />{{ countryName(country) }}</span
+              >
+            </div>
+            <div class="row" style="gap: 6px; margin-top: 14px; flex-wrap: wrap">
+              <button class="btn sm" type="button" @click="share">
+                <Icon name="share" />{{ shared ? 'Link copied' : 'Share' }}
+              </button>
+              <a
+                v-for="x in socials"
+                :key="x.key"
+                class="btn sm ghost"
+                :href="x.href"
+                target="_blank"
+                rel="noreferrer"
+                :aria-label="`${x.handle} on ${x.name}`"
+                :title="x.name"
+                ><SocialIcon :name="x.icon" />{{ x.handle }}</a
+              >
+            </div>
+          </div>
+          <div class="pv-rc">
+            <div class="pv-rank">
+              <RankEmblem :tier="best?.tier" :size="60" />
+              <span class="pv-fig">
+                <span v-if="best?.tier" class="pv-tier" :style="tierColor(best.tier)">{{
+                  rankWords(best.tier, best.division)
+                }}</span>
+                <span v-if="best?.tier" class="fg-l num"
+                  >{{ lpOf(best) ?? '-' }}<span class="u">LP</span></span
+                >
+                <span v-else class="fg-s">Unranked</span>
+                <span class="meta ell"
+                  >{{ best ? (PLATFORM[best.platform] ?? best.platform) : ''
+                  }}{{ peakWords ? `, peak ${peakWords}` : '' }}</span
+                >
+              </span>
+            </div>
+            <div class="pv-rc-figs" title="Solo queue, every account, last 30 days">
+              <span class="pv-fig"
+                ><span class="fg-s num">{{ rec.games }}</span
+                ><span class="meta">Games</span></span
+              >
+              <span class="pv-fig"
+                ><span class="fg-s num"
+                  >{{ rec.rate ?? '-' }}<span v-if="rec.rate !== null" class="u">%</span></span
+                ><span class="meta">Win rate</span></span
+              >
+              <span class="pv-fig"
+                ><span class="fg-s num">{{ rec.kda ?? '-' }}</span
+                ><span class="meta">KDA</span></span
+              >
+            </div>
+          </div>
+        </div>
+        <ProRoster
+          v-if="roster && roster.members.length"
+          mode="strip"
+          :team="roster.team"
+          :members="roster.members"
+          :me="pro.slug"
+        />
+      </section>
+
+      <!-- C: an identity rail, like a profile's card, the figures and games beside it. -->
+      <aside v-if="v === 'c'" class="card pv-rail pp-pro" :class="{ plain: !art }">
+        <Frame class="pp-art" :src="art ? championSplash(art.champion) : null" eager stage>
+          <ProPic :slug="pro.slug" :photo="pro.photo" :team="pro.team" :size="240" eager />
+          <Link
+            v-if="art"
+            class="pp-cap"
+            :href="`/champions/${slugOf(art.champion)}`"
+            title="Their most played champion in solo queue, last four months"
+            ><img :src="champIcon(art.champion)" alt="" />{{ nameOf(art.champion)
+            }}<span>{{ n(art.games) }} games</span></Link
+          >
+        </Frame>
+        <div class="pv-rail-id">
+          <h1 class="pp-name">{{ pro.name }}</h1>
+          <p v-if="realName" class="body" style="margin-top: 6px">{{ realName }}</p>
+          <div class="row" style="gap: 6px; margin-top: 14px; flex-wrap: wrap">
+            <Link v-if="pro.team" class="tagx" :href="`/team/${pro.team.slug}`"
+              ><Logo :team="pro.team.id" :size="16" />{{
+                pro.team.shortName ?? pro.team.name
+              }}</Link
+            >
+            <span v-if="laneOf(pro.role)" class="tagx"
+              ><RoleIcon :lane="laneOf(pro.role)!" :size="15" />{{ roleLabel(pro.role) }}</span
+            >
+            <span v-if="country" class="tagx"
+              ><Flag :code="country" :size="18" />{{ countryName(country) }}</span
+            >
+          </div>
+          <div class="row" style="gap: 4px; margin-top: 12px; flex-wrap: wrap">
+            <button class="btn sm" type="button" @click="share">
+              <Icon name="share" />{{ shared ? 'Link copied' : 'Share' }}
+            </button>
+            <a
+              v-for="x in socials"
+              :key="x.key"
+              class="btn sm ghost ico"
+              :href="x.href"
+              target="_blank"
+              rel="noreferrer"
+              :aria-label="`${x.handle} on ${x.name}`"
+              :title="`${x.handle} on ${x.name}`"
+              ><SocialIcon :name="x.icon"
+            /></a>
+          </div>
+        </div>
+        <div class="pv-rail-sec pv-rank">
+          <RankEmblem :tier="best?.tier" :size="52" />
+          <span class="pv-fig" style="min-width: 0">
+            <span v-if="best?.tier" class="fg-m num"
+              >{{ lpOf(best) ?? '-' }}<span class="u">LP</span></span
+            >
+            <span v-else class="fg-s">Unranked</span>
+            <span class="meta ell"
+              ><span v-if="best?.tier" class="pv-tier" :style="tierColor(best.tier)">{{
+                rankWords(best.tier, best.division)
+              }}</span
+              >{{ best ? `, ${PLATFORM[best.platform] ?? best.platform}` : ''
+              }}{{ peakWords ? `, peak ${peakWords}` : '' }}</span
+            >
+          </span>
+        </div>
+        <ProAccounts bare :accounts="pro.accounts" :limit="3" />
+        <ProRoster
+          v-if="roster && roster.members.length"
+          mode="faces"
+          :team="roster.team"
+          :members="roster.members"
+          :me="pro.slug"
+        />
+      </aside>
+
+      <Tabs
+        :items="tabs"
+        :active="tab"
+        label="Pro"
+        preserve-scroll
+        :style="{ marginTop: v === 'c' ? '0' : '24px' }"
+      />
+
+      <!-- A and B: accounts and career, the games, the champions, side by side. -->
+      <section v-if="tab === 'overview' && (v === 'a' || v === 'b')" class="pv-cols">
+        <div class="col">
+          <ProAccounts :accounts="pro.accounts" :limit="4" />
+          <ProRoster
+            v-if="v === 'a' && roster && roster.members.length"
+            :team="roster.team"
+            :members="roster.members"
+            :me="pro.slug"
+          />
+          <div v-if="pro.teams.length" class="card">
+            <CardHead
+              title="Career"
+              icon="trophy"
+              :more="pro.teams.length > 3 ? { label: 'All', href: `${base}?tab=career` } : null"
+            />
+            <Link
+              v-for="(t, i) in pro.teams.slice(0, 3)"
+              :key="`${t.team.slug}-${i}`"
+              class="pv-ch"
+              :href="`/team/${t.team.slug}`"
+            >
+              <Logo
+                :team="t.team.id"
+                :size="32"
+                style="width: 26px; height: 26px; object-fit: contain; flex: none"
+              />
+              <span class="h5 ell grow">{{ t.team.name }}</span>
+              <span class="meta">{{ span(t) }}</span>
+            </Link>
+          </div>
+        </div>
+        <ProGames
+          :games="pro.games"
+          :stored="props.games"
+          :names="names"
+          :slug="pro.slug"
+          :limit="20"
+        />
+        <div class="col">
+          <ProMain :builds="pro.builds" :names="names" :pro="pro.name" :base="base" :limit="5" />
+        </div>
+      </section>
+
+      <!-- C: the month in figures, then the games with their items, then the champions. -->
+      <template v-if="tab === 'overview' && v === 'c'">
+        <div class="card pv-figs">
+          <span class="pv-fig"
+            ><span class="fg-m num">{{ rec.games }}</span
+            ><span class="meta">Games in 30 days</span></span
+          >
+          <span class="pv-fig"
+            ><span class="fg-m num"
+              >{{ rec.rate ?? '-' }}<span v-if="rec.rate !== null" class="u">%</span></span
+            ><span class="meta">{{ rec.wins }}W {{ rec.losses }}L</span></span
+          >
+          <span class="pv-fig" :title="rec.avg ? `${rec.avg} per game` : undefined"
+            ><span class="fg-m num">{{ rec.kda ?? '-' }}</span
+            ><span class="meta">KDA</span></span
+          >
+          <span class="pv-fig"
+            ><span class="fg-m num">{{ csMin ?? '-' }}</span
+            ><span class="meta">CS per minute</span></span
+          >
+          <span class="pv-fig"
+            ><FormStrip v-if="rec.form.length" :results="rec.form" tall /><span v-else class="fg-m"
+              >-</span
+            ><span class="meta">Last {{ rec.form.length || '' }} games</span></span
+          >
+        </div>
+        <ProGames
+          :games="pro.games"
+          :stored="props.games"
+          :names="names"
+          :slug="pro.slug"
+          :limit="10"
+          items
+          style="margin-top: 20px"
+        />
+        <div class="pv-c-g">
+          <ProMain :builds="pro.builds" :names="names" :pro="pro.name" :base="base" show="list" />
+          <ProMain :builds="pro.builds" :names="names" :pro="pro.name" :base="base" show="main" />
+        </div>
+      </template>
 
       <!-- Overview: the team, then games, champions and career side by side. -->
       <section
-        v-if="tab === 'overview' && roster && five.length"
+        v-if="tab === 'overview' && !v && roster && five.length"
         class="sec"
         style="padding-top: 36px"
       >
@@ -472,7 +820,7 @@ const PLATFORM: Record<string, string> = {
       </section>
 
       <section
-        v-if="tab === 'overview' || tab === 'solo'"
+        v-if="(tab === 'overview' && !v) || tab === 'solo'"
         class="sec"
         :class="{ 'pp-g': tab === 'overview' }"
         :style="tab === 'solo' ? 'padding-top: 32px' : undefined"
