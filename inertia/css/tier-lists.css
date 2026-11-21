@@ -145,6 +145,10 @@
 /* ── Shared pieces ─────────────────────────────────────────── */
 .vb .tx-head > span, .vb .tl-head > span { white-space: nowrap; }
 .vb .tx-head .r, .vb .tl-head .r { text-align: right; }
+/* One rule for every table: names on the left, each figure (`.c`) centred under its centred head. */
+.vb :is(.tl-head, .tx-head, .tl-row, .tx-row) > .c { justify-self: center; text-align: center; }
+.vb :is(.tl-fig, .tx-fig, .du-syn).c { align-items: center; }
+.vb .tl-row > .tl-tr, .vb .tl-row > .spark { justify-self: stretch; }
 .vb a.tx-row, .vb a.tl-row { color: inherit; }
 .vb .tx-sub { display: flex; align-items: center; min-width: 0; }
 .vb .role-seg svg { width: 16px; height: 16px; opacity: 0.6; flex: none; }

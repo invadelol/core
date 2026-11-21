@@ -115,18 +115,20 @@ class ProPhotoService {
 
   /**
    * Whether a pro's photo is a cutout (`isCutout`): one can stand before art or rise above a
-   * stage, a plain picture only fills its frame. Read from the served photo, kept a day. A first
+   * stage, a plain picture only fills its frame. Read from the served photo, kept a day (per photo
+   * version). A first
    * read slower than `waitMs` (the photo still being fetched) answers false, a plain frame, and
    * is there for the next page.
    */
   cutout(slug: string, waitMs = 1500): Promise<boolean> {
-    const known = this.#cutouts.get(slug)
+    const key = `${slug}@${this.of(slug) ?? ''}`
+    const known = this.#cutouts.get(key)
     if (known && Date.now() - known.at < 24 * HOUR) return Promise.resolve(known.cutout)
     const reading = this.get(slug, PHOTO_SIZES[PHOTO_SIZES.length - 1])
       .then(async (photo) => {
         if (!photo) return false
         const cutout = await isCutout(photo.body)
-        this.#cutouts.set(slug, { at: Date.now(), cutout })
+        this.#cutouts.set(key, { at: Date.now(), cutout })
         return cutout
       })
       .catch(() => false)
@@ -137,11 +139,15 @@ class ProPhotoService {
     return Promise.race([reading, late]).finally(() => clearTimeout(timer))
   }
 
-  /** A pro's photo at a served size (`photoSize`), or null. */
+  /**
+   * A pro's photo at a served size (`photoSize`), or null. Kept under its version: a new photo
+   * is never answered with the old one's bytes, which an address of the new version would keep.
+   */
   get(slug: string, size: number): Promise<Logo | null> {
     if (!SLUG.test(slug)) return Promise.resolve(null)
-    return this.once(`${slug}@${size}`, 24 * HOUR, async () => {
-      const original = await this.once(slug, 10 * 60_000, () => this.load(slug), this.#originals)
+    const at = `${slug}@${this.of(slug) ?? ''}`
+    return this.once(`${at}@${size}`, 24 * HOUR, async () => {
+      const original = await this.once(at, 10 * 60_000, () => this.load(slug), this.#originals)
       if (!original) return null
       const px = size * 2
       const body = await sharp(original.body)

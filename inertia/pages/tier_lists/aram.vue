@@ -177,10 +177,10 @@ const pickMax = computed(() => Math.max(0.1, ...shown.value.map((r) => r.pick)))
             <article class="card" style="overflow: hidden">
               <div class="tx-head ar-head">
                 <SortHead :sorter="sort" col="name" label="Champion" />
-                <SortHead :sorter="sort" col="win" label="Win rate" />
-                <SortHead :sorter="sort" col="pick" label="Pick rate" />
-                <SortHead :sorter="sort" col="games" label="Games" class="r" />
-                <SortHead :sorter="sort" col="kda" label="KDA" class="r" />
+                <SortHead :sorter="sort" col="win" label="Win rate" class="c" />
+                <SortHead :sorter="sort" col="pick" label="Pick rate" class="c" />
+                <SortHead :sorter="sort" col="games" label="Games" class="c" />
+                <SortHead :sorter="sort" col="kda" label="KDA" class="c" />
                 <span>Keystone</span>
               </div>
               <template v-for="g in groups" :key="g.t ?? 'sorted'">
@@ -201,10 +201,10 @@ const pickMax = computed(() => Math.max(0.1, ...shown.value.map((r) => r.pick)))
                       >
                     </div>
                   </div>
-                  <Fig :value="(r.win * 100).toFixed(0)" :width="barWidth(r.win, 0.38, 0.62)" big mid />
-                  <Fig :value="(r.pick * 100).toFixed(0)" :width="barWidth(r.pick, 0, pickMax)" />
-                  <span class="fg-xs t2 r">{{ thousands(r.games) }}</span>
-                  <span class="fg-xs t2 r">{{ r.kda.toFixed(2) }}</span>
+                  <Fig :value="(r.win * 100).toFixed(0)" :width="barWidth(r.win, 0.38, 0.62)" big mid class="c" />
+                  <Fig :value="(r.pick * 100).toFixed(0)" :width="barWidth(r.pick, 0, pickMax)" class="c" />
+                  <span class="fg-xs t2 c">{{ thousands(r.games) }}</span>
+                  <span class="fg-xs t2 c">{{ r.kda.toFixed(2) }}</span>
                   <div class="ar-ks">
                     <template v-if="r.keystone">
                       <img :src="perkUrl(r.keystone.keystone)" alt="" />

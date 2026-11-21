@@ -2,13 +2,21 @@
 import { computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import Icon from '../ui/Icon.vue'
-import { championSplash } from '../../lib/assets.js'
-import { CATEGORIES, STATS, emptyText, fmtMetric, type StatDef } from '../../lib/studio.js'
+import { itemUrl, perkUrl, spellUrl } from '../../lib/champions.js'
+import {
+  CATEGORIES,
+  STATS,
+  emptyText,
+  fmtMetric,
+  type CategoryKey,
+  type StatDef,
+} from '../../lib/studio.js'
 
 /**
- * The stats studio's hub: each category a tile under the art of the champion at the top of its
- * first statistic, that figure large, then the category's other statistics as links. Every
- * statistic is one click away.
+ * The stats studio's hub: each category a tile under League's own objects for what it counts
+ * (Riot's in-game art: items, spells, runes, monsters, pings), then the champion at the top of
+ * its first statistic with that figure large, then the category's other statistics as links.
+ * Every statistic is one click away.
  */
 export interface Leader {
   champion: number
@@ -22,13 +30,71 @@ const props = defineProps<{
   query: string
 }>()
 const href = (slug: string) => `/stats/${slug}${props.query ? `?${props.query}` : ''}`
-/** The champion's art at about the width the tile shows it (the proxy resizes it once). */
-const art = (champion: number, width: number) => `${championSplash(champion)}?w=${width}`
+
+/**
+ * A cover's objects: square game art in a hairline ring (`sq`), a glyph drawn on transparency at
+ * its own shape (`glyph`), or a ping, small as the game draws it (`ping`).
+ */
+type Obj = { src: string; name: string; kind: 'sq' | 'glyph' | 'ping' }
+const sq = (src: string, name: string): Obj => ({ src, name, kind: 'sq' })
+const glyph = (src: string, name: string): Obj => ({ src, name, kind: 'glyph' })
+const ping = (file: string, name: string): Obj => ({
+  src: `/game-objects/${file}.png`,
+  name,
+  kind: 'ping',
+})
+const art = (file: string) => `/game-objects/${file}.webp`
+const COVERS: Record<CategoryKey, Obj[]> = {
+  results: [glyph(art('victory'), 'Victory'), glyph(art('defeat'), 'Defeat')],
+  combat: [
+    glyph(perkUrl(8112), 'Electrocute'),
+    glyph(perkUrl(8010), 'Conqueror'),
+    glyph(perkUrl(8128), 'Dark Harvest'),
+  ],
+  damage: [
+    sq(itemUrl(3031), 'Infinity Edge'),
+    sq(itemUrl(3089), "Rabadon's Deathcap"),
+    sq(itemUrl(6653), "Liandry's Torment"),
+  ],
+  laning: [
+    sq(art('minion-melee'), 'Melee minion'),
+    sq(art('minion-cannon'), 'Cannon minion'),
+    sq(art('blue-sentinel'), 'Blue Sentinel'),
+  ],
+  objectives: [
+    sq(art('infernal-drake'), 'Infernal Drake'),
+    sq(art('baron-nashor'), 'Baron Nashor'),
+    sq(art('voidgrub'), 'Voidgrub'),
+  ],
+  vision: [
+    sq(itemUrl(3340), 'Stealth Ward'),
+    sq(itemUrl(2055), 'Control Ward'),
+    sq(itemUrl(3364), 'Oracle Lens'),
+  ],
+  length: [
+    sq(itemUrl(2420), 'Stopwatch'),
+    sq(itemUrl(3157), "Zhonya's Hourglass"),
+    sq(art('elder-dragon'), 'Elder Dragon'),
+  ],
+  pings: [
+    ping('ping-missing', 'Enemy missing'),
+    ping('ping-on-my-way', 'On my way'),
+    ping('ping-retreat', 'Retreat'),
+    ping('ping-all-in', 'All in'),
+  ],
+  spells: [sq(spellUrl(4), 'Flash'), sq(spellUrl(14), 'Ignite'), sq(spellUrl(12), 'Teleport')],
+}
 const tiles = computed(() =>
   CATEGORIES.map((c) => {
     const stats = STATS.filter((s) => s.category === c.key)
     const first = stats.find((s) => !s.wide) ?? stats[0]
-    return { ...c, first, rest: stats.filter((s) => s !== first), lead: props.leader(first) }
+    return {
+      ...c,
+      first,
+      rest: stats.filter((s) => s !== first),
+      lead: props.leader(first),
+      cover: COVERS[c.key] ?? [],
+    }
   })
 )
 </script>
@@ -37,24 +103,24 @@ const tiles = computed(() =>
   <div class="st-tiles">
     <section v-for="t in tiles" :key="t.key" class="card st-tile" :aria-labelledby="`st-${t.key}`">
       <Link
-        v-if="t.lead !== null"
+        v-if="t.cover.length"
         class="fr st-art"
         :href="href(t.first.slug)"
         tabindex="-1"
         aria-hidden="true"
       >
-        <img
-          v-if="t.lead"
-          loading="lazy"
-          decoding="async"
-          fetchpriority="low"
-          width="960"
-          height="540"
-          alt=""
-          sizes="(max-width: 767px) calc(100vw - 48px), (max-width: 1023px) calc(50vw - 48px), 380px"
-          :srcset="`${art(t.lead.champion, 480)} 480w, ${art(t.lead.champion, 960)} 960w`"
-          :src="art(t.lead.champion, 480)"
-        />
+        <span class="st-objs">
+          <img
+            v-for="o in t.cover"
+            :key="o.src"
+            :class="['st-o', `st-o-${o.kind}`]"
+            :src="o.src"
+            :title="o.name"
+            alt=""
+            loading="lazy"
+            decoding="async"
+          />
+        </span>
       </Link>
       <div class="st-tb">
         <h2 :id="`st-${t.key}`" class="h3 st-th">

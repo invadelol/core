@@ -7,15 +7,17 @@ import Masthead from '../../components/ui/Masthead.vue'
 import Logo from '../../components/pros/Logo.vue'
 import ProPic from '../../components/pros/ProPic.vue'
 import Flag from '../../components/pros/Flag.vue'
+import LpRule from '../../components/esports/LpRule.vue'
 import { countryName } from '../../lib/board.js'
-import { laneOf, n, roleLabel } from '../../lib/ladders.js'
-import { slots, type LeagueBoard, type TeamBoard } from '../../lib/esports_landing.js'
+import { laneOf, roleLabel } from '../../lib/ladders.js'
+import { lpText, slots, type LeagueBoard, type TeamBoard } from '../../lib/esports_landing.js'
 import '../../css/esports.css'
 import '../../css/esports-landing.css'
 
 /**
- * `/teams`: every league's teams in one ranking by their starters' average solo queue LP (those in
- * Master and above; a team needs three of its five there to be ranked), each with its crest,
+ * `/teams`: every league's teams in one ranking by their starters' average solo queue LP (against
+ * Master 0 LP, Diamond below it, lower ranks left out: app/services/team_lp.ts; a team needs three
+ * starters counted to be ranked), each with its crest,
  * league, country and starting five by face and name, a dot on the ones who joined in the last
  * weeks. The leagues above narrow the list in the browser
  * (`?league=lec`, or a league page's `#lec`), the address following.
@@ -23,17 +25,17 @@ import '../../css/esports-landing.css'
 const props = defineProps<{ boards: LeagueBoard[]; description: string }>()
 
 type Row = TeamBoard & { league: LeagueBoard['league'] }
-/** A team is ranked by its starters' average LP once three of them are in Master and above. */
+/** A team is ranked by its starters' average LP once it counts three of them. */
 const RANKED = 3
-const ranked = (t: TeamBoard) => t.lp !== null && t.apex >= RANKED
+const ranked = (t: TeamBoard) => t.lp !== null && t.counted >= RANKED
 const all = computed<Row[]>(() =>
   props.boards
     .flatMap((b) => b.teams.map((t) => ({ ...t, league: b.league })))
     .sort(
       (a, b) =>
         Number(ranked(b)) - Number(ranked(a)) ||
-        (ranked(a) ? 0 : b.apex - a.apex) ||
-        (b.lp ?? -1) - (a.lp ?? -1) ||
+        (ranked(a) ? 0 : b.counted - a.counted) ||
+        (b.lp ?? -1e9) - (a.lp ?? -1e9) ||
         a.name.localeCompare(b.name)
     )
 )
@@ -61,7 +63,7 @@ function pick(slug: string | null) {
 const rows = computed(() =>
   all.value.filter((t) => !league.value || t.league.slug === league.value)
 )
-/** A team's place in the list; one with fewer than three starters in Master and above has none. */
+/** A team's place in the list; one with fewer than three starters counted has none. */
 const place = (i: number, t: Row) => (ranked(t) ? String(i + 1) : '–')
 const fresh = computed(() => all.value.some((t) => t.five.some((p) => p.fresh)))
 </script>
@@ -102,13 +104,13 @@ const fresh = computed(() => all.value.some((t) => t.five.some((p) => p.fresh)))
           <span></span>
           <span>Team</span>
           <span>Starting five</span>
-          <span class="el-rk-r">LP average</span>
-          <span class="el-rk-r">In Master+</span>
+          <span class="el-rk-r el-rk-lp">LP average<LpRule /></span>
+          <span class="el-rk-r">Starters counted</span>
         </div>
         <div v-for="(t, i) in rows" :key="t.id" class="el-rk">
           <span
             class="el-rk-n num"
-            :title="ranked(t) ? undefined : 'Fewer than three starters in Master and above'"
+            :title="ranked(t) ? undefined : 'Fewer than three starters counted'"
             >{{ place(i, t) }}</span
           >
           <Link :href="`/team/${t.slug}`" class="el-rk-t">
@@ -152,11 +154,37 @@ const fresh = computed(() => all.value.some((t) => t.five.some((p) => p.fresh)))
               >
             </template>
           </span>
-          <span class="el-rk-r el-v num">{{ t.lp === null ? '–' : n(t.lp) }}</span>
-          <span class="el-rk-r el-sub num el-rk-a">{{ t.apex }} of 5</span>
+          <span class="el-rk-r el-v num"
+            >{{ t.lp === null ? '–' : lpText(t.lp)
+            }}<span class="el-rk-cn">{{ t.counted }} of {{ t.starters }} counted</span></span
+          >
+          <span class="el-rk-r el-sub num el-rk-a">{{ t.counted }} of {{ t.starters }}</span>
         </div>
       </section>
       <p v-else class="meta" style="padding-top: 24px">No team is stored for these leagues yet.</p>
     </div>
   </SiteLayout>
 </template>
+
+<style scoped>
+.el-rk-lp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+}
+/* How many starters the average counts, under it once its own column is hidden. */
+.el-rk-cn {
+  display: none;
+}
+@media (max-width: 1199px) {
+  .el-rk-cn {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--t3);
+    white-space: nowrap;
+  }
+}
+</style>

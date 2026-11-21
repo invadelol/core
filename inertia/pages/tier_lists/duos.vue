@@ -283,13 +283,14 @@ const shareMax = computed(() => Math.max(0.2, ...shown.value.map((r) => r.share)
             <article class="card" style="overflow: hidden">
               <div class="tx-head du-head">
                 <SortHead :sorter="sort" col="name" label="Duo" />
-                <SortHead :sorter="sort" col="win" label="Win rate" />
-                <SortHead :sorter="sort" col="synergy" label="Synergy" />
-                <SortHead :sorter="sort" col="share" :label="`Of the ${L.a.one}’s duo games`" />
-                <SortHead :sorter="sort" col="games" label="Games" class="r" />
+                <SortHead :sorter="sort" col="win" label="Win rate" class="c" />
+                <SortHead :sorter="sort" col="synergy" label="Synergy" class="c" />
+                <SortHead :sorter="sort" col="share" :label="`Of the ${L.a.one}’s duo games`" class="c" />
+                <SortHead :sorter="sort" col="games" label="Games" class="c" />
                 <SortHead
                   :sorter="sort"
                   col="since"
+                  class="c"
                   :label="ready.previousPatch ? `Since ${patchName(ready.previousPatch)}` : 'Since'"
                   title="Win rate change since the patch before"
                 />
@@ -314,8 +315,8 @@ const shareMax = computed(() => Math.max(0.2, ...shown.value.map((r) => r.share)
                       >
                     </div>
                   </div>
-                  <Fig :value="p1(r.win)" :width="barWidth(r.win, 0.44, 0.56)" big mid />
-                  <div class="du-syn">
+                  <Fig :value="p1(r.win)" :width="barWidth(r.win, 0.44, 0.56)" big mid class="c" />
+                  <div class="du-syn c">
                     <template v-if="r.synergy !== null">
                       <span class="fg-xs" :class="r.synergy > 0 ? 'vi' : 't3'">{{ sgn(r.synergy * 100) }}<span class="u">pts</span></span>
                       <span class="tk"
@@ -326,9 +327,9 @@ const shareMax = computed(() => Math.max(0.2, ...shown.value.map((r) => r.share)
                     </template>
                     <span v-else class="fg-xs t3">&#8211;</span>
                   </div>
-                  <Fig :value="p1(r.share)" :width="barWidth(r.share, 0, shareMax)" />
-                  <span class="fg-xs t2 r">{{ thousands(r.games) }}</span>
-                  <SinceCell :d="r.delta === null ? null : r.delta * 100" />
+                  <Fig :value="p1(r.share)" :width="barWidth(r.share, 0, shareMax)" class="c" />
+                  <span class="fg-xs t2 c">{{ thousands(r.games) }}</span>
+                  <SinceCell :d="r.delta === null ? null : r.delta * 100" class="c" />
                 </div>
               </template>
               <div class="tx-foot">
