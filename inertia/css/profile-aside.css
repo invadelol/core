@@ -1,0 +1,171 @@
+/* A profile's right column beside the games (summoner.vue, `?v=`): the summary moved right (a),
+   the main champion's build under Performance (b), or the main champion before its art (c). */
+@layer components {
+  /* The games keep their items from 620 px: both side columns narrow to leave them that. */
+  .vb .pl.pa-c {
+    grid-template-columns: 260px minmax(0, 1fr) 280px;
+    grid-template-areas: 'side main aside';
+    column-gap: 20px;
+  }
+  .vb .pl.pa-a,
+  .vb .pl.pa-b {
+    grid-template-columns: 272px minmax(0, 1fr);
+    column-gap: 24px;
+  }
+  .vb .pl-aside {
+    grid-area: aside;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0;
+  }
+  .vb .pl.pa-c > .pl-aside {
+    position: sticky;
+    top: 16px;
+  }
+  /* A and B: the section's column splits under Performance, the games beside the column. */
+  .vb .pl.pa-a > .pl-main,
+  .vb .pl.pa-b > .pl-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 256px;
+    column-gap: 20px;
+    row-gap: 28px;
+    align-items: start;
+  }
+  .vb .pl.pa-a > .pl-main > *,
+  .vb .pl.pa-b > .pl-main > * {
+    grid-column: 1 / -1;
+  }
+  .vb .pl.pa-a > .pl-main > .mh,
+  .vb .pl.pa-b > .pl-main > .mh {
+    grid-column: 1;
+    min-width: 0;
+  }
+  .vb .pl.pa-a > .pl-main > .pl-aside,
+  .vb .pl.pa-b > .pl-main > .pl-aside {
+    grid-area: auto;
+    grid-column: 2;
+    position: sticky;
+    top: 16px;
+  }
+
+  /* The main champion's card. */
+  .vb .pa-main {
+    position: relative;
+    overflow: hidden;
+  }
+  .vb .pa-art {
+    position: relative;
+    height: 150px;
+    margin-bottom: -44px;
+    overflow: hidden;
+  }
+  .vb .pa-art img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 20%;
+    opacity: 0.7;
+    -webkit-mask-image: linear-gradient(180deg, #000 45%, transparent);
+    mask-image: linear-gradient(180deg, #000 45%, transparent);
+  }
+  .vb .pa-head {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 18px 12px;
+  }
+  .vb .pa-ic {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--r-sm);
+  }
+  .vb .pa-main.spotlight .pa-head .h4 {
+    font-size: 20px;
+    font-weight: 650;
+  }
+  .vb .pa-figs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 4px 18px 14px;
+  }
+  .vb .pa-figs .u {
+    margin-left: 2px;
+    font-size: 0.55em;
+    font-weight: 600;
+    color: var(--t3);
+  }
+  .vb .pa-kv {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 46px;
+    padding: 8px 18px;
+    border-top: 1px solid var(--line);
+  }
+  .vb .pa-its {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .vb .pa-its img {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--r-sm);
+    background: var(--ink-0);
+  }
+  .vb .pa-its img.r {
+    border-radius: 50%;
+  }
+  .vb .pa-its img.sm {
+    width: 20px;
+    height: 20px;
+  }
+  .vb .pa-more {
+    display: flex;
+    justify-content: center;
+    padding: 12px;
+    border-top: 1px solid var(--line);
+  }
+
+  @media (max-width: 1279px) {
+    .vb .pl.pa-c {
+      grid-template-columns: 260px minmax(0, 1fr);
+      grid-template-areas:
+        'side main'
+        'side aside';
+    }
+    .vb .pl.pa-c > .pl-aside {
+      position: static;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      align-items: start;
+    }
+    .vb .pl.pa-a > .pl-main,
+    .vb .pl.pa-b > .pl-main {
+      display: flex;
+    }
+    .vb .pl-main > .pl-aside {
+      position: static;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      align-items: start;
+    }
+  }
+  @media (max-width: 1023px) {
+    .vb .pl.pa-a,
+    .vb .pl.pa-b,
+    .vb .pl.pa-c {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-areas:
+        'rail'
+        'main'
+        'aside'
+        'more';
+    }
+  }
+}
