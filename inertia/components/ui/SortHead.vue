@@ -7,7 +7,7 @@ import type { Sorter } from './sort.js'
  * A sortable column head: the head cell itself (one element, so a table's `:nth-child` rules still
  * count it), carrying `aria-sort`, with a button inside, or a link when the server sorts
  * (`linkSort`). The arrow points the way the figures run: down, most first; up, least first.
- * Classes on it (`n`, `r`, `hm`) land on the cell, as on the plain head it replaces.
+ * Classes on it (`n`, `r`, `c`, `hm`) land on the cell, as on the plain head it replaces.
  */
 const props = defineProps<{
   sorter: Sorter
@@ -110,6 +110,16 @@ const state = computed(() =>
 }
 .sh:is(.n, .r) .sh-b {
   flex-direction: row-reverse;
+}
+/* A centred head (`.c`): the words over the middle of the column, the arrow just after them. */
+.sh.c .sh-b {
+  position: relative;
+}
+.sh.c .sh-a {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  margin-top: -6px;
 }
 @media (hover: none) {
   .sh-a {

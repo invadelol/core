@@ -61,7 +61,8 @@ export function movers<T>(rows: T[], change: (r: T) => number | null, up = 6, do
 
 /**
  * A sparkline's line and area in a `w` × `h` box, from values (nulls leave a gap), on a scale
- * that always holds `pivot` (the 50 % line), and that line's height.
+ * that always holds `pivot` (the 50 % line), and that line's height. `points` places each value
+ * in the box (null where it is unknown), for a hover; `last` is the last known one.
  */
 export function sparkPaths(values: (number | null)[], w = 160, h = 30, pivot = 0.5) {
   const known = values.filter((v): v is number => v !== null)
@@ -88,5 +89,7 @@ export function sparkPaths(values: (number | null)[], w = 160, h = 30, pivot = 0
     else run.push([x(i), y(v)])
   })
   flush()
-  return { line, area, pivot: y(pivot).toFixed(1) }
+  const points = values.map((v, i) => (v === null ? null : { x: x(i), y: y(v), v }))
+  const last = [...points].reverse().find((p) => p !== null) ?? null
+  return { line, area, pivot: y(pivot).toFixed(1), points, last }
 }
