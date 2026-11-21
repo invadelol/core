@@ -283,6 +283,13 @@
   .vb .pl-sec-h .r {
     margin-left: auto;
   }
+  /* the ranked cards, one per queue, as one block */
+  .vb .pl-rank {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0;
+  }
   .vb .pl-rk {
     display: grid;
     grid-template-columns: 56px minmax(0, 1fr) auto;
