@@ -77,7 +77,7 @@ watch(
 </script>
 
 <template>
-  <div class="card pv-games">
+  <div class="card pp-games">
     <div class="card-h">
       <Icon name="chart" />
       <h2 class="h3">Solo queue</h2>
@@ -95,7 +95,7 @@ watch(
     >
       <component
         :is="gamePath(g) ? 'a' : 'div'"
-        class="sq pv-sq"
+        class="sq pp-sq"
         :class="[g.win ? 'w' : 'l', { it: items }]"
         :href="gamePath(g) ?? undefined"
         :aria-expanded="stored.has(g.matchId) ? open === g.matchId : undefined"
@@ -133,7 +133,7 @@ watch(
             :title="`${p.pro.name}, ${p.ally ? 'on their side' : 'against them'}`"
             ><ProPic :slug="p.pro.slug" :photo="p.pro.photo" :team="p.pro.team" :size="32"
           /></span>
-          <b v-if="(g.pros?.length ?? 0) > faces" class="pv-plus"
+          <b v-if="(g.pros?.length ?? 0) > faces" class="pp-plus"
             >+{{ (g.pros?.length ?? 0) - faces }}</b
           >
         </span>
@@ -157,7 +157,7 @@ watch(
     <button
       v-if="!all && list.length > shownGames.length"
       type="button"
-      class="more pv-more"
+      class="more pp-more"
       @click="all = true"
     >
       {{ list.length - shownGames.length }} more games<Icon name="chev" />

@@ -11,12 +11,9 @@ import { APEX, PLATFORM, type ProAccount } from './types.js'
 
 /**
  * A pro's solo queue accounts, best rank first, one line each: icon, Riot ID, server and record,
- * rank and LP. `limit` lines show first; `bare` drops the card (inside another sheet).
+ * rank and LP. `limit` lines show first, the rest on a tap.
  */
-const props = withDefaults(
-  defineProps<{ accounts: ProAccount[]; limit?: number; bare?: boolean }>(),
-  { limit: 4, bare: false }
-)
+const props = withDefaults(defineProps<{ accounts: ProAccount[]; limit?: number }>(), { limit: 4 })
 const sorted = computed(() =>
   [...props.accounts].sort(
     (a, b) =>
@@ -37,11 +34,11 @@ const full = (a: ProAccount) =>
 </script>
 
 <template>
-  <component :is="bare ? 'div' : 'section'" :class="bare ? 'pv-acc bare' : 'card pv-acc'">
+  <section class="card pp-accs">
     <CardHead title="Accounts" icon="user" :meta="String(accounts.length)" />
-    <Link v-for="a in rows" :key="a.id" class="pv-ac" :href="profilePath(a.gameName, a.tagLine)">
+    <Link v-for="a in rows" :key="a.id" class="pp-ac" :href="profilePath(a.gameName, a.tagLine)">
       <img
-        class="pv-ic"
+        class="pp-aic"
         loading="lazy"
         decoding="async"
         alt=""
@@ -62,17 +59,17 @@ const full = (a: ProAccount) =>
           }}</span
         >
       </span>
-      <span class="pv-rk" :class="{ un: !a.tier }" :title="full(a)"
+      <span class="pp-rk" :class="{ un: !a.tier }" :title="full(a)"
         ><RankEmblem v-if="a.tier" :tier="a.tier" :size="20" />{{ rank(a) }}</span
       >
     </Link>
     <button
       v-if="!all && sorted.length > rows.length"
       type="button"
-      class="more pv-more"
+      class="more pp-more"
       @click="all = true"
     >
       {{ sorted.length - rows.length }} more<Icon name="chev" />
     </button>
-  </component>
+  </section>
 </template>

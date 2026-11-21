@@ -10,8 +10,8 @@ import { champIcon, assetUrl } from '../../../lib/assets.js'
 import type { ChampionNames, ProBuild } from './types.js'
 
 /**
- * A pro's champions of the last 30 days (`list`), and how they play the one they play most
- * (`main`): core items, runes, spells, skill order and their last games on it.
+ * A pro's champions of the last 30 days, then how they play the one they play most: core items,
+ * runes, spells, skill order and their last games on it, with a link to the champion.
  */
 const props = withDefaults(
   defineProps<{
@@ -19,10 +19,9 @@ const props = withDefaults(
     names: ChampionNames
     pro: string
     base: string
-    show?: 'both' | 'list' | 'main'
     limit?: number
   }>(),
-  { show: 'both', limit: 6 }
+  { limit: 6 }
 )
 const main = computed(() => props.builds[0] ?? null)
 const nameOf = (id: number) => props.names[id]?.[0] ?? ''
@@ -30,7 +29,7 @@ const slugOf = (id: number) => props.names[id]?.[1] ?? String(id)
 </script>
 
 <template>
-  <section v-if="show !== 'main' && builds.length" class="card pv-champs">
+  <section class="card pp-champs">
     <CardHead
       title="Champions"
       icon="grid"
@@ -40,7 +39,7 @@ const slugOf = (id: number) => props.names[id]?.[1] ?? String(id)
     <Link
       v-for="b in builds.slice(0, limit)"
       :key="b.champion"
-      class="pv-ch"
+      class="pp-ch"
       :href="`/champions/${slugOf(b.champion)}`"
     >
       <Frame :src="champIcon(b.champion)" :width="32" size="xs" />
@@ -54,15 +53,15 @@ const slugOf = (id: number) => props.names[id]?.[1] ?? String(id)
     </Link>
   </section>
 
-  <section v-if="show !== 'list' && main" class="card pv-main">
+  <section v-if="main" class="card pp-main">
     <div class="card-h">
       <Frame :src="champIcon(main.champion)" :width="28" size="xs" />
       <h2 class="h3 ell">{{ pro }} on {{ nameOf(main.champion) }}</h2>
       <span class="meta" style="margin-left: auto">Most played</span>
     </div>
-    <div v-if="main.core.length" class="pv-kv">
+    <div v-if="main.core.length" class="pp-bkv">
       <span class="lab">Core</span>
-      <span class="pv-its">
+      <span class="pp-its">
         <img v-if="main.boots" :src="assetUrl('item', main.boots)" alt="" loading="lazy" /><img
           v-for="it in main.core"
           :key="it"
@@ -72,9 +71,9 @@ const slugOf = (id: number) => props.names[id]?.[1] ?? String(id)
         />
       </span>
     </div>
-    <div v-if="main.keystone || main.spells" class="pv-kv">
+    <div v-if="main.keystone || main.spells" class="pp-bkv">
       <span class="lab">Runes, spells</span>
-      <span class="pv-its">
+      <span class="pp-its">
         <img v-if="main.keystone" class="r" :src="assetUrl('rune', main.keystone)" alt="" /><img
           v-if="main.secondaryStyle"
           class="r sm"
@@ -83,15 +82,15 @@ const slugOf = (id: number) => props.names[id]?.[1] ?? String(id)
         /><img v-for="s in main.spells ?? []" :key="s" :src="assetUrl('spell', s)" alt="" />
       </span>
     </div>
-    <div v-if="main.max.length" class="pv-kv">
+    <div v-if="main.max.length" class="pp-bkv">
       <span class="lab">Skills</span>
       <span class="h5">Max {{ main.max.join(', ') }}</span>
     </div>
-    <div class="pv-kv">
+    <div class="pp-bkv">
       <span class="lab">Last games</span>
       <FormStrip :results="[...main.form].reverse()" small />
     </div>
-    <Link class="more pv-more" :href="`/champions/${slugOf(main.champion)}`"
+    <Link class="more pp-more" :href="`/champions/${slugOf(main.champion)}`"
       >{{ nameOf(main.champion) }} page<Icon name="chevr"
     /></Link>
   </section>
