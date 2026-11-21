@@ -49,32 +49,42 @@
     top: 16px;
   }
 
-  /* The main champion's card. */
-  .vb .pa-main {
-    position: relative;
-    overflow: hidden;
-  }
+  /* The main champion, on the ground like the summary: its art (spotlight), record, build. */
   .vb .pa-art {
-    position: relative;
-    height: 150px;
-    margin-bottom: -44px;
-    overflow: hidden;
+    display: block;
+    height: 132px;
+    --cut: 14px;
+    margin-bottom: 12px;
   }
-  .vb .pa-art img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: 50% 20%;
-    opacity: 0.7;
-    -webkit-mask-image: linear-gradient(180deg, #000 45%, transparent);
-    mask-image: linear-gradient(180deg, #000 45%, transparent);
+  .vb .pa-art > img:first-child {
+    object-position: 50% 22%;
+    opacity: 0.8;
+  }
+  .vb .pa-cap {
+    position: absolute;
+    left: 8px;
+    bottom: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 32px;
+    padding: 0 10px 0 4px;
+    border-radius: var(--r-sm);
+    background: var(--solid-2, var(--s2));
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--t1);
+  }
+  .vb .pa-cap img {
+    width: 24px;
+    height: 24px;
+    border-radius: var(--r-xs);
   }
   .vb .pa-head {
-    position: relative;
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 16px 18px 12px;
+    margin-bottom: 6px;
   }
   .vb .pa-ic {
     flex: none;
@@ -82,15 +92,11 @@
     height: 36px;
     border-radius: var(--r-sm);
   }
-  .vb .pa-main.spotlight .pa-head .h4 {
-    font-size: 20px;
-    font-weight: 650;
-  }
   .vb .pa-figs {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
-    padding: 4px 18px 14px;
+    flex: 1;
   }
   .vb .pa-figs .u {
     margin-left: 2px;
@@ -103,9 +109,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    min-height: 46px;
-    padding: 8px 18px;
-    border-top: 1px solid var(--line);
+    min-height: 40px;
   }
   .vb .pa-its {
     display: flex;
@@ -125,11 +129,10 @@
     width: 20px;
     height: 20px;
   }
-  .vb .pa-more {
-    display: flex;
-    justify-content: center;
-    padding: 12px;
-    border-top: 1px solid var(--line);
+  /* The column's first section starts on the ground without a hairline over it. */
+  .vb .pl-aside > .pl-gs:first-child {
+    padding-top: 0;
+    border-top: 0;
   }
 
   @media (max-width: 1279px) {

@@ -105,33 +105,44 @@ const slug = computed(() => (main.value ? championSlug(championName(main.value))
 </script>
 
 <template>
-  <section v-if="main && build" class="card pa-main" :class="mode">
-    <div v-if="mode === 'spotlight'" class="pa-art">
-      <img :src="championSplash(main)" alt="" loading="lazy" />
+  <!-- On the page ground like the summary beside it: a hairline above, no sheet. -->
+  <section v-if="main && build" class="pl-gs pa-main" :class="mode">
+    <div class="pl-sec-h">
+      <h2 class="h4 ell">
+        {{ mode === 'spotlight' ? 'Main champion' : `${name} on ${championName(main)}` }}
+      </h2>
+      <Link class="more r" :href="`/champions/${slug}`"
+        >{{ championName(main) }}<Icon name="chevr" :size="14"
+      /></Link>
     </div>
+    <Link v-if="mode === 'spotlight'" class="fr pa-art" :href="`/champions/${slug}`"
+      ><img :src="championSplash(main)" alt="" loading="lazy" /><span class="pa-cap"
+        ><img :src="champIcon(main)" alt="" width="24" height="24" />{{ championName(main) }}</span
+      ></Link
+    >
     <div class="pa-head">
-      <img class="pa-ic" :src="champIcon(main)" alt="" width="36" height="36" />
-      <span class="col" style="min-width: 0">
-        <span class="h4 ell">{{
-          mode === 'spotlight' ? championName(main) : `${name} on ${championName(main)}`
-        }}</span>
-        <span class="meta"
-          >Most played, {{ record?.games ?? build.games }}
-          {{ (record?.games ?? build.games) === 1 ? 'game' : 'games' }}</span
+      <img
+        v-if="mode === 'compact'"
+        class="pa-ic"
+        :src="champIcon(main)"
+        alt=""
+        width="36"
+        height="36"
+      />
+      <span v-if="record" class="pa-figs">
+        <span class="col"
+          ><span class="fg-s num"
+            >{{ Math.round((record.wins / Math.max(1, record.games)) * 100)
+            }}<span class="u">%</span></span
+          ><span class="meta num">{{ record.wins }}W {{ record.games - record.wins }}L</span></span
+        >
+        <span class="col"
+          ><span class="fg-s num">{{ record.kda }}</span
+          ><span class="meta num"
+            >KDA, {{ record.games }} {{ record.games === 1 ? 'game' : 'games' }}</span
+          ></span
         >
       </span>
-    </div>
-    <div v-if="mode === 'spotlight' && record" class="pa-figs">
-      <span class="col"
-        ><span class="fg-s num"
-          >{{ Math.round((record.wins / Math.max(1, record.games)) * 100)
-          }}<span class="u">%</span></span
-        ><span class="meta num">{{ record.wins }}W {{ record.games - record.wins }}L</span></span
-      >
-      <span class="col"
-        ><span class="fg-s num">{{ record.kda }}</span
-        ><span class="meta num">KDA</span></span
-      >
     </div>
     <div v-if="build.core.length || build.boots" class="pa-kv">
       <span class="lab">Core</span>
@@ -158,19 +169,9 @@ const slug = computed(() => (main.value ? championSlug(championName(main.value))
           alt="" /><img v-for="s in build.spells" :key="s" :src="assetUrl('spell', s)" alt=""
       /></span>
     </div>
-    <div v-if="mode === 'compact'" class="pa-kv">
-      <span class="lab">Record</span>
-      <span class="h5 num"
-        >{{ record?.wins }}W {{ (record?.games ?? 0) - (record?.wins ?? 0) }}L,
-        {{ record?.kda }} KDA</span
-      >
-    </div>
     <div class="pa-kv">
-      <span class="lab">Last games</span>
+      <span class="lab">Last games on it</span>
       <FormStrip :results="build.form" small />
     </div>
-    <Link class="more pa-more" :href="`/champions/${slug}`"
-      >{{ championName(main) }} page<Icon name="chevr"
-    /></Link>
   </section>
 </template>
