@@ -15,6 +15,7 @@ import SearchBar from './SearchBar.vue'
 import NavMenu from './header/NavMenu.vue'
 import PatchMenu from './header/PatchMenu.vue'
 import ThemeToggle from './header/ThemeToggle.vue'
+import DiscordMark from './header/DiscordMark.vue'
 import { DISCORD_URL } from '../lib/links.js'
 import SubArt from './header/SubArt.vue'
 import { SUB_ART, type SubLink } from './header/sub_art.js'
@@ -453,7 +454,7 @@ function skip(event: MouseEvent) {
               rel="noreferrer"
               data-track="header_discord"
               aria-label="Discord"
-              ><Icon name="discord" :size="17"
+              ><DiscordMark :size="19"
             /></a>
             <ThemeToggle />
             <button

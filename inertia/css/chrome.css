@@ -212,6 +212,11 @@
 .vb .hx-end.alone {
   margin-left: auto;
 }
+/* Discord in its own mark and blurple; its cut-out eyes take the button's colour. */
+.vb .hx-discord .dc-mark {
+  display: block;
+  flex: none;
+}
 /* The theme, one click away; what it switches to in a tooltip under it. */
 .vb .hx-theme {
   position: relative;
