@@ -1,8 +1,9 @@
 /* ──────────────────────────────────────────────────────────────
    The profile (pages/summoner.vue, components/profile): the live
-   layout, a rail at the left (who, the sections, the rank, then the
-   summary: LP, champions, roles, mates, activity), the same on every
-   section, with the section at the right. Sheets,
+   layout, a rail at the left (who, the sections, a card per ranked
+   queue with its LP, then the summary on the ground: champions,
+   roles, mates, activity), the same on every section, with the
+   section at the right. Sheets,
    buttons, wells and rows take their materials from depth.css;
    this file lays them out. Components layer, scoped under `.vb`.
    ────────────────────────────────────────────────────────────── */
@@ -433,22 +434,6 @@
   .vb .pl-heat i.h4,
   .vb .pl-heat-k i.h4 {
     background: var(--v300);
-  }
-  [data-theme='light'] .vb .pl-heat i.h1,
-  [data-theme='light'] .vb .pl-heat-k i.h1 {
-    background: var(--v100);
-  }
-  [data-theme='light'] .vb .pl-heat i.h2,
-  [data-theme='light'] .vb .pl-heat-k i.h2 {
-    background: var(--v200);
-  }
-  [data-theme='light'] .vb .pl-heat i.h3,
-  [data-theme='light'] .vb .pl-heat-k i.h3 {
-    background: var(--v400);
-  }
-  [data-theme='light'] .vb .pl-heat i.h4,
-  [data-theme='light'] .vb .pl-heat-k i.h4 {
-    background: var(--v600);
   }
   .vb .pl-heat-f {
     justify-content: space-between;
