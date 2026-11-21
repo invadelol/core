@@ -922,22 +922,19 @@ export class HomeService {
       capped(this.section('best', TTL.best, () => this.bestGames())),
       capped(esportsService.recentResults(1)),
     ])
-    // The patch's changes, each champion with its place in its main role before and after.
-    const notes = picks
-      ? await capped(
-          patchNotesService.get(patchName(picks.patch)).then(async (found) => {
-            const stats = found
-              ? await capped(
-                  patchNotesService.stats(
-                    picks.patch,
-                    found.champions.map((c) => c.id)
-                  )
-                )
-              : null
-            return patchNotesOf(found, stats?.byChampion)
-          })
-        )
-      : null
+    // The patch's changes, each champion with its place in its main role before and after: the
+    // places wait apart from the notes, so slow figures only leave the places out, not the card.
+    const found = picks ? await capped(patchNotesService.get(patchName(picks.patch))) : null
+    const stats =
+      picks && found
+        ? await capped(
+            patchNotesService.stats(
+              picks.patch,
+              found.champions.map((c) => c.id)
+            )
+          )
+        : null
+    const notes = patchNotesOf(found, stats?.byChampion)
     return {
       picks: picks && {
         patch: picks.patch,
