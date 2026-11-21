@@ -1,0 +1,29 @@
+/* ──────────────────────────────────────────────────────────────
+   Touch: on a touch screen every shared control is at least 40 px
+   to tap. Filters, selects and buttons grow to 40; controls drawn as
+   words (a "more" link, a breadcrumb, a switch, the logo) keep their look and
+   only reach further, past their text. Components layer, scoped
+   under `.vb`; a page's own small controls do the same in its sheet.
+   ────────────────────────────────────────────────────────────── */
+@media (pointer: coarse) {
+  .vb .seg > * {
+    height: 40px;
+  }
+  .vb .sel,
+  .vb .btn,
+  .vb .btn.sm,
+  .vb .chip2 {
+    height: 40px;
+  }
+  .vb .btn.ico,
+  .vb .btn.ico.sm {
+    width: 40px;
+  }
+  .vb .btn {
+    min-width: 40px;
+  }
+  .vb :is(.more, .crumbs a, .chk, .brand) {
+    padding-block: 11px;
+    margin-block: -11px;
+  }
+}

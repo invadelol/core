@@ -15,6 +15,8 @@
 @import './depth.css' layer(components);
 /* How the site answers the pointer: one easing, quiet hovers, plain fades. */
 @import './motion.css' layer(components);
+/* On a touch screen every shared control is at least 40 px to tap. */
+@import './touch.css' layer(components);
 
 /* Every class used by the app lives under inertia/. */
 @source '../';

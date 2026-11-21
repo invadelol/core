@@ -517,6 +517,14 @@ const capacity = computed(() => (chips.value.length > 5 ? MAX_PLAYERS : 5))
   border-radius: 5px;
   color: var(--t3);
 }
+/* On a touch screen the chip's cross reaches 40 px around its glyph, the chip keeping its size. */
+@media (pointer: coarse) {
+  .ms-chip button {
+    width: 40px;
+    height: 40px;
+    margin: -9px -9px -9px -7px;
+  }
+}
 .ms-chip button:hover {
   background: var(--s4);
   color: var(--t1);

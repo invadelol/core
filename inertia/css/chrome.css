@@ -1054,6 +1054,30 @@ html.hx-locked {
   .vb .ft-meta {
     align-items: flex-start;
   }
+  /* Each link a full row to tap, the columns keeping their rhythm. */
+  .vb .ft-col {
+    gap: 0;
+  }
+  .vb .ft-col a {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+  }
+  .vb .ft-h {
+    margin-bottom: 2px;
+  }
+  .vb .ft-legal {
+    gap: 0 20px;
+  }
+  .vb .ft-legal > * {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+  }
+  .vb .ft .theme-btn {
+    width: 40px;
+    height: 40px;
+  }
 }
 
 /* ── The menus' pictures (components/header/MenuArt.vue) ────────
