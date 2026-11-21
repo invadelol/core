@@ -5,7 +5,8 @@ import type { IconName } from '../../lib/icons.js'
 
 /**
  * A page section's head, outside the cards: a violet line icon, the title (h2, 20 px), a grey
- * note and a "more" link at the far end. Controls go in the default slot, before the link.
+ * note (`meta`, or the `meta` slot for one with a rank crest in it) and a "more" link at the far
+ * end. Controls go in the default slot, before the link.
  */
 withDefaults(
   defineProps<{
@@ -25,7 +26,9 @@ withDefaults(
   <div class="sec-h">
     <Icon v-if="icon" :name="icon" :size="18" />
     <component :is="as" :id="id" class="h2">{{ title }}</component>
-    <span v-if="meta" class="meta">{{ meta }}</span>
+    <span v-if="meta || $slots.meta" class="meta"
+      ><slot name="meta">{{ meta }}</slot></span
+    >
     <slot />
     <MoreLink v-if="more" :href="more.href" :label="more.label" />
   </div>

@@ -9,6 +9,7 @@ import CardHead from '../../components/ui/CardHead.vue'
 import WinRate from '../../components/ui/WinRate.vue'
 import Icon from '../../components/ui/Icon.vue'
 import TierChip from '../../components/ui/TierChip.vue'
+import RankTag from '../../components/ui/RankTag.vue'
 import Skeleton from '../../components/ui/Skeleton.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import SortHead from '../../components/ui/SortHead.vue'
@@ -17,7 +18,6 @@ import { useSort } from '../../components/ui/sort.js'
 import StatFilters from '../../components/champions/StatFilters.vue'
 import { nameOf } from '../../lib/assets.js'
 import {
-  RANK_GROUPS,
   abilityUrl,
   champIconUrl,
   itemUrl,
@@ -347,7 +347,6 @@ const lengthChart = computed(() => {
 })
 
 /* ── Lower sections ─────────────────────────────────────────── */
-const rankLabel = (g: string) => RANK_GROUPS.find((r) => r.value === g)?.label ?? g
 const dmg = computed(() => details.value?.damageSplit ?? null)
 const ago = (ms: number) => {
   const days = Math.floor((Date.now() - ms) / 86_400_000)
@@ -703,7 +702,7 @@ const ago = (ms: number) => {
                 <SortHead :sorter="rankSort" col="tier" label="Tier" class="n hm" />
               </div>
               <div v-for="r in rankSort.rows" :key="r.group" class="tbl-r">
-                <span class="h5">{{ rankLabel(r.group) }}</span>
+                <span class="h5"><RankTag :bracket="r.group" /></span>
                 <span class="n num">{{ thousands(r.games) }}</span>
                 <span class="n num">{{ r.win === null ? '–' : `${p1(r.win)}%` }}</span>
                 <span class="n num hm">{{ p1(r.pick) }}%</span>

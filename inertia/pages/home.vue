@@ -15,6 +15,7 @@ import Glyph from '../components/ui/Glyph.vue'
 import Icon from '../components/ui/Icon.vue'
 import SectionHead from '../components/ui/SectionHead.vue'
 import CardHead from '../components/ui/CardHead.vue'
+import RankTag from '../components/ui/RankTag.vue'
 import { championHref, positionOf } from '../components/header/sections.js'
 import { champIcon } from '../lib/assets.js'
 import { headlineGame, homeCards, patchMoves } from '../lib/home_cards.js'
@@ -255,9 +256,12 @@ const topBully = (rows: { value: number }[]) => rows[0]?.value || 1
           id="hm-picks"
           title="Best picks"
           icon="trophy"
-          :meta="patch ? `Patch ${patch}, Emerald+` : 'Emerald+'"
           :more="{ label: 'Tier list', href: '/tier-list' }"
-        />
+        >
+          <template #meta
+            ><template v-if="patch">Patch {{ patch }}, </template><RankTag bracket="emerald_plus"
+          /></template>
+        </SectionHead>
         <BestPicks :picks="picks" :splus="splus" />
       </section>
 

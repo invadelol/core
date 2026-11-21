@@ -8,6 +8,7 @@ import Select from '../components/ui/Select.vue'
 import EmptyState from '../components/ui/EmptyState.vue'
 import Frame from '../components/ui/Frame.vue'
 import TierChip from '../components/ui/TierChip.vue'
+import RankTag from '../components/ui/RankTag.vue'
 import WinRate from '../components/ui/WinRate.vue'
 import ChangeMark from '../components/patch/ChangeMark.vue'
 import ChangeTable from '../components/patch/ChangeTable.vue'
@@ -59,14 +60,6 @@ const props = defineProps<{
   skins?: PatchSkins | null
 }>()
 
-const RANK: Record<string, string> = {
-  emerald_plus: 'Emerald+',
-  platinum_plus: 'Platinum+',
-  diamond_plus: 'Diamond+',
-  master_plus: 'Master+',
-  all: 'all ranks',
-}
-const rank = computed(() => RANK[props.stats?.bracket ?? 'emerald_plus'] ?? 'Emerald+')
 const counts = computed(() => (props.notes ? noteCounts(props.notes) : null))
 const sub = computed(() => patchSubRow(props.patches, `/patch/${props.current}`))
 const patchModel = computed({
@@ -550,7 +543,8 @@ onBeforeUnmount(() => observer?.disconnect())
                 <div v-if="stat(champion.id)" class="msh">
                   <span class="ms-t"
                     >Since the patch<span class="meta"
-                      >{{ rank }}, {{ positionOf(stat(champion.id)!.position).label }}</span
+                      ><RankTag :bracket="stats?.bracket" />,
+                      {{ positionOf(stat(champion.id)!.position).label }}</span
                     ></span
                   >
                   <div class="msh-g">
