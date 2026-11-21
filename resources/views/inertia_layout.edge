@@ -112,6 +112,15 @@
       <script src="{{ page.props.analytics.scriptUrl }}" defer async></script>
     @endif
 
+    {{--
+      Which stylesheets each page needs (from the build's manifest; none in development): the
+      browser switches off, on every visit, those of pages not shown (inertia/lib/page_styles.ts).
+    --}}
+    @let(styles = pageStyles())
+    @if(styles)
+      <script>window.__pageStyles = {{{ styles }}}</script>
+    @end
+
     @vite(['inertia/app/app.ts', `inertia/pages/${page.component}.vue`])
     @inertiaHead()
     @stack('dumper')
