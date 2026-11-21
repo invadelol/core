@@ -365,9 +365,14 @@
     .vb .pp-strip .pp-rk .rk-emb {
       display: none;
     }
-    .vb .pp-sq {
-      grid-template-columns: 40px minmax(0, 1fr) 88px auto;
+    /* A phone: the champion, the result and the KDA; the other pros' faces wait in the game. */
+    .vb .pp-sq,
+    .vb .pp-sq.it {
+      grid-template-columns: 40px minmax(0, 1fr) 96px;
       padding: 10px 12px 10px 16px;
+    }
+    .vb .pp-sq > .faces2 {
+      display: none;
     }
     .vb .pp-sq > :nth-child(4) {
       display: none;
