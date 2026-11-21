@@ -10,10 +10,12 @@ import { resolvePageComponent } from '@adonisjs/inertia/helpers'
 import { installIconFallback } from '../lib/icon_fallback.js'
 import { installTouchTitles } from '../lib/touch_titles.js'
 import { enterPageStyles, showPageStyles, startPageStyles } from '../lib/page_styles.js'
+import { installVisitErrors } from '../lib/visit_errors.js'
 import { invadeUi } from './ui.js'
 
 installIconFallback()
 installTouchTitles()
+installVisitErrors()
 
 const appName = import.meta.env.VITE_APP_NAME || 'invade.lol'
 
