@@ -1,0 +1,234 @@
+/* The home's desktop card, three readings behind `?v=` (home.vue). */
+@layer components {
+  .vb .dk-h {
+    font-size: 32px;
+    line-height: 1.12;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    color: var(--t1);
+    text-wrap: balance;
+  }
+  .vb .dk-dim {
+    color: var(--t3);
+  }
+  .vb .dk-p {
+    max-width: 440px;
+    margin-top: 14px;
+    font-size: 15.5px;
+    line-height: 1.55;
+    color: var(--t3);
+  }
+  .vb .dk-p b {
+    font-weight: 600;
+    color: var(--t1);
+  }
+  .vb .promo .dl-app {
+    gap: 12px;
+  }
+
+  /* A: the text narrow, the window large, out of the card's right and bottom edges. */
+  .vb .promo.dk-a {
+    grid-template-columns: 380px minmax(0, 1fr);
+    gap: 44px;
+    padding: 48px 0 0 48px;
+  }
+  .vb .dk-a .dk-t {
+    align-self: center;
+    padding-bottom: 48px;
+  }
+  .vb .dk-t .dk-h {
+    margin-top: 20px;
+  }
+  .vb .dk-t .dl-app {
+    margin-top: 24px;
+  }
+  .vb .promo.dk-a .shot {
+    height: 500px;
+  }
+  /* Read at the app's own size: the window larger than its frame, cut at the right. */
+  .vb .promo.dk-a .shot img {
+    width: 136%;
+    max-width: none;
+    height: auto;
+  }
+
+  /* B: one line of hook and buttons, the window across the card under it. */
+  .vb .promo.dk-b {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 40px 40px 0;
+  }
+  .vb .dk-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 32px;
+  }
+  .vb .dk-b .dk-h {
+    flex: 1;
+    font-size: 38px;
+  }
+  .vb .dk-cta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+    flex: none;
+  }
+  .vb .dk-b .dk-p {
+    max-width: 620px;
+    margin: 10px 0 28px;
+  }
+  .vb .promo.dk-b .shot {
+    align-self: stretch;
+    height: 520px;
+    border-radius: 12px 12px 0 0;
+  }
+  .vb .promo.dk-b .shot img {
+    object-position: 50% 0;
+  }
+
+  /* C: League itself, with Invade's overlays where they sit in a game. */
+  .vb .promo.dk-c {
+    grid-template-columns: 400px minmax(0, 1fr);
+    gap: 40px;
+    padding: 0 0 0 48px;
+    align-items: stretch;
+  }
+  .vb .dk-c .dk-t {
+    align-self: center;
+    padding: 48px 0;
+  }
+  .vb .dk-stage {
+    position: relative;
+    min-height: 460px;
+    overflow: hidden;
+    border-radius: 0 16px 16px 0;
+  }
+  .vb .dk-game {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 40% 50%;
+  }
+  /* Each capture holds its overlay on black: the frame shows the overlay alone. */
+  .vb .dk-ov {
+    position: absolute;
+    overflow: hidden;
+    border-radius: var(--r-md);
+    box-shadow: 0 18px 40px rgb(4 3 10 / 0.55);
+  }
+  .vb .dk-ov > img {
+    position: absolute;
+    max-width: none;
+  }
+  .vb .dk-ov.o1 {
+    aspect-ratio: 576 / 108;
+  }
+  .vb .dk-ov.o1 > img {
+    width: 119.44%;
+    left: -9.72%;
+    top: -24.07%;
+  }
+  .vb .dk-ov.o2 {
+    aspect-ratio: 424 / 228;
+  }
+  .vb .dk-ov.o2 > img {
+    width: 126.42%;
+    left: -13.44%;
+    top: -25%;
+  }
+  .vb .dk-ov.o3 {
+    aspect-ratio: 384 / 346;
+  }
+  .vb .dk-ov.o3 > img {
+    width: 129.17%;
+    left: -9.9%;
+    top: -16.18%;
+  }
+  .vb .dk-ov.o1 {
+    top: 24px;
+    left: 50%;
+    width: 300px;
+    transform: translateX(-50%);
+  }
+  .vb .dk-ov.o2 {
+    right: 24px;
+    bottom: 24px;
+    width: 250px;
+  }
+  .vb .dk-ov.o3 {
+    top: 96px;
+    right: 24px;
+    width: 196px;
+  }
+
+  @media (max-width: 1023px) {
+    .vb .promo.dk-a,
+    .vb .promo.dk-c {
+      grid-template-columns: minmax(0, 1fr);
+      padding: 36px 28px 0;
+      gap: 28px;
+    }
+    .vb .dk-a .dk-t,
+    .vb .dk-c .dk-t {
+      padding: 0;
+    }
+    .vb .promo.dk-a .shot {
+      height: 340px;
+      border-radius: 12px 12px 0 0;
+    }
+    .vb .promo.dk-a .shot img {
+      width: 150%;
+    }
+    .vb .dk-stage {
+      min-height: 340px;
+      margin: 0 -28px;
+      border-radius: 0 0 16px 16px;
+    }
+    .vb .dk-top {
+      flex-direction: column;
+      gap: 18px;
+    }
+    .vb .dk-cta {
+      align-items: flex-start;
+    }
+    .vb .promo.dk-b .shot {
+      height: 320px;
+    }
+  }
+  @media (max-width: 767px) {
+    .vb .dk-h,
+    .vb .dk-b .dk-h {
+      font-size: 26px;
+    }
+    .vb .promo.dk-a,
+    .vb .promo.dk-c,
+    .vb .promo.dk-b {
+      padding: 26px 20px 0;
+    }
+    .vb .promo.dk-a .shot,
+    .vb .promo.dk-b .shot {
+      height: 220px;
+    }
+    .vb .dk-stage {
+      min-height: 260px;
+      margin: 0 -20px;
+    }
+    .vb .dk-ov.o1 {
+      top: 14px;
+      width: 200px;
+    }
+    .vb .dk-ov.o2 {
+      right: 12px;
+      bottom: 12px;
+      width: 170px;
+    }
+    .vb .dk-ov.o3 {
+      display: none;
+    }
+  }
+}
