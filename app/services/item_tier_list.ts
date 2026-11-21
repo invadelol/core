@@ -218,6 +218,8 @@ export interface ItemTierRow {
   classes: ChampionClass[]
   /** Change of its win rate since the patch before (0.012 is 1.2 points); null without enough games. */
   delta: number | null
+  /** Its tier on the patch before, ranked the same way (same role and class); null when it was not ranked then. */
+  tierBefore: number | null
 }
 
 /** What a class's champions build in the role, in order (the "build" card). */
@@ -272,25 +274,21 @@ function perItem(counts: ItemCounts, position: Position | null) {
 }
 
 /**
- * The view of a role (`null`: every role) and an item class (`null`: every item): its items
- * ranked against each other, what the class's champions build in order, and the components'
- * order. `previous` is the patch before's counts (same filter), for the change of each item.
+ * The items of a role (`null`: every role) and an item class (`null`: every item) in `counts`,
+ * each with its tier among them: the role's games, the gate an item passes to be listed, every
+ * item's counts, and the listed items with their tier.
  */
-export function itemView(
+function rankItems(
   counts: ItemCounts,
-  previous: ItemCounts | null,
   position: Position | null,
   cls: ChampionClass | null,
   classes: Map<number, ChampionClass>,
-  kinds: Pick<ItemKinds, 'legendary'>
-): ItemView {
+  legendary: Set<number>
+) {
   const roles = roleCounts(counts, position)
   const games = roles.reduce((n, r) => n + r.champions.reduce((m, c) => m + c[1], 0), 0)
   const minGames = gate(games, ITEM_SHARE, MIN_ITEM_GAMES)
-  const legendary = new Set(kinds.legendary)
   const now = perItem(counts, position)
-  const was = previous ? perItem(previous, position) : new Map()
-
   const all = [...now]
     .filter(([item, i]) => legendary.has(item) && i.games >= minGames)
     .map(([item, i]) => {
@@ -311,6 +309,32 @@ export function itemView(
     minGames,
     PRIOR_GAMES
   )
+  return { roles, games, minGames, tiers }
+}
+
+/**
+ * The view of a role (`null`: every role) and an item class (`null`: every item): its items
+ * ranked against each other, what the class's champions build in order, and the components'
+ * order. `previous` is the patch before's counts (same filter), for the change of each item's
+ * win rate and tier.
+ */
+export function itemView(
+  counts: ItemCounts,
+  previous: ItemCounts | null,
+  position: Position | null,
+  cls: ChampionClass | null,
+  classes: Map<number, ChampionClass>,
+  kinds: Pick<ItemKinds, 'legendary'>
+): ItemView {
+  const legendary = new Set(kinds.legendary)
+  const { roles, games, minGames, tiers } = rankItems(counts, position, cls, classes, legendary)
+  const was = previous ? perItem(previous, position) : new Map()
+  const tiersBefore = new Map<number, number>()
+  if (previous) {
+    for (const [r, tier] of rankItems(previous, position, cls, classes, legendary).tiers) {
+      tiersBefore.set(r.item, tier)
+    }
+  }
   const rows: ItemTierRow[] = [...tiers].map(([r, tier]) => ({
     item: r.item,
     games: r.i.games,
@@ -322,6 +346,7 @@ export function itemView(
     championCount: r.i.by.size,
     classes: r.classes,
     delta: delta(r.i, was.get(r.item), MIN_DELTA_GAMES),
+    tierBefore: tiersBefore.get(r.item) ?? null,
   }))
   rows.sort((a, b) => (a.tier ?? 9) - (b.tier ?? 9) || b.games - a.games)
 

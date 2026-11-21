@@ -1,4 +1,4 @@
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { afterPaint } from './after_paint.js'
 
 export type ThemeChoice = 'light' | 'dark' | 'system'
@@ -27,9 +27,23 @@ function read(): ThemeChoice {
 /** The browser's own bars (a phone's status bar, Safari's toolbar) in the header's ink. */
 const BAR = { light: '#ffffff', dark: '#08070d' }
 
-/** The package's tokens read `data-theme`: `system` follows the system's preference. */
+function media() {
+  return typeof window !== 'undefined' && window.matchMedia
+    ? window.matchMedia('(prefers-color-scheme: dark)')
+    : null
+}
+
+/**
+ * `data-theme` on <html> only ever says `dark` or `light`: Auto is resolved here, from the
+ * device's preference, and again whenever the device switches. A stylesheet then never needs a
+ * block of its own for Auto (several had none, so Auto on a dark device lost the sheets' and the
+ * search list's backgrounds). The choice itself sits beside it, in `data-theme-choice`.
+ */
 function paint(value: ThemeChoice) {
-  document.documentElement.setAttribute('data-theme', value)
+  const root = document.documentElement
+  const on = value === 'system' ? (media()?.matches ? 'dark' : 'light') : value
+  root.setAttribute('data-theme', on)
+  root.setAttribute('data-theme-choice', value)
   // A chosen theme holds for both of the head's colour-scheme variants; `system` restores them.
   document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((meta) => {
     const scheme = meta.media.includes('dark') ? 'dark' : 'light'
@@ -37,27 +51,22 @@ function paint(value: ThemeChoice) {
   })
 }
 
-export function useTheme() {
-  const media =
-    typeof window !== 'undefined' && window.matchMedia
-      ? window.matchMedia('(prefers-color-scheme: dark)')
-      : null
-
-  function sync() {
-    systemDark.value = Boolean(media?.matches)
-  }
-
-  onMounted(() => {
-    if (!started) {
-      started = true
-      choice.value = read()
-      paint(choice.value)
-    }
-    sync()
-    media?.addEventListener('change', sync)
+/** Once per page load: the stored choice, and the device's switches while it is Auto. */
+function start() {
+  if (started || typeof window === 'undefined') return
+  started = true
+  choice.value = read()
+  paint(choice.value)
+  const query = media()
+  systemDark.value = Boolean(query?.matches)
+  query?.addEventListener('change', (event) => {
+    systemDark.value = event.matches
+    if (choice.value === 'system') paint('system')
   })
+}
 
-  onBeforeUnmount(() => media?.removeEventListener('change', sync))
+export function useTheme() {
+  onMounted(start)
 
   const resolved = computed<'light' | 'dark'>(() =>
     choice.value === 'system' ? (systemDark.value ? 'dark' : 'light') : choice.value

@@ -35,7 +35,7 @@ const width = (d: number) => `${Math.min(50, (Math.abs(d) / scale()) * 50).toFix
 
 <template>
   <article class="card moved">
-    <CardHead :title="title" icon="route" :meta="meta" />
+    <CardHead :title="title" icon="trend" :meta="meta" />
     <span class="lab moved-lab">Climbing</span>
     <component
       :is="m.href ? Link : 'span'"

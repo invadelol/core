@@ -8,12 +8,12 @@ import CardHead from '../../components/ui/CardHead.vue'
 import WinRate from '../../components/ui/WinRate.vue'
 import Icon from '../../components/ui/Icon.vue'
 import TierChip from '../../components/ui/TierChip.vue'
+import RankTag from '../../components/ui/RankTag.vue'
 import Skeleton from '../../components/ui/Skeleton.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import StatFilters from '../../components/champions/StatFilters.vue'
 import { nameOf } from '../../lib/assets.js'
 import {
-  BRACKETS,
   abilityUrl,
   champIconUrl,
   itemUrl,
@@ -78,7 +78,6 @@ const against = computed(() => props.mine?.against ?? null)
 const myWin = computed(() => against.value?.win ?? null)
 const fmt2 = (x: number | null | undefined) => (x === null || x === undefined ? '–' : (x * 100).toFixed(2))
 const fmt1 = (x: number | null | undefined) => (x === null || x === undefined ? '–' : (x * 100).toFixed(1))
-const rankLabel = computed(() => BRACKETS.find((b) => b.value === props.filter?.bracket)?.label ?? '')
 const gap = computed(() =>
   myWin.value !== null && props.expected !== null ? (myWin.value - props.expected) * 100 : null
 )
@@ -161,7 +160,7 @@ const tabs = computed(() => [
           </div>
           <WinRate class="mu-wr" :rate="myWin ?? 0.5" bare :width="260" style="margin-top: 14px" />
           <p class="meta" style="margin-top: 12px">
-            {{ role.label }}, {{ rankLabel }}<template v-if="filter">, patch {{ patchName(filter.patch) }}</template
+            {{ role.label }}<template v-if="filter">, <RankTag :bracket="filter.bracket" />, patch {{ patchName(filter.patch) }}</template
             ><template v-if="against">, {{ thousands(against.games) }} games</template>
           </p>
           <Link class="btn sm" :href="vsHref(opponent.slug, champion.slug)" style="margin-top: 14px"

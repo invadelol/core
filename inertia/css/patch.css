@@ -249,18 +249,19 @@
     background: var(--s1);
     box-shadow: inset 0 0 0 1px var(--line);
   }
-  .vb .lns:has(> .ln:nth-child(6)) {
+  .vb .lns:has(> .lnc:nth-child(6)) {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
   .vb .lns.one {
     grid-template-columns: minmax(0, 1fr);
   }
-  .vb .ln {
+  .vb .lnc {
     padding: 16px 14px 20px;
     border-left: 1px solid var(--line);
     min-width: 0;
+    container-type: inline-size;
   }
-  .vb .ln:first-child {
+  .vb .lnc:first-child {
     border-left: 0;
   }
   .vb .ln-h {
@@ -277,47 +278,60 @@
     font-weight: 700;
     color: var(--t1);
   }
+  /* A crowded lane (4 or more) wraps onto more rows, its card growing with them; in a narrow
+     lane its portraits shrink a step so that three still sit in a row. */
   .vb .ln-g {
+    --pt: 64px;
     display: grid;
-    grid-template-columns: repeat(auto-fill, 64px);
+    grid-template-columns: repeat(auto-fill, var(--pt));
     gap: 16px 10px;
+  }
+  @container (max-width: 211px) {
+    .vb .lnc.many .ln-g {
+      --pt: 50px;
+      column-gap: 6px;
+    }
+    .vb .lnc.many .lnp b {
+      font-size: 12px;
+    }
   }
   .vb .ln-e {
     font-size: 13px;
   }
-  .vb .pt {
+  .vb .lnp {
     display: flex;
     flex-direction: column;
     gap: 7px;
-    width: 64px;
+    width: var(--pt);
+    min-width: 0;
   }
-  .vb .pt-i {
+  .vb .lnp-i {
     position: relative;
     display: block;
   }
-  .vb .pt .fr {
+  .vb .lnp .fr {
     display: block;
-    width: 64px;
-    height: 64px;
+    width: var(--pt);
+    height: var(--pt);
     border-radius: 12px;
     transition: box-shadow var(--m) var(--ease);
   }
-  .vb .pt:hover .fr {
+  .vb .lnp:hover .fr {
     box-shadow: 0 0 0 2px var(--line-3);
   }
-  .vb .pt.on .fr {
+  .vb .lnp.on .fr {
     box-shadow:
       0 0 0 2px var(--s1),
       0 0 0 4px var(--v400);
   }
-  .vb .pt .pn-b {
+  .vb .lnp .pn-b {
     top: -6px;
     right: -6px;
     width: 20px;
     height: 20px;
     box-shadow: 0 0 0 2px var(--s1);
   }
-  .vb .pt b {
+  .vb .lnp b {
     font-size: 12.5px;
     font-weight: 650;
     color: var(--t1);
@@ -325,10 +339,10 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .vb .pt.on b {
+  .vb .lnp.on b {
     color: var(--v100);
   }
-  .vb .pt-k {
+  .vb .lnp-k {
     margin-top: -5px;
     font-size: 11.5px;
     font-weight: 700;
@@ -386,12 +400,12 @@
   }
 
   /* Riot's tables */
-  .vb .ct {
+  .vb .ctb {
     padding: 14px 0 6px;
     border-top: 1px solid var(--line);
     container-type: inline-size;
   }
-  .vb .ct:first-child {
+  .vb .ctb:first-child {
     padding-top: 0;
     border-top: 0;
   }
@@ -458,13 +472,10 @@
   }
   .vb .ct-l {
     display: grid;
-    grid-template-columns: 200px minmax(0, 1fr);
+    grid-template-columns: 160px minmax(0, 1fr);
     align-items: start;
     gap: 16px;
     padding: 9px 0;
-  }
-  .vb .ct-l.tab {
-    grid-template-columns: 200px auto minmax(0, 1fr);
   }
   .vb .ct-lab {
     display: flex;
@@ -498,18 +509,15 @@
     color: var(--nerf);
     background: rgb(var(--nerf-rgb) / 0.14);
   }
-  .vb .ct-t,
-  .vb .ct-x {
+  .vb .ct-tx {
     font-size: 14px;
     line-height: 1.55;
     color: var(--t1);
   }
-  .vb .ct-t .ov,
-  .vb .ct-x .ov {
+  .vb .ct-tx .ov {
     color: var(--t3);
   }
-  .vb .ct-t > .i,
-  .vb .ct-x > .i {
+  .vb .ct-tx > .i {
     display: inline-block;
     margin: 0 8px;
     color: var(--t4);
@@ -525,14 +533,31 @@
   .vb .ct-l.down .nv {
     color: var(--nerf);
   }
+  /* A bracketed ratio never breaks inside itself; AD and AP sit on the text's line, their icon
+     before them as in the game's tooltips. */
+  .vb .pnb .rg {
+    white-space: nowrap;
+  }
+  .vb .pnb .rt {
+    display: inline;
+  }
+  .vb .pnb .rt img {
+    display: inline-block;
+    margin: 0 2px 0 1px;
+    vertical-align: -2px;
+  }
   .vb .ct-g {
     display: grid;
-    grid-template-columns: 52px repeat(var(--n), minmax(0, 64px));
+    grid-template-columns: 44px repeat(var(--n), minmax(0, 56px));
+    justify-content: start;
     column-gap: 4px;
     row-gap: 2px;
   }
+  .vb .ct-g.rs {
+    grid-template-columns: 44px repeat(var(--n), minmax(0, 56px)) auto;
+  }
   .vb .ct-c {
-    height: 26px;
+    min-height: 26px;
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -556,7 +581,7 @@
   .vb .ct-p {
     display: flex;
     align-items: center;
-    height: 26px;
+    min-height: 26px;
     font-size: 11.5px;
     font-weight: 700;
     color: var(--t4);
@@ -565,34 +590,116 @@
   .vb .ct-c.nw {
     color: var(--t2);
   }
-  .vb .ct-c.mv {
+  .vb .ct-c.chg {
     font-weight: 750;
     color: var(--v100);
     background: rgb(var(--v-rgb) / 0.14);
   }
-  .vb .ct-l.up .ct-c.mv {
+  .vb .ct-l.up .ct-c.chg {
     color: var(--buff);
     background: rgb(var(--buff-rgb) / 0.13);
   }
-  .vb .ct-l.down .ct-c.mv {
+  .vb .ct-l.down .ct-c.chg {
     color: var(--nerf);
     background: rgb(var(--nerf-rgb) / 0.13);
   }
-  .vb .ct-l.tab .ct-x {
-    grid-column: 3;
-    margin-top: 22px;
-    padding-left: 14px;
+  /* What follows the ranks: the table's last column, on the row of each patch (said once across
+     both when unchanged); a changed ratio is lit like a changed rank. */
+  .vb .ct-r {
+    grid-column: -2 / -1;
+    display: flex;
+    align-items: center;
+    min-height: 26px;
+    margin-left: 8px;
+    padding: 2px 10px;
+    border-radius: 5px;
     font-size: 13px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--t2);
+    font-variant-numeric: tabular-nums;
+  }
+  .vb .ct-r.od {
+    grid-row: 2;
+    color: var(--t3);
+  }
+  .vb .ct-r.nw {
+    grid-row: 3;
+  }
+  .vb .ct-r.one {
+    grid-row: 2 / span 2;
+  }
+  .vb .ct-r .rt {
+    color: inherit;
+  }
+  .vb .ct-r.chg {
+    color: var(--t1);
+    background: rgb(var(--v-rgb) / 0.14);
+  }
+  .vb .ct-l.up .ct-r.chg {
+    background: rgb(var(--buff-rgb) / 0.13);
+  }
+  .vb .ct-l.down .ct-r.chg {
+    background: rgb(var(--nerf-rgb) / 0.13);
+  }
+  .vb .ct-p.rx {
+    display: none;
   }
   .vb .ct-chips {
-    margin: 0 0 6px 216px;
+    margin: 0 0 6px 176px;
   }
-  /* A narrow column has no room beside the rank table: the rest of the value goes under it. */
-  @container (max-width: 700px) {
-    .vb .ct-l.tab .ct-x {
+  /* A long rest ("(+2 / 2.5 / 3% Target Maximum Health)"), or a column too narrow to hold it
+     beside the ranks, takes rows of its own under the table, each patch's beside its name. */
+  .vb .ct-g.rs.long {
+    grid-template-columns: 44px repeat(var(--n), minmax(0, 56px));
+  }
+  .vb .ct-g.long .ct-c.rh {
+    display: none;
+  }
+  .vb .ct-g.long .ct-r {
+    grid-column: 2 / -1;
+    margin: 2px 0 0;
+    padding: 2px 8px;
+  }
+  .vb .ct-g.long .ct-p.rx {
+    display: flex;
+    grid-column: 1;
+    margin-top: 2px;
+  }
+  .vb .ct-g.long .ct-p.rx.o,
+  .vb .ct-g.long .ct-r.od,
+  .vb .ct-g.long .ct-r.one {
+    grid-row: 4;
+  }
+  .vb .ct-g.long .ct-p.rx.n,
+  .vb .ct-g.long .ct-r.nw {
+    grid-row: 5;
+  }
+  @container (max-width: 739px) {
+    .vb .ct-g.rs {
+      grid-template-columns: 44px repeat(var(--n), minmax(0, 56px));
+    }
+    .vb .ct-c.rh {
+      display: none;
+    }
+    .vb .ct-r {
       grid-column: 2 / -1;
-      margin-top: 0;
-      padding-left: 0;
+      margin: 2px 0 0;
+      padding: 2px 8px;
+    }
+    .vb .ct-p.rx {
+      display: flex;
+      grid-column: 1;
+      margin-top: 2px;
+    }
+    .vb .ct-p.rx.o,
+    .vb .ct-r.od,
+    .vb .ct-r.one {
+      grid-row: 4;
+    }
+    .vb .ct-p.rx.n,
+    .vb .ct-r.nw {
+      grid-row: 5;
     }
   }
 
@@ -983,14 +1090,14 @@
   }
   @media (max-width: 1023px) {
     .vb .lns,
-    .vb .lns:has(> .ln:nth-child(6)) {
+    .vb .lns:has(> .lnc:nth-child(6)) {
       grid-template-columns: minmax(0, 1fr);
     }
-    .vb .ln {
+    .vb .lnc {
       border-left: 0;
       border-top: 1px solid var(--line);
     }
-    .vb .ln:first-child {
+    .vb .lnc:first-child {
       border-top: 0;
     }
     .vb .sg {
@@ -1063,11 +1170,11 @@
       overflow-x: auto;
       scrollbar-width: none;
     }
-    .vb .ln {
+    .vb .lnc {
       padding: 14px 14px 16px;
     }
     .vb .ln-g {
-      grid-template-columns: repeat(4, 64px);
+      grid-template-columns: repeat(4, var(--pt));
       justify-content: space-between;
     }
     .vb .sg {
@@ -1081,12 +1188,8 @@
       grid-template-columns: minmax(0, 1fr);
       gap: 8px;
     }
-    .vb .ct-l.tab .ct-x {
-      grid-column: 1;
-      margin-top: 0;
-      padding-left: 0;
-    }
-    .vb .ct-g {
+    .vb .ct-g,
+    .vb .ct-g.rs {
       grid-template-columns: 40px repeat(var(--n), minmax(0, 1fr));
     }
     .vb .ct-c {

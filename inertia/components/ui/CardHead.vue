@@ -4,8 +4,9 @@ import MoreLink from './MoreLink.vue'
 import type { IconName } from '../../lib/icons.js'
 
 /**
- * A card's head (`.card-h`, inside a `.card`): a violet line icon, the title (16 px), a grey note
- * and a "more" link or the card's own controls (default slot) at the far end.
+ * A card's head (`.card-h`, inside a `.card`): an 18 px icon in its meaning colour (gold, red, else
+ * violet), the title (16 px), a grey note and a "more" link or the card's own controls (default
+ * slot) at the far end.
  */
 withDefaults(
   defineProps<{
@@ -22,7 +23,7 @@ withDefaults(
 
 <template>
   <div class="card-h">
-    <Icon v-if="icon" :name="icon" :size="16" />
+    <Icon v-if="icon" :name="icon" :size="18" tone="auto" />
     <component :is="as" :id="id" class="h3">{{ title }}</component>
     <span v-if="meta" class="meta">{{ meta }}</span>
     <span v-if="$slots.default" class="card-h-end"><slot /></span>

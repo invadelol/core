@@ -199,7 +199,15 @@ test.group('Home | S+ palette and patch notes', () => {
         { id: 1, name: 'A', kind: 'up', blocks: [] },
         { id: 2, name: 'B', kind: 'up', blocks: [] },
         { id: 3, name: 'C', kind: 'down', blocks: [] },
-        { id: 4, name: 'D', kind: 'mix', blocks: [] },
+        {
+          id: 4,
+          name: 'D',
+          kind: 'mix',
+          blocks: [
+            { key: 'base', title: 'Base stats', lines: [] },
+            { key: 'W', title: 'W', lines: [] },
+          ],
+        },
       ],
       items: [],
       aram: null,
@@ -209,7 +217,42 @@ test.group('Home | S+ palette and patch notes', () => {
     })
     assert.equal(notes?.buffs, 2)
     assert.equal(notes?.nerfs, 1)
-    assert.deepEqual(notes?.changes[3], { championId: 4, kind: 'mix' })
+    assert.deepEqual(notes?.changes[3], {
+      championId: 4,
+      kind: 'mix',
+      name: 'D',
+      keys: ['base', 'W'],
+    })
     assert.isNull(patchNotesOf(null))
+  })
+
+  test("adds each changed champion's place in its main role when known", ({ assert }) => {
+    const notes = patchNotesOf(
+      {
+        patch: '26.22',
+        version: '16.22',
+        published: '2026-11-03',
+        source: '',
+        champions: [{ id: 1, name: 'A', kind: 'up', blocks: [] }],
+        items: [],
+        aram: null,
+        skins: [],
+        chromas: [],
+        bugs: [],
+      },
+      {
+        1: {
+          position: 'MIDDLE',
+          win: 0.51,
+          pick: 0.04,
+          games: 900,
+          tier: 2,
+          rank: 12,
+          prevTier: 3,
+          prevRank: 30,
+        },
+      }
+    )
+    assert.deepInclude(notes?.changes[0], { position: 'MIDDLE', rank: 12, prevRank: 30 })
   })
 })

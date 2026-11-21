@@ -5,6 +5,7 @@ import '../../css/tier-lists.css'
 import '../../css/tier-boards.css'
 import SiteLayout from '../../components/SiteLayout.vue'
 import Masthead from '../../components/ui/Masthead.vue'
+import RankTag from '../../components/ui/RankTag.vue'
 import Icon from '../../components/ui/Icon.vue'
 import TierChip from '../../components/ui/TierChip.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
@@ -14,7 +15,7 @@ import RoleSeg from '../../components/champions/RoleSeg.vue'
 import ClassSeg from '../../components/champions/ClassSeg.vue'
 import Computing from '../../components/champions/Computing.vue'
 import RecipeTree, { type RecipeNode } from '../../components/champions/RecipeTree.vue'
-import { BRACKETS, TIERS, champIconUrl, compact, itemUrl, roleOf } from '../../lib/champions.js'
+import { TIERS, champIconUrl, compact, itemUrl, roleOf } from '../../lib/champions.js'
 import { patchName } from '../../lib/patches.js'
 import { ordinal, p1, points, thousands } from '../../lib/tier_lists.js'
 
@@ -32,6 +33,8 @@ interface Row {
   championCount: number
   classes: Cls[]
   delta: number | null
+  /** Its tier on the patch before (same role and class), null when it was not ranked then. */
+  tierBefore: number | null
 }
 interface List {
   computing?: boolean
@@ -91,20 +94,15 @@ const title = computed(() => {
   const text = words.filter(Boolean).join(' ')
   return text.charAt(0).toUpperCase() + text.slice(1)
 })
-const rankText = computed(() => {
-  const b = BRACKETS.find((x) => x.value === props.filter?.bracket)
-  if (!b || b.value === 'all') return 'every rank'
-  return b.label.endsWith('+') ? `${b.label.slice(0, -1)} and above` : b.label
-})
 const ready = computed(() => (props.list && !props.list.computing ? props.list : null))
-const metaLine = computed(() => {
-  if (!props.filter) return 'No ranked games stored yet'
+/** What follows the rank filter in the masthead's line ("Patch 26.22, Emerald+, …"). */
+const metaTail = computed(() => {
   const n = ready.value?.rows.length
   const what = [props.class ? CLASS_LABEL[props.class].toLowerCase() : null, 'items']
     .filter(Boolean)
     .join(' ')
   const where = roleWord.value ? `in ${roleWord.value} builds` : 'in every role'
-  return `Patch ${patchName(props.filter.patch)}, ${rankText.value}${n !== undefined ? `, ${n} ${what} ${where}` : ''}`
+  return n !== undefined ? `, ${n} ${what} ${where}` : ''
 })
 
 const nameOf = (id: number) => ready.value?.details[id]?.name ?? ready.value?.names[id] ?? ''
@@ -176,6 +174,25 @@ const order = computed(() => {
   return o && o.components.length > 1 ? o : undefined
 })
 const mainSlot = (r: Row) => r.slots.indexOf(Math.max(...r.slots))
+
+/** How an item's tier moved since the patch before; null without that patch to compare. */
+function moveOf(r: Row) {
+  const before = ready.value?.previousPatch
+  if (!before || r.tier === null) return null
+  const patch = patchName(before)
+  if (r.tierBefore === null) return { kind: 'new', text: `Not ranked on ${patch}` }
+  if (r.tierBefore === r.tier) return { kind: 'eq', text: `Same tier as on ${patch}` }
+  const up = r.tier < r.tierBefore
+  return {
+    kind: up ? 'up' : 'dn',
+    text: `${up ? 'Up' : 'Down'} from ${TIERS[r.tierBefore]} since ${patch}`,
+  }
+}
+/** The tiles mark only the items that changed tier. */
+const moved = (r: Row) => {
+  const m = moveOf(r)
+  return m && (m.kind === 'up' || m.kind === 'dn') ? m : null
+}
 const classLabel = (r: Row) => (r.classes[0] ? CLASS_LABEL[r.classes[0]] : null)
 
 /** The game's stat icons (`/cdn/stat/<name>`), by the stat's words; others get a small diamond. */
@@ -200,8 +217,13 @@ const statIcon = (stat: string) => STAT_ICON.find(([re]) => re.test(stat.trim())
       <Masthead
         :title="title"
         :crumbs="[{ label: 'Tier list', href: '/tier-list' }, { label: 'Items' }]"
-        :meta="metaLine"
+        meta="No ranked games stored yet"
       >
+        <template v-if="filter" #meta
+          >Patch {{ patchName(filter.patch) }}, <RankTag :bracket="filter.bracket" />{{
+            metaTail
+          }}</template
+        >
         <template #end>
           <StatFilters :filter="filter" :patches="patches" />
         </template>
@@ -246,17 +268,27 @@ const statIcon = (stat: string) => STAT_ICON.find(([re]) => re.test(stat.trim())
                     class="ib-t"
                     :class="{ on: open?.item === r.item }"
                     :aria-pressed="open?.item === r.item"
-                    :title="nameOf(r.item)"
+                    :title="
+                      moved(r)
+                        ? `${nameOf(r.item)}, ${moved(r)!.text.toLowerCase()}`
+                        : nameOf(r.item)
+                    "
                     @click="pick(r.item)"
                   >
-                    <img
-                      class="tb-ic"
-                      :src="itemUrl(r.item)"
-                      alt=""
-                      width="48"
-                      height="48"
-                      loading="lazy"
-                    />
+                    <span class="ib-ic"
+                      ><img
+                        class="tb-ic"
+                        :src="itemUrl(r.item)"
+                        alt=""
+                        width="48"
+                        height="48"
+                        loading="lazy"
+                      /><i v-if="moved(r)" class="ib-mv" :class="moved(r)!.kind"
+                        ><Icon name="arrow" :size="12" :stroke-width="2" /><span class="sr-only">{{
+                          moved(r)!.text
+                        }}</span></i
+                      ></span
+                    >
                     <span class="n">{{ nameOf(r.item) }}</span>
                     <span class="wr">{{ p1(r.win) }}%</span>
                   </button>
@@ -290,6 +322,13 @@ const statIcon = (stat: string) => STAT_ICON.find(([re]) => re.test(stat.trim())
                     >
                     <span class="gd">{{ thousands(detail.gold) }} gold</span>
                   </span>
+                  <span v-if="moveOf(open)" class="ip-mv" :class="moveOf(open)!.kind"
+                    ><Icon
+                      v-if="moveOf(open)!.kind === 'up' || moveOf(open)!.kind === 'dn'"
+                      name="arrow"
+                      :size="14"
+                    />{{ moveOf(open)!.text }}</span
+                  >
                 </div>
                 <button type="button" class="ip-x" aria-label="Close" @click="sheet = false">
                   <Icon name="x" />

@@ -57,14 +57,14 @@ const gone = (event: Event) => ((event.target as HTMLImageElement).style.visibil
       decoding="async"
       @error="gone"
   /></span>
-  <span v-else-if="crest" class="sri ct em" :style="{ background: crest }" aria-hidden="true" />
+  <span v-else-if="crest" class="sri sri-ct em" :style="{ background: crest }" aria-hidden="true" />
   <span
     v-else
     class="sri"
     :class="{
-      ct: art.kind === 'logo' || art.kind === 'team',
-      o: art.kind === 'pro' || art.kind === 'round',
-      rd: art.kind === 'round',
+      'sri-ct': art.kind === 'logo' || art.kind === 'team',
+      'o': art.kind === 'pro' || art.kind === 'round',
+      'rd': art.kind === 'round',
     }"
     aria-hidden="true"
     ><img v-if="src" :src="src" alt="" width="22" height="22" decoding="async" @error="gone"

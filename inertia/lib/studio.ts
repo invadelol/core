@@ -329,11 +329,11 @@ export type CategoryKey =
 
 export const CATEGORIES: { key: CategoryKey; label: string; icon: IconName }[] = [
   { key: 'results', label: 'Results', icon: 'trophy' },
-  { key: 'combat', label: 'Combat', icon: 'swords' },
-  { key: 'damage', label: 'Damage', icon: 'spark' },
-  { key: 'laning', label: 'Laning and farm', icon: 'target' },
-  { key: 'objectives', label: 'Objectives', icon: 'flag' },
-  { key: 'vision', label: 'Vision', icon: 'eye' },
+  { key: 'combat', label: 'Combat', icon: 'riotKda' },
+  { key: 'damage', label: 'Damage', icon: 'riotDamage' },
+  { key: 'laning', label: 'Laning and farm', icon: 'riotCs' },
+  { key: 'objectives', label: 'Objectives', icon: 'riotTower' },
+  { key: 'vision', label: 'Vision', icon: 'riotVision' },
   { key: 'length', label: 'Game length', icon: 'clock' },
   { key: 'pings', label: 'Pings', icon: 'chat' },
   { key: 'spells', label: 'Summoner spells', icon: 'flame' },

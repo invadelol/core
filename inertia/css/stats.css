@@ -1,8 +1,7 @@
 /* ──────────────────────────────────────────────────────────────
    The stats studio: the role filter and the champion search
    under the masthead; the hub's tiles (one per category, under
-   the art of the champion leading its first statistic, `.fr` of
-   facet.css); a statistic's page with the categories as tabs,
+   League's own objects for what it counts, `.fr` of facet.css); a statistic's page with the categories as tabs,
    the category's statistics as a segmented row, and its list
    (`.tbl`, ui.css: one violet bar per row, `.bar` of facet.css).
    ────────────────────────────────────────────────────────────── */
@@ -38,8 +37,31 @@
   height: 128px;
   --cut: 14px;
 }
-.vb .st-art img {
-  object-position: 50% 22%;
+/* The cover: the category's game objects side by side in the well, Riot's art at its own size. */
+.vb .st-objs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  height: 100%;
+}
+.vb .st-art .st-o {
+  flex: none;
+  object-fit: contain;
+}
+.vb .st-art .st-o-sq {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--r2);
+  box-shadow: 0 0 0 1px var(--line-2);
+}
+.vb .st-art .st-o-glyph {
+  width: 72px;
+  height: 72px;
+}
+.vb .st-art .st-o-ping {
+  width: 44px;
+  height: 44px;
 }
 .vb .st-tb {
   padding: 16px 12px 8px;

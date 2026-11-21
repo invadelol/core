@@ -13,6 +13,7 @@ import ProPic from '../../components/pros/ProPic.vue'
 import { leagueLogo } from '../../lib/board.js'
 import { useTheme } from '../../lib/theme.js'
 import { n, signedN } from '../../lib/ladders.js'
+import { lpText } from '../../lib/esports_landing.js'
 import { isLive, matchList, stageLine, teamLabel, type ProMatch } from '../../lib/pro_matches.js'
 import '../../css/esports.css'
 
@@ -186,7 +187,7 @@ const columns = computed(() => [
                 />
                 <span class="h5">{{ t.name }}</span>
                 <span class="meta" style="margin-top: -4px">{{
-                  t.lp === null ? `${t.players} players` : `${n(t.lp)} LP`
+                  t.lp === null ? `${t.players} players` : `${lpText(t.lp)} LP`
                 }}</span>
               </Link>
             </div>
@@ -245,7 +246,7 @@ const columns = computed(() => [
                 style="width: 22px; height: 22px; object-fit: contain"
               />
               <span class="h5 grow">{{ t.name }}</span>
-              <span class="fg-xs num">{{ t.lp === null ? '–' : n(t.lp) }}</span>
+              <span class="fg-xs num">{{ t.lp === null ? '–' : lpText(t.lp) }}</span>
             </Link>
           </div>
         </div>

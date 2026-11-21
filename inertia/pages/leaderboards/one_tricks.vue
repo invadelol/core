@@ -8,6 +8,7 @@ import Frame from '../../components/ui/Frame.vue'
 import Select from '../../components/ui/Select.vue'
 import RankEmblem from '../../components/ui/RankEmblem.vue'
 import TierChip from '../../components/ui/TierChip.vue'
+import RankTag from '../../components/ui/RankTag.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import SortHead from '../../components/ui/SortHead.vue'
 import { linkSort, useSort, type SortDir } from '../../components/ui/sort.js'
@@ -339,8 +340,8 @@ const updated = computed(() => since(props.updatedAt))
                   <span v-if="selected.stat" class="col"
                     ><span class="fg-s"
                       >{{ (selected.stat.win * 100).toFixed(1) }}<span class="u">%</span></span
-                    ><span class="meta">Win rate, Emerald+</span></span
-                  >
+                    ><span class="meta">Win rate, <RankTag bracket="emerald_plus" /></span
+                  ></span>
                   <span v-if="selected.stat" class="col"
                     ><span class="fg-s"
                       >{{ (selected.stat.pick * 100).toFixed(1) }}<span class="u">%</span></span

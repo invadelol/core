@@ -197,7 +197,7 @@
   color: var(--v100);
 }
 
-/* The end of the bar: the app, the account corner, the phone's buttons. On the right edge even
+/* The end of the bar: the app, Discord, the theme, the phone's buttons. On the right edge even
    when the page holds the search itself (the home), the field no longer pushing them there. */
 .vb .hx-end {
   display: flex;
@@ -208,70 +208,42 @@
 .vb .hx-search + .hx-end {
   margin-left: 4px;
 }
-.vb .hx-end .hx-me {
-  margin-left: 0;
-}
 /* No search in the bar (the home, where the page is the search): the end keeps to the right. */
 .vb .hx-end.alone {
   margin-left: auto;
 }
-/* The settings corner: a poro in a rounded frame, lit violet when its menu is open. */
-.vb .hx-end .hx-me {
-  padding: 0;
-  height: auto;
-  margin-left: 0;
-  border-radius: 10px;
+/* The site's stage beside the wordmark (lib/site_stage.ts), set like the patch menu's "New". */
+.vb .hx-stage {
+  align-self: center;
+  height: 20px;
+  margin-left: 8px;
+  padding: 0 7px;
+  border-radius: 6px;
+  background: var(--v900);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 20px;
+  letter-spacing: 0.01em;
+  color: var(--v100);
 }
-.vb .hx-me:hover,
-.vb .hx-me.open {
-  background: none;
-}
-.vb .hx-me .av {
+/* Discord in its own mark and blurple; its cut-out eyes take the button's colour. */
+.vb .hx-discord .dc-mark {
   display: block;
-  width: 32px;
-  height: 32px;
-  border-radius: 9px;
-  box-shadow:
-    0 0 0 1px var(--line-2),
-    0 0 0 3px transparent;
-  transition: box-shadow var(--m) var(--ease);
+  flex: none;
 }
-.vb .hx-me:hover .av {
-  box-shadow:
-    0 0 0 1px var(--line-3),
-    0 0 0 3px transparent;
+/* The theme, one click away; what it switches to in a tooltip under it. */
+.vb .hx-theme {
+  position: relative;
+  color: var(--t2);
 }
-.vb .hx-me.open .av {
-  box-shadow:
-    0 0 0 1px var(--v300),
-    0 0 0 3px color-mix(in srgb, var(--v400) 35%, transparent);
+.vb .hx-theme:hover {
+  color: var(--t1);
 }
 .vb .hx-burger,
 .vb .hx-only-phone {
   display: none;
 }
 
-/* The account corner's menu: the theme, then a few links. */
-.vb .hx-acc {
-  left: auto;
-  right: 32px;
-  width: 300px;
-  animation: hx-in 140ms var(--ease);
-}
-.vb .acc-theme {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--line);
-}
-.vb .acc-l {
-  padding: 8px 0;
-}
-.vb .acc-theme .seg {
-  flex: none;
-}
 /* The theme: one icon button turning Dark, Light, Auto; its name in a tooltip. */
 .vb .theme-btn {
   position: relative;
@@ -297,7 +269,8 @@
   width: 17px;
   height: 17px;
 }
-.vb .theme-btn::after {
+.vb .theme-btn::after,
+.vb .hx-theme::after {
   content: attr(data-tip);
   position: absolute;
   right: 0;
@@ -306,7 +279,9 @@
   padding: 5px 9px;
   border-radius: 6px;
   background: var(--s3);
-  box-shadow: inset 0 0 0 1px var(--line-2), var(--drop);
+  box-shadow:
+    inset 0 0 0 1px var(--line-2),
+    var(--drop);
   color: var(--t1);
   font-size: 12px;
   font-weight: 650;
@@ -316,8 +291,14 @@
   transition: opacity var(--m-fast) var(--ease);
 }
 .vb .theme-btn:hover::after,
-.vb .theme-btn:focus-visible::after {
+.vb .theme-btn:focus-visible::after,
+.vb .hx-theme:focus-visible::after {
   opacity: 1;
+}
+@media (hover: hover) {
+  .vb .hx-theme:hover::after {
+    opacity: 1;
+  }
 }
 /* At the foot of the page the tooltip opens upwards. */
 .vb .ft .theme-btn::after {
@@ -631,12 +612,12 @@
   object-position: 50% 10%;
 }
 .vb .sx-i.gl,
-.vb .sx-i.tm {
+.vb .sx-i.sx-tm {
   background: var(--s2);
   box-shadow: inset 0 0 0 1px var(--line);
   color: var(--t2);
 }
-.vb .sx-i.tm .cs-logo {
+.vb .sx-i.sx-tm .cs-logo {
   background: none;
 }
 .vb .sx-i.ini {
@@ -874,11 +855,23 @@
     right: 0;
     width: auto;
   }
-  .vb .hx-acc {
-    right: 24px;
-  }
   .vb .hx-discord {
     display: none;
+  }
+  /* Between the phone's flat search and menu buttons, the theme is drawn like them. */
+  .vb .hx-end .hx-theme {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: transparent;
+    box-shadow: none;
+  }
+  .vb .hx-end .hx-theme:hover {
+    background: var(--s1);
+  }
+  .vb .hx-end .hx-theme .i {
+    width: 19px;
+    height: 19px;
   }
 }
 @media (max-width: 639px) {
@@ -900,10 +893,7 @@
   .vb .hx-end {
     gap: 4px;
   }
-  .vb .hx-acc {
-    right: 16px;
-  }
-  /* The search over the bar, from its button; the account and the menu make room. */
+  /* The search over the bar, from its button; the theme and the menu make room. */
   .vb.is-search .hx-search {
     display: block;
     position: absolute;
@@ -913,7 +903,7 @@
     z-index: 7;
     margin: 0;
   }
-  .vb.is-search .hx-me,
+  .vb.is-search .hx-theme,
   .vb.is-search .hx-burger {
     display: none;
   }

@@ -115,7 +115,7 @@ const columns = computed(() => {
 
     <article v-else-if="error" class="card" role="alert">
       <EmptyState
-        icon="star"
+        icon="crown"
         title="Mastery is not available right now"
         line="Riot did not answer for this player's mastery."
       >
@@ -125,7 +125,7 @@ const columns = computed(() => {
 
     <article v-else-if="!sorted.length" class="card">
       <EmptyState
-        icon="star"
+        icon="crown"
         title="No mastery yet"
         line="Champions show up here once this player has played them."
       />

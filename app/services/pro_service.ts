@@ -13,6 +13,7 @@ import proLadderService, {
   rankScore,
 } from '#services/pro_ladder_service'
 import { PLATFORMS } from '#constants/riot'
+import { starterLp, teamLp } from '#services/team_lp'
 import proPhotoService from '#services/pro_photo_service'
 import { notRemake } from '#services/analytics/remakes'
 
@@ -52,7 +53,7 @@ const PRO_CACHE = { freshMs: 30 * 60_000, keepMs: 86_400_000 }
  * deploys and serves a stale one while its refresh runs, so a release that changes what a page
  * reads must bump it: otherwise the pages get the previous release's answers for up to a day.
  */
-export const PRO_SHAPE = 6
+export const PRO_SHAPE = 7
 /** How far back a pro's games are read. */
 const GAMES_DAYS = 30
 const CHAMPION_GAMES_DAYS = 14
@@ -436,8 +437,13 @@ export class ProService {
         active: team.active as boolean,
         socials: (team.socials ?? {}) as Record<string, string>,
         league: league ? leagueRef(league) : null,
-        /** Average LP of the starters in Master and above, and the team's place in its league by it. */
+        /**
+         * The starters' average LP against Master 0 LP (team_lp.ts), how many of them it counts,
+         * and the team's place in its league by it.
+         */
         lp: place >= 0 ? (standing!.teams[place].lp ?? null) : null,
+        counted: place >= 0 ? standing!.teams[place].counted : 0,
+        starters: place >= 0 ? standing!.teams[place].starters : 0,
         place: place >= 0 && standing!.teams[place].lp !== null ? place + 1 : null,
         roster: roster.map((m: Record<string, any>) => ({
           ...m,
@@ -818,13 +824,20 @@ export class ProService {
           champions: rec?.champions.slice(0, 3) ?? [],
         }
       })
-      const teams = new Map<string, { team: TeamRef; players: number; apex: number[] }>()
+      const teams = new Map<
+        string,
+        { team: TeamRef; players: number; starters: (number | null)[] }
+      >()
       for (const p of players) {
         if (!p.team) continue
-        const t = teams.get(p.team.id) ?? { team: p.team, players: 0, apex: [] as number[] }
+        const t = teams.get(p.team.id) ?? {
+          team: p.team,
+          players: 0,
+          starters: [] as (number | null)[],
+        }
         t.players++
-        if (p.starter && p.best && rankScore(p.best.tier, p.best.division, p.best.lp)! >= 2800) {
-          t.apex.push(p.best.lp)
+        if (p.starter) {
+          t.starters.push(p.best ? starterLp(p.best.tier, p.best.division, p.best.lp) : null)
         }
         teams.set(p.team.id, t)
       }
@@ -834,11 +847,11 @@ export class ProService {
           .map((t) => ({
             ...t.team,
             players: t.players,
-            lp: t.apex.length
-              ? Math.round(t.apex.reduce((n, x) => n + x, 0) / t.apex.length)
-              : null,
+            // The starters' average against Master 0 LP (team_lp.ts), and how many it counts.
+            ...teamLp(t.starters),
+            starters: t.starters.length,
           }))
-          .sort((a, b) => (b.lp ?? -1) - (a.lp ?? -1) || a.name.localeCompare(b.name)),
+          .sort((a, b) => (b.lp ?? -1e9) - (a.lp ?? -1e9) || a.name.localeCompare(b.name)),
         players: rowsOut,
         counts: {
           teams: teams.size,

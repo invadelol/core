@@ -4,6 +4,7 @@ import { Deferred, Head, Link } from '@inertiajs/vue3'
 import '../../css/tier-lists.css'
 import SiteLayout from '../../components/SiteLayout.vue'
 import Masthead from '../../components/ui/Masthead.vue'
+import RankTag from '../../components/ui/RankTag.vue'
 import CardHead from '../../components/ui/CardHead.vue'
 import Icon from '../../components/ui/Icon.vue'
 import TierChip from '../../components/ui/TierChip.vue'
@@ -15,9 +16,10 @@ import RoleSeg from '../../components/champions/RoleSeg.vue'
 import MovedCard, { type Moved } from '../../components/champions/MovedCard.vue'
 import Fig from '../../components/champions/Fig.vue'
 import WinPickPlot, { type PlotChampion } from '../../components/champions/WinPickPlot.vue'
-import { BRACKETS, TIERS, champIconUrl, roleOf } from '../../lib/champions.js'
+import TrendSpark from '../../components/champions/TrendSpark.vue'
+import { TIERS, champIconUrl, roleOf } from '../../lib/champions.js'
 import { patchName } from '../../lib/patches.js'
-import { barWidth, movers, p1, sparkPaths, thousands } from '../../lib/tier_lists.js'
+import { barWidth, movers, p1, thousands } from '../../lib/tier_lists.js'
 
 type Position = 'TOP' | 'JUNGLE' | 'MIDDLE' | 'BOTTOM' | 'UTILITY'
 
@@ -59,16 +61,8 @@ const href = (r: Row) => {
 }
 
 const title = computed(() => (role.value ? `${role.value.label} tier list` : 'Tier list'))
-const rankText = computed(() => {
-  const b = BRACKETS.find((x) => x.value === props.filter?.bracket)
-  if (!b || b.value === 'all') return 'every rank'
-  return b.label.endsWith('+') ? `${b.label.slice(0, -1)} and above` : b.label
-})
-const metaLine = computed(() =>
-  props.filter
-    ? `Patch ${patchName(props.filter.patch)}, ${rankText.value}, ${thousands(props.games)} ranked solo games`
-    : 'No ranked games stored yet'
-)
+/** What follows the rank filter in the masthead's line ("Patch 26.22, Emerald+, …"). */
+const metaTail = computed(() => `, ${thousands(props.games)} ranked solo games`)
 
 /* ── Filters ─────────────────────────────────────────────────── */
 const mainOnly = ref(false)
@@ -161,9 +155,11 @@ const winScale = computed(() => {
 const pickMax = computed(() => Math.max(0.05, ...shown.value.map((r) => r.pick)))
 const banMax = computed(() => Math.max(0.05, ...shown.value.map((r) => r.ban)))
 
-const spark = (r: Row) => {
-  const line = props.trends?.[r.position]?.lines?.[r.champion]
-  return line ? sparkPaths(line) : null
+/** A row's daily win rates of the last two weeks, once they have loaded. */
+const trend = (r: Row) => {
+  const t = props.trends?.[r.position]
+  const values = t?.lines?.[r.champion]
+  return t && values ? { values, days: t.days } : null
 }
 const since = (r: Row) => {
   if (!props.previousPatch) return { cls: 'eq', text: '–' }
@@ -182,8 +178,11 @@ const since = (r: Row) => {
       <Masthead
         :title="title"
         :crumbs="[{ label: 'Tier list', href: '/tier-list' }, { label: 'Champions' }]"
-        :meta="metaLine"
+        meta="No ranked games stored yet"
       >
+        <template v-if="filter" #meta
+          >Patch {{ patchName(filter.patch) }}, <RankTag :bracket="filter.bracket" />{{ metaTail }}</template
+        >
         <template #end>
           <StatFilters :filter="filter" :patches="patches" />
         </template>
@@ -235,14 +234,17 @@ const since = (r: Row) => {
           <article class="card" style="overflow: hidden">
             <div class="tl-head">
               <SortHead :sorter="sort" col="name" label="Champion" />
-              <SortHead :sorter="sort" col="win" label="Win rate" />
-              <SortHead :sorter="sort" col="pick" label="Pick rate" />
-              <SortHead :sorter="sort" col="ban" label="Ban rate" />
-              <SortHead :sorter="sort" col="games" label="Games" class="r" />
-              <span>Win rate, 14 days</span>
+              <SortHead :sorter="sort" col="win" label="Win rate" class="c" />
+              <SortHead :sorter="sort" col="pick" label="Pick rate" class="c" />
+              <SortHead :sorter="sort" col="ban" label="Ban rate" class="c" />
+              <SortHead :sorter="sort" col="games" label="Games" class="c" />
+              <span class="c" title="Win rate of each day, the dashed line at 50%, the last day's figure beside it"
+                >Win rate, 14 days</span
+              >
               <SortHead
                 :sorter="sort"
                 col="since"
+                class="c"
                 :label="previousPatch ? `Since ${patchName(previousPatch)}` : 'Since'"
                 title="Places moved in the role since the patch before"
               />
@@ -267,24 +269,16 @@ const since = (r: Row) => {
                     <span class="meta ell">{{ roleWord(r.position) }} in {{ Math.round(r.roleShare * 100) }}% of games</span>
                   </div>
                 </div>
-                <Fig :value="p1(r.win)" :width="barWidth(r.win, winScale.lo, winScale.hi)" big mid class="tl-fig" />
-                <Fig :value="p1(r.pick)" :width="barWidth(r.pick, 0, pickMax)" class="tl-fig" />
-                <Fig :value="p1(r.ban)" :width="barWidth(r.ban, 0, banMax)" class="tl-fig" />
-                <span class="fg-xs t2" style="text-align: right">{{ thousands(r.games) }}</span>
+                <Fig :value="p1(r.win)" :width="barWidth(r.win, winScale.lo, winScale.hi)" big mid class="tl-fig c" />
+                <Fig :value="p1(r.pick)" :width="barWidth(r.pick, 0, pickMax)" class="tl-fig c" />
+                <Fig :value="p1(r.ban)" :width="barWidth(r.ban, 0, banMax)" class="tl-fig c" />
+                <span class="fg-xs t2 c">{{ thousands(r.games) }}</span>
                 <Deferred data="trends">
                   <template #fallback><span class="spark" /></template>
-                  <div v-if="spark(r)" class="chart spark">
-                    <svg class="fade" viewBox="0 0 160 30" preserveAspectRatio="none" aria-hidden="true">
-                      <path class="area" :d="spark(r)!.area" />
-                    </svg>
-                    <svg viewBox="0 0 160 30" preserveAspectRatio="none" aria-hidden="true">
-                      <path class="dash" :d="`M0 ${spark(r)!.pivot} H160`" />
-                      <path class="ln" :d="spark(r)!.line" />
-                    </svg>
-                  </div>
+                  <TrendSpark v-if="trend(r)" :values="trend(r)!.values" :days="trend(r)!.days" />
                   <span v-else class="spark" />
                 </Deferred>
-                <span class="tl-plc" :class="since(r).cls"
+                <span class="tl-plc c" :class="since(r).cls"
                   ><Icon v-if="since(r).cls !== 'eq'" name="arrow" :size="14" />{{ since(r).text }}</span
                 >
               </Link>

@@ -7,7 +7,8 @@ import { labelStat, rankTable, type ChangeKind, type NoteLine } from '../../lib/
 /**
  * One ability's change as Riot's tables put it: a value given per rank becomes a small table, the
  * patch before over this one, the ranks that moved lit in the change's colour (green a buff, red
- * a nerf, violet both); any other value reads old → new, a new effect or a description as text.
+ * a nerf, violet both), and what follows the ranks (a ratio) as the table's last column, lit the
+ * same way when it changed; any other value reads old → new, a new effect or a description as text.
  */
 const props = defineProps<{
   lines: NoteLine[]
@@ -25,7 +26,9 @@ const rows = computed(() =>
     t: l.type === undefined ? rankTable(l.old, l.new) : null,
   }))
 )
-const ICON = { up: 'up', down: 'down', mix: 'compare', new: 'plus' } as const
+const ICON = { up: 'up', down: 'down', mix: 'updown', new: 'plus' } as const
+/** Past this many characters, what follows the ranks goes under the table, not beside it. */
+const LONG_REST = 30
 </script>
 
 <template>
@@ -36,7 +39,7 @@ const ICON = { up: 'up', down: 'down', mix: 'compare', new: 'plus' } as const
           ><Icon :name="l.type === 'new' ? 'plus' : 'compare'" :size="12" /></span
         >{{ l.type === 'new' ? 'New' : 'Changed' }}</span
       >
-      <span class="ct-t"><NoteValue :value="l.text" /></span>
+      <span class="ct-tx"><NoteValue :value="l.text" /></span>
     </div>
     <div v-else-if="l.type === 'set'" class="ct-l txt">
       <span class="ct-lab"
@@ -49,10 +52,10 @@ const ICON = { up: 'up', down: 'down', mix: 'compare', new: 'plus' } as const
           height="14"
         />{{ l.label }}</span
       >
-      <span class="ct-t"><NoteValue :value="l.value" /></span>
+      <span class="ct-tx"><NoteValue :value="l.value" /></span>
     </div>
     <template v-else>
-      <div v-if="t" class="ct-l tab" :class="dirOf(l)" :style="{ '--n': t!.old.length }">
+      <div v-if="t" class="ct-l tab" :class="dirOf(l)">
         <span class="ct-lab"
           ><span class="ct-dg" :class="dirOf(l)"><Icon :name="ICON[dirOf(l)]" :size="12" /></span
           ><img
@@ -64,11 +67,20 @@ const ICON = { up: 'up', down: 'down', mix: 'compare', new: 'plus' } as const
             height="14"
           />{{ l.label }}</span
         >
-        <div class="ct-g" role="table" :aria-label="l.label">
+        <div
+          class="ct-g"
+          :class="{
+            rs: t!.restOld || t!.restNew,
+            long: Math.max(t!.restOld.length, t!.restNew.length) > LONG_REST,
+          }"
+          role="table"
+          :aria-label="l.label"
+          :style="{ '--n': t!.old.length }"
+        >
           <span class="ct-p" />
           <span v-for="(_, k) in t!.old" :key="`h${k}`" class="ct-c h" role="columnheader"
             >Rank {{ k + 1 }}</span
-          >
+          ><span v-if="t!.restOld || t!.restNew" class="ct-c h rh" />
           <span class="ct-p">{{ before }}</span>
           <span v-for="(v, k) in t!.old" :key="`o${k}`" class="ct-c od" role="cell"
             >{{ v }}<small v-if="t!.unit">{{ t!.unit }}</small></span
@@ -78,19 +90,25 @@ const ICON = { up: 'up', down: 'down', mix: 'compare', new: 'plus' } as const
             v-for="(v, k) in t!.new"
             :key="`n${k}`"
             class="ct-c nw"
-            :class="{ mv: v !== t!.old[k] }"
+            :class="{ chg: v !== t!.old[k] }"
             role="cell"
             >{{ v }}<small v-if="t!.unit">{{ t!.unit }}</small></span
           >
-        </div>
-        <div v-if="t!.restOld || t!.restNew" class="ct-x">
+          <!-- What follows the ranks (a ratio, "of his Max Health"): beside the table on its two
+               rows, or under it on a narrow column; said once when the patch left it as it was. -->
           <template v-if="t!.restOld !== t!.restNew">
-            <span class="ov"><NoteValue :value="t!.restOld" /></span
-            ><Icon name="arrow" :size="13" /><span
-              ><NoteValue :value="t!.restNew" :before="t!.restOld"
-            /></span>
+            <span class="ct-p rx o">{{ before }}</span
+            ><span class="ct-r od" role="cell"
+              ><span><NoteValue :value="t!.restOld" /></span
+            ></span>
+            <span class="ct-p rx n">{{ after }}</span
+            ><span class="ct-r nw chg" role="cell"
+              ><span><NoteValue :value="t!.restNew" :before="t!.restOld" /></span
+            ></span>
           </template>
-          <span v-else class="ov"><NoteValue :value="t!.restNew" /></span>
+          <span v-else-if="t!.restNew" class="ct-r one" role="cell"
+            ><span><NoteValue :value="t!.restNew" /></span
+          ></span>
         </div>
       </div>
       <div v-else class="ct-l" :class="dirOf(l)">
@@ -105,7 +123,7 @@ const ICON = { up: 'up', down: 'down', mix: 'compare', new: 'plus' } as const
             height="14"
           />{{ l.label }}</span
         >
-        <span class="ct-t"
+        <span class="ct-tx"
           ><span class="ov"><NoteValue :value="l.old" /></span><Icon name="arrow" :size="13" /><span
             ><NoteValue :value="l.new" :before="l.old" /></span
         ></span>
