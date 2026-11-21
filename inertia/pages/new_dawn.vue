@@ -8,6 +8,7 @@ import NdOverview from '../components/new_dawn/NdOverview.vue'
 import NdPosts from '../components/new_dawn/NdPosts.vue'
 import NdRumours from '../components/new_dawn/NdRumours.vue'
 import { patchSubRow } from '../components/header/sub_art.js'
+import { playAt } from '../components/new_dawn/teaser.js'
 import {
   NEW_DAWN,
   NEW_DAWN_META,
@@ -38,6 +39,11 @@ const page = usePage()
 const path = computed(() => page.url.split('?')[0].replace(/\/+$/, '') || '/')
 const sub = computed(() => patchSubRow(props.patches, path.value))
 const small = computed(() => props.tab !== 'overview')
+/** "Watch the teaser" plays it on the page, in the Overview's player. */
+function watch() {
+  playAt(0)
+  document.getElementById('teaser')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 </script>
 
 <template>
@@ -76,7 +82,12 @@ const small = computed(() => props.tab !== 'overview')
           <h1 class="nw-h">New Dawn</h1>
           <p class="nw-st"><NdText :parts="small ? NEW_DAWN.leadShort : NEW_DAWN.lead" /></p>
           <div v-if="!small" class="nw-act">
-            <a class="btn nw-kb" :href="TEASER_URL" target="_blank" rel="noreferrer"
+            <a
+              class="btn nw-kb"
+              :href="TEASER_URL"
+              target="_blank"
+              rel="noreferrer"
+              @click.prevent="watch"
               ><Icon name="triangle" :size="16" />Watch the teaser<span class="nw-tm">{{
                 TEASER.length
               }}</span></a

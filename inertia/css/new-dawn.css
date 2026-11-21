@@ -264,6 +264,145 @@
 .vb .nw-c.nw-c-blitzcrank .fr img {
   object-position: 8% 50%;
 }
+/* The champion on screen while the player runs its cast. */
+.vb .nw-c.on b,
+.vb .nw-c.on .meta {
+  color: var(--v200);
+}
+
+/* ---- the teaser's player: Riot's dawn still until a visitor plays it, its moments beside ------------- */
+.vb .nw-pl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.vb .nw-vid {
+  --cut: 14px;
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+.vb .nw-vid iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.vb .nw-poster {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  color: #fff;
+}
+.vb .nw-poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 40%;
+  display: block;
+}
+.vb .nw-poster::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, rgb(var(--nw-ink) / 0.55), rgb(var(--nw-ink) / 0) 45%);
+}
+.vb .nw-pb {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  margin: -34px 0 0 -34px;
+  padding-left: 3px;
+  border-radius: 50%;
+  background: rgb(var(--nw-ink) / 0.72);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.16);
+  transition: background var(--m) var(--ease);
+}
+.vb .nw-poster:hover .nw-pb,
+.vb .nw-poster:focus-visible .nw-pb {
+  background: var(--v500);
+}
+.vb .nw-pt {
+  position: absolute;
+  z-index: 1;
+  left: 20px;
+  bottom: 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 13px;
+  color: rgb(255 255 255 / 0.75);
+}
+.vb .nw-pt b {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+.vb .nw-mom {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vb .nw-mom li + li {
+  border-top: 1px solid var(--line);
+}
+.vb .nw-mom button {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 10px 8px;
+  border: 0;
+  border-radius: var(--r2);
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--m) var(--ease);
+}
+.vb .nw-mom button:hover {
+  background: var(--glint);
+}
+.vb .nw-mom .t {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--t3);
+}
+.vb .nw-mom .l {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--t2);
+}
+.vb .nw-mom .who {
+  margin-right: 6px;
+  color: var(--t3);
+}
+.vb .nw-mom .on {
+  background: var(--s2);
+}
+.vb .nw-mom .on .t {
+  color: var(--v200);
+}
+.vb .nw-mom .on .l {
+  color: var(--t1);
+}
 
 .vb .nw-tz {
   display: grid;
@@ -1895,6 +2034,20 @@
 
 /* ---- between a phone and the full width: the bento folds, the rows narrow ----------------------------- */
 @media (max-width: 1199px) {
+  .vb .nw-pl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .vb .nw-mom {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 24px;
+  }
+  .vb .nw-mom li + li {
+    border-top: 0;
+  }
+  .vb .nw-mom li {
+    border-bottom: 1px solid var(--line);
+  }
   /* items across the top, then Ranked Rush beside runes and skins */
   .vb .nw-jan {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -1990,6 +2143,21 @@
 
 /* ---- phone: the same page, stacked ---------------------------------------------------------------------- */
 @media (max-width: 767px) {
+  .vb .nw-mom {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .vb .nw-mom li:last-child {
+    border-bottom: 0;
+  }
+  .vb .nw-pb {
+    width: 56px;
+    height: 56px;
+    margin: -28px 0 0 -28px;
+  }
+  .vb .nw-pt {
+    left: 14px;
+    bottom: 10px;
+  }
   .vb .nw-stage {
     height: 300px;
     margin-top: 16px;
