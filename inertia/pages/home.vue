@@ -213,7 +213,7 @@ const topBully = (rows: { value: number }[]) => rows[0]?.value || 1
               prefetch
             >
               <span class="lc-h"
-                ><Icon name="chart" :size="16" /><b>Patch changes</b
+                ><Icon name="trend" :size="16" tone="auto" /><b>Patch changes</b
                 ><span class="lc-m">{{ card.patch }}</span></span
               >
               <template v-for="(g, gi) in changeGroups(card.changes)" :key="g.kind">
