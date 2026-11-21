@@ -714,7 +714,7 @@ function clearFilters() {
             <div class="card pl-sec"><Skeleton :rows="5" /></div>
           </aside>
           <aside class="pl-more">
-            <div class="card pl-sec"><Skeleton :rows="5" pic /></div>
+            <div class="pl-gs"><Skeleton :rows="5" pic /></div>
           </aside>
         </div>
         <div class="pl-main">
@@ -773,7 +773,7 @@ function clearFilters() {
 
           <!-- The summary, the same on every section: champions, roles, mates, activity -->
           <aside class="pl-more" aria-label="Summary">
-            <div v-if="pending.champions || pending.matches" class="card pl-sec">
+            <div v-if="pending.champions || pending.matches" class="pl-gs">
               <Skeleton :rows="5" pic />
             </div>
             <SideCards
