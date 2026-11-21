@@ -822,7 +822,11 @@ export class ProService {
       >()
       for (const p of players) {
         if (!p.team) continue
-        const t = teams.get(p.team.id) ?? { team: p.team, players: 0, starters: [] }
+        const t = teams.get(p.team.id) ?? {
+          team: p.team,
+          players: 0,
+          starters: [] as (number | null)[],
+        }
         t.players++
         if (p.starter) {
           t.starters.push(p.best ? starterLp(p.best.tier, p.best.division, p.best.lp) : null)
