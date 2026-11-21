@@ -9,6 +9,7 @@ import CardHead from '../../components/ui/CardHead.vue'
 import RankEmblem from '../../components/ui/RankEmblem.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import MatchLine from '../../components/esports/MatchLine.vue'
+import LpRule from '../../components/esports/LpRule.vue'
 import Logo from '../../components/pros/Logo.vue'
 import ProPic from '../../components/pros/ProPic.vue'
 import Flag from '../../components/pros/Flag.vue'
@@ -18,6 +19,7 @@ import { laneOf, n, rankWords, roleLabel } from '../../lib/ladders.js'
 import { profilePath } from '../../lib/format.js'
 import { rememberTeam } from '../../lib/recent.js'
 import { matchList, type ProMatch } from '../../lib/pro_matches.js'
+import { lpText } from '../../lib/esports_landing.js'
 import '../../css/esports.css'
 
 interface Member {
@@ -62,7 +64,10 @@ const props = defineProps<{
     region: string | null
     socials: Record<string, string>
     league: { slug: string; code: string; name: string; region: string | null } | null
+    /** The starters' average LP against Master 0 LP, how many it counts, of how many starters. */
     lp: number | null
+    counted: number
+    starters: number
     place: number | null
     roster: Member[]
     games: Game[]
@@ -200,45 +205,51 @@ const wonBy = (m: ProMatch) => (m.winner ? m.teams[m.winner - 1].id === props.te
             >
           </div>
         </div>
-        <div class="pp-kv">
+        <div class="pp-kv tm-kv">
           <div v-if="nextMatch || lastMatch">
             <span class="lab">{{ nextMatch ? 'Next match' : 'Last match' }}</span>
-            <span v-if="nextMatch"
-              ><span class="fg-l">{{
-                opponentOf(nextMatch).code ?? opponentOf(nextMatch).name
-              }}</span>
-              <span class="meta">
-                {{ nextMatch.league?.code }}, {{ day(Date.parse(nextMatch.at)) }}</span
+            <span v-if="nextMatch" class="tm-f"
+              ><span class="tm-f1"
+                ><span class="fg-l">{{
+                  opponentOf(nextMatch).code ?? opponentOf(nextMatch).name
+                }}</span></span
+              ><span class="tm-f2"
+                >{{ nextMatch.league?.code }}, {{ day(Date.parse(nextMatch.at)) }}</span
               ></span
             >
-            <span v-else-if="lastMatch"
-              ><span class="fg-l"
-                >{{ lastMatch.teams[0].score }}–{{ lastMatch.teams[1].score }}</span
-              >
-              <span class="meta">
-                {{ wonBy(lastMatch) ? 'won' : 'lost' }} against
+            <span v-else-if="lastMatch" class="tm-f"
+              ><span class="tm-f1"
+                ><span class="fg-l"
+                  >{{ lastMatch.teams[0].score }}-{{ lastMatch.teams[1].score }}</span
+                ></span
+              ><span class="tm-f2"
+                >{{ wonBy(lastMatch) ? 'Won' : 'Lost' }} against
                 {{ opponentOf(lastMatch).code ?? opponentOf(lastMatch).name }}</span
               ></span
             >
           </div>
           <div v-if="team.lp !== null">
             <span class="lab">Starters</span>
-            <span
-              ><span class="fg-l gd">{{ n(team.lp) }}</span>
-              <span class="meta"
-                >LP average<template v-if="team.place && team.league"
-                  >, {{ ordinal(team.place) }} in the {{ team.league.code }}</template
-                ></span
+            <span class="tm-f"
+              ><span class="tm-f1 gd"
+                ><span class="fg-l">{{ lpText(team.lp) }}</span
+                ><span class="tm-u">LP average</span
+                ><LpRule :counted="team.counted" :starters="team.starters" /></span
+              ><span v-if="team.place && team.league" class="tm-f2"
+                >{{ ordinal(team.place) }} in the {{ team.league.code }}</span
+              ><span v-if="team.counted < team.starters" class="tm-f3"
+                >{{ team.counted }} of {{ team.starters }} starters counted</span
               ></span
             >
           </div>
           <div v-if="team.record.games">
             <span class="lab">Solo queue</span>
-            <span
-              ><span class="fg-l"
-                >{{ Math.round((team.record.wins / team.record.games) * 100) }}%</span
-              >
-              <span class="meta"> over their last {{ n(team.record.games) }} games</span></span
+            <span class="tm-f"
+              ><span class="tm-f1"
+                ><span class="fg-l"
+                  >{{ Math.round((team.record.wins / team.record.games) * 100) }}%</span
+                ><span class="tm-u">win rate</span></span
+              ><span class="tm-f2">Over their last {{ n(team.record.games) }} games</span></span
             >
           </div>
         </div>
@@ -281,7 +292,7 @@ const wonBy = (m: ProMatch) => (m.winner ? m.teams[m.winner - 1].id === props.te
             <span class="rk5"
               ><RankEmblem v-if="m.best" :tier="m.best.tier" :size="16" />{{
                 m.best
-                  ? `${rankWords(m.best.tier, m.best.division)}${['MASTER', 'GRANDMASTER', 'CHALLENGER'].includes(m.best.tier) ? `, ${n(m.best.lp)} LP` : ''}`
+                  ? `${rankWords(m.best.tier, m.best.division)}, ${n(m.best.lp)} LP`
                   : 'Unranked'
               }}</span
             >
@@ -326,26 +337,28 @@ const wonBy = (m: ProMatch) => (m.winner ? m.teams[m.winner - 1].id === props.te
               :is="gamePath(g) ? Link : 'div'"
               v-for="g in games"
               :key="g.matchId + g.champion"
-              class="lrow"
+              class="lrow tm-sq"
               :href="gamePath(g) ?? undefined"
-              style="min-height: 58px"
             >
               <span class="es-pp" style="width: 36px; height: 36px"
                 ><ProPic :slug="g.pro?.slug" :photo="g.pro?.photo" :team="team" :size="36"
               /></span>
-              <span class="col" style="width: 110px">
+              <span class="col tm-sq-who">
                 <span class="h5 ell">{{ g.pro?.name ?? '' }}</span>
                 <span class="meta">{{ day(g.startMs) }}</span>
               </span>
               <Frame :src="champIcon(g.champion)" :width="32" size="xs" />
-              <span class="h5 ell" style="width: 100px">{{ nameOf(g.champion) }}</span>
+              <span class="h5 ell tm-sq-ch">{{ nameOf(g.champion) }}</span>
               <span class="wl" :class="{ w: g.win }">{{ g.win ? 'W' : 'L' }}</span>
-              <span class="meta" style="width: 50px">{{ clock(g.durationSec) }}</span>
-              <span class="kda grow" style="font-size: 14.5px"
-                >{{ g.kills }}<span class="sl">/</span><span class="d">{{ g.deaths }}</span
-                ><span class="sl">/</span>{{ g.assists }}</span
+              <span class="meta tm-sq-t">{{ clock(g.durationSec) }}</span>
+              <span
+                class="tm-kda"
+                :aria-label="`${g.kills} kills, ${g.deaths} deaths, ${g.assists} assists`"
+                ><b>{{ g.kills }}</b
+                ><i>/</i><b class="d">{{ g.deaths }}</b
+                ><i>/</i><b>{{ g.assists }}</b></span
               >
-              <span class="meta">{{ g.cs }} CS</span>
+              <span class="meta tm-sq-cs">{{ g.cs }} CS</span>
             </component>
             <EmptyState
               v-if="!games.length"
@@ -430,7 +443,7 @@ const wonBy = (m: ProMatch) => (m.winner ? m.teams[m.winner - 1].id === props.te
                 style="width: 22px; height: 22px; object-fit: contain"
               />
               <span class="h5 grow">{{ t.name }}</span>
-              <span class="fg-xs num">{{ t.lp === null ? '–' : n(t.lp) }}</span>
+              <span class="fg-xs num">{{ t.lp === null ? '–' : lpText(t.lp) }}</span>
             </Link>
           </div>
         </div>
@@ -438,3 +451,96 @@ const wonBy = (m: ProMatch) => (m.winner ? m.teams[m.winner - 1].id === props.te
     </div>
   </SiteLayout>
 </template>
+
+<style scoped>
+/* The header's figures: the figure and its unit on one line, in the figure's colour, then what
+   it means below it. */
+.tm-f {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.tm-f1 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+}
+.tm-f1 .fg-l {
+  white-space: nowrap;
+}
+.tm-u {
+  font-size: 15px;
+  font-weight: 600;
+}
+.tm-f1 :deep(.lp-rule) {
+  align-self: center;
+  margin-left: -2px;
+}
+.tm-f2 {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--t1);
+}
+.tm-f3 {
+  margin-top: -2px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--t3);
+}
+
+/* A solo queue game: one grid for every row, the KDA always on one line. */
+.vb .lrow.tm-sq {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 120px) 32px minmax(0, 110px) 24px 44px minmax(0, 1fr) 64px;
+  gap: 14px;
+  min-height: 58px;
+}
+.tm-sq-t,
+.tm-sq-cs {
+  white-space: nowrap;
+}
+.tm-sq-cs {
+  text-align: right;
+}
+.tm-kda {
+  display: inline-flex;
+  flex-flow: row nowrap;
+  align-items: baseline;
+  gap: 3px;
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.tm-kda b {
+  font-weight: 700;
+  color: var(--t1);
+}
+.tm-kda b.d {
+  color: var(--loss);
+}
+.tm-kda i {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--t4);
+}
+@media (max-width: 767px) {
+  .vb .lrow.tm-sq {
+    grid-template-columns: 36px minmax(0, 1fr) 28px 24px 76px;
+    gap: 10px;
+    padding: 8px 16px;
+  }
+  .tm-kda {
+    justify-self: end;
+  }
+  .tm-sq-ch,
+  .tm-sq-t,
+  .tm-sq-cs {
+    display: none;
+  }
+}
+</style>
