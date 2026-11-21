@@ -29,7 +29,7 @@ import MatchRows from '../components/profile/MatchRows.vue'
 import OlderGames from '../components/profile/OlderGames.vue'
 import PerformanceCard from '../components/profile/PerformanceCard.vue'
 import SideCards from '../components/profile/SideCards.vue'
-import MainBuild from '../components/profile/aside/MainBuild.vue'
+import MainChampion from '../components/profile/MainChampion.vue'
 import ChampionsTable from '../components/profile/ChampionsTable.vue'
 import LiveGame from '../components/profile/LiveGame.vue'
 import { champIcon, championName } from '../lib/assets.js'
@@ -68,6 +68,8 @@ const props = defineProps<{
   summoner: string
   section?: string
   initialProfile?: Summoner | null
+  /** Finished items and boots on the newest patch, for the main champion's core build. */
+  items?: { legendary: number[]; boots: number[] } | null
   /** The professional player behind this account, when there is one. */
   pro?: {
     slug: string
@@ -643,14 +645,18 @@ async function sync() {
 /** Games the overview lists before "Show older games" (the Matches route lists them all). */
 const OVERVIEW_GAMES = 10
 
-/* ── A right column beside the games, behind `?v=a|b|c` (Overview and Matches) ── */
-const v = ref<'a' | 'b' | 'c' | null>(null)
-onMounted(() => {
-  const q = new URLSearchParams(window.location.search).get('v')
-  v.value = q === 'a' || q === 'b' || q === 'c' ? q : null
-})
-const aside = computed(() =>
-  v.value && (section.value === 'overview' || section.value === 'matches') ? v.value : null
+/**
+ * Beside the games (Overview and Matches), a column with how they play their main champion and
+ * their champions, which leave the left column there; shown while they load and once there is
+ * something to show.
+ */
+const aside = computed(
+  () =>
+    (section.value === 'overview' || section.value === 'matches') &&
+    (pending.champions ||
+      pending.matches ||
+      champions.value.length > 0 ||
+      matches.value.some((m) => m.queueId !== 0))
 )
 const QUEUES: { value: Filters['type']; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -760,7 +766,7 @@ function clearFilters() {
         </span>
       </EmptyState>
 
-      <div v-else-if="profile" class="pl" :class="aside ? `pa pa-${aside}` : null">
+      <div v-else-if="profile" class="pl" :class="{ 'has-aside': aside }">
         <!-- The left column, sticky beside the section (wide screens) -->
         <div ref="side" class="pl-side">
           <!-- The rail: who, where to go, the rank -->
@@ -789,7 +795,7 @@ function clearFilters() {
               <Skeleton :rows="5" pic />
             </div>
             <SideCards
-              v-else-if="aside !== 'a'"
+              v-else
               :champions="aside ? [] : champions"
               :matches="matches"
               :teammates="teammates"
@@ -797,47 +803,9 @@ function clearFilters() {
               :champions-href="`${base}/champions`"
               :friends-href="`${base}/friends`"
             />
-            <ActivityCard
-              v-if="aside !== 'a' && !pending.activity && activity.length"
-              :activity="activity"
-            />
+            <ActivityCard v-if="!pending.activity && activity.length" :activity="activity" />
           </aside>
         </div>
-
-        <!-- C: the right column from the top, Performance in it, the games first in the middle -->
-        <aside v-if="aside === 'c'" class="pl-aside" aria-label="More">
-          <template v-if="section === 'overview'">
-            <div v-if="pending.stats" class="card pf"><Skeleton :height="260" /></div>
-            <PerformanceCard
-              v-else
-              :matches="performanceMatches"
-              :previous="previousMatches"
-              :stats="stats?.global ?? null"
-              :previous-stats="previousStats"
-              :puuid="profile.puuid"
-            />
-          </template>
-          <template v-if="!pending.matches">
-            <MainBuild
-              v-if="!pending.matches"
-              mode="spotlight"
-              :matches="matches"
-              :puuid="profile.puuid"
-              :champion="mainChampion ?? null"
-              :stats="champions"
-              :name="profile.gameName"
-            />
-            <SideCards
-              v-if="!pending.champions"
-              :champions="champions"
-              :matches="[]"
-              :teammates="[]"
-              :puuid="profile.puuid"
-              :champions-href="`${base}/champions`"
-              :friends-href="`${base}/friends`"
-            />
-          </template>
-        </aside>
 
         <div class="pl-main">
           <p v-if="failedPanels.length" class="pf-note" role="alert">
@@ -847,7 +815,7 @@ function clearFilters() {
 
           <!-- ── Overview and Matches ──────────────────────────── -->
           <template v-if="section === 'overview' || section === 'matches'">
-            <template v-if="section === 'overview' && aside !== 'c'">
+            <template v-if="section === 'overview'">
               <div v-if="pending.stats" class="card pf"><Skeleton :height="260" /></div>
               <PerformanceCard
                 v-else
@@ -958,37 +926,29 @@ function clearFilters() {
                 :auto="wide"
               />
             </section>
-            <!-- A and B: the right column beside the games, under Performance -->
-            <aside v-if="aside === 'a'" class="pl-aside" aria-label="More">
-              <SideCards
-                v-if="!pending.champions && !pending.matches"
-                :champions="champions"
-                :matches="matches"
-                :teammates="teammates"
-                :puuid="profile.puuid"
-                :champions-href="`${base}/champions`"
-                :friends-href="`${base}/friends`"
-              />
-              <ActivityCard v-if="!pending.activity && activity.length" :activity="activity" />
-            </aside>
-            <aside v-if="aside === 'b'" class="pl-aside" aria-label="More">
-              <MainBuild
-                v-if="!pending.matches"
-                :matches="matches"
-                :puuid="profile.puuid"
-                :champion="mainChampion ?? null"
-                :stats="champions"
-                :name="profile.gameName"
-              />
-              <SideCards
-                v-if="!pending.champions"
-                :champions="champions"
-                :matches="[]"
-                :teammates="[]"
-                :puuid="profile.puuid"
-                :champions-href="`${base}/champions`"
-                :friends-href="`${base}/friends`"
-              />
+            <!-- Beside the games, under Performance: their main champion, then their champions -->
+            <aside v-if="aside" class="pl-aside" aria-label="Main champion and champions">
+              <div v-if="pending.matches || pending.champions" class="pl-gs">
+                <Skeleton :rows="5" pic />
+              </div>
+              <template v-else>
+                <MainChampion
+                  :matches="matches"
+                  :puuid="profile.puuid"
+                  :champion="mainChampion ?? null"
+                  :stats="champions"
+                  :items="props.items ?? null"
+                  :name="profile.gameName"
+                />
+                <SideCards
+                  :champions="champions"
+                  :matches="[]"
+                  :teammates="[]"
+                  :puuid="profile.puuid"
+                  :champions-href="`${base}/champions`"
+                  :friends-href="`${base}/friends`"
+                />
+              </template>
             </aside>
           </template>
 

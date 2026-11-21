@@ -1,85 +1,41 @@
-/* A profile's right column beside the games (summoner.vue, `?v=`): the summary moved right (a),
-   the main champion's build under Performance (b), or the main champion before its art (c). */
+/* A profile's column beside the games (summoner.vue, Overview and Matches): under Performance,
+   the games and, on their right, "<Name> on <Champion>" and the champions, on the page ground
+   like the summary at the left. The games keep at least 620 px, where their items stay. */
 @layer components {
-  /* The games keep their items from 620 px: both side columns narrow to leave them that. */
-  .vb .pl.pa-c {
-    grid-template-columns: 260px minmax(0, 1fr) 280px;
-    grid-template-areas: 'side main aside';
-    column-gap: 20px;
-  }
-  .vb .pl.pa-a,
-  .vb .pl.pa-b {
+  .vb .pl.has-aside {
     grid-template-columns: 272px minmax(0, 1fr);
     column-gap: 24px;
   }
-  .vb .pl-aside {
-    grid-area: aside;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    min-width: 0;
-  }
-  .vb .pl.pa-c > .pl-aside {
-    position: sticky;
-    top: 16px;
-  }
-  /* A and B: the section's column splits under Performance, the games beside the column. */
-  .vb .pl.pa-a > .pl-main,
-  .vb .pl.pa-b > .pl-main {
+  .vb .pl.has-aside > .pl-main {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 256px;
     column-gap: 20px;
     row-gap: 28px;
     align-items: start;
   }
-  .vb .pl.pa-a > .pl-main > *,
-  .vb .pl.pa-b > .pl-main > * {
+  .vb .pl.has-aside > .pl-main > * {
     grid-column: 1 / -1;
   }
-  .vb .pl.pa-a > .pl-main > .mh,
-  .vb .pl.pa-b > .pl-main > .mh {
+  .vb .pl.has-aside > .pl-main > .mh {
     grid-column: 1;
     min-width: 0;
   }
-  .vb .pl.pa-a > .pl-main > .pl-aside,
-  .vb .pl.pa-b > .pl-main > .pl-aside {
-    grid-area: auto;
+  .vb .pl.has-aside > .pl-main > .pl-aside {
     grid-column: 2;
     position: sticky;
     top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0;
+  }
+  /* The column's first section starts on the ground without a hairline over it. */
+  .vb .pl-aside > .pl-gs:first-child {
+    padding-top: 0;
+    border-top: 0;
   }
 
-  /* The main champion, on the ground like the summary: its art (spotlight), record, build. */
-  .vb .pa-art {
-    display: block;
-    height: 132px;
-    --cut: 14px;
-    margin-bottom: 12px;
-  }
-  .vb .pa-art > img:first-child {
-    object-position: 50% 22%;
-    opacity: 0.8;
-  }
-  .vb .pa-cap {
-    position: absolute;
-    left: 8px;
-    bottom: 8px;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    height: 32px;
-    padding: 0 10px 0 4px;
-    border-radius: var(--r-sm);
-    background: var(--solid-2, var(--s2));
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--t1);
-  }
-  .vb .pa-cap img {
-    width: 24px;
-    height: 24px;
-    border-radius: var(--r-xs);
-  }
+  /* The main champion: its icon, record and KDA, then its build, a line each. */
   .vb .pa-head {
     display: flex;
     align-items: center;
@@ -94,9 +50,9 @@
   }
   .vb .pa-figs {
     display: grid;
+    flex: 1;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
-    flex: 1;
   }
   .vb .pa-figs .u {
     margin-left: 2px;
@@ -129,47 +85,28 @@
     width: 20px;
     height: 20px;
   }
-  /* The column's first section starts on the ground without a hairline over it. */
-  .vb .pl-aside > .pl-gs:first-child {
-    padding-top: 0;
-    border-top: 0;
-  }
 
+  /* Under 1280 px the games take the width and the column follows them, its sections side by side. */
   @media (max-width: 1279px) {
-    .vb .pl.pa-c {
-      grid-template-columns: 260px minmax(0, 1fr);
-      grid-template-areas:
-        'side main'
-        'side aside';
-    }
-    .vb .pl.pa-c > .pl-aside {
-      position: static;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      align-items: start;
-    }
-    .vb .pl.pa-a > .pl-main,
-    .vb .pl.pa-b > .pl-main {
+    .vb .pl.has-aside > .pl-main {
       display: flex;
       align-items: stretch;
     }
-    .vb .pl-main > .pl-aside {
+    .vb .pl.has-aside > .pl-main > .pl-aside {
       position: static;
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       align-items: start;
+      column-gap: 32px;
+    }
+    .vb .pl-aside > .pl-gs {
+      padding-top: 0;
+      border-top: 0;
     }
   }
   @media (max-width: 1023px) {
-    .vb .pl.pa-a,
-    .vb .pl.pa-b,
-    .vb .pl.pa-c {
+    .vb .pl.has-aside {
       grid-template-columns: minmax(0, 1fr);
-      grid-template-areas:
-        'rail'
-        'main'
-        'aside'
-        'more';
     }
   }
 }
