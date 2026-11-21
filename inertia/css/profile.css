@@ -321,6 +321,29 @@
     height: 110px;
     margin-top: 16px;
   }
+  /* The summary under the rank (champions, roles, mates, activity): sections on the page ground,
+     a hairline between them, no sheet per block. Their rows sit on the ground too, a wash on
+     hover. */
+  .vb .pl-gs {
+    min-width: 0;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+  }
+  .vb .pl-gs .pl-sec-h {
+    margin-bottom: 10px;
+  }
+  .vb .pl-gs .pl-cr {
+    margin: 0 -8px;
+    padding: 6px 8px;
+    border-radius: var(--r-sm);
+    transition: background-color 140ms var(--ease);
+  }
+  .vb .pl-gs a.pl-cr:hover {
+    background: var(--s1);
+  }
+  .vb .pl-gs-more {
+    margin-top: 6px;
+  }
   .vb .pl-cr {
     display: grid;
     grid-template-columns: 36px minmax(0, 1fr) auto;
@@ -328,7 +351,7 @@
     gap: 12px;
     padding: 7px 0;
   }
-  .vb .pl-cr + .pl-cr {
+  .vb .pl-sec .pl-cr + .pl-cr {
     border-top: 1px solid var(--line);
   }
   .vb .pl-cr .pic {
