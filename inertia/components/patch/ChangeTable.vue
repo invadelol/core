@@ -26,7 +26,7 @@ const rows = computed(() =>
     t: l.type === undefined ? rankTable(l.old, l.new) : null,
   }))
 )
-const ICON = { up: 'up', down: 'down', mix: 'compare', new: 'plus' } as const
+const ICON = { up: 'up', down: 'down', mix: 'updown', new: 'plus' } as const
 /** Past this many characters, what follows the ranks goes under the table, not beside it. */
 const LONG_REST = 30
 </script>

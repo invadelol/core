@@ -17,6 +17,27 @@
   .vb .mx2-mid {
     text-align: center;
   }
+  /* Riot's stat and objective glyphs before a stat's name, as the client draws them. The team
+     stats' glyph sits in the line, so a name that wraps on a phone keeps it on its first line. */
+  .vb .cmp3 .m4-l .i {
+    display: inline-block;
+    margin-right: 5px;
+    vertical-align: -2px;
+    color: var(--t3);
+  }
+  .vb .sbh-s {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+  }
+  .vb .sbh-s.r {
+    justify-content: flex-end;
+  }
+  .vb .sbh-s .i {
+    flex: none;
+    color: var(--t3);
+  }
   .vb .mx-gold {
     margin-top: 18px;
   }
