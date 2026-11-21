@@ -148,6 +148,7 @@
     .vb .pl.pa-a > .pl-main,
     .vb .pl.pa-b > .pl-main {
       display: flex;
+      align-items: stretch;
     }
     .vb .pl-main > .pl-aside {
       position: static;
