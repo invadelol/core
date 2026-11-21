@@ -472,6 +472,13 @@
   gap: 8px;
   margin-top: 10px;
 }
+/* On a touch screen the quote's icon link reaches 40 px around its glyph. */
+@media (pointer: coarse) {
+  .vb .nw-who .nw-ext {
+    padding: 13px;
+    margin: -13px;
+  }
+}
 .vb .nw-who img {
   width: 22px;
   height: 22px;

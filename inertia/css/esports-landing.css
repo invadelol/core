@@ -414,6 +414,14 @@
   .vb .el-jump button.on {
     box-shadow: inset 0 -2px 0 var(--v400);
   }
+  /* On a touch screen each league is 40 px tall and reaches past its name ("All" was 15 px wide). */
+  @media (pointer: coarse) {
+    .vb .el-jump button {
+      min-height: 40px;
+      padding-inline: 10px;
+      margin-inline: -10px;
+    }
+  }
   .vb .el-jump .el-key {
     margin-left: auto;
   }

@@ -79,6 +79,13 @@ const state = computed(() =>
   outline: 2px solid var(--v400);
   outline-offset: 0;
 }
+/* On a touch screen the head reaches past its words, to 40 px. */
+@media (pointer: coarse) {
+  .sh-b {
+    margin-block: -11px;
+    padding-block: 11px;
+  }
+}
 .sh-a {
   width: 12px;
   height: 12px;

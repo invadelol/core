@@ -859,17 +859,17 @@
     display: none;
   }
   /* Between the phone's flat search and menu buttons, the theme is drawn like them. */
-  .vb .hx-end .hx-theme {
+  .vb .hx-end .btn.hx-theme {
     width: 40px;
     height: 40px;
     border-radius: 10px;
     background: transparent;
     box-shadow: none;
   }
-  .vb .hx-end .hx-theme:hover {
+  .vb .hx-end .btn.hx-theme:hover {
     background: var(--s1);
   }
-  .vb .hx-end .hx-theme .i {
+  .vb .hx-end .btn.hx-theme .i {
     width: 19px;
     height: 19px;
   }
@@ -923,13 +923,15 @@
 }
 
 /* ── The phone's sheet ───────────────────────────────────────── */
+/* From the bar's lower edge (its top is set when it opens) to the bottom of the screen, over the
+   section's row: every row down to the theme can be reached. */
 .vb .hx-phone {
-  position: absolute;
+  position: fixed;
   left: 0;
   right: 0;
-  top: 100%;
+  top: 60px;
+  bottom: 0;
   z-index: 8;
-  height: calc(100dvh - 60px);
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 8px 0 40px;
@@ -1051,6 +1053,30 @@ html.hx-locked {
   }
   .vb .ft-meta {
     align-items: flex-start;
+  }
+  /* Each link a full row to tap, the columns keeping their rhythm. */
+  .vb .ft-col {
+    gap: 0;
+  }
+  .vb .ft-col a {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+  }
+  .vb .ft-h {
+    margin-bottom: 2px;
+  }
+  .vb .ft-legal {
+    gap: 0 20px;
+  }
+  .vb .ft-legal > * {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+  }
+  .vb .ft .theme-btn {
+    width: 40px;
+    height: 40px;
   }
 }
 

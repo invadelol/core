@@ -66,6 +66,7 @@
   }
   .vb .lb-filt {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 12px;
     margin: 24px 0 16px;
@@ -450,9 +451,14 @@
   }
   .vb .lb-sec {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 12px;
     padding: 18px 20px 14px;
+  }
+  /* Its filters wrap under the title rather than run past the edge (a tablet's width). */
+  .vb .lb-sec > .row {
+    flex-wrap: wrap;
   }
 
   /* What the canvas did not draw: links in the role filter, the pro tag and the pager's states. */

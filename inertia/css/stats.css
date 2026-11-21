@@ -228,6 +228,17 @@
   .vb .st-tiles {
     columns: 2;
   }
+  /* Up to a tablet's width the table keeps its main columns (the others ran past the edge at
+     768 px); the rank takes three digits, which from 100 on ran into the picture. */
+  .vb .st-tbl .hm {
+    display: none;
+  }
+  .vb .st-tbl {
+    --cols: 26px minmax(0, 1fr) 156px;
+  }
+  .vb .st-tbl.wide {
+    --cols: 26px minmax(0, 1fr) 72px 64px;
+  }
 }
 @media (max-width: 767px) {
   .vb .st-tools {
@@ -264,12 +275,7 @@
   .vb .st-stats > * {
     height: 34px;
   }
-  .vb .st-tbl {
-    --cols: 18px minmax(0, 1fr) 156px;
-  }
-  .vb .st-tbl.wide {
-    --cols: 18px minmax(0, 1fr) 72px 64px;
-  }
+
   .vb .st-fig {
     grid-template-columns: minmax(0, 1fr) 56px;
     gap: 10px;

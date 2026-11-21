@@ -666,7 +666,7 @@ const ago = (ms: number) => {
                   <path class="ln" :d="lengthChart.line" />
                 </svg>
                 <span class="dot" :style="{ left: `${lengthChart.px}%`, top: `${lengthChart.py}%` }" />
-                <span class="peak" :style="{ left: `${lengthChart.px}%`, top: `${lengthChart.py}%` }">{{ lengthChart.peak }}</span>
+                <span class="peak" :class="{ end: lengthChart.px > 70, start: lengthChart.px < 30 }" :style="{ left: `${lengthChart.px}%`, top: `${lengthChart.py}%` }">{{ lengthChart.peak }}</span>
               </div>
               <div class="cp-xs"><span v-for="(x, i) in lengthChart.xs" :key="i">{{ x }}</span></div>
             </template>
@@ -743,7 +743,7 @@ const ago = (ms: number) => {
                 <span class="who"><img class="pic sm" :src="champIconUrl(m.champion)" alt="" loading="lazy" /><span class="h5 ell">{{ champName(m.champion) }}</span></span>
                 <span class="n num">{{ thousands(m.games) }}</span>
                 <span class="n num" :class="m.win >= 0.5 ? 't1' : 't3'">{{ p1(m.win) }}%</span>
-                <span class="n hm meta" style="display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px">Open<Icon name="chevr" :size="12" /></span>
+                <span class="n hm meta cp-open">Open<Icon name="chevr" :size="12" /></span>
               </Link>
             </div>
             <p v-else class="meta cp-none">Too few games against one opponent yet.</p>

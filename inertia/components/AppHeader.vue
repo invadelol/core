@@ -258,9 +258,16 @@ function onHotkey(event: KeyboardEvent) {
 const mobileOpen = ref(false)
 const menuButton = ref<HTMLElement>()
 
+/** Where the phone's sheet starts: right under the bar, wherever the page was scrolled to. */
+const sheetTop = ref(60)
+
 function toggleMobile() {
   close()
   searchOpen.value = false
+  if (!mobileOpen.value) {
+    const barBottom = bar.value?.parentElement?.getBoundingClientRect().bottom
+    if (barBottom !== undefined) sheetTop.value = Math.max(0, Math.round(barBottom))
+  }
   mobileOpen.value = !mobileOpen.value
   if (mobileOpen.value) loadSiteNav()
 }
@@ -508,6 +515,7 @@ function skip(event: MouseEvent) {
         :ctx="ctx"
         :path="path"
         :patch-href="patchHref"
+        :style="{ top: `${sheetTop}px` }"
         @close="closeMobile"
       />
     </div>

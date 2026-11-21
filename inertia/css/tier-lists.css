@@ -186,6 +186,8 @@
 @media (max-width: 767px) {
   .vb .tx-filters .seg, .vb .tl-filters .seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
   .vb .tx-filters .seg::-webkit-scrollbar, .vb .tl-filters .seg::-webkit-scrollbar { display: none; }
+  /* A row of classes runs past the screen's edge: a short fade says there is more (as the stats'). */
+  .vb .tx-filters .seg:not(.role-seg):has(> :nth-child(5)) { mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); padding-right: 28px; }
   .vb .tx-head, .vb .tx-row, .vb .tl-head, .vb .tl-row { gap: 12px; padding: 0 14px; }
   .vb .tx-grp, .vb .tl-grp { padding: 0 14px; }
   .vb .tl-head, .vb .tl-row { grid-template-columns: minmax(0, 1fr) 72px 64px; }
@@ -205,8 +207,9 @@
 .vb .du-mx a { color: inherit; }
 .vb .du-pair > a { display: block; }
 @media (max-width: 767px) {
-  .vb .du-grid { overflow-x: auto; }
-  .vb .du-mx { min-width: 640px; padding: 6px 14px 16px; }
+  .vb .du-grid { overflow-x: auto; scrollbar-width: none; mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
+  .vb .du-grid::-webkit-scrollbar { display: none; }
+  .vb .du-mx { min-width: 640px; padding: 6px 42px 16px 14px; }
   .vb .du-key { margin: 0 14px 16px; flex-wrap: wrap; }
   .vb .du-head, .vb .du-row { grid-template-columns: minmax(0, 1fr) 72px 56px; }
   .vb .du-head > :nth-child(3), .vb .du-head > :nth-child(4), .vb .du-head > :nth-child(5),

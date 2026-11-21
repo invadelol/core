@@ -6,7 +6,8 @@ import type { IconName } from '../../lib/icons.js'
 /**
  * A card's head (`.card-h`, inside a `.card`): an 18 px icon in its meaning colour (gold, red, else
  * violet), the title (16 px), a grey note and a "more" link or the card's own controls (default
- * slot) at the far end.
+ * slot) at the far end. On a phone the note goes under the title, so neither is squeezed into a
+ * narrow column (inertia/css/ui.css).
  */
 withDefaults(
   defineProps<{
@@ -22,7 +23,7 @@ withDefaults(
 </script>
 
 <template>
-  <div class="card-h">
+  <div class="card-h card-hd">
     <Icon v-if="icon" :name="icon" :size="18" tone="auto" />
     <component :is="as" :id="id" class="h3">{{ title }}</component>
     <span v-if="meta" class="meta">{{ meta }}</span>
