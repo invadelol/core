@@ -212,6 +212,20 @@
 .vb .hx-end.alone {
   margin-left: auto;
 }
+/* The site's stage beside the wordmark (lib/site_stage.ts), set like the patch menu's "New". */
+.vb .hx-stage {
+  align-self: center;
+  height: 20px;
+  margin-left: 8px;
+  padding: 0 7px;
+  border-radius: 6px;
+  background: var(--v900);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 20px;
+  letter-spacing: 0.01em;
+  color: var(--v100);
+}
 /* Discord in its own mark and blurple; its cut-out eyes take the button's colour. */
 .vb .hx-discord .dc-mark {
   display: block;

@@ -17,6 +17,7 @@ import PatchMenu from './header/PatchMenu.vue'
 import ThemeToggle from './header/ThemeToggle.vue'
 import DiscordMark from './header/DiscordMark.vue'
 import { DISCORD_URL } from '../lib/links.js'
+import { SITE_STAGE } from '../lib/site_stage.js'
 import SubArt from './header/SubArt.vue'
 import { SUB_ART, type SubLink } from './header/sub_art.js'
 import '../css/subrow.css'
@@ -33,9 +34,10 @@ import { season, startSeason } from '../lib/season.js'
 import { patchName } from '../lib/patch.js'
 
 /**
- * The site's header, on every page (Facet): one bar with the mark, the four sections and their
- * small menus, the patch pill, the search (a field with its region; its results drop under it),
- * the desktop app, Discord and the theme; under it, the plain-text row of the section you are in.
+ * The site's header, on every page (Facet): one bar with the mark and its stage (Beta), the four
+ * sections and their small menus, the patch pill, the search (a field with its region; its results
+ * drop under it), the desktop app, Discord and the theme; under it, the plain-text row of the
+ * section you are in.
  * Under 1024 px the sections fold into the phone's sheet; under 640 px the search is a button.
  *
  * Nothing here fetches on load: a menu opens in the frame of its hover, click or key, and its
@@ -351,8 +353,14 @@ function skip(event: MouseEvent) {
 
       <div class="hx-main">
         <div ref="bar" class="wrap" @focusout="onFocusOut">
-          <Link class="brand" href="/" aria-label="Invade home" prefetch>
-            <Glyph :h="26" /><span class="wm">Invade</span>
+          <Link
+            class="brand"
+            href="/"
+            :aria-label="SITE_STAGE ? `Invade (${SITE_STAGE}) home` : 'Invade home'"
+            prefetch
+          >
+            <Glyph :h="26" /><span class="wm">Invade</span
+            ><span v-if="SITE_STAGE" class="hx-stage">{{ SITE_STAGE }}</span>
           </Link>
 
           <nav class="hx-nav" aria-label="Site">
