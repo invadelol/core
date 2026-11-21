@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, reactive } from 'vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import { RoleIcon } from '@invadelol/ui'
 import SiteLayout from '../components/SiteLayout.vue'
@@ -42,13 +42,6 @@ import '../css/home-desk.css'
  */
 const props = defineProps<HomePage>()
 const page = usePage()
-
-/** The desktop card's proposal (`?v=a|b|c`), read in the browser. */
-const v = ref<'a' | 'b' | 'c' | null>(null)
-onMounted(() => {
-  const q = new URLSearchParams(window.location.search).get('v')
-  v.value = q === 'a' || q === 'b' || q === 'c' ? q : null
-})
 
 const version = computed(
   () => props.picks?.patch ?? (page.props as { patch?: string | null }).patch ?? null
@@ -328,10 +321,10 @@ const topBully = (rows: { value: number }[]) => rows[0]?.value || 1
         </div>
       </section>
 
+      <!-- The desktop app: a line a player says, two things the app does, the window at its size -->
       <section class="sec" aria-labelledby="hm-app">
-        <!-- A: the same card, the window much larger, a hook with its words lit -->
-        <div v-if="v === 'a'" class="promo dk-a">
-          <div class="dk-t">
+        <div class="promo dk">
+          <div class="hm-promo">
             <Glyph :h="36" />
             <h2 id="hm-app" class="dk-h">Stop copying runes from a website.</h2>
             <p class="dk-p">
@@ -345,98 +338,9 @@ const topBully = (rows: { value: number }[]) => rows[0]?.value || 1
             ><img
               :src="'/app-page/home-1280.webp'"
               :srcset="'/app-page/home-1280.webp 1280w, /app-page/home-2560.webp 2560w'"
-              sizes="(max-width: 767px) 100vw, 900px"
-              alt="The Invade desktop app's Home: rank and LP, the match history scored out of 100, clips and champions"
-              loading="lazy"
-              decoding="async"
-          /></span>
-        </div>
-
-        <!-- B: the hook and the buttons on one line, champion select under them, edge to edge -->
-        <div v-else-if="v === 'b'" class="promo dk-b">
-          <div class="dk-top">
-            <h2 id="hm-app" class="dk-h">
-              Lock in. <span class="dk-dim">Your runes are already set.</span>
-            </h2>
-            <div class="dk-cta">
-              <DownloadApp track="home" />
-              <p class="meta">Free on Windows and macOS, no account needed.</p>
-            </div>
-          </div>
-          <p class="dk-p">
-            Invade opens with League, reads your champion select and imports
-            <b>the most played setup for your champion and role</b>. After the game,
-            <b>a score out of 100</b> tells you how it went.
-          </p>
-          <span class="fr l shot dk-shot"
-            ><img
-              :src="'/app-page/live-draft-1280.webp'"
-              :srcset="'/app-page/live-draft-1280.webp 1280w, /app-page/live-draft-2560.webp 2560w'"
-              sizes="(max-width: 767px) 100vw, 1216px"
-              alt="The Invade desktop app in champion select: both teams' picks, the most popular setup for Veigar mid with its runes ready to import, and strong picks for mid"
-              loading="lazy"
-              decoding="async"
-          /></span>
-        </div>
-
-        <!-- C: in game, the overlays over League itself -->
-        <div v-else-if="v === 'c'" class="promo dk-c">
-          <div class="dk-t">
-            <Glyph :h="36" />
-            <h2 id="hm-app" class="dk-h">What you count in your head, on screen.</h2>
-            <p class="dk-p">
-              Invade draws over League while you play: <b>objective timers</b>,
-              <b>the gold to your next item</b> and <b>your numbers against Diamond players</b>. In
-              champion select, your runes are set before you lock in.
-            </p>
-            <DownloadApp track="home" />
-            <p class="meta hm-free">Free on Windows and macOS, no account needed.</p>
-          </div>
-          <div class="dk-stage iv-dark">
-            <img
-              class="dk-game"
-              :src="'/app-page/game-1920.webp'"
-              alt="A League of Legends game on Summoner's Rift"
-              loading="lazy"
-              decoding="async"
-            />
-            <span class="dk-ov o1"
-              ><img
-                :src="'/app-page/ov-objectives-688.webp'"
-                alt="Invade's objective timers over the game"
-                loading="lazy"
-            /></span>
-            <span class="dk-ov o2"
-              ><img
-                :src="'/app-page/ov-build-536.webp'"
-                alt="Invade's next item: Archangel's Staff, 780 gold to go"
-                loading="lazy"
-            /></span>
-            <span class="dk-ov o3"
-              ><img
-                :src="'/app-page/ov-perf-496.webp'"
-                alt="Invade's numbers against Diamond players: CS per minute, gold per minute, kill participation, KDA"
-                loading="lazy"
-            /></span>
-          </div>
-        </div>
-
-        <div v-else class="promo">
-          <div class="hm-promo">
-            <Glyph :h="44" />
-            <h2 id="hm-app" class="h1">Invade for desktop</h2>
-            <p class="body">
-              It opens with League, brings the build into champion select and scores each of your
-              games out of 100.
-            </p>
-            <DownloadApp track="home" />
-            <p class="meta hm-free">Free, no account needed.</p>
-          </div>
-          <span class="fr l shot"
-            ><img
-              :src="'/app-page/home-1280.webp'"
-              :srcset="'/app-page/home-1280.webp 1280w, /app-page/home-2560.webp 2560w'"
-              sizes="(max-width: 767px) 100vw, 640px"
+              sizes="(max-width: 767px) 150vw, 1000px"
+              width="1280"
+              height="800"
               alt="The Invade desktop app's Home: rank and LP, the match history scored out of 100, clips and champions"
               loading="lazy"
               decoding="async"
