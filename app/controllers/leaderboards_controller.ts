@@ -8,7 +8,7 @@ import ladderService, {
 } from '#services/ladder_service'
 import flexLadderService, { LISTED, SEEN_DAYS } from '#services/flex_ladder_service'
 import proLadderService from '#services/pro_ladder_service'
-import proService from '#services/pro_service'
+import proService, { type ProPool } from '#services/pro_service'
 import proPhotoService from '#services/pro_photo_service'
 import proMatchService from '#services/pro_match_service'
 import championStatsService from '#services/champion_stats_service'
@@ -192,8 +192,14 @@ export default class LeaderboardsController {
       const s = scores.get(shown[i].puuid)
       return { ...r, score: s?.score ?? null, scoreGames: s?.games ?? 0 }
     })
-    // The head of the page: #1 on a short banner, #2 and #3 in a line each.
-    const podium = ladderService.rowsOf(snapshot, snapshot.entries.slice(0, 3))
+    // The head of the page: the first three as a podium, a pro among them standing before their
+    // champion's art when their photo is a cutout.
+    const podium = await Promise.all(
+      ladderService.rowsOf(snapshot, snapshot.entries.slice(0, 3)).map(async (r) => ({
+        ...r,
+        cutout: r.pro?.photo ? await proPhotoService.cutout(r.pro.slug) : false,
+      }))
+    )
     const { cutoffs, movesSince, roles, updatedAt } = ladderService.overview(snapshot)
     const filtered = Boolean(role || tier || prosOnly || q || page > 1 || sortProp(order).sort)
     const leader = podium[0]
@@ -637,7 +643,15 @@ export default class LeaderboardsController {
     const ids = league
       ? []
       : [...new Set([...shown, ...podium].flatMap((r) => (r.playerId ? [r.playerId] : [])))]
-    const records = await proService.records(ids).catch(() => new Map())
+    // The podium's pros: what they play (a longer span when the month is thin) and whether their
+    // photo is a cutout, which stands before their champion's art.
+    const [records, pools, cutouts] = await Promise.all([
+      proService.records(ids).catch(() => new Map()),
+      proService
+        .pools(podium.flatMap((r) => (r.playerId ? [r.playerId] : [])))
+        .catch(() => new Map<string, ProPool>()),
+      Promise.all(podium.map((r) => (r.pro.photo ? proPhotoService.cutout(r.pro.slug) : false))),
+    ])
     const recordOf = (r: Row) => {
       const own = inLeague.get(r.pro.slug)
       if (own) return { record: own.record, champions: own.champions }
@@ -687,7 +701,11 @@ export default class LeaderboardsController {
       }
     }
     const rows = shown.map(out)
-    const podiumRows = podium.map(out)
+    const podiumRows = podium.map((r, i) => ({
+      ...out(r),
+      pool: (r.playerId ? pools.get(r.playerId) : null) ?? null,
+      cutout: cutouts[i] ?? false,
+    }))
     const first = league?.slug === catalog.first?.slug
     // A league on its own is a page of the site (the first one at the bare address).
     const path = !league
@@ -716,8 +734,6 @@ export default class LeaderboardsController {
         APEX_TIERS.map((t) => [t, ladderRows.filter((r) => r.account?.tier === t).length])
       ),
       podium: podiumRows,
-      /** Whether the leader's photo is a cutout, which rises above their stage. */
-      leaderCutout: lead?.pro.photo ? await proPhotoService.cutout(lead.pro.slug) : false,
       rows,
       total,
       pros: players,
@@ -728,9 +744,10 @@ export default class LeaderboardsController {
       pageSize: PAGE,
       updatedAt: updated,
       next: league ? next.filter((m) => m.status !== 'finished') : [],
-      names: await championNames(
-        [...rows, ...podiumRows].flatMap((r) => r.champions.map((c) => c.champion))
-      ),
+      names: await championNames([
+        ...[...rows, ...podiumRows].flatMap((r) => r.champions.map((c) => c.champion)),
+        ...podiumRows.flatMap((r) => r.pool?.champions.map((c) => c.champion) ?? []),
+      ]),
       ...meta({
         title: league
           ? `${league.code} pros: solo queue ladder`

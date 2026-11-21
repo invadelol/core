@@ -29,6 +29,7 @@ import MatchRows from '../components/profile/MatchRows.vue'
 import OlderGames from '../components/profile/OlderGames.vue'
 import PerformanceCard from '../components/profile/PerformanceCard.vue'
 import SideCards from '../components/profile/SideCards.vue'
+import MainChampion from '../components/profile/MainChampion.vue'
 import ChampionsTable from '../components/profile/ChampionsTable.vue'
 import LiveGame from '../components/profile/LiveGame.vue'
 import { champIcon, championName } from '../lib/assets.js'
@@ -36,6 +37,7 @@ import type { IconName } from '../lib/icons.js'
 import { profilePath } from '../lib/format.js'
 import { useStickyColumn } from '../lib/sticky_column.js'
 import '../css/profile.css'
+import '../css/profile-aside.css'
 
 /** The match list's filters: queue, champion, role (the API's own values). */
 interface Filters {
@@ -66,6 +68,8 @@ const props = defineProps<{
   summoner: string
   section?: string
   initialProfile?: Summoner | null
+  /** Finished items and boots on the newest patch, for the main champion's core build. */
+  items?: { legendary: number[]; boots: number[] } | null
   /** The professional player behind this account, when there is one. */
   pro?: {
     slug: string
@@ -640,6 +644,20 @@ async function sync() {
 /* ── The page's own pieces ─────────────────────────────────── */
 /** Games the overview lists before "Show older games" (the Matches route lists them all). */
 const OVERVIEW_GAMES = 10
+
+/**
+ * Beside the games (Overview and Matches), a column with how they play their main champion and
+ * their champions, which leave the left column there; shown while they load and once there is
+ * something to show.
+ */
+const aside = computed(
+  () =>
+    (section.value === 'overview' || section.value === 'matches') &&
+    (pending.champions ||
+      pending.matches ||
+      champions.value.length > 0 ||
+      matches.value.some((m) => m.queueId !== 0))
+)
 const QUEUES: { value: Filters['type']; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'ranked', label: 'Solo/Duo' },
@@ -748,7 +766,7 @@ function clearFilters() {
         </span>
       </EmptyState>
 
-      <div v-else-if="profile" class="pl">
+      <div v-else-if="profile" class="pl" :class="{ 'has-aside': aside }">
         <!-- The left column, sticky beside the section (wide screens) -->
         <div ref="side" class="pl-side">
           <!-- The rail: who, where to go, the rank -->
@@ -778,7 +796,7 @@ function clearFilters() {
             </div>
             <SideCards
               v-else
-              :champions="champions"
+              :champions="aside ? [] : champions"
               :matches="matches"
               :teammates="teammates"
               :puuid="profile.puuid"
@@ -908,6 +926,30 @@ function clearFilters() {
                 :auto="wide"
               />
             </section>
+            <!-- Beside the games, under Performance: their main champion, then their champions -->
+            <aside v-if="aside" class="pl-aside" aria-label="Main champion and champions">
+              <div v-if="pending.matches || pending.champions" class="pl-gs">
+                <Skeleton :rows="5" pic />
+              </div>
+              <template v-else>
+                <MainChampion
+                  :matches="matches"
+                  :puuid="profile.puuid"
+                  :champion="mainChampion ?? null"
+                  :stats="champions"
+                  :items="props.items ?? null"
+                  :name="profile.gameName"
+                />
+                <SideCards
+                  :champions="champions"
+                  :matches="[]"
+                  :teammates="[]"
+                  :puuid="profile.puuid"
+                  :champions-href="`${base}/champions`"
+                  :friends-href="`${base}/friends`"
+                />
+              </template>
+            </aside>
           </template>
 
           <!-- ── Live: asks Riot once, when opened ─────────────────── -->

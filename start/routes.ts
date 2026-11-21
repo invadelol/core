@@ -400,8 +400,10 @@ router.get('/:summoner/:section?', async ({ inertia, params, request, response }
   const preload = initialProfile ? analyticsUrls(initialProfile.puuid) : []
   // A pro's account carries the "Pro" tag and leads to their page.
   const identity = summonerService.normalize(params.summoner)
-  const { default: proService } = await import('#services/pro_service')
+  const { default: proService, itemKinds } = await import('#services/pro_service')
   const pro = identity ? await proService.byRiotId(identity.gameName, identity.tagLine) : null
+  // Which items finish a build and which are boots, for the main champion's core beside the games.
+  const kinds = await itemKinds().catch(() => null)
   // A beta tester's profile says so.
   const { default: betaService } = await import('#services/desktop/beta_service')
   const betaTester = initialProfile ? await betaService.isTester(initialProfile.puuid) : false
@@ -421,6 +423,9 @@ router.get('/:summoner/:section?', async ({ inertia, params, request, response }
     preload,
     pro,
     betaTester,
+    items: kinds?.legendary.size
+      ? { legendary: [...kinds.legendary], boots: [...kinds.boots] }
+      : null,
   })
 })
 

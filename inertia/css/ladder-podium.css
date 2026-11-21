@@ -1,0 +1,262 @@
+/* A ladder's podium (LadderPodium.vue), on the Solo/Duo and pro ladders: three cards, second,
+   first, third, the first raised by a taller picture; then the apex tiers in one line. */
+@layer components {
+  .vb .pod {
+    display: grid;
+    grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr));
+    gap: 16px;
+    align-items: end;
+  }
+  .vb .pod-c {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    border-radius: var(--r3);
+    background: var(--d-sheen), var(--d-sf1);
+    box-shadow: var(--d-lit), var(--d-drop);
+    transition: background 160ms var(--ease);
+  }
+  .vb .pod-c.one {
+    background:
+      radial-gradient(70% 100% at 100% 0%, var(--d-glow), rgb(var(--v-rgb) / 0) 75%),
+      var(--d-sheen), var(--d-sf1);
+  }
+  .vb .pod-c:hover {
+    background:
+      linear-gradient(rgb(var(--v-rgb) / 0.04), rgb(var(--v-rgb) / 0.04)), var(--d-sheen),
+      var(--d-sf1);
+  }
+
+  /* The picture: their main champion's art, quiet, the player before it. */
+  .vb .pod-art {
+    height: 136px;
+    border-radius: 0;
+    --cut: 18px;
+  }
+  .vb .pod-c.one .pod-art {
+    height: 176px;
+  }
+  .vb .pod-art > img:first-child {
+    opacity: 0.55;
+    object-position: 50% 22%;
+    -webkit-mask-image: radial-gradient(120% 140% at 100% 0%, #000 35%, transparent 85%);
+    mask-image: radial-gradient(120% 140% at 100% 0%, #000 35%, transparent 85%);
+  }
+  .vb .pod-pic {
+    position: absolute;
+    left: 18px;
+    overflow: hidden;
+  }
+  /* A cutout stands on the art's floor. */
+  .vb .pod-pic.stand {
+    bottom: 0;
+    width: 124px;
+    height: 124px;
+  }
+  .vb .pod-c.one .pod-pic.stand {
+    width: 164px;
+    height: 164px;
+  }
+  /* Any other picture (a photo with its room, a logo, an icon) in a square. */
+  .vb .pod-pic.box {
+    bottom: 16px;
+    width: 76px;
+    height: 76px;
+    border-radius: var(--r2);
+    background: var(--v900);
+    box-shadow:
+      0 0 0 1px var(--line-2),
+      0 10px 24px rgb(4 3 10 / 0.35);
+  }
+  .vb .pod-c.one .pod-pic.box {
+    width: 92px;
+    height: 92px;
+  }
+  .vb .pod-pic.box > img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .vb .pod-no {
+    position: absolute;
+    right: 16px;
+    bottom: 12px;
+    font-size: 26px;
+    line-height: 1;
+    font-weight: 650;
+    letter-spacing: -0.03em;
+    color: var(--t2);
+    font-variant-numeric: lining-nums;
+  }
+  .vb .pod-c.one .pod-no {
+    font-size: 34px;
+    color: var(--t1);
+  }
+  .vb .pod-no sup {
+    margin-left: 1px;
+    font-size: 0.42em;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--t3);
+  }
+
+  /* Who, their LP and gap, their three champions, their record. */
+  .vb .pod-b {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    padding: 16px 18px;
+  }
+  .vb .pod-nm {
+    display: flex;
+    align-items: baseline;
+    min-width: 0;
+    font-size: 18px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+  }
+  .vb .pod-c.one .pod-nm {
+    font-size: 22px;
+  }
+  .vb .pod-nm .lb-tag {
+    flex: none;
+    margin-left: 0.3em;
+  }
+  .vb .pod-mt {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    min-height: 18px;
+  }
+  .vb .pod-mt > .row {
+    gap: 5px;
+    min-width: 0;
+  }
+  .vb .pod-lg {
+    width: 14px;
+    height: 14px;
+    flex: none;
+    object-fit: contain;
+  }
+  .vb .pod-lp {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 6px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .vb .pod-lp .u {
+    margin-left: 2px;
+    font-size: 0.55em;
+    font-weight: 600;
+    color: var(--t3);
+  }
+  /* Three rows tall whatever the pool, so a short pool says so instead of shrinking the card. */
+  .vb .pod-pool {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-height: 104px;
+    padding: 4px 0 2px;
+  }
+  .vb .pod-ch {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 32px;
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+  .vb .pod-ch .fr {
+    flex: none;
+  }
+  .vb .pod-wr {
+    width: 40px;
+    text-align: right;
+  }
+  .vb .pod-few {
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+    padding-left: 33px;
+  }
+  .vb .pod-ft {
+    min-height: 18px;
+  }
+
+  /* The apex tiers under the podium, in one line. */
+  .vb .pod-cut {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 24px;
+    margin-top: 16px;
+    padding: 14px 24px;
+  }
+  .vb .pod-cut > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .vb .pod-cut .grow {
+    flex: 1;
+  }
+
+  @media (max-width: 1023px) {
+    .vb .pod {
+      gap: 12px;
+    }
+    .vb .pod-art,
+    .vb .pod-c.one .pod-art {
+      height: 132px;
+    }
+    .vb .pod-pic.stand,
+    .vb .pod-c.one .pod-pic.stand {
+      width: 124px;
+      height: 124px;
+    }
+    .vb .pod-c.one .pod-nm,
+    .vb .pod-nm {
+      font-size: 17px;
+    }
+    .vb .pod-mt > .row:nth-child(2) {
+      display: none;
+    }
+  }
+  @media (max-width: 767px) {
+    .vb .pod {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .vb .pod > .one {
+      order: -1;
+    }
+    .vb .pod-art,
+    .vb .pod-c.one .pod-art {
+      height: 112px;
+    }
+    .vb .pod-pic.stand,
+    .vb .pod-c.one .pod-pic.stand {
+      width: 108px;
+      height: 108px;
+    }
+    .vb .pod-pic.box,
+    .vb .pod-c.one .pod-pic.box {
+      width: 68px;
+      height: 68px;
+      bottom: 14px;
+    }
+    .vb .pod-mt > .row:nth-child(2) {
+      display: flex;
+    }
+    .vb .pod-pool {
+      min-height: 0;
+    }
+    .vb .pod-cut {
+      padding: 14px 16px;
+    }
+  }
+}

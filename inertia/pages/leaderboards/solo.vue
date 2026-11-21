@@ -5,7 +5,6 @@ import { RoleIcon } from '@invadelol/ui'
 import SiteLayout from '../../components/SiteLayout.vue'
 import Icon from '../../components/ui/Icon.vue'
 import Frame from '../../components/ui/Frame.vue'
-import ProPic from '../../components/pros/ProPic.vue'
 import Select from '../../components/ui/Select.vue'
 import ScoreDial from '../../components/ui/ScoreDial.vue'
 import RankEmblem from '../../components/ui/RankEmblem.vue'
@@ -16,7 +15,7 @@ import { linkSort, type SortDir } from '../../components/ui/sort.js'
 import RoleFilter from '../../components/leaderboards/RoleFilter.vue'
 import LadderPager from '../../components/leaderboards/LadderPager.vue'
 import LadderPlayer from '../../components/leaderboards/LadderPlayer.vue'
-import { champIcon, championName, championSplash, profileIcon } from '../../lib/assets.js'
+import { champIcon, championName } from '../../lib/assets.js'
 import {
   dayMonth,
   laneOf,
@@ -26,11 +25,13 @@ import {
   signedN,
   since,
   tierWord,
-  winPct,
   withQuery,
 } from '../../lib/ladders.js'
 import { regionFlag } from '../../lib/flags.js'
+import LadderPodium from '../../components/leaderboards/LadderPodium.vue'
+import type { PodiumPlayer } from '../../components/leaderboards/podium.js'
 import '../../css/leaderboards.css'
+import '../../css/ladder-podium.css'
 
 interface Row {
   place: number
@@ -56,14 +57,14 @@ interface Row {
   score: number | null
   scoreGames: number
 }
-/** One of the ladder's first three, for the head of the page. */
-type Leader = Omit<Row, 'score' | 'scoreGames'>
+/** One of the ladder's first three, for the head of the page, a pro with whether their photo is a cutout. */
+type Leader = Omit<Row, 'score' | 'scoreGames'> & { cutout: boolean }
 
 /**
  * `/leaderboards/solo`: a server's Challenger, Grandmaster and Master, as the crawler last read
- * each league whole (app/services/ladder_service.ts). One sheet at the top: #1 on a short banner,
- * #2 and #3 in a line each, and what Challenger and Grandmaster take beside them; then the role
- * filter with each role's share, and the table.
+ * each league whole (app/services/ladder_service.ts). At the top, the first three as a podium (their
+ * champions and record) and what Challenger and Grandmaster take in one line; then the role filter
+ * with each role's share, and the table.
  */
 const props = defineProps<{
   region: { slug: string; label: string; platform: string }
@@ -168,31 +169,26 @@ onMounted(() => {
 })
 onBeforeUnmount(() => clearInterval(resetTimer))
 
-/* ── The leaders: #1 with the art of the champion they play most, then #2 and #3 ── */
-const leader = computed(() => props.podium[0] ?? null)
-const chasers = computed(() => props.podium.slice(1, 3))
-/** How far #1 is ahead of #2, in LP. */
-const lead = computed(() => {
-  const [a, b] = props.podium
-  return a && b ? a.lp - b.lp : null
-})
-/** LP behind #1. */
-const behind = (r: Leader) => (leader.value ? leader.value.lp - r.lp : 0)
-const topChampion = (r: Leader) => r.champions[0] ?? null
-const whereTo = (r: Leader) =>
-  (r.pro ? `/pro/${r.pro.slug}` : playerPath(r.gameName, r.tagLine)) ?? '#'
-const nameOf = (r: Leader) => r.pro?.name ?? r.gameName ?? 'Unknown player'
-const tagOf = (r: Leader) =>
-  r.pro ? (r.pro.team?.name ?? null) : r.tagLine ? `#${r.tagLine}` : null
-const record = (r: Leader) =>
-  `${winPct(r.wins, r.wins + r.losses)} of ${n(r.wins + r.losses)} games`
-
-/** "2nd", "3rd", "4th": the place as words read. */
-const ordinal = (place: number) => {
-  const t = place % 100
-  if (t >= 11 && t <= 13) return 'th'
-  return ['th', 'st', 'nd', 'rd'][place % 10] ?? 'th'
-}
+/* ── The head: the first three as a podium, with what they play and their record ── */
+const podium = computed<PodiumPlayer[]>(() =>
+  props.podium.map((r) => ({
+    place: r.place,
+    name: r.pro?.name ?? r.gameName ?? 'Unknown player',
+    tag: r.pro ? null : r.tagLine ? `#${r.tagLine}` : null,
+    riot: !r.pro,
+    href: (r.pro ? `/pro/${r.pro.slug}` : playerPath(r.gameName, r.tagLine)) ?? '#',
+    pro: r.pro ? { slug: r.pro.slug, photo: r.pro.photo, team: r.pro.team } : null,
+    cutout: r.cutout,
+    icon: r.icon,
+    tier: r.tier,
+    lp: r.lp,
+    role: r.role,
+    champions: r.champions,
+    span: `in ${props.rule.windowDays} days`,
+    record: { wins: r.wins, games: r.wins + r.losses, span: 'this season' },
+    hot: r.hotStreak,
+  }))
+)
 </script>
 
 <template>
@@ -236,102 +232,28 @@ const ordinal = (place: number) => {
 
       <template v-else>
         <!-- The leaders and what each apex tier takes, on one sheet -->
-        <section v-if="leader" class="card lit sl">
-          <div class="sl-lead">
-            <Link class="sl-one" :href="whereTo(leader)">
-              <span v-if="topChampion(leader)" class="sl-art"
-                ><img
-                  :src="championSplash(topChampion(leader)!.champion)"
-                  alt=""
-                  fetchpriority="high"
-              /></span>
-              <span class="sl-no hi">1<span class="sl-ord">st</span></span>
-              <span v-if="leader.pro" class="lb-pp sl-pic"
-                ><ProPic
-                  :slug="leader.pro.slug"
-                  :photo="leader.pro.photo"
-                  :team="leader.pro.team"
-                  :size="64"
-                  position="50% 8%"
-                  eager
-              /></span>
-              <Frame v-else class="sl-pic" :src="profileIcon(leader.icon)" eager />
-              <span class="col sl-who">
-                <span class="sl-nm ell"
-                  >{{ nameOf(leader)
-                  }}<span v-if="tagOf(leader)" class="lb-tag">{{ tagOf(leader) }}</span></span
-                >
-                <span class="meta row sl-mt"
-                  ><RoleIcon v-if="laneOf(leader.role)" :lane="laneOf(leader.role)!" :size="13" />
-                  <span class="ell"
-                    ><template v-if="topChampion(leader)"
-                      >{{ championName(topChampion(leader)!.champion) }}, </template
-                    >{{ record(leader) }}</span
-                  ></span
-                >
-              </span>
-              <span class="col sl-lp">
-                <span class="row" style="gap: 8px"
-                  ><RankEmblem :tier="leader.tier" :size="28" /><span class="fg-l num"
-                    >{{ n(leader.lp) }}<span class="u">LP</span></span
-                  ></span
-                >
-                <span v-if="lead !== null" class="meta">{{ n(lead) }} LP ahead</span>
-              </span>
-            </Link>
-            <Link v-for="p in chasers" :key="p.place" class="sl-r" :href="whereTo(p)">
-              <span class="sl-no"
-                >{{ p.place }}<span class="sl-ord">{{ ordinal(p.place) }}</span></span
-              >
-              <span v-if="p.pro" class="lb-pp sl-sp"
-                ><ProPic
-                  :slug="p.pro.slug"
-                  :photo="p.pro.photo"
-                  :team="p.pro.team"
-                  :size="32"
-                  position="50% 8%"
-              /></span>
-              <Frame v-else :src="profileIcon(p.icon)" :width="32" size="xs" />
-              <span class="h5 ell"
-                >{{ nameOf(p) }}<span v-if="tagOf(p)" class="lb-tag">{{ tagOf(p) }}</span></span
-              >
-              <span class="meta row sl-rl"
-                ><RoleIcon v-if="laneOf(p.role)" :lane="laneOf(p.role)!" :size="13" />{{
-                  winPct(p.wins, p.wins + p.losses)
-                }}</span
-              >
-              <span class="h5 num sl-rv">{{ n(p.lp) }} LP</span>
-              <span class="meta num sl-rv sl-gap">{{ n(behind(p)) }} behind</span>
-            </Link>
-          </div>
-          <div class="sl-cut">
-            <span class="lab">What it takes</span>
-            <span v-for="c in cutoffs" :key="c.tier" class="sl-t">
-              <RankEmblem :tier="c.tier" :size="30" />
-              <span class="col" style="gap: 2px; min-width: 0">
-                <span class="h5">{{ tierWord(c.tier) }}</span>
-                <span class="meta">{{
-                  c.at === null
-                    ? 'Not read yet'
-                    : `${n(c.players)} ${c.players === 1 ? 'player' : 'players'}`
-                }}</span>
-              </span>
-              <span class="col sl-tv">
-                <span class="fg-s num"
-                  >{{ c.lp === null ? '–' : n(c.lp)
-                  }}<span v-if="c.lp !== null" class="u">LP</span></span
-                >
-                <span v-if="c.change !== null && movesHead" class="meta"
-                  ><span :class="{ vi: c.change > 0 }">{{ signedN(c.change) }}</span>
-                  {{ movesHead === '24 hours' ? 'today' : movesHead.toLowerCase() }}</span
-                >
-              </span>
-            </span>
-            <span class="meta sl-nx"
+        <!-- The first three as a podium, then what each apex tier takes, in one line -->
+        <template v-if="podium.length">
+          <LadderPodium :players="podium" />
+          <section class="card pod-cut" aria-label="What each apex tier takes">
+            <span v-for="c in cutoffs" :key="c.tier"
+              ><RankEmblem :tier="c.tier" :size="22" /><span class="h5">{{ tierWord(c.tier) }}</span
+              ><span class="meta"
+                >{{ c.lp === null ? 'not read yet' : `from ${n(c.lp)} LP` }}, {{ n(c.players) }}
+                {{ c.players === 1 ? 'player' : 'players'
+                }}<template v-if="c.change && movesHead"
+                  >,
+                  <span :class="{ vi: c.change > 0 }">{{ signedN(c.change) }}</span>
+                  {{ movesHead === '24 hours' ? 'today' : movesHead.toLowerCase() }}</template
+                ></span
+              ></span
+            >
+            <span class="grow"></span>
+            <span class="meta"
               >Moves at 00:00 UTC<template v-if="nextReset">, {{ nextReset }}</template></span
             >
-          </div>
-        </section>
+          </section>
+        </template>
 
         <div class="lb-filt">
           <RoleFilter :active="filters.role" :shares="shares" :href="(role) => href({ role })" />

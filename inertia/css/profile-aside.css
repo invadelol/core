@@ -1,0 +1,112 @@
+/* A profile's column beside the games (summoner.vue, Overview and Matches): under Performance,
+   the games and, on their right, "<Name> on <Champion>" and the champions, on the page ground
+   like the summary at the left. The games keep at least 620 px, where their items stay. */
+@layer components {
+  .vb .pl.has-aside {
+    grid-template-columns: 272px minmax(0, 1fr);
+    column-gap: 24px;
+  }
+  .vb .pl.has-aside > .pl-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 256px;
+    column-gap: 20px;
+    row-gap: 28px;
+    align-items: start;
+  }
+  .vb .pl.has-aside > .pl-main > * {
+    grid-column: 1 / -1;
+  }
+  .vb .pl.has-aside > .pl-main > .mh {
+    grid-column: 1;
+    min-width: 0;
+  }
+  .vb .pl.has-aside > .pl-main > .pl-aside {
+    grid-column: 2;
+    position: sticky;
+    top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-width: 0;
+  }
+  /* The column's first section starts on the ground without a hairline over it. */
+  .vb .pl-aside > .pl-gs:first-child {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  /* The main champion: its icon, record and KDA, then its build, a line each. */
+  .vb .pa-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+  .vb .pa-ic {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--r-sm);
+  }
+  .vb .pa-figs {
+    display: grid;
+    flex: 1;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .vb .pa-figs .u {
+    margin-left: 2px;
+    font-size: 0.55em;
+    font-weight: 600;
+    color: var(--t3);
+  }
+  .vb .pa-kv {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 40px;
+  }
+  .vb .pa-its {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .vb .pa-its img {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--r-sm);
+    background: var(--ink-0);
+  }
+  .vb .pa-its img.r {
+    border-radius: 50%;
+  }
+  .vb .pa-its img.sm {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Under 1280 px the games take the width and the column follows them, its sections side by side. */
+  @media (max-width: 1279px) {
+    .vb .pl.has-aside > .pl-main {
+      display: flex;
+      align-items: stretch;
+    }
+    .vb .pl.has-aside > .pl-main > .pl-aside {
+      position: static;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      align-items: start;
+      column-gap: 32px;
+    }
+    .vb .pl-aside > .pl-gs {
+      padding-top: 0;
+      border-top: 0;
+    }
+  }
+  @media (max-width: 1023px) {
+    .vb .pl.has-aside {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}
