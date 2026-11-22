@@ -29,7 +29,6 @@ import MatchRows from '../components/profile/MatchRows.vue'
 import OlderGames from '../components/profile/OlderGames.vue'
 import PerformanceCard from '../components/profile/PerformanceCard.vue'
 import SideCards from '../components/profile/SideCards.vue'
-import MainChampion from '../components/profile/MainChampion.vue'
 import ChampionsTable from '../components/profile/ChampionsTable.vue'
 import LiveGame from '../components/profile/LiveGame.vue'
 import { champIcon, championName } from '../lib/assets.js'
@@ -788,7 +787,7 @@ function clearFilters() {
         </span>
       </EmptyState>
 
-      <div v-else-if="profile" class="pl" :class="{ 'has-aside': aside }">
+      <div v-else-if="profile" class="pl">
         <!-- The left column, sticky beside the section (wide screens) -->
         <div ref="side" class="pl-side">
           <!-- The rail: who, where to go, the rank -->
@@ -948,30 +947,6 @@ function clearFilters() {
                 :auto="wide"
               />
             </section>
-            <!-- Beside the games, under Performance: their main champion, then their champions -->
-            <aside v-if="aside" class="pl-aside" aria-label="Main champion and champions">
-              <div v-if="pending.matches || pending.champions" class="pl-gs">
-                <Skeleton :rows="5" pic />
-              </div>
-              <template v-else>
-                <MainChampion
-                  :matches="matches"
-                  :puuid="profile.puuid"
-                  :champion="mainChampion ?? null"
-                  :stats="champions"
-                  :items="props.items ?? null"
-                  :name="profile.gameName"
-                />
-                <SideCards
-                  :champions="champions"
-                  :matches="[]"
-                  :teammates="[]"
-                  :puuid="profile.puuid"
-                  :champions-href="`${base}/champions`"
-                  :friends-href="`${base}/friends`"
-                />
-              </template>
-            </aside>
           </template>
 
           <!-- ── Live: asks Riot once, when opened ─────────────────── -->
