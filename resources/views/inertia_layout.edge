@@ -81,6 +81,14 @@
       <meta property="og:image:width" content="{{ page.props.social.imageWidth || 1200 }}" />
       <meta property="og:image:height" content="{{ page.props.social.imageHeight || 630 }}" />
       <meta property="og:image:alt" content="{{ page.props.social.alt || (page.props.social.title + ' champion artwork and recent stats') }}" />
+      {{-- A clip: the video itself, which Discord and others play in the preview. --}}
+      @if(page.props.social.video)
+        <meta property="og:video" content="{{ page.props.social.video.url }}" />
+        <meta property="og:video:secure_url" content="{{ page.props.social.video.url }}" />
+        <meta property="og:video:type" content="video/mp4" />
+        <meta property="og:video:width" content="{{ page.props.social.video.width }}" />
+        <meta property="og:video:height" content="{{ page.props.social.video.height }}" />
+      @endif
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:site" content="@invadedotlol" />
       <meta name="twitter:title" content="{{ page.props.social.title }}" />

@@ -554,8 +554,10 @@ class AccountService {
     }
   }
 
-  /** Deletes the account and everything attached to it. League data and the apps stay. */
+  /** Deletes the account and everything attached to it, clips included. League data and the apps stay. */
   async remove(user: SignedIn) {
+    const { default: clipService } = await import('#services/clips/clip_service')
+    await clipService.purge(await clipService.idsOf(user.id))
     await db.from('invade_user').where('id', user.id).delete()
   }
 }

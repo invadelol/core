@@ -25,3 +25,6 @@ yarn-error.log
 
 # Platform specific
 .DS_Store
+
+# Local clip videos (CLIPS_STORAGE=local)
+storage

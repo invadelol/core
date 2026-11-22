@@ -308,14 +308,21 @@
   background: rgb(var(--loss-rgb) / 0.22);
 }
 
-/* A profile's star, after the Riot ID's copy button. */
-.vb .pl-name .ac-fav {
-  margin-left: -2px;
+/* A profile's star, in the identity card's top-right corner, over the champion's art. */
+.vb .pl-id .ac-fav {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  color: var(--t2);
 }
-.vb .pl-name .ac-fav.on {
+.vb .pl-id .ac-fav:hover {
+  color: var(--t1);
+}
+.vb .pl-id .ac-fav.on {
   color: var(--gold);
 }
-.vb .pl-name .ac-fav.on svg {
+.vb .pl-id .ac-fav.on svg {
   fill: rgb(var(--gold-rgb) / 0.3);
 }
 

@@ -58,6 +58,8 @@ const TierListsController = () => import('#controllers/tier_lists_controller')
 const AccountController = () => import('#controllers/account_controller')
 const AccountAuthController = () => import('#controllers/account_auth_controller')
 const DesktopAccountController = () => import('#controllers/desktop_account_controller')
+const ClipsController = () => import('#controllers/clips_controller')
+const DesktopClipsController = () => import('#controllers/desktop_clips_controller')
 
 // API routes group
 router
@@ -215,6 +217,18 @@ router
         router
           .delete('/account', [DesktopAccountController, 'disconnect'])
           .use(middleware.desktopAuth())
+        /** Clips posted from the app (§11): details, then the video and its picture as files. */
+        router.get('/clips', [DesktopClipsController, 'index']).use(middleware.desktopAuth())
+        router.post('/clips', [DesktopClipsController, 'create']).use(middleware.desktopAuth())
+        router
+          .put('/clips/:id/video', [DesktopClipsController, 'video'])
+          .use(middleware.desktopAuth())
+        router
+          .put('/clips/:id/poster', [DesktopClipsController, 'poster'])
+          .use(middleware.desktopAuth())
+        router
+          .delete('/clips/:id', [DesktopClipsController, 'destroy'])
+          .use(middleware.desktopAuth())
       })
       .prefix('/desktop')
 
@@ -333,6 +347,12 @@ router.get('/api/account', [AccountController, 'show'])
 router.post('/api/account/changes', [AccountController, 'change'])
 router.post('/api/account/link', [AccountController, 'approve'])
 router.delete('/api/account', [AccountController, 'destroy'])
+
+/** Clips: a clip's page, its video and picture, the lists of a match and a player, deletion. */
+router.get('/clip/:id', [ClipsController, 'page'])
+router.get('/clips/:file', [ClipsController, 'file'])
+router.get('/api/clips', [ClipsController, 'list'])
+router.delete('/api/clips/:id', [ClipsController, 'destroy'])
 
 /** The community server, before the summoner catch-all below. */
 router.get('/discord', ({ response }) => response.redirect(DISCORD_URL, false, 302))

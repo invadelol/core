@@ -31,6 +31,7 @@ import PerformanceCard from '../components/profile/PerformanceCard.vue'
 import SideCards from '../components/profile/SideCards.vue'
 import ChampionsTable from '../components/profile/ChampionsTable.vue'
 import LiveGame from '../components/profile/LiveGame.vue'
+import ProfileClips from '../components/clips/ProfileClips.vue'
 import { champIcon, championName } from '../lib/assets.js'
 import type { IconName } from '../lib/icons.js'
 import { profilePath } from '../lib/format.js'
@@ -854,6 +855,7 @@ function clearFilters() {
                 :previous-stats="previousStats"
                 :puuid="profile.puuid"
               />
+              <ProfileClips :puuid="profile.puuid" />
             </template>
 
             <section id="matches" class="mh">

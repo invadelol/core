@@ -5,6 +5,7 @@ import { BuildTab, ObjectiveIcon, Timeline } from '@invadelol/ui'
 import { hasEvents, queueName, type MatchDetail } from '@invadelol/ui/logic'
 import SiteLayout from '../components/SiteLayout.vue'
 import MatchChart from '../components/match/MatchChart.vue'
+import MatchClips from '../components/clips/MatchClips.vue'
 import Icon from '../components/ui/Icon.vue'
 import Frame from '../components/ui/Frame.vue'
 import CardHead from '../components/ui/CardHead.vue'
@@ -621,6 +622,7 @@ async function copy() {
           </div>
 
           <div class="stk">
+            <MatchClips :match-id="matchId" />
             <div v-if="best" class="card">
               <CardHead title="Best in the game" icon="star" />
               <div style="padding: 0 16px 16px">

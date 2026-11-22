@@ -14,7 +14,7 @@ import '../../css/account.css'
 
 /**
  * The identity sheet at the top of the profile rail (`.pl-id`): the icon with the level under it,
- * the Riot ID with a copy button and the favorite star, the role the player mostly plays, the server and a Pro tag, when
+ * the Riot ID with a copy button, the favorite star in its corner, the role the player mostly plays, the server and a Pro tag, when
  * the last game was and how many times the profile was opened, then Update, Share and Compare. The
  * main champion's centred art fades into the top right corner.
  */
@@ -150,6 +150,18 @@ function star() {
     <div v-if="champion" class="pl-art" aria-hidden="true">
       <img :src="championSplash(champion)" alt="" />
     </div>
+    <button
+      type="button"
+      class="btn sm ico ac-fav"
+      :class="{ on: favorite }"
+      :aria-pressed="favorite"
+      :aria-label="favorite ? 'Remove from favorites' : 'Add to favorites'"
+      :title="favorite ? 'In your favorites' : 'Add to favorites'"
+      data-track="profile_favorite"
+      @click="star"
+    >
+      <Icon name="star" :size="16" />
+    </button>
     <div class="pl-ic">
       <img :src="profileIcon(summoner.profileIconId)" alt="" width="72" height="72" />
       <b v-if="summoner.summonerLevel" class="num">{{ summoner.summonerLevel }}</b>
@@ -165,18 +177,6 @@ function star() {
         @click="copy"
       >
         <Icon :name="copied ? 'check' : 'copy'" :size="14" />
-      </button>
-      <button
-        type="button"
-        class="pl-copy ac-fav"
-        :class="{ on: favorite }"
-        :aria-pressed="favorite"
-        :aria-label="favorite ? 'Remove from favorites' : 'Add to favorites'"
-        :title="favorite ? 'In your favorites' : 'Add to favorites'"
-        data-track="profile_favorite"
-        @click="star"
-      >
-        <Icon name="star" :size="15" />
       </button>
     </div>
     <div class="pl-tags">

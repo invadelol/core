@@ -6,6 +6,7 @@ import app from '@adonisjs/core/services/app'
 import BodyParserMiddleware from '@adonisjs/core/bodyparser_middleware'
 import type { BodyParserConfig } from '@adonisjs/core/types/bodyparser'
 import { EMPTY_BODY_SHA256 } from '#services/desktop/signing'
+import { DesktopException } from '#exceptions/desktop_exception'
 
 declare module '@adonisjs/core/http' {
   interface HttpContext {
@@ -14,6 +15,8 @@ declare module '@adonisjs/core/http' {
      * desktop routes' signatures (docs/desktop-sync.md §1.1).
      */
     desktopBodyDigest?: Promise<string>
+    /** The whole body of a desktop route that takes a file (`RAW_LIMITS`), as it arrived. */
+    desktopRawBody?: Buffer
   }
 }
 
@@ -34,6 +37,34 @@ const JSON_LIMITS = new Map([
   // A bug report with its screenshot and clip, base64 (§9.2).
   ['/api/desktop/reports', 16 * 1024 * 1024],
 ])
+
+/**
+ * Desktop routes whose body is a file, not JSON (a clip's video and picture, §11): read whole,
+ * up to their limit, hashed for the signature, and handed to the route as bytes.
+ */
+const RAW_LIMITS = new Map([
+  ['/api/desktop/clips/:id/video', (Number(process.env.CLIPS_MAX_MB) || 40) * 1024 * 1024],
+  ['/api/desktop/clips/:id/poster', 512 * 1024],
+])
+
+/**
+ * Reads a whole body; null when it is larger than `limit` bytes. An oversized body is still read
+ * to its end (and dropped), so the client gets the 413 rather than a closed connection.
+ */
+function readRaw(request: IncomingMessage, limit: number): Promise<Buffer | null> {
+  if (Number(request.headers['content-length']) > limit) return Promise.resolve(null)
+  return new Promise((resolve) => {
+    let chunks: Buffer[] = []
+    let size = 0
+    request.on('data', (chunk: Buffer) => {
+      size += chunk.length
+      if (size > limit) chunks = []
+      else chunks.push(chunk)
+    })
+    request.once('end', () => resolve(size > limit ? null : Buffer.concat(chunks)))
+    request.once('error', () => resolve(null))
+  })
+}
 
 /** The limit a 413 on this URL refers to, when the route has one of its own. */
 export function payloadLimitOf(url: string): number | null {
@@ -112,6 +143,21 @@ function digestBody(request: IncomingMessage, hasBody: boolean): Promise<string>
 export default class BodyParser {
   async handle(ctx: HttpContext, next: NextFn) {
     const pattern = ctx.route?.pattern ?? ''
+    const raw = RAW_LIMITS.get(pattern)
+    if (raw) {
+      const body = await readRaw(ctx.request.request, raw)
+      if (!body) {
+        await drain(ctx.request.request)
+        throw new DesktopException(
+          `The file is larger than ${Math.round(raw / 1024 / 1024) || 1} MB`,
+          413,
+          'E_PAYLOAD_TOO_LARGE'
+        )
+      }
+      ctx.desktopRawBody = body
+      ctx.desktopBodyDigest = Promise.resolve(createHash('sha256').update(body).digest('hex'))
+      return next()
+    }
     if (pattern.startsWith('/api/desktop/')) {
       ctx.desktopBodyDigest = digestBody(ctx.request.request, ctx.request.hasBody())
     }

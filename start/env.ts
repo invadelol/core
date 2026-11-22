@@ -124,6 +124,18 @@ export default await Env.create(new URL('../', import.meta.url), {
   /** Local only: both providers answered by scripts/oauth_mock.mjs at this origin. Ignored in production. */
   OAUTH_MOCK_ORIGIN: Env.schema.string.optional(),
 
+  /*
+  |----------------------------------------------------------
+  | Clips (app/services/clips)
+  |----------------------------------------------------------
+  | Where videos live: `local` (default, under CLIPS_DIR, default ./storage)
+  | or `drive` (the DRIVE_DISK object storage). Limits per clip and account.
+  */
+  CLIPS_STORAGE: Env.schema.enum.optional(['local', 'drive'] as const),
+  CLIPS_DIR: Env.schema.string.optional(),
+  CLIPS_MAX_MB: Env.schema.number.optional(),
+  CLIPS_PER_ACCOUNT: Env.schema.number.optional(),
+
   /** Local only: a made-up live game for the fictional demo accounts. Ignored in production. */
   DEMO_LIVE: Env.schema.boolean.optional(),
 
