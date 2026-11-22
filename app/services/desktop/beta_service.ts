@@ -4,6 +4,7 @@ import db from '@adonisjs/lucid/services/db'
 import drive from '@adonisjs/drive/services/main'
 import logger from '@adonisjs/core/services/logger'
 import env from '#start/env'
+import { withDeadline } from '#services/desktop_release'
 import type DesktopDevice from '#models/desktop_device'
 
 /**
@@ -21,6 +22,8 @@ export type BetaTarget = (typeof BETA_TARGETS)[number]
 
 /** How long a download link in the feed stays valid. */
 const LINK_SECONDS = 30 * 60
+/** How long opening an installer in storage may take before the download is refused. */
+const OPEN_TIMEOUT_MS = 15_000
 /** Builds sent to the app: the newest few, so a tester on an older one still sees its notes. */
 const BUILDS_SENT = 5
 
@@ -236,11 +239,16 @@ export class BetaService {
   /** Streams an installer from object storage. Null when it cannot be read. */
   async open(asset: BetaAsset): Promise<{ stream: Readable; length: number | null } | null> {
     if (!asset.key) return null
+    let opening: Promise<Readable> | undefined
     try {
       const disk = drive.use()
-      const stream = await disk.getStream(asset.key)
+      opening = disk.getStream(asset.key)
+      // Storage that never answers costs the tester a short wait, not a request held open.
+      const stream = await withDeadline(OPEN_TIMEOUT_MS, 'beta installer', () => opening!)
       return { stream, length: asset.size || null }
     } catch (error) {
+      // A stream that opens after the deadline is closed, not left holding a connection.
+      opening?.then((late) => late.destroy()).catch(() => {})
       logger.warn({ err: error, asset: asset.name }, 'beta: installer read failed')
       return null
     }
