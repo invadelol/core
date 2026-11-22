@@ -27,6 +27,34 @@ export function hours(seconds: number) {
   return `${h}h ${m}m`
 }
 
+/** A wait in seconds, as said after "Try again in": "40s", "3 min". */
+export function waitLabel(seconds: number) {
+  const total = Math.max(Math.ceil(Number(seconds) || 60), 1)
+  if (total < 60) return `${total}s`
+  return `${Math.ceil(total / 60)} min`
+}
+
+/**
+ * Our own quota on what asks Riot (a 429 `E_TOO_MANY_REQUESTS`): its wait in seconds and whose
+ * quota it was, or null for any other answer.
+ */
+export async function quotaRefusal(
+  res: Response
+): Promise<{ retryAfter: number; scope: 'address' | 'player' } | null> {
+  if (res.status !== 429) return null
+  const body = (await res
+    .clone()
+    .json()
+    .catch(() => null)) as {
+    errors?: { code?: string }[]
+    retryAfter?: number
+    scope?: string
+  } | null
+  if (body?.errors?.[0]?.code !== 'E_TOO_MANY_REQUESTS') return null
+  const retryAfter = Number(body?.retryAfter ?? res.headers.get('retry-after')) || 60
+  return { retryAfter, scope: body?.scope === 'player' ? 'player' : 'address' }
+}
+
 export function timeAgo(ms: number) {
   const value = Number(ms)
   if (!value || Number.isNaN(value)) return 'unknown'

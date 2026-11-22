@@ -25,7 +25,7 @@ import {
   type RiotIdentity,
 } from '../lib/multisearch.js'
 import { champIcon, championName, profileIcon } from '../lib/assets.js'
-import { profilePath } from '../lib/format.js'
+import { profilePath, quotaRefusal, waitLabel } from '../lib/format.js'
 import { regionFlag } from '../lib/flags.js'
 import type { Scout, Season } from '../lib/scout.js'
 import '../css/multisearch.css'
@@ -34,7 +34,7 @@ import type { Match, RanksPayload, Summoner } from '../lib/types.js'
 export interface ScoutEntry {
   key: string
   identity: RiotIdentity
-  status: 'loading' | 'ready' | 'not-found' | 'riot-unavailable' | 'error'
+  status: 'loading' | 'ready' | 'not-found' | 'riot-unavailable' | 'rate-limited' | 'error'
   /** Asking Riot for the player's newest games. */
   syncing: boolean
   summoner: Summoner | null
@@ -91,6 +91,7 @@ function blank(identity: RiotIdentity): ScoutEntry {
 
 async function failureOf(res: Response): Promise<ScoutEntry['status']> {
   if (res.status === 404 || res.status === 422) return 'not-found'
+  if (await quotaRefusal(res)) return 'rate-limited'
   if (res.status === 503 || res.status === 429) return 'riot-unavailable'
   return 'error'
 }
@@ -211,10 +212,14 @@ async function sync(entry: ScoutEntry, signal: AbortSignal) {
       const matches = await analytics(target, signal)
       if (matches?.length && matches.length < MIN_GAMES) await older(target, matches, signal)
     } else {
+      const refusal = await quotaRefusal(res)
       const failure = await res.json().catch(() => null)
       const code = failure?.errors?.[0]?.code
-      target.note =
-        code === 'E_RIOT_RATE_LIMITED'
+      target.note = refusal
+        ? refusal.scope === 'player'
+          ? `Updated many times this hour. Try again in ${waitLabel(refusal.retryAfter)}`
+          : `Too many updates from your connection. Try again in ${waitLabel(refusal.retryAfter)}`
+        : code === 'E_RIOT_RATE_LIMITED'
           ? `Riot rate limit reached. Try again in ${failure.retryAfter ?? 60}s`
           : res.status === 503
             ? 'Riot is not answering right now'
@@ -491,7 +496,9 @@ onBeforeUnmount(() => controller?.abort())
                       ? 'Not found on this server'
                       : e.status === 'riot-unavailable'
                         ? 'Riot is not answering right now'
-                        : 'Could not be loaded'
+                        : e.status === 'rate-limited'
+                          ? 'Too many lookups from your connection, try again later'
+                          : 'Could not be loaded'
                   }}
                 </p>
               </div>

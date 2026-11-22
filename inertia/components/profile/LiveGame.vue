@@ -9,7 +9,7 @@ import RankEmblem from '../ui/RankEmblem.vue'
 import Skeleton from '../ui/Skeleton.vue'
 import { assetUrl, champIcon, championName, nameOf as assetName } from '../../lib/assets.js'
 import { SERVER } from '../../lib/board.js'
-import { profilePath } from '../../lib/format.js'
+import { profilePath, quotaRefusal } from '../../lib/format.js'
 import { since } from '../../lib/ladders.js'
 import type { LiveCheck, LiveGame } from '../../lib/types.js'
 
@@ -49,10 +49,9 @@ async function load(again = false) {
       { signal, cache: 'no-store' }
     )
     if (response.status === 429) {
-      const body = await response.json().catch(() => null)
-      const retryAfter = Number(body?.retryAfter ?? response.headers.get('retry-after')) || 60
-      // Riot's own limit says E_RIOT_RATE_LIMITED; ours counts this address's checks.
-      error.value = body?.errors ? { kind: 'riot' } : { kind: 'limit', retryAfter }
+      // Ours counts this address's checks (E_TOO_MANY_REQUESTS); anything else is Riot's limit.
+      const refusal = await quotaRefusal(response)
+      error.value = refusal ? { kind: 'limit', retryAfter: refusal.retryAfter } : { kind: 'riot' }
       return
     }
     if (!response.ok) {

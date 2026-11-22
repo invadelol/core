@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { champIcon, championName } from '../lib/assets.js'
-import { compact, timeAgo } from '../lib/format.js'
+import { compact, timeAgo, waitLabel } from '../lib/format.js'
 import type { ChampionMastery } from '../lib/types.js'
 import MasteryBubbles from './mastery/MasteryBubbles.vue'
 import MasteryCrest from './mastery/MasteryCrest.vue'
@@ -20,7 +20,8 @@ import { useSort } from './ui/sort.js'
 const props = defineProps<{
   mastery: ChampionMastery[]
   loading: boolean
-  error: boolean
+  /** True when the read failed; the seconds to wait when our quota refused it. */
+  error: boolean | number
 }>()
 
 defineEmits<{ retry: [] }>()
@@ -117,7 +118,11 @@ const columns = computed(() => {
       <EmptyState
         icon="crown"
         title="Mastery is not available right now"
-        line="Riot did not answer for this player's mastery."
+        :line="
+          typeof error === 'number'
+            ? `Too many players opened from your connection. Try again in ${waitLabel(error)}.`
+            : 'Riot did not answer for this player\'s mastery.'
+        "
       >
         <button type="button" class="btn sm" @click="$emit('retry')">Retry</button>
       </EmptyState>

@@ -28,7 +28,7 @@ import MatchRows from './profile/MatchRows.vue'
 import { spark, tierVar } from './profile/rank.js'
 import { champIcon, championName, profileIcon } from '../lib/assets.js'
 import { monotone } from '../lib/rd_curve.js'
-import { compact } from '../lib/format.js'
+import { compact, quotaRefusal, waitLabel } from '../lib/format.js'
 import { isRemake, scoreLobby } from '../lib/match.js'
 import {
   championSplit,
@@ -110,11 +110,14 @@ async function pick(entry: { gameName: string; tagLine: string }) {
     }
     if (!summoner) {
       const res = await fetch(`/api/summoners/${encodeURIComponent(slug)}`, { signal })
+      const refusal = res.ok ? null : await quotaRefusal(res)
       if (!res.ok)
         throw new Error(
           res.status === 404
             ? 'Player not found. Check their Riot ID.'
-            : 'Riot could not load this player.'
+            : refusal
+              ? `Too many lookups from your connection. Try again in ${waitLabel(refusal.retryAfter)}.`
+              : 'Riot could not load this player.'
         )
       summoner = (await res.json()).summoner
     }

@@ -46,7 +46,7 @@ interface Filters {
   role: 'all' | 'TOP' | 'JUNGLE' | 'MIDDLE' | 'BOTTOM' | 'SUPPORT'
 }
 import ShareProfile from '../components/ShareProfile.vue'
-import { decodeSlug, parseSlug } from '../lib/format.js'
+import { decodeSlug, parseSlug, quotaRefusal, waitLabel } from '../lib/format.js'
 import { isRemake } from '../lib/match.js'
 import { rememberPlayer, updateRecent } from '../lib/recent.js'
 import type { SynergyReport } from '../lib/synergy.js'
@@ -102,7 +102,8 @@ const mastery = shallowRef<ChampionMastery[]>([])
 /** Whether `mastery` is every champion, or only the top few the overview needs. */
 const masteryComplete = ref(false)
 const masteryLoading = ref(false)
-const masteryError = ref(false)
+/** True when it failed; the wait in seconds when our quota refused it. */
+const masteryError = ref<boolean | number>(false)
 
 let filterController: AbortController | undefined
 let moreController: AbortController | undefined
@@ -236,6 +237,11 @@ async function loadMastery(complete = section.value === 'mastery') {
     const response = await fetch(`/api/summoners/puuid/${profile.value.puuid}/mastery${query}`, {
       signal,
     })
+    const refusal = await quotaRefusal(response)
+    if (refusal) {
+      if (!signal.aborted) masteryError.value = refusal.retryAfter
+      return
+    }
     if (!response.ok) throw new Error()
     const data = await response.json()
     if (!signal.aborted) {
@@ -412,10 +418,18 @@ let viewTimer: ReturnType<typeof setTimeout> | undefined
 let messageTimer: ReturnType<typeof setTimeout> | undefined
 
 /** What went wrong, so the page can say something true about it. */
-type LoadFailure = 'not-found' | 'riot-unavailable' | 'error'
+type LoadFailure = 'not-found' | 'riot-unavailable' | 'rate-limited' | 'error'
+
+/** How long the quota said to wait, for a 'rate-limited' failure. */
+const retryIn = ref(60)
 
 async function failureFor(res: Response): Promise<LoadFailure> {
   if (res.status === 404) return 'not-found'
+  const refusal = await quotaRefusal(res)
+  if (refusal) {
+    retryIn.value = refusal.retryAfter
+    return 'rate-limited'
+  }
   // 503 is the API telling us Riot rate limited us or rejected our key.
   if (res.status === 503) return 'riot-unavailable'
   return 'error'
@@ -620,11 +634,15 @@ async function sync() {
       if (section.value === 'friends') void loadFriends(true)
       else friendsReport.value = null
     } else {
+      const refusal = await quotaRefusal(res)
       const failure = await res.json().catch(() => null)
       if (signal.aborted) return
       const code = failure?.errors?.[0]?.code
-      syncMessage.value =
-        code === 'E_RIOT_RATE_LIMITED'
+      syncMessage.value = refusal
+        ? refusal.scope === 'player'
+          ? `Updated many times this hour. Try again in ${waitLabel(refusal.retryAfter)}`
+          : `Too many updates from your connection. Try again in ${waitLabel(refusal.retryAfter)}`
+        : code === 'E_RIOT_RATE_LIMITED'
           ? `Riot rate limit reached. Try again in ${failure.retryAfter ?? 60}s`
           : res.status === 404
             ? 'Player not found'
@@ -750,14 +768,18 @@ function clearFilters() {
             ? 'Summoner not found'
             : error === 'riot-unavailable'
               ? 'Riot\'s API is not answering'
-              : 'This profile could not be loaded'
+              : error === 'rate-limited'
+                ? 'Too many lookups from your connection'
+                : 'This profile could not be loaded'
         "
         :line="
           error === 'not-found'
             ? `No League profile was found for ${parsed.gameName}#${parsed.tagLine} on any server.`
             : error === 'riot-unavailable'
               ? 'This profile is not stored yet and Riot is limiting requests. It usually clears in a minute.'
-              : 'Something broke on our side while looking this player up.'
+              : error === 'rate-limited'
+                ? `This profile is not stored yet. Try again in ${waitLabel(retryIn)}.`
+                : 'Something broke on our side while looking this player up.'
         "
       >
         <span class="row" style="gap: 8px">
