@@ -35,6 +35,19 @@ export class RiotApiService {
   }
 
   /**
+   * Every champion's mastery of a player (champion-mastery-v4 by PUUID). The SDK's own helper
+   * fills a `summonerId` the PUUID path no longer has, so the method is asked by its key.
+   */
+  public championMasteries(platform: string, puuid: string) {
+    return this.client.request<RiotAPITypes.ChampionMastery.ChampionMasteryDTO[]>(
+      platform.toLowerCase() as PlatformId,
+      RiotAPITypes.METHOD_KEY.CHAMPION_MASTERY.GET_ALL_CHAMPIONS,
+      { encryptedPUUID: puuid },
+      { id: `${platform}.championMastery.getAllChampions.${puuid}` }
+    )
+  }
+
+  /**
    * Maps a platform ID (e.g., EUW1) to its regional routing cluster
    */
   public platformToRegion(

@@ -5,6 +5,7 @@ import { DateTime } from 'luxon'
 import Summoner from '#models/summoner'
 import PlayerMastery from '#models/player_mastery'
 import PlayerInsightsController from '#controllers/player_insights_controller'
+import riotApiService from '#services/riot/api'
 
 let puuid = 'P'.repeat(78)
 let responseId = 0
@@ -16,13 +17,17 @@ const context = {
   response: { ok: (value: unknown) => value, header: () => {} },
 } as unknown as HttpContext
 
+/**
+ * Riot answering `status` (and `body` when 200) through the shared client's mastery read, as the
+ * SDK reports it: the JSON, or a 429 with its wait in ms, or the failed response.
+ */
 async function withResponse(
   status: number,
   body: unknown,
   run: (controller: PlayerInsightsController, urls: string[]) => Promise<void>
 ) {
   puuid = String(++responseId).padStart(78, 'P')
-  const fetch = globalThis.fetch
+  const masteries = riotApiService.championMasteries
   const find = Summoner.findBy
   const getOrSet = cache.getOrSet
   const qs = context.request.qs
@@ -30,17 +35,16 @@ async function withResponse(
   Summoner.findBy = (async () => ({ platform: 'EUW1' })) as unknown as typeof Summoner.findBy
   cache.getOrSet = (async (options: { factory: () => Promise<unknown> }) =>
     options.factory()) as unknown as typeof cache.getOrSet
-  globalThis.fetch = (async (url: string) => {
-    urls.push(url)
-    return new Response(JSON.stringify(body), {
-      status,
-      headers: { 'Content-Type': 'application/json', 'Retry-After': '19' },
-    })
-  }) as typeof globalThis.fetch
+  riotApiService.championMasteries = (async (platform: string, player: string) => {
+    urls.push(`${platform}/champion-masteries/by-puuid/${player}`)
+    if (status === 200) return body
+    if (status === 429) throw { status, statusText: 'Too Many Requests', retryAfter: 19_000 }
+    throw { status }
+  }) as typeof riotApiService.championMasteries
   try {
     await run(new PlayerInsightsController(), urls)
   } finally {
-    globalThis.fetch = fetch
+    riotApiService.championMasteries = masteries
     Summoner.findBy = find
     cache.getOrSet = getOrSet
     context.request.qs = qs
@@ -60,6 +64,24 @@ test.group('Player insights', () => {
       }
       assert.equal(urls.length, 1)
     })
+  })
+
+  test('Riot out of reach is a 503, not a crash', async ({ assert }) => {
+    const find = PlayerMastery.find
+    PlayerMastery.find = (async () => null) as unknown as typeof PlayerMastery.find
+    try {
+      // No status at all: the connection itself failed.
+      await withResponse(0, {}, async (controller) => {
+        const [result] = await Promise.allSettled([controller.mastery(context)])
+        assert.equal(result.status, 'rejected')
+        if (result.status === 'rejected') {
+          const error = result.reason?.cause ?? result.reason
+          assert.equal(error.status, 503)
+        }
+      })
+    } finally {
+      PlayerMastery.find = find
+    }
   })
 
   test('uses PUUID mastery and only returns fields needed by the collection', async ({
@@ -85,7 +107,7 @@ test.group('Player insights', () => {
         assert.equal(result[0].championId, 45)
         assert.equal(result[0].championPoints, 79000)
         assert.notProperty(result[0], 'puuid')
-        assert.include(urls[0], `champion-masteries/by-puuid/${puuid}`)
+        assert.equal(urls[0], `euw1/champion-masteries/by-puuid/${puuid}`)
       }
     )
   })

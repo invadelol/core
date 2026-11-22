@@ -4,9 +4,9 @@ import { Exception } from '@adonisjs/core/exceptions'
 import cache from '@adonisjs/cache/services/main'
 import db from '@adonisjs/lucid/services/db'
 import logger from '@adonisjs/core/services/logger'
-import env from '#start/env'
 import Summoner from '#models/summoner'
 import PlayerMastery from '#models/player_mastery'
+import riotApiService from '#services/riot/api'
 import { translateRiotError } from '#utils/riot_errors'
 import { SyncGuard } from '#utils/sync_guard'
 
@@ -37,8 +37,19 @@ const byPoints = (a: { championPoints: number }, b: { championPoints: number }) 
   b.championPoints - a.championPoints
 
 /**
- * Mastery, read from Riot's current PUUID API. Shared by the website's profile
- * and the desktop app's onboarding, so both hit the same cache.
+ * A failed Riot read as the API reports it: Riot's status when it answered (404, 429, a rejected
+ * key), a refusal of ours as it is, and 503 when Riot could not be reached at all.
+ */
+function riotFailure(error: unknown) {
+  const translated = translateRiotError(error)
+  if (translated instanceof Exception) return translated
+  return new Exception('Riot is temporarily unavailable', { status: 503 })
+}
+
+/**
+ * Mastery, read from Riot's current PUUID API through the shared Riot client (its rate limits,
+ * queue caps and the caller's quota). Shared by the website's profile and the desktop app's
+ * onboarding, so both hit the same cache.
  */
 class PlayerInsightsService {
   async get(puuid: string, kind: 'mastery', refresh = false) {
@@ -52,20 +63,14 @@ class PlayerInsightsService {
       forceFresh: refresh,
       factory: () =>
         insightsGuard.run(key, async () => {
-          const path = `champion-mastery/v4/champion-masteries/by-puuid/${encodeURIComponent(puuid)}`
-          let res: Response
+          let data: Awaited<ReturnType<typeof riotApiService.championMasteries>>
           try {
-            res = await fetch(`https://${platform}.api.riotgames.com/lol/${path}`, {
-              headers: { 'X-Riot-Token': env.get('RIOT_API_KEY') },
-              signal: AbortSignal.timeout(12_000),
-            })
-          } catch {
-            throw new Exception('Riot is temporarily unavailable', { status: 503 })
+            data = await riotApiService.championMasteries(platform, puuid)
+          } catch (error) {
+            throw riotFailure(error)
           }
-          if (!res.ok) throw translateRiotError(res)
-          const data: any = await res.json()
           const observedAt = Date.now()
-          const entries: ChampionMastery[] = data.map((entry: any) => ({
+          const entries: ChampionMastery[] = data.map((entry) => ({
             championId: entry.championId,
             championLevel: entry.championLevel,
             championPoints: entry.championPoints,
