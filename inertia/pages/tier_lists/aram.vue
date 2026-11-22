@@ -152,8 +152,7 @@ const pickMax = computed(() => Math.max(0.1, ...shown.value.map((r) => r.pick)))
         </template>
         <EmptyState
           v-if="!list || !list.enough"
-          :title="`Not enough ${label} games yet`"
-          :line="`We hold ${thousands(list?.games ?? 0)} ${label} games for this patch: our crawler reads ranked games, so these are only the ones players’ profiles brought in. The list shows once there are ${thousands(2000)}.`"
+          :title="`Not enough games this patch`"
           icon="clock"
         />
         <template v-else>

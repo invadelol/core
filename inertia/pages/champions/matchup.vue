@@ -180,7 +180,7 @@ const tabs = computed(() => [
         >
       </nav>
 
-      <EmptyState v-if="!filter" title="No ranked games stored yet" line="This page fills in once our crawler has read the patch's games." />
+      <EmptyState v-if="!filter" title="Not enough games this patch" />
       <Deferred v-else :data="['mine', 'theirs']">
         <template #fallback>
           <section class="sec side2" style="padding-top: 28px">

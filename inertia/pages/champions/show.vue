@@ -415,8 +415,7 @@ const ago = (ms: number) => {
 
       <EmptyState
         v-if="!filter"
-        title="No ranked games stored yet"
-        line="This page fills in once our crawler has read the patch's games."
+        title="Not enough games this patch"
       />
       <template v-else>
         <section class="g12" style="padding-top: 24px; align-items: start">
