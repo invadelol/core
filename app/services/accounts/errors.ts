@@ -12,6 +12,9 @@ export class AccountError extends Exception {
     super(message, { status, code })
   }
 
+  /** An answer the person acts on, not a fault: nothing to log. */
+  async report() {}
+
   async handle(error: this, ctx: HttpContext) {
     ctx.response.header('Cache-Control', 'no-store')
     return ctx.response

@@ -76,6 +76,34 @@ test.group('Page cache', (group) => {
     assert.equal(renders, 1)
   })
 
+  test('a signed-in visitor is never served the shared page, nor fills it', async ({
+    client,
+    assert,
+  }) => {
+    const { default: sessionService } = await import('#services/accounts/session_service')
+    const { default: db } = await import('@adonisjs/lucid/services/db')
+    const { userId } = await sessionService.signIn('discord', `t-${ref()}`, 'Briar', null)
+    const token = await sessionService.create(userId)
+    try {
+      const warm = await client.get('/app').header('accept-encoding', 'identity')
+      warm.assertHeader('x-cache', 'MISS')
+      const signedIn = await client
+        .get('/app')
+        .header('accept-encoding', 'identity')
+        .withCookie('invade_session', token)
+      signedIn.assertStatus(200)
+      assert.isUndefined(signedIn.header('x-cache'))
+      assert.include(signedIn.text(), '&quot;viewer&quot;:{&quot;name&quot;:&quot;Briar&quot;')
+      // The shared copy is still the visitor's one.
+      const shared = await client.get('/app').header('accept-encoding', 'identity')
+      shared.assertHeader('x-cache', 'MEMORY')
+      assert.notInclude(shared.text(), 'Briar')
+      assert.equal(renders, 2)
+    } finally {
+      await db.from('invade_user').where('id', userId).delete()
+    }
+  })
+
   test('a hit is byte-identical to an uncached render, and Redis failing still renders', async ({
     client,
     assert,
