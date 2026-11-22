@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
 import Glyph from './ui/Glyph.vue'
 import Icon from './ui/Icon.vue'
+import DiscordMark from './header/DiscordMark.vue'
 import ThemeChoice from './header/ThemeChoice.vue'
 import { prefetchOnTouch } from './header/prefetch.js'
 import { DISCORD_URL, REPO_URL, X_URL } from '../lib/links.js'
@@ -53,7 +54,7 @@ const year = new Date().getFullYear()
                 target="_blank"
                 rel="noreferrer"
                 data-track="footer_discord"
-                ><Icon name="discord" :size="16" />Discord</a
+                ><DiscordMark :size="16" />Discord</a
               >
               <a class="btn sm" :href="X_URL" target="_blank" rel="noreferrer" data-track="footer_x"
                 >X</a

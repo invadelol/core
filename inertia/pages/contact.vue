@@ -4,6 +4,7 @@ import { Head } from '@inertiajs/vue3'
 import SiteLayout from '../components/SiteLayout.vue'
 import Masthead from '../components/ui/Masthead.vue'
 import Icon from '../components/ui/Icon.vue'
+import DiscordMark from '../components/header/DiscordMark.vue'
 import type { IconName } from '../lib/icons.js'
 import { DISCORD_URL, X_URL } from '../lib/links.js'
 
@@ -74,7 +75,8 @@ const cards = computed(() => {
           v-bind="c.out ? { target: '_blank', rel: 'noreferrer' } : {}"
           :data-track="`contact_${c.key}`"
         >
-          <Icon :name="c.icon" :size="26" />
+          <DiscordMark v-if="c.key === 'discord'" :size="30" />
+          <Icon v-else :name="c.icon" :size="26" />
           <span class="h2">{{ c.title }}</span>
           <span class="body">{{ c.line }}</span>
           <span class="more">{{ c.action }}<Icon name="fwd" :size="14" /></span>

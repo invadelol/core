@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import Icon from '../ui/Icon.vue'
+import DiscordMark from '../header/DiscordMark.vue'
 import NdText from './NdText.vue'
 import NdPostPic from './NdPostPic.vue'
 import NdVote from './NdVote.vue'
@@ -512,7 +513,7 @@ onBeforeUnmount(() => observer?.disconnect())
         <span class="meta">#new-dawn on Discord, or What's new in the app</span>
         <span class="btns"
           ><a class="btn sm" :href="DISCORD_URL" target="_blank" rel="noreferrer"
-            ><Icon name="discord" :size="16" />Discord</a
+            ><DiscordMark :size="16" />Discord</a
           ><Link class="btn sm" href="/app" prefetch
             ><Icon name="download" :size="16" />Desktop app</Link
           ></span

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import Icon from '../ui/Icon.vue'
+import DiscordMark from '../header/DiscordMark.vue'
 import NdVote from './NdVote.vue'
 import { DISCORD_URL } from '../../lib/links.js'
 import {
@@ -134,7 +135,7 @@ const tally = [
         <div class="nw-rv">
           <span class="nw-closed"><b>Seen one?</b>Post it with its link in #new-dawn.</span>
           <a class="btn sm" :href="DISCORD_URL" target="_blank" rel="noreferrer"
-            ><Icon name="discord" :size="16" />Open #new-dawn</a
+            ><DiscordMark :size="16" />Open #new-dawn</a
           >
         </div>
       </article>

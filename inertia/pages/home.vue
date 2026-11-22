@@ -13,6 +13,7 @@ import Logo from '../components/pros/Logo.vue'
 import MatchTime from '../components/pros/MatchTime.vue'
 import Glyph from '../components/ui/Glyph.vue'
 import Icon from '../components/ui/Icon.vue'
+import DiscordMark from '../components/header/DiscordMark.vue'
 import SectionHead from '../components/ui/SectionHead.vue'
 import CardHead from '../components/ui/CardHead.vue'
 import RankTag from '../components/ui/RankTag.vue'
@@ -389,7 +390,7 @@ const topBully = (rows: { value: number }[]) => rows[0]?.value || 1
           data-track="home_discord"
         >
           <span class="cm-h"
-            ><span class="cm-ico"><Icon name="discord" :size="24" /></span
+            ><span class="cm-ico"><DiscordMark :size="26" /></span
             ><span class="col cm-n"
               ><b class="h2">Invade on Discord</b
               ><span class="meta">Bugs, ideas and games with other players</span></span
