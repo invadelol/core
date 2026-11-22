@@ -948,3 +948,56 @@ HttpOnly, `SameSite=Lax` cookie (core keeps its SHA-256), valid 60 days from the
 browser write must carry the site's own `Origin` (`ACCOUNT_ORIGIN`). Signed-in pages are never
 served from or stored in the shared page cache. Only the provider's stable id and a display name
 are read (Discord `identify`, Google `openid profile`); no e-mail address is asked for or kept.
+
+## 11. Clips (contract v1.7)
+
+A clip is a moment of a game, recorded by the app and posted by a person signed in to an Invade
+account (§10). It gets its own page (`/clip/<id>`, the video first and the match under it), and
+shows on the match page and on the profile of the League account that played it. The app posts it
+in three signed requests: the details, then the video, then its picture, as files.
+
+Limits: an H.264 MP4 (an HEVC recording is refused: browsers do not all play it), 60 seconds and
+`CLIPS_MAX_MB` (default 40) MB at most, a JPEG, PNG or WebP picture of 512 KB at most,
+`CLIPS_PER_ACCOUNT` (default 20) clips per account. Per device and hour: 30 clips created or
+deleted, 60 files, 300 reads. Errors keep the shape of §1 and the codes of §10, plus:
+
+| status | code | meaning |
+| --- | --- | --- |
+| 403 | `E_CLIP_NO_ACCOUNT` | the account has no League account yet (§10.3) |
+| 404 | `E_CLIP_NO_GAME` | none of the account's League accounts has a stored game starting within 15 minutes of the recording |
+| 413 | `E_CLIP_TOO_LARGE`, `E_PAYLOAD_TOO_LARGE` | over the size limit (the details' `bytes`, or the file itself) |
+| 422 | `E_CLIP_INVALID`, `E_CLIP_HEVC`, `E_CLIP_QUOTA` | bad details or file, an HEVC video, the account's clips are full |
+
+### 11.1 `POST /api/desktop/clips` (auth)
+
+```json
+{ "started": 1791873000000, "gameTime": 552, "durationMs": 21000, "title": "he really thought he had me",
+  "event": "kill" | "death" | "assist" | "objective" | "manual", "visibility": "everyone" | "link",
+  "championKey": "Ezreal", "bytes": 7400000, "width": 1280, "height": 720 }
+```
+→ `201 { "id": "<10 characters>", "url": "https://invade.lol/clip/<id>", "matchId": "EUW1_7998180573" }`.
+
+`started` is when the game's recording started (epoch ms), `gameTime` where the clip starts in the
+game (seconds). Core finds the game among the stored games of the person's own League accounts
+(§10.3): the one starting nearest `started`, within 15 minutes, its champion first when
+`championKey` (Data Dragon's name) is known. The clip waits for its video for an hour, then goes.
+`visibility: link`: only who has the link sees it (not on the match page, the profile, or search).
+
+### 11.2 `PUT /api/desktop/clips/:id/video` and `PUT /api/desktop/clips/:id/poster` (auth)
+
+The file's bytes as the body (`Content-Type: video/mp4`, `image/jpeg`), signed like any body (§1.1:
+the hash covers the file). → `200`, the clip as `GET /api/desktop/clips` lists it. The clip is on
+the site once its video arrived. A refused video deletes the waiting clip.
+
+### 11.3 `GET /api/desktop/clips` and `DELETE /api/desktop/clips/:id` (auth)
+
+`{ "clips": [{ "id", "url", "video": "/clips/<id>.mp4", "poster": "/clips/<id>.jpg" | null, "matchId",
+"platform", "championId", "gameTime", "durationMs", "title", "event", "visibility", "width", "height",
+"views", "bytes", "createdAt", "player": { "puuid", "gameName", "tagLine", "profileIconId" }, "mine" }] }`:
+the person's clips, newest first. `DELETE` → `204`: the clip, its video and its picture are gone.
+
+The website: `/clip/:id`, `/clips/<id>.mp4` (byte ranges) and `/clips/<id>.jpg`,
+`GET /api/clips?match=<id>` and `?puuid=<id>` (public clips), `DELETE /api/clips/:id` (its owner,
+same-origin). Storage (`CLIPS_STORAGE`): `local` (files under `CLIPS_DIR`, served by core) or `drive`
+(the site's object storage, `DRIVE_DISK`; the browser is sent to a signed address). Deleting an
+Invade account deletes its clips and their files.
