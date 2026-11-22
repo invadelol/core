@@ -51,6 +51,8 @@ test.group('Riot quota: addresses', () => {
     assert.equal(quotaAddress('2001:0db8:00aa:00bb:ffff::1'), '2001:db8:aa:bb::/64')
     assert.equal(quotaAddress('2001:db8::1'), '2001:db8:0:0::/64')
     assert.equal(quotaAddress('::1'), '0:0:0:0::/64')
+    // A client that hung up before its answer has no address left.
+    assert.equal(quotaAddress(undefined), 'gone')
   })
 })
 

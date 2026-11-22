@@ -74,9 +74,11 @@ const PREFIX = 'quota:'
 
 /**
  * The address a quota counts: an IPv4 address as is, an IPv6 one by its /64 (one home or phone
- * holds a whole /64 and can change address within it at will).
+ * holds a whole /64 and can change address within it at will). A client that already hung up
+ * has no address left; it is counted apart, nobody is waiting for its answer anyway.
  */
-export function quotaAddress(ip: string): string {
+export function quotaAddress(ip: string | null | undefined): string {
+  if (typeof ip !== 'string' || !ip) return 'gone'
   const address = ip.startsWith('::ffff:') && isIPv4(ip.slice(7)) ? ip.slice(7) : ip
   if (!isIPv6(address)) return address
   const [head, tail = ''] = address.split('%')[0].split('::')
@@ -141,7 +143,11 @@ export class RiotQuota {
   }
 
   /** Runs one request's handling, `kind` saying which route quota its Riot requests take. */
-  async run<T>(ip: string, kind: QuotaKind | null, task: () => Promise<T>): Promise<T> {
+  async run<T>(
+    ip: string | null | undefined,
+    kind: QuotaKind | null,
+    task: () => Promise<T>
+  ): Promise<T> {
     const meter = new QuotaMeter(this, this.id(quotaAddress(ip)), kind)
     try {
       return await metered(meter, task)
