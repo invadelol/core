@@ -16,6 +16,7 @@ import { riotCompleteness } from '#services/desktop/conversion'
 import { isExcludedQueue } from '#constants/riot'
 import { riotErrorStatus } from '#utils/riot_errors'
 import pendingMatches from '#services/pending_matches'
+import { TooManyRequestsException } from '#exceptions/too_many_requests_exception'
 
 type MatchCluster = Exclude<RiotAPITypes.Cluster, PlatformId.ESPORTS>
 /** A game a sync stored (or found another writer storing). */
@@ -192,6 +193,8 @@ class MatchesService {
         await invalidateResponseCache([`match:${match.matchId}`]).catch(() => {})
         return true
       } catch (error) {
+        // The reader's quota is spent: the page opens as it is, and the next reader may fetch it.
+        if (error instanceof TooManyRequestsException) return false
         this.backfillFailures.set(match.matchId, Date.now())
         logger.warn({ err: error, matchId: match.matchId }, 'match timeline backfill failed')
         return false

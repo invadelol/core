@@ -1,7 +1,7 @@
 import logger from '@adonisjs/core/services/logger'
 import type { PlatformId } from '@fightmegg/riot-api'
 import riotApiService, { type RiotAPITypes } from '#services/riot/api'
-import { inBackground } from '#services/riot/client'
+import { inBackground, unmetered } from '#services/riot/client'
 import matchRepository from '#services/analytics/match_repository'
 import { RetryScheduler, type AttemptResult } from '#services/desktop/retry_scheduler'
 import { RiotBudget } from '#services/desktop/riot_budget'
@@ -129,13 +129,16 @@ export class PendingMatches {
     if (!cluster || this.queued.has(matchId) || this.queued.size >= MAX_PENDING) return false
     this.missing.delete(matchId)
     this.queued.set(matchId, this.now())
-    this.retries.schedule(
-      matchId,
-      () => this.attempt(matchId, cluster),
-      async () => {
-        this.queued.delete(matchId)
-        this.markMissing(matchId)
-      }
+    // The attempts are the queue's, under its own budget, whoever's request queued the game.
+    unmetered(() =>
+      this.retries.schedule(
+        matchId,
+        () => this.attempt(matchId, cluster),
+        async () => {
+          this.queued.delete(matchId)
+          this.markMissing(matchId)
+        }
+      )
     )
     return true
   }

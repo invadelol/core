@@ -64,7 +64,9 @@ router
     router.get('/pros/search', [ProsController, 'search'])
     /** One stored game's ten players, for a pro's recent games. */
     router.get('/pros/games/:matchId', [ProsController, 'board'])
-    router.post('/summoners/sync', [SummonersController, 'sync'])
+    router
+      .post('/summoners/sync', [SummonersController, 'sync'])
+      .use(middleware.riotQuota({ kind: 'sync' }))
     /**
      * Summoner spells from our own ranked games, for any champion in any role. Before the
      * player routes: a numeric champion and a role never name a platform and a player.
@@ -73,12 +75,20 @@ router
       .get('/summoners/:champion/:role', [SpellStatsController, 'show'])
       .where('champion', /^\d+$/)
       .where('role', /^(top|jungle|mid|middle|adc|bottom|support|utility)$/i)
-    router.get('/summoners/:summoner', [SummonersController, 'show'])
-    router.get('/summoners/:platform/:summoner', [SummonersController, 'show'])
+    router
+      .get('/summoners/:summoner', [SummonersController, 'show'])
+      .use(middleware.riotQuota({ kind: 'lookup' }))
+    router
+      .get('/summoners/:platform/:summoner', [SummonersController, 'show'])
+      .use(middleware.riotQuota({ kind: 'lookup' }))
 
-    router.get('/summoners/puuid/:puuid/mastery', [PlayerInsightsController, 'mastery'])
+    router
+      .get('/summoners/puuid/:puuid/mastery', [PlayerInsightsController, 'mastery'])
+      .use(middleware.riotQuota({ kind: 'mastery' }))
     /** The live game, for a profile's Live section only: no page or timer asks it. */
-    router.get('/summoners/puuid/:puuid/live', [PlayerInsightsController, 'live'])
+    router
+      .get('/summoners/puuid/:puuid/live', [PlayerInsightsController, 'live'])
+      .use(middleware.riotQuota({ kind: 'live' }))
 
     // PUUID-based routes
     router
@@ -122,13 +132,16 @@ router
       .get('/summoners/puuid/:puuid/season', [SummonersController, 'season'])
       .use(middleware.httpCache())
 
+    // Older games are paced by `MatchPager`; what they cost still counts for the address.
     router
       .get('/summoners/puuid/:puuid/matches', [SummonersController, 'matches'])
-      .use(middleware.httpCache())
+      .use([middleware.riotQuota(), middleware.httpCache()])
 
     router.get('/summoners/puuid/:puuid/lens', [LensController, 'show']).use(middleware.httpCache())
 
-    router.get('/matches/:id', [MatchesController, 'show']).use(middleware.httpCache())
+    router
+      .get('/matches/:id', [MatchesController, 'show'])
+      .use([middleware.riotQuota({ kind: 'timeline' }), middleware.httpCache()])
 
     /** Rune pages from our own ranked games, for any champion in any role. */
     router.get('/runes/:champion/:role', [RuneStatsController, 'show'])
@@ -317,7 +330,9 @@ router.get('/og/stats/:file', [SiteCardsController, 'stats'])
 router.get('/og/pros/:file', [SiteCardsController, 'pros'])
 router.get('/og/pro/:file', [SiteCardsController, 'pro'])
 router.get('/og/team/:file', [SiteCardsController, 'team'])
-router.get('/og/mastery/:file', [SiteCardsController, 'mastery'])
+router
+  .get('/og/mastery/:file', [SiteCardsController, 'mastery'])
+  .use(middleware.riotQuota({ kind: 'mastery', crossSite: true }))
 router.get('/og/leaderboards/:file', [SiteCardsController, 'leaderboard'])
 router.get('/og/esports.jpg', [SiteCardsController, 'esports'])
 router.get('/og/patch/:file', [SiteCardsController, 'patch'])

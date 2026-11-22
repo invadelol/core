@@ -22,6 +22,7 @@ import {
   translateRiotError,
 } from '#utils/riot_errors'
 import matchPager from '#services/match_pager'
+import riotQuota from '#services/quota/riot_quota'
 import homeService from '#services/home_service'
 import { firstViewInWindow } from '#services/profile_views'
 import deviceService from '#services/desktop/device_service'
@@ -71,17 +72,28 @@ export default class SummonersController {
    * @requestBody <syncSummonerValidator>
    * @responseBody 200 - { summoner: <Summoner>, matches: <Match[]> }
    * @responseBody 404 - Summoner not found
+   * @responseBody 429 - {"errors":[{"code":"E_TOO_MANY_REQUESTS"}],"retryAfter":60,"scope":"address"}
    */
   async sync({ request, response }: HttpContext) {
     const { summoner, platform } = await request.validateUsing(syncSummonerValidator)
 
     const identity = summonerService.normalize(summoner)
+    const player = identity ? `${identity.gameName}#${identity.tagLine}` : null
     const key = JSON.stringify([
       identity?.gameName.toLowerCase(),
       identity?.tagLine.toLowerCase(),
       platform?.toUpperCase(),
     ])
     const result = await syncGuard.run(key, async () => {
+      if (player) {
+        // Updated by someone a moment ago: what is stored is that update, and Riot has nothing
+        // newer yet. Five teammates scouting the same lobby make one set of requests, not five.
+        if (await riotQuota.recentlySynced(player)) {
+          const stored = await summonerService.findStored(summoner, platform).catch(() => null)
+          if (stored) return { summoner: stored, matches: [], rankRefreshFailed: false }
+        }
+        riotQuota.target(player)
+      }
       let resolvedSummoner
       try {
         resolvedSummoner = await summonerService.resolveAndUpsert(summoner, platform, {
@@ -127,6 +139,7 @@ export default class SummonersController {
       await invalidateResponseCache([`summoner:${puuid}`]).catch((error) =>
         logger.warn({ err: error }, 'Sync cache invalidation failed')
       )
+      if (player) await riotQuota.synced(player)
       return { summoner: resolvedSummoner, matches: newMatches, rankRefreshFailed }
     })
     return response.ok(result)
@@ -137,9 +150,13 @@ export default class SummonersController {
    * @paramPath summoner - GameName-TagLine
    * @paramPath platform - Region (e.g., EUW1)
    * @responseBody 200 - { summoner: <Summoner>, freshness: { lastRefreshAt, lastDesktopSyncAt, lastObservedAt } }
+   * @responseBody 429 - {"errors":[{"code":"E_TOO_MANY_REQUESTS"}],"retryAfter":60,"scope":"address"}
    */
   async show({ params, response }: HttpContext) {
     const { summoner, platform } = params
+    // Only a Riot ID not stored yet reaches Riot, and takes from the quotas.
+    const identity = summonerService.normalize(summoner)
+    if (identity) riotQuota.target(`${identity.gameName}#${identity.tagLine}`)
 
     try {
       const resolvedSummoner = await summonerService.resolveAndUpsert(summoner, platform)

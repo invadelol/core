@@ -2,6 +2,8 @@ import { test } from '@japa/runner'
 import { randomBytes } from 'node:crypto'
 import redis from '@adonisjs/redis/services/main'
 import riotApiService from '#services/riot/api'
+import { CoalescingRiotAPI } from '#services/riot/client'
+import { RIOT_QUOTAS } from '#services/quota/riot_quota'
 import Summoner from '#models/summoner'
 
 /** A Riot API puuid's shape (78 base64url characters), never a real one. */
@@ -69,7 +71,7 @@ test.group('Live game', (group) => {
     stored.clear()
     Summoner.findBy = (async (_key: string, puuid: string) =>
       stored.has(puuid) ? { puuid, platform: 'EUW1' } : null) as unknown as typeof Summoner.findBy
-    const keys = await redis.keys('live:rl:*')
+    const keys = await redis.keys('quota:*')
     if (keys.length) await redis.del(...keys)
   })
   group.each.teardown(() => {
@@ -130,14 +132,22 @@ test.group('Live game', (group) => {
     client: http,
     assert,
   }) => {
-    const calls = riot(null)
+    // The application's own client (the quota sits in front of its queue), Riot saying "no game".
+    const api = new CoalescingRiotAPI('RGAPI-00000000-0000-0000-0000-000000000000')
+    let spectator = 0
+    ;(api as any).riotRateLimiter.execute = async () => {
+      spectator++
+      throw { status: 404 }
+    }
+    riotApiService.client = api
+    const { limit } = RIOT_QUOTAS.routes.live.address[0]
     let last = 200
-    for (let i = 0; i < 31; i++) {
+    for (let i = 0; i <= limit; i++) {
       const puuid = fakePuuid()
       stored.add(puuid)
       last = (await http.get(live(puuid))).status()
     }
     assert.equal(last, 429)
-    assert.equal(calls.spectator, 30)
+    assert.equal(spectator, limit)
   })
 })

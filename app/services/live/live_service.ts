@@ -32,8 +32,8 @@ import { SyncGuard } from '#utils/sync_guard'
  *   cannot give right now is left out, never guessed;
  * - their games on their champion: the games already stored, no request.
  *
- * An address may ask Riot a few times per window (the controller's `beforeRiot`), so a page left
- * open or a script cannot spend the key; a kept answer costs nothing and is never counted.
+ * An address may ask Riot a few times per window (the route's quota, `riot_quota.ts`), so a page
+ * left open or a script cannot spend the key; a kept answer costs nothing and is never counted.
  */
 
 /** A check's answer stands this long for everyone. */
@@ -79,15 +79,8 @@ async function pooled<T, R>(list: T[], width: number, task: (item: T) => Promise
 }
 
 class LiveService {
-  /**
-   * The game `puuid` is in now, or `game: null` between games. `beforeRiot` runs only when Riot is
-   * about to be asked (not for a kept answer), and may refuse by throwing.
-   */
-  async check(
-    puuid: string,
-    again = false,
-    beforeRiot: () => Promise<void> = async () => {}
-  ): Promise<LiveCheck> {
+  /** The game `puuid` is in now, or `game: null` between games. */
+  async check(puuid: string, again = false): Promise<LiveCheck> {
     const player = await Summoner.findBy('puuid', puuid)
     if (!player) throw new Exception('Player not found', { status: 404 })
     if (demoLiveEnabled(puuid)) {
@@ -98,7 +91,6 @@ class LiveService {
     const key = `live:${platform}:${puuid}`
     const kept = await cache.get<LiveCheck>({ key }).catch(() => undefined)
     if (kept && (!again || Date.now() - kept.checkedAt < MIN_RECHECK_MS)) return kept
-    await beforeRiot()
     return guard.run(key, async () => {
       const found = await this.spectate(puuid, platform)
       const answer: LiveCheck = {
