@@ -243,21 +243,15 @@
     box-shadow: inset 0 0 0 1px rgb(var(--v-rgb) / 0.5);
     cursor: default;
   }
-  .vb .pl-upd.is-run::before {
-    opacity: 1;
-    transform: scaleX(0.9);
-    transition: transform 9s cubic-bezier(0.1, 0.55, 0.25, 1);
-  }
+  /* the fill follows `--p` (set by the component), each step eased so the bar flows */
+  .vb .pl-upd.is-run::before,
   .vb .pl-upd.is-done::before {
     opacity: 1;
-    transform: scaleX(1);
-    transition: transform 0.25s ease-out;
+    transform: scaleX(var(--p, 0));
+    transition: transform 0.3s cubic-bezier(0.25, 0.7, 0.3, 1);
   }
   @media (prefers-reduced-motion: reduce) {
-    .vb .pl-upd.is-run::before {
-      transform: scaleX(0.5);
-      transition: none;
-    }
+    .vb .pl-upd.is-run::before,
     .vb .pl-upd.is-done::before {
       transition: none;
     }

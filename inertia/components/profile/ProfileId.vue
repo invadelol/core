@@ -39,24 +39,83 @@ const ROLE: Record<string, string> = {
 }
 
 /**
- * The Update button is a gauge: it fills while the update runs (the length is unknown, so it eases
- * towards 90%), jumps to full and says "Updated" when it went through, and just empties when it
- * failed (the message under the name says why).
+ * The Update button is a gauge. Riot gives no progress, so it is simulated the way a download bar
+ * moves: uneven steps every few hundred ms, quick at first, slower as it nears 90%. When the update
+ * is back it keeps going for at least `MIN_MS` (a fast update does not just blink), fills to the
+ * end and says "Updated"; when the update failed it simply empties (the line under the name says
+ * why).
  */
+const MIN_MS = 1300
 const phase = ref<'idle' | 'run' | 'done'>('idle')
+const progress = ref(0)
+let started = 0
+let back = false
+let tick: ReturnType<typeof setTimeout> | undefined
 let doneTimer: ReturnType<typeof setTimeout> | undefined
+const still = () =>
+  typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+function trickle() {
+  const room = 0.92 - progress.value
+  // once the update is back, bigger steps closer together, so the end is not a wait
+  progress.value += room * (back ? 0.3 + Math.random() * 0.25 : 0.1 + Math.random() * 0.22)
+  tick = setTimeout(trickle, back ? 120 + Math.random() * 90 : 170 + Math.random() * 260)
+}
+function stop() {
+  clearTimeout(tick)
+  clearTimeout(doneTimer)
+}
 watch(
   () => props.isSyncing,
   (on) => {
+    if (on) {
+      stop()
+      back = false
+      started = Date.now()
+      progress.value = 0
+      phase.value = 'run'
+      if (still()) progress.value = 0.5
+      else
+        requestAnimationFrame(() => {
+          progress.value = 0.05 + Math.random() * 0.05
+          tick = setTimeout(trickle, 200)
+        })
+      return
+    }
+    if (phase.value !== 'run') return
+    if (props.syncFailed) {
+      stop()
+      phase.value = 'idle'
+      progress.value = 0
+      return
+    }
+    back = true
     clearTimeout(doneTimer)
-    if (on) phase.value = 'run'
-    else if (phase.value === 'run' && !props.syncFailed) {
-      phase.value = 'done'
-      doneTimer = setTimeout(() => (phase.value = 'idle'), 700)
-    } else phase.value = 'idle'
-  },
+    doneTimer = setTimeout(
+      () => {
+        clearTimeout(tick)
+        progress.value = 1
+        doneTimer = setTimeout(() => {
+          phase.value = 'done'
+          doneTimer = setTimeout(() => {
+            phase.value = 'idle'
+            progress.value = 0
+          }, 900)
+        }, 280)
+      },
+      Math.max(0, MIN_MS - (Date.now() - started))
+    )
+  }
 )
-onBeforeUnmount(() => clearTimeout(doneTimer))
+// another profile opened mid-update: the bar belongs to the one left, start clean
+watch(
+  () => props.summoner.puuid,
+  () => {
+    stop()
+    phase.value = 'idle'
+    progress.value = 0
+  }
+)
+onBeforeUnmount(stop)
 
 const copied = ref(false)
 let copiedTimer: ReturnType<typeof setTimeout> | undefined
@@ -118,9 +177,10 @@ const views = (n: number) => `${n.toLocaleString('en-US')} ${n === 1 ? 'view' : 
       <button
         class="btn pri pl-upd"
         :class="{ 'is-run': phase === 'run', 'is-done': phase === 'done' }"
+        :style="{ '--p': progress }"
         type="button"
-        :disabled="isSyncing"
-        :aria-busy="isSyncing"
+        :disabled="isSyncing || phase !== 'idle'"
+        :aria-busy="phase === 'run'"
         @click="$emit('sync')"
       >
         <Icon v-if="phase === 'idle'" name="refresh" /><Icon v-else-if="phase === 'done'" name="check" /><span>{{
