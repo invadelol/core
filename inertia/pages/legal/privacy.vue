@@ -61,6 +61,18 @@ defineProps<{ publisher: LegalPublisher }>()
       </li>
     </ul>
     <p>
+      <strong>An Invade account, if you create one.</strong> You sign in with Discord or Google. We
+      receive and keep the account’s id at that provider and the name it gives, never your email
+      address or password. We keep your favorite players and their folders, the League accounts the
+      desktop app saw you sign in to, and the apps you connected. Signing in sets one cookie, a
+      random session token (we store only its hash), for 60 days after your last visit.
+    </p>
+    <p>
+      <strong>Clips you post.</strong> When you press Post in the app: the video, its picture, its
+      title, who may see it, and the game it is from. A clip is shown with the Riot ID of the
+      account that played it, to everyone or to whoever has its link, as you choose.
+    </p>
+    <p>
       <strong>Anonymous usage statistics.</strong> The app sends one event when it starts and one
       when it updates to Aptabase, on servers in the EU. These events carry no identifier that links
       them to you. Switch them off in Settings, Data.
@@ -76,11 +88,12 @@ defineProps<{ publisher: LegalPublisher }>()
       with OpenPanel, which we run on our own server. It sets no cookies and doesn’t keep your IP
       address. The app’s device registrations and uploaded games are counted there too, under the
       device’s random id. Our servers keep technical logs (IP address, browser, page) for 14 days for
-      security. invade.lol sets no cookies.
+      security. invade.lol sets no cookies, except the session cookie when you sign in.
     </p>
     <p>
       <strong>What never leaves your computer.</strong> The app’s database (your accounts, games,
-      favorites and settings) and your recordings and clips.
+      favorites and settings) and your recordings and clips, except the clips you post and, signed
+      in, your favorite players.
     </p>
 
     <h2>Why, and on what legal basis</h2>
@@ -91,7 +104,8 @@ defineProps<{ publisher: LegalPublisher }>()
         Riot Games makes available for such services (GDPR article 6(1)(f)).
       </li>
       <li>
-        Syncing your own games when you use the app: the service you asked for (article 6(1)(b)).
+        Syncing your own games when you use the app, your Invade account and the clips you post:
+        the service you asked for (article 6(1)(b)).
       </li>
       <li>
         Security, signed requests and rate limits: our legitimate interest in protecting the
@@ -108,8 +122,8 @@ defineProps<{ publisher: LegalPublisher }>()
       <li>Anyone visiting invade.lol sees public profiles and match pages.</li>
       <li>
         Our service providers: {{ publisher.hostCompany ?? 'our hosting provider' }} for the
-        servers, Cloudflare (R2 storage), Aptabase (usage statistics, EU) and GitHub (app downloads
-        and updates).
+        servers, Cloudflare (R2 storage), Aptabase (usage statistics, EU), GitHub (app downloads
+        and updates), and Discord or Google when you sign in with them.
       </li>
       <li>We do not sell data and we show no ads.</li>
     </ul>
@@ -121,6 +135,10 @@ defineProps<{ publisher: LegalPublisher }>()
         remove it.
       </li>
       <li>Device records: until the device has been inactive for 12 months.</li>
+      <li>
+        Your Invade account, its favorites and your clips: until you delete them, or the account
+        (Account, Delete account), which deletes its clips too.
+      </li>
       <li>Server logs: 14 days.</li>
     </ul>
 
