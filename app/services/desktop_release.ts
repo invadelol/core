@@ -184,6 +184,7 @@ export class DesktopReleases {
   #reading: Promise<DesktopRelease | null> | null = null
   #retryAt = 0
   #failing = false
+  #waitedInVain = false
   #options: Options
 
   constructor(options: Partial<Options> = {}) {
@@ -197,20 +198,25 @@ export class DesktopReleases {
 
   /**
    * The newest release GitHub has told us about, without waiting on it: an old answer is
-   * used while a new one is read in the background. Only before the very first answer does
-   * this wait, and never longer than a moment. Null when nothing is known yet.
+   * used while a new one is read in the background. Before the first answer, the first
+   * visitors wait a moment at most, and only until one such wait comes to nothing. Null when
+   * nothing is known yet.
    */
   async latest(now = Date.now()): Promise<DesktopRelease | null> {
     const known = this.#known
     if (known && now - known.at < FRESH_MS) return known.release
     const reading = this.#refresh(now)
     if (known) return known.release
+    // Once a wait has come to nothing, GitHub is slow or down: nobody waits again.
+    if (this.#waitedInVain) return null
     let timer: NodeJS.Timeout | undefined
     const pause = new Promise<null>(
       (resolve) => (timer = setTimeout(resolve, this.#options.firstWaitMs, null))
     )
     try {
-      return await Promise.race([reading, pause])
+      const release = await Promise.race([reading, pause])
+      if (!release) this.#waitedInVain = true
+      return release
     } finally {
       clearTimeout(timer)
     }
@@ -281,6 +287,7 @@ export class DesktopReleases {
     this.#reading = null
     this.#retryAt = 0
     this.#failing = false
+    this.#waitedInVain = false
   }
 }
 

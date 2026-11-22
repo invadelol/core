@@ -193,7 +193,19 @@ test.group('Desktop release: reading GitHub', () => {
     answer = async () => payload('0.4.1')
     // After the retry pause, a new read starts and answers.
     const later = start + 61_000
+    await releases.latest(later)
+    await new Promise((resolve) => setTimeout(resolve, 10))
     assert.equal((await releases.latest(later))?.version, '0.4.1')
+  })
+
+  test('once a wait came to nothing, nobody waits on GitHub again', async ({ assert }) => {
+    const releases = new DesktopReleases({ read: never, readTimeoutMs: 1_000, firstWaitMs: 50 })
+    const first = await timed(releases.installer('windows'))
+    assert.isAtLeast(first.ms, 45)
+    // The read is still running, yet the next visitors are answered at once.
+    const next = await timed(releases.installer('windows'))
+    assert.equal(next.value.source, 'built-in')
+    assert.isBelow(next.ms, 10)
   })
 
   test('an old answer is served at once while a new one is read', async ({ assert }) => {
