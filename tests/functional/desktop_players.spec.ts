@@ -1,6 +1,7 @@
 import { test } from '@japa/runner'
 import { randomUUID } from 'node:crypto'
 import db from '@adonisjs/lucid/services/db'
+import redis from '@adonisjs/redis/services/main'
 import riotApiService from '#services/riot/api'
 import summonerService from '#services/summoner_service'
 import matchesService from '#services/matches_service'
@@ -308,6 +309,9 @@ test.group('Desktop player snapshots API', (group) => {
 
     await db.from('riot_rank').where('puuid', stored.puuid).delete()
     await rankAt(5)
+    // A later Update: past the minute in which a sync that worked is answered from what is stored.
+    const synced = await redis.keys('quota:synced:*')
+    if (synced.length) await redis.del(...synced)
     const stale = await http.post('/api/summoners/sync').json({ summoner: slug })
     stale.assertStatus(200)
     assert.deepEqual(riotCalls, ['league'])
