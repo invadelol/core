@@ -29,6 +29,8 @@ const props = defineProps<{
   pro: { slug: string; name: string; team: { name: string } | null } | null
   champion: number | undefined
   compareHref: string
+  /** In the signed-in visitor's favorites when the page was drawn. */
+  favorite?: boolean
 }>()
 defineEmits<{ sync: []; share: [] }>()
 
@@ -137,9 +139,9 @@ const views = (n: number) => `${n.toLocaleString('en-US')} ${n === 1 ? 'view' : 
 
 /** The star: this player in the signed-in person's favorites (a visitor is sent to sign in). */
 const { isFavorite, toggleFavorite } = useViewer()
-const favorite = computed(() => isFavorite(props.summoner.puuid))
+const favorite = computed(() => isFavorite(props.summoner.puuid, props.favorite ?? false))
 function star() {
-  toggleFavorite(props.summoner.puuid).catch(() => {})
+  toggleFavorite(props.summoner.puuid, props.favorite ?? false).catch(() => {})
 }
 </script>
 
@@ -181,7 +183,11 @@ function star() {
       <span v-if="roles[0]" class="pl-tag"
         ><RoleIcon :lane="roles[0]" :size="14" />Mostly {{ ROLE[roles[0]] }}</span
       >
-      <span class="pl-tag"><img class="pl-flag" :src="regionFlag(summoner.platform)" alt="" />{{ SERVER[summoner.platform] ?? summoner.platform }}</span>
+      <span class="pl-tag"
+        ><img class="pl-flag" :src="regionFlag(summoner.platform)" alt="" />{{
+          SERVER[summoner.platform] ?? summoner.platform
+        }}</span
+      >
       <Link v-if="pro" class="pl-tag pro" :href="`/pro/${pro.slug}`"
         >Pro<template v-if="pro.team">, {{ pro.team.name }}</template></Link
       >

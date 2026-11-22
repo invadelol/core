@@ -14,6 +14,17 @@ import { desktopClient } from '#tests/fixtures/desktop_http'
  * check, favorites and folders, a desktop app connected through its browser link, and the proof
  * of a League account, which only a client link of the same device gives.
  */
+/** The change is refused with a message matching `message`. */
+async function refused(change: Promise<unknown>, message: RegExp) {
+  try {
+    await change
+  } catch (error) {
+    if (!message.test((error as Error).message)) throw error
+    return
+  }
+  throw new Error(`expected a refusal matching ${message}`)
+}
+
 test.group('Invade accounts', (group) => {
   group.tap((t) => t.tags(['@accounts']))
   const prefixes = { limiter: rateLimiter.prefix, replay: replayGuard.prefix }
@@ -102,8 +113,8 @@ test.group('Invade accounts', (group) => {
     await accountService.change(user, { type: 'createFolder', id: folder, name: 'Scouting' })
     // The same folder twice (a retry) is already done; another with the same name is refused.
     await accountService.change(user, { type: 'createFolder', id: folder, name: 'Scouting' })
-    await assert.rejects(
-      () => accountService.change(user, { type: 'createFolder', id: randomUUID(), name: 'scouting' }),
+    await refused(
+      accountService.change(user, { type: 'createFolder', id: randomUUID(), name: 'scouting' }),
       /already have a folder/
     )
     await accountService.change(user, { type: 'favorite', puuid: a.puuid, folderId: folder })
@@ -120,23 +131,23 @@ test.group('Invade accounts', (group) => {
       account.favorites.map((f) => f.folderId),
       [null, null]
     )
-    await assert.rejects(
-      () => accountService.change(user, { type: 'favorite', puuid: 'A'.repeat(78) }),
+    await refused(
+      accountService.change(user, { type: 'favorite', puuid: 'A'.repeat(78) }),
       /not on Invade/
     )
   })
 
-  test('another person cannot file into my folder', async ({ assert }) => {
+  test('another person cannot file into my folder', async () => {
     const [me, other] = [await person(), await person('Copper Lane')]
     const player = await seed.player()
     const folder = randomUUID()
     await accountService.change(me, { type: 'createFolder', id: folder, name: 'Mine' })
-    await assert.rejects(
-      () => accountService.change(other, { type: 'favorite', puuid: player.puuid, folderId: folder }),
+    await refused(
+      accountService.change(other, { type: 'favorite', puuid: player.puuid, folderId: folder }),
       /no longer exists/
     )
-    await assert.rejects(
-      () => accountService.change(other, { type: 'createFolder', id: folder, name: 'Mine' }),
+    await refused(
+      accountService.change(other, { type: 'createFolder', id: folder, name: 'Mine' }),
       /Unknown folder/
     )
   })
@@ -197,7 +208,11 @@ test.group('Invade accounts', (group) => {
     assert.isNull(empty.body().user)
     for (const response of [
       await app.post('/api/desktop/account/verify', { rawPuuid: randomUUID() }),
-      await app.post('/api/desktop/account/changes', { type: 'createFolder', id: randomUUID(), name: 'X' }),
+      await app.post('/api/desktop/account/changes', {
+        type: 'createFolder',
+        id: randomUUID(),
+        name: 'X',
+      }),
     ]) {
       // Never 401: to the app that means its device token is gone.
       response.assertStatus(403)
@@ -248,7 +263,6 @@ test.group('Invade accounts', (group) => {
     const raw = randomUUID()
     await seed.link(mine.device.id, player.puuid, raw)
     await seed.link(theirs.device.id, player.puuid, raw)
-
     ;(await mine.app.post('/api/desktop/account/verify', { rawPuuid: raw })).assertStatus(200)
     ;(await theirs.app.post('/api/desktop/account/verify', { rawPuuid: raw })).assertStatus(200)
     let account = await accountService.snapshot(me)

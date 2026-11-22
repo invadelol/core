@@ -172,10 +172,17 @@ async function removeAll() {
               <AccountRow v-for="p in account.accounts" :key="p.puuid" :profile="p">
                 <template v-if="removing === p.puuid">
                   <span class="ac-ask">Remove it?</span>
-                  <button type="button" class="btn sm" :disabled="busy" @click="removeAccount(p.puuid)">
+                  <button
+                    type="button"
+                    class="btn sm"
+                    :disabled="busy"
+                    @click="removeAccount(p.puuid)"
+                  >
                     Remove
                   </button>
-                  <button type="button" class="btn sm ghost" @click="removing = null">Cancel</button>
+                  <button type="button" class="btn sm ghost" @click="removing = null">
+                    Cancel
+                  </button>
                 </template>
                 <template v-else>
                   <span v-if="p.puuid === account.mainPuuid" class="ac-main-tag">Main</span>
@@ -232,7 +239,12 @@ async function removeAll() {
               </button>
             </CardHead>
 
-            <form v-if="editing" class="ac-form" @submit.prevent="saveFolder" @keydown.esc="editing = null">
+            <form
+              v-if="editing"
+              class="ac-form"
+              @submit.prevent="saveFolder"
+              @keydown.esc="editing = null"
+            >
               <label class="field">
                 <Icon name="layers" />
                 <input
@@ -250,7 +262,9 @@ async function removeAll() {
             </form>
 
             <div v-if="account.folders.length" class="ac-folders">
-              <div class="ac-seg"><Segmented v-model="folder" :options="folderOptions" label="Folders" /></div>
+              <div class="ac-seg">
+                <Segmented v-model="folder" :options="folderOptions" label="Folders" />
+              </div>
               <span v-if="current && !editing" class="ac-folder-acts">
                 <button type="button" class="btn sm ghost" :disabled="busy" @click="edit('rename')">
                   Rename
@@ -306,7 +320,12 @@ async function removeAll() {
               <div v-for="d in account.devices" :key="d.id" class="ac-line">
                 <span class="ac-line-t">
                   <b>{{ OS[d.os] ?? d.os }}</b>
-                  <span>Invade {{ d.app }}<template v-if="d.lastSeenAt">, seen {{ since(Date.parse(d.lastSeenAt)) }}</template></span>
+                  <span
+                    >Invade {{ d.app
+                    }}<template v-if="d.lastSeenAt"
+                      >, seen {{ since(Date.parse(d.lastSeenAt)) }}</template
+                    ></span
+                  >
                 </span>
                 <button
                   type="button"
@@ -347,7 +366,12 @@ async function removeAll() {
                 <b>Name</b>
                 <span>{{ user.name }}</span>
               </span>
-              <form v-else class="ac-form ac-form-in" @submit.prevent="saveName" @keydown.esc="naming = false">
+              <form
+                v-else
+                class="ac-form ac-form-in"
+                @submit.prevent="saveName"
+                @keydown.esc="naming = false"
+              >
                 <label class="field">
                   <input
                     v-model="name"

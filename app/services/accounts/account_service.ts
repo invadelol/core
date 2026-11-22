@@ -64,9 +64,7 @@ const iso = (value: unknown) => new Date(value as string).toISOString()
 /** The code both sides show while an app connects (§10.1), from the link's own secret. */
 export function pairingCheck(code: string) {
   const bytes = createHash('sha256').update(`check:${code}`).digest()
-  return Array.from(bytes.subarray(0, 4), (b) => CHECK_ALPHABET[b % CHECK_ALPHABET.length]).join(
-    ''
-  )
+  return Array.from(bytes.subarray(0, 4), (b) => CHECK_ALPHABET[b % CHECK_ALPHABET.length]).join('')
 }
 
 /** A favorite as the app may name it: an API PUUID, the client's raw PUUID, or a Riot ID. */
@@ -144,24 +142,18 @@ class AccountService {
     }
   }
 
-  /** What every page shows of the signed-in person (the header's menu): two small queries. */
+  /** What every page shows of the signed-in person (the header's menu): one or two small queries. */
   async viewer(user: SignedIn): Promise<Viewer | null> {
-    const [counts, favorites] = await Promise.all([
-      db.rawQuery(
-        `SELECT u.display_name, u.main_puuid,
-           (SELECT count(*) FROM invade_owned_account o
-             WHERE o.user_id = u.id AND o.removed_at IS NULL)::int AS accounts,
-           (SELECT count(*) FROM invade_device_user du JOIN desktop_device d ON d.id = du.device_id
-             WHERE du.user_id = u.id AND d.revoked_at IS NULL)::int AS apps
-         FROM invade_user u WHERE u.id = ?`,
-        [user.id]
-      ),
-      db
-        .from('invade_profile_favorite')
-        .where('user_id', user.id)
-        .limit(ACCOUNT_LIMITS.favorites)
-        .select('puuid'),
-    ])
+    const counts = await db.rawQuery(
+      `SELECT u.display_name, u.main_puuid,
+         (SELECT count(*) FROM invade_owned_account o
+           WHERE o.user_id = u.id AND o.removed_at IS NULL)::int AS accounts,
+         (SELECT count(*) FROM invade_profile_favorite f WHERE f.user_id = u.id)::int AS favorites,
+         (SELECT count(*) FROM invade_device_user du JOIN desktop_device d ON d.id = du.device_id
+           WHERE du.user_id = u.id AND d.revoked_at IS NULL)::int AS apps
+       FROM invade_user u WHERE u.id = ?`,
+      [user.id]
+    )
     const row = counts.rows[0]
     if (!row) return null
     let main: AccountProfile | null = null
@@ -176,10 +168,16 @@ class AccountService {
       name: row.display_name,
       main,
       accounts: row.accounts,
-      favorites: favorites.length,
+      favorites: row.favorites,
       apps: row.apps,
-      favoritePuuids: favorites.map((f) => f.puuid),
     }
+  }
+
+  /** Whether a player is one of the person's favorites (a profile's star). */
+  async isFavorite(userId: string, puuid: string) {
+    return Boolean(
+      await db.from('invade_profile_favorite').where({ user_id: userId, puuid }).first()
+    )
   }
 
   /** Applies one change and answers the account as it now is. */
@@ -248,9 +246,7 @@ class AccountService {
         if ((await this.count(trx, 'invade_favorite_folder', user.id)) >= ACCOUNT_LIMITS.folders) {
           throw AccountError.limit(`You can have up to ${ACCOUNT_LIMITS.folders} folders.`)
         }
-        await trx
-          .table('invade_favorite_folder')
-          .insert({ id: input.id, user_id: user.id, name })
+        await trx.table('invade_favorite_folder').insert({ id: input.id, user_id: user.id, name })
         return
       }
       case 'deleteFolder': {
@@ -314,7 +310,9 @@ class AccountService {
         }
         const total = await this.count(trx, 'invade_profile_favorite', user.id)
         if (total >= ACCOUNT_LIMITS.favorites) {
-          throw AccountError.limit(`You can keep up to ${ACCOUNT_LIMITS.favorites} favorite players.`)
+          throw AccountError.limit(
+            `You can keep up to ${ACCOUNT_LIMITS.favorites} favorite players.`
+          )
         }
         await trx
           .table('invade_profile_favorite')
@@ -437,7 +435,9 @@ class AccountService {
         .first()
       if (owner && owner.user_id !== user.id) throw AccountError.appTaken()
       if (!owner) {
-        await trx.table('invade_device_user').insert({ device_id: pair.device_id, user_id: user.id })
+        await trx
+          .table('invade_device_user')
+          .insert({ device_id: pair.device_id, user_id: user.id })
       }
       await trx
         .from('invade_pairing')

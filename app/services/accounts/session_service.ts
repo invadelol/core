@@ -60,7 +60,10 @@ class SessionService {
         .from('invade_session')
         .where('token_hash', hash)
         .update({ expires_at: new Date(now + SESSION_DAYS * DAY_MS) })
-      await db.from('invade_user').where('id', row.id).update({ last_seen_at: new Date(now) })
+      await db
+        .from('invade_user')
+        .where('id', row.id)
+        .update({ last_seen_at: new Date(now) })
     }
     return { id: row.id, name: row.display_name }
   }

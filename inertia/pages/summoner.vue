@@ -69,6 +69,8 @@ const props = defineProps<{
   initialProfile?: Summoner | null
   /** Finished items and boots on the newest patch, for the main champion's core build. */
   items?: { legendary: number[]; boots: number[] } | null
+  /** This player is in the signed-in visitor's favorites. */
+  favorite?: boolean
   /** The professional player behind this account, when there is one. */
   pro?: {
     slug: string
@@ -807,6 +809,7 @@ function clearFilters() {
               :pro="props.pro ?? null"
               :champion="mainChampion"
               :compare-href="`${base}/compare`"
+              :favorite="props.favorite ?? false"
               @sync="sync"
               @share="shareOpen = true"
             />

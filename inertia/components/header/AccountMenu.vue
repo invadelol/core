@@ -74,11 +74,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Link
-    v-if="!viewer"
-    class="btn sm hx-signin"
-    :href="signInHref(path)"
-    data-track="header_sign_in"
+  <Link v-if="!viewer" class="btn sm hx-signin" :href="signInHref(path)" data-track="header_sign_in"
     >Sign in</Link
   >
   <div v-else ref="root" class="hx-acct" @focusout="onFocusOut">
@@ -93,7 +89,14 @@ onBeforeUnmount(() => {
       aria-controls="hx-menu-account"
       @click="toggle"
     >
-      <img v-if="main" class="av" :src="profileIcon(main.profileIconId)" alt="" width="30" height="30" />
+      <img
+        v-if="main"
+        class="av"
+        :src="profileIcon(main.profileIconId)"
+        alt=""
+        width="30"
+        height="30"
+      />
       <span v-else class="av none"><Icon name="user" :size="16" /></span>
       <Icon name="chev" :size="13" />
     </button>
@@ -103,7 +106,9 @@ onBeforeUnmount(() => {
         <img v-if="main" :src="profileIcon(main.profileIconId)" alt="" width="40" height="40" />
         <span v-else class="av none"><Icon name="user" :size="18" /></span>
         <span class="am-who">
-          <b v-if="main" class="ell">{{ main.gameName }}<small>#{{ main.tagLine }}</small></b>
+          <b v-if="main" class="ell"
+            >{{ main.gameName }}<small>#{{ main.tagLine }}</small></b
+          >
           <b v-else class="ell">{{ viewer.name }}</b>
           <span v-if="main" class="am-rk">
             <RankEmblem :tier="main.tier" :size="16" />

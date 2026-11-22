@@ -50,41 +50,35 @@ export function signInHref(path?: string) {
   return `/signin?next=${encodeURIComponent(here)}`
 }
 
-/** Favorites starred or unstarred on this page, ahead of the server's next `viewer`. */
-const pending = shallowRef<Record<string, boolean>>({})
+/** Stars changed since the page was drawn: the server's answer, by PUUID. */
+const known = shallowRef<Record<string, boolean>>({})
 
 export function useViewer() {
   const page = usePage()
   const viewer = computed(() => (page.props as { viewer?: Viewer | null }).viewer ?? null)
 
-  function isFavorite(puuid: string) {
-    const mark = pending.value[puuid]
-    return mark ?? Boolean(viewer.value?.favoritePuuids.includes(puuid))
+  /** `drawn`: what the page said when it was rendered. */
+  function isFavorite(puuid: string, drawn: boolean) {
+    return known.value[puuid] ?? drawn
   }
 
   /** Stars or unstars a player; signed out, it leads to the sign-in first. */
-  async function toggleFavorite(puuid: string) {
+  async function toggleFavorite(puuid: string, drawn: boolean) {
     if (!viewer.value) {
       router.visit(signInHref())
       return
     }
-    const on = !isFavorite(puuid)
-    pending.value = { ...pending.value, [puuid]: on }
+    const on = !isFavorite(puuid, drawn)
+    known.value = { ...known.value, [puuid]: on }
     try {
-      await send('POST', '/api/account/changes', {
+      const account = await send<InvadeAccountData>('POST', '/api/account/changes', {
         type: on ? 'favorite' : 'removeFavorite',
         puuid,
       })
-      router.reload({
-        only: ['viewer'],
-        onFinish: () => {
-          const { [puuid]: _done, ...rest } = pending.value
-          pending.value = rest
-        },
-      })
+      known.value = { ...known.value, [puuid]: account.favorites.some((f) => f.puuid === puuid) }
+      refreshViewer()
     } catch (error) {
-      const { [puuid]: _undo, ...rest } = pending.value
-      pending.value = rest
+      known.value = { ...known.value, [puuid]: !on }
       throw error
     }
   }

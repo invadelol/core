@@ -28,11 +28,7 @@ export default class CreateInvadeAccounts extends BaseSchema {
     this.schema.createTable('invade_identity', (t) => {
       t.string('provider', 16).notNullable()
       t.string('subject', 255).notNullable()
-      t.uuid('user_id')
-        .notNullable()
-        .references('id')
-        .inTable('invade_user')
-        .onDelete('CASCADE')
+      t.uuid('user_id').notNullable().references('id').inTable('invade_user').onDelete('CASCADE')
       t.string('display_name', 100).nullable()
       t.timestamp('created_at', { useTz: true }).notNullable().defaultTo(this.now())
       t.primary(['provider', 'subject'])
@@ -55,11 +51,7 @@ export default class CreateInvadeAccounts extends BaseSchema {
 
     /** The desktop app (a registered device) a person connected to their account. */
     this.schema.createTable('invade_device_user', (t) => {
-      t.uuid('device_id')
-        .primary()
-        .references('id')
-        .inTable('desktop_device')
-        .onDelete('CASCADE')
+      t.uuid('device_id').primary().references('id').inTable('desktop_device').onDelete('CASCADE')
       t.uuid('user_id')
         .notNullable()
         .references('id')
@@ -98,11 +90,7 @@ export default class CreateInvadeAccounts extends BaseSchema {
         .inTable('invade_user')
         .onDelete('CASCADE')
         .index()
-      t.uuid('device_id')
-        .nullable()
-        .references('id')
-        .inTable('desktop_device')
-        .onDelete('SET NULL')
+      t.uuid('device_id').nullable().references('id').inTable('desktop_device').onDelete('SET NULL')
       t.timestamp('verified_at', { useTz: true }).notNullable().defaultTo(this.now())
       t.timestamp('removed_at', { useTz: true }).nullable()
     })
@@ -124,11 +112,7 @@ export default class CreateInvadeAccounts extends BaseSchema {
     )
 
     this.schema.createTable('invade_profile_favorite', (t) => {
-      t.uuid('user_id')
-        .notNullable()
-        .references('id')
-        .inTable('invade_user')
-        .onDelete('CASCADE')
+      t.uuid('user_id').notNullable().references('id').inTable('invade_user').onDelete('CASCADE')
       t.text('puuid').notNullable().references('puuid').inTable('riot_player').onDelete('CASCADE')
       // Deleting a folder keeps its players, unfiled.
       t.uuid('folder_id')

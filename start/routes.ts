@@ -424,7 +424,7 @@ router.get('/:summoner/match/:matchId', async ({ inertia, params }) => {
   })
 })
 
-router.get('/:summoner/:section?', async ({ inertia, params, request, response }) => {
+router.get('/:summoner/:section?', async ({ inertia, params, request, response, invadeUser }) => {
   const section = params.section ?? 'overview'
   if (section === 'history')
     return response.redirect(`/${encodeURIComponent(params.summoner)}/matches`)
@@ -456,6 +456,12 @@ router.get('/:summoner/:section?', async ({ inertia, params, request, response }
   // A beta tester's profile says so.
   const { default: betaService } = await import('#services/desktop/beta_service')
   const betaTester = initialProfile ? await betaService.isTester(initialProfile.puuid) : false
+  // The star beside the Riot ID, for a signed-in visitor.
+  const { default: accountService } = await import('#services/accounts/account_service')
+  const favorite =
+    invadeUser && initialProfile
+      ? await accountService.isFavorite(invadeUser.id, initialProfile.puuid).catch(() => false)
+      : false
 
   return inertia.render('summoner', {
     summoner: params.summoner,
@@ -472,6 +478,7 @@ router.get('/:summoner/:section?', async ({ inertia, params, request, response }
     preload,
     pro,
     betaTester,
+    favorite,
     items: kinds?.legendary.size
       ? { legendary: [...kinds.legendary], boots: [...kinds.boots] }
       : null,

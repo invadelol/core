@@ -67,8 +67,6 @@ export interface Viewer {
   accounts: number
   favorites: number
   apps: number
-  /** The favorite players' PUUIDs, so a profile's star shows its state without a request. */
-  favoritePuuids: string[]
 }
 
 /** One change, as `POST /api/account/changes` and `POST /api/desktop/account/changes` take it. */

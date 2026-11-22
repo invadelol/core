@@ -37,10 +37,18 @@ const none = computed(() => !props.providers.discord && !props.providers.google)
         <p class="meta">Your favorite players and League accounts, here and in the app.</p>
         <p v-if="message" class="ac-err" role="alert">{{ message }}</p>
         <div class="ac-ways">
-          <a v-if="providers.discord" class="btn lg" :href="href('discord')" data-track="sign_in_discord"
+          <a
+            v-if="providers.discord"
+            class="btn lg"
+            :href="href('discord')"
+            data-track="sign_in_discord"
             ><DiscordMark :size="20" />Continue with Discord</a
           >
-          <a v-if="providers.google" class="btn lg" :href="href('google')" data-track="sign_in_google"
+          <a
+            v-if="providers.google"
+            class="btn lg"
+            :href="href('google')"
+            data-track="sign_in_google"
             ><GoogleMark :size="18" />Continue with Google</a
           >
           <p v-if="none" class="ac-err">Sign-in is not available right now.</p>
