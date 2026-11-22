@@ -33,6 +33,38 @@ export function inBackground<T>(task: () => Promise<T>): Promise<T> {
   return background.run(true, task)
 }
 
+/**
+ * Who pays for the Riot requests made while serving one HTTP request (`metered`): asked before
+ * each of them goes out, told when one did. A request shared with an identical one already in
+ * flight is told to the first asker only.
+ */
+export interface RiotMeter {
+  /** Before a request enters the queue: null to let it through, or a wait that may refuse it. */
+  gate(): Promise<void> | null
+  /** The request went to Riot. */
+  sent(): void
+}
+
+const meters = new AsyncLocalStorage<RiotMeter>()
+
+/** Runs `task` with every Riot request it makes, however deep, gated and counted by `meter`. */
+export function metered<T>(meter: RiotMeter, task: () => Promise<T>): Promise<T> {
+  return meters.run(meter, task)
+}
+
+/** The meter of the work running now, if any. */
+export function currentMeter(): RiotMeter | undefined {
+  return meters.getStore()
+}
+
+/**
+ * Runs `task` outside any meter: work it leaves behind (a retry on a timer) is nobody's request
+ * and has budgets of its own.
+ */
+export function unmetered<T>(task: () => T): T {
+  return meters.exit(task)
+}
+
 /** What a refused request tells its caller to wait, in seconds: about one window of the key. */
 const BACKLOG_RETRY_AFTER = 60
 
@@ -158,6 +190,11 @@ export class CoalescingRiotAPI extends RiotAPI {
   }
 
   override request<T>(...args: Parameters<RiotAPI['request']>): Promise<T> {
+    const wait = meters.getStore()?.gate()
+    return wait ? wait.then(() => this.queue<T>(...args)) : this.queue<T>(...args)
+  }
+
+  private queue<T>(...args: Parameters<RiotAPI['request']>): Promise<T> {
     const [platform, method, path, options] = args
     const slot = `${platform}:${method}`
     const low = background.getStore() === true
@@ -179,6 +216,7 @@ export class CoalescingRiotAPI extends RiotAPI {
       }
       this.pending.set(slot, waiting + 1)
       if (low) this.pendingBackground.set(slot, waitingLow + 1)
+      meters.getStore()?.sent()
       return super
         .request<T>(platform, method, path, {
           ...options,
