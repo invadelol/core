@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { RoleIcon } from '@invadelol/ui'
 import type { Position } from '@invadelol/ui/logic'
@@ -23,6 +23,7 @@ const props = defineProps<{
   viewCount: number | null
   isSyncing: boolean
   syncMessage: string | null
+  syncFailed?: boolean
   pro: { slug: string; name: string; team: { name: string } | null } | null
   champion: number | undefined
   compareHref: string
@@ -36,6 +37,26 @@ const ROLE: Record<string, string> = {
   ADC: 'bot',
   SUPPORT: 'support',
 }
+
+/**
+ * The Update button is a gauge: it fills while the update runs (the length is unknown, so it eases
+ * towards 90%), jumps to full and says "Updated" when it went through, and just empties when it
+ * failed (the message under the name says why).
+ */
+const phase = ref<'idle' | 'run' | 'done'>('idle')
+let doneTimer: ReturnType<typeof setTimeout> | undefined
+watch(
+  () => props.isSyncing,
+  (on) => {
+    clearTimeout(doneTimer)
+    if (on) phase.value = 'run'
+    else if (phase.value === 'run' && !props.syncFailed) {
+      phase.value = 'done'
+      doneTimer = setTimeout(() => (phase.value = 'idle'), 700)
+    } else phase.value = 'idle'
+  },
+)
+onBeforeUnmount(() => clearTimeout(doneTimer))
 
 const copied = ref(false)
 let copiedTimer: ReturnType<typeof setTimeout> | undefined
@@ -94,10 +115,17 @@ const views = (n: number) => `${n.toLocaleString('en-US')} ${n === 1 ? 'view' : 
       </template>
     </p>
     <div class="pl-acts">
-      <button class="btn pri" type="button" :disabled="isSyncing" @click="$emit('sync')">
-        <Icon name="refresh" :class="{ 'pl-spin': isSyncing }" />{{
-          isSyncing ? 'Updating' : 'Update'
-        }}
+      <button
+        class="btn pri pl-upd"
+        :class="{ 'is-run': phase === 'run', 'is-done': phase === 'done' }"
+        type="button"
+        :disabled="isSyncing"
+        :aria-busy="isSyncing"
+        @click="$emit('sync')"
+      >
+        <Icon v-if="phase === 'idle'" name="refresh" /><Icon v-else-if="phase === 'done'" name="check" /><span>{{
+          phase === 'run' ? 'Updating' : phase === 'done' ? 'Updated' : 'Update'
+        }}</span>
       </button>
       <button class="btn" type="button" @click="$emit('share')"><Icon name="share" />Share</button>
       <Link class="btn ico" :href="compareHref" aria-label="Compare" title="Compare" preserve-scroll

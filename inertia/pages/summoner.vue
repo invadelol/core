@@ -387,6 +387,7 @@ const isLoading = ref(!profile.value)
 const error = ref<LoadFailure | null>(null)
 const isSyncing = ref(false)
 const syncMessage = ref<string | null>(null)
+const syncFailed = ref(false)
 const viewCount = ref<number | null>(null)
 
 /** A number, whichever way the database driver returned the bigint. */
@@ -606,6 +607,7 @@ async function sync() {
   if (!profile.value || isSyncing.value) return
   const signal = controller!.signal
   isSyncing.value = true
+  syncFailed.value = false
   syncMessage.value = null
 
   try {
@@ -633,6 +635,7 @@ async function sync() {
       if (section.value === 'friends') void loadFriends(true)
       else friendsReport.value = null
     } else {
+      syncFailed.value = true
       const refusal = await quotaRefusal(res)
       const failure = await res.json().catch(() => null)
       if (signal.aborted) return
@@ -650,6 +653,7 @@ async function sync() {
               : 'Update failed'
     }
   } catch {
+    syncFailed.value = true
     if (!signal.aborted) syncMessage.value = 'Update failed'
   } finally {
     if (!signal.aborted) {
@@ -799,6 +803,7 @@ function clearFilters() {
               :view-count="viewCount"
               :is-syncing="isSyncing"
               :sync-message="syncMessage"
+              :sync-failed="syncFailed"
               :pro="props.pro ?? null"
               :champion="mainChampion"
               :compare-href="`${base}/compare`"
