@@ -107,6 +107,23 @@ export default await Env.create(new URL('../', import.meta.url), {
   /** When the privacy policy last changed, as it should read, e.g. "14 October 2026". */
   LEGAL_UPDATED: Env.schema.string.optional(),
 
+  /*
+  |----------------------------------------------------------
+  | Invade accounts (app/services/accounts)
+  |----------------------------------------------------------
+  | The site's own origin: browser account requests must come from it, and the
+  | OAuth redirect URLs are built on it (`<origin>/auth/discord/callback`,
+  | `<origin>/auth/google/callback`). Unset: https://invade.lol. A provider
+  | without both its id and secret is not offered.
+  */
+  ACCOUNT_ORIGIN: Env.schema.string.optional(),
+  DISCORD_CLIENT_ID: Env.schema.string.optional(),
+  DISCORD_CLIENT_SECRET: Env.schema.string.optional(),
+  GOOGLE_CLIENT_ID: Env.schema.string.optional(),
+  GOOGLE_CLIENT_SECRET: Env.schema.string.optional(),
+  /** Local only: both providers answered by scripts/oauth_mock.mjs at this origin. Ignored in production. */
+  OAUTH_MOCK_ORIGIN: Env.schema.string.optional(),
+
   /** Local only: a made-up live game for the fictional demo accounts. Ignored in production. */
   DEMO_LIVE: Env.schema.boolean.optional(),
 

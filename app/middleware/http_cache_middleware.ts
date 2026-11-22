@@ -54,6 +54,9 @@ export default class HttpCacheMiddleware {
   async handle(ctx: HttpContext, next: () => Promise<void>, options: HttpCacheOptions = {}) {
     const { request, response } = ctx
     if (env.get('NODE_ENV') === 'development' || request.method() !== 'GET') return next()
+    // A signed-in page carries the person's header: never served from the shared cache, never
+    // stored in it.
+    if (options.page && ctx.invadeUser) return next()
     if (options.page) return this.page(ctx, next)
 
     const url = request.url(true)

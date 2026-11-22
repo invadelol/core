@@ -55,6 +55,9 @@ const ProsController = () => import('#controllers/pros_controller')
 const StatsController = () => import('#controllers/stats_controller')
 const LobbyGamesController = () => import('#controllers/lobby_games_controller')
 const TierListsController = () => import('#controllers/tier_lists_controller')
+const AccountController = () => import('#controllers/account_controller')
+const AccountAuthController = () => import('#controllers/account_auth_controller')
+const DesktopAccountController = () => import('#controllers/desktop_account_controller')
 
 // API routes group
 router
@@ -198,6 +201,20 @@ router
         router
           .post('/reports', [DesktopReportsController, 'store'])
           .use(middleware.desktopAuth({ optional: true }))
+        /** The Invade account the app is connected to (§10). */
+        router
+          .post('/account/pair', [DesktopAccountController, 'pair'])
+          .use(middleware.desktopAuth())
+        router.get('/account', [DesktopAccountController, 'show']).use(middleware.desktopAuth())
+        router
+          .post('/account/changes', [DesktopAccountController, 'change'])
+          .use(middleware.desktopAuth())
+        router
+          .post('/account/verify', [DesktopAccountController, 'verify'])
+          .use(middleware.desktopAuth())
+        router
+          .delete('/account', [DesktopAccountController, 'disconnect'])
+          .use(middleware.desktopAuth())
       })
       .prefix('/desktop')
 
@@ -301,6 +318,21 @@ router.get('/new-dawn', [NewDawnController, 'overview'])
 router.get('/new-dawn/posts', [NewDawnController, 'posts'])
 router.get('/new-dawn/rumours', [NewDawnController, 'rumours'])
 router.post('/api/new-dawn/votes/:rumour', [NewDawnController, 'vote'])
+
+/**
+ * Invade accounts: sign-in with Discord or Google, the account page, the page a desktop app's link
+ * opens, and the JSON routes the pages use. Before the summoner catch-all below.
+ */
+router.get('/signin', [AccountAuthController, 'page'])
+router.get('/auth/:provider', [AccountAuthController, 'redirect'])
+router.get('/auth/:provider/callback', [AccountAuthController, 'callback'])
+router.post('/signout', [AccountAuthController, 'signout'])
+router.get('/account', [AccountController, 'page'])
+router.get('/account/link/:code', [AccountController, 'linkPage'])
+router.get('/api/account', [AccountController, 'show'])
+router.post('/api/account/changes', [AccountController, 'change'])
+router.post('/api/account/link', [AccountController, 'approve'])
+router.delete('/api/account', [AccountController, 'destroy'])
 
 /** The community server, before the summoner catch-all below. */
 router.get('/discord', ({ response }) => response.redirect(DISCORD_URL, false, 302))
