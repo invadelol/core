@@ -217,6 +217,8 @@ router
 
 /** Desktop app installers, before the summoner catch-all below. */
 router.get('/download/:platform', [DownloadsController, 'show'])
+/** A bare `/download` is someone looking for the app, not a player named "download". */
+router.get('/download', ({ response }) => response.redirect().withQs().toPath('/app'))
 
 /** The desktop app's landing page, before the summoner catch-all below. */
 router.get('/app', [AppPageController, 'show']).use(middleware.httpCache({ page: true }))
