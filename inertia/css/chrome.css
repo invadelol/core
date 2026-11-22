@@ -215,14 +215,14 @@
 /* The site's stage beside the wordmark (lib/site_stage.ts), set like the patch menu's "New". */
 .vb .hx-stage {
   align-self: center;
-  height: 20px;
-  margin-left: 8px;
-  padding: 0 7px;
-  border-radius: 6px;
+  height: 25px;
+  margin-left: -4px;
+  padding: 0 9px;
+  border-radius: 7px;
   background: var(--v900);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
-  line-height: 20px;
+  line-height: 25px;
   letter-spacing: 0.01em;
   color: var(--v100);
 }
