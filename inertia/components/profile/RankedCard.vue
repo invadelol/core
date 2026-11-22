@@ -4,9 +4,9 @@ import RankedQueue from './RankedQueue.vue'
 import type { RanksPayload } from '../../lib/types.js'
 
 /**
- * The rail's ranked cards, one per queue, each with its LP history: Solo/Duo always (Unranked
- * when it is), Flex when the player is ranked there. One block, so the narrow layouts place it as
- * one piece beside the player's card. A Master or higher Solo/Duo rank also asks for the player's
+ * The rail's ranked card: Solo/Duo with its LP history (Unranked when it is), and the Flex rank
+ * as one quiet line at its foot when the player is ranked there. One block, so the narrow layouts
+ * place it as one piece beside the player's card. A Master or higher Solo/Duo rank also asks for the player's
  * place on their server's ladder (stored reads, no request to Riot).
  */
 const props = defineProps<{ ranks: RanksPayload | null; puuid: string }>()
@@ -49,13 +49,7 @@ onBeforeUnmount(() => asked?.abort())
       :rank="solo"
       :history="history"
       :ladder="ladder"
-    />
-    <RankedQueue
-      v-if="flex"
-      title="Ranked Flex"
-      queue="RANKED_FLEX_SR"
-      :rank="flex"
-      :history="history"
+      :flex="flex"
     />
   </div>
 </template>

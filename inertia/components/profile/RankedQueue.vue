@@ -20,7 +20,8 @@ import type { Rank } from '../../lib/types.js'
  * One ranked queue in the rail, rank and LP history together: the emblem, the rank and its LP, the
  * season's record and, on the apex ladder, the player's place in it; then the LP the stored
  * snapshots saw, one point per change joined by straight lines, with the tiers' emblems as guides
- * on the axis; under it the peak of everything stored and what the range changed.
+ * on the axis; under it the peak of everything stored and what the range changed, and the Flex
+ * rank when there is one.
  */
 const props = defineProps<{
   title: string
@@ -29,6 +30,8 @@ const props = defineProps<{
   history: ReadonlyArray<Rank>
   /** The player's place on their server's apex ladder, when they are on it. */
   ladder?: { position: number; server: string } | null
+  /** Their Flex rank, one quiet line at the foot of the card (Flex has no card of its own). */
+  flex?: Rank | null
 }>()
 
 const label = (r: Rank) => rankLabel(rankFromCore(r), false)
@@ -238,6 +241,16 @@ const ordinal = (n: number) => {
         }}</b>
       </div>
     </div>
+    <div v-if="flex" class="pl-q-fx" :class="{ top: !peak }">
+      <span class="lab">Flex</span>
+      <span class="pl-q-v num"
+        ><RankEmblem :tier="flex.tier" :size="18" /><span>{{ label(flex) }}</span
+        >{{ ' ' }}{{ lp(flex.leaguePoints) }} LP</span
+      >
+      <span v-if="flex.losses !== null && flex.losses !== undefined" class="meta num"
+        >{{ flex.wins }}W {{ flex.losses }}L</span
+      >
+    </div>
   </section>
 </template>
 
@@ -388,6 +401,25 @@ const ordinal = (n: number) => {
 }
 span.pl-q-v {
   color: var(--t2);
+}
+/* Flex: one line under the peak, label, emblem and rank, the record at the end */
+.pl-q-fx {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+.pl-q-fx.top {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.pl-q-fx .pl-q-v {
+  min-width: 0;
+}
+.pl-q-fx .meta {
+  flex: none;
+  margin-left: auto;
 }
 .pl-q-v b,
 b.pl-q-v {
