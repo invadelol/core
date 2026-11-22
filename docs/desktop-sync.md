@@ -1,4 +1,4 @@
-# Desktop ↔ core: onboarding and match sync (contract v1.5)
+# Desktop ↔ core: onboarding and match sync (contract v1.7)
 
 The Invade desktop app (`invadelol/app`, Tauri + Rust) reads League data from the League client's
 local API (LCU) on the player's computer. This contract lets it:
@@ -834,3 +834,117 @@ the text, the version and system, the screenshot and the clip. Answers
 `{ "id": 42, "discordUrl": "https://discord.com/channels/…" }` (`discordUrl` null without
 `discord`). A failed Discord post still answers 200 with the report kept and `discordUrl: null`,
 `discordError: true`. 503 `E_REPORTS_UNAVAILABLE` when the admin schema is missing.
+
+## 10. Invade accounts (contract v1.7)
+
+A person signs in on the website with Discord or Google: that is an **Invade account**. It is not a
+League account and not a device. It holds the League accounts the person plays on (one of them the
+main), their favorite players sorted into folders, and the desktop apps they connected. The app
+connects through the browser: no OAuth token, cookie or password ever enters the app, and the app's
+requests stay signed by its device (§1.1). Riot Sign-On is not used (it needs a production key).
+
+All routes below are signed device routes (§1). Errors keep the shape of §1 with these codes; none
+is a 401, which would make the app register again:
+
+| status | code | meaning |
+| --- | --- | --- |
+| 403 | `E_NOT_CONNECTED` | the device is not connected to an Invade account |
+| 403 | `E_NOT_DETECTED` | no client link (§2.3, `source: lcu`) of this device for that raw PUUID, or its mapping is disputed |
+| 404 | `E_ACCOUNT_NOT_FOUND` | the player, folder or favorite does not exist |
+| 422 | `E_ACCOUNT_INVALID`, `E_ACCOUNT_LIMIT` | a bad change, or over a limit (30 folders, 300 favorites) |
+| 429 | `E_RATE_LIMITED` | per device and hour: pair 20, read 600, changes 600, verify 60 |
+
+### 10.1 `POST /api/desktop/account/pair` (auth)
+
+`{}` → `201 { "url": "https://invade.lol/account/link/<32 chars>", "check": "K7Q2", "expiresAt": <epoch ms> }`.
+
+A single-use link, valid ten minutes; a new one replaces the device's earlier link. The app opens
+`url` in the browser and shows `check` while it waits. The website signs the person in if needed,
+shows the app's version and system and the same four characters, and connects the device only when
+the person presses Connect (`POST /api/account/link`, same-origin, signed-in). A device already
+connected to someone else is never moved (409 on the website); the person disconnects it first.
+The app learns the result by reading §10.2 (every few seconds while it waits, at most ten minutes).
+
+### 10.2 `GET /api/desktop/account` (auth)
+
+```json
+{ "user": { "id": "<uuid>", "name": "Ember", "providers": ["discord"], "createdAt": "<ISO>" },
+  "mainPuuid": "<api puuid>" | null,
+  "accounts": [{ "puuid": "<api puuid>", "gameName": "Ember", "tagLine": "EUW", "platform": "EUW1",
+                 "profileIconId": 4655, "tier": "EMERALD", "division": "II", "lp": 64, "verifiedAt": "<ISO>" }],
+  "folders": [{ "id": "<uuid>", "name": "Duo partners" }],
+  "favorites": [{ "puuid": "…", "gameName": "…", "tagLine": "…", "platform": "…", "profileIconId": 1,
+                  "tier": null, "division": null, "lp": null, "folderId": "<uuid>" | null, "addedAt": "<ISO>" }],
+  "devices": [{ "id": "<uuid>", "os": "windows", "app": "0.3.9", "linkedAt": "<ISO>", "lastSeenAt": "<ISO>" | null }] }
+```
+
+Not connected: `user: null` and empty lists (200). PUUIDs are the Riot API's (78 characters), as on
+the website. `tier`/`division`/`lp`: the newest stored Solo/Duo rank. Favorites come newest first.
+
+### 10.3 `POST /api/desktop/account/verify` (auth)
+
+`{ "rawPuuid": "<the client's raw PUUID>", "auto": true | false }` → the §10.2 body plus
+`"verified": "<api puuid>" | null` (null: nothing changed).
+
+Proof that the person plays on a League account. The app sends it right after linking the account
+the League client is signed in to (§2.3, `source: lcu`), with the raw PUUID it read from the client
+itself (`lcu::current_summoner`), never one typed or received. Core requires that same device's
+client link for that raw PUUID, and that the raw → API mapping (§3) is not in `conflict` or pointing
+elsewhere. A Riot ID link (`source: riot_id`) proves nothing.
+
+- A League account belongs to one Invade account. A newer proof from another person's connected app
+  moves it to them (whoever plays it on their own computer now); the previous owner's main moves to
+  their next account.
+- The first proven account becomes the main.
+- The app calls it with `auto: true` at each client sign-in once connected: an account the person
+  removed on the website ("Not mine") is not added back. `auto: false` (the person asked, in the
+  app) adds it back.
+
+What it cannot stop: a modified client on the person's own computer can make any request its device
+can sign (§1.2), including a client link for a raw PUUID it learned elsewhere. Owning a League
+account gives no access to anything private; the website lists a person's accounts only to them.
+
+### 10.4 `POST /api/desktop/account/changes` (auth)
+
+One change per request → the §10.2 body. The website sends the same changes to
+`POST /api/account/changes`.
+
+| `type` | fields | effect |
+| --- | --- | --- |
+| `favorite` | player, `folderId?` | stars a player (into a folder when given) |
+| `removeFavorite` | player | unstars (a player Invade does not hold: nothing to do, 200) |
+| `moveFavorite` | player, `folderId` (null: no folder) | moves a favorite |
+| `createFolder` | `id` (a UUID the app makes), `name` (1 to 40) | the same id twice is done once; names are unique per account, ignoring case |
+| `renameFolder` | `id`, `name` | |
+| `deleteFolder` | `id` | its players stay, unfiled |
+| `main` | `puuid` | one of the person's own accounts |
+| `removeAccount` | `puuid` | "Not mine": off the list until the person asks again (§10.3) |
+| `unlinkDevice` | `deviceId` | disconnects an app |
+| `rename` | `name` (1 to 32) | the name shown to the person |
+
+A player, from the app: `puuid` (API PUUID or the client's raw PUUID) and/or `gameName`, `tagLine`,
+`platform`. Core maps a raw PUUID through §3 and a Riot ID through stored players; only `favorite`
+may look an unknown Riot ID up (one account-v1 call). A failed change is not applied: the app shows
+the message and keeps its last answer.
+
+### 10.5 `DELETE /api/desktop/account` (auth)
+
+→ `204`. The app leaves the account. Its device, its games and everything kept on the computer stay.
+
+### 10.6 Desktop behaviour
+
+- The app keeps the last §10.2 answer for showing offline, and reads it again when a page that
+  shows it opens. A change made offline is not pretended to be saved: it fails with a message.
+- Connecting: Sign in opens §10.1's link, the app shows the check code and reads §10.2 every three
+  seconds until `user` is set (ten minutes at most), then verifies the account the client is signed
+  in to (§10.3, `auto: false`).
+- At every client sign-in, once connected, the app links the account (§2.3) and verifies it with
+  `auto: true`.
+
+The website: `/signin` (Discord, Google), `/auth/:provider` and its callback, `POST /signout`,
+`/account`, `/account/link/:code`, `GET /api/account`, `POST /api/account/changes`,
+`POST /api/account/link`, `DELETE /api/account`. A browser session is a random token in an
+HttpOnly, `SameSite=Lax` cookie (core keeps its SHA-256), valid 60 days from the last visit. Every
+browser write must carry the site's own `Origin` (`ACCOUNT_ORIGIN`). Signed-in pages are never
+served from or stored in the shared page cache. Only the provider's stable id and a display name
+are read (Discord `identify`, Google `openid profile`); no e-mail address is asked for or kept.
