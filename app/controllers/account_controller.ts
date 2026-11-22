@@ -34,8 +34,11 @@ export default class AccountController {
   async page(ctx: HttpContext) {
     if (!ctx.invadeUser) return ctx.response.redirect('/signin?next=/account')
     const error = ctx.request.input('error')
+    const { default: clipService, CLIP_LIMITS } = await import('#services/clips/clip_service')
     return ctx.inertia.render('account/account', {
       account: await accountService.snapshot(ctx.invadeUser),
+      clips: await clipService.ofUser(ctx.invadeUser),
+      clipLimit: CLIP_LIMITS.perAccount,
       providers: availableProviders(),
       error: error === 'taken' ? error : null,
       robots: 'noindex, nofollow',

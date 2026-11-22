@@ -9,6 +9,9 @@ import Segmented from '../../components/ui/Segmented.vue'
 import Select from '../../components/ui/Select.vue'
 import Icon from '../../components/ui/Icon.vue'
 import AccountRow from '../../components/account/AccountRow.vue'
+import ClipRow from '../../components/clips/ClipRow.vue'
+import type { Clip } from '../../lib/clip_types.js'
+import '../../css/clips.css'
 import DiscordMark from '../../components/header/DiscordMark.vue'
 import GoogleMark from '../../components/header/GoogleMark.vue'
 import { since } from '../../lib/ladders.js'
@@ -29,6 +32,9 @@ import '../../css/account.css'
  */
 const props = defineProps<{
   account: InvadeAccountData
+  /** The person's posted clips, newest first, and how many they may keep. */
+  clips: Clip[]
+  clipLimit: number
   providers: Record<AccountProvider, boolean>
   error: string | null
 }>()
@@ -311,6 +317,13 @@ async function removeAll() {
               line="Star a player on their profile to keep them here and in the app."
             />
           </section>
+
+          <section v-if="clips.length" id="clips" class="card ac-card">
+            <CardHead title="Clips" icon="film" :meta="`${clips.length} of ${clipLimit}`" />
+            <div class="cl-list">
+              <ClipRow v-for="c in clips" :key="c.id" :clip="c" />
+            </div>
+          </section>
         </div>
 
         <aside class="ac-side">
@@ -396,7 +409,7 @@ async function removeAll() {
           <section class="card ac-card">
             <CardHead title="Delete account" />
             <p class="ac-text">
-              Your favorites, folders and the list of your League accounts go. Your games and
+              Your favorites, folders, clips and the list of your League accounts go. Your games and
               profiles stay on invade.lol.
             </p>
             <div class="ac-del">
