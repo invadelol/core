@@ -80,3 +80,12 @@ const regionValue = computed({
     />
   </div>
 </template>
+
+<style>
+/* The gap lives here, not only in tier-lists.css: pages that use the filters without that sheet
+   (and navigations that arrive before it loaded) printed the menus edge to edge. */
+.vb .row.stat-filters {
+  gap: 8px;
+  flex-wrap: wrap;
+}
+</style>
