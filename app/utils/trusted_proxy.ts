@@ -51,7 +51,9 @@ for (const range of [
   CLOUDFLARE.addSubnet(network, Number(bits), 'ipv6')
 }
 
-function inList(list: BlockList, address: string): boolean {
+function inList(list: BlockList, address: string | undefined): boolean {
+  // A socket the client already closed has no address left: it is nobody we trust.
+  if (typeof address !== 'string') return false
   // Node reports IPv4 peers of a dual-stack socket as `::ffff:10.0.1.2`.
   const v4 = address.startsWith('::ffff:') ? address.slice(7) : address
   if (isIPv4(v4)) return list.check(v4, 'ipv4')
@@ -62,11 +64,11 @@ function inList(list: BlockList, address: string): boolean {
   }
 }
 
-export function trustedProxy(address: string): boolean {
+export function trustedProxy(address: string | undefined): boolean {
   return inList(PRIVATE, address)
 }
 
-export function cloudflareEdge(address: string): boolean {
+export function cloudflareEdge(address: string | undefined): boolean {
   return inList(CLOUDFLARE, address)
 }
 

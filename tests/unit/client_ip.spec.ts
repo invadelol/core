@@ -1,5 +1,5 @@
 import { test } from '@japa/runner'
-import { clientIp, cloudflareEdge } from '#utils/trusted_proxy'
+import { clientIp, cloudflareEdge, trustedProxy } from '#utils/trusted_proxy'
 
 /** What `request.ips()` gives behind Traefik: Traefik's own hop, then the peer it saw. */
 function request(peer: string, headers: Record<string, string> = {}) {
@@ -38,6 +38,11 @@ test.group('Client IP behind Cloudflare', () => {
 
   test('ignores the header on a request made straight to the server', ({ assert }) => {
     assert.equal(clientIp(request('81.2.69.160', { 'cf-connecting-ip': '1.1.1.1' })), '81.2.69.160')
+  })
+
+  test('a request whose client already left has no address, and that is no error', ({ assert }) => {
+    assert.isFalse(trustedProxy(undefined))
+    assert.isFalse(cloudflareEdge(undefined))
   })
 
   test('keeps the edge when the header is missing or not an address', ({ assert }) => {
