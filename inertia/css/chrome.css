@@ -205,6 +205,10 @@
   gap: 12px;
   margin-left: auto;
 }
+/* With the account at its end the bar keeps the search's room: the buttons sit closer. */
+.vb .hx-end:has(.hx-acct, .hx-signin) {
+  gap: 8px;
+}
 .vb .hx-search + .hx-end {
   margin-left: 4px;
 }
@@ -304,6 +308,138 @@
 .vb .ft .theme-btn::after {
   top: auto;
   bottom: calc(100% + 6px);
+}
+
+/* The account (header/AccountMenu.vue): the main League account's icon, its menu at the right. */
+.vb .hx-me {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 34px;
+  padding: 0 2px;
+  border-radius: var(--r2);
+  color: var(--t3);
+  cursor: pointer;
+  transition: color var(--m) var(--ease);
+}
+.vb .hx-me:hover,
+.vb .hx-me.open {
+  color: var(--t1);
+}
+.vb .hx-me .av,
+.vb .am-id .av {
+  display: block;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px var(--line-2);
+  transition: box-shadow var(--m) var(--ease);
+}
+.vb .hx-me:hover .av {
+  box-shadow: 0 0 0 1px var(--line-3);
+}
+.vb .hx-me.open .av {
+  box-shadow: 0 0 0 1px var(--v300);
+}
+.vb :is(.hx-me, .am-id) .av.none {
+  display: grid;
+  place-items: center;
+  background: var(--s2);
+  color: var(--t2);
+}
+.vb .hx-menu.am {
+  left: auto;
+  right: 32px;
+  width: 300px;
+  animation: hx-in 140ms var(--ease);
+}
+.vb .am-id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.vb .am-id > img,
+.vb .am-id .av {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r2);
+}
+.vb .am-who {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.vb .am-who b {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--t1);
+}
+.vb .am-who b small {
+  margin-left: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--t3);
+}
+.vb .am-rk {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.vb .am-rk .q {
+  color: var(--t3);
+  font-weight: 500;
+}
+.vb .am-l {
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+}
+.vb .am-foot {
+  border-top: 1px solid var(--line);
+}
+.vb .am-r {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: var(--r2);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--t2);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 160ms var(--ease),
+    color 160ms var(--ease);
+}
+.vb .am-r .i {
+  width: 16px;
+  height: 16px;
+  color: var(--t3);
+}
+.vb .am-r:hover {
+  background: rgb(var(--v-rgb) / 0.08);
+  color: var(--t1);
+}
+.vb .am-r:focus-visible {
+  outline-offset: -2px;
+}
+.vb .am-r .end {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--t3);
 }
 
 /* The section's row: plain words, the current one on violet. */
@@ -858,6 +994,9 @@
   .vb .hx-discord {
     display: none;
   }
+  .vb .hx-menu.am {
+    right: 24px;
+  }
   /* Between the phone's flat search and menu buttons, the theme is drawn like them. */
   .vb .hx-end .btn.hx-theme {
     width: 40px;
@@ -893,6 +1032,21 @@
   .vb .hx-end {
     gap: 4px;
   }
+  .vb .hx-menu.am {
+    right: 16px;
+    max-width: calc(100vw - 32px);
+  }
+  .vb .hx-me {
+    height: 40px;
+    padding: 0 6px;
+  }
+  .vb .hx-me > .i {
+    display: none;
+  }
+  /* On a phone, Sign in sits in the menu's sheet: the bar keeps its buttons. */
+  .vb .hx-signin {
+    display: none;
+  }
   /* The search over the bar, from its button; the theme and the menu make room. */
   .vb.is-search .hx-search {
     display: block;
@@ -904,6 +1058,7 @@
     margin: 0;
   }
   .vb.is-search .hx-theme,
+  .vb.is-search .hx-acct,
   .vb.is-search .hx-burger {
     display: none;
   }
@@ -996,6 +1151,11 @@ html.hx-locked {
 /* New Dawn, under the patch chips. */
 .vb .hx-phone-nd {
   margin-top: 8px;
+}
+.vb .hx-phone-acct {
+  display: flex;
+  flex-direction: column;
+  padding: 18px 4px 0;
 }
 .vb .hx-phone-theme {
   display: flex;

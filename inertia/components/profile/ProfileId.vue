@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { RoleIcon } from '@invadelol/ui'
 import type { Position } from '@invadelol/ui/logic'
@@ -9,10 +9,12 @@ import { SERVER } from '../../lib/board.js'
 import { regionFlag } from '../../lib/flags.js'
 import { since } from '../../lib/ladders.js'
 import type { Summoner } from '../../lib/types.js'
+import { useViewer } from '../../lib/account.js'
+import '../../css/account.css'
 
 /**
  * The identity sheet at the top of the profile rail (`.pl-id`): the icon with the level under it,
- * the Riot ID with a copy button, the role the player mostly plays, the server and a Pro tag, when
+ * the Riot ID with a copy button and the favorite star, the role the player mostly plays, the server and a Pro tag, when
  * the last game was and how many times the profile was opened, then Update, Share and Compare. The
  * main champion's centred art fades into the top right corner.
  */
@@ -132,6 +134,13 @@ async function copy() {
 onBeforeUnmount(() => clearTimeout(copiedTimer))
 
 const views = (n: number) => `${n.toLocaleString('en-US')} ${n === 1 ? 'view' : 'views'}`
+
+/** The star: this player in the signed-in person's favorites (a visitor is sent to sign in). */
+const { isFavorite, toggleFavorite } = useViewer()
+const favorite = computed(() => isFavorite(props.summoner.puuid))
+function star() {
+  toggleFavorite(props.summoner.puuid).catch(() => {})
+}
 </script>
 
 <template>
@@ -154,6 +163,18 @@ const views = (n: number) => `${n.toLocaleString('en-US')} ${n === 1 ? 'view' : 
         @click="copy"
       >
         <Icon :name="copied ? 'check' : 'copy'" :size="14" />
+      </button>
+      <button
+        type="button"
+        class="pl-copy ac-fav"
+        :class="{ on: favorite }"
+        :aria-pressed="favorite"
+        :aria-label="favorite ? 'Remove from favorites' : 'Add to favorites'"
+        :title="favorite ? 'In your favorites' : 'Add to favorites'"
+        data-track="profile_favorite"
+        @click="star"
+      >
+        <Icon name="star" :size="15" />
       </button>
     </div>
     <div class="pl-tags">

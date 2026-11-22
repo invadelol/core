@@ -15,6 +15,7 @@ import SearchBar from './SearchBar.vue'
 import NavMenu from './header/NavMenu.vue'
 import PatchMenu from './header/PatchMenu.vue'
 import ThemeToggle from './header/ThemeToggle.vue'
+import AccountMenu from './header/AccountMenu.vue'
 import DiscordMark from './header/DiscordMark.vue'
 import { DISCORD_URL } from '../lib/links.js'
 import { SITE_STAGE } from '../lib/site_stage.js'
@@ -36,8 +37,8 @@ import { patchName } from '../lib/patch.js'
 /**
  * The site's header, on every page (Facet): one bar with the mark and its stage (Beta), the four
  * sections and their small menus, the patch pill, the search (a field with its region; its results
- * drop under it), the desktop app, Discord and the theme; under it, the plain-text row of the
- * section you are in.
+ * drop under it), the desktop app, Discord, the theme and the account (Sign in, or the signed-in
+ * person's menu); under it, the plain-text row of the section you are in.
  * Under 1024 px the sections fold into the phone's sheet; under 640 px the search is a button.
  *
  * Nothing here fetches on load: a menu opens in the frame of its hover, click or key, and its
@@ -472,6 +473,7 @@ function skip(event: MouseEvent) {
               ><DiscordMark :size="19"
             /></a>
             <ThemeToggle />
+            <AccountMenu />
             <button
               ref="menuButton"
               type="button"

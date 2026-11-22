@@ -5,11 +5,12 @@ import Icon from '../ui/Icon.vue'
 import MenuArt from './MenuArt.vue'
 import ThemeChoice from './ThemeChoice.vue'
 import { NEW_DAWN_LINK, SECTIONS, type NavContext } from '../../lib/site_nav.js'
+import { signInHref, useViewer } from '../../lib/account.js'
 
 /**
  * The header on a phone (under 1024 px): the patch notes (the newest, then the older ones) and New
- * Dawn, then every section's pages in one sheet under the bar, each with its picture, and the
- * theme. The page under it holds still.
+ * Dawn, then every section's pages in one sheet under the bar, each with its picture, Sign in for
+ * a visitor, and the theme. The page under it holds still.
  */
 const props = defineProps<{ ctx: NavContext; path: string; patchHref: string | null }>()
 defineEmits<{ close: [] }>()
@@ -19,6 +20,8 @@ const older = computed(() =>
   (props.ctx.nav?.patchNotes ?? []).filter((n) => n.patch !== props.ctx.patch)
 )
 const nd = NEW_DAWN_LINK
+/** Signed out, Sign in closes the sheet (the bar has no room for it on a phone). */
+const { viewer } = useViewer()
 </script>
 
 <template>
@@ -72,6 +75,9 @@ const nd = NEW_DAWN_LINK
           >
         </Link>
       </nav>
+      <div v-if="!viewer" class="hx-phone-acct">
+        <Link class="btn" :href="signInHref(path)" @click="$emit('close')">Sign in</Link>
+      </div>
       <div class="hx-phone-theme">
         <span class="lab">Theme</span>
         <ThemeChoice />
