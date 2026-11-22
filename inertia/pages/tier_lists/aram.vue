@@ -152,7 +152,7 @@ const pickMax = computed(() => Math.max(0.1, ...shown.value.map((r) => r.pick)))
         </template>
         <EmptyState
           v-if="!list || !list.enough"
-          :title="`Not enough games this patch`"
+          title="Not enough games this patch"
           icon="clock"
         />
         <template v-else>
