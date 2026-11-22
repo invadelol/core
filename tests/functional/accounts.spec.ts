@@ -9,11 +9,6 @@ import accountService from '#services/accounts/account_service'
 import { DesktopSeed } from '#tests/fixtures/desktop_db'
 import { desktopClient } from '#tests/fixtures/desktop_http'
 
-/**
- * Invade accounts end to end (docs/desktop-sync.md §10): the browser session and its Origin
- * check, favorites and folders, a desktop app connected through its browser link, and the proof
- * of a League account, which only a client link of the same device gives.
- */
 /** The change is refused with a message matching `message`. */
 async function refused(change: Promise<unknown>, message: RegExp) {
   try {
@@ -25,6 +20,11 @@ async function refused(change: Promise<unknown>, message: RegExp) {
   throw new Error(`expected a refusal matching ${message}`)
 }
 
+/**
+ * Invade accounts end to end (docs/desktop-sync.md §10): the browser session and its Origin
+ * check, favorites and folders, a desktop app connected through its browser link, and the proof
+ * of a League account, which only a client link of the same device gives.
+ */
 test.group('Invade accounts', (group) => {
   group.tap((t) => t.tags(['@accounts']))
   const prefixes = { limiter: rateLimiter.prefix, replay: replayGuard.prefix }
@@ -263,8 +263,10 @@ test.group('Invade accounts', (group) => {
     const raw = randomUUID()
     await seed.link(mine.device.id, player.puuid, raw)
     await seed.link(theirs.device.id, player.puuid, raw)
-    ;(await mine.app.post('/api/desktop/account/verify', { rawPuuid: raw })).assertStatus(200)
-    ;(await theirs.app.post('/api/desktop/account/verify', { rawPuuid: raw })).assertStatus(200)
+    const first = await mine.app.post('/api/desktop/account/verify', { rawPuuid: raw })
+    first.assertStatus(200)
+    const second = await theirs.app.post('/api/desktop/account/verify', { rawPuuid: raw })
+    second.assertStatus(200)
     let account = await accountService.snapshot(me)
     assert.lengthOf(account.accounts, 0)
     assert.isNull(account.mainPuuid)
