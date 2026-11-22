@@ -5,7 +5,7 @@ import { DateTime } from 'luxon'
 import Summoner from '#models/summoner'
 import PlayerMastery from '#models/player_mastery'
 import PlayerInsightsController from '#controllers/player_insights_controller'
-import riotApiService from '#services/riot/api'
+import riotApiService, { RiotApiService } from '#services/riot/api'
 
 let puuid = 'P'.repeat(78)
 let responseId = 0
@@ -52,6 +52,23 @@ async function withResponse(
 }
 
 test.group('Player insights', () => {
+  test("asks champion-mastery-v4 by PUUID on the player's server, through the shared client", async ({
+    assert,
+  }) => {
+    const service = new RiotApiService()
+    const urls: string[] = []
+    ;(service.client as any).riotRateLimiter.execute = async ({ url }: { url: string }) => {
+      urls.push(url)
+      return [{ championId: 45, championLevel: 7, championPoints: 70000, lastPlayTime: 1 }]
+    }
+    const player = 'Q'.repeat(78)
+    const entries = await service.championMasteries('EUW1', player)
+    assert.equal(entries[0].championId, 45)
+    assert.deepEqual(urls, [
+      `https://euw1.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/${player}`,
+    ])
+  })
+
   test('backs off repeated mastery reads using Riot Retry-After', async ({ assert }) => {
     await withResponse(429, {}, async (controller, urls) => {
       for (let attempt = 0; attempt < 2; attempt++) {
