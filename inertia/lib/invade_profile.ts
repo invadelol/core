@@ -109,8 +109,12 @@ export type ProfileTab =
   | 'champions'
   | 'career'
 
+/** The tags the team puts on an Invade account, in the order its profile shows them. */
+export const ACCOUNT_TAGS = ['founder', 'team'] as const
+export type AccountTag = (typeof ACCOUNT_TAGS)[number]
+
 export interface ProfileBadge {
-  kind: 'plus' | 'beta'
+  kind: AccountTag | 'plus' | 'beta'
   label: string
 }
 

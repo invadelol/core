@@ -51,6 +51,14 @@ export class AccountError extends Exception {
     return new AccountError('Connect the app to your Invade account first.', 403, 'E_NOT_CONNECTED')
   }
 
+  /**
+   * The team suspended the Invade account: the site treats the person as signed out, and the
+   * desktop app shows this instead of the account (docs/desktop-sync.md §10).
+   */
+  static suspended() {
+    return new AccountError('This Invade account is suspended.', 403, 'E_ACCOUNT_SUSPENDED')
+  }
+
   /** The app never reported this League account as signed in to the client on this computer. */
   static notDetected() {
     return new AccountError(
