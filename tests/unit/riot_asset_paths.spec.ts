@@ -146,11 +146,39 @@ test.group('Riot asset paths', () => {
       emblem: 'emerald',
       ability: '266-q',
       stat: 'ad',
+      gem: 'epic',
     }
     for (const kind of ASSET_KINDS.filter((k) => k !== 'augment')) {
       const sources = fallbackSources(kind, ids[kind] ?? '1')
       assert.isAbove(sources.length, 0, `${kind} has no fallback source`)
     }
+  })
+
+  test("rarity gems and skin tiles resolve to Community Dragon's art", ({ assert }) => {
+    assert.deepEqual(fallbackSources('gem', 'mythic', PATCH_16_20), [
+      `${CDRAGON}/16.20/plugins/rcp-be-lol-game-data/global/default/v1/rarity-gem-icons/mythic.png`,
+    ])
+    assert.equal(parseAssetRequest('gem', 'epic.png')?.id, 'epic')
+    assert.isNull(parseAssetRequest('gem', 'standard'))
+    assert.isNull(parseAssetRequest('gem', '../x'))
+    assert.equal(parseAssetRequest('tile', '103-97.jpg')?.id, '103-97')
+    const art = parseChampion({
+      alias: 'Ahri',
+      skins: [
+        {
+          id: 103000,
+          isBase: true,
+          splashPath: '/a.jpg',
+          tilePath: '/lol-game-data/assets/t0.jpg',
+        },
+        { id: 103097, splashPath: '/b.jpg', tilePath: '/lol-game-data/assets/t97.jpg' },
+      ],
+    })
+    assert.deepEqual(championSources('tile', '103-97', art, PATCH_16_20), [
+      `${CDRAGON}/16.20/plugins/rcp-be-lol-game-data/global/default/t97.jpg`,
+      `${DDRAGON}/cdn/img/champion/tiles/Ahri_97.jpg`,
+      'https://cdn.communitydragon.org/latest/champion/103/tile/skin/97',
+    ])
   })
 
   test('stat icons resolve by their short name, nothing else', ({ assert }) => {

@@ -62,6 +62,9 @@ const SocialController = () => import('#controllers/social_controller')
 const SharedBuildsController = () => import('#controllers/shared_builds_controller')
 const ClipsController = () => import('#controllers/clips_controller')
 const DesktopClipsController = () => import('#controllers/desktop_clips_controller')
+const ProfilesController = () => import('#controllers/profiles_controller')
+const SkinsController = () => import('#controllers/skins_controller')
+const DesktopCollectionController = () => import('#controllers/desktop_collection_controller')
 
 // API routes group
 router
@@ -224,6 +227,10 @@ router
           .put('/builds', [DesktopAccountController, 'syncBuilds'])
           .use(middleware.desktopAuth())
         /** Clips posted from the app (§11): details, then the video and its picture as files. */
+        /** The skins a proven League account owns, as the app read them (§13). */
+        router
+          .put('/collection', [DesktopCollectionController, 'replace'])
+          .use(middleware.desktopAuth())
         router.get('/clips', [DesktopClipsController, 'index']).use(middleware.desktopAuth())
         router.post('/clips', [DesktopClipsController, 'create']).use(middleware.desktopAuth())
         router
@@ -385,6 +392,32 @@ router.get('/clip/:id', [ClipsController, 'page'])
 router.get('/clips/:file', [ClipsController, 'file'])
 router.get('/api/clips', [ClipsController, 'list'])
 router.delete('/api/clips/:id', [ClipsController, 'destroy'])
+
+/**
+ * Invade profiles (`/u/<handle>` and its tabs) and the owner's Customize saves, before the
+ * summoner catch-all below.
+ */
+router.get('/u/:handle/:tab?', [ProfilesController, 'page']).where('handle', /^[A-Za-z0-9_]{2,24}$/)
+router.put('/api/profile', [ProfilesController, 'save'])
+
+/**
+ * Skins as players rate them: the hub, a skin's page, a list, and the signed-in person's marks,
+ * reviews, likes and lists. Before the summoner catch-all below.
+ */
+router.get('/skins', [SkinsController, 'hub'])
+router.get('/skins/lists/:id', [SkinsController, 'list'])
+router.get('/skins/:id', [SkinsController, 'show']).where('id', /^\d{4,6}$/)
+router.get('/api/skins/search', [SkinsController, 'search'])
+router.put('/api/skins/:id/rating', [SkinsController, 'rate'])
+router.put('/api/skins/:id/like', [SkinsController, 'like'])
+router.put('/api/skins/:id/wish', [SkinsController, 'wish'])
+router.put('/api/skins/:id/review', [SkinsController, 'review'])
+router.put('/api/skin-reviews/:id/like', [SkinsController, 'likeReview'])
+router.post('/api/skin-lists', [SkinsController, 'createList'])
+router.patch('/api/skin-lists/:id', [SkinsController, 'updateList'])
+router.delete('/api/skin-lists/:id', [SkinsController, 'deleteList'])
+router.put('/api/skin-lists/:id/skins/:skin', [SkinsController, 'listSkin'])
+router.put('/api/skin-lists/:id/like', [SkinsController, 'likeList'])
 
 /** The community server, before the summoner catch-all below. */
 router.get('/discord', ({ response }) => response.redirect(DISCORD_URL, false, 302))

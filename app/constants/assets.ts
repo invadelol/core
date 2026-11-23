@@ -18,6 +18,7 @@ export const ASSET_KINDS = [
   'splash',
   'centered',
   'loading',
+  'tile',
   'ability',
   'item',
   'spell',
@@ -31,6 +32,7 @@ export const ASSET_KINDS = [
   'mastery',
   'stat',
   'ward',
+  'gem',
 ] as const
 
 export type AssetKind = (typeof ASSET_KINDS)[number]
@@ -72,6 +74,16 @@ export const STAT_ICONS = {
   tenacity: 'tenacity',
 } as const
 
+/** Riot's skin rarity gems, by the rarity's short name (`kEpic` → `epic`); standard skins have none. */
+export const RARITY_GEMS = [
+  'epic',
+  'legendary',
+  'mythic',
+  'ultimate',
+  'transcendent',
+  'exalted',
+] as const
+
 /** Ability slots, `p` being the passive. */
 export const ABILITY_KEYS = ['p', 'q', 'w', 'e', 'r'] as const
 
@@ -89,6 +101,7 @@ export const ASSET_IDS: Record<AssetKind, RegExp> = {
   'splash': CHAMPION_SKIN,
   'centered': CHAMPION_SKIN,
   'loading': CHAMPION_SKIN,
+  'tile': CHAMPION_SKIN,
   'ability': new RegExp(`^\\d{1,4}-[${ABILITY_KEYS.join('')}]$`),
   'item': NUMERIC,
   'spell': NUMERIC,
@@ -102,6 +115,7 @@ export const ASSET_IDS: Record<AssetKind, RegExp> = {
   'mastery': /^(?:\d|10)$/,
   'stat': new RegExp(`^(${Object.keys(STAT_ICONS).join('|')})$`),
   'ward': NUMERIC,
+  'gem': new RegExp(`^(${RARITY_GEMS.join('|')})$`),
 }
 
 /** A patch in a URL: `16.20`, Community Dragon's granularity. */

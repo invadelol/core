@@ -1,0 +1,1314 @@
+/* ──────────────────────────────────────────────────────────────
+   The Invade profile (`/u/<handle>`): a person's head (backdrop,
+   avatar, bio, League account plates), its tabs and showcases, and
+   the owner's Customize panel. The accent is the owner's; violet
+   unless they hold Invade+. Under `.vb`.
+   ────────────────────────────────────────────────────────────── */
+
+/* The accents, per theme: each reads on its own ground. */
+.vb .pf {
+  --acc: var(--v400);
+  --acc-rgb: var(--v-rgb);
+}
+.vb .pf[data-accent='rose'] {
+  --acc: #ff7ab0;
+  --acc-rgb: 255 122 176;
+}
+.vb .pf[data-accent='gold'] {
+  --acc: #e9c46a;
+  --acc-rgb: 233 196 106;
+}
+.vb .pf[data-accent='teal'] {
+  --acc: #2fd3c0;
+  --acc-rgb: 47 211 192;
+}
+.vb .pf[data-accent='ice'] {
+  --acc: #8fb7ff;
+  --acc-rgb: 143 183 255;
+}
+.vb .pf[data-accent='white'] {
+  --acc: #f1eff8;
+  --acc-rgb: 241 239 248;
+}
+[data-theme='light'] .vb .pf[data-accent='rose'] {
+  --acc: #d63f7f;
+  --acc-rgb: 214 63 127;
+}
+[data-theme='light'] .vb .pf[data-accent='gold'] {
+  --acc: #a87a12;
+  --acc-rgb: 168 122 18;
+}
+[data-theme='light'] .vb .pf[data-accent='teal'] {
+  --acc: #0e9c8c;
+  --acc-rgb: 14 156 140;
+}
+[data-theme='light'] .vb .pf[data-accent='ice'] {
+  --acc: #3d74d8;
+  --acc-rgb: 61 116 216;
+}
+[data-theme='light'] .vb .pf[data-accent='white'] {
+  --acc: #16131f;
+  --acc-rgb: 22 19 31;
+}
+
+.vb .pf-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.vb .pf.editing .pf-stage {
+  grid-template-columns: minmax(0, 1fr) 400px;
+}
+.vb .pf-wrap {
+  padding-top: 28px;
+  padding-bottom: 80px;
+  min-width: 0;
+}
+@media (min-width: 1181px) {
+  .vb .pf.editing .pf-wrap {
+    max-width: none;
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+}
+
+/* ── The head ────────────────────────────────────────────────── */
+.vb .pf-top {
+  display: flex;
+  flex-direction: column;
+}
+.vb .pf-bd {
+  position: relative;
+  height: 340px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: var(--s2);
+  box-shadow: var(--d-lit);
+}
+.vb .pf-bd img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 24%;
+}
+.vb .pf-bd::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 90px;
+  background: linear-gradient(180deg, transparent, rgb(8 7 14 / 0.35));
+  pointer-events: none;
+}
+.vb .pf-bd.empty::after {
+  display: none;
+}
+.vb .pf.editing .pf-bd {
+  outline: 2px dashed rgb(var(--v-rgb) / 0.55);
+  outline-offset: 6px;
+}
+.vb .pf-bd-edit {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1;
+}
+.vb .pf-id {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 28px;
+  margin-top: -64px;
+  padding: 0 8px 0 36px;
+}
+.vb .pf-av {
+  flex: none;
+  width: 148px;
+  height: 148px;
+  border-radius: 36px;
+  overflow: hidden;
+  background: var(--s2);
+  box-shadow:
+    0 0 0 6px var(--ink-0),
+    0 18px 40px rgb(0 0 0 / 0.45);
+}
+.vb .pf-av.framed {
+  box-shadow:
+    0 0 0 4px var(--acc),
+    0 0 0 8px var(--ink-0),
+    0 18px 40px rgb(0 0 0 / 0.45);
+}
+.vb .pf-av img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.vb .pf-who {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  padding-top: 80px;
+}
+.vb .pf-who h1 {
+  margin: 0;
+  font-size: 44px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  overflow-wrap: anywhere;
+}
+.vb .pf-ver {
+  display: inline-flex;
+  margin-left: 10px;
+  vertical-align: 4px;
+  color: var(--v300);
+}
+.vb .pf-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--t3);
+}
+.vb .pf-counts {
+  display: inline-flex;
+  gap: 16px;
+}
+.vb .pf-counts a {
+  color: inherit;
+}
+.vb .pf-counts a:hover {
+  color: var(--t1);
+}
+.vb .pf-counts b {
+  font-weight: 650;
+  color: var(--t1);
+}
+.vb .pf-mutual {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: var(--r1);
+  background: var(--s3);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--t2);
+}
+.vb .pf-bio {
+  margin: 8px 0 0;
+  max-width: 560px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--t1);
+  overflow-wrap: anywhere;
+}
+.vb .pf-tags {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 10px;
+}
+.vb .pf-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--t2);
+}
+.vb a.pf-badge:hover {
+  color: var(--t1);
+}
+.vb .pf-badge .i {
+  color: var(--acc);
+}
+.vb .pf-badge img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+.vb .pf-link {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  color: var(--t2);
+}
+.vb .pf-link:hover {
+  background: var(--d-sf2);
+  color: var(--t1);
+}
+.vb .pf-acts {
+  display: flex;
+  gap: 8px;
+  padding-top: 84px;
+}
+
+/* ── League account plates ──────────────────────────────────── */
+.vb .pf-plates {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  gap: 12px;
+  margin: 28px 8px 0 212px;
+}
+.vb .pf-plates.one {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 620px;
+}
+.vb .pf-plates.three {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 0.9fr);
+}
+.vb .pf-plate {
+  container-type: inline-size;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  border-radius: var(--r3);
+  background: var(--d-sheen), var(--d-sf1);
+  box-shadow: var(--d-row);
+  transition: background 180ms var(--ease);
+}
+.vb a.pf-plate:hover {
+  background: var(--d-sheen), var(--d-sf2);
+}
+.vb .pf-plate.lit {
+  background:
+    radial-gradient(70% 130% at 100% 0%, var(--d-glow), rgb(var(--v-rgb) / 0) 75%), var(--d-sheen),
+    var(--d-sf1);
+  box-shadow: var(--d-lit), var(--d-drop);
+}
+.vb .pf-pt {
+  display: grid;
+  align-items: center;
+  column-gap: 12px;
+  height: 100px;
+  padding: 0 18px 0 4px;
+}
+.vb .pf-plate.main .pf-pt {
+  grid-template-columns: 96px minmax(0, 1fr) auto auto;
+  column-gap: 16px;
+}
+.vb .pf-plate.alt .pf-pt {
+  grid-template-columns: 84px minmax(0, 1fr) auto;
+}
+.vb .pf-plate.pro .pf-pt {
+  grid-template-columns: 88px minmax(0, 1fr);
+  height: 92px;
+}
+.vb .pf-em {
+  display: grid;
+  place-items: center;
+}
+.vb .pf-pid {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.vb .pf-rk {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  white-space: nowrap;
+}
+.vb .pf-rk b {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+.vb .pf-rk .num {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--t1);
+}
+.vb .pf-rid {
+  font-size: 14.5px;
+  font-weight: 650;
+  color: var(--t1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vb .pf-rid span {
+  margin-left: 1px;
+  font-weight: 500;
+  color: var(--t3);
+}
+.vb .pf-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--t3);
+  white-space: nowrap;
+}
+.vb .pf-lp {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 170px;
+}
+.vb .pf-cap {
+  font-size: 12.5px;
+  color: var(--t3);
+  white-space: nowrap;
+}
+.vb .pf-ch {
+  display: flex;
+  gap: 6px;
+}
+.vb .pf-ch img {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  box-shadow: var(--d-portrait);
+}
+/* A plate too narrow for everything drops its line, then its champions. */
+@container (max-width: 560px) {
+  .vb .pf-plate.main .pf-pt {
+    grid-template-columns: 84px minmax(0, 1fr) auto;
+  }
+  .vb .pf-plate.main .pf-lp {
+    display: none;
+  }
+}
+@container (max-width: 380px) {
+  .vb .pf-plate.main .pf-pt {
+    grid-template-columns: 76px minmax(0, 1fr);
+  }
+  .vb .pf-plate.main .pf-ch {
+    display: none;
+  }
+}
+@container (max-width: 300px) {
+  .vb .pf-plate.alt .pf-pt {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+  .vb .pf-plate.alt .pf-ch {
+    display: none;
+  }
+}
+.vb .pf-plate.alt .pf-ch img {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r2);
+}
+.vb .pf-ft {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 18px;
+  padding: 11px 0 13px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--t2);
+  white-space: nowrap;
+}
+.vb .pf-ft > span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.vb .pf-ft b {
+  font-weight: 650;
+}
+.vb .pf-ft .num b {
+  margin-right: 8px;
+  color: var(--t1);
+}
+.vb .pf-more {
+  justify-content: flex-start;
+  padding: 12px 18px 10px;
+  gap: 4px;
+  background: var(--d-inset);
+  box-shadow: var(--d-inset-sh);
+}
+.vb .pf-more ul {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vb .pf-more li a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: 28px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--t1);
+}
+.vb .pf-more li + li {
+  border-top: 1px solid var(--line);
+}
+.vb .pf-srv {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--t3);
+}
+
+/* ── Tabs ────────────────────────────────────────────────────── */
+.vb .pf-tabs {
+  margin: 34px 0 30px;
+}
+.vb .pf-tabs .tabs {
+  gap: 6px;
+}
+.vb .pf-tabs .tabs > a {
+  padding: 0 14px;
+  font-size: 15px;
+}
+.vb .pf-tabs .tabs > a.on::after {
+  left: 14px;
+  right: 14px;
+  background: var(--acc);
+}
+
+/* ── Showcases ───────────────────────────────────────────────── */
+.vb .pf-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 392px;
+  gap: 48px;
+  align-items: start;
+}
+.vb .pf-grid.single {
+  grid-template-columns: minmax(0, 1fr);
+}
+.vb .pf.editing .pf-grid {
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 36px;
+}
+.vb .pf-col {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  min-width: 0;
+}
+.vb .pf-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.vb .pf-hr {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.vb .pf-h {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.vb .pf-h .n {
+  margin-left: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--t3);
+}
+.vb .pf-empty {
+  margin: 0;
+  font-size: 14px;
+  color: var(--t3);
+}
+
+/* Clips */
+.vb .pf-pin {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.vb .pf-pv,
+.vb .pf-ccv {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--s3);
+  box-shadow: var(--d-portrait);
+}
+.vb .pf-pv {
+  box-shadow:
+    var(--d-portrait),
+    0 24px 50px rgb(0 0 0 / 0.35);
+}
+.vb .pf-ccv {
+  margin-bottom: 6px;
+  border-radius: var(--r3);
+}
+.vb .pf-pv img,
+.vb .pf-ccv img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 800ms var(--ease);
+}
+.vb .pf-pin:hover .pf-pv img,
+.vb .pf-cc:hover .pf-ccv img {
+  transform: scale(1.03);
+}
+.vb .pf-play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 68px;
+  margin: -34px 0 0 -34px;
+  border-radius: 50%;
+  background: rgb(10 9 16 / 0.55);
+  color: #fff;
+}
+.vb .pf-play .i {
+  fill: currentColor;
+}
+.vb .pf-dur {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--scrim);
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+}
+.vb .pf-ccv .pf-dur {
+  right: 8px;
+  bottom: 8px;
+  padding: 1px 6px;
+  border-radius: var(--r1);
+  font-size: 12px;
+}
+.vb .pf-vis {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--scrim);
+  color: #fff;
+}
+.vb .pf-pt-t {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.vb .pf-pt-t b {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--t1);
+}
+.vb .pf-ccs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.vb .pf-cc {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.vb .pf-cc b {
+  font-size: 14.5px;
+  font-weight: 650;
+  color: var(--t1);
+}
+.vb .pf-cc .meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Favourite four (the Overview's), signature champions, builds */
+.vb .pf-f4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.vb .pf-f4.big {
+  gap: 16px;
+}
+.vb .pf-f4 a {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.vb .pf-f4.big .skn-po {
+  border-radius: 14px;
+}
+.vb .pf-sigs {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.vb .pf-sig {
+  position: relative;
+  display: block;
+  height: 76px;
+  border-radius: var(--r3);
+  overflow: hidden;
+  background: var(--s3);
+  box-shadow: var(--d-portrait);
+}
+.vb .pf-sig img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 60% 28%;
+}
+.vb .pf-sig::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    90deg,
+    rgb(9 8 14 / 0.86) 0%,
+    rgb(9 8 14 / 0.55) 45%,
+    transparent 75%
+  );
+}
+.vb .pf-sig-t {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transform: translateY(-50%);
+}
+.vb .pf-sig-t b {
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+}
+.vb .pf-sig-t span {
+  font-size: 13px;
+  color: rgb(255 255 255 / 0.72);
+}
+.vb .pf-brows {
+  display: flex;
+  flex-direction: column;
+}
+.vb .pf-build {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  gap: 4px 16px;
+  align-items: center;
+  padding: 18px 20px;
+}
+.vb .pf-build + .pf-build {
+  border-top: 1px solid var(--line);
+}
+.vb .pf-build .fr {
+  grid-row: span 2;
+  align-self: start;
+}
+.vb .pf-bt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.vb .pf-bt b {
+  font-size: 15px;
+  font-weight: 650;
+}
+.vb .pf-bacts {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.vb .pf-route {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.vb .pf-route img {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  box-shadow: var(--d-portrait);
+}
+.vb .pf-route .chev {
+  color: var(--t4);
+}
+.vb .pf-skill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 14px;
+}
+.vb .pf-bstat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-size: 13px;
+  color: var(--t3);
+  white-space: nowrap;
+}
+.vb .pf-bstat b {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--t1);
+}
+.vb .pf-mini-build {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--r3);
+  background: var(--d-inset);
+  box-shadow: var(--d-inset-sh);
+}
+.vb .pf-mini-build b {
+  font-size: 14.5px;
+  font-weight: 650;
+}
+.vb .pf-mini-build .pf-route {
+  margin-left: auto;
+  flex-wrap: nowrap;
+}
+
+/* Friends */
+.vb .pf-frs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 24px;
+}
+.vb .pf-grid > .pf-col:last-child .pf-frs {
+  grid-template-columns: minmax(0, 1fr);
+}
+.vb .pf-fr {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.vb .pf-fav {
+  position: relative;
+  flex: none;
+}
+.vb .pf-fav .live-champ {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  box-shadow: 0 0 0 2px var(--ink-1);
+}
+.vb .pf-frt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.vb .pf-frt b {
+  font-size: 14.5px;
+  font-weight: 650;
+  color: var(--t1);
+}
+.vb .pf-frt b small {
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--t3);
+}
+.vb .pf-st {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--t3);
+  white-space: nowrap;
+}
+.vb .pf-st.playing {
+  color: var(--t1);
+}
+.vb .pf-st.playing .i {
+  color: var(--acc);
+}
+.vb .pf-playing {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.vb .pf-pc {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.vb .pf-pcv {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: var(--r3);
+  background: var(--s3);
+  box-shadow: var(--d-portrait);
+}
+.vb .pf-pcv img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.vb .pf-ftab {
+  display: flex;
+  flex-direction: column;
+}
+.vb .pf-frow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(150px, 0.6fr);
+  align-items: center;
+  gap: 20px;
+  min-height: 61px;
+  padding: 8px 0;
+}
+.vb .pf-frow + .pf-frow {
+  border-top: 1px solid var(--line);
+}
+.vb .pf-frow .pf-ch img {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+}
+
+/* A pro's career */
+.vb .pf-career {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vb .pf-career li {
+  padding: 10px 0;
+}
+.vb .pf-career li + li {
+  border-top: 1px solid var(--line);
+}
+.vb .pf-crl {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--d-inset);
+  box-shadow: var(--d-inset-sh);
+}
+.vb .pf-crl img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+/* This season */
+.vb .pf-season {
+  --rd-violet: var(--acc);
+  --rd-violet-hi: var(--acc);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.vb .pf-sn {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--t3);
+}
+.vb .pf-sn span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+/* ── Customize ───────────────────────────────────────────────── */
+.vb .pf-edit {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  max-height: 100vh;
+  overflow: auto;
+  padding: 24px 24px 28px;
+  border-left: 1px solid var(--line);
+  background: var(--s1);
+}
+.vb .pf-edit-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.vb .pf-edit-h h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+.vb .pf-es {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.vb .pf-el {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.vb .pf-el b,
+.vb .pf-el legend {
+  padding: 0;
+  font-size: 14.5px;
+  font-weight: 650;
+  color: var(--t1);
+}
+.vb .pf-plus {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--v300);
+  white-space: nowrap;
+}
+.vb .pf-bds {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 8px;
+  max-height: 252px;
+  overflow: auto;
+  padding: 3px;
+}
+.vb .pf-bdo {
+  display: block;
+  flex: none;
+  width: calc((100% - 40px) / 6);
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--r2);
+  opacity: 0.72;
+  box-shadow: var(--d-portrait);
+  transition: opacity 160ms var(--ease);
+}
+.vb .pf-bdo:hover {
+  opacity: 1;
+}
+.vb .pf-bdo[aria-pressed='true'] {
+  opacity: 1;
+  box-shadow:
+    0 0 0 2px var(--v400),
+    var(--d-portrait);
+}
+.vb .pf-bdo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 308 / 560;
+  object-fit: cover;
+}
+.vb .pf-sws {
+  display: flex;
+  gap: 10px;
+}
+.vb .pf-sw {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--sw);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.12);
+}
+.vb .pf-sw[aria-checked='true'] {
+  box-shadow:
+    0 0 0 2px var(--s1),
+    0 0 0 4px var(--sw);
+}
+.vb .pf-sw:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.vb .pf-seg {
+  align-self: flex-start;
+}
+.vb .pf-shows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: var(--r3);
+  background: var(--d-inset);
+  box-shadow: var(--d-inset-sh);
+}
+.vb .pf-show {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 44px;
+  padding: 0 12px;
+  background: transparent;
+}
+.vb .pf-show + .pf-show {
+  border-top: 1px solid var(--line);
+}
+.vb .pf-show.dragging {
+  opacity: 0.5;
+}
+.vb .pf-grip {
+  display: inline-flex;
+  padding: 4px 2px;
+  border-radius: var(--r1);
+  color: var(--t3);
+  cursor: grab;
+}
+.vb .pf-sl {
+  flex: 1;
+  font-size: 14px;
+  color: var(--t1);
+}
+.vb .pf-show .switch {
+  cursor: pointer;
+}
+.vb .pf-show .switch:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.vb .pf-in {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.vb .pf-in textarea,
+.vb .pf-in input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--r3);
+  background: var(--d-inset);
+  box-shadow: var(--d-inset-sh);
+  font: 500 14px/1.5 var(--f);
+  color: var(--t1);
+  resize: vertical;
+}
+.vb .pf-in input {
+  height: 40px;
+}
+.vb .pf-links {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.vb .pf-edit-f {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+.vb .pf-edit-f .pf-err {
+  margin-right: auto;
+}
+.vb .pf-err {
+  font-size: 13px;
+  color: var(--loss);
+}
+.vb .pf-note {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--t3);
+}
+
+/* ── Narrower screens ─────────────────────────────────────────── */
+@media (max-width: 1180px) {
+  .vb .pf-plates {
+    margin-left: 0;
+  }
+  .vb .pf.editing .pf-stage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .vb .pf-edit {
+    position: fixed;
+    inset: 0 0 0 auto;
+    z-index: 60;
+    width: min(420px, 100vw);
+    max-height: none;
+    box-shadow: var(--drop);
+  }
+}
+@media (max-width: 1024px) {
+  .vb .pf-grid,
+  .vb .pf.editing .pf-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 760px) {
+  .vb .pf-wrap {
+    padding-top: 0;
+    padding-bottom: 40px;
+  }
+  .vb .pf-bd {
+    height: 190px;
+    margin: 0 -16px;
+    border-radius: 0;
+  }
+  .vb .pf.editing .pf-bd {
+    outline-offset: -4px;
+  }
+  .vb .pf-id {
+    flex-direction: column;
+    gap: 14px;
+    margin-top: -52px;
+    padding: 0;
+  }
+  .vb .pf-av {
+    width: 100px;
+    height: 100px;
+    border-radius: 26px;
+  }
+  .vb .pf-who {
+    padding-top: 0;
+  }
+  .vb .pf-who h1 {
+    font-size: 34px;
+  }
+  .vb .pf-meta {
+    gap: 4px 12px;
+  }
+  .vb .pf-tags {
+    gap: 10px 14px;
+  }
+  .vb .pf-acts {
+    align-self: stretch;
+    padding-top: 0;
+  }
+  .vb .pf-acts .btn {
+    flex: 1;
+    height: 40px;
+  }
+  .vb .pf-acts .btn.ico {
+    flex: none;
+    width: 40px;
+  }
+  .vb .pf-plates,
+  .vb .pf-plates.one,
+  .vb .pf-plates.three {
+    display: flex;
+    gap: 10px;
+    max-width: none;
+    margin: 22px -16px 0;
+    padding: 0 16px 6px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 16px;
+    scrollbar-width: none;
+  }
+  .vb .pf-plate {
+    flex: none;
+    width: 300px;
+    scroll-snap-align: start;
+  }
+  .vb .pf-plates.one .pf-plate {
+    width: 100%;
+  }
+  .vb .pf-plate.main .pf-pt {
+    grid-template-columns: 72px minmax(0, 1fr) auto;
+    height: auto;
+    padding: 14px 14px 14px 2px;
+  }
+  .vb .pf-plate.main .pf-lp {
+    display: none;
+  }
+  .vb .pf-more {
+    width: 250px;
+  }
+  .vb .pf-tabs {
+    margin: 24px -16px 22px;
+  }
+  .vb .pf-tabs .tabs {
+    padding: 0 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .vb .pf-tabs .tabs > a {
+    padding: 0 10px;
+    white-space: nowrap;
+  }
+  .vb .pf-col {
+    gap: 34px;
+  }
+  .vb .pf-ccs,
+  .vb .pf-playing {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .vb .pf-frs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .vb .pf-frow {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .vb .pf-frow .pf-ch {
+    display: none;
+  }
+  .vb .pf-build {
+    grid-template-columns: 40px minmax(0, 1fr);
+    padding: 14px 16px;
+  }
+  .vb .pf-build .fr {
+    grid-row: auto;
+  }
+  .vb .pf-bacts,
+  .vb .pf-bstat {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    align-items: flex-start;
+  }
+  .vb .pf-mini-build .pf-route {
+    display: none;
+  }
+  .vb .pf-edit {
+    width: 100vw;
+  }
+  .vb .pf-in textarea,
+  .vb .pf-in input {
+    font-size: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vb .pf-pv img,
+  .vb .pf-ccv img {
+    transition: none;
+  }
+}

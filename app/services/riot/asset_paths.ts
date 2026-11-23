@@ -174,6 +174,7 @@ export function fallbackSources(kind: AssetKind, id: string, release: Release = 
     case 'splash':
     case 'centered':
     case 'loading':
+    case 'tile':
     case 'ability':
       return championSources(kind, id, null)
     case 'rank':
@@ -188,6 +189,8 @@ export function fallbackSources(kind: AssetKind, id: string, release: Release = 
       return statSources(id, release)
     case 'ward':
       return [`${root}/content/src/leagueclient/wardskinimages/wardhero_${id}.png`]
+    case 'gem':
+      return [`${root}/v1/rarity-gem-icons/${id}.png`]
     default:
       return []
   }
@@ -246,6 +249,8 @@ export interface SkinArt {
   splash?: string
   centered?: string
   loading?: string
+  /** The square crop the client's skin tiles show. */
+  tile?: string
   /** Riot's rarity (`kEpic`, `kLegendary`…; absent for a standard skin). */
   rarity?: string
   /** The skin lines it belongs to (`v1/skinlines.json` ids). */
@@ -262,6 +267,7 @@ export interface ChampionArt {
   splash?: string
   centered?: string
   loading?: string
+  tile?: string
   abilities: Partial<Record<(typeof ABILITY_KEYS)[number], string>>
   /** Every skin with art, base first; chromas are kept on their skin (no splash of their own). */
   skins?: SkinArt[]
@@ -305,6 +311,7 @@ export function parseChampion(raw: any): ChampionArt | null {
       splash: skin.uncenteredSplashPath,
       centered: skin.splashPath,
       loading: skin.loadScreenPath,
+      tile: skin.tilePath,
       ...(typeof skin.rarity === 'string' && skin.rarity !== 'kNoRarity'
         ? { rarity: skin.rarity }
         : {}),
@@ -318,6 +325,7 @@ export function parseChampion(raw: any): ChampionArt | null {
     splash: base?.uncenteredSplashPath,
     centered: base?.splashPath,
     loading: base?.loadScreenPath,
+    tile: base?.tilePath,
     abilities,
     skins: list,
   }
@@ -350,6 +358,7 @@ const ART = {
   splash: { ddragon: 'splash', cdn: 'splash-art' },
   centered: { ddragon: 'centered', cdn: 'splash-art/centered' },
   loading: { ddragon: 'loading', cdn: 'portrait' },
+  tile: { ddragon: 'tiles', cdn: 'tile' },
 } as const
 
 /**
@@ -359,7 +368,7 @@ const ART = {
  * `<champion id>-<p|q|w|e|r>` for an ability.
  */
 export function championSources(
-  kind: 'splash' | 'centered' | 'loading' | 'ability',
+  kind: 'splash' | 'centered' | 'loading' | 'tile' | 'ability',
   id: string,
   art: ChampionArt | null,
   release: Release = LATEST

@@ -78,6 +78,14 @@ defineProps<{ publisher: LegalPublisher }>()
       account that played it, to everyone or to whoever has its link, as you choose.
     </p>
     <p>
+      <strong>Your profile and skins.</strong> What you put on your Invade profile (bio, links,
+      backdrop, the showcases you choose) and what you say about skins (ratings, reviews, likes, your
+      wishlist and lists) are public on invade.lol. With the app connected, it sends the skins your
+      own League accounts own and when you bought them, as the League client lists them: they make
+      your collection and your diary. Your League accounts appear on your profile only if you show
+      them.
+    </p>
+    <p>
       <strong>Anonymous usage statistics.</strong> The app sends one event when it starts and one
       when it updates to Aptabase, on servers in the EU. These events carry no identifier that links
       them to you. Switch them off in Settings, Data.
@@ -143,6 +151,10 @@ defineProps<{ publisher: LegalPublisher }>()
       <li>
         Your Invade account, its favorites and your clips: until you delete them, or the account
         (Account, Delete account), which deletes its clips too.
+      </li>
+      <li>
+        Your profile, your skins collection, ratings, reviews, likes, wishlist and lists: until you
+        change or delete them, or delete the account.
       </li>
       <li>Server logs: 14 days.</li>
     </ul>

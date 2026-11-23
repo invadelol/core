@@ -1,5 +1,6 @@
 import { accountOrigin } from '#services/accounts/session_service'
 import proPhotoService from '#services/pro_photo_service'
+import { avatarUrl } from '#services/profiles/people'
 import { profilePath } from '../../../inertia/lib/format.js'
 import { SERVER } from '../../../inertia/lib/board.js'
 import { rankText } from '../../../inertia/lib/account_format.js'
@@ -50,13 +51,15 @@ export const SHOWN_MAIN_JOIN = `
     SELECT tier, division FROM riot_rank
     WHERE puuid = m.puuid AND queue_type = 'RANKED_SOLO_5x5'
     ORDER BY fetched_at DESC LIMIT 1
-  ) mr ON m.puuid IS NOT NULL`
+  ) mr ON m.puuid IS NOT NULL
+  LEFT JOIN invade_profile pav ON pav.user_id = u.id`
 
 /** The columns `SHOWN_MAIN_JOIN` adds. */
 export const SHOWN_MAIN_COLUMNS = `
   m.puuid AS sm_puuid, m.game_name AS sm_game_name, m.tag_line AS sm_tag_line,
   m.platform AS sm_platform, m.profile_icon_id AS sm_icon,
-  mr.tier AS sm_tier, mr.division AS sm_division`
+  mr.tier AS sm_tier, mr.division AS sm_division,
+  pav.avatar AS sm_avatar, pav.backdrop_skin AS sm_backdrop`
 
 type Row = Record<string, unknown>
 
@@ -98,8 +101,18 @@ export function shownMainOf(row: Row): CardAccount | null {
   }
 }
 
-/** A person's picture: their shown main account's icon, or none. */
-export const avatarOf = (row: Row) => (row.sm_puuid ? profileIconUrl(integer(row.sm_icon)) : null)
+/**
+ * A person's picture, as their profile draws it: the tile of their backdrop skin, else their shown
+ * main account's icon, else none.
+ */
+export const avatarOf = (row: Row) => {
+  const url = avatarUrl({
+    avatar: text(row.sm_avatar),
+    backdropSkin: integer(row.sm_backdrop),
+    iconId: row.sm_puuid ? integer(row.sm_icon) : null,
+  })
+  return url ? absolute(url) : null
+}
 
 /** A person as a list names them: their main Riot ID under their name, when they show it. */
 export function personLine(row: Row) {
