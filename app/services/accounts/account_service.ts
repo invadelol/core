@@ -488,7 +488,7 @@ class AccountService {
           device_id: deviceId,
           verified_at: new Date(),
           removed_at: null,
-          shown: true,
+          shown: false,
         })
         .onConflict('puuid')
         .merge(['user_id', 'device_id', 'verified_at', 'removed_at', ...(moved ? ['shown'] : [])])
