@@ -1,4 +1,4 @@
-# Desktop ↔ core: onboarding and match sync (contract v1.7)
+# Desktop ↔ core: onboarding and match sync (contract v1.8)
 
 The Invade desktop app (`invadelol/app`, Tauri + Rust) reads League data from the League client's
 local API (LCU) on the player's computer. This contract lets it:
@@ -835,13 +835,15 @@ the text, the version and system, the screenshot and the clip. Answers
 `discord`). A failed Discord post still answers 200 with the report kept and `discordUrl: null`,
 `discordError: true`. 503 `E_REPORTS_UNAVAILABLE` when the admin schema is missing.
 
-## 10. Invade accounts (contract v1.7)
+## 10. Invade accounts (contract v1.7, v1.8)
 
-A person signs in on the website with Discord or Google: that is an **Invade account**. It is not a
-League account and not a device. It holds the League accounts the person plays on (one of them the
-main), their favorite players sorted into folders, and the desktop apps they connected. The app
-connects through the browser: no OAuth token, cookie or password ever enters the app, and the app's
-requests stay signed by its device (§1.1). Riot Sign-On is not used (it needs a production key).
+A person signs in on the website with Discord: that is an **Invade account**. It is not a League
+account and not a device. It has a handle (its address on the site, `/u/<handle>`), holds the
+League accounts the person plays on (one of them the main, each shown on their profile or not),
+who and what they follow, the clips and matches they keep (Favorites), their builds (§14), and the
+desktop apps they connected. The app connects through the browser: no OAuth token, cookie or
+password ever enters the app, and the app's requests stay signed by its device (§1.1). Riot
+Sign-On is not used (it needs a production key).
 
 All routes below are signed device routes (§1). Errors keep the shape of §1 with these codes; none
 is a 401, which would make the app register again:
@@ -850,36 +852,52 @@ is a 401, which would make the app register again:
 | --- | --- | --- |
 | 403 | `E_NOT_CONNECTED` | the device is not connected to an Invade account |
 | 403 | `E_NOT_DETECTED` | no client link (§2.3, `source: lcu`) of this device for that raw PUUID, or its mapping is disputed |
-| 404 | `E_ACCOUNT_NOT_FOUND` | the player, folder or favorite does not exist |
-| 422 | `E_ACCOUNT_INVALID`, `E_ACCOUNT_LIMIT` | a bad change, or over a limit (30 folders, 300 favorites) |
-| 429 | `E_RATE_LIMITED` | per device and hour: pair 20, read 600, changes 600, verify 60 |
+| 404 | `E_ACCOUNT_NOT_FOUND` | the person, player, pro, clip or match does not exist (or the clip may not be watched) |
+| 422 | `E_ACCOUNT_INVALID`, `E_ACCOUNT_LIMIT` | a bad change, or over a limit (2,000 follows, 1,000 saved items, 50 changes a request) |
+| 429 | `E_RATE_LIMITED` | per device and hour: pair 20, read 600, changes 600, verify 60, build syncs 120 |
 
 ### 10.1 `POST /api/desktop/account/pair` (auth)
 
-`{}` → `201 { "url": "https://invade.lol/account/link/<32 chars>", "check": "K7Q2", "expiresAt": <epoch ms> }`.
+`{}` → `201 { "url": "https://invade.lol/account/link/<32 characters>", "expiresAt": <epoch ms> }`.
 
-A single-use link, valid ten minutes; a new one replaces the device's earlier link. The app opens
-`url` in the browser and shows `check` while it waits. The website signs the person in if needed,
-shows the app's version and system and the same four characters, and connects the device only when
-the person presses Connect (`POST /api/account/link`, same-origin, signed-in). A device already
-connected to someone else is never moved (409 on the website); the person disconnects it first.
-The app learns the result by reading §10.2 (every few seconds while it waits, at most ten minutes).
+A single-use link, valid ten minutes; a new one replaces the device's earlier link. Its 32
+characters are the secret: there is no code to show, read or type. The app opens `url` in the
+browser, shows that it is waiting, and reads §10.2 every three seconds for ten minutes at most
+(it stops on success, when its window closes or when the person cancels). The website signs the
+person in if needed (and comes back), names the computer (its system and app version) and the
+account, and connects the device only when the person presses Connect (`POST /api/account/link`,
+same-origin, signed-in). "This is not me" signs the browser out and comes back to the same link
+for another account. A device already connected to someone else is never moved (409
+`E_APP_TAKEN` on the website); the person disconnects it first. A spent or expired link is 410
+`E_LINK_EXPIRED`.
 
 ### 10.2 `GET /api/desktop/account` (auth)
 
 ```json
-{ "user": { "id": "<uuid>", "name": "Ember", "providers": ["discord"], "createdAt": "<ISO>" },
+{ "user": { "id": "<uuid>", "name": "Ember", "handle": "ember", "avatarUrl": "<url>" | null,
+            "providers": ["discord"], "createdAt": "<ISO>", "premium": false },
   "mainPuuid": "<api puuid>" | null,
-  "accounts": [{ "puuid": "<api puuid>", "gameName": "Ember", "tagLine": "EUW", "platform": "EUW1",
-                 "profileIconId": 4655, "tier": "EMERALD", "division": "II", "lp": 64, "verifiedAt": "<ISO>" }],
-  "folders": [{ "id": "<uuid>", "name": "Duo partners" }],
-  "favorites": [{ "puuid": "…", "gameName": "…", "tagLine": "…", "platform": "…", "profileIconId": 1,
-                  "tier": null, "division": null, "lp": null, "folderId": "<uuid>" | null, "addedAt": "<ISO>" }],
-  "devices": [{ "id": "<uuid>", "os": "windows", "app": "0.3.9", "linkedAt": "<ISO>", "lastSeenAt": "<ISO>" | null }] }
+  "accounts": [{ "puuid": "<api puuid>", "gameName": "Ember", "tagLine": "0002", "platform": "EUW1",
+                 "profileIconId": 4025, "tier": "EMERALD", "division": "III", "lp": 44,
+                 "verifiedAt": "<ISO>", "shown": true }],
+  "following": [{ "kind": "user" | "player" | "pro", "id": "<user uuid | api puuid | pro slug>",
+                  "name": "Briar", "subtitle": "Briar Signal#5555" | null, "imageUrl": "<url>" | null,
+                  "href": "/u/briar", "since": "<ISO>" }],
+  "counts": { "followers": 148, "following": 61, "friends": 24, "saved": 18 },
+  "devices": [{ "id": "<uuid>", "os": "windows", "app": "0.4.0", "linkedAt": "<ISO>", "lastSeenAt": "<ISO>" | null }],
+  "settings": { "clipVisibility": "everyone" | "link" | "private", "clipComments": "everyone" | "game" | "off",
+                "clipsOnProfile": true, "allowTags": true, "streamerMode": true } }
 ```
 
-Not connected: `user: null` and empty lists (200). PUUIDs are the Riot API's (78 characters), as on
-the website. `tier`/`division`/`lp`: the newest stored Solo/Duo rank. Favorites come newest first.
+Not connected: `user: null`, empty lists, zero counts, `settings: null` (200). PUUIDs are the Riot
+API's (78 characters), as on the website. `tier`/`division`/`lp`: the newest stored Solo/Duo rank.
+`avatarUrl` and a person's `subtitle` and `imageUrl` in `following` come from their main League
+account only when they show it on their profile. A player's `subtitle` is their rank (else their
+server), a pro's their team and role. `following` comes newest first. Friends are the people who
+follow the person back. `premium`: Invade+ is active on the account. `settings` are the person's
+privacy choices on the website: the default audience and comments of a new clip, whether their
+clips show on their League accounts' profiles, whether others may tag them, and whether League's
+Hide My Name keeps them off other people's clips and comments.
 
 ### 10.3 `POST /api/desktop/account/verify` (auth)
 
@@ -902,30 +920,24 @@ elsewhere. A Riot ID link (`source: riot_id`) proves nothing.
 
 What it cannot stop: a modified client on the person's own computer can make any request its device
 can sign (§1.2), including a client link for a raw PUUID it learned elsewhere. Owning a League
-account gives no access to anything private; the website lists a person's accounts only to them.
+account gives no access to anything private; a person's League accounts show on their Invade
+profile only as they allow (`shown`).
 
 ### 10.4 `POST /api/desktop/account/changes` (auth)
 
-One change per request → the §10.2 body. The website sends the same changes to
-`POST /api/account/changes`.
+`{ "ops": [ … ] }`, 1 to 50 changes applied in order, all or none → the §10.2 body. A failed change
+applies nothing: the app shows the message and keeps its last answer.
 
-| `type` | fields | effect |
+| `op` | fields | effect |
 | --- | --- | --- |
-| `favorite` | player, `folderId?` | stars a player (into a folder when given) |
-| `removeFavorite` | player | unstars (a player Invade does not hold: nothing to do, 200) |
-| `moveFavorite` | player, `folderId` (null: no folder) | moves a favorite |
-| `createFolder` | `id` (a UUID the app makes), `name` (1 to 40) | the same id twice is done once; names are unique per account, ignoring case |
-| `renameFolder` | `id`, `name` | |
-| `deleteFolder` | `id` | its players stay, unfiled |
-| `main` | `puuid` | one of the person's own accounts |
-| `removeAccount` | `puuid` | "Not mine": off the list until the person asks again (§10.3) |
-| `unlinkDevice` | `deviceId` | disconnects an app |
-| `rename` | `name` (1 to 32) | the name shown to the person |
+| `follow`, `unfollow` | `kind`: `user`, `player`, `pro`; `id` | follows a person (their account id), a League account (its API PUUID; the client's raw PUUID is mapped through a verified alias, §3, never looked up) or a pro (their slug). Following twice, or unfollowing what is not followed, is already done. Nobody follows themselves. |
+| `save`, `unsave` | `kind`: `clip`, `match`; `id`; `puuid?` | keeps a clip (one the person may watch) or a stored match in Favorites; `puuid` names whose game a match is (it is drawn from that player's side) |
+| `main` | `puuid` | one of the person's own accounts becomes the main |
+| `show` | `puuid`, `shown` | whether one of the person's own accounts shows on their profile |
 
-A player, from the app: `puuid` (API PUUID or the client's raw PUUID) and/or `gameName`, `tagLine`,
-`platform`. Core maps a raw PUUID through §3 and a Riot ID through stored players; only `favorite`
-may look an unknown Riot ID up (one account-v1 call). A failed change is not applied: the app shows
-the message and keeps its last answer.
+The website sends the same changes to `POST /api/account/changes`, plus its own: `notMine`
+(`puuid`: off the list until the app proves it again on request, §10.3), `disconnect`
+(`deviceId`), `rename` (`name`, 1 to 32) and `settings` (any of the §10.2 settings).
 
 ### 10.5 `DELETE /api/desktop/account` (auth)
 
@@ -935,19 +947,26 @@ the message and keeps its last answer.
 
 - The app keeps the last §10.2 answer for showing offline, and reads it again when a page that
   shows it opens. A change made offline is not pretended to be saved: it fails with a message.
-- Connecting: Sign in opens §10.1's link, the app shows the check code and reads §10.2 every three
-  seconds until `user` is set (ten minutes at most), then verifies the account the client is signed
-  in to (§10.3, `auto: false`).
+- Connecting: Sign in opens §10.1's link and reads §10.2 every three seconds until `user` is set
+  (ten minutes at most), then verifies the account the client is signed in to (§10.3,
+  `auto: false`).
 - At every client sign-in, once connected, the app links the account (§2.3) and verifies it with
   `auto: true`.
 
-The website: `/signin` (Discord, Google), `/auth/:provider` and its callback, `POST /signout`,
-`/account`, `/account/link/:code`, `GET /api/account`, `POST /api/account/changes`,
-`POST /api/account/link`, `DELETE /api/account`. A browser session is a random token in an
-HttpOnly, `SameSite=Lax` cookie (core keeps its SHA-256), valid 60 days from the last visit. Every
-browser write must carry the site's own `Origin` (`ACCOUNT_ORIGIN`). Signed-in pages are never
-served from or stored in the shared page cache. Only the provider's stable id and a display name
-are read (Discord `identify`, Google `openid profile`); no e-mail address is asked for or kept.
+The website: `/signin` (Discord), `/auth/discord` and its callback, `POST /signout` (`next`: a page
+of the site to go on to), `/account` (Favorites), `/account/settings`, `/account/link/:code`,
+`GET /api/account`, `POST /api/account/changes`, `POST /api/account/link`, `DELETE /api/account`,
+`PUT` and `DELETE /api/follows/:kind/:id` and `/api/saved/:kind/:id` (the site's buttons),
+`GET /api/saved` (the clips and games a person keeps, for the stars), and a person's lists,
+`/u/:handle/followers` and `/u/:handle/following` (`GET /api/users/:handle/followers|following`,
+fifty a page, `cursor` for the next). A browser session is a random token in an HttpOnly,
+`SameSite=Lax` cookie (core keeps its SHA-256), valid 60 days from the last visit. Every browser
+write must carry the site's own `Origin` (`ACCOUNT_ORIGIN`). Signed-in pages are never served
+from or stored in the shared page cache. Only Discord's stable id and display name are read
+(`identify`); no e-mail address is asked for or kept. A handle is made from the Discord name at
+the first sign-in (lower case letters, digits and underscores, 2 to 24, a number added when it is
+taken). Deleting the account deletes its follows (both ways), saved items, builds and clips with
+their files.
 
 ## 11. Clips (contract v1.7)
 
@@ -1001,3 +1020,39 @@ The website: `/clip/:id`, `/clips/<id>.mp4` (byte ranges) and `/clips/<id>.jpg`,
 same-origin). Storage (`CLIPS_STORAGE`): `local` (files under `CLIPS_DIR`, served by core) or `drive`
 (the site's object storage, `DRIVE_DISK`; the browser is sent to a signed address). Deleting an
 Invade account deletes its clips and their files.
+
+## 14. Builds (contract v1.8)
+
+The builds a person made in the app, kept on their Invade account (§10), and the shared builds
+they saved from others. A shared build has its own page on the website, `/build/<id>`, which
+says who made it and how often it was opened and imported. Errors and limits as §10; per device
+and hour: 600 reads, 120 syncs.
+
+### 14.1 `PUT /api/desktop/builds` (auth)
+
+```json
+{ "builds": [{ "localId": "<uuid the app made>", "championId": 81, "lane": "bottom", "name": "Lethality",
+               "code": "s1055,2003-b3158-c3042,6692,3071-l6333-mqew", "updatedAt": "<ISO>", "shared": true }] }
+```
+→ `{ "builds": [{ "localId": "<uuid>", "id": "<10 characters>", "url": "https://invade.lol/build/<id>", "opens": 41, "imports": 12 }] }`.
+
+The whole set, 200 builds at most: absent builds leave the account; the others are matched by
+`localId` and keep their `id`, page and counts. `lane`: `top`, `jungle`, `mid`, `bottom`,
+`support`. `code`: the item groups of a version 2 build link (the part after the role in
+`/desktop/build/2/<champion>/<role>/<code>`: starting sets, early buys, boots, core, later slots,
+situational items, elixirs, trinkets, max order); `name` as a build link cleans it (40
+characters). Each build is checked against the live game data: an unknown champion or item, or a
+build the app would not write, refuses the whole set (422 `E_ACCOUNT_INVALID`). A build with
+`shared: false` has a page only its owner sees.
+
+### 14.2 `GET /api/desktop/builds` (auth)
+
+`{ "builds": [{ "localId", "id", "url", "opens", "imports", "championId", "lane", "name", "code",
+"updatedAt", "shared", "savedFrom": null | { "name": "Ember", "handle": "ember" } }] }`: the
+person's own builds (`savedFrom: null`), then the shared builds they saved from others (newest
+first; `localId` is the author's, never matched against the app's own). A saved build that its
+author stops sharing or removes leaves the list.
+
+`opens`: the page was opened, once a day per visitor (never its owner). `imports`: how many people
+saved it to their builds (Save to my builds on its page, `PUT /api/builds/:id/save`, same-origin,
+signed-in; `DELETE` lets it go).
