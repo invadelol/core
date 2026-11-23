@@ -3,7 +3,7 @@ import { onMounted, shallowRef, watch } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import CardHead from '../ui/CardHead.vue'
 import { championName, championSplash } from '../../lib/assets.js'
-import { EVENT_WORD, clipClock, clipSeconds, fetchClips } from '../../lib/clips.js'
+import { clipClock, fetchClips } from '../../lib/clips.js'
 import type { Clip } from '../../lib/clip_types.js'
 import '../../css/clips.css'
 
@@ -33,13 +33,13 @@ watch(() => props.puuid, load)
             height="180"
             loading="lazy"
           />
-          <b class="num">{{ clipSeconds(c.durationMs) }}</b>
+          <b class="num">{{ clipClock(c.durationMs) }}</b>
         </span>
         <span class="cl-txt">
           <b class="ell">{{ c.title }}</b>
           <span class="ell num"
-            >{{ championName(c.championId) }}, {{ EVENT_WORD[c.event].toLowerCase() }} at
-            {{ clipClock(c.gameTime) }}</span
+            >{{ championName(c.championId) }}, {{ c.moment ? `${c.moment},` : 'at' }}
+            {{ clipClock(c.momentAt ?? c.startMs) }}</span
           >
         </span>
       </Link>

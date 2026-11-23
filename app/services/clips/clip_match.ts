@@ -1,21 +1,9 @@
 import matchRepository from '#services/analytics/match_repository'
-import type { Clip } from '../../../inertia/lib/clip_types.js'
+import type { Clip, ClipMatch } from '../../../inertia/lib/clip_types.js'
 import type { Match, MatchEvent, TimelineEntry } from '../../../inertia/lib/types.js'
 
 /** The objectives the gold line marks, as Riot's glyphs name them. */
 const MARKED = new Set(['dragon', 'baron', 'herald', 'grubs', 'tower', 'inhibitor'])
-
-/** The match card beside a clip: the stored game, its gold line, and the game's other clips. */
-export interface ClipMatch {
-  /** The game as the site's match lists read it (scoreboard columns, no timeline). */
-  match: Match
-  /** The clip's player in it. */
-  puuid: string
-  /** The team gold lead of the clip's player's side, one point a minute (minute, gold). */
-  gold: [number, number][]
-  /** Objectives at their minute: which and whether the clip's side took it. */
-  objectives: { minute: number; kind: string; ours: boolean }[]
-}
 
 /** The minute-by-minute gold lead of a team, from the timeline's frames. */
 function goldLead(frames: TimelineEntry[], teamId: number): [number, number][] {

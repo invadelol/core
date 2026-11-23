@@ -60,9 +60,10 @@ export default class DesktopClipsController {
   }
 
   async complete(ctx: HttpContext) {
-    return run(ctx, LIMITS.complete, async (user) =>
-      ctx.response.ok(await clipService.complete(user, ctx.params.id))
-    )
+    return run(ctx, LIMITS.complete, async (user) => {
+      const clip = await clipService.complete(user, ctx.params.id)
+      return ctx.response.ok({ ...clip, status: 'ready' })
+    })
   }
 
   async index(ctx: HttpContext) {

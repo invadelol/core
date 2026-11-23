@@ -6,7 +6,20 @@ import type { ClipNotification } from '../../../inertia/lib/clip_types.js'
 /** What one answer holds at most. */
 const PAGE = 30
 
-type Row = Record<string, any>
+/** One item of `notificationsOf`'s union, with its actor and clip. */
+type NotificationRow = {
+  kind: ClipNotification['kind']
+  id: string
+  at: Date
+  clip_id: string | null
+  text: string | null
+  champion_id: number | null
+  display_name: string
+  handle: string
+  sm_puuid: string | null
+  sm_icon: number | null
+  clip_title: string | null
+}
 
 /** A cursor is the newest item's time and id: the next poll asks for what came after it. */
 const encode = (at: string, id: string) => Buffer.from(`${at}|${id}`).toString('base64url')
@@ -57,7 +70,7 @@ export async function notificationsOf(userId: string, after?: unknown) {
      LIMIT ${PAGE}`,
     { me: userId, at: since?.[0] ?? null, id: since?.[1] ?? null }
   )
-  const items: ClipNotification[] = result.rows.map((row: Row) => ({
+  const items: ClipNotification[] = (result.rows as NotificationRow[]).map((row) => ({
     id: row.id,
     kind: row.kind,
     at: iso(row.at),
@@ -65,13 +78,17 @@ export async function notificationsOf(userId: string, after?: unknown) {
       name: row.display_name,
       handle: row.handle,
       avatarUrl: avatarOf(row),
-      championId: row.champion_id ?? null,
-      inGame: row.champion_id !== null && row.champion_id !== undefined,
+      championId: row.champion_id,
+      inGame: row.champion_id !== null,
     },
     clip: row.clip_id
-      ? { id: row.clip_id, title: row.clip_title, url: `${accountOrigin()}/clip/${row.clip_id}` }
+      ? {
+          id: row.clip_id,
+          title: row.clip_title ?? '',
+          url: `${accountOrigin()}/clip/${row.clip_id}`,
+        }
       : null,
-    text: row.text ?? null,
+    text: row.text,
   }))
   const newest = items[0]
   return {

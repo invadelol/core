@@ -1,4 +1,5 @@
 import riotAssets from '#services/riot/assets'
+import { keyEvent } from '#services/clips/events'
 import { clipKey, clipStore } from '#services/clips/storage'
 import {
   C,
@@ -23,6 +24,12 @@ const clock = (ms: number) => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 }
 
+/** The duel's crossed swords (the site's `swords` icon, 24 by 24 strokes), `size` wide at (x, y). */
+function swords(x: number, y: number, size: number) {
+  const k = size / 24
+  return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) scale(${k.toFixed(4)})" fill="none" stroke="${C.text1}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2M14.5 6.5 18 3h3v3l-3.5 3.5M5 14l4 4M7 17l-3 3M3 19l2 2"/></g>`
+}
+
 async function posterBytes(id: string): Promise<Buffer | null> {
   const file = await clipStore()
     .read(clipKey(id, 'poster'))
@@ -42,11 +49,12 @@ async function posterBytes(id: string): Promise<Buffer | null> {
 
 /**
  * A clip's link preview (the moment cover): its picture faded into the ink, the title large, the
- * duel (the clip's champion and the one it beat), the moment in violet with its game time.
+ * duel (the clip's champion and the other one of its key event), the moment in violet with its
+ * game time.
  */
 export async function renderClipCover(clip: Clip) {
-  const kill = clip.events.find((e) => e.kind === 'kill' && e.killer === clip.championId)
-  const rival = kill?.victim ?? null
+  const key = keyEvent(clip.events, clip.championId)
+  const rival = (key?.kind === 'death' ? key.killer : key?.victim) ?? null
   const [poster, mine, theirs] = await Promise.all([
     posterBytes(clip.id).then((b) => maybe(b, 1280)),
     riotAssets.get('champion', String(clip.championId)).then((a) => maybe(a.body, 144)),
@@ -69,12 +77,13 @@ export async function renderClipCover(clip: Clip) {
   body += portrait(mine, x, top, size)
   x += size
   if (rival) {
+    body += swords(x + 13, top + size / 2 - 14, 28)
     x += 54
     body += portrait(theirs, x, top, size)
     x += size
   }
-  const word = clip.moment?.replace(/ on .*$/, '') ?? 'Clip'
-  const at = clock(kill?.t ?? clip.startMs)
+  const word = clip.moment?.replace(/ (on|to) .*$/, '') ?? 'Clip'
+  const at = clock(clip.momentAt ?? clip.startMs)
   x += 28
   const baseline = top + size / 2 + 15
   body += text('display', word, C.brand, 44, x, baseline)

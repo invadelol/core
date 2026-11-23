@@ -7,7 +7,23 @@ import type { Clip, ClipComment } from '../../../inertia/lib/clip_types.js'
 
 export const COMMENT_LIMITS = { body: 500, perClip: 2000 }
 
-type Row = Record<string, any>
+/** A comment as `list` reads it: its writer, their shown main account, its GGs. */
+type CommentRow = {
+  id: string
+  user_id: string
+  parent_id: string | null
+  body: string
+  at_ms: number | null
+  champion_id: number | null
+  created_at: Date
+  display_name: string
+  handle: string
+  sm_puuid: string | null
+  sm_icon: number | null
+  gg: number
+  gg_by_viewer: boolean
+  clip_owner: string
+}
 
 function cleanBody(value: unknown) {
   if (typeof value !== 'string') return null
@@ -34,7 +50,7 @@ class CommentService {
     if (!owned.length) return null
     const match = await matchRepository.getSummaryById(matchId).catch(() => null)
     const mine = new Set(owned.map((o) => o.puuid as string))
-    const seat = (match?.participants ?? []).find((p: Row) => mine.has(p.puuid))
+    const seat = (match?.participants ?? []).find((p: { puuid: string }) => mine.has(p.puuid))
     return seat ? Number(seat.championId) : null
   }
 
@@ -56,7 +72,7 @@ class CommentService {
        LIMIT ${COMMENT_LIMITS.perClip}`,
       [viewerId, clip.id]
     )
-    const view = (row: Row): ClipComment => ({
+    const view = (row: CommentRow): ClipComment => ({
       id: row.id,
       body: row.body,
       atMs: row.at_ms,
@@ -71,7 +87,7 @@ class CommentService {
     })
     const top: ClipComment[] = []
     const byId = new Map<string, ClipComment>()
-    for (const row of result.rows as Row[]) {
+    for (const row of result.rows as CommentRow[]) {
       const comment = view(row)
       if (row.parent_id) byId.get(row.parent_id)?.replies.push(comment)
       else {

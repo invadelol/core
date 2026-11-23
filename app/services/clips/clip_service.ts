@@ -10,7 +10,7 @@ import { AccountError } from '#services/accounts/errors'
 import { accountOrigin, type SignedIn } from '#services/accounts/session_service'
 import savedService from '#services/social/saved'
 import { SHOWN_MAIN_COLUMNS, SHOWN_MAIN_JOIN, avatarOf, iso } from '#services/social/cards'
-import { cleanEvents, momentOf, type GamePlayer } from '#services/clips/events'
+import { cleanEvents, keyEvent, momentOf, type GamePlayer } from '#services/clips/events'
 import { fillRecap } from '#services/clips/recap'
 import { CLIP_FILES, clipKey, clipStore, type ClipFileKind } from '#services/clips/storage'
 import type {
@@ -97,7 +97,44 @@ export type CreateResult =
     }
   | { existing: ExistingClip }
 
-type Row = Record<string, any>
+/** An `invade_clip` row. */
+type ClipRow = {
+  id: string
+  user_id: string
+  puuid: string
+  match_id: string
+  platform: string
+  champion_id: number
+  start_ms: number
+  duration_ms: number
+  title: string
+  visibility: ClipVisibility
+  comments: ClipCommentRule
+  status: 'uploading' | 'ready'
+  events: ClipEvent[] | null
+  recap: KillRecap[] | null
+  views: number
+  pinned_at: Date | null
+  created_at: Date
+  ready_at: Date | null
+}
+
+/** A clip as `CLIP_SQL` reads it: its author, their shown main account, the counts. */
+type ClipViewRow = ClipRow & {
+  display_name: string
+  handle: string
+  sm_puuid: string | null
+  sm_icon: number | null
+  game_name: string | null
+  tag_line: string | null
+  profile_icon_id: number | null
+  comment_count: number
+  gg: number
+  gg_by_viewer: boolean
+}
+
+/** A clip of the person's own list, with its counts. */
+type MyClipRow = ClipRow & { comment_count: number; gg: number }
 
 /** A clip with its author, counts and the visitor's GG. `?` is the visitor's id (or null). */
 const CLIP_SQL = `
@@ -138,9 +175,9 @@ class ClipService {
     return this.names
   }
 
-  private view(row: Row, viewerId: string | null): Clip {
-    const id = String(row.id)
-    const events = (row.events ?? []) as ClipEvent[]
+  private view(row: ClipViewRow, viewerId: string | null): Clip {
+    const id = row.id
+    const events = row.events ?? []
     return {
       id,
       url: `${accountOrigin()}/clip/${id}`,
@@ -153,10 +190,11 @@ class ClipService {
       durationMs: row.duration_ms,
       title: row.title,
       moment: momentOf(events, row.champion_id, (c) => this.names[c] ?? 'a champion'),
+      momentAt: keyEvent(events, row.champion_id)?.t ?? null,
       visibility: row.visibility,
       comments: row.comments,
       events,
-      recap: (row.recap ?? []) as KillRecap[],
+      recap: row.recap ?? [],
       views: row.views,
       commentCount: row.comment_count,
       gg: row.gg,
@@ -167,13 +205,14 @@ class ClipService {
         name: row.display_name,
         handle: row.handle,
         avatarUrl: avatarOf(row),
-        account: row.game_name
-          ? {
-              gameName: row.game_name,
-              tagLine: row.tag_line,
-              profileIconId: row.profile_icon_id ?? null,
-            }
-          : null,
+        account:
+          row.game_name !== null && row.tag_line !== null
+            ? {
+                gameName: row.game_name,
+                tagLine: row.tag_line,
+                profileIconId: row.profile_icon_id,
+              }
+            : null,
       },
       mine: viewerId === row.user_id,
       pinned: Boolean(row.pinned_at),
@@ -183,7 +222,7 @@ class ClipService {
   private async rows(where: string, bindings: unknown[], viewerId: string | null, tail = '') {
     await this.championNames()
     const result = await db.rawQuery(`${CLIP_SQL} WHERE ${where} ${tail}`, [viewerId, ...bindings])
-    return result.rows.map((row: Row) => this.view(row, viewerId))
+    return (result.rows as ClipViewRow[]).map((row) => this.view(row, viewerId))
   }
 
   /* ── Posting from the app ─────────────────────────────────────────── */
@@ -255,7 +294,7 @@ class ClipService {
         .from('invade_clip')
         .where({ user_id: user.id, match_id: game.matchId })
         .first()
-      if (before && before.status === 'ready' && input.replace !== true) return before as Row
+      if (before && before.status === 'ready' && input.replace !== true) return before as ClipRow
       if (before) {
         replaced = before.id as string
         await this.purgeRows(trx, [replaced])
@@ -290,7 +329,7 @@ class ClipService {
     }
   }
 
-  private async existing(row: Row): Promise<ExistingClip> {
+  private async existing(row: ClipRow): Promise<ExistingClip> {
     const [{ total }] = await db
       .from('invade_clip_comment')
       .where('clip_id', row.id)
@@ -357,7 +396,7 @@ class ClipService {
   /** The game's players, to turn the events' Riot IDs into champions. */
   private async players(matchId: string): Promise<GamePlayer[]> {
     const match = await matchRepository.getSummaryById(matchId).catch(() => null)
-    return (match?.participants ?? []).map((p: Row) => ({
+    return (match?.participants ?? []).map((p: Record<string, unknown>) => ({
       gameName: String(p.gameName ?? ''),
       tagLine: String(p.tagLine ?? ''),
       championId: Number(p.championId),
@@ -370,7 +409,7 @@ class ClipService {
         ? await db.from('invade_clip').where({ id, user_id: user.id }).first()
         : null
     if (!row) throw AccountError.notFound('This clip does not exist.')
-    return row as Row
+    return row as ClipRow
   }
 
   /**
@@ -434,7 +473,7 @@ class ClipService {
        FROM invade_clip c WHERE c.user_id = ? ORDER BY c.created_at DESC`,
       [user.id]
     )
-    return result.rows.map((row: Row) => ({
+    return (result.rows as MyClipRow[]).map((row) => ({
       id: row.id,
       url: `${accountOrigin()}/clip/${row.id}`,
       matchId: row.match_id,

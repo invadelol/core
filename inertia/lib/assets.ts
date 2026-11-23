@@ -31,6 +31,8 @@ export const championSplash = (id: number) => assetUrl('splash', id)
 export const skinSplash = (id: number, skin: number) =>
   skin ? `/cdn/${PATHS.splash}/${id}-${skin}.jpg` : championSplash(id)
 export const champIcon = (id: number) => assetUrl('champion', id)
+/** A champion's ability icon: `key` is `p` (passive), `q`, `w`, `e` or `r`. */
+export const abilityIcon = (champion: number, key: string) => `/cdn/ability/${champion}-${key}.png`
 /** A champion's whole splash, uncropped (the scene behind signing in). */
 export const fullSplash = (id: number) => `/cdn/splash/${id}.jpg`
 
