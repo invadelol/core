@@ -7,6 +7,7 @@ import { isHandle } from '#services/accounts/handles'
 import { accountOrigin, digest, type SignedIn } from '#services/accounts/session_service'
 import followService from '#services/social/follows'
 import savedService from '#services/social/saved'
+import moderation from '#services/moderation/moderation'
 import {
   PROFILE_COLUMNS,
   PUUID,
@@ -145,13 +146,17 @@ class AccountService {
     }
   }
 
-  /** A person by their handle, as a page about them names them; null for an unknown handle. */
+  /**
+   * A person by their handle, as a page about them names them; null for an unknown handle or a
+   * suspended account.
+   */
   async byHandle(handle: unknown) {
     if (!isHandle(handle)) return null
+    const visible = await moderation.visibility()
     const found = await db.rawQuery(
       `SELECT u.id, u.display_name, u.handle, ${SHOWN_MAIN_COLUMNS}
        FROM invade_user u ${SHOWN_MAIN_JOIN}
-       WHERE u.handle = ?`,
+       WHERE u.handle = ? AND ${visible.person('u.id')}`,
       [handle]
     )
     const row = found.rows[0]
@@ -357,7 +362,10 @@ class AccountService {
 
   /* ── The desktop app ──────────────────────────────────────────────── */
 
-  /** The Invade account a device is connected to, or null. */
+  /**
+   * The Invade account a device is connected to, or null. A suspended account is refused
+   * (`E_ACCOUNT_SUSPENDED`): the app shows that rather than offering to connect again.
+   */
   async deviceUser(deviceId: string): Promise<SignedIn | null> {
     const row = await db
       .from('invade_device_user as d')
@@ -365,7 +373,9 @@ class AccountService {
       .where('d.device_id', deviceId)
       .select('u.id', 'u.display_name')
       .first()
-    return row ? { id: row.id, name: row.display_name } : null
+    if (!row) return null
+    if (await moderation.suspended(row.id)) throw AccountError.suspended()
+    return { id: row.id, name: row.display_name }
   }
 
   /**

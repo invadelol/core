@@ -8,6 +8,7 @@ import { renderClipCover } from '#services/clips/cover'
 import { H as COVER_H, W as COVER_W } from '#services/og/kit'
 import riotAssets from '#services/riot/assets'
 import followService from '#services/social/follows'
+import reportService, { REPORTS_PER_HOUR } from '#services/moderation/reports'
 import { limit, sameOrigin, signedIn } from '#controllers/account_controller'
 import { AccountError } from '#services/accounts/errors'
 import { FixedWindowLimiter } from '#services/desktop/rate_limiter'
@@ -48,8 +49,9 @@ async function describe(clip: Clip, card: ClipMatch | null) {
 
 /**
  * Clips on the site: a clip's page (the video, what happened in it, its comments, its match),
- * its files, the lists of a match and a League account, the comments and GGs, its owner's
- * controls, its link preview's cover, and the local stand-in for the storage's upload addresses.
+ * its files, the lists of a match and a League account, the comments and GGs, reports to the
+ * team, its owner's controls, its link preview's cover, and the local stand-in for the storage's
+ * upload addresses.
  */
 export default class ClipsController {
   async page(ctx: HttpContext) {
@@ -214,6 +216,25 @@ export default class ClipsController {
     return ctx.response.ok(
       await commentService.gg(user, clip, target, ctx.request.method() === 'PUT')
     )
+  }
+
+  /**
+   * A report to the team on the clip (`/report`) or on one of its comments
+   * (`/comments/:comment/report`).
+   */
+  async report(ctx: HttpContext) {
+    sameOrigin(ctx)
+    const user = signedIn(ctx)
+    await limit('reports:user', user.id, REPORTS_PER_HOUR)
+    const clip = await watchable(ctx)
+    const input = ctx.request.only(['reason', 'note'])
+    if (ctx.params.comment) {
+      await reportService.comment(user, clip, String(ctx.params.comment), input)
+    } else {
+      await reportService.clip(user, clip, input)
+    }
+    ctx.response.header('Cache-Control', 'no-store')
+    return ctx.response.created({ reported: true })
   }
 
   /**

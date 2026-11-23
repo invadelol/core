@@ -2,6 +2,7 @@ import db from '@adonisjs/lucid/services/db'
 import type { QueryClientContract } from '@adonisjs/lucid/types/database'
 import matchRepository from '#services/analytics/match_repository'
 import { AccountError } from '#services/accounts/errors'
+import moderation, { type Visibility } from '#services/moderation/moderation'
 import {
   PUUID,
   SHOWN_MAIN_COLUMNS,
@@ -31,10 +32,12 @@ export const isSavedKind = (value: unknown): value is SavedKind =>
 export const gameIdOf = (matchId: string) => matchId.slice(matchId.indexOf('_') + 1)
 
 /**
- * A clip someone may keep: ready, and watchable by them (anyone's public or link-only clip, or
- * their own private one).
+ * A clip someone may keep: ready, watchable by them (anyone's public or link-only clip, or their
+ * own private one), not taken down and not from a suspended account.
  */
-const VISIBLE_CLIP = `c.status = 'ready' AND (c.visibility <> 'private' OR c.user_id = ?)`
+const visibleClip = (visible: Visibility) =>
+  `c.status = 'ready' AND (c.visibility <> 'private' OR c.user_id = ?)
+   AND ${visible.clip('c.id')} AND ${visible.person('c.user_id')}`
 
 type Row = Record<string, unknown>
 
@@ -113,7 +116,7 @@ class SavedService {
       ? await trx
           .from('invade_clip as c')
           .where('c.id', id)
-          .whereRaw(VISIBLE_CLIP, [userId])
+          .whereRaw(visibleClip(await moderation.visibility()), [userId])
           .first()
       : null
     if (!clip) throw AccountError.notFound('This clip is not available.')
@@ -167,17 +170,18 @@ class SavedService {
   }
 
   private async clips(userId: string): Promise<SavedClip[]> {
+    const visible = await moderation.visibility()
     const rows = await db.rawQuery(
       `SELECT c.*, s.created_at AS saved_at, u.display_name, u.handle, ${SHOWN_MAIN_COLUMNS},
-         (SELECT count(*) FROM invade_clip_comment cc WHERE cc.clip_id = c.id)::int
-           AS comment_count,
+         (SELECT count(*) FROM invade_clip_comment cc
+           WHERE cc.clip_id = c.id AND ${visible.thread('cc')})::int AS comment_count,
          (SELECT count(*) FROM invade_gg g
            WHERE g.target_kind = 'clip' AND g.target_id = c.id)::int AS gg
        FROM invade_saved s
        JOIN invade_clip c ON c.id = s.target_id
        JOIN invade_user u ON u.id = c.user_id
        ${SHOWN_MAIN_JOIN}
-       WHERE s.user_id = ? AND s.kind = 'clip' AND ${VISIBLE_CLIP}
+       WHERE s.user_id = ? AND s.kind = 'clip' AND ${visibleClip(visible)}
        ORDER BY s.created_at DESC
        LIMIT ${PAGE}`,
       [userId, userId]

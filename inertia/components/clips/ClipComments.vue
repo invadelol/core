@@ -19,7 +19,11 @@ const props = defineProps<{
   canComment: boolean
   now: number
 }>()
-const emit = defineEmits<{ seek: [ms: number]; change: [comments: ClipComment[]] }>()
+const emit = defineEmits<{
+  seek: [ms: number]
+  change: [comments: ClipComment[]]
+  report: [comment: ClipComment]
+}>()
 
 const { viewer } = useViewer()
 const list = shallowRef(props.comments)
@@ -192,6 +196,14 @@ const role = (c: ClipComment) =>
                   @click="remove(item)"
                 >
                   Delete
+                </button>
+                <button
+                  v-if="viewer && !item.mine"
+                  type="button"
+                  class="clp-link"
+                  @click="emit('report', item)"
+                >
+                  Report
                 </button>
               </p>
             </div>

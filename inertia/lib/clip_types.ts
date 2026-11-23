@@ -172,3 +172,9 @@ export interface ClipNotification {
   clip: { id: string; title: string; url: string } | null
   text: string | null
 }
+
+/** Why a person reports a clip or a comment to the team. */
+export const REPORT_REASONS = ['spam', 'harassment', 'cheating', 'explicit', 'other'] as const
+export type ReportReason = (typeof REPORT_REASONS)[number]
+/** The longest note a report takes. */
+export const REPORT_NOTE_MAX = 280

@@ -1,6 +1,7 @@
 import db from '@adonisjs/lucid/services/db'
 import matchRepository from '#services/analytics/match_repository'
 import { AccountError } from '#services/accounts/errors'
+import moderation from '#services/moderation/moderation'
 import { SHOWN_MAIN_COLUMNS, SHOWN_MAIN_JOIN, UUID, avatarOf, iso } from '#services/social/cards'
 import type { SignedIn } from '#services/accounts/session_service'
 import type { Clip, ClipComment } from '../../../inertia/lib/clip_types.js'
@@ -54,8 +55,12 @@ class CommentService {
     return seat ? Number(seat.championId) : null
   }
 
-  /** The clip's comments, oldest conversation first, each with its replies. */
+  /**
+   * The clip's comments, oldest conversation first, each with its replies. What the team took
+   * down, and everything a suspended account wrote, is left out with the replies under it.
+   */
   async list(clip: Clip, viewerId: string | null): Promise<ClipComment[]> {
+    const visible = await moderation.visibility()
     const result = await db.rawQuery(
       `SELECT cc.*, u.display_name, u.handle, ${SHOWN_MAIN_COLUMNS},
          (SELECT count(*) FROM invade_gg g
@@ -67,7 +72,7 @@ class CommentService {
        JOIN invade_clip c ON c.id = cc.clip_id
        JOIN invade_user u ON u.id = cc.user_id
        ${SHOWN_MAIN_JOIN}
-       WHERE cc.clip_id = ?
+       WHERE cc.clip_id = ? AND ${visible.thread('cc')}
        ORDER BY cc.created_at
        LIMIT ${COMMENT_LIMITS.perClip}`,
       [viewerId, clip.id]
@@ -126,14 +131,9 @@ class CommentService {
     let parentId: string | null = null
     if (input.parentId !== undefined && input.parentId !== null) {
       const parent =
-        typeof input.parentId === 'string' && UUID.test(input.parentId)
-          ? await db
-              .from('invade_clip_comment')
-              .where({ id: input.parentId, clip_id: clip.id })
-              .whereNull('parent_id')
-              .first()
-          : null
-      if (!parent) throw AccountError.notFound('This comment is gone.')
+        typeof input.parentId === 'string' ? await this.find(clip.id, input.parentId) : null
+      // Replies answer a conversation, never another reply.
+      if (!parent || parent.parentId) throw AccountError.notFound('This comment is gone.')
       parentId = parent.id
     }
     const [{ total }] = await db
@@ -153,6 +153,26 @@ class CommentService {
     })
   }
 
+  /** A comment of the clip as its thread shows it, or null (unknown, taken down, hidden). */
+  async find(clipId: string, id: string) {
+    if (!UUID.test(id)) return null
+    const visible = await moderation.visibility()
+    const row = await db
+      .from('invade_clip_comment as cc')
+      .where({ 'cc.id': id, 'cc.clip_id': clipId })
+      .whereRaw(visible.thread('cc'))
+      .select('cc.id', 'cc.user_id', 'cc.parent_id', 'cc.body')
+      .first()
+    return row
+      ? {
+          id: String(row.id),
+          userId: String(row.user_id),
+          parentId: (row.parent_id as string | null) ?? null,
+          body: String(row.body),
+        }
+      : null
+  }
+
   /** Deletes a comment (and its replies): its writer or the clip's owner may. */
   async remove(user: SignedIn, clip: Clip, id: unknown) {
     const comment =
@@ -167,11 +187,18 @@ class CommentService {
         'E_NOT_YOURS'
       )
     }
-    const replies = await db.from('invade_clip_comment').where('parent_id', comment.id).select('id')
-    const ids = [comment.id as string, ...replies.map((r) => r.id as string)]
+    await this.purge([comment.id as string])
+  }
+
+  /** Deletes comments for good, with their replies and the GGs on all of them. */
+  async purge(ids: string[]) {
+    if (!ids.length) return
+    const replies = await db.from('invade_clip_comment').whereIn('parent_id', ids).select('id')
+    const all = [...ids, ...replies.map((r) => r.id as string)]
     await db.transaction(async (trx) => {
-      await trx.from('invade_gg').where('target_kind', 'comment').whereIn('target_id', ids).delete()
-      await trx.from('invade_clip_comment').where('id', comment.id).delete()
+      await trx.from('invade_gg').where('target_kind', 'comment').whereIn('target_id', all).delete()
+      // Replies go with the comment they answer (on delete cascade).
+      await trx.from('invade_clip_comment').whereIn('id', ids).delete()
     })
   }
 
@@ -186,11 +213,9 @@ class CommentService {
     on: boolean
   ) {
     if (target.kind === 'comment') {
-      const comment = UUID.test(target.id)
-        ? await db.from('invade_clip_comment').where({ id: target.id, clip_id: clip.id }).first()
-        : null
+      const comment = await this.find(clip.id, target.id)
       if (!comment) throw AccountError.notFound('This comment is gone.')
-      if (comment.user_id === user.id) throw AccountError.invalid('This is your own comment.')
+      if (comment.userId === user.id) throw AccountError.invalid('This is your own comment.')
     } else if (clip.mine) {
       throw AccountError.invalid('This is your own clip.')
     }

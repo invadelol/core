@@ -3,6 +3,7 @@ import db from '@adonisjs/lucid/services/db'
 import env from '#start/env'
 import { SITE_ORIGIN } from '#services/sitemap'
 import { freeHandle } from '#services/accounts/handles'
+import moderation from '#services/moderation/moderation'
 
 /** The person behind a request, once their session cookie checks out. */
 export interface SignedIn {
@@ -40,15 +41,20 @@ export function sessionCookieOptions() {
 }
 
 class SessionService {
-  /** The signed-in person for a session token, or null (unknown, expired, malformed). */
+  /**
+   * The signed-in person for a session token, or null (unknown, expired, malformed, or the
+   * account is suspended: its sessions stay, and work again once the suspension is lifted).
+   */
   async authenticate(token: unknown): Promise<SignedIn | null> {
     if (typeof token !== 'string' || token.length < 20 || token.length > 128) return null
     const hash = digest(token)
+    const visible = await moderation.visibility()
     const row = await db
       .from('invade_session as s')
       .join('invade_user as u', 'u.id', 's.user_id')
       .where('s.token_hash', hash)
       .where('s.expires_at', '>', new Date())
+      .whereRaw(visible.person('u.id'))
       .select('u.id', 'u.display_name', 's.expires_at', 'u.last_seen_at')
       .first()
     if (!row) return null

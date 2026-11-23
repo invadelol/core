@@ -75,6 +75,7 @@ export default defineConfig({
     () => import('#start/events'),
     () => import('#start/view'),
     { file: () => import('#start/stats'), environment: ['web'] },
+    { file: () => import('#start/moderation'), environment: ['web'] },
   ],
 
   /*

@@ -1,4 +1,5 @@
 import db from '@adonisjs/lucid/services/db'
+import moderation from '#services/moderation/moderation'
 import type { PersonRef } from '../../../inertia/lib/skin_types.js'
 
 /** What a person's avatar is drawn from: their choice, their backdrop skin, their main's icon. */
@@ -50,25 +51,28 @@ export function personOf(row: Record<string, any>): PersonRef {
   }
 }
 
-/** Several people by id, for rows that only hold their ids. */
+/** Several people by id, for rows that only hold their ids; a suspended account is left out. */
 export async function loadPeople(ids: Iterable<string>): Promise<Map<string, PersonRef>> {
   const list = [...new Set(ids)]
   if (!list.length) return new Map()
+  const visible = await moderation.visibility()
   const result = await db.rawQuery(
-    `SELECT ${PERSON_COLUMNS} FROM invade_user u ${PERSON_JOINS} WHERE u.id = ANY(?)`,
+    `SELECT ${PERSON_COLUMNS} FROM invade_user u ${PERSON_JOINS}
+     WHERE u.id = ANY(?) AND ${visible.person('u.id')}`,
     [list]
   )
   return new Map(result.rows.map((row: Record<string, any>) => [row.person_id, personOf(row)]))
 }
 
-/** The Invade accounts that follow `userId` and that `userId` follows back. */
+/** The Invade accounts that follow `userId` and that `userId` follows back (none suspended). */
 export async function friendIds(userId: string): Promise<string[]> {
+  const visible = await moderation.visibility()
   const result = await db.rawQuery(
     `SELECT f.target_id AS id FROM invade_follow f
      JOIN invade_follow b
        ON b.follower_id::text = f.target_id AND b.target_kind = 'user'
       AND b.target_id = f.follower_id::text
-     WHERE f.follower_id = ? AND f.target_kind = 'user'`,
+     WHERE f.follower_id = ? AND f.target_kind = 'user' AND ${visible.person('b.follower_id')}`,
     [userId]
   )
   return result.rows.map((row: { id: string }) => row.id)

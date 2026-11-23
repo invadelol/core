@@ -9,6 +9,7 @@ import riotAssets from '#services/riot/assets'
 import { AccountError } from '#services/accounts/errors'
 import { accountOrigin, type SignedIn } from '#services/accounts/session_service'
 import savedService from '#services/social/saved'
+import moderation, { type Visibility } from '#services/moderation/moderation'
 import { SHOWN_MAIN_COLUMNS, SHOWN_MAIN_JOIN, avatarOf, iso } from '#services/social/cards'
 import { cleanEvents, keyEvent, momentOf, type GamePlayer } from '#services/clips/events'
 import { fillRecap } from '#services/clips/recap'
@@ -119,7 +120,7 @@ type ClipRow = {
   ready_at: Date | null
 }
 
-/** A clip as `CLIP_SQL` reads it: its author, their shown main account, the counts. */
+/** A clip as `clipSql` reads it: its author, their shown main account, the counts. */
 type ClipViewRow = ClipRow & {
   display_name: string
   handle: string
@@ -136,13 +137,21 @@ type ClipViewRow = ClipRow & {
 /** A clip of the person's own list, with its counts. */
 type MyClipRow = ClipRow & { comment_count: number; gg: number }
 
-/** A clip with its author, counts and the visitor's GG. `?` is the visitor's id (or null). */
-const CLIP_SQL = `
+/** How many comments of the clip `c` show (moderation hides some). */
+const commentCount = (visible: Visibility) =>
+  `(SELECT count(*) FROM invade_clip_comment cc
+    WHERE cc.clip_id = c.id AND ${visible.thread('cc')})::int`
+
+/**
+ * A clip with its author, counts and the visitor's GG. `?` is the visitor's id (or null). The
+ * caller's conditions follow `WHERE`, then `clipShown`'s.
+ */
+const clipSql = (visible: Visibility) => `
   SELECT c.*, u.display_name, u.handle, ${SHOWN_MAIN_COLUMNS},
     CASE WHEN oa.shown THEN p.game_name END AS game_name,
     CASE WHEN oa.shown THEN p.tag_line END AS tag_line,
     CASE WHEN oa.shown THEN p.profile_icon_id END AS profile_icon_id,
-    (SELECT count(*) FROM invade_clip_comment cc WHERE cc.clip_id = c.id)::int AS comment_count,
+    ${commentCount(visible)} AS comment_count,
     (SELECT count(*) FROM invade_gg g
       WHERE g.target_kind = 'clip' AND g.target_id = c.id)::int AS gg,
     EXISTS (SELECT 1 FROM invade_gg g WHERE g.target_kind = 'clip' AND g.target_id = c.id
@@ -155,6 +164,10 @@ const CLIP_SQL = `
 
 /** Who may see a clip: ready, and not someone else's private one. `?` is the visitor's id. */
 const WATCHABLE = `c.status = 'ready' AND (c.visibility <> 'private' OR c.user_id = ?::uuid)`
+
+/** A clip shows nowhere once it was taken down or its poster's account is suspended. */
+const clipShown = (visible: Visibility) =>
+  `${visible.clip('c.id')} AND ${visible.person('c.user_id')}`
 
 /**
  * Clips (docs/desktop-sync.md §11): posted from the desktop app by a signed-in person, one per
@@ -220,8 +233,11 @@ class ClipService {
   }
 
   private async rows(where: string, bindings: unknown[], viewerId: string | null, tail = '') {
-    await this.championNames()
-    const result = await db.rawQuery(`${CLIP_SQL} WHERE ${where} ${tail}`, [viewerId, ...bindings])
+    const [visible] = await Promise.all([moderation.visibility(), this.championNames()])
+    const result = await db.rawQuery(
+      `${clipSql(visible)} WHERE ${where} AND ${clipShown(visible)} ${tail}`,
+      [viewerId, ...bindings]
+    )
     return (result.rows as ClipViewRow[]).map((row) => this.view(row, viewerId))
   }
 
@@ -287,14 +303,19 @@ class ClipService {
       await this.championNames()
     )
     const id = newId()
+    const visible = await moderation.visibility()
     let replaced: string | null = null
     const conflict = await db.transaction(async (trx) => {
       await trx.from('invade_user').where('id', user.id).forUpdate().firstOrFail()
+      // A clip of this game that was taken down is not online: a new one takes its place.
       const before = await trx
-        .from('invade_clip')
-        .where({ user_id: user.id, match_id: game.matchId })
+        .from('invade_clip as c')
+        .where({ 'c.user_id': user.id, 'c.match_id': game.matchId })
+        .select('c.*', trx.raw(`${visible.clip('c.id')} AS shown`))
         .first()
-      if (before && before.status === 'ready' && input.replace !== true) return before as ClipRow
+      if (before && before.status === 'ready' && before.shown && input.replace !== true) {
+        return before as ClipRow
+      }
       if (before) {
         replaced = before.id as string
         await this.purgeRows(trx, [replaced])
@@ -330,16 +351,17 @@ class ClipService {
   }
 
   private async existing(row: ClipRow): Promise<ExistingClip> {
-    const [{ total }] = await db
-      .from('invade_clip_comment')
-      .where('clip_id', row.id)
-      .count('* as total')
+    const visible = await moderation.visibility()
+    const result = await db.rawQuery(
+      `SELECT ${commentCount(visible)} AS total FROM invade_clip c WHERE c.id = ?`,
+      [row.id]
+    )
     return {
       id: row.id,
       title: row.title,
       url: `${accountOrigin()}/clip/${row.id}`,
       views: row.views,
-      comments: Number(total),
+      comments: Number(result.rows[0]?.total ?? 0),
       postedAt: iso(row.ready_at ?? row.created_at),
     }
   }
@@ -463,14 +485,18 @@ class ClipService {
     return view
   }
 
-  /** The person's clips, every visibility, newest first, with their counts (the app's list). */
+  /**
+   * The person's clips, every visibility, newest first, with their counts (the app's list). A
+   * clip the team took down is not theirs to see any more.
+   */
   async mine(user: SignedIn): Promise<MyClip[]> {
+    const visible = await moderation.visibility()
     const result = await db.rawQuery(
-      `SELECT c.*,
-         (SELECT count(*) FROM invade_clip_comment cc WHERE cc.clip_id = c.id)::int AS comment_count,
+      `SELECT c.*, ${commentCount(visible)} AS comment_count,
          (SELECT count(*) FROM invade_gg g
            WHERE g.target_kind = 'clip' AND g.target_id = c.id)::int AS gg
-       FROM invade_clip c WHERE c.user_id = ? ORDER BY c.created_at DESC`,
+       FROM invade_clip c WHERE c.user_id = ? AND ${visible.clip('c.id')}
+       ORDER BY c.created_at DESC`,
       [user.id]
     )
     return (result.rows as MyClipRow[]).map((row) => ({

@@ -469,6 +469,139 @@
   color: var(--loss);
 }
 
+/* The report sheet: the floating layer, one reason in a list of rows, a note, send. */
+.vb .clp-sheet {
+  width: min(480px, calc(100vw - 32px));
+  padding: 0;
+  border: 0;
+  border-radius: var(--r3);
+  background: var(--s1);
+  color: var(--t1);
+  box-shadow:
+    inset 0 0 0 1px var(--line-2),
+    var(--drop);
+}
+.vb .clp-sheet::backdrop {
+  background: var(--scrim);
+}
+.vb .clp-sheet-in {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+}
+.vb .clp-sheet-h {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.vb .clp-sheet-h h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+}
+.vb .clp-sheet-t {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--t2);
+}
+.vb .clp-report {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.vb .clp-report .clp-err {
+  margin: 0;
+}
+.vb .clp-reasons {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.vb .clp-reasons legend {
+  margin-bottom: 8px;
+  padding: 0;
+}
+.vb .clp-reason {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 0 10px;
+  border-radius: var(--r2);
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--t1);
+  cursor: pointer;
+  transition: background-color 120ms var(--ease);
+}
+.vb .clp-reason + .clp-reason {
+  box-shadow: 0 -1px 0 var(--line);
+}
+.vb .clp-reason:hover,
+.vb .clp-reason:has(input:checked) {
+  background: var(--s2);
+}
+.vb .clp-reason input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--v400);
+}
+.vb .clp-reason input:focus-visible {
+  outline: 2px solid var(--v400);
+  outline-offset: 2px;
+}
+.vb .clp-note {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vb .clp-note-h {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t2);
+}
+.vb .clp-note textarea {
+  width: 100%;
+  min-height: 76px;
+  padding: 10px 12px;
+  border-radius: var(--r2);
+  background: var(--d-inset);
+  box-shadow: var(--d-inset-sh);
+  font: 500 15px/1.5 var(--f);
+  color: var(--t1);
+  resize: vertical;
+}
+.vb .clp-note textarea:focus-visible {
+  outline: none;
+  box-shadow:
+    var(--d-inset-sh),
+    0 0 0 1px rgb(var(--v-rgb) / 0.55),
+    0 0 0 3px rgb(var(--v-rgb) / 0.16);
+}
+.vb .clp-sheet-f {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+@media (pointer: coarse) {
+  .vb .clp-note textarea {
+    font-size: 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vb .clp-reason {
+    transition: none;
+  }
+}
+
 /* The conversation. */
 .vb .clp-comments {
   display: flex;

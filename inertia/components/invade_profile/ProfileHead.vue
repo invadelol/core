@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import Icon from '../ui/Icon.vue'
+import Glyph from '../ui/Glyph.vue'
 import SocialIcon from '../pros/SocialIcon.vue'
 import Logo from '../pros/Logo.vue'
 import LeaguePlates from './LeaguePlates.vue'
@@ -10,8 +11,16 @@ import { regionLabel } from '../../lib/assets.js'
 import { countryName } from '../../lib/board.js'
 import { roleLabel } from '../../lib/ladders.js'
 import { shortCount } from '../../lib/skins.js'
-import { LINK_NAMES, type ProfileHead } from '../../lib/invade_profile.js'
+import { LINK_NAMES, type ProfileBadge, type ProfileHead } from '../../lib/invade_profile.js'
 import type { FollowState } from '../../lib/account_types.js'
+import type { IconName } from '../../lib/icons.js'
+
+/** Each badge's mark, in the person's accent; the Invade team's is Invade's own glyph. */
+const BADGE_ICONS: Record<Exclude<ProfileBadge['kind'], 'team'>, IconName> = {
+  founder: 'flag',
+  plus: 'crown',
+  beta: 'flask',
+}
 
 /**
  * The person: the backdrop from a skin they own (or their main champion's art), their avatar,
@@ -110,7 +119,11 @@ onBeforeUnmount(() => clearTimeout(timer))
             >
           </template>
           <span v-for="b in h.badges" :key="b.kind" class="pf-badge"
-            ><Icon :name="b.kind === 'plus' ? 'crown' : 'flask'" :size="15" />{{ b.label }}</span
+            ><Glyph v-if="b.kind === 'team'" :h="15" /><Icon
+              v-else
+              :name="BADGE_ICONS[b.kind]"
+              :size="15"
+            />{{ b.label }}</span
           >
           <a
             v-for="l in h.links"

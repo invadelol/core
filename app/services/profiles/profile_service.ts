@@ -9,6 +9,7 @@ import { loadProfileSocial } from '#services/social/profile_social'
 import { loadProfileClips } from '#services/clips/profile_clips'
 import { loadProfileBuilds } from '#services/builds/profile_builds'
 import entitlements from '#services/profiles/entitlements'
+import moderation from '#services/moderation/moderation'
 import { platesOf, shownAccounts } from '#services/profiles/league_plates'
 import { avatarUrl } from '#services/profiles/people'
 import {
@@ -24,6 +25,7 @@ import { SEASON_START_MS } from '#config/constants'
 import { ladderValue } from '../../../inertia/lib/lp_line.js'
 import {
   linkUrl,
+  type AccountTag,
   type CustomizeData,
   type OverviewData,
   type ProfileBadge,
@@ -86,13 +88,19 @@ async function championNames(): Promise<Record<number, [string, string]>> {
 const splashOf = (championId: number, num = 0) =>
   `/cdn/splash/${championId}${num ? `-${num}` : ''}.jpg`
 
+/** The words of the team's tags on a profile. */
+const TAG_BADGES: Record<AccountTag, string> = { founder: 'Founder', team: 'Invade team' }
+
 class ProfileService {
+  /** The person with this handle; a suspended account has no profile. */
   async findByHandle(handle: string): Promise<ProfileUser | null> {
     if (!HANDLE.test(handle)) return null
+    const visible = await moderation.visibility()
     const row = await db
-      .from('invade_user')
-      .where('handle', handle)
-      .select('id', 'display_name', 'handle')
+      .from('invade_user as u')
+      .where('u.handle', handle)
+      .whereRaw(visible.person('u.id'))
+      .select('u.id', 'u.display_name', 'u.handle')
       .first()
     return row ? { id: row.id, name: row.display_name, handle: row.handle } : null
   }
@@ -148,10 +156,11 @@ class ProfileService {
     if (!user) return null
     const viewerId = viewer?.id ?? null
     const owner = viewerId === user.id
-    const [stored, granted, accounts, social, clips, builds, skinsOwned, verified] =
+    const [stored, granted, tags, accounts, social, clips, builds, skinsOwned, verified] =
       await Promise.all([
         this.settings(user.id),
         entitlements.of(user.id),
+        moderation.tags(user.id),
         shownAccounts(user.id),
         loadProfileSocial(viewerId, user.id),
         loadProfileClips(user.id, viewerId),
@@ -174,7 +183,7 @@ class ProfileService {
         : null
     const icon = main?.profileIconId ?? null
 
-    const badges: ProfileBadge[] = []
+    const badges: ProfileBadge[] = tags.map((kind) => ({ kind, label: TAG_BADGES[kind] }))
     if (granted.premium) badges.push({ kind: 'plus', label: 'Invade+' })
     if (granted.beta) badges.push({ kind: 'beta', label: 'Beta tester' })
 
