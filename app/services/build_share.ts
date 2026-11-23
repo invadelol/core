@@ -1,6 +1,13 @@
 import riotAssets from '#services/riot/assets'
 import { buildCardVersion } from '#services/build_card'
-import { LANE_LABELS, SITE, buildPath, withQuery, type BuildLink } from '#services/build_link'
+import {
+  LANE_LABELS,
+  SITE,
+  allItems,
+  buildPath,
+  withQuery,
+  type BuildLink,
+} from '#services/build_link'
 
 /** A shared build link (`build_link`) checked against the live game data, and its preview. */
 
@@ -21,12 +28,7 @@ export async function resolveBuild(link: BuildLink | null): Promise<SharedBuild 
   ])
   const championId = keys[link.champion]
   if (!championId) return null
-  const all = [
-    ...link.items.start,
-    ...(link.items.boots === null ? [] : [link.items.boots]),
-    ...link.items.core,
-    ...link.items.later.flat(),
-  ]
+  const all = allItems(link.items)
   const itemNames: Record<string, string> = {}
   for (const id of all) {
     const name = items[String(id)]

@@ -10,8 +10,10 @@ import { detectDesktopTarget, type DesktopPlatform } from '../../lib/platform.js
 
 /**
  * /desktop/build/…: a build shared from the desktop app's My builds, drawn in the order it is
- * bought: starting items, boots, the core, then the 4th to 6th item with their alternatives.
- * The link opens in the app: Champions → the champion → My builds → Import.
+ * bought: starting items, boots, the core, then the later items with their alternatives; below
+ * it, the build's other rows (other starts and boots, early buys, situational items, elixirs,
+ * trinket, max order) when it has them. The link opens in the app: Champions → the champion →
+ * My builds → Import.
  */
 type Lane = 'TOP' | 'JUNGLE' | 'MID' | 'ADC' | 'SUPPORT'
 const props = defineProps<{
@@ -20,7 +22,17 @@ const props = defineProps<{
     championName: string
     lane: Lane
     name: string
-    items: { start: number[]; boots: number | null; core: number[]; later: number[][] }
+    items: {
+      start: number[][]
+      early: number[]
+      boots: number[]
+      core: number[]
+      later: number[][]
+      situational: number[]
+      elixirs: number[]
+      trinkets: number[]
+      max: string
+    }
     itemNames: Record<string, string>
   }
   link: string
@@ -49,12 +61,44 @@ const title = computed(() =>
 const item = (id: number) => assetUrl('item', id)
 const itemName = (id: number) => props.build.itemNames[String(id)] ?? ''
 
+/** The buy order: the first starting set and boots, the core, the later slots. */
+const route = computed(() => ({
+  start: props.build.items.start[0] ?? [],
+  boots: props.build.items.boots[0] ?? null,
+  core: props.build.items.core,
+  later: props.build.items.later,
+}))
 /** The starting items' names, a stack once: "Health Potion ×2". */
 const startNames = computed(() => {
   const counts = new Map<number, number>()
-  for (const id of props.build.items.start) counts.set(id, (counts.get(id) ?? 0) + 1)
+  for (const id of route.value.start) counts.set(id, (counts.get(id) ?? 0) + 1)
   return [...counts].map(([id, n]) => (n > 1 ? `${itemName(id)} ×${n}` : itemName(id)))
 })
+/** A set as its items, a stack once: Health Potion ×2. */
+const stacked = (ids: number[]) => {
+  const counts = new Map<number, number>()
+  for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1)
+  return [...counts].map(([id, count]) => ({ id, count }))
+}
+/** The rows besides the buy order, those the build has; `or` between a row's choices. */
+const more = computed(() => {
+  const i = props.build.items
+  const rows = [
+    { label: 'Or start with', sets: i.start.slice(1) },
+    { label: 'Early buys', sets: [i.early] },
+    { label: 'Other boots', sets: [i.boots.slice(1)] },
+    { label: 'Situational', sets: [i.situational] },
+    { label: 'Elixirs', sets: [i.elixirs] },
+    { label: 'Trinket', sets: [i.trinkets.slice(0, 1), i.trinkets.slice(1)] },
+  ]
+  return rows
+    .map((r) => ({ label: r.label, sets: r.sets.filter((x) => x.length).map(stacked) }))
+    .filter((r) => r.sets.length)
+    .map((r) => ({ ...r, wide: r.sets.flat().length > 4 }))
+})
+const maxKeys = computed(() => props.build.items.max.split(''))
+/** Alternatives under a later slot with their names, up to this many; more show as icons. */
+const ALT_NAMES = 2
 
 const copied = ref(false)
 async function copy() {
@@ -105,12 +149,12 @@ onMounted(async () => (target.value = await detectDesktopTarget()))
       <section class="card sb-card" aria-labelledby="sb-order">
         <h2 id="sb-order" class="h3 sb-h">Buy order</h2>
         <ol class="sb-route">
-          <li v-if="build.items.start.length" class="sb-step">
+          <li v-if="route.start.length" class="sb-step">
             <div class="sb-col">
               <span class="sb-lab">Start</span>
               <span class="sb-icons">
                 <img
-                  v-for="(id, i) in build.items.start"
+                  v-for="(id, i) in route.start"
                   :key="i"
                   :src="item(id)"
                   :alt="itemName(id)"
@@ -123,24 +167,20 @@ onMounted(async () => (target.value = await detectDesktopTarget()))
               </span>
             </div>
           </li>
-          <li v-if="build.items.boots !== null" class="sb-step">
+          <li v-if="route.boots !== null" class="sb-step">
             <Icon name="chevr" :size="16" class="sb-chev" />
             <div class="sb-col">
               <span class="sb-lab">Boots</span>
               <span class="sb-icons">
-                <img
-                  :src="item(build.items.boots)"
-                  :alt="itemName(build.items.boots)"
-                  class="sb-item"
-                />
+                <img :src="item(route.boots)" :alt="itemName(route.boots)" class="sb-item" />
               </span>
-              <span class="sb-name">{{ itemName(build.items.boots) }}</span>
+              <span class="sb-name">{{ itemName(route.boots) }}</span>
             </div>
           </li>
           <li class="sb-step">
             <Icon name="chevr" :size="16" class="sb-chev" />
             <ol class="sb-well" aria-label="Core">
-              <li v-for="(id, i) in build.items.core" :key="i" class="sb-step">
+              <li v-for="(id, i) in route.core" :key="i" class="sb-step">
                 <Icon v-if="i" name="chevr" :size="16" class="sb-chev" />
                 <div class="sb-col">
                   <span class="sb-lab strong"
@@ -154,22 +194,63 @@ onMounted(async () => (target.value = await detectDesktopTarget()))
               </li>
             </ol>
           </li>
-          <li v-for="(options, slot) in build.items.later" :key="`l${slot}`" class="sb-step">
+          <li v-for="(options, slot) in route.later" :key="`l${slot}`" class="sb-step">
             <Icon name="chevr" :size="16" class="sb-chev" />
             <div class="sb-col">
-              <span class="sb-lab">{{ ORDINALS[build.items.core.length + slot] }}</span>
+              <span class="sb-lab">{{ ORDINALS[route.core.length + slot] }}</span>
               <span class="sb-icons">
                 <img :src="item(options[0])" :alt="itemName(options[0])" class="sb-item" />
               </span>
               <span class="sb-name">{{ itemName(options[0]) }}</span>
-              <span v-for="(id, o) in options.slice(1)" :key="o" class="sb-alt">
+              <template v-if="options.length <= ALT_NAMES + 1">
+                <span v-for="(id, o) in options.slice(1)" :key="o" class="sb-alt">
+                  or
+                  <img :src="item(id)" :alt="itemName(id)" class="sb-item xs" />
+                  {{ itemName(id) }}
+                </span>
+              </template>
+              <span v-else class="sb-alt sb-alts">
                 or
-                <img :src="item(id)" :alt="itemName(id)" class="sb-item xs" />
-                {{ itemName(id) }}
+                <span class="sb-alt-grid">
+                  <img
+                    v-for="(id, o) in options.slice(1)"
+                    :key="o"
+                    :src="item(id)"
+                    :alt="itemName(id)"
+                    :title="itemName(id)"
+                    class="sb-item xs"
+                  />
+                </span>
               </span>
             </div>
           </li>
         </ol>
+
+        <div v-if="more.length || maxKeys.length" class="sb-extra" aria-label="More of this build">
+          <div v-for="r in more" :key="r.label" class="sb-group" :class="{ wide: r.wide }">
+            <h3 class="sb-lab">{{ r.label }}</h3>
+            <div class="sb-list">
+              <template v-for="(set, s) in r.sets" :key="s">
+                <span v-if="s" class="sb-or">or</span>
+                <span v-for="it in set" :key="`${s}:${it.id}`" class="sb-entry">
+                  <img :src="item(it.id)" alt="" class="sb-item xs" />
+                  <span
+                    >{{ itemName(it.id) }}<small v-if="it.count > 1"> ×{{ it.count }}</small></span
+                  >
+                </span>
+              </template>
+            </div>
+          </div>
+          <div v-if="maxKeys.length" class="sb-group">
+            <h3 class="sb-lab">Skill max order</h3>
+            <div class="sb-list sb-keys">
+              <template v-for="(k, i) in maxKeys" :key="k">
+                <Icon v-if="i" name="chevr" :size="14" class="sb-key-sep" />
+                <kbd>{{ k }}</kbd>
+              </template>
+            </div>
+          </div>
+        </div>
       </section>
 
       <div class="sb-foot">
@@ -303,6 +384,74 @@ onMounted(async () => (target.value = await detectDesktopTarget()))
   width: 28px;
   height: 28px;
 }
+.sb-extra {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 22px 40px;
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+.sb-group {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+}
+.sb-group.wide {
+  grid-column: 1 / -1;
+}
+.sb-group h3 {
+  margin: 0;
+}
+.sb-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+}
+.sb-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 16px;
+  color: var(--text-2);
+}
+.sb-entry small {
+  font-size: 12px;
+  color: var(--text-3);
+}
+.sb-or {
+  font-size: 12px;
+  color: var(--text-3);
+}
+.sb-keys {
+  gap: 6px;
+}
+.sb-keys kbd {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  font: 600 13px var(--font);
+  color: var(--text-1);
+  background: var(--key);
+  border-radius: var(--r-xs);
+  box-shadow: var(--key-shadow);
+}
+.sb-key-sep {
+  color: var(--text-4);
+}
+.sb-alts {
+  align-items: flex-start;
+}
+.sb-alt-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 28px);
+  gap: 6px;
+}
 .sb-alt {
   display: flex;
   align-items: center;
@@ -356,6 +505,17 @@ onMounted(async () => (target.value = await detectDesktopTarget()))
     grid-column: 2 / -1;
     padding-top: 0;
     border-top: 0;
+  }
+  .sb-alts {
+    align-items: center;
+  }
+  .sb-alt-grid {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .sb-extra {
+    grid-template-columns: minmax(0, 1fr);
+    margin-top: 12px;
   }
 }
 </style>
