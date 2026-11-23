@@ -53,14 +53,13 @@ export const DEFAULT_SHOWCASES: Showcase[] = SHOWCASES.map((key) => ({
   on: !PLUS_SHOWCASES.has(key),
 }))
 
-export const LINK_KINDS = ['twitch', 'x', 'youtube', 'instagram', 'tiktok'] as const
+export const LINK_KINDS = ['twitch', 'x', 'youtube', 'instagram'] as const
 export type LinkKind = (typeof LINK_KINDS)[number]
 export const LINK_NAMES: Record<LinkKind, string> = {
   twitch: 'Twitch',
   x: 'X',
   youtube: 'YouTube',
   instagram: 'Instagram',
-  tiktok: 'TikTok',
 }
 /** Each network's own rule for a handle, so a link always opens that network's page. */
 export const LINK_HANDLE: Record<LinkKind, RegExp> = {
@@ -68,7 +67,6 @@ export const LINK_HANDLE: Record<LinkKind, RegExp> = {
   x: /^[A-Za-z0-9_]{1,15}$/,
   youtube: /^[A-Za-z0-9._-]{3,30}$/,
   instagram: /^[A-Za-z0-9._]{1,30}$/,
-  tiktok: /^[A-Za-z0-9._]{2,24}$/,
 }
 export function linkUrl(kind: LinkKind, handle: string) {
   switch (kind) {
@@ -80,8 +78,6 @@ export function linkUrl(kind: LinkKind, handle: string) {
       return `https://www.youtube.com/@${handle}`
     case 'instagram':
       return `https://www.instagram.com/${handle}`
-    case 'tiktok':
-      return `https://www.tiktok.com/@${handle}`
   }
 }
 

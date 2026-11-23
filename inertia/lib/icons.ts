@@ -7,8 +7,10 @@ import {
   ArrowRight,
   ArrowUp,
   ArrowUpDown,
+  BadgeCheck,
   Ban,
   Bell,
+  Bookmark,
   ChartLine,
   Check,
   ChevronDown,
@@ -28,13 +30,19 @@ import {
   Film,
   Flag,
   Flame,
+  FlaskConical,
   Globe,
+  GripVertical,
   Heart,
   House,
+  Image,
   Keyboard,
   Layers,
   LayoutGrid,
+  Link2,
   List,
+  ListPlus,
+  Lock,
   LogOut,
   Map as MapIcon,
   Menu,
@@ -43,6 +51,7 @@ import {
   Monitor,
   Moon,
   Newspaper,
+  Pencil,
   Play,
   Plus,
   Radio,
@@ -63,6 +72,8 @@ import {
   TrendingUp,
   Trophy,
   User,
+  UserCheck,
+  UserPlus,
   Users,
   X,
 } from 'lucide-vue-next'
@@ -132,6 +143,24 @@ export const ICONS = {
   /** The Enter key, on the search's highlighted row. */
   enter: CornerDownLeft,
   check: Check,
+  /** An Invade profile's edit, a review's. */
+  pencil: Pencil,
+  /** A skin on the wishlist. */
+  bookmark: Bookmark,
+  /** Add a skin to a list. */
+  listPlus: ListPlus,
+  /** A beta tester. */
+  flask: FlaskConical,
+  /** A verified pro's Invade profile. */
+  verified: BadgeCheck,
+  /** A row that drags into another place. */
+  grip: GripVertical,
+  image: Image,
+  /** A clip only its owner sees, one only its link opens. */
+  lock: Lock,
+  link: Link2,
+  follow: UserPlus,
+  following: UserCheck,
   minimap: MapIcon,
   scroll: ScrollText,
   keyboard: Keyboard,
