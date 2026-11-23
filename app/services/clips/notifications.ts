@@ -1,5 +1,6 @@
 import db from '@adonisjs/lucid/services/db'
 import { accountOrigin } from '#services/accounts/session_service'
+import moderation from '#services/moderation/moderation'
 import { SHOWN_MAIN_COLUMNS, SHOWN_MAIN_JOIN, avatarOf, iso } from '#services/social/cards'
 import type { ClipNotification } from '../../../inertia/lib/clip_types.js'
 
@@ -31,31 +32,36 @@ function decode(cursor: unknown): [string, string] | null {
 
 /**
  * What happened around a person's clips and account (docs/desktop-sync.md §12): comments on their
- * clips, replies to their comments, GGs on either, and new followers; never their own doing.
+ * clips, replies to their comments, GGs on either, and new followers; never their own doing, nor
+ * what moderation hides (a suspended account's doing, a clip or a comment taken down).
  * Newest first, thirty at most; `after` asks only for what came after an earlier answer.
  */
 export async function notificationsOf(userId: string, after?: unknown) {
   const since = decode(after)
+  const visible = await moderation.visibility()
+  // `comment`: the comment the item is, or is a GG on; `parent`: the comment a reply answers.
   const result = await db.rawQuery(
     `WITH items AS (
        SELECT 'comment' AS kind, cc.id::text AS id, cc.created_at AS at, cc.user_id AS actor,
-              cc.clip_id, cc.body AS text, cc.champion_id
+              cc.clip_id, cc.body AS text, cc.champion_id,
+              cc.id::text AS comment, NULL::text AS parent
        FROM invade_clip_comment cc JOIN invade_clip c ON c.id = cc.clip_id
        WHERE c.user_id = :me AND cc.parent_id IS NULL AND cc.user_id <> :me
        UNION ALL
-       SELECT 'reply', r.id::text, r.created_at, r.user_id, r.clip_id, r.body, r.champion_id
+       SELECT 'reply', r.id::text, r.created_at, r.user_id, r.clip_id, r.body, r.champion_id,
+              r.id::text, p.id::text
        FROM invade_clip_comment r JOIN invade_clip_comment p ON p.id = r.parent_id
        WHERE p.user_id = :me AND r.user_id <> :me
        UNION ALL
        SELECT 'gg', g.target_kind || ':' || g.target_id || ':' || g.user_id, g.created_at,
-              g.user_id, COALESCE(c.id, cc.clip_id), NULL, NULL
+              g.user_id, COALESCE(c.id, cc.clip_id), NULL, NULL, cc.id::text, NULL
        FROM invade_gg g
        LEFT JOIN invade_clip c ON g.target_kind = 'clip' AND c.id = g.target_id
        LEFT JOIN invade_clip_comment cc
          ON g.target_kind = 'comment' AND cc.id::text = g.target_id
        WHERE g.user_id <> :me AND (c.user_id = :me OR cc.user_id = :me)
        UNION ALL
-       SELECT 'follow', f.id::text, f.created_at, f.follower_id, NULL, NULL, NULL
+       SELECT 'follow', f.id::text, f.created_at, f.follower_id, NULL, NULL, NULL, NULL, NULL
        FROM invade_follow f
        WHERE f.target_kind = 'user' AND f.target_id = :me::text
      )
@@ -66,6 +72,10 @@ export async function notificationsOf(userId: string, after?: unknown) {
      ${SHOWN_MAIN_JOIN}
      LEFT JOIN invade_clip clip ON clip.id = i.clip_id
      WHERE ${since ? "(date_trunc('milliseconds', i.at), i.id) > (:at::timestamptz, :id)" : 'true'}
+       AND ${visible.person('i.actor')}
+       AND (i.clip_id IS NULL OR ${visible.clip('i.clip_id')})
+       AND (i.comment IS NULL OR ${visible.comment('i.comment')})
+       AND (i.parent IS NULL OR ${visible.comment('i.parent')})
      ORDER BY i.at DESC, i.id DESC
      LIMIT ${PAGE}`,
     { me: userId, at: since?.[0] ?? null, id: since?.[1] ?? null }

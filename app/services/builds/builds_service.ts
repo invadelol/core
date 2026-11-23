@@ -5,6 +5,7 @@ import logger from '@adonisjs/core/services/logger'
 import riotAssets from '#services/riot/assets'
 import { AccountError } from '#services/accounts/errors'
 import { accountOrigin } from '#services/accounts/session_service'
+import moderation from '#services/moderation/moderation'
 import { cleanName, parseBuildLink, routeOf, type BuildLane } from '#services/build_link'
 import { resolveBuild, type SharedBuild } from '#services/build_share'
 import { SHOWN_MAIN_COLUMNS, SHOWN_MAIN_JOIN, UUID, avatarOf, iso } from '#services/social/cards'
@@ -193,6 +194,7 @@ class BuildsService {
 
   /** The account's builds for the app: its own, then those saved from others (§14). */
   async ofAccount(userId: string): Promise<AccountBuild[]> {
+    const visible = await moderation.visibility()
     const rows = await db.rawQuery(
       `SELECT b.*, ${IMPORTS}, NULL AS saved_at, NULL AS author_name, NULL AS author_handle
        FROM invade_build b WHERE b.user_id = ?
@@ -202,7 +204,7 @@ class BuildsService {
        FROM invade_build_saved s
        JOIN invade_build b ON b.id = s.build_id AND b.shared
        JOIN invade_user u ON u.id = b.user_id
-       WHERE s.user_id = ?
+       WHERE s.user_id = ? AND ${visible.person('u.id')}
        ORDER BY saved_at DESC NULLS FIRST, updated_at DESC`,
       [userId, userId]
     )
@@ -224,9 +226,13 @@ class BuildsService {
     }))
   }
 
-  /** A build's page, for a visitor: a build that is not shared is only its owner's. */
+  /**
+   * A build's page, for a visitor: a build that is not shared is only its owner's, and none of a
+   * suspended account's shows.
+   */
   async page(id: unknown, viewerId: string | null): Promise<BuildPage | null> {
     if (typeof id !== 'string' || !ID.test(id)) return null
+    const visible = await moderation.visibility()
     const found = await db.rawQuery(
       `SELECT b.*, ${IMPORTS}, u.display_name, u.handle, ${SHOWN_MAIN_COLUMNS},
          EXISTS (SELECT 1 FROM invade_build_saved s
@@ -234,7 +240,7 @@ class BuildsService {
        FROM invade_build b
        JOIN invade_user u ON u.id = b.user_id
        ${SHOWN_MAIN_JOIN}
-       WHERE b.id = ?`,
+       WHERE b.id = ? AND ${visible.person('u.id')}`,
       [viewerId, id]
     )
     const row = found.rows[0]

@@ -1,6 +1,7 @@
 import db from '@adonisjs/lucid/services/db'
 import type { QueryClientContract } from '@adonisjs/lucid/types/database'
 import { AccountError } from '#services/accounts/errors'
+import moderation from '#services/moderation/moderation'
 import {
   PRO_SLUG,
   PUUID,
@@ -75,6 +76,10 @@ const TARGET_COLUMNS = `
 
 /** A target that still exists: a follow of something gone is left out. */
 const TARGET_EXISTS = '(u.id IS NOT NULL OR p.puuid IS NOT NULL OR pro.slug IS NOT NULL)'
+
+/** The person a follow `alias` points at, when it points at a person (null otherwise). */
+const followedPerson = (alias: string) =>
+  `CASE WHEN ${alias}.target_kind = 'user' THEN ${alias}.target_id::uuid END`
 
 type Row = Record<string, unknown>
 
@@ -204,17 +209,21 @@ class FollowService {
     return Number(total)
   }
 
-  /** A person's followers, following and friends. */
+  /** A person's followers, following and friends; suspended accounts are not counted. */
   async counts(userId: string) {
+    const visible = await moderation.visibility()
     const result = await db.rawQuery(
       `SELECT
-         (SELECT count(*) FROM invade_follow
-           WHERE target_kind = 'user' AND target_id = ?)::int AS followers,
-         (SELECT count(*) FROM invade_follow WHERE follower_id = ?)::int AS following,
+         (SELECT count(*) FROM invade_follow f
+           WHERE f.target_kind = 'user' AND f.target_id = ?
+             AND ${visible.person('f.follower_id')})::int AS followers,
+         (SELECT count(*) FROM invade_follow f
+           WHERE f.follower_id = ? AND ${visible.person(followedPerson('f'))})::int AS following,
          (SELECT count(*) FROM invade_follow a
            WHERE a.follower_id = ? AND a.target_kind = 'user'
+             AND ${visible.person(followedPerson('a'))}
              AND EXISTS (SELECT 1 FROM invade_follow b
-               WHERE b.follower_id = CASE WHEN a.target_kind = 'user' THEN a.target_id::uuid END
+               WHERE b.follower_id = ${followedPerson('a')}
                  AND b.target_kind = 'user' AND b.target_id = ?))::int AS friends`,
       [userId, userId, userId, userId]
     )
@@ -222,13 +231,17 @@ class FollowService {
     return { followers: row.followers, following: row.following, friends: row.friends }
   }
 
-  /** What a person follows, newest first, a page at a time (the whole list for the app). */
+  /**
+   * What a person follows, newest first, a page at a time (the whole list for the app); a
+   * suspended account is left out.
+   */
   async following(userId: string, options: { limit: number; cursor?: unknown }) {
     const after = decodeCursor(options.cursor)
+    const visible = await moderation.visibility()
     const rows = await db.rawQuery(
       `SELECT f.id AS follow_id, ${TARGET_COLUMNS}
        FROM invade_follow f ${TARGET_JOINS}
-       WHERE f.follower_id = ? AND ${TARGET_EXISTS}
+       WHERE f.follower_id = ? AND ${TARGET_EXISTS} AND ${visible.person(followedPerson('f'))}
          ${after ? 'AND (f.created_at, f.id) < (?::timestamptz, ?::uuid)' : ''}
        ORDER BY f.created_at DESC, f.id DESC
        LIMIT ?`,
@@ -239,7 +252,7 @@ class FollowService {
 
   /**
    * The people who follow a target, newest first, a page at a time, each marked when the
-   * signed-in visitor (`viewerId`) follows them.
+   * signed-in visitor (`viewerId`) follows them. Suspended accounts are left out.
    */
   async followers(
     kind: FollowKind,
@@ -248,6 +261,7 @@ class FollowService {
     options: { limit: number; cursor?: unknown }
   ): Promise<Page<FollowRow>> {
     const after = decodeCursor(options.cursor)
+    const visible = await moderation.visibility()
     const rows = await db.rawQuery(
       `SELECT f.id AS follow_id, f.created_at, 'user' AS target_kind,
          u.id AS user_id, u.display_name, u.handle, ${SHOWN_MAIN_COLUMNS},
@@ -257,7 +271,7 @@ class FollowService {
        FROM invade_follow f
        JOIN invade_user u ON u.id = f.follower_id
        ${SHOWN_MAIN_JOIN}
-       WHERE f.target_kind = ? AND f.target_id = ?
+       WHERE f.target_kind = ? AND f.target_id = ? AND ${visible.person('u.id')}
          ${after ? 'AND (f.created_at, f.id) < (?::timestamptz, ?::uuid)' : ''}
        ORDER BY f.created_at DESC, f.id DESC
        LIMIT ?`,
@@ -275,14 +289,18 @@ class FollowService {
     return { items: shown.map(map), cursor: more ? encodeCursor(shown[shown.length - 1]) : null }
   }
 
-  /** Everyone a person is friends with (they follow each other): ids, newest friendship first. */
+  /**
+   * Everyone a person is friends with (they follow each other): ids, newest friendship first.
+   * A suspended account is nobody's friend while it is.
+   */
   async friendIds(userId: string): Promise<string[]> {
+    const visible = await moderation.visibility()
     const rows = await db.rawQuery(
       `SELECT a.target_id FROM invade_follow a
        JOIN invade_follow b
-         ON b.follower_id = CASE WHEN a.target_kind = 'user' THEN a.target_id::uuid END
+         ON b.follower_id = ${followedPerson('a')}
         AND b.target_kind = 'user' AND b.target_id = ?
-       WHERE a.follower_id = ? AND a.target_kind = 'user'
+       WHERE a.follower_id = ? AND a.target_kind = 'user' AND ${visible.person('b.follower_id')}
        ORDER BY GREATEST(a.created_at, b.created_at) DESC`,
       [userId, userId]
     )

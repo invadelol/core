@@ -2,6 +2,7 @@ import db from '@adonisjs/lucid/services/db'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
 import { AccountError } from '#services/accounts/errors'
 import type { SignedIn } from '#services/accounts/session_service'
+import moderation from '#services/moderation/moderation'
 import { PERSON_COLUMNS, PERSON_JOINS, personOf } from '#services/profiles/people'
 import type { Catalogue } from '#services/skins/skin_catalogue'
 import { cardOf } from '#services/skins/skin_ratings'
@@ -64,7 +65,9 @@ export async function reviews(
   viewerId: string | null,
   query: ReviewQuery
 ): Promise<SkinReview[]> {
-  const where: string[] = []
+  // A suspended account's reviews are not shown while it is.
+  const visible = await moderation.visibility()
+  const where: string[] = [visible.person('r.user_id')]
   const bindings: unknown[] = [viewerId]
   if (query.skinId !== undefined) {
     where.push('r.skin_id = ?')
@@ -81,7 +84,7 @@ export async function reviews(
   }
   const order = query.order === 'popular' ? 'likes DESC, r.created_at DESC' : 'r.created_at DESC'
   const result = await db.rawQuery(
-    `${REVIEW_SELECT} ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+    `${REVIEW_SELECT} WHERE ${where.join(' AND ')}
      ORDER BY ${order} LIMIT ${Math.trunc(query.limit)}`,
     bindings
   )
@@ -154,7 +157,9 @@ export function listCardOf(catalogue: Catalogue, row: Record<string, any>): Skin
 }
 
 export async function lists(viewerId: string | null, query: ListQuery) {
-  const where: string[] = []
+  // Nor its lists.
+  const visible = await moderation.visibility()
+  const where: string[] = [visible.person('l.user_id')]
   const bindings: unknown[] = [viewerId]
   if (query.ownerId) {
     where.push('l.user_id = ?')

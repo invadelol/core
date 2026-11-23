@@ -16,6 +16,7 @@ import {
 import { FixedWindowLimiter } from '#services/desktop/rate_limiter'
 import { sameOrigin } from '#controllers/account_controller'
 import { track } from '#services/openpanel'
+import moderation from '#services/moderation/moderation'
 
 const FLOW_COOKIE = 'invade_oauth'
 const limiter = new FixedWindowLimiter('account:rl:')
@@ -29,7 +30,7 @@ const flowCookieOptions = () => ({
   maxAge: 600,
 })
 
-const ERRORS = new Set(['expired', 'failed', 'unavailable', 'denied', 'busy'])
+const ERRORS = new Set(['expired', 'failed', 'unavailable', 'denied', 'busy', 'suspended'])
 
 /**
  * Sign-in with Discord (app/services/accounts/oauth.ts): the page, the redirect to Discord, its
@@ -85,6 +86,7 @@ export default class AccountAuthController {
     try {
       const person = await identify(code)
       const userId = await sessionService.signIn(person.subject, person.name)
+      if (await moderation.suspended(userId)) return response.redirect('/signin?error=suspended')
       if (ctx.invadeUser?.id !== userId) {
         await sessionService.destroy(request.cookie(SESSION_COOKIE))
         const token = await sessionService.create(userId)

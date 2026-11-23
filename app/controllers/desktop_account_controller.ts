@@ -64,8 +64,10 @@ export default class DesktopAccountController {
     const current = device(ctx)
     await limit(LIMITS.read, current.id)
     ctx.response.header('Cache-Control', 'no-store')
-    const user = await accountService.deviceUser(current.id)
-    return ctx.response.ok(user ? await accountService.snapshot(user) : emptyAccount())
+    return run(async () => {
+      const user = await accountService.deviceUser(current.id)
+      return ctx.response.ok(user ? await accountService.snapshot(user) : emptyAccount())
+    })
   }
 
   async change(ctx: HttpContext) {
