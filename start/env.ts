@@ -127,12 +127,13 @@ export default await Env.create(new URL('../', import.meta.url), {
   | Clips (app/services/clips)
   |----------------------------------------------------------
   | Where videos live: `local` (default, under CLIPS_DIR, default ./storage)
-  | or `drive` (the DRIVE_DISK object storage). Limits per clip and account.
+  | or `drive` (R2's CLIPS_BUCKET, default invade-clips, on the R2 key and
+  | endpoint). The largest clip, in MB.
   */
   CLIPS_STORAGE: Env.schema.enum.optional(['local', 'drive'] as const),
   CLIPS_DIR: Env.schema.string.optional(),
+  CLIPS_BUCKET: Env.schema.string.optional(),
   CLIPS_MAX_MB: Env.schema.number.optional(),
-  CLIPS_PER_ACCOUNT: Env.schema.number.optional(),
 
   /** Local only: a made-up live game for the fictional demo accounts. Ignored in production. */
   DEMO_LIVE: Env.schema.boolean.optional(),

@@ -76,6 +76,7 @@ export function site(http: ApiClient, person: Person) {
     get: (path: string) => http.get(path).withCookie('invade_session', person.token),
     post: (path: string) => as(http.post(path)),
     put: (path: string) => as(http.put(path)),
+    patch: (path: string) => as(http.patch(path)),
     delete: (path: string) => as(http.delete(path)),
   }
 }
