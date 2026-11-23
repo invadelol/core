@@ -9,9 +9,6 @@ type Art = Pick<SkinCard, 'championId' | 'num'>
 
 export const posterUrl = (skin: Art) => `/cdn/loading/${skin.championId}-${skin.num}.jpg`
 export const splashUrl = (skin: Art) => `/cdn/splash/${skin.championId}-${skin.num}.jpg`
-export const centeredUrl = (skin: Art, width?: 480 | 960) =>
-  `/cdn/centered/${skin.championId}-${skin.num}.jpg${width ? `?w=${width}` : ''}`
-export const tileUrl = (skin: Art) => `/cdn/tile/${skin.championId}-${skin.num}.jpg`
 
 export const RARITY_NAMES: Record<SkinRarity, string> = {
   standard: 'Standard',

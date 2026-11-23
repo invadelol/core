@@ -1,6 +1,5 @@
 import logger from '@adonisjs/core/services/logger'
 import riotAssets from '#services/riot/assets'
-import { RARITY_GEMS } from '#constants/assets'
 import type { SkinFacts, SkinRarity } from '../../../inertia/lib/skin_types.js'
 
 /**
@@ -89,8 +88,6 @@ export const searchKey = (text: string) =>
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '')
-
-export const hasGem = (rarity: SkinRarity) => (RARITY_GEMS as readonly string[]).includes(rarity)
 
 /** One patch's index: every skin by id, by champion and by line, and which ones are new. */
 export class Catalogue {

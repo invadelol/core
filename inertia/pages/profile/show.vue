@@ -27,7 +27,7 @@ import type { ProfileSkinsData, SkinCard } from '../../lib/skin_types.js'
 import type {
   CustomizeData,
   OverviewData,
-  ProfileHead as Head_,
+  ProfileHead as ProfileHeadData,
   ProfileSettings,
   ProfileTab,
   ShowcaseKey,
@@ -50,7 +50,7 @@ import '../../css/invade-profile.css'
  * previews every choice before it is saved.
  */
 const props = defineProps<{
-  head: Head_
+  head: ProfileHeadData
   tab: ProfileTab
   tabs: ProfileTab[]
   overview: OverviewData | null
