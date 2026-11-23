@@ -23,7 +23,7 @@ export const CARD_WIDTH = 1200
 export const CARD_HEIGHT = 630
 
 /** Bump on any change to how the card is drawn: every `?v=` changes, so shared images refresh. */
-export const RENDERER = 2
+export const RENDERER = 3
 
 export function buildCardVersion() {
   return String(RENDERER)
