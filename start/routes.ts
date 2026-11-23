@@ -58,6 +58,8 @@ const TierListsController = () => import('#controllers/tier_lists_controller')
 const AccountController = () => import('#controllers/account_controller')
 const AccountAuthController = () => import('#controllers/account_auth_controller')
 const DesktopAccountController = () => import('#controllers/desktop_account_controller')
+const SocialController = () => import('#controllers/social_controller')
+const SharedBuildsController = () => import('#controllers/shared_builds_controller')
 const ClipsController = () => import('#controllers/clips_controller')
 const DesktopClipsController = () => import('#controllers/desktop_clips_controller')
 
@@ -203,7 +205,7 @@ router
         router
           .post('/reports', [DesktopReportsController, 'store'])
           .use(middleware.desktopAuth({ optional: true }))
-        /** The Invade account the app is connected to (§10). */
+        /** The Invade account the app is connected to (§10), and its builds (§14). */
         router
           .post('/account/pair', [DesktopAccountController, 'pair'])
           .use(middleware.desktopAuth())
@@ -216,6 +218,10 @@ router
           .use(middleware.desktopAuth())
         router
           .delete('/account', [DesktopAccountController, 'disconnect'])
+          .use(middleware.desktopAuth())
+        router.get('/builds', [DesktopAccountController, 'builds']).use(middleware.desktopAuth())
+        router
+          .put('/builds', [DesktopAccountController, 'syncBuilds'])
           .use(middleware.desktopAuth())
         /** Clips posted from the app (§11): details, then the video and its picture as files. */
         router.get('/clips', [DesktopClipsController, 'index']).use(middleware.desktopAuth())
@@ -334,19 +340,45 @@ router.get('/new-dawn/rumours', [NewDawnController, 'rumours'])
 router.post('/api/new-dawn/votes/:rumour', [NewDawnController, 'vote'])
 
 /**
- * Invade accounts: sign-in with Discord or Google, the account page, the page a desktop app's link
- * opens, and the JSON routes the pages use. Before the summoner catch-all below.
+ * Invade accounts: sign-in with Discord, the account's Favorites and settings, the page a desktop
+ * app's link opens, and the JSON routes the pages use. Before the summoner catch-all below.
  */
 router.get('/signin', [AccountAuthController, 'page'])
-router.get('/auth/:provider', [AccountAuthController, 'redirect'])
-router.get('/auth/:provider/callback', [AccountAuthController, 'callback'])
+router.get('/auth/discord', [AccountAuthController, 'redirect'])
+router.get('/auth/discord/callback', [AccountAuthController, 'callback'])
 router.post('/signout', [AccountAuthController, 'signout'])
-router.get('/account', [AccountController, 'page'])
+router.get('/account', [AccountController, 'favorites'])
+router.get('/account/settings', [AccountController, 'settings'])
 router.get('/account/link/:code', [AccountController, 'linkPage'])
 router.get('/api/account', [AccountController, 'show'])
 router.post('/api/account/changes', [AccountController, 'change'])
 router.post('/api/account/link', [AccountController, 'approve'])
 router.delete('/api/account', [AccountController, 'destroy'])
+
+/**
+ * Follows and Favorites from the site's buttons, and a person's followers and following. Before
+ * the summoner catch-all below.
+ */
+router
+  .put('/api/follows/:kind/:id', [SocialController, 'follow'])
+  .where('kind', /^(user|player|pro)$/)
+router
+  .delete('/api/follows/:kind/:id', [SocialController, 'unfollow'])
+  .where('kind', /^(user|player|pro)$/)
+router.put('/api/saved/:kind/:id', [SocialController, 'save']).where('kind', /^(clip|match)$/)
+router.delete('/api/saved/:kind/:id', [SocialController, 'unsave']).where('kind', /^(clip|match)$/)
+router.get('/api/saved', [SocialController, 'savedKeys'])
+router
+  .get('/api/users/:handle/:list', [SocialController, 'list'])
+  .where('list', /^(followers|following)$/)
+router
+  .get('/u/:handle/:list', [SocialController, 'listPage'])
+  .where('list', /^(followers|following)$/)
+
+/** A build kept on an Invade account, and Save to my builds. Before the summoner catch-all below. */
+router.get('/build/:id', [SharedBuildsController, 'account'])
+router.put('/api/builds/:id/save', [SharedBuildsController, 'save'])
+router.delete('/api/builds/:id/save', [SharedBuildsController, 'unsave'])
 
 /** Clips: a clip's page, its video and picture, the lists of a match and a player, deletion. */
 router.get('/clip/:id', [ClipsController, 'page'])
@@ -409,14 +441,8 @@ router.get('/og/app/changelog/:file', [
 ])
 
 /** A build shared from the desktop app, and its link preview (`build_link`). */
-router.get('/desktop/build/:version/:champion/:role/:groups', [
-  () => import('#controllers/shared_builds_controller'),
-  'show',
-])
-router.get('/og/build/:version/:champion/:role/:file', [
-  () => import('#controllers/shared_builds_controller'),
-  'image',
-])
+router.get('/desktop/build/:version/:champion/:role/:groups', [SharedBuildsController, 'show'])
+router.get('/og/build/:version/:champion/:role/:file', [SharedBuildsController, 'image'])
 
 /** The desktop app's Discord presence picture; its badge is the static `/presence/invade.png`. */
 router.get('/presence/:file', [() => import('#controllers/presence_cards_controller'), 'show'])
@@ -476,12 +502,13 @@ router.get('/:summoner/:section?', async ({ inertia, params, request, response, 
   // A beta tester's profile says so.
   const { default: betaService } = await import('#services/desktop/beta_service')
   const betaTester = initialProfile ? await betaService.isTester(initialProfile.puuid) : false
-  // The star beside the Riot ID, for a signed-in visitor.
-  const { default: accountService } = await import('#services/accounts/account_service')
-  const favorite =
-    invadeUser && initialProfile
-      ? await accountService.isFavorite(invadeUser.id, initialProfile.puuid).catch(() => false)
-      : false
+  // The Follow button beside the Riot ID: how many follow this League account, and the visitor.
+  const { default: followService } = await import('#services/social/follows')
+  const follow = initialProfile
+    ? await followService
+        .state(invadeUser?.id ?? null, 'player', initialProfile.puuid)
+        .catch(() => null)
+    : null
 
   return inertia.render('summoner', {
     summoner: params.summoner,
@@ -498,7 +525,7 @@ router.get('/:summoner/:section?', async ({ inertia, params, request, response, 
     preload,
     pro,
     betaTester,
-    favorite,
+    follow,
     items: kinds?.legendary.size
       ? { legendary: [...kinds.legendary], boots: [...kinds.boots] }
       : null,

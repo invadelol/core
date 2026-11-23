@@ -1,5 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import riotAssets from '#services/riot/assets'
+import buildsService, { buildUrl } from '#services/builds/builds_service'
+import { limit, sameOrigin, signedIn } from '#controllers/account_controller'
 import { renderBuildCard } from '#services/build_card'
 import { parseBuildLink, routeOf } from '#services/build_link'
 import { buildSocial, resolveBuild, type SharedBuild } from '#services/build_share'
@@ -54,10 +56,22 @@ async function draw(build: SharedBuild) {
   return { body, complete: !art.placeholder && icons.size === ids.length }
 }
 
+/** The build's own fields, as the page draws them. */
+const pageBuild = (build: SharedBuild) => ({
+  championId: build.championId,
+  championName: build.championName,
+  lane: build.lane,
+  name: build.name,
+  items: build.items,
+  itemNames: build.itemNames,
+})
+
 /**
  * A build shared from the desktop app: `/desktop/build/1/ahri/mid/1056,2003-3020-…?n=…` (or a
  * version 2 link, every row of the build), its page, and `/og/build/1/ahri/mid/1056,2003-3020-….jpg?n=…`,
- * its link preview (`build_card`).
+ * its link preview (`build_card`). A build kept on an Invade account and shared has its own page,
+ * `/build/<id>`: the same page with who made it, how often it was opened and imported, and Save
+ * to my builds.
  * Anything the app would not have written, or that names an unknown champion or item, is a 404.
  */
 export default class SharedBuildsController {
@@ -76,18 +90,59 @@ export default class SharedBuildsController {
     }
     const social = buildSocial(build)
     return inertia.render('desktop/build', {
-      build: {
-        championId: build.championId,
-        championName: build.championName,
-        lane: build.lane,
-        name: build.name,
-        items: build.items,
-        itemNames: build.itemNames,
-      },
+      build: pageBuild(build),
       link: social.url,
       description: social.description,
       social,
+      account: null,
     })
+  }
+
+  /** `/build/:id`: a build kept on an account, for anyone when it is shared. */
+  async account({ inertia, invadeUser, params, request, response }: HttpContext) {
+    const page = await buildsService.page(params.id, invadeUser?.id ?? null)
+    if (!page) {
+      response.status(404)
+      return inertia.render('errors/not_found', { error: { status: 404, message: null } })
+    }
+    await buildsService.opened(page, request.ip())
+    const url = buildUrl(page.id)
+    const social = { ...buildSocial(page.build), url, canonical: url }
+    return inertia.render('desktop/build', {
+      build: pageBuild(page.build),
+      link: url,
+      description: social.description,
+      social,
+      account: {
+        id: page.id,
+        author: page.author,
+        opens: page.opens,
+        imports: page.imports,
+        shared: page.shared,
+        mine: page.mine,
+        saved: page.saved,
+      },
+      robots: page.shared ? undefined : 'noindex, nofollow',
+    })
+  }
+
+  /** Save to my builds: someone else's shared build joins the visitor's account and app. */
+  async save(ctx: HttpContext) {
+    sameOrigin(ctx)
+    const user = signedIn(ctx)
+    await limit('builds:user', user.id, 120)
+    await buildsService.save(user.id, ctx.params.id)
+    ctx.response.header('Cache-Control', 'no-store')
+    return ctx.response.ok({ saved: true })
+  }
+
+  async unsave(ctx: HttpContext) {
+    sameOrigin(ctx)
+    const user = signedIn(ctx)
+    await limit('builds:user', user.id, 120)
+    await buildsService.unsave(user.id, ctx.params.id)
+    ctx.response.header('Cache-Control', 'no-store')
+    return ctx.response.ok({ saved: false })
   }
 
   async image({ params, request, response }: HttpContext) {
