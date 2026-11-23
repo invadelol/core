@@ -171,30 +171,53 @@ export interface ItemCounts {
   roles: Partial<Record<Position, RoleItemCounts>>
 }
 
-/** Sums rows by their key (every column but the last `sums`). */
-function sumBy<R extends unknown[]>(rows: Iterable<R>, sums: number): R[] {
-  const out = new Map<string, R>()
-  for (const r of rows) {
-    const at = JSON.stringify(r.slice(0, r.length - sums))
-    const was = out.get(at)
-    if (!was) out.set(at, [...r] as R)
-    else for (let i = r.length - sums; i < r.length; i++) (was[i] as number) += r[i] as number
+/**
+ * The rows of `lists` in the bracket's seed `tiers`, without their tier column, summed by their
+ * key (every other column but the last `sums`), in the order first met. A blob holds hundreds of
+ * thousands of rows: one pass and a plain string key, no copy of the rows left out.
+ */
+function sumTiers<R extends unknown[]>(lists: unknown[][][], tiers: Set<number>, sums: number) {
+  const out = new Map<string, unknown[]>()
+  for (const list of lists) {
+    for (const r of list) {
+      if (!tiers.has(r[0] as number)) continue
+      const end = r.length - sums
+      let at = ''
+      for (let i = 1; i < end; i++) {
+        const v = r[i]
+        at += `${Array.isArray(v) ? v.join('.') : v}|`
+      }
+      const was = out.get(at)
+      if (!was) out.set(at, r.slice(1))
+      else for (let i = end; i < r.length; i++) (was[i - 1] as number) += r[i] as number
+    }
   }
-  return [...out.values()]
+  return [...out.values()] as R[]
 }
 
 /** One role's counts for a filter: its patches' blobs summed over the bracket's seed tiers. */
 export function roleItemCounts(blobs: ItemBlob[], tiers: Set<number>): RoleItemCounts {
-  const keep = <R extends unknown[]>(list: R[]) =>
-    list.filter((r) => tiers.has(r[0] as number)).map((r) => r.slice(1))
   return {
-    champions: sumBy(blobs.flatMap((b) => keep(b.champions)) as [number, number, number][], 2),
-    slots: sumBy(
-      blobs.flatMap((b) => keep(b.slots)) as [number, number, number, number, number][],
+    champions: sumTiers<[number, number, number]>(
+      blobs.map((b) => b.champions),
+      tiers,
       2
     ),
-    boots: sumBy(blobs.flatMap((b) => keep(b.boots)) as [number, number, number, number][], 1),
-    orders: sumBy(blobs.flatMap((b) => keep(b.orders)) as [number, number[], number][], 1),
+    slots: sumTiers<[number, number, number, number, number]>(
+      blobs.map((b) => b.slots),
+      tiers,
+      2
+    ),
+    boots: sumTiers<[number, number, number, number]>(
+      blobs.map((b) => b.boots),
+      tiers,
+      1
+    ),
+    orders: sumTiers<[number, number[], number]>(
+      blobs.map((b) => b.orders),
+      tiers,
+      1
+    ),
   }
 }
 

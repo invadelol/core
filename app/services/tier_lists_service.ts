@@ -148,6 +148,13 @@ export class TierListsService {
   #aram = statsCache('tier-aram', 8)
   /** Views built from the blobs, a few minutes, so a busy page sums them once. */
   #views = new AnswerCache(256, 5 * 60_000)
+  /**
+   * A filter's blobs summed over its seed tiers, as long as its views: every lane, role or class
+   * of the filter reads the same sum. Summing holds the process for up to a second, so it is
+   * done on a view's first build only. Item sums are a few MB, hence fewer kept.
+   */
+  #itemCounts = new AnswerCache(8, 5 * 60_000)
+  #duoCounts = new AnswerCache(16, 5 * 60_000)
 
   /** The filter of the patch (or range) before, same rank and region; null without one. */
   async previous(filter: Filter): Promise<Filter | null> {
@@ -283,23 +290,24 @@ export class TierListsService {
     return filter.patches.flatMap((p) => roles.map((r) => this.itemBlob(p, filter.region, r)))
   }
 
-  /** A filter's item counts if every blob it sums is held, else null (missing ones are queued). */
-  private async itemCounts(
+  /** A filter's item counts from its blobs (`itemWants`' order), summed once per filter. */
+  private itemCounts(
     filter: Filter,
     position: Position | null,
-    wait?: { ahead: number | null }
-  ): Promise<ItemCounts | null> {
-    const roles = position ? [position] : [...POSITIONS]
-    const blobs = await this.ready(this.itemWants(filter, position), wait)
-    if (!blobs) return null
-    const tiers = bracketTiers(filter.bracket)
-    const counts: ItemCounts = { roles: {} }
-    roles.forEach((role, r) => {
-      // The blobs are patch by patch, each holding every role in order.
-      const mine = filter.patches.map((_, p) => blobs[p * roles.length + r])
-      counts.roles[role] = roleItemCounts(mine, tiers)
+    blobs: ItemBlob[]
+  ): Promise<ItemCounts> {
+    const at = `${filter.patches.join(',')}:${filter.bracket}:${filter.region ?? ''}:${position}`
+    return this.#itemCounts.get(at, async () => {
+      const roles = position ? [position] : [...POSITIONS]
+      const tiers = bracketTiers(filter.bracket)
+      const counts: ItemCounts = { roles: {} }
+      roles.forEach((role, r) => {
+        // The blobs are patch by patch, each holding every role in order.
+        const mine = filter.patches.map((_, p) => blobs[p * roles.length + r])
+        counts.roles[role] = roleItemCounts(mine, tiers)
+      })
+      return counts
     })
-    return counts
   }
 
   /** The item tier list of a role (`null`: every role) and an item class (`null`: every item). */
@@ -310,14 +318,18 @@ export class TierListsService {
   ): Promise<ItemTierList | Computing> {
     const wait = { ahead: 0 as number | null }
     const before = await this.previous(filter)
-    const [counts, previous] = await Promise.all([
-      this.itemCounts(filter, position, wait),
-      before ? this.itemCounts(before, position).catch(() => null) : null,
+    const [blobs, previousBlobs] = await Promise.all([
+      this.ready(this.itemWants(filter, position), wait),
+      before ? this.ready(this.itemWants(before, position)).catch(() => null) : null,
     ])
-    if (!counts) return { computing: true, ahead: wait.ahead }
-    const at = `items:${filter.patch}:${filter.bracket}:${filter.region ?? ''}:${position}:${cls}:${!!previous}`
+    if (!blobs) return { computing: true, ahead: wait.ahead }
+    const at = `items:${filter.patch}:${filter.bracket}:${filter.region ?? ''}:${position}:${cls}:${!!previousBlobs}`
     return this.#views.get(at, async () => {
-      const [items, kinds, list] = await Promise.all([
+      const [counts, previous, items, kinds, list] = await Promise.all([
+        this.itemCounts(filter, position, blobs),
+        before && previousBlobs
+          ? this.itemCounts(before, position, previousBlobs).catch(() => null)
+          : null,
         buildStatsService.items(filter.patches[0]),
         buildStatsService.kinds(filter.patches[0]),
         championStatsService.champions(),
@@ -424,21 +436,26 @@ export class TierListsService {
   async duos(filter: Filter, lane: DuoLane): Promise<DuoTierList | Computing> {
     const wait = { ahead: 0 as number | null }
     const before = await this.previous(filter)
-    const counts = async (f: Filter, w?: { ahead: number | null }) => {
-      const blobs = await this.ready(
+    const blobsOf = (f: Filter, w?: { ahead: number | null }) =>
+      this.ready(
         f.patches.map((p) => this.duoBlob(p, f.region)),
         w
       )
-      return blobs ? duoCounts(blobs, bracketTiers(f.bracket)) : null
-    }
-    const [now, previous] = await Promise.all([
-      counts(filter, wait),
-      before ? counts(before).catch(() => null) : null,
+    // Every lane of a filter reads the same sum.
+    const counts = (f: Filter, blobs: DuoBlob[]) =>
+      this.#duoCounts.get(`${f.patches.join(',')}:${f.bracket}:${f.region ?? ''}`, async () =>
+        duoCounts(blobs, bracketTiers(f.bracket))
+      )
+    const [blobs, previousBlobs] = await Promise.all([
+      blobsOf(filter, wait),
+      before ? blobsOf(before).catch(() => null) : null,
     ])
-    if (!now) return { computing: true, ahead: wait.ahead }
-    const at = `duos:${filter.patch}:${filter.bracket}:${filter.region ?? ''}:${lane}:${!!previous}`
+    if (!blobs) return { computing: true, ahead: wait.ahead }
+    const at = `duos:${filter.patch}:${filter.bracket}:${filter.region ?? ''}:${lane}:${!!previousBlobs}`
     return this.#views.get(at, async () => {
-      const [summary, list] = await Promise.all([
+      const [now, previous, summary, list] = await Promise.all([
+        counts(filter, blobs),
+        before && previousBlobs ? counts(before, previousBlobs).catch(() => null) : null,
         championStatsService.summary(filter).catch(() => null),
         championStatsService.champions(),
       ])

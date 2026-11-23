@@ -131,15 +131,19 @@ function pairsOf(counts: DuoCounts | null, lane: DuoLane) {
 
 /** A filter's pairs: its patches' blobs summed over the bracket's seed tiers. */
 export function duoCounts(blobs: DuoBlob[], tiers: Set<number>): DuoCounts {
-  const sums = new Map<string, [number, number, number, number, number]>()
+  const sums = new Map<number, [number, number, number, number, number]>()
   for (const blob of blobs) {
-    for (const [t, pair, a, b, g, w] of blob) {
-      if (!tiers.has(t)) continue
-      const at = `${pair}:${a}:${b}`
-      const r = sums.get(at) ?? [pair, a, b, 0, 0]
-      r[3] += g
-      r[4] += w
-      sums.set(at, r)
+    for (const row of blob) {
+      if (!tiers.has(row[0])) continue
+      const pair = row[1]
+      const a = row[2]
+      const b = row[3]
+      // One exact number per pair and champions (champion ids fit in 16 bits, pairs in 4).
+      const at = (pair * 65536 + a) * 65536 + b
+      let r = sums.get(at)
+      if (!r) sums.set(at, (r = [pair, a, b, 0, 0]))
+      r[3] += row[4]
+      r[4] += row[5]
     }
   }
   const out: DuoCounts = {}
