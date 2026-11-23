@@ -55,7 +55,7 @@ onBeforeUnmount(() => clearTimeout(timer))
 
 <template>
   <section class="pf-top" :aria-label="`${h.name}'s profile`">
-    <div class="pf-bd">
+    <div class="pf-bd" :class="{ empty: !h.backdrop }">
       <img v-if="h.backdrop" :src="h.backdrop.url" alt="" fetchpriority="high" />
       <button v-if="editing" type="button" class="btn sm pf-bd-edit" @click="emit('backdrop')">
         <Icon name="image" />Change backdrop

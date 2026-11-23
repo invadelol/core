@@ -98,6 +98,9 @@
   background: linear-gradient(180deg, transparent, rgb(8 7 14 / 0.35));
   pointer-events: none;
 }
+.vb .pf-bd.empty::after {
+  display: none;
+}
 .vb .pf.editing .pf-bd {
   outline: 2px dashed rgb(var(--v-rgb) / 0.55);
   outline-offset: 6px;
