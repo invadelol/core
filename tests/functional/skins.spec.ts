@@ -231,6 +231,9 @@ test.group('Skins', (group) => {
     })
     made.assertStatus(201)
     const id = made.body().id
+    // A list without a description: the empty box arrives as null.
+    const bare = await write(client, ember, 'post', '/api/skin-lists', { title: 'Later', body: '' })
+    bare.assertStatus(201)
     for (const skin of [SKINS.kdaAhri, SKINS.firestarterAhri, SKINS.kdaAhri]) {
       await expectStatus(
         write(client, ember, 'put', `/api/skin-lists/${id}/skins/${skin}`, { on: true }),

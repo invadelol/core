@@ -14,9 +14,14 @@ export const ratingValidator = vine.compile(
 /** A like, a wish, a list's skin: on or off. */
 export const toggleValidator = vine.compile(vine.object({ on: vine.boolean() }))
 
+/*
+ * Text fields are nullable: the JSON body parser turns an empty string into null
+ * (config/bodyparser.ts), and an emptied box means "none".
+ */
+
 /** A review's text; empty takes it back. Its length is checked with the text cleaned. */
 export const reviewValidator = vine.compile(
-  vine.object({ body: vine.string().maxLength(SKIN_LIMITS.review * 2) })
+  vine.object({ body: vine.string().maxLength(SKIN_LIMITS.review * 2).nullable() })
 )
 
 export const listValidator = vine.compile(
@@ -25,6 +30,7 @@ export const listValidator = vine.compile(
     body: vine
       .string()
       .maxLength(SKIN_LIMITS.listBody * 2)
+      .nullable()
       .optional(),
   })
 )
