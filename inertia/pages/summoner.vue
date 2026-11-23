@@ -34,6 +34,7 @@ import LiveGame from '../components/profile/LiveGame.vue'
 import ProfileClips from '../components/clips/ProfileClips.vue'
 import { champIcon, championName } from '../lib/assets.js'
 import type { IconName } from '../lib/icons.js'
+import type { FollowState } from '../lib/account_types.js'
 import { profilePath } from '../lib/format.js'
 import { useStickyColumn } from '../lib/sticky_column.js'
 import '../css/profile.css'
@@ -70,8 +71,8 @@ const props = defineProps<{
   initialProfile?: Summoner | null
   /** Finished items and boots on the newest patch, for the main champion's core build. */
   items?: { legendary: number[]; boots: number[] } | null
-  /** This player is in the signed-in visitor's favorites. */
-  favorite?: boolean
+  /** Who follows this League account, and whether the signed-in visitor does. */
+  follow?: FollowState | null
   /** The professional player behind this account, when there is one. */
   pro?: {
     slug: string
@@ -810,7 +811,7 @@ function clearFilters() {
               :pro="props.pro ?? null"
               :champion="mainChampion"
               :compare-href="`${base}/compare`"
-              :favorite="props.favorite ?? false"
+              :follow="props.follow ?? null"
               @sync="sync"
               @share="shareOpen = true"
             />

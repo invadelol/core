@@ -1,364 +1,447 @@
 /* ──────────────────────────────────────────────────────────────
-   Accounts: the sign-in page, the account page, the page that
-   connects a desktop app, and a profile's star. Under `.vb`.
+   The private account: its head and tabs (Favorites, Settings),
+   the Favorites of clips and matches, the settings' lists, and the
+   followers and following lists. Under `.vb`.
    ────────────────────────────────────────────────────────────── */
 
-/* ── Sign-in and the app's link: one narrow column on the ground ─ */
-.vb .ac-sign {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  max-width: 400px;
+.vb .ac-wrap {
+  max-width: 960px;
   margin: 0 auto;
-  padding: 96px 0 48px;
-  text-align: center;
-}
-.vb .ac-sign .meta {
-  margin-top: 8px;
-  font-size: 14px;
-}
-.vb .ac-ways {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 100%;
-  margin-top: 32px;
-}
-.vb .ac-ways .btn {
-  width: 100%;
-  gap: 10px;
-}
-.vb .ac-fine {
-  margin-top: 20px;
-  font-size: 12.5px;
-  color: var(--t3);
-  text-wrap: balance;
-}
-.vb .ac-err {
-  margin-top: 16px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--loss);
-}
-.vb .ac-notice {
-  margin: -8px 0 16px;
-}
-.vb .ac-ok {
-  margin-bottom: 16px;
-  color: var(--v300);
-}
-.vb .ac-check {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  margin-top: 28px;
-}
-.vb .ac-check b {
-  font-size: 34px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: var(--t1);
+  padding-top: 44px;
+  padding-bottom: 64px;
 }
 
-/* ── The account page: two columns, the side one 360 px ────────── */
-.vb .ac-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  gap: 24px;
-  align-items: start;
-  padding-bottom: 32px;
-}
-.vb .ac-main,
-.vb .ac-side {
+/* The head: the person's picture, "Account", who is signed in, their profile. */
+.vb .ac-h {
   display: flex;
-  flex-direction: column;
-  gap: 24px;
-  min-width: 0;
-}
-.vb .ac-card {
-  padding-bottom: 8px;
-  scroll-margin-top: 24px;
-}
-.vb .ac-card > .empty {
-  padding: 20px 24px 28px;
-}
-
-/* A League account: icon and Riot ID, its rank, the row's controls. */
-.vb .ac-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 200px auto;
   align-items: center;
-  gap: 16px;
-  min-height: 56px;
-  padding: 6px 12px 6px 20px;
-  border-top: 1px solid var(--line);
-  transition: background 160ms var(--ease);
+  gap: 18px;
 }
-.vb .ac-row:hover {
-  background: rgb(var(--v-rgb) / 0.04);
+.vb .ac-av {
+  flex: none;
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  object-fit: cover;
+  box-shadow: var(--d-portrait);
+}
+.vb .ac-av.none {
+  display: grid;
+  place-items: center;
+  background: var(--d-btn);
+  color: var(--t2);
 }
 .vb .ac-who {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 2px;
   min-width: 0;
 }
-.vb .ac-who img {
-  flex: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  background: var(--s3);
+.vb .ac-h h1 {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
-.vb .ac-name {
+.vb .ac-h .btn {
+  margin-left: auto;
+}
+.vb .ac-tabs {
+  margin: 28px 0;
+}
+.vb .ac-body {
   display: flex;
   flex-direction: column;
+  gap: 28px;
+}
+.vb .ac-notice {
+  margin: -12px 0 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--loss);
+}
+
+/* ── Favorites ─────────────────────────────────────────────────── */
+.vb .ac-filter {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.vb .ac-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.vb .ac-sec-h {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.vb .ac-sec-h h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
+}
+.vb .ac-sec-h .more {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--t3);
+}
+.vb .ac-sec-h .more:hover {
+  color: var(--t1);
+}
+
+/* A saved clip: its poster with the star and the length, its title, who played it. */
+.vb .ac-clips {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px 16px;
+}
+.vb .ac-clip {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
   min-width: 0;
 }
-.vb .ac-name b {
-  font-size: 14px;
+.vb .ac-cover {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  margin-bottom: 8px;
+  border-radius: var(--r3);
+  overflow: hidden;
+  background: var(--well);
+  box-shadow: var(--d-portrait);
+}
+.vb .ac-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 300ms var(--ease);
+}
+.vb .ac-clip:hover .ac-cover img {
+  transform: scale(1.03);
+}
+.vb .ac-cover .ac-champ {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.18);
+}
+.vb .ac-len {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: rgb(8 7 13 / 0.72);
+  font-size: 12px;
+  font-weight: 650;
+  color: #fff;
+}
+.vb .ac-clip .sv-star {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  width: 32px;
+  height: 32px;
+  background: rgb(8 7 13 / 0.6);
+  box-shadow: none;
+  backdrop-filter: blur(6px);
+}
+.vb .ac-clip-t {
+  font-size: 14.5px;
   font-weight: 650;
   color: var(--t1);
 }
-.vb .ac-who:hover .ac-name b {
+.vb .ac-clip-t:hover {
   text-decoration: underline;
   text-decoration-color: var(--line-3);
   text-underline-offset: 3px;
 }
-.vb .ac-name small {
-  margin-left: 3px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--t3);
-}
-.vb .ac-sv {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--t3);
-}
-.vb .ac-rank {
+.vb .ac-by {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--t3);
+}
+.vb .ac-by img {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+}
+.vb .ac-by a {
+  color: var(--t2);
+}
+.vb .ac-by a:hover {
+  color: var(--t1);
+}
+
+/* A saved match: whose game it is above the shared row. */
+.vb .ac-matches {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.vb .ac-match {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.vb .ac-match-who {
+  align-self: flex-start;
+  padding-left: 4px;
   font-size: 13px;
   font-weight: 650;
-  white-space: nowrap;
+  color: var(--t2);
 }
-.vb .ac-lp {
-  color: var(--t3);
+.vb .ac-match-who span {
   font-weight: 500;
+  color: var(--t3);
 }
-.vb .ac-end {
+.vb .ac-match-who:hover {
+  color: var(--t1);
+}
+
+/* ── Settings ──────────────────────────────────────────────────── */
+.vb .ac-set {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.vb .ac-set > h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+}
+.vb .ac-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 4px 20px;
+  list-style: none;
+}
+.vb .ac-row {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
-  min-width: 120px;
+  gap: 20px;
+  min-height: 58px;
+  padding: 8px 0;
 }
-.vb .ac-main-tag {
+.vb .ac-row + .ac-row {
+  border-top: 1px solid var(--line);
+}
+.vb .ac-row-t {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.vb .ac-row-t .h5 {
   display: inline-flex;
   align-items: center;
-  height: 22px;
-  padding: 0 8px;
-  margin-right: 8px;
-  border-radius: 6px;
-  background: var(--v900);
-  font-size: 12px;
-  font-weight: 650;
-  color: var(--v100);
+  gap: 9px;
+  color: var(--t1);
+}
+.vb .ac-row-t .h5 small {
+  margin-left: 3px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--t3);
+}
+.vb .ac-row-t .h5 svg {
+  color: var(--t2);
+}
+.vb .ac-row-c {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.vb .ac-row-c .seg > * {
+  height: 28px;
+  font-size: 12.5px;
+}
+.vb .ac-quiet {
+  font-size: 13px;
+  color: var(--t3);
 }
 .vb .ac-ask {
-  margin-right: 4px;
   font-size: 13px;
   font-weight: 600;
   color: var(--t2);
 }
-/* Row controls show on the row's hover or focus, like the app's. */
-@media (hover: hover) {
-  .vb .ac-row .ac-reveal {
-    opacity: 0;
-    transition: opacity 160ms var(--ease);
-  }
-  .vb .ac-row:hover .ac-reveal,
-  .vb .ac-row:focus-within .ac-reveal {
-    opacity: 1;
-  }
-}
-.vb .ac-foot {
-  padding: 12px 20px 8px;
-  border-top: 1px solid var(--line);
-  font-size: 12.5px;
-  color: var(--t3);
-}
-
-/* Folders: the segmented row (it scrolls when it is long), the name field. */
-.vb .ac-folders {
-  display: flex;
+.vb .ac-show {
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 20px 14px;
+  gap: 10px;
+  margin-right: 8px;
+  font-size: 13px;
+  color: var(--t3);
+  cursor: pointer;
 }
-.vb .ac-seg {
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
+/* A switch is a real button here (`role="switch"`): the board's `.switch` on a button. */
+.vb button.switch {
+  padding: 0;
+  border: 0;
+  cursor: pointer;
 }
-.vb .ac-seg::-webkit-scrollbar {
-  display: none;
+.vb button.switch:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
-.vb .ac-folder-acts {
+.vb .ac-name-form {
   display: flex;
-  gap: 2px;
-  margin-left: auto;
-  flex: none;
-}
-.vb .ac-form {
-  display: flex;
+  flex: 1;
   align-items: center;
   gap: 8px;
-  padding: 0 20px 14px;
 }
-.vb .ac-form .field {
+.vb .ac-name-form .field {
   flex: 1;
   max-width: 320px;
   height: 36px;
 }
-.vb .ac-form-in {
-  flex: 1;
-  padding: 0;
-}
-.vb .ac-move {
-  margin-right: 4px;
-}
-
-/* The favorite star: gold once saved, as in the app. */
-.vb .ac-star {
-  display: inline-grid;
-  place-items: center;
-  flex: none;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--r2);
-  color: var(--t3);
-  cursor: pointer;
-  transition:
-    color 160ms var(--ease),
-    background 160ms var(--ease);
-}
-.vb .ac-star:hover {
-  background: var(--s2);
-  color: var(--t1);
-}
-.vb .ac-star.on {
-  color: var(--gold);
-}
-.vb .ac-star.on svg {
-  fill: rgb(var(--gold-rgb) / 0.3);
-}
-
-/* The side column's lines: a name and its grey detail, an action at the end. */
-.vb .ac-line {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 52px;
-  padding: 6px 12px 6px 20px;
-  border-top: 1px solid var(--line);
-}
-.vb .ac-line-t {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-  font-size: 13px;
-  color: var(--t3);
-}
-.vb .ac-line-t b {
-  font-size: 14px;
-  font-weight: 650;
-  color: var(--t1);
-}
-.vb .ac-prov {
-  flex-direction: row;
-  align-items: center;
-  gap: 10px;
-}
-.vb .ac-quiet {
-  padding-right: 8px;
-  font-size: 13px;
-  color: var(--t3);
-}
-.vb .ac-text {
-  padding: 0 20px 4px;
-  font-size: 13px;
-  color: var(--t3);
-}
 .vb .ac-del {
   display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 20px;
+}
+.vb .ac-del p {
+  flex: 1;
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.vb .ac-del-acts {
+  display: flex;
   gap: 8px;
-  padding: 12px 20px 12px;
 }
 .vb .ac-danger.btn {
-  background: rgb(var(--loss-rgb) / 0.14);
-  box-shadow: inset 0 0 0 1px rgb(var(--loss-rgb) / 0.4);
   color: var(--loss);
 }
-.vb .ac-danger.btn:hover {
-  background: rgb(var(--loss-rgb) / 0.22);
+.vb .ac-danger.btn.sure {
+  background: rgb(var(--loss-rgb) / 0.14);
+  box-shadow: inset 0 0 0 1px rgb(var(--loss-rgb) / 0.4);
+}
+.vb .ac-card > .empty {
+  padding: 20px 24px 24px;
 }
 
-/* A profile's star, in the identity card's top-right corner, over the champion's art. */
-.vb .pl-id .ac-fav {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  z-index: 2;
-  color: var(--t2);
+/* ── Followers and following ───────────────────────────────────── */
+.vb .fl-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 4px 20px;
+  list-style: none;
 }
-.vb .pl-id .ac-fav:hover {
-  color: var(--t1);
+.vb .fl-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 10px 0;
 }
-.vb .pl-id .ac-fav.on {
-  color: var(--gold);
+.vb .fl-row + .fl-row {
+  border-top: 1px solid var(--line);
 }
-.vb .pl-id .ac-fav.on svg {
-  fill: rgb(var(--gold-rgb) / 0.3);
+.vb .fl-who {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.vb .fl-pic {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  object-fit: cover;
+  box-shadow: var(--d-portrait);
+}
+.vb .fl-pic.none {
+  display: grid;
+  place-items: center;
+  background: var(--d-btn);
+  color: var(--t3);
+}
+.vb .fl-who:hover .h5 {
+  text-decoration: underline;
+  text-decoration-color: var(--line-3);
+  text-underline-offset: 3px;
+}
+.vb .fl-more {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0 4px;
 }
 
-@media (max-width: 1023px) {
-  .vb .ac-grid {
-    grid-template-columns: minmax(0, 1fr);
+@media (max-width: 767px) {
+  .vb .ac-wrap {
+    padding-top: 28px;
   }
-}
-@media (max-width: 639px) {
-  .vb .ac-sign {
-    padding-top: 56px;
-  }
-  .vb .ac-row {
-    grid-template-columns: minmax(0, 1fr) auto;
-    padding-left: 16px;
-  }
-  .vb .ac-rank {
-    grid-column: 1;
-    grid-row: 2;
-    padding: 0 0 4px 44px;
-  }
-  .vb .ac-end {
-    grid-row: 1 / span 2;
-    grid-column: 2;
-    min-width: 0;
-  }
-  .vb .ac-folders,
-  .vb .ac-form {
+  .vb .ac-h {
     flex-wrap: wrap;
-    padding-left: 16px;
-    padding-right: 16px;
+    gap: 14px;
   }
-  .vb .ac-folder-acts {
+  /* The picture and the title share the first line; the profile button takes the next. */
+  .vb .ac-who {
+    flex: 1 1 calc(100% - 70px);
+  }
+  .vb .ac-av {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+  }
+  .vb .ac-h h1 {
+    font-size: 26px;
+  }
+  .vb .ac-h .btn {
     margin-left: 0;
   }
-  .vb .ac-line {
-    padding-left: 16px;
+  .vb .ac-tabs {
+    margin: 20px 0;
+  }
+  .vb .ac-clips {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .vb .ac-filter {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .vb .ac-list,
+  .vb .fl-list {
+    padding: 4px 16px;
+  }
+  .vb .ac-row {
+    flex-wrap: wrap;
+    gap: 10px 16px;
+  }
+  .vb .ac-row-c {
+    flex-wrap: wrap;
+  }
+  .vb .ac-row.stack .ac-row-c {
+    width: 100%;
+  }
+  .vb .ac-del {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px;
+  }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .vb .ac-clips {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

@@ -1,16 +1,35 @@
 import { computed, shallowRef } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
-import type { AccountChange, InvadeAccountData, Viewer } from './account_types.js'
+import type {
+  FollowKind,
+  FollowState,
+  InvadeAccountData,
+  SavedKind,
+  SiteAccountOp,
+  Viewer,
+} from './account_types.js'
+import type { SavedKeys } from './saved_types.js'
 
 /**
- * The signed-in person on the site's pages: the `viewer` every page carries (the header's menu,
- * a profile's star) and the one way to change the account, `POST /api/account/changes`.
+ * The signed-in person on the site's pages: the `viewer` every page carries (the header's menu),
+ * the way to change the account, the Follow buttons and the Favorites stars.
  */
 
 /** The answer to a change that could not be saved, in words for the page. */
-export class AccountRequestError extends Error {}
+export class AccountRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status: number
+  ) {
+    super(message)
+  }
+}
 
-async function send<T>(method: 'POST' | 'DELETE', url: string, body?: unknown): Promise<T> {
+async function send<T>(
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+  url: string,
+  body?: unknown
+): Promise<T> {
   const response = await fetch(url, {
     method,
     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -21,25 +40,14 @@ async function send<T>(method: 'POST' | 'DELETE', url: string, body?: unknown): 
   const data = await response.json().catch(() => null)
   if (!response.ok) {
     throw new AccountRequestError(
-      data?.errors?.[0]?.message ?? 'That did not go through. Try again in a moment.'
+      data?.errors?.[0]?.message ?? 'That did not go through. Try again in a moment.',
+      response.status
     )
   }
   return data as T
 }
 
-/** Applies a change and answers the account as it now is; the header's counts follow. */
-export async function changeAccount(change: AccountChange) {
-  const account = await send<InvadeAccountData>('POST', '/api/account/changes', change)
-  refreshViewer()
-  return account
-}
-
-export const approveLink = (code: string) =>
-  send<InvadeAccountData>('POST', '/api/account/link', { code })
-
-export const deleteAccount = () => send<void>('DELETE', '/api/account', { confirm: 'delete' })
-
-/** The header and the stars read `viewer`: ask the server for it again, nothing else. */
+/** The header and the buttons read `viewer`: ask the server for it again, nothing else. */
 export function refreshViewer() {
   router.reload({ only: ['viewer'] })
 }
@@ -50,38 +58,98 @@ export function signInHref(path?: string) {
   return `/signin?next=${encodeURIComponent(here)}`
 }
 
-/** Stars changed since the page was drawn: the server's answer, by PUUID. */
-const known = shallowRef<Record<string, boolean>>({})
+/** Applies changes and answers the account as it now is; the header's counts follow. */
+export async function changeAccount(ops: SiteAccountOp[]) {
+  const account = await send<InvadeAccountData>('POST', '/api/account/changes', { ops })
+  refreshViewer()
+  return account
+}
+
+export const approveLink = (code: string) => send<void>('POST', '/api/account/link', { code })
+
+export const deleteAccount = () => send<void>('DELETE', '/api/account', { confirm: 'delete' })
 
 export function useViewer() {
   const page = usePage()
   const viewer = computed(() => (page.props as { viewer?: Viewer | null }).viewer ?? null)
+  return { viewer }
+}
 
-  /** `drawn`: what the page said when it was rendered. */
-  function isFavorite(puuid: string, drawn: boolean) {
-    return known.value[puuid] ?? drawn
+/** Follows or stops following; answers whether the visitor follows, and how many do. */
+export function setFollow(kind: FollowKind, id: string, on: boolean) {
+  const path = `/api/follows/${kind}/${encodeURIComponent(id)}`
+  return send<FollowState>(on ? 'PUT' : 'DELETE', path)
+}
+
+/** Saves someone else's shared build to the visitor's builds (their account and app), or not. */
+export function setBuildSaved(id: string, on: boolean) {
+  return send<{ saved: boolean }>(on ? 'PUT' : 'DELETE', `/api/builds/${id}/save`)
+}
+
+/* ── Favorites: the stars of clips and matches ─────────────────────── */
+
+/**
+ * What the signed-in visitor keeps, asked for once per visit the first time a star shows, then
+ * kept in step with each star pressed: a page never carries the whole list.
+ */
+const savedClips = shallowRef<ReadonlySet<string>>(new Set())
+const savedGames = shallowRef<ReadonlySet<string>>(new Set())
+let asked: Promise<void> | null = null
+
+function loadSaved() {
+  if (asked || typeof window === 'undefined') return
+  asked = send<SavedKeys>('GET', '/api/saved').then(
+    (keys) => {
+      savedClips.value = new Set(keys.clips)
+      savedGames.value = new Set(keys.games)
+    },
+    // Unknown for now: the stars show empty, and the next visit asks again.
+    () => void (asked = null)
+  )
+}
+
+/** The number in a match id, as the shared rows key a game. */
+export const gameIdOf = (matchId: string) => matchId.slice(matchId.indexOf('_') + 1)
+
+export function useSaved() {
+  const { viewer } = useViewer()
+
+  /** Whether the visitor keeps this clip or match; signed out, nothing is kept. */
+  function isSaved(kind: SavedKind, id: string) {
+    if (!viewer.value) return false
+    loadSaved()
+    return kind === 'clip' ? savedClips.value.has(id) : savedGames.value.has(gameIdOf(id))
   }
 
-  /** Stars or unstars a player; signed out, it leads to the sign-in first. */
-  async function toggleFavorite(puuid: string, drawn: boolean) {
+  /**
+   * Keeps or lets go of a clip or a match (`puuid`: whose game it is); signed out, it leads to
+   * the sign-in first. The star turns at once and turns back if the server says no.
+   */
+  async function toggleSaved(kind: SavedKind, id: string, puuid?: string) {
     if (!viewer.value) {
       router.visit(signInHref())
       return
     }
-    const on = !isFavorite(puuid, drawn)
-    known.value = { ...known.value, [puuid]: on }
+    const on = !isSaved(kind, id)
+    const list = kind === 'clip' ? savedClips : savedGames
+    const key = kind === 'clip' ? id : gameIdOf(id)
+    const flip = (keep: boolean) => {
+      const next = new Set(list.value)
+      if (keep) next.add(key)
+      else next.delete(key)
+      list.value = next
+    }
+    flip(on)
     try {
-      const account = await send<InvadeAccountData>('POST', '/api/account/changes', {
-        type: on ? 'favorite' : 'removeFavorite',
+      await send(on ? 'PUT' : 'DELETE', `/api/saved/${kind}/${encodeURIComponent(id)}`, {
         puuid,
       })
-      known.value = { ...known.value, [puuid]: account.favorites.some((f) => f.puuid === puuid) }
       refreshViewer()
     } catch (error) {
-      known.value = { ...known.value, [puuid]: !on }
+      flip(!on)
       throw error
     }
   }
 
-  return { viewer, isFavorite, toggleFavorite }
+  return { isSaved, toggleSaved }
 }

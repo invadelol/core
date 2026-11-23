@@ -31,6 +31,8 @@ export const championSplash = (id: number) => assetUrl('splash', id)
 export const skinSplash = (id: number, skin: number) =>
   skin ? `/cdn/${PATHS.splash}/${id}-${skin}.jpg` : championSplash(id)
 export const champIcon = (id: number) => assetUrl('champion', id)
+/** A champion's whole splash, uncropped (the scene behind signing in). */
+export const fullSplash = (id: number) => `/cdn/splash/${id}.jpg`
 
 /** A champion mastery crest: levels past ten wear the tenth (docs/cdn.md, `mastery`). */
 export const masteryCrest = (level: number) =>

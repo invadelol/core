@@ -6,6 +6,7 @@ import { hasEvents, queueName, type MatchDetail } from '@invadelol/ui/logic'
 import SiteLayout from '../components/SiteLayout.vue'
 import MatchChart from '../components/match/MatchChart.vue'
 import MatchClips from '../components/clips/MatchClips.vue'
+import SaveStar from '../components/social/SaveStar.vue'
 import Icon from '../components/ui/Icon.vue'
 import Frame from '../components/ui/Frame.vue'
 import CardHead from '../components/ui/CardHead.vue'
@@ -393,9 +394,17 @@ async function copy() {
             <span class="h4" style="margin: 0 auto"
               >{{ queue }} <span class="meta">{{ when }}</span></span
             >
-            <button class="btn sm" type="button" @click="copy">
-              <Icon name="share" />{{ copied ? 'Copied' : 'Copy link' }}
-            </button>
+            <span class="row" style="gap: 6px">
+              <SaveStar
+                kind="match"
+                :id="match.matchId"
+                :puuid="ownerPuuid ?? undefined"
+                label="this match"
+              />
+              <button class="btn sm" type="button" @click="copy">
+                <Icon name="share" />{{ copied ? 'Copied' : 'Copy link' }}
+              </button>
+            </span>
           </div>
           <div class="mx2-sc">
             <template v-for="t in [blue, null, red]" :key="t?.teamId ?? 'mid'">
@@ -699,12 +708,30 @@ async function copy() {
               <div class="tbl-h">
                 <span>Player</span>
                 <SortHead :sorter="statSort" col="kda" label="K / D / A" title="KDA" />
-                <SortHead :sorter="statSort" col="kp" label="KP" class="n" title="Kill participation" />
+                <SortHead
+                  :sorter="statSort"
+                  col="kp"
+                  label="KP"
+                  class="n"
+                  title="Kill participation"
+                />
                 <SortHead :sorter="statSort" col="damage" label="Damage" class="n" />
-                <SortHead :sorter="statSort" col="taken" label="Taken" class="n" title="Damage taken" />
+                <SortHead
+                  :sorter="statSort"
+                  col="taken"
+                  label="Taken"
+                  class="n"
+                  title="Damage taken"
+                />
                 <SortHead :sorter="statSort" col="cs" label="CS" class="n" />
                 <SortHead :sorter="statSort" col="csMin" label="CS/min" class="n" />
-                <SortHead :sorter="statSort" col="wards" label="Wards" class="n" title="Wards placed" />
+                <SortHead
+                  :sorter="statSort"
+                  col="wards"
+                  label="Wards"
+                  class="n"
+                  title="Wards placed"
+                />
                 <SortHead :sorter="statSort" col="vision" label="Vision" class="n" />
                 <span>Items</span>
               </div>

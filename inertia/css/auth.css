@@ -1,0 +1,713 @@
+/* ──────────────────────────────────────────────────────────────
+   Sign-in and connecting the app (components/account/AuthScene.vue):
+   one full-bleed scene in the manner of the League client's login.
+   The form on the night ink at the left; Nunu & Willump's Freljord
+   camp fills the rest and fades into the ink under the form, so no
+   text ever sits on the art. The scene stays at night in both
+   themes (`.iv-dark`). Its lights move; reduced motion holds still.
+   Under `.vb`.
+   ────────────────────────────────────────────────────────────── */
+
+.vb.au {
+  position: relative;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: var(--ink-0);
+  color: var(--t1);
+}
+
+.vb .au-scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* The art: Willump's face and Nunu's fire right of the form. Its own lights live inside it,
+   measured in its width (`cqw`), so they stay on their source as it drifts. */
+.vb .au-art {
+  position: absolute;
+  left: max(196px, 13.6vw);
+  top: -34px;
+  width: max(1520px, 105.6vw);
+  container-type: inline-size;
+  transform-origin: 62% 40%;
+  animation:
+    au-in 1.4s cubic-bezier(0.16, 1, 0.3, 1) both,
+    au-drift 46s ease-in-out 1.4s infinite alternate;
+}
+.vb .au-art img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: saturate(1.02) contrast(1.04) brightness(0.84);
+}
+.vb .au-art > i,
+.vb .au-aurora,
+.vb .au-sweep {
+  position: absolute;
+  mix-blend-mode: screen;
+}
+.vb .au-orb {
+  left: 29.2cqw;
+  top: 27.2cqw;
+  width: 27.6cqw;
+  height: 27.6cqw;
+  background: radial-gradient(
+    closest-side,
+    rgb(150 214 255 / 0.3),
+    rgb(150 214 255 / 0.08) 55%,
+    rgb(150 214 255 / 0)
+  );
+  animation: au-breathe 5.6s ease-in-out infinite;
+}
+.vb .au-fire {
+  left: 62.8cqw;
+  top: 42.4cqw;
+  width: 28.9cqw;
+  height: 23.7cqw;
+  background: radial-gradient(
+    closest-side,
+    rgb(255 150 72 / 0.34),
+    rgb(255 120 60 / 0.1) 55%,
+    rgb(255 120 60 / 0)
+  );
+  animation:
+    au-flicker 2.9s ease-in-out infinite,
+    au-flicker2 4.3s ease-in-out infinite;
+}
+.vb .au-eye {
+  left: 57.2cqw;
+  top: 17.7cqw;
+  width: 5.3cqw;
+  height: 5.3cqw;
+  background: radial-gradient(
+    closest-side,
+    rgb(170 220 255 / 0.55),
+    rgb(150 200 255 / 0.14) 50%,
+    rgb(150 200 255 / 0)
+  );
+  animation: au-breathe 4.8s ease-in-out infinite;
+}
+.vb .au-eye.e2 {
+  left: 66.8cqw;
+  top: 23.8cqw;
+  animation-delay: -0.4s;
+}
+
+/* The sky's lights: the aurora drifting across the top right, a band of moonlight crossing. */
+.vb .au-aurora {
+  left: 44vw;
+  top: -120px;
+  width: 68vw;
+  height: 520px;
+  background: radial-gradient(
+    50% 46% at 50% 50%,
+    rgb(118 236 214 / 0.22),
+    rgb(123 109 255 / 0.1) 55%,
+    rgb(123 109 255 / 0) 78%
+  );
+  animation: au-aurora 19s ease-in-out infinite alternate;
+}
+.vb .au-sweep {
+  inset: -10% -60%;
+  background: linear-gradient(
+    104deg,
+    rgb(255 255 255 / 0) 41%,
+    rgb(206 214 255 / 0.08) 48%,
+    rgb(206 214 255 / 0.13) 50%,
+    rgb(206 214 255 / 0.08) 52%,
+    rgb(255 255 255 / 0) 59%
+  );
+  animation: au-sweep 17s linear infinite;
+}
+
+/* The ink: the form's side, the floor the poros stand on, the top under the lockup. */
+.vb .au-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      90deg,
+      var(--ink-0) 0,
+      var(--ink-0) 430px,
+      rgb(8 7 13 / 0.86) 520px,
+      rgb(8 7 13 / 0.42) 640px,
+      rgb(8 7 13 / 0) 780px
+    ),
+    radial-gradient(340px 90px at 650px calc(100% - 32px), rgb(150 200 255 / 0.17), transparent),
+    linear-gradient(
+      0deg,
+      rgb(8 7 13 / 0.96) 0,
+      rgb(8 7 13 / 0.82) 70px,
+      rgb(8 7 13 / 0.4) 170px,
+      rgb(8 7 13 / 0) 300px
+    ),
+    linear-gradient(180deg, rgb(8 7 13 / 0.55) 0, rgb(8 7 13 / 0) 140px);
+}
+.vb .au-grain {
+  position: absolute;
+  inset: 0;
+  background: var(--d-grain);
+  background-size: 160px 160px;
+  opacity: 0.45;
+  mix-blend-mode: overlay;
+}
+
+/* The poros: lit by the scene (cool from the spirit above, warm from the fire), floating. */
+.vb .au-poros {
+  position: absolute;
+  inset: 0;
+}
+.vb .au-p,
+.vb .au-i {
+  position: absolute;
+  display: block;
+  height: auto;
+  animation:
+    au-pop 360ms cubic-bezier(0.34, 1.56, 0.64, 1) var(--in, 1.3s) both,
+    au-float var(--t, 8s) ease-in-out var(--d, 0s) infinite;
+}
+.vb .au-pf {
+  left: 538px;
+  bottom: 46px;
+  width: 168px;
+  filter: drop-shadow(0 -3px 8px rgb(150 205 255 / 0.22)) drop-shadow(0 18px 22px rgb(0 0 0 / 0.5))
+    brightness(0.97);
+  --t: 7.5s;
+}
+.vb .au-pb {
+  left: 716px;
+  bottom: 118px;
+  width: 98px;
+  opacity: 0.78;
+  filter: blur(1.8px) saturate(0.75) brightness(0.62);
+  --t: 9.5s;
+  --d: -3s;
+  --in: 1.42s;
+}
+.vb .au-sh {
+  position: absolute;
+  left: 560px;
+  bottom: 30px;
+  width: 124px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(0 0 0 / 0.55), rgb(0 0 0 / 0));
+  animation: au-shadow 7.5s ease-in-out infinite;
+}
+.vb .au-i {
+  width: 40px;
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.1),
+    0 10px 18px -6px rgb(0 0 0 / 0.6);
+  rotate: var(--r, 0deg);
+}
+.vb .au-i1 {
+  left: 676px;
+  bottom: 262px;
+  --r: -11deg;
+  --t: 8.5s;
+  --d: -2s;
+  --in: 1.54s;
+}
+.vb .au-i2 {
+  left: 842px;
+  bottom: 196px;
+  width: 30px;
+  border-radius: 8px;
+  opacity: 0.55;
+  filter: blur(1.3px);
+  --r: 10deg;
+  --t: 11s;
+  --d: -6s;
+  --in: 1.66s;
+}
+/* Pointing at the main action, the cheeky poro gets excited. */
+.vb .au-pf-x {
+  opacity: 0;
+  transition: opacity 180ms var(--ease);
+}
+.vb.au:has(.au-b.pri:hover) .au-pf:not(.au-pf-x) {
+  opacity: 0;
+}
+.vb.au:has(.au-b.pri:hover) .au-pf-x {
+  opacity: 1;
+}
+/* Connected: one small hop, then the float. */
+.vb .au-pf.hop {
+  animation:
+    au-hop 520ms cubic-bezier(0.3, 0, 0.3, 1) both,
+    au-float var(--t, 8s) ease-in-out 520ms infinite;
+}
+
+/* The lockup, home. */
+.vb .au-logo {
+  position: absolute;
+  left: 112px;
+  top: 40px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--t1);
+  animation: au-fade 600ms var(--ease) 300ms both;
+}
+.vb .au-logo .glyph {
+  fill: var(--v500);
+}
+.vb .au-logo b {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* The form, on the ink. Each line rises in turn. */
+.vb .au-panel {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  width: 372px;
+  min-height: 100dvh;
+  margin-left: 112px;
+  padding: 120px 0 96px;
+}
+.vb .au-panel > * {
+  animation: au-rise 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.vb .au-panel > :nth-child(1) {
+  animation-delay: 700ms;
+}
+.vb .au-panel > :nth-child(2) {
+  animation-delay: 780ms;
+}
+.vb .au-panel > :nth-child(3) {
+  animation-delay: 860ms;
+}
+.vb .au-panel > :nth-child(4) {
+  animation-delay: 940ms;
+}
+.vb .au-panel > :nth-child(n + 5) {
+  animation-delay: 1020ms;
+}
+.vb .au-h {
+  margin: 0;
+  font-size: 46px;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+}
+.vb .au-sub {
+  margin: 12px 0 0;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--t2);
+}
+.vb .au-btns {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  margin-top: 34px;
+}
+.vb .au-b {
+  width: 100%;
+  height: 52px;
+  gap: 12px;
+  font-size: 15.5px;
+  border-radius: 10px;
+}
+.vb .au-b svg {
+  flex: none;
+}
+.vb .au-n {
+  margin: 18px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--t3);
+}
+.vb .au-n a {
+  color: var(--t2);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--line-3);
+}
+.vb .au-err {
+  margin: 16px 0 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--loss);
+}
+.vb .au-legal {
+  position: absolute;
+  left: 112px;
+  bottom: 30px;
+  z-index: 2;
+  margin: 0;
+  font-size: 12px;
+  color: var(--t4);
+}
+.vb .au-not {
+  margin-top: 16px;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--t3);
+  cursor: pointer;
+}
+.vb .au-not:hover {
+  color: var(--t1);
+}
+
+/* Connecting: the PC and the account side by side, tied by a dashed line a light runs along;
+   once connected the tie is whole, violet, with a tick in its middle. */
+.vb .au-pair {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 34px;
+}
+.vb .au-end {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 136px;
+  text-align: center;
+}
+.vb .au-end b {
+  margin-top: 12px;
+  font-size: 16px;
+  font-weight: 650;
+}
+.vb .au-end > span:last-child {
+  font-size: 13px;
+  color: var(--t3);
+}
+.vb .au-pc,
+.vb .au-me {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  border-radius: 24px;
+}
+.vb .au-pc {
+  color: var(--t2);
+  background: var(--d-btn);
+  box-shadow:
+    var(--d-btn-sh),
+    0 14px 30px -14px rgb(0 0 0 / 0.8);
+}
+.vb .au-pc > svg {
+  margin-top: -4px;
+}
+.vb .au-pc .glyph {
+  position: absolute;
+  left: 50%;
+  top: 41px;
+  fill: var(--v400);
+  transform: translate(-50%, -50%);
+}
+.vb .au-me img,
+.vb .au-me .au-none {
+  width: 96px;
+  height: 96px;
+  border-radius: 24px;
+  object-fit: cover;
+  box-shadow:
+    var(--d-portrait),
+    0 14px 30px -14px rgb(0 0 0 / 0.8);
+}
+.vb .au-me .au-none {
+  display: grid;
+  place-items: center;
+  background: var(--d-btn);
+  color: var(--t2);
+}
+.vb .au-dc {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  color: #fff;
+  background: #5865f2;
+  box-shadow: 0 0 0 3px var(--ink-0);
+}
+.vb .au-tie {
+  position: relative;
+  flex: 1;
+  height: 2px;
+  margin: 47px -14px 0;
+  background: repeating-linear-gradient(90deg, var(--line-3) 0 4px, transparent 4px 9px);
+}
+.vb .au-tie i {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--v300);
+  animation: au-run 1.9s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.vb .au-tie.on {
+  background: linear-gradient(90deg, var(--v500), var(--v500)) left / 100% 100% no-repeat;
+  animation: au-fill 500ms var(--ease) both;
+}
+.vb .au-tie.on i {
+  display: none;
+}
+.vb .au-tie b {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--v500);
+  box-shadow: 0 0 0 4px var(--ink-0);
+  animation: au-tick 360ms cubic-bezier(0.34, 1.56, 0.64, 1) 400ms both;
+}
+
+@keyframes au-in {
+  from {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+}
+@keyframes au-drift {
+  from {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.06) translate3d(-22px, -10px, 0);
+  }
+}
+@keyframes au-aurora {
+  0% {
+    transform: translate3d(-90px, 0, 0) scaleX(0.92);
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate3d(80px, 18px, 0) scaleX(1.08);
+    opacity: 0.7;
+  }
+}
+@keyframes au-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+@keyframes au-flicker {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  30% {
+    opacity: 1;
+  }
+  55% {
+    opacity: 0.62;
+  }
+  80% {
+    opacity: 0.92;
+  }
+}
+@keyframes au-flicker2 {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.06);
+  }
+  70% {
+    transform: scale(0.97);
+  }
+}
+@keyframes au-sweep {
+  from {
+    transform: translate3d(-38%, 0, 0);
+  }
+  to {
+    transform: translate3d(38%, 0, 0);
+  }
+}
+@keyframes au-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -8px;
+  }
+}
+@keyframes au-shadow {
+  0%,
+  100% {
+    scale: 1;
+    opacity: 1;
+  }
+  50% {
+    scale: 0.86;
+    opacity: 0.68;
+  }
+}
+@keyframes au-pop {
+  from {
+    opacity: 0;
+    scale: 0.9;
+  }
+}
+@keyframes au-hop {
+  40% {
+    translate: 0 -8px;
+  }
+}
+@keyframes au-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes au-rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+@keyframes au-run {
+  0% {
+    left: 0;
+    opacity: 0;
+  }
+  18% {
+    opacity: 1;
+  }
+  82% {
+    opacity: 1;
+  }
+  100% {
+    left: calc(100% - 8px);
+    opacity: 0;
+  }
+}
+@keyframes au-fill {
+  from {
+    background-size: 0 100%;
+  }
+}
+@keyframes au-tick {
+  from {
+    opacity: 0;
+    scale: 0.4;
+  }
+}
+
+/* A phone: the art is a band at the top fading into the ink, the form under it. */
+@media (max-width: 767px) {
+  .vb .au-art {
+    left: -60vw;
+    top: -4vw;
+    width: 190vw;
+  }
+  .vb .au-aurora {
+    left: 0;
+    width: 120vw;
+  }
+  .vb .au-shade {
+    background:
+      linear-gradient(
+        180deg,
+        rgb(8 7 13 / 0.5) 0,
+        rgb(8 7 13 / 0) 120px,
+        rgb(8 7 13 / 0) 34vh,
+        rgb(8 7 13 / 0.9) 50vh,
+        var(--ink-0) 58vh
+      ),
+      linear-gradient(90deg, rgb(8 7 13 / 0.4), rgb(8 7 13 / 0) 40%);
+  }
+  .vb .au-pf {
+    left: auto;
+    right: 18px;
+    bottom: auto;
+    top: calc(44vh - 118px);
+    width: 112px;
+  }
+  .vb .au-sh {
+    left: auto;
+    right: 30px;
+    bottom: auto;
+    top: calc(44vh - 14px);
+    width: 88px;
+    height: 14px;
+  }
+  .vb .au-pb {
+    left: auto;
+    right: 132px;
+    bottom: auto;
+    top: calc(44vh - 96px);
+    width: 64px;
+  }
+  .vb .au-i1 {
+    left: 34vw;
+    bottom: auto;
+    top: calc(44vh - 64px);
+    width: 30px;
+  }
+  .vb .au-i2 {
+    display: none;
+  }
+  .vb .au-logo {
+    left: 20px;
+    top: 24px;
+  }
+  .vb .au-panel {
+    width: auto;
+    margin: 0 20px;
+    padding: 46vh 0 88px;
+    justify-content: flex-start;
+  }
+  .vb .au-h {
+    font-size: 36px;
+  }
+  .vb .au-legal {
+    left: 20px;
+    right: 20px;
+    bottom: 24px;
+  }
+  .vb .au-pair {
+    margin-top: 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vb.au *,
+  .vb.au *::before,
+  .vb.au *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -8,6 +8,7 @@ import Frame from '../../components/ui/Frame.vue'
 import Glyph from '../../components/ui/Glyph.vue'
 import Icon from '../../components/ui/Icon.vue'
 import ClipRow from '../../components/clips/ClipRow.vue'
+import SaveStar from '../../components/social/SaveStar.vue'
 import { champIcon, championName, profileIcon } from '../../lib/assets.js'
 import { profilePath } from '../../lib/format.js'
 import { since } from '../../lib/ladders.js'
@@ -177,6 +178,7 @@ async function remove() {
             </span>
             <span class="cl-acts">
               <span class="meta num">{{ views }}</span>
+              <SaveStar kind="clip" :id="c.id" label="this clip" />
               <button type="button" class="btn sm" @click="share">
                 <Icon :name="copied ? 'check' : 'share'" />{{ copied ? 'Link copied' : 'Share' }}
               </button>

@@ -48,6 +48,13 @@
     padding: 20px;
     border-radius: 14px;
   }
+  /* Follow this League account, in the card's top-right corner, over the champion's art. */
+  .vb .pl-follow {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 2;
+  }
   .vb .pl-art {
     position: absolute;
     right: 0;

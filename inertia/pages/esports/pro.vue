@@ -20,6 +20,7 @@ import ProGames from '../../components/esports/pro/ProGames.vue'
 import ProAccounts from '../../components/esports/pro/ProAccounts.vue'
 import ProTeamLine from '../../components/esports/pro/ProTeamLine.vue'
 import ProChampions from '../../components/esports/pro/ProChampions.vue'
+import FollowButton from '../../components/social/FollowButton.vue'
 import { useSort } from '../../components/ui/sort.js'
 import { champIcon, assetUrl, championSplash, profileIcon } from '../../lib/assets.js'
 import { countryName } from '../../lib/board.js'
@@ -27,6 +28,7 @@ import { laneOf, n, rankValue, rankWords, roleLabel, winPct } from '../../lib/la
 import { profilePath } from '../../lib/format.js'
 import { rememberPro } from '../../lib/recent.js'
 import type { Match } from '../../lib/types.js'
+import type { FollowState } from '../../lib/account_types.js'
 import {
   APEX,
   PLATFORM,
@@ -48,6 +50,8 @@ type Tab = 'overview' | 'solo' | 'champions' | 'accounts' | 'career'
  * they play most. Tabs for the full tables; the tab is in the address (`?tab=accounts`).
  */
 const props = defineProps<{
+  /** Who follows this pro, and whether the visitor does. */
+  follow: FollowState
   pro: {
     slug: string
     name: string
@@ -311,6 +315,7 @@ const accountSort = useSort(
               >
             </div>
             <div class="row pp-links">
+              <FollowButton kind="pro" :id="pro.slug" :name="pro.name" :state="follow" small />
               <button class="btn sm" type="button" @click="share">
                 <Icon name="share" />{{ shared ? 'Link copied' : 'Share' }}
               </button>

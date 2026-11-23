@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { RoleIcon } from '@invadelol/ui'
 import type { Position } from '@invadelol/ui/logic'
@@ -9,12 +9,12 @@ import { SERVER } from '../../lib/board.js'
 import { regionFlag } from '../../lib/flags.js'
 import { since } from '../../lib/ladders.js'
 import type { Summoner } from '../../lib/types.js'
-import { useViewer } from '../../lib/account.js'
-import '../../css/account.css'
+import FollowButton from '../social/FollowButton.vue'
+import type { FollowState } from '../../lib/account_types.js'
 
 /**
  * The identity sheet at the top of the profile rail (`.pl-id`): the icon with the level under it,
- * the Riot ID with a copy button, the favorite star in its corner, the role the player mostly plays, the server and a Pro tag, when
+ * the Riot ID with a copy button, the Follow button in its corner, the role the player mostly plays, the server and a Pro tag, when
  * the last game was and how many times the profile was opened, then Update, Share and Compare. The
  * main champion's centred art fades into the top right corner.
  */
@@ -29,8 +29,8 @@ const props = defineProps<{
   pro: { slug: string; name: string; team: { name: string } | null } | null
   champion: number | undefined
   compareHref: string
-  /** In the signed-in visitor's favorites when the page was drawn. */
-  favorite?: boolean
+  /** Who follows this League account, and whether the visitor does, when the page was drawn. */
+  follow?: FollowState | null
 }>()
 defineEmits<{ sync: []; share: [] }>()
 
@@ -136,13 +136,6 @@ async function copy() {
 onBeforeUnmount(() => clearTimeout(copiedTimer))
 
 const views = (n: number) => `${n.toLocaleString('en-US')} ${n === 1 ? 'view' : 'views'}`
-
-/** The star: this player in the signed-in person's favorites (a visitor is sent to sign in). */
-const { isFavorite, toggleFavorite } = useViewer()
-const favorite = computed(() => isFavorite(props.summoner.puuid, props.favorite ?? false))
-function star() {
-  toggleFavorite(props.summoner.puuid, props.favorite ?? false).catch(() => {})
-}
 </script>
 
 <template>
@@ -150,18 +143,15 @@ function star() {
     <div v-if="champion" class="pl-art" aria-hidden="true">
       <img :src="championSplash(champion)" alt="" />
     </div>
-    <button
-      type="button"
-      class="btn sm ico ac-fav"
-      :class="{ on: favorite }"
-      :aria-pressed="favorite"
-      :aria-label="favorite ? 'Remove from favorites' : 'Add to favorites'"
-      :title="favorite ? 'In your favorites' : 'Add to favorites'"
-      data-track="profile_favorite"
-      @click="star"
-    >
-      <Icon name="star" :size="16" />
-    </button>
+    <FollowButton
+      v-if="follow"
+      class="pl-follow"
+      kind="player"
+      :id="summoner.puuid"
+      :name="`${summoner.gameName}#${summoner.tagLine}`"
+      :state="follow"
+      small
+    />
     <div class="pl-ic">
       <img :src="profileIcon(summoner.profileIconId)" alt="" width="72" height="72" />
       <b v-if="summoner.summonerLevel" class="num">{{ summoner.summonerLevel }}</b>
@@ -210,9 +200,10 @@ function star() {
         :aria-busy="phase === 'run'"
         @click="$emit('sync')"
       >
-        <Icon v-if="phase === 'idle'" name="refresh" /><Icon v-else-if="phase === 'done'" name="check" /><span>{{
-          phase === 'run' ? 'Updating' : phase === 'done' ? 'Updated' : 'Update'
-        }}</span>
+        <Icon v-if="phase === 'idle'" name="refresh" /><Icon
+          v-else-if="phase === 'done'"
+          name="check"
+        /><span>{{ phase === 'run' ? 'Updating' : phase === 'done' ? 'Updated' : 'Update' }}</span>
       </button>
       <button class="btn" type="button" @click="$emit('share')"><Icon name="share" />Share</button>
       <Link class="btn ico" :href="compareHref" aria-label="Compare" title="Compare" preserve-scroll

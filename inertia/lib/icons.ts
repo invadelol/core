@@ -9,6 +9,8 @@ import {
   ArrowUpDown,
   Ban,
   Bell,
+  BookmarkCheck,
+  BookmarkPlus,
   ChartLine,
   Check,
   ChevronDown,
@@ -32,8 +34,10 @@ import {
   Heart,
   House,
   Keyboard,
+  Laptop,
   Layers,
   LayoutGrid,
+  Link,
   List,
   LogOut,
   Map as MapIcon,
@@ -63,6 +67,8 @@ import {
   TrendingUp,
   Trophy,
   User,
+  UserCheck,
+  UserPlus,
   Users,
   X,
 } from 'lucide-vue-next'
@@ -100,6 +106,14 @@ export const ICONS = {
   layers: Layers,
   user: User,
   users: Users,
+  /** Follow someone; once followed, the check. */
+  follow: UserPlus,
+  following: UserCheck,
+  /** Save a build to one's own; once saved, the check. */
+  save: BookmarkPlus,
+  saved: BookmarkCheck,
+  /** A link to copy. */
+  link: Link,
   sliders: SlidersHorizontal,
   download: Download,
   arrow: ArrowRight,
@@ -151,6 +165,7 @@ export const ICONS = {
   sun: Sun,
   moon: Moon,
   monitor: Monitor,
+  laptop: Laptop,
   /** A video to start (a play triangle on its own). */
   triangle: Play,
   /** An article or a web page. */

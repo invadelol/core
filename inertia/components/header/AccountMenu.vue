@@ -5,18 +5,22 @@ import Icon from '../ui/Icon.vue'
 import RankEmblem from '../ui/RankEmblem.vue'
 import { profileIcon } from '../../lib/assets.js'
 import { SERVER, tierColor, tierName } from '../../lib/board.js'
-import { profilePath } from '../../lib/format.js'
 import { signInHref } from '../../lib/account.js'
 import type { Viewer } from '../../lib/account_types.js'
 
 /**
- * The end of the header for accounts: "Sign in" for a visitor; for a signed-in person their main
- * League account's icon, which opens their menu: who they are (the main account and its rank),
- * then their profile, favorites, League accounts, the desktop app and Sign out.
+ * The end of the header for accounts: "Sign in" for a visitor; for a signed-in person their
+ * picture, which opens their menu: who they are (their name, handle, main League account and its
+ * rank), then their profile, Favorites, who they follow, the desktop app, the account's settings
+ * and Sign out.
  */
 const page = usePage()
 const viewer = computed(() => (page.props as { viewer?: Viewer | null }).viewer ?? null)
 const main = computed(() => viewer.value?.main ?? null)
+/** Their picture, or their main account's icon (shown to them even when their profile hides it). */
+const avatar = computed(
+  () => viewer.value?.avatarUrl ?? (main.value ? profileIcon(main.value.profileIconId) : null)
+)
 const path = computed(() => page.url)
 
 const open = ref(false)
@@ -89,27 +93,19 @@ onBeforeUnmount(() => {
       aria-controls="hx-menu-account"
       @click="toggle"
     >
-      <img
-        v-if="main"
-        class="av"
-        :src="profileIcon(main.profileIconId)"
-        alt=""
-        width="30"
-        height="30"
-      />
+      <img v-if="avatar" class="av" :src="avatar" alt="" width="30" height="30" />
       <span v-else class="av none"><Icon name="user" :size="16" /></span>
       <Icon name="chev" :size="13" />
     </button>
 
     <div v-if="open" id="hx-menu-account" class="hx-menu dm am">
       <div class="am-id">
-        <img v-if="main" :src="profileIcon(main.profileIconId)" alt="" width="40" height="40" />
+        <img v-if="avatar" :src="avatar" alt="" width="40" height="40" />
         <span v-else class="av none"><Icon name="user" :size="18" /></span>
         <span class="am-who">
-          <b v-if="main" class="ell"
-            >{{ main.gameName }}<small>#{{ main.tagLine }}</small></b
+          <b class="ell"
+            >{{ viewer.name }}<small>@{{ viewer.handle }}</small></b
           >
-          <b v-else class="ell">{{ viewer.name }}</b>
           <span v-if="main" class="am-rk">
             <RankEmblem :tier="main.tier" :size="16" />
             <span :style="tierColor(main.tier)">{{ rank ?? 'Unranked' }}</span>
@@ -118,31 +114,26 @@ onBeforeUnmount(() => {
         </span>
       </div>
       <div class="am-l">
-        <Link
-          v-if="main"
-          class="am-r"
-          :href="profilePath(main.gameName, main.tagLine)"
-          prefetch
-          @click="close()"
+        <Link class="am-r" :href="`/u/${viewer.handle}`" @click="close()"
           ><Icon name="user" :size="16" />My profile</Link
         >
-        <Link class="am-r" href="/account#favorites" @click="close()"
+        <Link class="am-r" href="/account" @click="close()"
           ><Icon name="star" :size="16" />Favorites<span class="end num">{{
-            viewer.favorites
+            viewer.saved
           }}</span></Link
         >
-        <Link class="am-r" href="/account#accounts" @click="close()"
-          ><Icon name="users" :size="16" />League accounts<span class="end num">{{
-            viewer.accounts
+        <Link class="am-r" :href="`/u/${viewer.handle}/following`" @click="close()"
+          ><Icon name="following" :size="16" />Following<span class="end num">{{
+            viewer.following
           }}</span></Link
         >
-        <Link class="am-r" href="/account#apps" @click="close()"
-          ><Icon name="download" :size="16" />Desktop app<span class="end">{{
+        <Link class="am-r" href="/account/settings#ac-apps" @click="close()"
+          ><Icon name="monitor" :size="16" />Desktop app<span class="end">{{
             viewer.apps ? 'Connected' : 'Not connected'
           }}</span></Link
         >
-        <Link class="am-r" href="/account" @click="close()"
-          ><Icon name="settings" :size="16" />Account</Link
+        <Link class="am-r" href="/account/settings" @click="close()"
+          ><Icon name="settings" :size="16" />Settings</Link
         >
       </div>
       <form class="am-l am-foot" method="post" action="/signout">
