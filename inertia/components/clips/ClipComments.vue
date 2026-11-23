@@ -135,7 +135,12 @@ const role = (c: ClipComment) =>
         <template v-for="item in [c, ...c.replies]" :key="item.id">
           <div class="clp-c-row" :class="{ reply: item !== c }">
             <span class="clp-face">
-              <img v-if="item.author.avatarUrl" class="clp-av" :src="item.author.avatarUrl" alt="" />
+              <img
+                v-if="item.author.avatarUrl"
+                class="clp-av"
+                :src="item.author.avatarUrl"
+                alt=""
+              />
               <span v-else class="clp-av none"><Icon name="user" :size="16" /></span>
               <img
                 v-if="item.championId"

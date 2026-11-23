@@ -38,8 +38,8 @@ watch(() => props.puuid, load)
         <span class="cl-txt">
           <b class="ell">{{ c.title }}</b>
           <span class="ell num"
-            >{{ championName(c.championId) }}, {{ c.moment ?? 'at' }}
-            {{ clipClock(c.startMs) }}</span
+            >{{ championName(c.championId) }}, {{ c.moment ? `${c.moment},` : 'at' }}
+            {{ clipClock(c.momentAt ?? c.startMs) }}</span
           >
         </span>
       </Link>

@@ -1,15 +1,18 @@
 import type { HttpContext } from '@adonisjs/core/http'
+import { queueName } from '@invadelol/ui/logic'
 import clipService, { CLIP_ID } from '#services/clips/clip_service'
 import commentService from '#services/clips/comments'
 import { clipMatch } from '#services/clips/clip_match'
 import { CLIP_FILES, clipKey, clipStore, localUploadKey } from '#services/clips/storage'
 import { renderClipCover } from '#services/clips/cover'
+import { H as COVER_H, W as COVER_W } from '#services/og/kit'
+import riotAssets from '#services/riot/assets'
 import followService from '#services/social/follows'
 import { limit, sameOrigin, signedIn } from '#controllers/account_controller'
 import { AccountError } from '#services/accounts/errors'
 import { FixedWindowLimiter } from '#services/desktop/rate_limiter'
 import { accountOrigin } from '#services/accounts/session_service'
-import type { Clip } from '../../inertia/lib/clip_types.js'
+import type { Clip, ClipMatch } from '../../inertia/lib/clip_types.js'
 
 const views = new FixedWindowLimiter('clip:view:')
 const FILE = /^([A-Za-z0-9]{10})\.(mp4|jpg)$/
@@ -25,11 +28,22 @@ async function watchable(ctx: HttpContext): Promise<Clip> {
   return clip
 }
 
-/** The link preview's words: who, on what, what happened, when in the game. */
-function describe(clip: Clip) {
-  const who = clip.author.name
-  const what = clip.moment ? `, ${clip.moment.charAt(0).toLowerCase()}${clip.moment.slice(1)}` : ''
-  return `${who}${what} at ${clock(clip.startMs)} in the game. A clip on Invade.`
+/**
+ * The link preview's words: who on what, what happened and when, then how the game went ("Ember on
+ * Ezreal, solo kill on Lee Sin at 9:12. Victory in 31:24, Ranked Solo/Duo.").
+ */
+async function describe(clip: Clip, card: ClipMatch | null) {
+  const names = await riotAssets.names('champion').catch((): Record<string, string> => ({}))
+  const champion = names[clip.championId] ?? 'a champion'
+  const what = clip.moment
+    ? `${clip.moment.charAt(0).toLowerCase()}${clip.moment.slice(1)} at ${clock(clip.momentAt ?? clip.startMs)}`
+    : `at ${clock(clip.startMs)} in the game`
+  const seat = card?.match.participants.find((p) => p.puuid === card.puuid)
+  const game =
+    card && seat
+      ? ` ${seat.win ? 'Victory' : 'Defeat'} in ${clock(card.match.duration * 1000)}, ${queueName(card.match.queueId)}.`
+      : ''
+  return `${clip.author.name} on ${champion}, ${what}.${game}`
 }
 
 /**
@@ -57,6 +71,7 @@ export default class ClipsController {
       if (first.allowed) await clipService.viewed(clip.id).catch(() => {})
     }
     const cover = `${accountOrigin()}/og/clip/${clip.id}.jpg`
+    const description = await describe(clip, match)
     return ctx.inertia.render('clips/clip', {
       clip,
       match,
@@ -65,18 +80,18 @@ export default class ClipsController {
       canComment,
       follow,
       robots: clip.visibility === 'everyone' ? undefined : 'noindex, nofollow',
-      description: describe(clip),
+      description,
       social: {
         type: 'video.other',
         title: clip.title,
-        description: describe(clip),
+        description,
         url: clip.url,
         canonical: clip.url,
         image: cover,
         imageType: 'image/jpeg',
-        imageWidth: 1280,
-        imageHeight: 720,
-        alt: `${clip.title}: ${clip.moment ?? 'a moment'} at ${clock(clip.startMs)}`,
+        imageWidth: COVER_W,
+        imageHeight: COVER_H,
+        alt: `${clip.title}: ${clip.moment ?? 'a moment'} at ${clock(clip.momentAt ?? clip.startMs)}`,
         video: { url: `${accountOrigin()}${clip.video}`, width: 1280, height: 720 },
       },
     })

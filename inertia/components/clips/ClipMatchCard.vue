@@ -84,8 +84,12 @@ const chart = computed(() => {
     zero: y(0),
     end: points.at(-1)![1],
     marks: props.card.objectives.map((o) => ({ ...o, x: x(o.minute) })),
-    here: dot(props.clip.startMs),
-    others: props.others.map((c) => ({ id: c.id, champion: c.championId, ...dot(c.startMs) })),
+    here: dot(props.clip.momentAt ?? props.clip.startMs),
+    others: props.others.map((c) => ({
+      id: c.id,
+      champion: c.championId,
+      ...dot(c.momentAt ?? c.startMs),
+    })),
     ticks: [0, 10, 20, 30, 40].filter((m) => m < last).map((m) => ({ m, x: x(m) })),
     last,
   }
@@ -148,9 +152,7 @@ const signed = (n: number) => `${n >= 0 ? '+' : '-'}${compact(Math.abs(n))}`
           :title="championName(p.championId)"
         >
           <img :src="champIcon(p.championId)" :alt="championName(p.championId)" />
-          <i v-if="posted.has(p.championId)" class="clp-m-clap"
-            ><Icon name="film" :size="11"
-          /></i>
+          <i v-if="posted.has(p.championId)" class="clp-m-clap"><Icon name="film" :size="11" /></i>
         </span>
       </div>
     </div>
@@ -207,7 +209,7 @@ const signed = (n: number) => `${n >= 0 ? '+' : '-'}${compact(Math.abs(n))}`
       <Link v-for="o in others.slice(0, 2)" :key="o.id" class="clp-m-clip" :href="`/clip/${o.id}`">
         <span class="clp-m-cover"><img :src="o.poster ?? ''" alt="" /></span>
         <b class="ell">{{ o.title }}</b>
-        <span class="meta ell">{{ o.author.name }}, {{ clipClock(o.startMs) }}</span>
+        <span class="meta ell">{{ o.author.name }}, {{ clipClock(o.momentAt ?? o.startMs) }}</span>
       </Link>
     </div>
 

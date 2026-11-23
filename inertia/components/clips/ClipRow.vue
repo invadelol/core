@@ -27,7 +27,8 @@ defineProps<{ clip: Clip }>()
       <b class="ell">{{ clip.title }}</b>
       <span class="ell">{{ clip.author.name }}, {{ championName(clip.championId) }}</span>
       <span class="num"
-        >{{ clip.moment ? `${clip.moment}, ` : '' }}{{ clipClock(clip.startMs) }} in the game</span
+        >{{ clip.moment ? `${clip.moment}, ` : ''
+        }}{{ clipClock(clip.momentAt ?? clip.startMs) }} in the game</span
       >
     </span>
   </Link>

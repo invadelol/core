@@ -85,6 +85,8 @@ export interface Clip {
   title: string
   /** What happened, in a few words ("Solo kill on Lee Sin"), or null without events. */
   moment: string | null
+  /** The game time of the event the moment names, ms; null without events. */
+  momentAt: number | null
   visibility: ClipVisibility
   comments: ClipCommentRule
   events: ClipEvent[]

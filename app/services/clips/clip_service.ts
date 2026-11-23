@@ -10,7 +10,7 @@ import { AccountError } from '#services/accounts/errors'
 import { accountOrigin, type SignedIn } from '#services/accounts/session_service'
 import savedService from '#services/social/saved'
 import { SHOWN_MAIN_COLUMNS, SHOWN_MAIN_JOIN, avatarOf, iso } from '#services/social/cards'
-import { cleanEvents, momentOf, type GamePlayer } from '#services/clips/events'
+import { cleanEvents, keyEvent, momentOf, type GamePlayer } from '#services/clips/events'
 import { fillRecap } from '#services/clips/recap'
 import { CLIP_FILES, clipKey, clipStore, type ClipFileKind } from '#services/clips/storage'
 import type {
@@ -190,6 +190,7 @@ class ClipService {
       durationMs: row.duration_ms,
       title: row.title,
       moment: momentOf(events, row.champion_id, (c) => this.names[c] ?? 'a champion'),
+      momentAt: keyEvent(events, row.champion_id)?.t ?? null,
       visibility: row.visibility,
       comments: row.comments,
       events,

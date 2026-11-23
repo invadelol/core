@@ -57,7 +57,9 @@ const game = computed(() =>
     : null
 )
 const line = computed(() => {
-  const kda = game.value ? `, ${game.value.kills} / ${game.value.deaths} / ${game.value.assists}` : ''
+  const kda = game.value
+    ? `, ${game.value.kills} / ${game.value.deaths} / ${game.value.assists}`
+    : ''
   return `${championName(clip.value.championId)}${kda}, ${since(Date.parse(clip.value.postedAt))}`
 })
 const dial = computed(() => {
@@ -130,7 +132,7 @@ async function remove() {
 const title = computed(() => clip.value.title.replace(/</g, '‹').replace(/>/g, '›'))
 const moment = computed(() =>
   clip.value.moment
-    ? `${clip.value.moment}, ${clipClock(clip.value.startMs)}`
+    ? `${clip.value.moment}, ${clipClock(clip.value.momentAt ?? clip.value.startMs)}`
     : `At ${clipClock(clip.value.startMs)} in the game`
 )
 </script>
@@ -241,7 +243,13 @@ const moment = computed(() =>
           <p v-if="problem" class="clp-err" role="alert">{{ problem }}</p>
         </div>
 
-        <ClipMatchCard v-if="match && game" :clip="clip" :others="others" :card="match" :game="game" />
+        <ClipMatchCard
+          v-if="match && game"
+          :clip="clip"
+          :others="others"
+          :card="match"
+          :game="game"
+        />
 
         <div class="clp-talk">
           <ClipComments

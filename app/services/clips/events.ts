@@ -87,33 +87,58 @@ export function cleanEvents(
 }
 
 const MULTI = ['', '', 'Double kill', 'Triple kill', 'Quadra kill', 'Penta kill']
+const multiSize = (e: ClipEvent) => {
+  const size = Number(e.detail)
+  return size >= 2 && size <= 5 ? size : 0
+}
 
 /**
- * The clip's moment in a few words, from the side of the champion who posted it: its biggest
- * event ("Triple kill", "Solo kill on Lee Sin", "Baron"). Invade names what happened, never
- * judges it. Null without events.
+ * The clip's biggest event from the side of the champion who posted it, the one its moment names:
+ * a multikill, an ace, first blood, an objective, a kill, an assist, a death, in that order.
+ */
+export function keyEvent(events: ClipEvent[], championId: number): ClipEvent | null {
+  const mine = (e: ClipEvent) => e.killer === championId
+  const multi = events
+    .filter((e) => e.kind === 'multikill' && mine(e) && multiSize(e))
+    .sort((a, b) => multiSize(b) - multiSize(a))[0]
+  return (
+    multi ??
+    events.find((e) => e.kind === 'ace' && mine(e)) ??
+    events.find((e) => e.kind === 'first_blood' && mine(e) && e.victim !== null) ??
+    events.find((e) => e.kind === 'objective' && e.detail) ??
+    events.find((e) => e.kind === 'kill' && mine(e) && e.victim !== null) ??
+    events.find((e) => e.kind === 'assist' && e.victim !== null) ??
+    events.find((e) => e.kind === 'death' && e.killer !== null) ??
+    null
+  )
+}
+
+/**
+ * The clip's moment in a few words ("Triple kill", "Solo kill on Lee Sin", "Baron"), from its key
+ * event. Invade names what happened, never judges it. Null without events.
  */
 export function momentOf(
   events: ClipEvent[],
   championId: number,
   name: (id: number) => string
 ): string | null {
-  const mine = (e: ClipEvent) => e.killer === championId
-  const multi = events
-    .filter((e) => e.kind === 'multikill' && mine(e))
-    .map((e) => Number(e.detail))
-    .filter((n) => n >= 2 && n <= 5)
-  if (multi.length) return MULTI[Math.max(...multi)]
-  if (events.some((e) => e.kind === 'ace' && mine(e))) return 'Ace'
-  const first = events.find((e) => e.kind === 'first_blood' && mine(e) && e.victim !== null)
-  if (first) return `First blood on ${name(first.victim!)}`
-  const objective = events.find((e) => e.kind === 'objective' && e.detail)
-  if (objective) return objective.detail
-  const kill = events.find((e) => e.kind === 'kill' && mine(e) && e.victim !== null)
-  if (kill) return `${kill.assisters.length ? 'Kill' : 'Solo kill'} on ${name(kill.victim!)}`
-  const assist = events.find((e) => e.kind === 'assist' && e.victim !== null)
-  if (assist) return `Assist on ${name(assist.victim!)}`
-  const death = events.find((e) => e.kind === 'death' && e.killer !== null)
-  if (death) return `Death to ${name(death.killer!)}`
-  return null
+  const key = keyEvent(events, championId)
+  switch (key?.kind) {
+    case 'multikill':
+      return MULTI[multiSize(key)]
+    case 'ace':
+      return 'Ace'
+    case 'first_blood':
+      return `First blood on ${name(key.victim!)}`
+    case 'objective':
+      return key.detail
+    case 'kill':
+      return `${key.assisters.length ? 'Kill' : 'Solo kill'} on ${name(key.victim!)}`
+    case 'assist':
+      return `Assist on ${name(key.victim!)}`
+    case 'death':
+      return `Death to ${name(key.killer!)}`
+    default:
+      return null
+  }
 }
