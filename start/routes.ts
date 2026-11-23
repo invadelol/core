@@ -226,21 +226,24 @@ router
         router
           .put('/builds', [DesktopAccountController, 'syncBuilds'])
           .use(middleware.desktopAuth())
-        /** Clips posted from the app (§11): details, then the video and its picture as files. */
         /** The skins a proven League account owns, as the app read them (§13). */
         router
           .put('/collection', [DesktopCollectionController, 'replace'])
           .use(middleware.desktopAuth())
+        /**
+         * Clips posted from the app (§11): details, the files on signed addresses, complete; and
+         * what happened around them (§12).
+         */
         router.get('/clips', [DesktopClipsController, 'index']).use(middleware.desktopAuth())
         router.post('/clips', [DesktopClipsController, 'create']).use(middleware.desktopAuth())
         router
-          .put('/clips/:id/video', [DesktopClipsController, 'video'])
-          .use(middleware.desktopAuth())
-        router
-          .put('/clips/:id/poster', [DesktopClipsController, 'poster'])
+          .post('/clips/:id/complete', [DesktopClipsController, 'complete'])
           .use(middleware.desktopAuth())
         router
           .delete('/clips/:id', [DesktopClipsController, 'destroy'])
+          .use(middleware.desktopAuth())
+        router
+          .get('/notifications', [DesktopClipsController, 'notifications'])
           .use(middleware.desktopAuth())
       })
       .prefix('/desktop')
@@ -387,11 +390,25 @@ router.get('/build/:id', [SharedBuildsController, 'account'])
 router.put('/api/builds/:id/save', [SharedBuildsController, 'save'])
 router.delete('/api/builds/:id/save', [SharedBuildsController, 'unsave'])
 
-/** Clips: a clip's page, its video and picture, the lists of a match and a player, deletion. */
+/**
+ * Clips: a clip's page, its files and link preview, the lists of a match and a League account,
+ * comments and GGs, its owner's controls, and the local stand-in for signed upload addresses.
+ */
 router.get('/clip/:id', [ClipsController, 'page'])
 router.get('/clips/:file', [ClipsController, 'file'])
+router.get('/og/clip/:file', [ClipsController, 'cover'])
 router.get('/api/clips', [ClipsController, 'list'])
+router.put('/api/clips/upload', [ClipsController, 'upload'])
+router.patch('/api/clips/:id', [ClipsController, 'update'])
 router.delete('/api/clips/:id', [ClipsController, 'destroy'])
+router.put('/api/clips/:id/pin', [ClipsController, 'pin'])
+router.delete('/api/clips/:id/pin', [ClipsController, 'pin'])
+router.post('/api/clips/:id/comments', [ClipsController, 'comment'])
+router.delete('/api/clips/:id/comments/:comment', [ClipsController, 'uncomment'])
+router.put('/api/clips/:id/gg', [ClipsController, 'gg'])
+router.delete('/api/clips/:id/gg', [ClipsController, 'gg'])
+router.put('/api/clips/:id/comments/:comment/gg', [ClipsController, 'gg'])
+router.delete('/api/clips/:id/comments/:comment/gg', [ClipsController, 'gg'])
 
 /**
  * Invade profiles (`/u/<handle>` and its tabs) and the owner's Customize saves, before the

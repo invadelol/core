@@ -45,8 +45,8 @@ const JSON_LIMITS = new Map([
  * up to their limit, hashed for the signature, and handed to the route as bytes.
  */
 const RAW_LIMITS = new Map([
-  ['/api/desktop/clips/:id/video', (Number(process.env.CLIPS_MAX_MB) || 40) * 1024 * 1024],
-  ['/api/desktop/clips/:id/poster', 512 * 1024],
+  // A clip's file on a local upload address (app/services/clips/storage.ts): a video at most.
+  ['/api/clips/upload', (Number(process.env.CLIPS_MAX_MB) || 40) * 1024 * 1024],
 ])
 
 /**

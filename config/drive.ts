@@ -21,6 +21,19 @@ const driveConfig = defineConfig({
       supportsACL: false,
       forcePathStyle: true,
     }),
+    /** Clip videos and posters (app/services/clips/storage.ts): private, read on signed addresses. */
+    clips: services.s3({
+      credentials: {
+        accessKeyId: env.get('R2_KEY'),
+        secretAccessKey: env.get('R2_SECRET'),
+      },
+      region: 'auto',
+      bucket: env.get('CLIPS_BUCKET') || 'invade-clips',
+      endpoint: env.get('R2_ENDPOINT'),
+      visibility: 'private',
+      supportsACL: false,
+      forcePathStyle: true,
+    }),
   },
 })
 
