@@ -44,11 +44,11 @@ export function starsWords(halves: number) {
   return `${stars} ${stars === 1 ? 'star' : 'stars'}`
 }
 
-/** A count for a small label: 1,204 → "1.2k", under a thousand as it is. */
+/** A count for a small label: 1,204 → "1.2k", 52,400 → "52.4k", under a thousand as it is. */
 export function shortCount(n: number) {
   if (n < 1000) return String(n)
   const k = n / 1000
-  return `${k >= 10 ? Math.round(k) : Math.round(k * 10) / 10}k`
+  return `${k >= 100 ? Math.round(k) : Math.round(k * 10) / 10}k`
 }
 
 /** 1 → "1st", 22 → "22nd", 13 → "13th". */

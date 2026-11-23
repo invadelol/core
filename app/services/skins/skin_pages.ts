@@ -237,9 +237,9 @@ async function activity(catalogue: Catalogue, friends: string[]): Promise<SkinAc
 async function popularThisWeek(catalogue: Catalogue, limit: number) {
   const result = await db.rawQuery(
     `SELECT skin_id, count(*) FILTER (WHERE rated_at >= ?)::int AS week, count(*)::int AS ever
-     FROM invade_skin_rating GROUP BY skin_id
-     ORDER BY week DESC, ever DESC LIMIT ?`,
-    [new Date(Date.now() - WEEK_MS), limit * 2]
+     FROM invade_skin_rating WHERE skin_id = ANY(?) GROUP BY skin_id
+     ORDER BY week DESC, ever DESC, avg(rating) DESC, skin_id LIMIT ?`,
+    [new Date(Date.now() - WEEK_MS), [...catalogue.skins.keys()], limit]
   )
   const picked = catalogue.pick(result.rows.map((r: { skin_id: number }) => r.skin_id))
   for (const skin of [...catalogue.newest(), ...[...catalogue.skins.values()].reverse()]) {

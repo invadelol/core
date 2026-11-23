@@ -79,30 +79,28 @@ export async function rated(skins: SkinFacts[]): Promise<RatedSkin[]> {
 }
 
 /**
- * The best rated of `ids` (every rated skin when none are given), by Bayesian average, best first.
+ * The best rated of `ids` (every skin of the catalogue when none are given), by Bayesian average,
+ * best first.
  */
 export async function bestRated(
   catalogue: Catalogue,
   limit: number,
-  ids?: number[]
+  ids: number[] = [...catalogue.skins.keys()]
 ): Promise<RatedSkin[]> {
   const result = await db.rawQuery(
     `SELECT skin_id, sum(rating)::int AS total, count(*)::int AS n FROM invade_skin_rating
-     ${ids ? 'WHERE skin_id = ANY(?)' : ''}
+     WHERE skin_id = ANY(?)
      GROUP BY skin_id
      ORDER BY (sum(rating) + ${PRIOR_WEIGHT * PRIOR_MEAN}) / (count(*) + ${PRIOR_WEIGHT}) DESC,
               count(*) DESC, skin_id
-     LIMIT ${Math.trunc(limit * 2)}`,
-    ids ? [ids] : []
+     LIMIT ?`,
+    [ids, limit]
   )
-  const out: RatedSkin[] = []
-  for (const row of result.rows as { skin_id: number; total: number; n: number }[]) {
-    const skin = catalogue.get(row.skin_id)
-    if (!skin) continue
-    out.push({ ...cardOf(skin), average: average(row.total, row.n), ratings: row.n })
-    if (out.length === limit) break
-  }
-  return out
+  return (result.rows as { skin_id: number; total: number; n: number }[]).map((row) => ({
+    ...cardOf(catalogue.get(row.skin_id)!),
+    average: average(row.total, row.n),
+    ratings: row.n,
+  }))
 }
 
 /** Where a skin stands among its champion's rated skins, best first. */

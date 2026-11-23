@@ -173,6 +173,14 @@ class SkinCatalogueService {
     return this.#current?.value ?? new Catalogue('', new Map(), new Map())
   }
 
+  /**
+   * Serves `catalogue` until the next patch check (null: forget it and build on the next read).
+   * What a test uses to run without Community Dragon.
+   */
+  use(catalogue: Catalogue | null) {
+    this.#current = catalogue ? { at: Date.now(), value: catalogue } : null
+  }
+
   private async build(): Promise<Catalogue | null> {
     try {
       const live = await riotAssets.gameFile('skins:v1', FILE, parseSkins)

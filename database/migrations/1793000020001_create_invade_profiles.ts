@@ -65,21 +65,32 @@ export default class CreateInvadeProfiles extends BaseSchema {
 
     /**
      * The skins a League account owns, as the desktop app last read them from the League client
-     * (docs/desktop-sync.md §13). A person's collection is the union over the League accounts
-     * they own; a newer read replaces an account's whole set.
+     * (docs/desktop-sync.md §13): one read per League account, the person whose app sent it, and
+     * its skins. A person's collection is the union over the League accounts they own; a newer
+     * read replaces an account's whole set; deleting the person deletes what their app sent.
      */
-    this.schema.createTable('invade_owned_skin', (t) => {
-      t.text('puuid').notNullable().references('puuid').inTable('riot_player').onDelete('CASCADE')
-      t.integer('skin_id').notNullable()
-      t.timestamp('purchased_at', { useTz: true }).nullable()
-      t.primary(['puuid', 'skin_id'])
-    })
     this.schema.createTable('invade_collection_read', (t) => {
       t.text('puuid').primary().references('puuid').inTable('riot_player').onDelete('CASCADE')
+      t.uuid('user_id')
+        .notNullable()
+        .references('id')
+        .inTable('invade_user')
+        .onDelete('CASCADE')
+        .index()
       t.uuid('device_id').nullable().references('id').inTable('desktop_device').onDelete('SET NULL')
       // When the app read the client, and when core received it.
       t.timestamp('read_at', { useTz: true }).notNullable()
       t.timestamp('received_at', { useTz: true }).notNullable().defaultTo(this.now())
+    })
+    this.schema.createTable('invade_owned_skin', (t) => {
+      t.text('puuid')
+        .notNullable()
+        .references('puuid')
+        .inTable('invade_collection_read')
+        .onDelete('CASCADE')
+      t.integer('skin_id').notNullable()
+      t.timestamp('purchased_at', { useTz: true }).nullable()
+      t.primary(['puuid', 'skin_id'])
     })
 
     /** Half-star ratings: 1 is half a star, 10 is five stars. */
@@ -176,8 +187,8 @@ export default class CreateInvadeProfiles extends BaseSchema {
       'invade_skin_review_like',
       'invade_skin_review',
       'invade_skin_rating',
-      'invade_collection_read',
       'invade_owned_skin',
+      'invade_collection_read',
       'invade_verified_pro',
       'invade_profile',
     ]) {

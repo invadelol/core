@@ -67,6 +67,18 @@ class CollectionService {
         .forUpdate()
         .first()
       if (stored && new Date(stored.read_at).getTime() >= readAt) return
+      await trx
+        .knexQuery()
+        .table('invade_collection_read')
+        .insert({
+          puuid: read.puuid,
+          user_id: user.id,
+          device_id: deviceId,
+          read_at: new Date(readAt),
+          received_at: new Date(),
+        })
+        .onConflict('puuid')
+        .merge(['user_id', 'device_id', 'read_at', 'received_at'])
       await trx.from('invade_owned_skin').where('puuid', read.puuid).delete()
       const rows = [...skins].map(([id, purchasedAt]) => ({
         puuid: read.puuid,
@@ -76,17 +88,6 @@ class CollectionService {
       for (let i = 0; i < rows.length; i += 1000) {
         await trx.table('invade_owned_skin').multiInsert(rows.slice(i, i + 1000))
       }
-      await trx
-        .knexQuery()
-        .table('invade_collection_read')
-        .insert({
-          puuid: read.puuid,
-          device_id: deviceId,
-          read_at: new Date(readAt),
-          received_at: new Date(),
-        })
-        .onConflict('puuid')
-        .merge(['device_id', 'read_at', 'received_at'])
     })
   }
 

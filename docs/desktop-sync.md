@@ -1001,3 +1001,46 @@ The website: `/clip/:id`, `/clips/<id>.mp4` (byte ranges) and `/clips/<id>.jpg`,
 same-origin). Storage (`CLIPS_STORAGE`): `local` (files under `CLIPS_DIR`, served by core) or `drive`
 (the site's object storage, `DRIVE_DISK`; the browser is sent to a signed address). Deleting an
 Invade account deletes its clips and their files.
+
+## 13. Collection (contract v1.8)
+
+The skins a League account owns, as the League client lists them to the app (the app's Collection
+page reads them already). They make "owned" on the website: a person's Invade profile counts their
+collection by Riot's rarity, keeps the dates bought as a diary, lets them pick a backdrop among
+them, and shows "Owns it" beside their skin reviews. Nobody can say on the website that they own a
+skin: only this read does. Signed like every desktop route (§1); errors keep the shape of §1 and
+the codes of §10.
+
+### 13.1 `PUT /api/desktop/collection` (auth, 60 / hour / device, body ≤ 512 KB)
+
+```json
+{ "puuid": "<api puuid>", "readAt": "2026-11-23T18:04:11.000Z",
+  "skins": [{ "id": 103097, "purchasedAt": "2026-11-04T21:12:00.000Z" }, { "id": 81033, "purchasedAt": null }] }
+```
+→ `204`.
+
+- `puuid`: the API PUUID of the League account signed in to the client, one this device proved
+  (§10.3) and that belongs to the Invade account the device is connected to. The device must hold
+  a client link for it (§2.3, `source: lcu`): a Riot ID link proves nothing. Otherwise 403
+  `E_NOT_DETECTED`; a device not connected to an account gets 403 `E_NOT_CONNECTED`.
+- `skins`: every skin the client says the account owns, at most 5,000: `id` is the skin's id as the
+  game data writes it (`champion id * 1000 + skin number`, 1000 to 999999; base skins and chromas
+  are left out), `purchasedAt` when it was bought (ISO), or `null` when the client does not say.
+- `readAt`: when the app read the client (ISO). A read older than the one core holds for that
+  account changes nothing (still `204`); one more than five minutes ahead of core's clock, or a
+  purchase date before 2009 or after the read, is refused whole: 422 `E_ACCOUNT_INVALID`. A body
+  of another shape: 422 `E_VALIDATION_ERROR`.
+
+The newest read replaces the account's whole set: a skin missing from it is no longer owned.
+Core keeps the set per League account and draws a person's collection as the union over the
+accounts they own (an account they marked "Not mine" in §10.4 no longer counts; one that moves to
+another person moves with its skins). Ids the game data does not know yet are kept and appear once
+the live patch's catalogue has them. Deleting the Invade account deletes what its apps sent.
+
+### 13.2 Desktop behaviour
+
+- After each read of the Collection page's data, once connected (§10.6), the app sends it for the
+  account signed in to the client, then not again until the set or a purchase date changes, or a
+  day passed.
+- A 403 is not retried until the next client sign-in; a 429 waits `Retry-After`; other failures
+  retry with the backoff of §5.3.
