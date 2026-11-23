@@ -71,6 +71,8 @@ export default class CreateInvadeClips extends BaseSchema {
       t.timestamp('created_at', { useTz: true }).notNullable().defaultTo(this.now())
       t.index(['clip_id', 'created_at'])
       t.index(['parent_id'])
+      // A person's comments: the replies they are told about, and their account's deletion.
+      t.index(['user_id'])
     })
 
     /** A GG: one person's nod to a clip or a comment. */
