@@ -100,7 +100,8 @@ export default class CreateInvadeAccounts extends BaseSchema {
      * League accounts a person plays on, each proven by a connected desktop app that saw it signed
      * in to the League client. One owner per League account: a newer proof from another person
      * moves it. `removed_at`: the owner said it is not theirs; the app does not add it back on its
-     * own, only when asked. `shown`: the owner lets their Invade profile show it.
+     * own, only when asked. `shown`: the owner lets their Invade profile show it; hidden until they
+     * do.
      */
     this.schema.createTable('invade_owned_account', (t) => {
       t.text('puuid').primary().references('puuid').inTable('riot_player').onDelete('CASCADE')
@@ -111,7 +112,7 @@ export default class CreateInvadeAccounts extends BaseSchema {
         .onDelete('CASCADE')
         .index()
       t.uuid('device_id').nullable().references('id').inTable('desktop_device').onDelete('SET NULL')
-      t.boolean('shown').notNullable().defaultTo(true)
+      t.boolean('shown').notNullable().defaultTo(false)
       t.timestamp('verified_at', { useTz: true }).notNullable().defaultTo(this.now())
       t.timestamp('removed_at', { useTz: true }).nullable()
     })

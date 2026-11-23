@@ -921,7 +921,7 @@ elsewhere. A Riot ID link (`source: riot_id`) proves nothing.
 What it cannot stop: a modified client on the person's own computer can make any request its device
 can sign (§1.2), including a client link for a raw PUUID it learned elsewhere. Owning a League
 account gives no access to anything private; a person's League accounts show on their Invade
-profile only as they allow (`shown`).
+profile only once they allow it (`shown`, false for a newly proven account).
 
 ### 10.4 `POST /api/desktop/account/changes` (auth)
 

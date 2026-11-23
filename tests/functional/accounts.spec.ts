@@ -175,7 +175,8 @@ test.group('Invade accounts', (group) => {
     assert.equal(proven.body().mainPuuid, player.puuid)
     assert.deepEqual(
       proven.body().accounts.map((a: { puuid: string; shown: boolean }) => [a.puuid, a.shown]),
-      [[player.puuid, true]]
+      // Shown on the profile only once its owner says so.
+      [[player.puuid, false]]
     )
 
     const seen = await app.get('/api/desktop/account')
