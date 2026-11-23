@@ -361,7 +361,7 @@ export default class LeaderboardsController {
 
     const since = Date.now() - RECENT_DAYS * DAY_MS
     const all = ladderService.oneTricks(snapshot).filter((t) => !recent || t.trick.last >= since)
-    const place = new Map(snapshot.entries.map((e, i) => [e.puuid, i + 1]))
+    const place = ladderService.placesOf(snapshot)
     const byChampion = new Map<number, { entry: ApexEntry; trick: OneTrick }[]>()
     for (const t of all) {
       const list = byChampion.get(t.trick.champion) ?? []

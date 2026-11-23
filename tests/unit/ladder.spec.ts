@@ -14,7 +14,7 @@ import {
   type GamesRow,
   type TierRead,
 } from '#services/ladder'
-import { averageScores } from '#services/ladder_service'
+import ladderService, { averageScores, type LadderSnapshot } from '#services/ladder_service'
 import {
   baselineOf,
   cutoffLine,
@@ -323,5 +323,34 @@ test.group('Ladder history', () => {
     assert.equal(placeOf(entries, identities, 'briar signal', 'euw'), 1)
     assert.equal(placeOf(entries, identities, 'Moss Lantern', 'ZEN'), 3)
     assert.isNull(placeOf(entries, identities, 'Moss Lantern', 'EUW'))
+  })
+
+  test('places rows asked one at a time on the whole ladder, read once per snapshot', ({
+    assert,
+  }) => {
+    const entries = Array.from({ length: 2000 }, (_, i) => entry(`p${i}`, 'MASTER', 3000 - i, NOW))
+    const snapshot: LadderSnapshot = {
+      platform: 'EUW1',
+      reads,
+      entries,
+      players: {},
+      identities: {},
+      pros: {},
+      history: {
+        moves: {},
+        since: null,
+        cutoffsThen: null,
+        lines: { CHALLENGER: [], GRANDMASTER: [] },
+      },
+    }
+    // The one-tricks page asks for its rows one by one: each must not read the whole ladder again.
+    assert.strictEqual(ladderService.placesOf(snapshot), ladderService.placesOf(snapshot))
+    const places = entries.map((e) => ladderService.rowsOf(snapshot, [e])[0].place)
+    assert.deepEqual(
+      places,
+      entries.map((_, i) => i + 1)
+    )
+    const other = { ...snapshot, entries: [...entries].reverse() }
+    assert.equal(ladderService.rowsOf(other, [entries[0]])[0].place, entries.length)
   })
 })

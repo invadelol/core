@@ -423,6 +423,9 @@ const NO_HISTORY: LadderHistory = {
   lines: { CHALLENGER: [], GRANDMASTER: [] },
 }
 
+/** `LadderService.placesOf`'s maps, dropped with their snapshot. */
+const PLACES = new WeakMap<LadderSnapshot, Map<string, number>>()
+
 export class LadderService {
   source: LadderSource = clickhouseSource
   history: HistoryStore = redisHistory
@@ -511,9 +514,22 @@ export class LadderService {
     return { platform, reads, entries, players, identities: named, pros, history }
   }
 
+  /**
+   * Each player's place on the whole ladder (1 is first), built once per snapshot: pages ask for
+   * rows one at a time, and rebuilding it for each kept the process busy for seconds.
+   */
+  placesOf(snapshot: LadderSnapshot): Map<string, number> {
+    let places = PLACES.get(snapshot)
+    if (!places) {
+      places = new Map(snapshot.entries.map((e, i) => [e.puuid, i + 1]))
+      PLACES.set(snapshot, places)
+    }
+    return places
+  }
+
   /** Rows as pages show them, with their place on the whole ladder. */
   rowsOf(snapshot: LadderSnapshot, entries: ApexEntry[]): LadderPlayer[] {
-    const place = new Map(snapshot.entries.map((e, i) => [e.puuid, i + 1]))
+    const place = this.placesOf(snapshot)
     return entries.map((e) => {
       const id = snapshot.identities[e.puuid]
       const games = snapshot.players[e.puuid]
