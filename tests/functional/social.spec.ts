@@ -48,14 +48,15 @@ test.group('Follows and Favorites', (group) => {
       id,
       user_id: person.id,
       puuid,
-      match_id: 'EUW1_1',
+      // One clip per game and account: each its own game.
+      match_id: `EUW1_${clips.length}`,
       platform: 'EUW1',
       champion_id: 81,
-      game_time: 540,
+      start_ms: 540_000,
       duration_ms: 21000,
       title: 'he really thought he had me',
-      event: 'kill',
       visibility,
+      comments: 'everyone',
       status: 'ready',
     })
     return id
@@ -195,12 +196,15 @@ test.group('Follows and Favorites', (group) => {
     assert,
   }) => {
     const me = await accounts.person()
-    const player = await seed.player('EUW1', { game_name: 'Glass Orchard', tag_line: 'EUW' })
+    // Its own Riot ID each run: the site keeps a Riot ID's PUUID in Redis between runs.
+    const name = `Orchard ${randomUUID().slice(0, 6)}`
+    const player = await seed.player('EUW1', { game_name: name, tag_line: 'EUW' })
     await follow(me, 'player', player.puuid)
-    const page = await site(http, me).get('/Glass%20Orchard-EUW')
+    const url = `/${encodeURIComponent(name)}-EUW`
+    const page = await site(http, me).get(url)
     page.assertStatus(200)
     assert.deepEqual(pageProps(page.text()).follow, { following: true, followers: 1 })
-    const visitor = await http.get('/Glass%20Orchard-EUW')
+    const visitor = await http.get(url)
     assert.deepEqual(pageProps(visitor.text()).follow, { following: false, followers: 1 })
   })
 

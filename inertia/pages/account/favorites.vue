@@ -9,7 +9,7 @@ import SaveStar from '../../components/social/SaveStar.vue'
 import EmptyState from '../../components/ui/EmptyState.vue'
 import Segmented from '../../components/ui/Segmented.vue'
 import Skeleton from '../../components/ui/Skeleton.vue'
-import { champIcon, championName, profileIcon } from '../../lib/assets.js'
+import { champIcon, championName } from '../../lib/assets.js'
 import { duration, profilePath } from '../../lib/format.js'
 import { since } from '../../lib/ladders.js'
 import { detailOf } from '../../lib/match.js'
@@ -106,10 +106,11 @@ const matchHref = (m: SavedMatch) =>
                 <SaveStar kind="clip" :id="s.clip.id" :label="`the clip ${s.clip.title}`" />
                 <Link class="ac-clip-t ell" :href="s.clip.url">{{ s.clip.title }}</Link>
                 <span class="ac-by">
-                  <img :src="profileIcon(s.player.profileIconId)" alt="" />
+                  <img v-if="s.by.avatar" :src="s.by.avatar" alt="" />
                   <span class="ell"
-                    ><Link :href="s.player.href">{{ s.player.gameName }}</Link
-                    >, {{ championName(s.clip.championId) }},
+                    ><Link v-if="s.by.href" :href="s.by.href">{{ s.by.name }}</Link
+                    ><template v-else>{{ s.by.name }}</template>,
+                    {{ championName(s.clip.championId) }},
                     {{ since(Date.parse(s.clip.postedAt)) }}</span
                   >
                 </span>

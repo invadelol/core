@@ -9,8 +9,11 @@ import type { Match } from './types.js'
 /** A saved clip with who posted it. */
 export interface SavedClip {
   clip: ClipCard
-  /** The League account that played it: its Riot ID and icon, and its page. */
-  player: { gameName: string; tagLine: string; profileIconId: number | null; href: string }
+  /**
+   * The person who posted it: their Invade name, picture and profile (`/u/<handle>`). Never the
+   * League account behind it, which only shows where its owner chose to show it.
+   */
+  by: { name: string; avatar: string | null; href: string | null }
   /** ISO. */
   savedAt: string
 }

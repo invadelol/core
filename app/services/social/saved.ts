@@ -2,7 +2,13 @@ import db from '@adonisjs/lucid/services/db'
 import type { QueryClientContract } from '@adonisjs/lucid/types/database'
 import matchRepository from '#services/analytics/match_repository'
 import { AccountError } from '#services/accounts/errors'
-import { PUUID, iso, playerHref } from '#services/social/cards'
+import {
+  PUUID,
+  SHOWN_MAIN_COLUMNS,
+  SHOWN_MAIN_JOIN,
+  avatarOf,
+  iso,
+} from '#services/social/cards'
 import { ACCOUNT_LIMITS, SAVED_KINDS, type SavedKind } from '../../../inertia/lib/account_types.js'
 import type { ClipCard, ClipCardVisibility } from '../../../inertia/lib/profile_types.js'
 import type {
@@ -37,17 +43,17 @@ function clipCard(row: Row): ClipCard {
   return {
     id,
     url: `/clip/${id}`,
-    poster: row.has_poster ? `/clips/${id}.jpg` : null,
+    poster: `/clips/${id}.jpg`,
     title: String(row.title),
     championId: Number(row.champion_id),
     matchId: row.match_id ? String(row.match_id) : null,
-    startMs: Number(row.game_time) * 1000,
+    startMs: Number(row.start_ms),
     durationMs: Number(row.duration_ms),
     moment: null,
     visibility: row.visibility as ClipCardVisibility,
     views: Number(row.views),
-    comments: 0,
-    gg: 0,
+    comments: Number(row.comment_count),
+    gg: Number(row.gg),
     postedAt: iso(row.created_at),
   }
 }
@@ -162,10 +168,15 @@ class SavedService {
 
   private async clips(userId: string): Promise<SavedClip[]> {
     const rows = await db.rawQuery(
-      `SELECT c.*, s.created_at AS saved_at, p.game_name, p.tag_line, p.profile_icon_id
+      `SELECT c.*, s.created_at AS saved_at, u.display_name, u.handle, ${SHOWN_MAIN_COLUMNS},
+         (SELECT count(*) FROM invade_clip_comment cc WHERE cc.clip_id = c.id)::int
+           AS comment_count,
+         (SELECT count(*) FROM invade_gg g
+           WHERE g.target_kind = 'clip' AND g.target_id = c.id)::int AS gg
        FROM invade_saved s
        JOIN invade_clip c ON c.id = s.target_id
-       JOIN riot_player p ON p.puuid = c.puuid
+       JOIN invade_user u ON u.id = c.user_id
+       ${SHOWN_MAIN_JOIN}
        WHERE s.user_id = ? AND s.kind = 'clip' AND ${VISIBLE_CLIP}
        ORDER BY s.created_at DESC
        LIMIT ${PAGE}`,
@@ -173,11 +184,10 @@ class SavedService {
     )
     return rows.rows.map((row: Row) => ({
       clip: clipCard(row),
-      player: {
-        gameName: String(row.game_name),
-        tagLine: String(row.tag_line),
-        profileIconId: row.profile_icon_id === null ? null : Number(row.profile_icon_id),
-        href: playerHref(row.game_name, row.tag_line),
+      by: {
+        name: String(row.display_name),
+        avatar: avatarOf(row),
+        href: row.handle ? `/u/${row.handle}` : null,
       },
       savedAt: iso(row.saved_at),
     }))
