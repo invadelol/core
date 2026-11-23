@@ -1,5 +1,6 @@
 import db from '@adonisjs/lucid/services/db'
 import logger from '@adonisjs/core/services/logger'
+import type { RiotAPITypes } from '@fightmegg/riot-api'
 import riotApiService from '#services/riot/api'
 import { inBackground } from '#services/riot/client'
 import riotAssets from '#services/riot/assets'
@@ -17,15 +18,13 @@ import type { DamageLine, KillRecap } from '../../../inertia/lib/clip_types.js'
 
 const SLOTS = ['q', 'w', 'e', 'r'] as const
 
-interface DamageEntry {
-  basic?: boolean
-  magicDamage?: number
-  physicalDamage?: number
-  trueDamage?: number
-  participantId?: number
-  spellSlot?: number
-  type?: string
-}
+/** A timeline event, with the shutdown gold Riot sends beside the bounty (missing upstream). */
+type TimelineEvent = RiotAPITypes.MatchV5.EventDTO & { shutdownBounty?: number }
+/** One entry of a kill's `victimDamageDealt` / `victimDamageReceived` (typed as strings upstream). */
+type DamageEntry = Partial<RiotAPITypes.MatchV5.VictimDamageDTO>
+
+const damageOf = (entries: TimelineEvent['victimDamageDealt']) =>
+  (entries ?? []) as unknown as DamageEntry[]
 
 const sourceOf = (entry: DamageEntry) => {
   if (entry.basic) return 'attack'
@@ -84,15 +83,14 @@ export async function readRecap(clip: RecapClip): Promise<KillRecap[]> {
   const to = clip.startMs + clip.durationMs + EVENT_MARGIN_MS
 
   const kills = (timeline.info?.frames ?? [])
-    .flatMap((frame) => frame.events ?? [])
-    .filter((e: Record<string, any>) => e.type === 'CHAMPION_KILL')
-    .filter((e: Record<string, any>) => e.timestamp >= from && e.timestamp <= to)
+    .flatMap((frame): TimelineEvent[] => frame.events ?? [])
+    .filter((e) => e.type === 'CHAMPION_KILL' && e.timestamp >= from && e.timestamp <= to)
     .filter(
-      (e: Record<string, any>) =>
+      (e) =>
         e.killerId === player ||
         e.victimId === player ||
         (e.assistingParticipantIds ?? []).includes(player)
-    ) as Array<Record<string, any>>
+    )
   if (!kills.length) return []
 
   const champions = await championsOf(clip.matchId, seats)
@@ -102,17 +100,17 @@ export async function readRecap(clip: RecapClip): Promise<KillRecap[]> {
     text.set(id, found?.abilities ?? {})
   }
   return kills.flatMap((kill) => {
-    const killer = champions.get(kill.killerId)
-    const victim = champions.get(kill.victimId)
+    const killer = champions.get(kill.killerId ?? 0)
+    const victim = champions.get(kill.victimId ?? 0)
     if (!killer || !victim) return []
-    const received = (kill.victimDamageReceived ?? []) as DamageEntry[]
-    const dealt = (kill.victimDamageDealt ?? []) as DamageEntry[]
+    const received = damageOf(kill.victimDamageReceived)
+    const dealt = damageOf(kill.victimDamageDealt)
     return [
       {
-        t: Number(kill.timestamp),
+        t: kill.timestamp,
         killer,
         victim,
-        bounty: Number(kill.bounty) + Number(kill.shutdownBounty ?? 0) || 0,
+        bounty: (kill.bounty ?? 0) + (kill.shutdownBounty ?? 0),
         dealt: lines(
           received.filter((d) => d.participantId === kill.killerId),
           text.get(killer) ?? {}
@@ -130,7 +128,9 @@ export async function readRecap(clip: RecapClip): Promise<KillRecap[]> {
 async function championsOf(matchId: string, seats: Map<number, string>) {
   const match = await matchRepository.getSummaryById(matchId)
   const byPuuid = new Map<string, number>(
-    (match?.participants ?? []).map((p: any) => [String(p.puuid), Number(p.championId)] as const)
+    (match?.participants ?? []).map(
+      (p: { puuid: string; championId: number }) => [p.puuid, Number(p.championId)] as const
+    )
   )
   const out = new Map<number, number>()
   for (const [seat, puuid] of seats) {
