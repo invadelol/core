@@ -57,6 +57,20 @@ test.group('Shared builds', (group) => {
     assert.include(response.header('cache-control'), 'max-age=604800')
   })
 
+  test('a version 2 link opens, its picture too', async ({ client, assert }) => {
+    const v2 =
+      '/desktop/build/2/ahri/mid/s1056,2003.1056-b3020-c3118,4646-l3089-l3157,3102-o3135-mQWE'
+    const page = await client.get(`${v2}?n=Burst`)
+    page.assertStatus(200)
+    assert.include(
+      page.text(),
+      'property="og:image" content="https://invade.lol/og/build/2/ahri/mid/'
+    )
+    const image = await client.get(v2.replace('/desktop/build', '/og/build') + '.jpg?n=Burst')
+    image.assertStatus(200)
+    image.assertHeader('content-type', 'image/jpeg')
+  })
+
   test('unknown champions, items and broken links are 404', async ({ client }) => {
     for (const path of [
       '/desktop/build/1/teemo/mid/-3020-3118',
