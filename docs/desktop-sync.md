@@ -851,10 +851,19 @@ is a 401, which would make the app register again:
 | status | code | meaning |
 | --- | --- | --- |
 | 403 | `E_NOT_CONNECTED` | the device is not connected to an Invade account |
+| 403 | `E_ACCOUNT_SUSPENDED` | the Invade account the device is connected to is suspended (added in v1.8, see below) |
 | 403 | `E_NOT_DETECTED` | no client link (§2.3, `source: lcu`) of this device for that raw PUUID, or its mapping is disputed |
 | 404 | `E_ACCOUNT_NOT_FOUND` | the person, player, pro, clip or match does not exist (or the clip may not be watched) |
 | 422 | `E_ACCOUNT_INVALID`, `E_ACCOUNT_LIMIT` | a bad change, or over a limit (2,000 follows, 1,000 saved items, 50 changes a request) |
 | 429 | `E_RATE_LIMITED` | per device and hour: pair 20, read 600, changes 600, verify 60, build syncs 120 |
+
+**Suspended accounts** (added in v1.8, no version change). The team can suspend an Invade account.
+While it is suspended, every route of §10 to §14 that acts for the connected account answers 403
+`E_ACCOUNT_SUSPENDED` (§10.2 included, instead of its body): the app keeps the device connected,
+shows that the account is suspended (no account, no clips, no sync) and does not offer to connect
+again; `DELETE /api/desktop/account` (§10.5) still disconnects the app. Everything comes back as
+it was once the suspension is lifted. On the website the account is signed out, `/signin` says it
+is suspended, and its profile, clips, comments, reviews and lists are not shown to anyone.
 
 ### 10.1 `POST /api/desktop/account/pair` (auth)
 
@@ -1063,8 +1072,18 @@ profile), `DELETE /api/clips/:id`, `POST /api/clips/:id/comments` (`body` 1 to 5
 `parentId` to answer a comment: one level of replies, `atMs` the moment of the clip it names),
 `DELETE /api/clips/:id/comments/:comment` (its writer or the clip's owner; its replies go with it),
 `PUT`/`DELETE /api/clips/:id/gg` and `/api/clips/:id/comments/:comment/gg` (a GG, never on one's
-own). A comment names its writer's Invade account and the champion they played in that game,
-never their League account. Deleting an Invade account deletes its clips, comments, GGs and files.
+own), `POST /api/clips/:id/report` and `/api/clips/:id/comments/:comment/report` (`reason`: `spam`,
+`harassment`, `cheating`, `explicit` or `other`, `note` up to 280 characters: a report to the
+team, once per person and target, never on one's own, 20 an hour; 201, or 409 `E_REPORT_EXISTS`,
+403 `E_REPORT_OWN`). A comment names its writer's Invade account and the champion they played in
+that game, never their League account. Deleting an Invade account deletes its clips, comments,
+GGs and files.
+
+**Taken down** (added in v1.8, no version change). The team can take a clip or a comment down. It
+disappears at once from every page and list, from §11.3's list and from §12 (a comment with its
+replies), and is deleted for good seven days later (a clip with its files) unless the team
+restores it. A game whose clip was taken down takes a new clip without `replace` (§11.1); the
+person is not told in this version.
 
 ## 12. Notifications (contract v1.8)
 
@@ -1085,6 +1104,7 @@ first, 30 at most. `after`: the `cursor` of an earlier answer, to read only what
 answer then keeps that cursor when nothing is new). `text`: the comment or reply. `championId`
 and `inGame`: the champion the commenter played in the clip's game, when they played in it.
 `avatarUrl`: the actor's main League account's icon, only when they show it on their profile.
+Nothing comes from a suspended account (§10) or about a clip or comment taken down (§11.3).
 
 ## 13. Collection (contract v1.8)
 
