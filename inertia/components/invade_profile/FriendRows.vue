@@ -58,7 +58,7 @@ const shown = computed(() => props.friends)
       </span>
       <span class="pf-frt">
         <b>{{ f.name }}<small v-if="f.isViewer">You</small></b>
-        <span class="pf-st" :class="{ live: f.live }"
+        <span class="pf-st" :class="{ playing: f.live }"
           ><Icon v-if="f.live" name="live" :size="13" />{{ status(f) }}</span
         >
       </span>
@@ -101,7 +101,7 @@ const shown = computed(() => props.friends)
           loading="lazy"
         />
       </span>
-      <span class="pf-st" :class="{ live: f.live }"
+      <span class="pf-st" :class="{ playing: f.live }"
         ><Icon v-if="f.live" name="live" :size="13" />{{ status(f) }}</span
       >
     </div>

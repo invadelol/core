@@ -371,6 +371,14 @@
     display: none;
   }
 }
+@container (max-width: 380px) {
+  .vb .pf-plate.main .pf-pt {
+    grid-template-columns: 76px minmax(0, 1fr);
+  }
+  .vb .pf-plate.main .pf-ch {
+    display: none;
+  }
+}
 @container (max-width: 300px) {
   .vb .pf-plate.alt .pf-pt {
     grid-template-columns: 72px minmax(0, 1fr);
@@ -556,6 +564,9 @@
   border-radius: 50%;
   background: rgb(10 9 16 / 0.55);
   color: #fff;
+}
+.vb .pf-play .i {
+  fill: currentColor;
 }
 .vb .pf-dur {
   position: absolute;
@@ -830,10 +841,10 @@
   color: var(--t3);
   white-space: nowrap;
 }
-.vb .pf-st.live {
+.vb .pf-st.playing {
   color: var(--t1);
 }
-.vb .pf-st.live .i {
+.vb .pf-st.playing .i {
   color: var(--acc);
 }
 .vb .pf-playing {

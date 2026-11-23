@@ -1266,7 +1266,19 @@
     padding: 14px 16px;
   }
   .vb .skn-list {
-    grid-template-columns: 120px minmax(0, 1fr);
+    grid-template-columns: 128px minmax(0, 1fr);
+  }
+  .vb .skn-fp {
+    width: 40px;
+  }
+  .vb .skn-fp + .skn-fp {
+    margin-left: -18px;
+  }
+  .vb .skn-fw {
+    padding: 8px 16px;
+  }
+  .vb .skn-fw > a:last-child {
+    display: none;
   }
   .vb .skn-acts .skn-act {
     height: 64px;

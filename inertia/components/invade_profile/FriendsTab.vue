@@ -66,7 +66,6 @@ onBeforeUnmount(() => clearInterval(tick))
       <FriendRows v-if="friends.length" :friends="friends" :names="names" rows />
       <EmptyState
         v-else
-        compact
         title="No friends yet"
         :line="
           owner
