@@ -1,30 +1,49 @@
 import { BaseSchema } from '@adonisjs/lucid/schema'
 
 /**
- * Invade accounts: a person who signs in on the site with Discord or Google, the browser sessions
- * of that person, the desktop apps they connected, the League accounts the desktop app proved they
- * play on, and their favorite players sorted into folders.
+ * Invade accounts: a person who signs in on the site with Discord, the browser sessions of that
+ * person, the desktop apps they connected, and the League accounts the desktop app proved they
+ * play on.
  *
  * Additive and safe on a live database: new tables only, nothing existing is altered. An Invade
  * account is not a League account and not a desktop device: the three are joined here, never
- * merged. Only provider subjects identify a person (no e-mail address is asked for or stored).
+ * merged. Only the provider's subject identifies a person (no e-mail address is asked for or
+ * stored).
  */
 export default class CreateInvadeAccounts extends BaseSchema {
   async up() {
     this.schema.createTable('invade_user', (t) => {
       t.uuid('id').primary().defaultTo(this.raw('gen_random_uuid()'))
       t.string('display_name', 64).notNullable()
+      // The person's address on the site (`/u/<handle>`): made from their Discord name at the
+      // first sign-in, a number added when it is taken.
+      t.string('handle', 24).notNullable().unique()
       // The League account opened first on the site and in the app. One the user owns (below).
       t.text('main_puuid')
         .nullable()
         .references('puuid')
         .inTable('riot_player')
         .onDelete('SET NULL')
+      // Privacy: who may watch a new clip and comment on it by default, whether the person's
+      // clips show on the profiles of their League accounts, whether others may tag them in
+      // their clips, and whether League's Hide My Name keeps them off other people's clips.
+      t.string('clip_visibility', 8).notNullable().defaultTo('everyone')
+      t.string('clip_comments', 8).notNullable().defaultTo('everyone')
+      t.boolean('clips_on_profile').notNullable().defaultTo(true)
+      t.boolean('allow_tags').notNullable().defaultTo(true)
+      t.boolean('streamer_mode').notNullable().defaultTo(true)
       t.timestamp('created_at', { useTz: true }).notNullable().defaultTo(this.now())
       t.timestamp('last_seen_at', { useTz: true }).nullable()
+      t.check(`handle ~ '^[a-z0-9_]{2,24}$'`, [], 'invade_user_handle_format')
+      t.check(
+        `clip_visibility IN ('everyone', 'link', 'private')`,
+        [],
+        'invade_user_clip_visibility'
+      )
+      t.check(`clip_comments IN ('everyone', 'game', 'off')`, [], 'invade_user_clip_comments')
     })
 
-    /** A sign-in method: the provider's own stable id for the person (Discord user id, Google `sub`). */
+    /** A sign-in method: the provider's own stable id for the person (the Discord user id). */
     this.schema.createTable('invade_identity', (t) => {
       t.string('provider', 16).notNullable()
       t.string('subject', 255).notNullable()
@@ -32,8 +51,9 @@ export default class CreateInvadeAccounts extends BaseSchema {
       t.string('display_name', 100).nullable()
       t.timestamp('created_at', { useTz: true }).notNullable().defaultTo(this.now())
       t.primary(['provider', 'subject'])
-      // One Discord and one Google per Invade account.
+      // One identity per provider and account.
       t.unique(['user_id', 'provider'])
+      t.check(`provider IN ('discord')`, [], 'invade_identity_provider')
     })
 
     /** Browser sessions. Only the SHA-256 of the cookie's token is kept. */
@@ -80,7 +100,7 @@ export default class CreateInvadeAccounts extends BaseSchema {
      * League accounts a person plays on, each proven by a connected desktop app that saw it signed
      * in to the League client. One owner per League account: a newer proof from another person
      * moves it. `removed_at`: the owner said it is not theirs; the app does not add it back on its
-     * own, only when asked.
+     * own, only when asked. `shown`: the owner lets their Invade profile show it.
      */
     this.schema.createTable('invade_owned_account', (t) => {
       t.text('puuid').primary().references('puuid').inTable('riot_player').onDelete('CASCADE')
@@ -91,44 +111,14 @@ export default class CreateInvadeAccounts extends BaseSchema {
         .onDelete('CASCADE')
         .index()
       t.uuid('device_id').nullable().references('id').inTable('desktop_device').onDelete('SET NULL')
+      t.boolean('shown').notNullable().defaultTo(true)
       t.timestamp('verified_at', { useTz: true }).notNullable().defaultTo(this.now())
       t.timestamp('removed_at', { useTz: true }).nullable()
-    })
-
-    this.schema.createTable('invade_favorite_folder', (t) => {
-      // Made by the client, so an app can create a folder and file a player in it offline-first.
-      t.uuid('id').primary()
-      t.uuid('user_id')
-        .notNullable()
-        .references('id')
-        .inTable('invade_user')
-        .onDelete('CASCADE')
-        .index()
-      t.string('name', 40).notNullable()
-      t.timestamp('created_at', { useTz: true }).notNullable().defaultTo(this.now())
-    })
-    this.schema.raw(
-      'CREATE UNIQUE INDEX invade_favorite_folder_name_uq ON invade_favorite_folder (user_id, lower(name))'
-    )
-
-    this.schema.createTable('invade_profile_favorite', (t) => {
-      t.uuid('user_id').notNullable().references('id').inTable('invade_user').onDelete('CASCADE')
-      t.text('puuid').notNullable().references('puuid').inTable('riot_player').onDelete('CASCADE')
-      // Deleting a folder keeps its players, unfiled.
-      t.uuid('folder_id')
-        .nullable()
-        .references('id')
-        .inTable('invade_favorite_folder')
-        .onDelete('SET NULL')
-      t.timestamp('created_at', { useTz: true }).notNullable().defaultTo(this.now())
-      t.primary(['user_id', 'puuid'])
     })
   }
 
   async down() {
     for (const table of [
-      'invade_profile_favorite',
-      'invade_favorite_folder',
       'invade_owned_account',
       'invade_pairing',
       'invade_device_user',

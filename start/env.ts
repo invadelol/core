@@ -112,16 +112,14 @@ export default await Env.create(new URL('../', import.meta.url), {
   | Invade accounts (app/services/accounts)
   |----------------------------------------------------------
   | The site's own origin: browser account requests must come from it, and the
-  | OAuth redirect URLs are built on it (`<origin>/auth/discord/callback`,
-  | `<origin>/auth/google/callback`). Unset: https://invade.lol. A provider
-  | without both its id and secret is not offered.
+  | Discord redirect URL is built on it (`<origin>/auth/discord/callback`).
+  | Unset: https://invade.lol. Without the Discord id and secret nobody can
+  | sign in.
   */
   ACCOUNT_ORIGIN: Env.schema.string.optional(),
   DISCORD_CLIENT_ID: Env.schema.string.optional(),
   DISCORD_CLIENT_SECRET: Env.schema.string.optional(),
-  GOOGLE_CLIENT_ID: Env.schema.string.optional(),
-  GOOGLE_CLIENT_SECRET: Env.schema.string.optional(),
-  /** Local only: both providers answered by scripts/oauth_mock.mjs at this origin. Ignored in production. */
+  /** Local only: Discord answered by scripts/oauth_mock.mjs at this origin. Ignored in production. */
   OAUTH_MOCK_ORIGIN: Env.schema.string.optional(),
 
   /*

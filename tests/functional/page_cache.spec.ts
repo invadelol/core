@@ -82,7 +82,7 @@ test.group('Page cache', (group) => {
   }) => {
     const { default: sessionService } = await import('#services/accounts/session_service')
     const { default: db } = await import('@adonisjs/lucid/services/db')
-    const { userId } = await sessionService.signIn('discord', `t-${ref()}`, 'Briar', null)
+    const userId = await sessionService.signIn(`t-${ref()}`, 'Briar')
     const token = await sessionService.create(userId)
     try {
       const warm = await client.get('/app').header('accept-encoding', 'identity')
@@ -93,7 +93,7 @@ test.group('Page cache', (group) => {
         .withCookie('invade_session', token)
       signedIn.assertStatus(200)
       assert.isUndefined(signedIn.header('x-cache'))
-      assert.include(signedIn.text(), '&quot;viewer&quot;:{&quot;name&quot;:&quot;Briar&quot;')
+      assert.include(signedIn.text(), `&quot;viewer&quot;:{&quot;id&quot;:&quot;${userId}&quot;`)
       // The shared copy is still the visitor's one.
       const shared = await client.get('/app').header('accept-encoding', 'identity')
       shared.assertHeader('x-cache', 'MEMORY')

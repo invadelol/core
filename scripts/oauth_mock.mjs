@@ -1,16 +1,13 @@
 #!/usr/bin/env node
 /**
- * A local stand-in for Discord's and Google's OAuth endpoints, to sign in on a development server
- * without either of them: set `OAUTH_MOCK_ORIGIN=http://127.0.0.1:3364` in `.env` (ignored in
- * production) and run
+ * A local stand-in for Discord's OAuth endpoints, to sign in on a development server without
+ * Discord: set `OAUTH_MOCK_ORIGIN=http://127.0.0.1:3364` in `.env` (ignored in production) and run
  *
  *   node scripts/oauth_mock.mjs [port]
  *
- * The authorize page lists a few fictional people (or takes any name); the token and identity
- * endpoints answer like the real ones, PKCE included, so the site's whole flow runs: state cookie,
- * code exchange, identity, session.
+ * The authorize page lists a few fictional people; the token and identity endpoints answer like
+ * Discord's, so the site's whole flow runs: state cookie, code exchange, identity, session.
  */
-import { createHash } from 'node:crypto'
 import { createServer } from 'node:http'
 
 const port = Number(process.argv[2] ?? 3364)
@@ -28,8 +25,7 @@ const unpack = (value) => {
     return null
   }
 }
-const escape = (value) =>
-  String(value).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
+const escape = (value) => String(value).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 
 function json(res, status, body) {
   res.writeHead(status, { 'Content-Type': 'application/json' })
@@ -45,7 +41,7 @@ async function form(req) {
 createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', `http://127.0.0.1:${port}`)
   const [, provider, step] = url.pathname.split('/')
-  if (!['discord', 'google'].includes(provider)) return json(res, 404, { error: 'not_found' })
+  if (provider !== 'discord') return json(res, 404, { error: 'not_found' })
 
   if (step === 'authorize') {
     const q = url.searchParams
@@ -55,23 +51,24 @@ createServer(async (req, res) => {
     }
     const back = (person) => {
       const target = new URL(redirect)
-      const code = pack({ provider, ...person, challenge: q.get('code_challenge') ?? null })
-      target.searchParams.set('code', code)
+      target.searchParams.set('code', pack(person))
       target.searchParams.set('state', q.get('state'))
       return target.href
     }
     // `?as=<name>` signs straight in, for scripts.
     if (q.get('as')) {
-      res.writeHead(302, { Location: back({ id: `9${q.get('as').length}0000`, name: q.get('as') }) })
+      res.writeHead(302, {
+        Location: back({ id: `9${q.get('as').length}0000`, name: q.get('as') }),
+      })
       return res.end()
     }
     const denied = new URL(redirect)
     denied.searchParams.set('error', 'access_denied')
     denied.searchParams.set('state', q.get('state'))
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
-    return res.end(`<!doctype html><meta charset="utf-8"><title>Mock ${provider}</title>
+    return res.end(`<!doctype html><meta charset="utf-8"><title>Mock Discord</title>
 <body style="font:15px system-ui;margin:48px auto;max-width:420px;color:#222">
-<h1 style="font-size:20px">Mock ${escape(provider)} sign-in</h1>
+<h1 style="font-size:20px">Mock Discord sign-in</h1>
 <p>Local development only. Continue as:</p>
 <ul>${PEOPLE.map((p) => `<li><a href="${escape(back(p))}">${escape(p.name)}</a></li>`).join('')}</ul>
 <p><a href="${escape(denied.href)}">Cancel</a></p></body>`)
@@ -80,16 +77,9 @@ createServer(async (req, res) => {
   if (step === 'token' && req.method === 'POST') {
     const body = await form(req)
     const code = unpack(body.get('code'))
-    if (!code || code.provider !== provider || !body.get('client_secret')) {
-      return json(res, 400, { error: 'invalid_grant' })
-    }
-    if (code.challenge) {
-      const verifier = body.get('code_verifier') ?? ''
-      const hash = createHash('sha256').update(verifier).digest('base64url')
-      if (hash !== code.challenge) return json(res, 400, { error: 'invalid_grant' })
-    }
+    if (!code?.id || !body.get('client_secret')) return json(res, 400, { error: 'invalid_grant' })
     return json(res, 200, {
-      access_token: pack({ provider, id: code.id, name: code.name }),
+      access_token: pack({ id: code.id, name: code.name }),
       token_type: 'Bearer',
       expires_in: 3600,
     })
@@ -97,17 +87,15 @@ createServer(async (req, res) => {
 
   if (step === 'identity') {
     const token = unpack((req.headers.authorization ?? '').replace(/^Bearer /, ''))
-    if (!token || token.provider !== provider) return json(res, 401, { error: 'invalid_token' })
-    return json(
-      res,
-      200,
-      provider === 'discord'
-        ? { id: token.id, username: token.name.toLowerCase(), global_name: token.name }
-        : { sub: token.id, name: `${token.name} Example`, given_name: token.name }
-    )
+    if (!token?.id) return json(res, 401, { error: 'invalid_token' })
+    return json(res, 200, {
+      id: token.id,
+      username: token.name.toLowerCase(),
+      global_name: token.name,
+    })
   }
 
   json(res, 404, { error: 'not_found' })
 }).listen(port, '127.0.0.1', () => {
-  console.log(`OAuth mock for Discord and Google on http://127.0.0.1:${port}`)
+  console.log(`OAuth mock for Discord on http://127.0.0.1:${port}`)
 })

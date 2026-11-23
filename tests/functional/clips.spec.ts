@@ -57,7 +57,7 @@ test.group('Clips', (group) => {
 
   /** A person whose connected app owns a League account, and that app. */
   async function poster(http: any) {
-    const { userId } = await sessionService.signIn('discord', randomUUID(), 'Ember', null)
+    const userId = await sessionService.signIn(randomUUID(), 'Ember')
     users.push(userId)
     const token = await sessionService.create(userId)
     const player = await seed.player()
@@ -193,7 +193,7 @@ test.group('Clips', (group) => {
     const id = made.body().id
     await put(http, me.device, `/api/desktop/clips/${id}/video`, video)
 
-    const { userId } = await sessionService.signIn('discord', randomUUID(), 'Copper Lane', null)
+    const userId = await sessionService.signIn(randomUUID(), 'Copper Lane')
     users.push(userId)
     const other = await sessionService.create(userId)
     const refused = await http

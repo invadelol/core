@@ -45,7 +45,10 @@ defineProps<{ publisher: LegalPublisher }>()
         statistics, and kills, objectives, buildings, items, skills and wards. It adds each player’s
         position as the app estimates it, and your LP change when it is certain.
       </li>
-      <li>The Riot accounts signed in on your computer, once each, so their games reach their profiles.</li>
+      <li>
+        The Riot accounts signed in on your computer, once each, so their games reach their
+        profiles.
+      </li>
       <li>
         Your device, with its first game or crash report: a random device token and its signing
         secret, the app version and operating system, and a keyed hash of your IP address used
@@ -61,11 +64,13 @@ defineProps<{ publisher: LegalPublisher }>()
       </li>
     </ul>
     <p>
-      <strong>An Invade account, if you create one.</strong> You sign in with Discord or Google. We
-      receive and keep the account’s id at that provider and the name it gives, never your email
-      address or password. We keep your favorite players and their folders, the League accounts the
-      desktop app saw you sign in to, and the apps you connected. Signing in sets one cookie, a
-      random session token (we store only its hash), for 60 days after your last visit.
+      <strong>An Invade account, if you create one.</strong> You sign in with Discord. We receive
+      and keep your Discord id and the name Discord gives, never your email address or password. We
+      keep your handle, the people, League accounts and pros you follow (who follows you is public),
+      the clips and matches you save, your builds, your privacy choices, the League accounts the
+      desktop app saw you sign in to (each shown on your profile only if you allow it), and the apps
+      you connected. Signing in sets one cookie, a random session token (we store only its hash),
+      for 60 days after your last visit. Deleting your account deletes all of it.
     </p>
     <p>
       <strong>Clips you post.</strong> When you press Post in the app: the video, its picture, its
@@ -87,8 +92,8 @@ defineProps<{ publisher: LegalPublisher }>()
       <strong>Website visits.</strong> We count page views, downloads and clicks on outside links
       with OpenPanel, which we run on our own server. It sets no cookies and doesn’t keep your IP
       address. The app’s device registrations and uploaded games are counted there too, under the
-      device’s random id. Our servers keep technical logs (IP address, browser, page) for 14 days for
-      security. invade.lol sets no cookies, except the session cookie when you sign in.
+      device’s random id. Our servers keep technical logs (IP address, browser, page) for 14 days
+      for security. invade.lol sets no cookies, except the session cookie when you sign in.
     </p>
     <p>
       <strong>What never leaves your computer.</strong> The app’s database (your accounts, games,
@@ -104,8 +109,8 @@ defineProps<{ publisher: LegalPublisher }>()
         Riot Games makes available for such services (GDPR article 6(1)(f)).
       </li>
       <li>
-        Syncing your own games when you use the app, your Invade account and the clips you post:
-        the service you asked for (article 6(1)(b)).
+        Syncing your own games when you use the app, your Invade account and the clips you post: the
+        service you asked for (article 6(1)(b)).
       </li>
       <li>
         Security, signed requests and rate limits: our legitimate interest in protecting the
@@ -122,8 +127,8 @@ defineProps<{ publisher: LegalPublisher }>()
       <li>Anyone visiting invade.lol sees public profiles and match pages.</li>
       <li>
         Our service providers: {{ publisher.hostCompany ?? 'our hosting provider' }} for the
-        servers, Cloudflare (R2 storage), Aptabase (usage statistics, EU), GitHub (app downloads
-        and updates), and Discord or Google when you sign in with them.
+        servers, Cloudflare (R2 storage), Aptabase (usage statistics, EU), GitHub (app downloads and
+        updates), and Discord when you sign in with it.
       </li>
       <li>We do not sell data and we show no ads.</li>
     </ul>

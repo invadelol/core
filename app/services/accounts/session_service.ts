@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'node:crypto'
 import db from '@adonisjs/lucid/services/db'
 import env from '#start/env'
 import { SITE_ORIGIN } from '#services/sitemap'
-import type { AccountProvider } from '../../../inertia/lib/account_types.js'
+import { freeHandle } from '#services/accounts/handles'
 
 /** The person behind a request, once their session cookie checks out. */
 export interface SignedIn {
@@ -20,7 +20,7 @@ export const digest = (token: string) => createHash('sha256').update(token).dige
 /**
  * The site's own origin, the only one browser account requests may come from. `ACCOUNT_ORIGIN`
  * per deployment (`https://pp.invade.lol`, `http://localhost:3333`); OAuth callbacks are built on
- * it too, so it must match the redirect URLs registered with Discord and Google.
+ * it too, so it must match the redirect URL registered with Discord.
  */
 export function accountOrigin() {
   return (env.get('ACCOUNT_ORIGIN') || SITE_ORIGIN).replace(/\/+$/, '')
@@ -92,63 +92,37 @@ class SessionService {
   }
 
   /**
-   * The Invade account a provider identity belongs to, created on its first sign-in. Signed in
-   * already (`current`), a new identity joins the current account instead, so one person can
-   * sign in with Discord or Google and land in the same place. An identity that already belongs
-   * to someone else is never moved: that person signs in with it as before.
+   * The Invade account a Discord identity belongs to, created with its handle on the first
+   * sign-in. Later sign-ins keep the account as it is and only note the name Discord gives now.
    */
-  async signIn(
-    provider: AccountProvider,
-    subject: string,
-    name: string,
-    current: SignedIn | null
-  ): Promise<{ userId: string; joined: boolean; taken: boolean }> {
-    const displayName = name.trim().slice(0, 32) || 'Player'
+  async signIn(subject: string, name: string): Promise<string> {
+    const discordName = name.slice(0, 100)
     return db.transaction(async (trx) => {
       const existing = await trx
         .from('invade_identity')
-        .where({ provider, subject })
+        .where({ provider: 'discord', subject })
         .forUpdate()
         .first()
       if (existing) {
         await trx
           .from('invade_identity')
-          .where({ provider, subject })
-          .update({ display_name: name.slice(0, 100) })
-        return {
-          userId: existing.user_id as string,
-          joined: false,
-          taken: Boolean(current && current.id !== existing.user_id),
-        }
+          .where({ provider: 'discord', subject })
+          .update({ display_name: discordName })
+        return existing.user_id as string
       }
-      if (current) {
-        const sameProvider = await trx
-          .from('invade_identity')
-          .where({ user_id: current.id, provider })
-          .first()
-        // One Discord and one Google per account: a second one signs in on its own.
-        if (!sameProvider) {
-          await trx.table('invade_identity').insert({
-            provider,
-            subject,
-            user_id: current.id,
-            display_name: name.slice(0, 100),
-          })
-          return { userId: current.id, joined: true, taken: false }
-        }
-      }
+      const displayName = name.replace(/\s+/g, ' ').trim().slice(0, 32) || 'Player'
       const [user] = await trx
         .table('invade_user')
-        .insert({ display_name: displayName })
+        .insert({ display_name: displayName, handle: await freeHandle(trx, displayName) })
         .returning('id')
-      const userId = typeof user === 'object' ? user.id : user
+      const userId: string = typeof user === 'object' ? user.id : user
       await trx.table('invade_identity').insert({
-        provider,
+        provider: 'discord',
         subject,
         user_id: userId,
-        display_name: name.slice(0, 100),
+        display_name: discordName,
       })
-      return { userId, joined: false, taken: false }
+      return userId
     })
   }
 }
