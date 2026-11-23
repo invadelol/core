@@ -98,6 +98,13 @@
   background: linear-gradient(180deg, transparent, rgb(8 7 14 / 0.35));
   pointer-events: none;
 }
+/* No skin or main champion yet: a quiet wash of the person's accent, not a grey box. */
+.vb .pf-bd.empty {
+  background:
+    radial-gradient(70% 120% at 88% -10%, rgb(var(--acc-rgb) / 0.24), transparent 62%),
+    radial-gradient(60% 110% at 6% 110%, rgb(var(--acc-rgb) / 0.1), transparent 60%),
+    var(--s2);
+}
 .vb .pf-bd.empty::after {
   display: none;
 }
@@ -140,6 +147,17 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+.vb .pf-av-initial {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(160deg, rgb(var(--acc-rgb) / 0.3), rgb(var(--acc-rgb) / 0.08));
+  color: var(--acc);
+  font-size: 64px;
+  font-weight: 700;
+  line-height: 1;
 }
 .vb .pf-who {
   display: flex;
@@ -1197,6 +1215,9 @@
     width: 100px;
     height: 100px;
     border-radius: 26px;
+  }
+  .vb .pf-av-initial {
+    font-size: 44px;
   }
   .vb .pf-who {
     padding-top: 0;

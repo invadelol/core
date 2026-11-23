@@ -45,6 +45,8 @@ const proLinks = computed(() => {
 })
 /** 1,204 as it is; 52,400 as "52.4k". */
 const figure = (n: number) => (n < 10_000 ? n.toLocaleString('en-US') : shortCount(n))
+/** Before any League account or skin: the first letter of the name, in the person's accent. */
+const initial = computed(() => Array.from(h.value.name.trim())[0]?.toUpperCase() ?? '')
 
 const copied = ref(false)
 let timer: ReturnType<typeof setTimeout> | undefined
@@ -72,6 +74,7 @@ onBeforeUnmount(() => clearTimeout(timer))
     <div class="pf-id">
       <span class="pf-av" :class="{ framed: h.frame }">
         <img v-if="h.avatarUrl" :src="h.avatarUrl" alt="" width="148" height="148" />
+        <span v-else class="pf-av-initial" aria-hidden="true">{{ initial }}</span>
       </span>
       <div class="pf-who">
         <h1>
