@@ -150,7 +150,7 @@ onMounted(async () => (target.value = await detectDesktopTarget()))
         <h2 id="sb-order" class="h3 sb-h">Buy order</h2>
         <ol class="sb-route">
           <li v-if="route.start.length" class="sb-step">
-            <div class="sb-col">
+            <div class="sb-col start">
               <span class="sb-lab">Start</span>
               <span class="sb-icons">
                 <img
@@ -344,6 +344,11 @@ onMounted(async () => (target.value = await detectDesktopTarget()))
   align-items: center;
   gap: 12px;
   width: 112px;
+}
+/* Three starting items are wider than a column: the column grows, so none reach the chevron. */
+.sb-col.start {
+  width: auto;
+  min-width: 112px;
 }
 .sb-lab {
   font-size: 12px;
