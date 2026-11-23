@@ -1,283 +1,266 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, ref, shallowRef } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
-import { queueName } from '@invadelol/ui/logic'
+import { summaryOf } from '@invadelol/ui/logic'
+import { useFormat } from '@invadelol/ui'
 import SiteLayout from '../../components/SiteLayout.vue'
-import CardHead from '../../components/ui/CardHead.vue'
-import Frame from '../../components/ui/Frame.vue'
 import Glyph from '../../components/ui/Glyph.vue'
 import Icon from '../../components/ui/Icon.vue'
-import ClipRow from '../../components/clips/ClipRow.vue'
+import ScoreDial from '../../components/ui/ScoreDial.vue'
+import Select from '../../components/ui/Select.vue'
+import ClipPlayer from '../../components/clips/ClipPlayer.vue'
+import ClipComments from '../../components/clips/ClipComments.vue'
+import ClipMatchCard from '../../components/clips/ClipMatchCard.vue'
+import FollowButton from '../../components/social/FollowButton.vue'
 import SaveStar from '../../components/social/SaveStar.vue'
-import { champIcon, championName, profileIcon } from '../../lib/assets.js'
-import { profilePath } from '../../lib/format.js'
+import { championName, profileIcon } from '../../lib/assets.js'
 import { since } from '../../lib/ladders.js'
-import { EVENT_WORD, clipClock } from '../../lib/clips.js'
-import type { Clip } from '../../lib/clip_types.js'
+import { detailOf } from '../../lib/match.js'
+import { signInHref, useViewer } from '../../lib/account.js'
+import { VISIBILITY_WORDS, clipApi, clipClock } from '../../lib/clips.js'
+import type { FollowState } from '../../lib/account_types.js'
+import type { Clip, ClipComment, ClipMatch, ClipVisibility } from '../../lib/clip_types.js'
 import '../../css/clips.css'
 
 /**
- * /clip/:id: the video first, then the match it is from (both fives, the result, the whole game's
- * clock with this clip and the game's other clips on it); beside it, the game's other clips and
- * where clips come from. Its owner can delete it here.
+ * /clip/:id: a clip on its own page. The video with what happened in it (Riot's events at their
+ * game times, each kill's damage recap) and its comments on one playhead; under it the title, who
+ * posted it and the clip's controls, the match it is from (beside, on a wide screen), then the
+ * conversation.
  */
-interface Seat {
-  championId: number
-  puuid: string
-  gameName: string
-  tagLine: string
-  kills: number
-}
 const props = defineProps<{
   clip: Clip
-  match: {
-    matchId: string
-    queueId: number
-    gameStartMs: number
-    duration: number
-    blueWon: boolean
-    blue: Seat[]
-    red: Seat[]
-    score: number[]
-  } | null
+  match: ClipMatch | null
   others: Clip[]
+  comments: ClipComment[]
+  canComment: boolean
+  follow: FollowState
 }>()
 
-const c = computed(() => props.clip)
-const who = computed(() => c.value.player)
-const champion = computed(() => championName(c.value.championId))
-const side = computed(() => {
-  if (!props.match) return null
-  return props.match.blue.some((p) => p.puuid === who.value.puuid) ? 'Blue side' : 'Red side'
-})
-const line = computed(
-  () =>
-    `${EVENT_WORD[c.value.event]} at ${clipClock(c.value.gameTime)} in the game, ${Math.round(c.value.durationMs / 1000)} seconds`
+const { viewer } = useViewer()
+const { score100, ordinal } = useFormat()
+const clip = shallowRef(props.clip)
+const now = ref(0)
+const player = ref<InstanceType<typeof ClipPlayer>>()
+const comments = shallowRef(props.comments)
+const problem = ref('')
+
+const who = computed(() => clip.value.author)
+const account = computed(() => who.value.account)
+const face = computed(
+  () => who.value.avatarUrl ?? (account.value ? profileIcon(account.value.profileIconId) : null)
 )
-const matchHref = computed(() =>
-  who.value.gameName
-    ? `${profilePath(who.value.gameName, who.value.tagLine)}/match/${encodeURIComponent(c.value.matchId)}`
+/** The clip's player's line in the game (its score, KDA), when the game is stored. */
+const game = computed(() =>
+  props.match
+    ? summaryOf(detailOf(props.match.match), props.match.puuid, props.match.match.matchId)
     : null
 )
-/** Dates in the visitor's own time zone and "posted 2 hours ago": drawn once the page is in the browser. */
-const mounted = ref(false)
-onMounted(() => (mounted.value = true))
-const posted = computed(() =>
-  mounted.value ? `, posted ${since(Date.parse(c.value.createdAt))}` : ''
-)
-const views = computed(
-  () => `${c.value.views.toLocaleString('en-US')} ${c.value.views === 1 ? 'view' : 'views'}`
-)
-const when = computed(() => {
-  if (!props.match) return ''
-  if (!mounted.value) return queueName(props.match.queueId)
-  const d = new Date(props.match.gameStartMs)
-  const day = d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
-  const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-  return `${queueName(props.match.queueId)}, ${day}, ${time}`
+const line = computed(() => {
+  const kda = game.value ? `, ${game.value.kills} / ${game.value.deaths} / ${game.value.assists}` : ''
+  return `${championName(clip.value.championId)}${kda}, ${since(Date.parse(clip.value.postedAt))}`
 })
-
-/** The game's clock: a tick every ten minutes, this clip and the game's others where they start. */
-const clock = computed(() => {
-  const length = props.match?.duration ?? 0
-  if (!length) return null
-  const at = (s: number) => Math.min(100, Math.max(0, (s / length) * 100))
-  const ticks = []
-  for (let m = 10; m * 60 < length; m += 10) ticks.push({ m, x: at(m * 60) })
+const dial = computed(() => {
+  const score = game.value?.score
+  if (!score) return null
   return {
-    ticks,
-    marks: [
-      {
-        id: c.value.id,
-        x: at(c.value.gameTime),
-        label: 'This clip',
-        time: clipClock(c.value.gameTime),
-        on: true,
-      },
-      ...props.others.map((o) => ({
-        id: o.id,
-        x: at(o.gameTime),
-        label: EVENT_WORD[o.event],
-        time: clipClock(o.gameTime),
-        on: false,
-      })),
-    ],
+    value: score100(score.score),
+    place: score.tag === 'mvp' ? 'MVP' : ordinal(score.rank),
   }
 })
 
+/* ── Its owner's controls, and everyone's GG and share ─────────────── */
+
+const AUDIENCE = (Object.keys(VISIBILITY_WORDS) as ClipVisibility[]).map((value) => ({
+  value,
+  label: VISIBILITY_WORDS[value],
+}))
+function failed(error: unknown) {
+  problem.value = error instanceof Error ? error.message : 'That did not go through.'
+}
+async function setVisibility(visibility: ClipVisibility) {
+  problem.value = ''
+  try {
+    clip.value = await clipApi.update(clip.value.id, { visibility })
+  } catch (error) {
+    failed(error)
+  }
+}
+async function gg() {
+  if (!viewer.value) return router.visit(signInHref())
+  problem.value = ''
+  try {
+    const answer = await clipApi.gg(clip.value.id, !clip.value.ggByViewer)
+    clip.value = { ...clip.value, ...answer }
+  } catch (error) {
+    failed(error)
+  }
+}
 const copied = ref(false)
-let copiedTimer: ReturnType<typeof setTimeout> | undefined
 async function share() {
   try {
-    await navigator.clipboard.writeText(c.value.url)
+    await navigator.clipboard.writeText(clip.value.url)
     copied.value = true
-    clearTimeout(copiedTimer)
-    copiedTimer = setTimeout(() => (copied.value = false), 1800)
+    setTimeout(() => (copied.value = false), 1600)
   } catch {
-    /* The address is in the bar to copy by hand. */
+    // The address bar still has it.
   }
 }
-onBeforeUnmount(() => clearTimeout(copiedTimer))
-
+const menu = ref(false)
 const asking = ref(false)
-const busy = ref(false)
-const error = ref('')
-async function remove() {
-  busy.value = true
-  error.value = ''
+async function pin() {
+  menu.value = false
   try {
-    const response = await fetch(`/api/clips/${c.value.id}`, { method: 'DELETE' })
-    if (!response.ok) throw new Error()
-    router.visit(who.value.gameName ? profilePath(who.value.gameName, who.value.tagLine) : '/')
-  } catch {
-    error.value = 'The clip could not be deleted. Try again.'
-    busy.value = false
+    await clipApi.pin(clip.value.id, !clip.value.pinned)
+    clip.value = { ...clip.value, pinned: !clip.value.pinned }
+  } catch (error) {
+    failed(error)
   }
 }
+async function remove() {
+  try {
+    await clipApi.remove(clip.value.id)
+    router.visit(`/u/${who.value.handle}`)
+  } catch (error) {
+    failed(error)
+  }
+}
+
+/** Inertia writes the title into `<title>` as it is: a clip's title never closes that tag. */
+const title = computed(() => clip.value.title.replace(/</g, '‹').replace(/>/g, '›'))
+const moment = computed(() =>
+  clip.value.moment
+    ? `${clip.value.moment}, ${clipClock(clip.value.startMs)}`
+    : `At ${clipClock(clip.value.startMs)} in the game`
+)
 </script>
 
 <template>
-  <Head :title="c.title" />
+  <Head :title="title" />
   <SiteLayout>
-    <div class="wrap cl-page">
-      <nav class="crumbs cl-crumbs" aria-label="Breadcrumb">
-        <Link v-if="who.gameName" :href="profilePath(who.gameName, who.tagLine)">{{
-          who.gameName
-        }}</Link
-        ><Icon v-if="who.gameName" name="chevr" /><span class="t2 ell" aria-current="page">{{
-          c.title
-        }}</span>
-      </nav>
+    <div class="wrap cp">
+      <ClipPlayer ref="player" :clip="clip" :comments="comments" @time="now = $event" />
 
-      <div class="cl-grid">
-        <div class="cl-main">
-          <div class="cl-video" :style="{ aspectRatio: `${c.width ?? 16} / ${c.height ?? 9}` }">
-            <video
-              :src="c.video"
-              :poster="c.poster ?? undefined"
-              controls
-              playsinline
-              preload="metadata"
+      <div class="clp-grid">
+        <div class="clp-head">
+          <h1 class="clp-title">{{ clip.title }}</h1>
+          <p class="clp-moment"><Icon name="swords" :size="15" />{{ moment }}</p>
+          <div class="clp-facts">
+            <Select
+              v-if="clip.mine"
+              class="clp-aud"
+              :model-value="clip.visibility"
+              :options="AUDIENCE"
+              width="14rem"
+              @update:model-value="(v: ClipVisibility) => setVisibility(v)"
             />
+            <span class="meta num">{{ clip.views.toLocaleString('en-US') }} views</span>
           </div>
 
-          <h1 class="cl-title">{{ c.title }}</h1>
-          <p class="meta">{{ line }}</p>
-
-          <div class="cl-by">
-            <img :src="profileIcon(who.profileIconId)" alt="" width="40" height="40" />
-            <span class="cl-who">
-              <Link v-if="who.gameName" :href="profilePath(who.gameName, who.tagLine)" class="ell"
-                ><b>{{ who.gameName }}</b
-                ><small>#{{ who.tagLine }}</small></Link
+          <div class="clp-by">
+            <Link class="clp-who" :href="`/u/${who.handle}`">
+              <img v-if="face" class="clp-av lg" :src="face" alt="" />
+              <span v-else class="clp-av lg none"><Icon name="user" :size="18" /></span>
+              <span class="clp-who-t">
+                <b
+                  >{{ account ? account.gameName : who.name
+                  }}<small v-if="account">#{{ account.tagLine }}</small></b
+                >
+                <span class="meta num">{{ line }}</span>
+              </span>
+            </Link>
+            <ScoreDial
+              v-if="dial"
+              class="clp-by-dial"
+              :value="dial.value"
+              :place="dial.place"
+              size="sm"
+            />
+            <span class="clp-acts">
+              <FollowButton
+                v-if="!clip.mine"
+                kind="user"
+                :id="who.id"
+                :name="who.name"
+                :state="follow"
+                small
+              />
+              <button
+                type="button"
+                class="btn sm clp-gg-btn"
+                :class="{ on: clip.ggByViewer }"
+                :aria-pressed="clip.ggByViewer"
+                :disabled="clip.mine"
+                :title="clip.mine ? 'GGs from the people who watch it' : undefined"
+                @click="gg"
               >
-              <span class="ell"
-                >{{ champion }}<template v-if="side">, {{ side }}</template
-                >{{ posted }}, recorded with Invade</span
-              >
-            </span>
-            <span class="cl-acts">
-              <span class="meta num">{{ views }}</span>
-              <SaveStar kind="clip" :id="c.id" label="this clip" />
-              <button type="button" class="btn sm" @click="share">
-                <Icon :name="copied ? 'check' : 'share'" />{{ copied ? 'Link copied' : 'Share' }}
+                GG <span class="num">{{ clip.gg }}</span>
               </button>
-              <template v-if="c.mine">
-                <button v-if="!asking" type="button" class="btn sm ghost" @click="asking = true">
-                  Delete
+              <SaveStar v-if="!clip.mine" kind="clip" :id="clip.id" label="this clip" />
+              <button
+                type="button"
+                class="btn sm clp-share"
+                :aria-label="copied ? 'Link copied' : 'Share'"
+                @click="share"
+              >
+                <Icon :name="copied ? 'check' : 'share'" /><span>{{
+                  copied ? 'Link copied' : 'Share'
+                }}</span>
+              </button>
+              <span v-if="clip.mine" class="clp-menu">
+                <button
+                  type="button"
+                  class="btn sm ico"
+                  aria-label="More"
+                  aria-haspopup="menu"
+                  :aria-expanded="menu"
+                  @click="menu = !menu"
+                >
+                  <Icon name="more" />
                 </button>
-                <template v-else>
-                  <button type="button" class="btn sm cl-danger" :disabled="busy" @click="remove">
+                <span v-if="menu" class="dm clp-dm" role="menu">
+                  <button type="button" class="dm-r" role="menuitem" @click="pin">
+                    {{ clip.pinned ? 'Unpin from my profile' : 'Pin to my profile' }}
+                  </button>
+                  <button
+                    v-if="!asking"
+                    type="button"
+                    class="dm-r danger"
+                    role="menuitem"
+                    @click="asking = true"
+                  >
                     Delete the clip
                   </button>
-                  <button type="button" class="btn sm ghost" @click="asking = false">Cancel</button>
-                </template>
-              </template>
+                  <button v-else type="button" class="dm-r danger" role="menuitem" @click="remove">
+                    Delete for good, with its comments
+                  </button>
+                </span>
+              </span>
             </span>
           </div>
-          <p v-if="error" class="cl-err" role="alert">{{ error }}</p>
-
-          <section v-if="match" class="card cl-match">
-            <CardHead title="The match" icon="swords" :meta="when">
-              <Link v-if="matchHref" class="btn sm" :href="matchHref" prefetch
-                >Open the match<Icon name="chevr"
-              /></Link>
-            </CardHead>
-            <div class="mx2-sc cl-sc">
-              <div class="side3">
-                <div class="cs2">
-                  <Frame
-                    v-for="p in match.blue"
-                    :key="p.puuid"
-                    :src="champIcon(p.championId)"
-                    size="s"
-                    :alt="championName(p.championId)"
-                    :class="{ me: p.puuid === who.puuid }"
-                  />
-                </div>
-              </div>
-              <div class="mx2-mid">
-                <span class="fg-xl num">{{ match.score[0] }} - {{ match.score[1] }}</span>
-                <span class="meta cl-res"
-                  >{{ match.blueWon ? 'Blue' : 'Red' }} side won in
-                  {{ clipClock(match.duration) }}</span
-                >
-              </div>
-              <div class="side3 r">
-                <div class="cs2">
-                  <Frame
-                    v-for="p in match.red"
-                    :key="p.puuid"
-                    :src="champIcon(p.championId)"
-                    size="s"
-                    :alt="championName(p.championId)"
-                    :class="{ me: p.puuid === who.puuid }"
-                  />
-                </div>
-              </div>
-            </div>
-            <div v-if="clock" class="cl-clock" aria-label="Clips in the game">
-              <div class="cl-line">
-                <Link
-                  v-for="m in clock.marks"
-                  :key="m.id"
-                  :href="`/clip/${m.id}`"
-                  class="cl-mark"
-                  :class="{ on: m.on }"
-                  :style="{ left: `${m.x}%` }"
-                  :aria-current="m.on ? 'page' : undefined"
-                  :title="`${m.label} ${m.time}`"
-                  ><span class="cl-mark-l"
-                    >{{ m.label }} <span class="num">{{ m.time }}</span></span
-                  ><Icon name="film" :size="12"
-                /></Link>
-              </div>
-              <div class="cl-ticks meta num">
-                <span>0</span>
-                <span v-for="t in clock.ticks" :key="t.m" :style="{ left: `${t.x}%` }"
-                  >{{ t.m }} min</span
-                >
-              </div>
-            </div>
-          </section>
+          <p v-if="problem" class="clp-err" role="alert">{{ problem }}</p>
         </div>
 
-        <aside class="cl-side">
-          <section v-if="others.length" class="card">
-            <CardHead title="More from this game" icon="film" :meta="String(others.length)" />
-            <div class="cl-list">
-              <ClipRow v-for="o in others" :key="o.id" :clip="o" />
-            </div>
-          </section>
-          <section class="card cl-app">
+        <ClipMatchCard v-if="match && game" :clip="clip" :others="others" :card="match" :game="game" />
+
+        <div class="clp-talk">
+          <ClipComments
+            :clip="clip"
+            :comments="comments"
+            :can-comment="canComment"
+            :now="now"
+            @seek="player?.seek($event)"
+            @change="comments = $event"
+          />
+          <Link v-if="!viewer" class="card cl-app" href="/app" prefetch data-track="clip_get_app">
             <Glyph :h="22" />
             <span class="cl-app-t">
               <b>Recorded with Invade</b>
-              <span>Clips your games by itself, free for Windows and macOS</span>
+              <span>Free for Windows and macOS</span>
             </span>
-            <Link class="btn sm" href="/app" prefetch data-track="clip_get_app">Get the app</Link>
-          </section>
-        </aside>
+            <Icon name="chevr" />
+          </Link>
+        </div>
       </div>
     </div>
   </SiteLayout>

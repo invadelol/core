@@ -1,219 +1,849 @@
 /* ──────────────────────────────────────────────────────────────
-   Clips: a clip's page, the clip rows of the match page and the
-   clip page, the profile's strip. Under `.vb`.
+   Clips: a clip's page (the video and its tray of lanes, the kill
+   card, the title and controls, the comments, the match card), the
+   clip rows of the match page and the profile's strip. Under `.vb`.
    ────────────────────────────────────────────────────────────── */
 
-.vb .cl-page {
-  padding-bottom: 32px;
-}
-.vb .cl-crumbs {
-  padding: 28px 0 20px;
-  margin: 0;
-  min-width: 0;
-}
-.vb .cl-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 384px;
-  gap: 28px;
-  align-items: start;
-}
-.vb .cl-main,
-.vb .cl-side {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-.vb .cl-side {
-  gap: 24px;
+.vb .cp {
+  padding-top: 28px;
+  padding-bottom: 56px;
 }
 
-/* The video: as recorded, on the darkest ink, rounded like a large sheet. */
-.vb .cl-video {
+/* ── The video and its tray ─────────────────────────────────────── */
+.vb .clp-stage {
+  max-width: 1120px;
+  margin: 0 auto;
   overflow: hidden;
-  width: 100%;
-  max-height: 72vh;
-  border-radius: var(--r3);
-  background: #000;
-  box-shadow: inset 0 0 0 1px var(--line);
+  padding: 0;
 }
-.vb .cl-video video {
+.vb .clp-frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+.vb .clp-video {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
+  background: #000;
+  cursor: pointer;
 }
-.vb .cl-title {
-  margin-top: 20px;
-  font-size: 22px;
+.vb .clp-big {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin: -36px 0 0 -36px;
+  border-radius: 50%;
+  background: rgb(8 7 13 / 0.62);
+  color: #fff;
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+}
+.vb .clp-big svg {
+  margin-left: 4px;
+  fill: currentColor;
+}
+/* The clock over the video, on a phone only (the bar has it on a wide screen). */
+.vb .clp-over {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: none;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgb(8 7 13 / 0.72);
+  font-size: 13px;
   font-weight: 650;
-  letter-spacing: -0.015em;
-  color: var(--t1);
+  color: #fff;
 }
-.vb .cl-main > .meta {
-  margin-top: 4px;
+.vb .clp-over span {
+  font-weight: 500;
+  color: rgb(255 255 255 / 0.7);
 }
-
-/* Who posted it, and what the page can do with it. */
-.vb .cl-by {
+.vb .clp-tray {
+  padding-bottom: 14px;
+}
+/* The bar, the lanes and the clock share three columns: the left (controls, a lane's name), the
+   track (the scrubber, the markers, the clock's minutes), the right; one playhead runs down the
+   track from the scrubber. */
+.vb .clp-rows {
+  --left: 196px;
+  --right: 96px;
+  position: relative;
+}
+.vb .clp-row {
+  display: grid;
+  grid-template-columns: var(--left) minmax(0, 1fr) var(--right);
+  align-items: center;
+  height: 45px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line);
+}
+.vb .clp-bar {
+  height: 58px;
+}
+.vb .clp-l {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: 18px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--line);
-}
-.vb .cl-by > img {
-  flex: none;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--r2);
-  background: var(--s3);
-}
-.vb .cl-who {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 0;
   min-width: 0;
-  font-size: 13px;
+}
+.vb .clp-r {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.vb .clp-time {
+  font-size: 14px;
+  font-weight: 650;
+}
+.vb .clp-time span {
+  font-weight: 500;
   color: var(--t3);
 }
-.vb .cl-who b {
-  font-size: 14px;
+.vb .clp-scrub {
+  width: 100%;
+  height: 4px;
+  margin: 0;
+  appearance: none;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--t1) var(--at), var(--line-2) var(--at));
+  cursor: pointer;
+}
+.vb .clp-scrub::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  appearance: none;
+  border-radius: 50%;
+  background: var(--t1);
+}
+.vb .clp-scrub::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--t1);
+}
+.vb .clp-lab {
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t2);
+}
+.vb .clp-lab svg {
+  color: var(--t3);
+}
+.vb .clp-track {
+  position: relative;
+  height: 100%;
+}
+.vb .clp-act,
+.vb .clp-note {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transform: translate(-15px, -50%);
+  padding: 3px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.vb .clp-act img {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+}
+.vb .clp-x {
+  color: var(--t2);
+}
+.vb .clp-act.on {
+  background: var(--s2);
+  box-shadow: inset 0 0 0 1.5px var(--t1);
+}
+.vb .clp-at {
+  margin: 0 4px;
+  font-size: 12px;
+  color: var(--t3);
+}
+.vb .clp-act.on .clp-at {
+  color: var(--t1);
+}
+.vb .clp-note img {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--s1);
+}
+.vb .clp-clock {
+  height: 26px;
+  border-bottom: 0;
+}
+.vb .clp-clock .clp-track span {
+  position: absolute;
+  top: 5px;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: var(--t4);
+}
+.vb .clp-rail {
+  position: absolute;
+  top: 29px;
+  bottom: 26px;
+  left: calc(14px + var(--left));
+  right: calc(14px + var(--right));
+  pointer-events: none;
+}
+.vb .clp-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--at);
+  width: 2px;
+  margin-left: -1px;
+  background: var(--t1);
+}
+
+/* The action's card: the duel, then the damage both ways. */
+.vb .clp-card {
+  margin: 0 14px;
+  padding: 18px 18px 14px;
+  border-radius: var(--r3);
+  background: var(--d-sheen), var(--d-sf1);
+  box-shadow: var(--d-lit);
+}
+.vb .clp-duel {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.vb .clp-faces {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--t2);
+}
+.vb .clp-faces img {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  box-shadow: var(--d-portrait);
+}
+.vb .clp-duel-t {
+  display: flex;
+  flex-direction: column;
+}
+.vb .clp-duel-t b {
+  font-size: 15px;
+  font-weight: 650;
+}
+.vb .clp-recap {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 40px;
+  margin-top: 16px;
+}
+.vb .clp-side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.vb .clp-side-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.vb .clp-side-h img {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+}
+.vb .clp-side-h .meta {
+  margin-left: auto;
+}
+.vb .clp-dmg {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px 44px;
+  align-items: center;
+  gap: 12px;
+  min-height: 30px;
+  font-size: 13px;
+  color: var(--t2);
+}
+.vb .clp-dmg > .num {
+  text-align: right;
   font-weight: 650;
   color: var(--t1);
 }
-.vb .cl-who small {
-  margin-left: 3px;
-  font-size: 13px;
+.vb .clp-src {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.vb .clp-src img,
+.vb .clp-src-i {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+.vb .clp-src-i {
+  display: grid;
+  place-items: center;
+  background: var(--s3);
   color: var(--t3);
 }
-.vb .cl-who a:hover b {
+.vb .clp-track-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+}
+.vb .clp-track-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--t4);
+}
+.vb .clp-side.mine .clp-track-bar i {
+  background: var(--v500);
+}
+
+/* ── Under the video: the clip and its conversation, the match beside ── */
+/* The head (title, controls) and the conversation in the left column, the match card beside both;
+   one column on a phone, the match between the head and the conversation. */
+.vb .clp-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 404px;
+  grid-template-rows: auto 1fr;
+  grid-template-areas: 'head match' 'talk match';
+  gap: 32px 48px;
+  max-width: 1120px;
+  margin: 32px auto 0;
+  align-items: start;
+}
+.vb .clp-head {
+  grid-area: head;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.vb .clp-talk {
+  grid-area: talk;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  min-width: 0;
+}
+.vb .clp-title {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+}
+.vb .clp-moment {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 0;
+  font-size: 15px;
+  color: var(--t2);
+}
+.vb .clp-facts {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 16px;
+}
+.vb .clp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: var(--r2);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+.vb .clp-by {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 22px;
+  padding: 18px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.vb .clp-who {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.vb .clp-who-t {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.vb .clp-who-t b {
+  font-size: 15px;
+  font-weight: 650;
+}
+.vb .clp-who-t small {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--t3);
+}
+.vb .clp-who:hover b {
   text-decoration: underline;
   text-decoration-color: var(--line-3);
   text-underline-offset: 3px;
 }
-.vb .cl-acts {
+.vb .clp-av {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+.vb .clp-av.lg {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+.vb .clp-av.none {
+  display: grid;
+  place-items: center;
+  background: var(--d-btn);
+  color: var(--t3);
+}
+.vb .clp-acts {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-left: auto;
-  flex: none;
 }
-.vb .cl-acts .meta {
-  margin-right: 6px;
+.vb .clp-gg-btn.on,
+.vb .clp-gg.on {
+  color: var(--v300);
 }
-.vb .cl-danger.btn {
-  background: rgb(var(--loss-rgb) / 0.14);
-  box-shadow: inset 0 0 0 1px rgb(var(--loss-rgb) / 0.4);
+.vb .clp-menu {
+  position: relative;
+}
+.vb .clp-dm {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  min-width: 260px;
+  padding: 6px;
+  border-radius: var(--r3);
+  background: var(--s2);
+}
+.vb .clp-dm .dm-r {
+  height: 36px;
+  padding: 0 10px;
+  border-radius: var(--r2);
+  text-align: left;
+  font-size: 14px;
+}
+.vb .clp-dm .danger {
   color: var(--loss);
 }
-.vb .cl-err {
-  margin-top: 10px;
-  font-size: 13px;
+.vb .clp-err {
+  margin: 12px 0 0;
+  font-size: 13.5px;
   font-weight: 600;
   color: var(--loss);
 }
 
-/* The match: the scoreline of the match page, then the whole game's clock. */
-.vb .cl-match {
-  margin-top: 24px;
+/* The conversation. */
+.vb .clp-comments {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
-.vb .cl-sc {
-  padding: 6px 20px 14px;
+.vb .clp-sec-h {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
 }
-.vb .cl-sc .cs2 .fr.me {
-  box-shadow: 0 0 0 2px var(--v400);
+.vb .clp-sec-h h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 650;
 }
-.vb .cl-res {
-  display: block;
-  margin-top: 8px;
+.vb .clp-compose {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
-.vb .cl-clock {
+.vb .clp-compose.reply {
+  margin: 4px 0 8px 48px;
+}
+.vb .clp-field {
+  flex: 1;
+  height: 42px;
+}
+.vb .clp-stamp {
+  flex: none;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--s3);
+  font-size: 12px;
+  color: var(--t2);
+}
+.vb .clp-signin {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 46px;
+  padding: 0 6px 0 14px;
+  border-radius: var(--r2);
+  background: var(--well);
+  font-size: 14px;
+  color: var(--t2);
+}
+.vb .clp-hint a {
+  color: var(--t1);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.vb .clp-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vb .clp-c-row {
+  display: flex;
+  gap: 12px;
+}
+.vb .clp-c-row.reply {
+  margin: 12px 0 0 48px;
+}
+.vb .clp-face {
   position: relative;
-  padding: 34px 20px 16px;
+  flex: none;
+  align-self: flex-start;
+  height: 36px;
 }
-.vb .cl-line {
+.vb .clp-champ {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  box-shadow: 0 0 0 2px var(--ink-1);
+}
+.vb .clp-c-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.vb .clp-c-h {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-size: 13.5px;
+}
+.vb .clp-c-h a {
+  font-weight: 650;
+}
+.vb .clp-c-t {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.vb .clp-c-at {
+  margin-right: 6px;
+  font-weight: 650;
+  color: var(--t1);
+  cursor: pointer;
+}
+.vb .clp-c-at:hover {
+  color: var(--v300);
+}
+.vb .clp-c-acts {
+  display: flex;
+  gap: 16px;
+  margin: 4px 0 0;
+  font-size: 12.5px;
+}
+.vb .clp-gg,
+.vb .clp-link {
+  font-weight: 650;
+  color: var(--t3);
+  cursor: pointer;
+}
+.vb .clp-gg:disabled {
+  cursor: default;
+}
+.vb .clp-gg:not(:disabled):hover,
+.vb .clp-link:hover {
+  color: var(--t1);
+}
+.vb .clp-more {
+  align-self: flex-start;
+  margin-left: 48px;
+}
+
+/* ── The match card ────────────────────────────────────────────── */
+.vb .clp-match {
+  grid-area: match;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0 0 16px;
+}
+.vb .clp-m-art {
   position: relative;
-  height: 20px;
-  margin: 0 10px;
+  height: 150px;
+  overflow: hidden;
 }
-.vb .cl-line::before {
+.vb .clp-m-art > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 20%;
+}
+.vb .clp-m-art::after {
   content: '';
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 9px;
-  height: 2px;
-  border-radius: 1px;
-  background: var(--s3);
+  inset: 0;
+  background: linear-gradient(180deg, rgb(8 7 13 / 0) 20%, rgb(8 7 13 / 0.85));
 }
-.vb .cl-mark {
+.vb .clp-m-art .sv-star {
   position: absolute;
-  top: 0;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  background: rgb(8 7 13 / 0.6);
+}
+.vb .clp-m-res {
+  position: absolute;
+  left: 18px;
+  bottom: 12px;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+}
+.vb .clp-m-res span {
+  font-size: 14px;
+  font-weight: 650;
+}
+.vb .clp-m-res .win {
+  color: var(--win);
+}
+.vb .clp-m-res .loss {
+  color: var(--loss);
+}
+.vb .clp-m-res b {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1;
+}
+.vb .clp-m-res b i {
+  font-style: normal;
+  color: rgb(255 255 255 / 0.5);
+}
+.vb .clp-m-when {
+  position: absolute;
+  right: 18px;
+  bottom: 12px;
+  z-index: 1;
+  margin: 0;
+  text-align: right;
+  color: rgb(255 255 255 / 0.78);
+}
+.vb .clp-m-me {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.vb .clp-m-who {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 14px;
+}
+.vb .clp-m-items {
+  display: flex;
+  gap: 3px;
+}
+.vb .clp-m-items img {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+}
+.vb .clp-m-teams {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.vb .clp-m-team {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+.vb .clp-m-team.them {
+  opacity: 0.72;
+}
+.vb .clp-m-p {
+  position: relative;
+  aspect-ratio: 1;
+}
+.vb .clp-m-p img {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  box-shadow: var(--d-portrait);
+}
+.vb .clp-m-p.me img {
+  box-shadow: 0 0 0 2px var(--t1);
+}
+.vb .clp-m-clap {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
   display: grid;
   place-items: center;
   width: 20px;
   height: 20px;
-  margin-left: -10px;
-  border-radius: 5px;
-  background: var(--s2);
-  box-shadow: inset 0 0 0 1px var(--line-2);
-  color: var(--t3);
-  transition: background 160ms var(--ease);
-}
-.vb .cl-mark:hover {
+  border-radius: 6px;
   background: var(--s3);
+  box-shadow: 0 0 0 2px var(--s1);
   color: var(--t1);
 }
-.vb .cl-mark.on {
-  background: var(--v600);
-  box-shadow: none;
-  color: #fff;
-}
-.vb .cl-mark-l {
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--t3);
-  white-space: nowrap;
-  pointer-events: none;
-}
-/* Only this clip's name stays over the line; another's shows on hover or focus. */
-.vb .cl-mark:not(.on) .cl-mark-l {
-  opacity: 0;
-  transition: opacity 120ms var(--ease);
-}
-.vb .cl-mark:not(.on):is(:hover, :focus-visible) .cl-mark-l {
-  opacity: 1;
-}
-.vb .cl-line:has(.cl-mark:not(.on):is(:hover, :focus-visible)) .cl-mark.on .cl-mark-l {
-  opacity: 0;
-}
-.vb .cl-mark.on .cl-mark-l {
-  color: var(--t1);
-}
-.vb .cl-mark-l .num {
-  margin-left: 2px;
-  font-weight: 500;
-  color: var(--t3);
-}
-.vb .cl-ticks {
+.vb .clp-m-gold {
   position: relative;
-  height: 16px;
-  margin: 8px 10px 0;
+  padding: 14px 16px 6px;
+  border-bottom: 1px solid var(--line);
 }
-.vb .cl-ticks span {
+.vb .clp-m-gh {
+  display: flex;
+  justify-content: space-between;
+  margin: 0;
+  font-size: 13px;
+}
+.vb .clp-m-marks {
+  position: relative;
+  height: 22px;
+  margin-top: 6px;
+}
+.vb .clp-m-marks span {
+  position: absolute;
+  top: 4px;
+  transform: translateX(-50%);
+  color: var(--t4);
+}
+.vb .clp-m-marks span.ours {
+  color: var(--t2);
+}
+.vb .clp-m-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.vb .clp-m-zero {
+  stroke: var(--line-3);
+  stroke-dasharray: 2 4;
+}
+.vb .clp-m-line {
+  fill: none;
+  stroke: var(--v500);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.vb .clp-m-here {
+  fill: #fff;
+  stroke: var(--v500);
+  stroke-width: 3;
+}
+.vb .clp-m-other {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  margin: 26px 0 0 -10px;
+  border-radius: 6px;
+  box-shadow: 0 0 0 2px var(--s1);
+  translate: 16px 0;
+}
+.vb .clp-m-axis {
+  position: relative;
+  height: 20px;
+  margin: 4px 0 0;
+}
+.vb .clp-m-axis span {
   position: absolute;
   top: 0;
   transform: translateX(-50%);
-  white-space: nowrap;
 }
-.vb .cl-ticks span:first-child {
+.vb .clp-m-axis span:first-child {
   left: 0;
   transform: none;
+}
+.vb .clp-m-axis .end {
+  right: 0;
+  transform: none;
+}
+.vb .clp-m-clips {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px 16px 0;
+}
+.vb .clp-m-clip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-size: 13px;
+}
+.vb .clp-m-cover {
+  display: block;
+  aspect-ratio: 16 / 9;
+  margin-bottom: 6px;
+  overflow: hidden;
+  border-radius: var(--r2);
+  background: var(--well);
+}
+.vb .clp-m-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.vb .clp-m-open {
+  margin: 16px 16px 0;
+  gap: 8px;
 }
 
 /* A clip in a list: its picture and length, its title, who and when. */
@@ -273,12 +903,18 @@
   color: var(--t1);
 }
 
-/* Where clips come from, at the end of the side column. */
+/* Where clips come from, under the conversation for a visitor who is not signed in. */
 .vb .cl-app {
   display: flex;
   align-items: center;
   gap: 14px;
   padding: 18px 20px;
+  color: var(--t3);
+}
+.vb .cl-app:hover .cl-app-t b {
+  text-decoration: underline;
+  text-decoration-color: var(--line-3);
+  text-underline-offset: 3px;
 }
 .vb .cl-app .glyph {
   flex: none;
@@ -322,34 +958,78 @@
 }
 
 @media (max-width: 1023px) {
-  .vb .cl-grid {
+  .vb .clp-grid {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas: 'head' 'match' 'talk';
+    row-gap: 28px;
+  }
+  .vb .clp-match {
+    width: 100%;
+    max-width: 560px;
+  }
+  .vb .clp-by-dial {
+    display: none;
   }
 }
+/* A phone: the lanes' names as icons, no times beside the markers (the card has them), the
+   recap in one column, the actions under the by-line. */
 @media (max-width: 639px) {
-  .vb .cl-by {
-    flex-wrap: wrap;
-    align-items: flex-start;
+  .vb .cp {
+    padding-top: 0;
   }
-  .vb .cl-who .ell {
-    white-space: normal;
+  .vb .clp-stage {
+    margin: 0 -16px;
+    border-radius: 0;
   }
-  .vb .cl-acts {
-    width: calc(100% - 52px);
-    margin-left: 52px;
+  .vb .clp-rows {
+    --left: 40px;
+    --right: 0px;
   }
-  .vb .cl-sc {
-    grid-template-columns: 1fr;
+  .vb .clp-bar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 12px;
+  }
+  .vb .clp-bar .clp-time {
+    display: none;
+  }
+  .vb .clp-over {
+    display: block;
+  }
+  .vb .clp-bar .clp-r .clp-full {
+    display: none;
+  }
+  .vb .clp-share span {
+    display: none;
+  }
+  .vb .clp-lab > span,
+  .vb .clp-at {
+    display: none;
+  }
+  .vb .clp-rail {
+    left: calc(14px + var(--left));
+    right: 14px;
+  }
+  .vb .clp-recap {
+    grid-template-columns: minmax(0, 1fr);
     gap: 14px;
   }
-  .vb .cl-sc .side3.r {
-    align-items: flex-start;
+  .vb .clp-dmg {
+    grid-template-columns: minmax(0, 1fr) 90px 40px;
   }
-  .vb .cl-sc .mx2-mid {
-    order: -1;
+  .vb .clp-title {
+    font-size: 24px;
   }
-  .vb .cl-sc .cs2 .fr {
-    width: 38px;
-    height: 38px;
+  .vb .clp-by {
+    flex-wrap: wrap;
+  }
+  .vb .clp-acts {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .vb .clp-compose.reply,
+  .vb .clp-c-row.reply,
+  .vb .clp-more {
+    margin-left: 24px;
   }
 }

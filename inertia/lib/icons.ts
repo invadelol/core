@@ -24,6 +24,7 @@ import {
   Crown,
   Download,
   Droplet,
+  Ellipsis,
   ExternalLink,
   Eye,
   FileText,
@@ -47,6 +48,7 @@ import {
   Monitor,
   Moon,
   Newspaper,
+  Pause,
   Play,
   Plus,
   Radio,
@@ -70,6 +72,8 @@ import {
   UserCheck,
   UserPlus,
   Users,
+  Volume2,
+  VolumeX,
   X,
 } from 'lucide-vue-next'
 
@@ -162,12 +166,17 @@ export const ICONS = {
   max: Square,
   fwd: ChevronRight,
   menu: Menu,
+  /** More actions, in a small menu. */
+  more: Ellipsis,
   sun: Sun,
   moon: Moon,
   monitor: Monitor,
   laptop: Laptop,
-  /** A video to start (a play triangle on its own). */
+  /** A video to start (a play triangle on its own), to stop, its sound on and off. */
   triangle: Play,
+  pause: Pause,
+  sound: Volume2,
+  mute: VolumeX,
   /** An article or a web page. */
   page: FileText,
   film: Film,

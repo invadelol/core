@@ -1,3 +1,5 @@
+import type { Match } from './types.js'
+
 /**
  * Clips as the site's pages and the desktop app receive them (docs/desktop-sync.md §11, §12).
  * Shared by the server and the pages.
@@ -98,6 +100,18 @@ export interface Clip {
   /** Posted by the signed-in visitor. */
   mine: boolean
   pinned: boolean
+}
+
+/** The match card beside a clip: the stored game, its gold line and its objectives. */
+export interface ClipMatch {
+  /** The game as the site's match lists read it (scoreboard columns, no timeline). */
+  match: Match
+  /** The clip's player in it. */
+  puuid: string
+  /** The team gold lead of the clip's player's side, one point a minute: [minute, gold]. */
+  gold: [number, number][]
+  /** The objectives at their minute: which, and whether the clip's side took it. */
+  objectives: { minute: number; kind: string; ours: boolean }[]
 }
 
 /** A comment and, for a top-level one, its replies (one level). */
