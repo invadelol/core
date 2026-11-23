@@ -916,7 +916,6 @@ function submit() {
           style="border-radius: 2px"
         />{{ regionLabel_ }}<Icon name="chev" :size="big ? 13 : 12" />
       </button>
-      <span class="kbd hs-kbd" aria-hidden="true">/</span>
     </div>
 
     <div v-if="regionOpen" class="hx-menu hs-reg panel reg" role="listbox" aria-label="Region">
