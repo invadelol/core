@@ -163,6 +163,12 @@ const SMALL_GAP = 10
 const ORDINALS = ['1st', '2nd', '3rd', '4th', '5th', '6th']
 const ALT = 52
 const ALT_GAP = 8
+/** The poro in the foot's right corner: its art's width over height (cheeky.png), how far its
+ *  right edge sits from the card's, how much of it sinks below the foot. Smaller for a full route. */
+const PORO_ASPECT = 178 / 155
+const PORO_RIGHT = 29
+const PORO_SINK = 34
+const poroHeight = (slots: number) => (slots > 5 ? 184 : 236)
 
 /** Where every item of the card goes, and the labels over the rows. */
 export function buildCardLayout(items: BuildRoute) {
@@ -170,10 +176,16 @@ export function buildCardLayout(items: BuildRoute) {
   // Two alternatives under a slot at most: the card is a preview, the page lists them all.
   const alts = items.later.map((o) => o.slice(1, 3))
   const hasAlts = alts.some((a) => a.length)
-  // The route fills the width, up to BIG a item.
+  const poroH = poroHeight(route.length)
+  const poro = {
+    x: Math.round(W - PORO_RIGHT - poroH * PORO_ASPECT),
+    y: H + PORO_SINK,
+    h: poroH,
+  }
+  // The route fills the width left of the poro, up to BIG a item.
   const big = Math.min(
     BIG,
-    Math.floor((W - 2 * MARGIN - (route.length - 1) * BIG_GAP) / route.length)
+    Math.floor((poro.x - 12 - MARGIN - (route.length - 1) * BIG_GAP) / route.length)
   )
   const routeY = H - MARGIN - (hasAlts ? ALT + 14 : 0) - big
   const slots: Slot[] = []
@@ -216,6 +228,7 @@ export function buildCardLayout(items: BuildRoute) {
   const smallLabelLine = smallY - 14
   return {
     slots,
+    poro,
     chevrons,
     ors,
     routeLabels: labels.filter((l) => l.text === 'Core' || ORDINALS.includes(l.text)),
@@ -363,8 +376,8 @@ export async function renderBuildCard(
       { input: under },
       ...pictures,
       { input: over },
-      // The poro, peeking from the foot's right corner, keen on the build.
-      { input: await poroLayer('cheeky', W - 300, H + 34, 236) },
+      // The poro, peeking from the foot's right corner, keen on the build, clear of the route.
+      { input: await poroLayer('cheeky', layout.poro.x, layout.poro.y, layout.poro.h) },
     ])
     .jpeg({ quality: 88, mozjpeg: true })
     .toBuffer()

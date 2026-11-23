@@ -167,6 +167,15 @@ test.group('Shared build card', () => {
       'mid',
       's1056,2003,2003-b3020,3158,3111-c3118,4646,3089,3157-l3102,3135,3165,4645,3916-l3135,3102,3165'
     )!
+    // The route stops short of the poro in the foot's right corner.
+    for (const layout of [
+      buildCardLayout(routeOf(full.items)),
+      buildCardLayout(routeOf(wide.items)),
+    ])
+      for (const s of layout.slots.filter(
+        (slot) => slot.y + slot.size > layout.poro.y - layout.poro.h
+      ))
+        assert.isBelow(s.x + s.size, layout.poro.x)
     for (const s of [
       ...buildCardLayout(routeOf(full.items)).slots,
       ...buildCardLayout(routeOf(wide.items)).slots,
