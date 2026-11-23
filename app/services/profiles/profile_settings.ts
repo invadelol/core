@@ -88,12 +88,19 @@ export function effectiveSettings(settings: ProfileSettings, premium: boolean): 
   }
 }
 
+/**
+ * The JSON body parser turns empty strings into null (config/bodyparser.ts): an empty bio or link
+ * handle arrives as null and means "none".
+ */
 const settingsSchema = vine.compile(
   vine.object({
-    bio: vine.string().maxLength(PROFILE_LIMITS.bio * 2),
+    bio: vine.string().maxLength(PROFILE_LIMITS.bio * 2).nullable(),
     links: vine
       .array(
-        vine.object({ kind: vine.enum(LINK_KINDS), handle: vine.string().trim().maxLength(40) })
+        vine.object({
+          kind: vine.enum(LINK_KINDS),
+          handle: vine.string().trim().maxLength(40).nullable(),
+        })
       )
       .maxLength(LINK_KINDS.length),
     backdrop: vine.number().withoutDecimals().positive().nullable(),
@@ -135,14 +142,14 @@ export async function parseSettings(
     throw error
   }
 
-  const bio = data.bio.replace(/\s+/g, ' ').trim()
+  const bio = (data.bio ?? '').replace(/\s+/g, ' ').trim()
   if (bio.length > PROFILE_LIMITS.bio) {
     throw AccountError.invalid(`Keep your bio to ${PROFILE_LIMITS.bio} characters.`)
   }
 
   const links: ProfileSettings['links'] = []
   for (const link of data.links) {
-    const handle = link.handle.replace(/^@/, '')
+    const handle = (link.handle ?? '').replace(/^@/, '')
     if (!handle) continue
     if (!LINK_HANDLE[link.kind].test(handle)) {
       throw AccountError.invalid(`That is not a ${link.kind === 'x' ? 'X' : link.kind} name.`)

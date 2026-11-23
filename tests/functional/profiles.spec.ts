@@ -111,6 +111,21 @@ test.group('Invade profiles', (group) => {
     assert.notInclude(JSON.stringify(none), main.puuid)
   })
 
+  test('an empty bio or link handle saves as none (the body parser sends them as null)', async ({
+    client,
+    assert,
+  }) => {
+    const ember = await people.person()
+    const saved = await save(
+      client,
+      ember,
+      settings({ bio: '', links: [{ kind: 'x', handle: 'emberplays' }, { kind: 'twitch', handle: '' }] })
+    )
+    saved.assertStatus(200)
+    assert.equal(saved.body().bio, '')
+    assert.deepEqual(saved.body().links, [{ kind: 'x', handle: 'emberplays' }])
+  })
+
   test('the owner customises; visitors and other origins cannot', async ({ client, assert }) => {
     const ember = await people.person()
     const briar = await people.person('Briar')

@@ -144,6 +144,12 @@ test.group('Skins', (group) => {
     const cleared = await write(client, ember, 'put', url, { body: '   ' })
     assert.isNull(cleared.body().id)
     assert.equal((await skinPage(SKINS.firestarterAhri, null))!.reviews.total, 0)
+
+    // An emptied box sends '', which the body parser turns into null: the same take-back.
+    await expectStatus(write(client, ember, 'put', url, { body: 'is a personality' }), 200)
+    const emptied = await write(client, ember, 'put', url, { body: '' })
+    emptied.assertStatus(200)
+    assert.equal((await skinPage(SKINS.firestarterAhri, null))!.reviews.total, 0)
   })
 
   test('"Owns it" and Owned come only from the app\'s read', async ({ client, assert }) => {

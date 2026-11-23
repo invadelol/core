@@ -269,7 +269,8 @@ export async function mark(
 /** The person's review of a skin, written or rewritten; an empty one takes it back. */
 export async function review(catalogue: Catalogue, user: SignedIn, skinId: unknown, body: unknown) {
   const skin = knownSkin(catalogue, skinId)
-  const text = cleanText(body, SKIN_LIMITS.review, true)
+  // An emptied review arrives as null (the body parser's empty strings).
+  const text = cleanText(body ?? '', SKIN_LIMITS.review, true)
   if (text === null) {
     throw AccountError.invalid(`Keep a review to ${SKIN_LIMITS.review} characters.`)
   }
