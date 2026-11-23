@@ -392,7 +392,8 @@ router.delete('/api/builds/:id/save', [SharedBuildsController, 'unsave'])
 
 /**
  * Clips: a clip's page, its files and link preview, the lists of a match and a League account,
- * comments and GGs, its owner's controls, and the local stand-in for signed upload addresses.
+ * comments and GGs, reports to the team, its owner's controls, and the local stand-in for signed
+ * upload addresses.
  */
 router.get('/clip/:id', [ClipsController, 'page'])
 router.get('/clips/:file', [ClipsController, 'file'])
@@ -409,6 +410,8 @@ router.put('/api/clips/:id/gg', [ClipsController, 'gg'])
 router.delete('/api/clips/:id/gg', [ClipsController, 'gg'])
 router.put('/api/clips/:id/comments/:comment/gg', [ClipsController, 'gg'])
 router.delete('/api/clips/:id/comments/:comment/gg', [ClipsController, 'gg'])
+router.post('/api/clips/:id/report', [ClipsController, 'report'])
+router.post('/api/clips/:id/comments/:comment/report', [ClipsController, 'report'])
 
 /**
  * Invade profiles (`/u/<handle>` and its tabs) and the owner's Customize saves, before the

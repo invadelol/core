@@ -11,6 +11,7 @@ import Select from '../../components/ui/Select.vue'
 import ClipPlayer from '../../components/clips/ClipPlayer.vue'
 import ClipComments from '../../components/clips/ClipComments.vue'
 import ClipMatchCard from '../../components/clips/ClipMatchCard.vue'
+import ReportSheet from '../../components/clips/ReportSheet.vue'
 import FollowButton from '../../components/social/FollowButton.vue'
 import SaveStar from '../../components/social/SaveStar.vue'
 import { championName, profileIcon } from '../../lib/assets.js'
@@ -128,6 +129,14 @@ async function remove() {
   }
 }
 
+/** What is being reported: the clip (no comment), or one of its comments. */
+const reporting = ref<{ comment: { id: string; author: string } | null } | null>(null)
+function report(comment: ClipComment | null) {
+  menu.value = false
+  if (!viewer.value) return router.visit(signInHref())
+  reporting.value = { comment: comment ? { id: comment.id, author: comment.author.name } : null }
+}
+
 /** Inertia writes the title into `<title>` as it is: a clip's title never closes that tag. */
 const title = computed(() => clip.value.title.replace(/</g, '‹').replace(/>/g, '›'))
 const moment = computed(() =>
@@ -209,7 +218,7 @@ const moment = computed(() =>
                   copied ? 'Link copied' : 'Share'
                 }}</span>
               </button>
-              <span v-if="clip.mine" class="clp-menu">
+              <span class="clp-menu">
                 <button
                   type="button"
                   class="btn sm ico"
@@ -221,20 +230,31 @@ const moment = computed(() =>
                   <Icon name="more" />
                 </button>
                 <span v-if="menu" class="dm clp-dm" role="menu">
-                  <button type="button" class="dm-r" role="menuitem" @click="pin">
-                    {{ clip.pinned ? 'Unpin from my profile' : 'Pin to my profile' }}
-                  </button>
-                  <button
-                    v-if="!asking"
-                    type="button"
-                    class="dm-r danger"
-                    role="menuitem"
-                    @click="asking = true"
-                  >
-                    Delete the clip
-                  </button>
-                  <button v-else type="button" class="dm-r danger" role="menuitem" @click="remove">
-                    Delete for good, with its comments
+                  <template v-if="clip.mine">
+                    <button type="button" class="dm-r" role="menuitem" @click="pin">
+                      {{ clip.pinned ? 'Unpin from my profile' : 'Pin to my profile' }}
+                    </button>
+                    <button
+                      v-if="!asking"
+                      type="button"
+                      class="dm-r danger"
+                      role="menuitem"
+                      @click="asking = true"
+                    >
+                      Delete the clip
+                    </button>
+                    <button
+                      v-else
+                      type="button"
+                      class="dm-r danger"
+                      role="menuitem"
+                      @click="remove"
+                    >
+                      Delete for good, with its comments
+                    </button>
+                  </template>
+                  <button v-else type="button" class="dm-r" role="menuitem" @click="report(null)">
+                    Report the clip
                   </button>
                 </span>
               </span>
@@ -259,6 +279,7 @@ const moment = computed(() =>
             :now="now"
             @seek="player?.seek($event)"
             @change="comments = $event"
+            @report="report"
           />
           <Link v-if="!viewer" class="card cl-app" href="/app" prefetch data-track="clip_get_app">
             <Glyph :h="22" />
@@ -271,5 +292,11 @@ const moment = computed(() =>
         </div>
       </div>
     </div>
+    <ReportSheet
+      v-if="reporting"
+      :clip-id="clip.id"
+      :comment="reporting.comment"
+      @close="reporting = null"
+    />
   </SiteLayout>
 </template>

@@ -244,6 +244,9 @@
 .vb .pf-badge .i {
   color: var(--acc);
 }
+.vb .pf-badge .glyph {
+  fill: var(--acc);
+}
 .vb .pf-badge img {
   width: 16px;
   height: 16px;

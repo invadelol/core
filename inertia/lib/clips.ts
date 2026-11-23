@@ -1,4 +1,10 @@
-import type { Clip, ClipComment, ClipCommentRule, ClipVisibility } from './clip_types.js'
+import type {
+  Clip,
+  ClipComment,
+  ClipCommentRule,
+  ClipVisibility,
+  ReportReason,
+} from './clip_types.js'
 
 /** "9:12": a moment of a game or a clip, from ms. */
 export function clipClock(ms: number) {
@@ -23,6 +29,14 @@ export const COMMENT_WORDS: Record<ClipCommentRule, string> = {
   everyone: 'Everyone can comment',
   game: 'This game’s players can comment',
   off: 'Comments are off',
+}
+
+export const REPORT_WORDS: Record<ReportReason, string> = {
+  spam: 'Spam',
+  harassment: 'Harassment or hate',
+  cheating: 'Cheating or scripting',
+  explicit: 'Sexual or violent content',
+  other: 'Something else',
 }
 
 /** The answer to a clip action that could not be saved, in words for the page. */
@@ -70,4 +84,11 @@ export const clipApi = {
     send<Clip>('PATCH', base(id), change),
   pin: (id: string, on: boolean) => send<void>(on ? 'PUT' : 'DELETE', `${base(id)}/pin`),
   remove: (id: string) => send<void>('DELETE', base(id)),
+  /** Reports the clip, or one of its comments, to the team. */
+  report: (id: string, report: { reason: ReportReason; note: string }, comment?: string) =>
+    send<{ reported: true }>(
+      'POST',
+      comment ? `${base(id)}/comments/${comment}/report` : `${base(id)}/report`,
+      report
+    ),
 }
