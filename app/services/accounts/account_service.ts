@@ -1,28 +1,37 @@
-import { createHash, randomBytes } from 'node:crypto'
+import { randomBytes } from 'node:crypto'
 import db from '@adonisjs/lucid/services/db'
 import logger from '@adonisjs/core/services/logger'
 import type { TransactionClientContract } from '@adonisjs/lucid/types/database'
-import summonerService from '#services/summoner_service'
-import { normalizePlatform } from '#services/riot/routing'
-import { riotErrorStatus } from '#utils/riot_errors'
 import { AccountError } from '#services/accounts/errors'
+import { isHandle } from '#services/accounts/handles'
 import { accountOrigin, digest, type SignedIn } from '#services/accounts/session_service'
+import followService from '#services/social/follows'
+import savedService from '#services/social/saved'
+import {
+  PROFILE_COLUMNS,
+  PUUID,
+  RANK_JOIN,
+  SHOWN_MAIN_COLUMNS,
+  SHOWN_MAIN_JOIN,
+  UUID,
+  avatarOf,
+  iso,
+  profileOf,
+} from '#services/social/cards'
 import {
   ACCOUNT_LIMITS,
   emptyAccount,
-  type AccountChange,
   type AccountProfile,
   type AccountProvider,
+  type AccountSettings,
   type InvadeAccountData,
+  type SiteAccountOp,
   type Viewer,
 } from '../../../inertia/lib/account_types.js'
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-/** An API PUUID as the site's routes carry it. */
-const PUUID = /^[A-Za-z0-9_-]{20,100}$/
 const PAIRING_MINUTES = 10
-/** The four characters both the app and the browser show while connecting, to compare. */
-const CHECK_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+/** A link's secret: 24 random bytes, 32 characters in the URL. */
+const PAIRING_CODE = /^[A-Za-z0-9_-]{32}$/
 
 const isUuid = (value: unknown): value is string => typeof value === 'string' && UUID.test(value)
 const isPuuid = (value: unknown): value is string => typeof value === 'string' && PUUID.test(value)
@@ -33,47 +42,42 @@ function cleanName(value: unknown, max: number): string | null {
   return name.length >= 1 && name.length <= max ? name : null
 }
 
-/** The latest Solo/Duo rank of each listed player, beside their stored identity. */
-const PROFILE_SQL = `
-  p.puuid, p.game_name, p.tag_line, p.platform, p.profile_icon_id,
-  r.tier, r.division, r.league_points
-`
-const RANK_JOIN = `
-  LEFT JOIN LATERAL (
-    SELECT tier, division, league_points FROM riot_rank
-    WHERE puuid = p.puuid AND queue_type = 'RANKED_SOLO_5x5'
-    ORDER BY fetched_at DESC LIMIT 1
-  ) r ON true
-`
+/** Where the changes come from: the app sends §10.4's, the site those and its own. */
+export type ChangeSource = 'app' | 'site'
+const APP_OPS = new Set(['follow', 'unfollow', 'save', 'unsave', 'main', 'show'])
 
-function profile(row: Record<string, any>): AccountProfile {
+/** The settings columns, by the name the pages and the app use. */
+const SETTING_COLUMNS = {
+  clipVisibility: 'clip_visibility',
+  clipComments: 'clip_comments',
+  clipsOnProfile: 'clips_on_profile',
+  allowTags: 'allow_tags',
+  streamerMode: 'streamer_mode',
+} as const satisfies Record<keyof AccountSettings, string>
+
+const SETTING_VALUES: Record<keyof AccountSettings, (value: unknown) => boolean> = {
+  clipVisibility: (v) => v === 'everyone' || v === 'link' || v === 'private',
+  clipComments: (v) => v === 'everyone' || v === 'game' || v === 'off',
+  clipsOnProfile: (v) => typeof v === 'boolean',
+  allowTags: (v) => typeof v === 'boolean',
+  streamerMode: (v) => typeof v === 'boolean',
+}
+
+function settingsOf(row: Record<string, unknown>): AccountSettings {
   return {
-    puuid: row.puuid,
-    gameName: row.game_name,
-    tagLine: row.tag_line,
-    platform: row.platform,
-    profileIconId: row.profile_icon_id ?? null,
-    tier: row.tier ?? null,
-    division: row.division ?? null,
-    lp: row.league_points ?? null,
+    clipVisibility: row.clip_visibility as AccountSettings['clipVisibility'],
+    clipComments: row.clip_comments as AccountSettings['clipComments'],
+    clipsOnProfile: Boolean(row.clips_on_profile),
+    allowTags: Boolean(row.allow_tags),
+    streamerMode: Boolean(row.streamer_mode),
   }
 }
 
-const iso = (value: unknown) => new Date(value as string).toISOString()
-
-/** The code both sides show while an app connects (§10.1), from the link's own secret. */
-export function pairingCheck(code: string) {
-  const bytes = createHash('sha256').update(`check:${code}`).digest()
-  return Array.from(bytes.subarray(0, 4), (b) => CHECK_ALPHABET[b % CHECK_ALPHABET.length]).join('')
-}
-
-/** A favorite as the app may name it: an API PUUID, the client's raw PUUID, or a Riot ID. */
-export interface ProfileRef {
-  puuid?: string | null
-  gameName?: string | null
-  tagLine?: string | null
-  platform?: string | null
-}
+/** The person's row with their shown main account (their picture). */
+const USER_SQL = `
+  SELECT u.*, ${SHOWN_MAIN_COLUMNS}
+  FROM invade_user u ${SHOWN_MAIN_JOIN}
+  WHERE u.id = ?`
 
 /**
  * Invade accounts: what a signed-in person sees and changes (docs/desktop-sync.md §10). The site
@@ -81,57 +85,55 @@ export interface ProfileRef {
  * or a signed device connected to the account).
  */
 class AccountService {
-  /** The whole account, as the account page and the app draw it. */
+  /** The whole account, as the account page and the app draw it (§10.2). */
   async snapshot(user: SignedIn): Promise<InvadeAccountData> {
-    const [row, identities, owned, folders, favorites, devices] = await Promise.all([
-      db.from('invade_user').where('id', user.id).first(),
-      db.from('invade_identity').where('user_id', user.id).orderBy('created_at').select('provider'),
-      db.rawQuery(
-        `SELECT ${PROFILE_SQL}, o.verified_at
-         FROM invade_owned_account o JOIN riot_player p ON p.puuid = o.puuid ${RANK_JOIN}
-         WHERE o.user_id = ? AND o.removed_at IS NULL
-         ORDER BY o.verified_at`,
-        [user.id]
-      ),
-      db
-        .from('invade_favorite_folder')
-        .where('user_id', user.id)
-        .orderBy('created_at')
-        .select('id', 'name'),
-      db.rawQuery(
-        `SELECT ${PROFILE_SQL}, f.folder_id, f.created_at AS added_at
-         FROM invade_profile_favorite f JOIN riot_player p ON p.puuid = f.puuid ${RANK_JOIN}
-         WHERE f.user_id = ?
-         ORDER BY f.created_at DESC`,
-        [user.id]
-      ),
-      db
-        .from('invade_device_user as u')
-        .join('desktop_device as d', 'd.id', 'u.device_id')
-        .where('u.user_id', user.id)
-        .whereNull('d.revoked_at')
-        .orderBy('u.linked_at')
-        .select('d.id', 'd.os', 'd.app', 'd.last_seen_at', 'u.linked_at'),
-    ])
+    const [found, identities, owned, following, counts, saved, devices, premium] =
+      await Promise.all([
+        db.rawQuery(USER_SQL, [user.id]),
+        db
+          .from('invade_identity')
+          .where('user_id', user.id)
+          .orderBy('created_at')
+          .select('provider'),
+        db.rawQuery(
+          `SELECT ${PROFILE_COLUMNS}, o.verified_at, o.shown
+           FROM invade_owned_account o JOIN riot_player p ON p.puuid = o.puuid ${RANK_JOIN}
+           WHERE o.user_id = ? AND o.removed_at IS NULL
+           ORDER BY o.verified_at`,
+          [user.id]
+        ),
+        followService.following(user.id, { limit: ACCOUNT_LIMITS.follows }),
+        followService.counts(user.id),
+        savedService.count(user.id),
+        db
+          .from('invade_device_user as u')
+          .join('desktop_device as d', 'd.id', 'u.device_id')
+          .where('u.user_id', user.id)
+          .whereNull('d.revoked_at')
+          .orderBy('u.linked_at')
+          .select('d.id', 'd.os', 'd.app', 'd.last_seen_at', 'u.linked_at'),
+        this.premium(user.id),
+      ])
+    const row = found.rows[0]
     if (!row) return emptyAccount()
     return {
       user: {
         id: row.id,
         name: row.display_name,
+        handle: row.handle,
+        avatarUrl: avatarOf(row),
         providers: identities.map((i) => i.provider as AccountProvider),
         createdAt: iso(row.created_at),
+        premium,
       },
       mainPuuid: row.main_puuid ?? null,
-      accounts: owned.rows.map((r: Record<string, any>) => ({
-        ...profile(r),
+      accounts: owned.rows.map((r: Record<string, unknown>) => ({
+        ...profileOf(r),
         verifiedAt: iso(r.verified_at),
+        shown: Boolean(r.shown),
       })),
-      folders,
-      favorites: favorites.rows.map((r: Record<string, any>) => ({
-        ...profile(r),
-        folderId: r.folder_id ?? null,
-        addedAt: iso(r.added_at),
-      })),
+      following: following.items,
+      counts: { ...counts, saved },
       devices: devices.map((d) => ({
         id: d.id,
         os: d.os,
@@ -139,19 +141,55 @@ class AccountService {
         linkedAt: iso(d.linked_at),
         lastSeenAt: d.last_seen_at ? iso(d.last_seen_at) : null,
       })),
+      settings: settingsOf(row),
     }
   }
 
-  /** What every page shows of the signed-in person (the header's menu): one or two small queries. */
+  /** A person by their handle, as a page about them names them; null for an unknown handle. */
+  async byHandle(handle: unknown) {
+    if (!isHandle(handle)) return null
+    const found = await db.rawQuery(
+      `SELECT u.id, u.display_name, u.handle, ${SHOWN_MAIN_COLUMNS}
+       FROM invade_user u ${SHOWN_MAIN_JOIN}
+       WHERE u.handle = ?`,
+      [handle]
+    )
+    const row = found.rows[0]
+    if (!row) return null
+    return {
+      id: String(row.id),
+      name: String(row.display_name),
+      handle: String(row.handle),
+      avatarUrl: avatarOf(row),
+    }
+  }
+
+  /**
+   * Invade+ on the account (the admin's `active_entitlement` view). Read defensively: a database
+   * without the admin schema has no premium accounts.
+   */
+  async premium(userId: string) {
+    try {
+      const row = await db
+        .from('admin.active_entitlement')
+        .where({ user_id: userId, kind: 'premium' })
+        .first()
+      return Boolean(row)
+    } catch {
+      return false
+    }
+  }
+
+  /** What every page shows of the signed-in person (the header's menu): one query, two at most. */
   async viewer(user: SignedIn): Promise<Viewer | null> {
     const counts = await db.rawQuery(
-      `SELECT u.display_name, u.main_puuid,
-         (SELECT count(*) FROM invade_owned_account o
-           WHERE o.user_id = u.id AND o.removed_at IS NULL)::int AS accounts,
-         (SELECT count(*) FROM invade_profile_favorite f WHERE f.user_id = u.id)::int AS favorites,
+      `SELECT u.id, u.display_name, u.handle, u.main_puuid, ${SHOWN_MAIN_COLUMNS},
+         (SELECT count(*) FROM invade_saved s WHERE s.user_id = u.id)::int AS saved,
+         (SELECT count(*) FROM invade_follow f WHERE f.follower_id = u.id)::int AS following,
          (SELECT count(*) FROM invade_device_user du JOIN desktop_device d ON d.id = du.device_id
            WHERE du.user_id = u.id AND d.revoked_at IS NULL)::int AS apps
-       FROM invade_user u WHERE u.id = ?`,
+       FROM invade_user u ${SHOWN_MAIN_JOIN}
+       WHERE u.id = ?`,
       [user.id]
     )
     const row = counts.rows[0]
@@ -159,168 +197,135 @@ class AccountService {
     let main: AccountProfile | null = null
     if (row.main_puuid) {
       const found = await db.rawQuery(
-        `SELECT ${PROFILE_SQL} FROM riot_player p ${RANK_JOIN} WHERE p.puuid = ?`,
+        `SELECT ${PROFILE_COLUMNS} FROM riot_player p ${RANK_JOIN} WHERE p.puuid = ?`,
         [row.main_puuid]
       )
-      main = found.rows[0] ? profile(found.rows[0]) : null
+      main = found.rows[0] ? profileOf(found.rows[0]) : null
     }
     return {
+      id: row.id,
       name: row.display_name,
+      handle: row.handle,
+      avatarUrl: avatarOf(row),
       main,
-      accounts: row.accounts,
-      favorites: row.favorites,
+      saved: row.saved,
+      following: row.following,
       apps: row.apps,
     }
   }
 
-  /** Whether a player is one of the person's favorites (a profile's star). */
-  async isFavorite(userId: string, puuid: string) {
-    return Boolean(
-      await db.from('invade_profile_favorite').where({ user_id: userId, puuid }).first()
-    )
-  }
-
-  /** Applies one change and answers the account as it now is. */
-  async change(user: SignedIn, input: AccountChange) {
-    if (!input || typeof input !== 'object' || Array.isArray(input) || !('type' in input)) {
-      throw AccountError.invalid('Unknown change.')
+  /**
+   * Applies changes in order, all or none, and answers the account as it now is. The app may
+   * send §10.4's changes; the site those and its own.
+   */
+  async change(user: SignedIn, ops: unknown, source: ChangeSource) {
+    if (!Array.isArray(ops) || !ops.length || ops.length > ACCOUNT_LIMITS.ops) {
+      throw AccountError.invalid(`Send 1 to ${ACCOUNT_LIMITS.ops} changes.`)
     }
-    // The person's row is locked for the change: limits, the main account and folder ownership
-    // stay consistent when the site and the app write at the same moment.
+    // The person's row is locked for the change: limits and the main account stay consistent
+    // when the site and the app write at the same moment.
     await db.transaction(async (trx) => {
       await trx.from('invade_user').where('id', user.id).forUpdate().firstOrFail()
-      await this.apply(trx, user, input)
+      for (const op of ops) {
+        if (!op || typeof op !== 'object' || (source === 'app' && !APP_OPS.has(op.op))) {
+          throw AccountError.invalid('Unknown change.')
+        }
+        await this.apply(trx, user, op as SiteAccountOp)
+      }
     })
     return this.snapshot(user)
   }
 
-  private async apply(trx: TransactionClientContract, user: SignedIn, input: AccountChange) {
-    switch (input.type) {
-      case 'rename': {
-        const name = cleanName(input.name, ACCOUNT_LIMITS.displayName)
-        if (!name) throw AccountError.invalid('Choose a name of 1 to 32 characters.')
-        await trx.from('invade_user').where('id', user.id).update({ display_name: name })
-        return
-      }
+  private async apply(trx: TransactionClientContract, user: SignedIn, op: SiteAccountOp) {
+    switch (op.op) {
+      case 'follow':
+        return followService.follow(trx, user.id, op.kind, await this.followId(trx, op))
+      case 'unfollow':
+        return followService.unfollow(trx, user.id, op.kind, await this.followId(trx, op))
+      case 'save':
+        return savedService.save(trx, user.id, op.kind, op.id, (op as { puuid?: unknown }).puuid)
+      case 'unsave':
+        return savedService.unsave(trx, user.id, op.kind, op.id)
       case 'main': {
-        if (!isPuuid(input.puuid) || !(await this.owns(trx, user.id, input.puuid))) {
+        if (!isPuuid(op.puuid) || !(await this.owns(trx, user.id, op.puuid))) {
           throw AccountError.invalid('Choose one of your own League accounts.')
         }
-        await trx.from('invade_user').where('id', user.id).update({ main_puuid: input.puuid })
+        await trx.from('invade_user').where('id', user.id).update({ main_puuid: op.puuid })
         return
       }
-      case 'removeAccount': {
-        if (!isPuuid(input.puuid)) throw AccountError.invalid('Unknown League account.')
+      case 'show': {
+        if (!isPuuid(op.puuid) || typeof op.shown !== 'boolean') {
+          throw AccountError.invalid('Unknown League account.')
+        }
+        const updated = await trx
+          .from('invade_owned_account')
+          .where({ puuid: op.puuid, user_id: user.id })
+          .whereNull('removed_at')
+          .update({ shown: op.shown })
+        if (!updated) throw AccountError.invalid('Choose one of your own League accounts.')
+        return
+      }
+      case 'notMine': {
+        if (!isPuuid(op.puuid)) throw AccountError.invalid('Unknown League account.')
         await trx
           .from('invade_owned_account')
-          .where({ puuid: input.puuid, user_id: user.id })
+          .where({ puuid: op.puuid, user_id: user.id })
           .update({ removed_at: new Date() })
         await this.settleMain(trx, user.id)
         return
       }
-      case 'createFolder':
-      case 'renameFolder': {
-        const name = cleanName(input.name, ACCOUNT_LIMITS.folderName)
-        if (!isUuid(input.id) || !name) {
-          throw AccountError.invalid('Choose a folder name of 1 to 40 characters.')
-        }
-        const duplicate = await trx
-          .from('invade_favorite_folder')
-          .where('user_id', user.id)
-          .whereRaw('lower(name) = lower(?)', [name])
-          .whereNot('id', input.id)
-          .first()
-        if (duplicate) throw AccountError.invalid('You already have a folder with this name.')
-        if (input.type === 'renameFolder') {
-          const updated = await trx
-            .from('invade_favorite_folder')
-            .where({ id: input.id, user_id: user.id })
-            .update({ name })
-          if (!updated) throw AccountError.notFound('This folder no longer exists.')
-          return
-        }
-        const taken = await trx.from('invade_favorite_folder').where('id', input.id).first()
-        // The same folder sent twice (a retry) is already done.
-        if (taken?.user_id === user.id) return
-        if (taken) throw AccountError.invalid('Unknown folder.')
-        if ((await this.count(trx, 'invade_favorite_folder', user.id)) >= ACCOUNT_LIMITS.folders) {
-          throw AccountError.limit(`You can have up to ${ACCOUNT_LIMITS.folders} folders.`)
-        }
-        await trx.table('invade_favorite_folder').insert({ id: input.id, user_id: user.id, name })
-        return
-      }
-      case 'deleteFolder': {
-        if (!isUuid(input.id)) throw AccountError.invalid('Unknown folder.')
-        await trx.from('invade_favorite_folder').where({ id: input.id, user_id: user.id }).delete()
-        return
-      }
-      case 'unlinkDevice': {
-        if (!isUuid(input.deviceId)) throw AccountError.invalid('Unknown app.')
+      case 'disconnect': {
+        if (!isUuid(op.deviceId)) throw AccountError.invalid('Unknown app.')
         await trx
           .from('invade_device_user')
-          .where({ device_id: input.deviceId, user_id: user.id })
+          .where({ device_id: op.deviceId, user_id: user.id })
           .delete()
         return
       }
-      case 'removeFavorite': {
-        if (!isPuuid(input.puuid)) throw AccountError.invalid('Unknown player.')
-        await trx
-          .from('invade_profile_favorite')
-          .where({ user_id: user.id, puuid: input.puuid })
-          .delete()
+      case 'rename': {
+        const name = cleanName(op.name, ACCOUNT_LIMITS.displayName)
+        if (!name) throw AccountError.invalid('Choose a name of 1 to 32 characters.')
+        await trx.from('invade_user').where('id', user.id).update({ display_name: name })
         return
       }
-      case 'favorite':
-      case 'moveFavorite': {
-        if (!isPuuid(input.puuid)) throw AccountError.invalid('Unknown player.')
-        const folderId = input.folderId ?? null
-        if (folderId !== null) {
-          const folder = isUuid(folderId)
-            ? await trx
-                .from('invade_favorite_folder')
-                .where({ id: folderId, user_id: user.id })
-                .first()
-            : null
-          if (!folder) throw AccountError.notFound('This folder no longer exists.')
-        }
-        const existing = await trx
-          .from('invade_profile_favorite')
-          .where({ user_id: user.id, puuid: input.puuid })
-          .first()
-        if (input.type === 'moveFavorite') {
-          if (!existing) throw AccountError.notFound('This player is not in your favorites.')
-          await trx
-            .from('invade_profile_favorite')
-            .where({ user_id: user.id, puuid: input.puuid })
-            .update({ folder_id: folderId })
-          return
-        }
-        if (existing) {
-          // Starred again from a folder view: it moves there; from anywhere else it stays put.
-          if (input.folderId !== undefined && existing.folder_id !== folderId) {
-            await trx
-              .from('invade_profile_favorite')
-              .where({ user_id: user.id, puuid: input.puuid })
-              .update({ folder_id: folderId })
-          }
-          return
-        }
-        if (!(await trx.from('riot_player').where('puuid', input.puuid).first())) {
-          throw AccountError.notFound('This player is not on Invade yet.')
-        }
-        const total = await this.count(trx, 'invade_profile_favorite', user.id)
-        if (total >= ACCOUNT_LIMITS.favorites) {
-          throw AccountError.limit(
-            `You can keep up to ${ACCOUNT_LIMITS.favorites} favorite players.`
-          )
-        }
-        await trx
-          .table('invade_profile_favorite')
-          .insert({ user_id: user.id, puuid: input.puuid, folder_id: folderId })
-        return
-      }
+      case 'settings':
+        return this.saveSettings(trx, user.id, op.settings)
       default:
         throw AccountError.invalid('Unknown change.')
+    }
+  }
+
+  /**
+   * The followed target's id as it is stored. The app may name a League account by the client's
+   * raw PUUID: it is mapped to the API PUUID through a verified alias (§3), never looked up.
+   */
+  private async followId(
+    trx: TransactionClientContract,
+    op: { kind: unknown; id: unknown }
+  ): Promise<unknown> {
+    if (op.kind !== 'player' || !isUuid(op.id)) return op.id
+    const alias = await trx
+      .from('riot_puuid_alias')
+      .where('raw_puuid', op.id.toLowerCase())
+      .whereNot('status', 'conflict')
+      .first()
+    if (!alias) throw AccountError.notFound('This person or player is not on Invade.')
+    return alias.puuid
+  }
+
+  private async saveSettings(trx: TransactionClientContract, userId: string, input: unknown) {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) {
+      throw AccountError.invalid('Unknown setting.')
+    }
+    const update: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(input)) {
+      if (!Object.hasOwn(SETTING_COLUMNS, key)) throw AccountError.invalid('Unknown setting.')
+      const name = key as keyof AccountSettings
+      if (!SETTING_VALUES[name](value)) throw AccountError.invalid('Unknown setting.')
+      update[SETTING_COLUMNS[name]] = value
+    }
+    if (Object.keys(update).length) {
+      await trx.from('invade_user').where('id', userId).update(update)
     }
   }
 
@@ -332,11 +337,6 @@ class AccountService {
         .whereNull('removed_at')
         .first()
     )
-  }
-
-  private async count(trx: TransactionClientContract, table: string, userId: string) {
-    const [{ total }] = await trx.from(table).where('user_id', userId).count('* as total')
-    return Number(total)
   }
 
   /** The main account stays one the person owns: else their oldest owned account, or none. */
@@ -368,7 +368,11 @@ class AccountService {
     return row ? { id: row.id, name: row.display_name } : null
   }
 
-  /** A single-use browser link that connects this device to whoever approves it (§10.1). */
+  /**
+   * A single-use browser link that connects this device to whoever approves it (§10.1). Its
+   * 32 characters are the secret: there is no code to read or type. A new link replaces the
+   * device's earlier one.
+   */
   async pair(deviceId: string) {
     const code = randomBytes(24).toString('base64url')
     const expiresAt = new Date(Date.now() + PAIRING_MINUTES * 60_000)
@@ -378,41 +382,33 @@ class AccountService {
         .table('invade_pairing')
         .insert({ code_hash: digest(code), device_id: deviceId, expires_at: expiresAt })
     })
-    return {
-      url: `${accountOrigin()}/account/link/${code}`,
-      check: pairingCheck(code),
-      expiresAt: expiresAt.getTime(),
-    }
+    return { url: `${accountOrigin()}/account/link/${code}`, expiresAt: expiresAt.getTime() }
   }
 
-  /** What the link page shows before the person approves: which app, and its check code. */
-  async pairing(code: unknown, viewer: SignedIn | null) {
-    if (typeof code !== 'string' || !/^[A-Za-z0-9_-]{32}$/.test(code)) return null
+  /** What the link page shows before the person says yes: which app, on which system. */
+  async pairing(code: unknown, viewer: SignedIn) {
+    if (typeof code !== 'string' || !PAIRING_CODE.test(code)) return null
     const row = await db
       .from('invade_pairing as p')
       .join('desktop_device as d', 'd.id', 'p.device_id')
       .leftJoin('invade_device_user as u', 'u.device_id', 'p.device_id')
       .where('p.code_hash', digest(code))
       .whereNull('d.revoked_at')
-      .select('p.expires_at', 'p.approved_at', 'p.user_id', 'd.os', 'd.app', 'u.user_id as owner')
+      .select('p.expires_at', 'p.approved_at', 'd.os', 'd.app', 'u.user_id as owner')
       .first()
     if (!row) return null
-    const linkedHere = Boolean(viewer && row.owner === viewer.id)
     return {
       os: row.os as string,
       app: row.app as string,
-      check: pairingCheck(code),
       expired: !row.approved_at && new Date(row.expires_at).getTime() < Date.now(),
-      approved: Boolean(row.approved_at) && linkedHere,
-      linkedElsewhere: Boolean(row.owner && (!viewer || row.owner !== viewer.id)),
+      approved: Boolean(row.approved_at) && row.owner === viewer.id,
+      linkedElsewhere: Boolean(row.owner && row.owner !== viewer.id),
     }
   }
 
-  /** The person approved the link in their browser: the device is now theirs. */
+  /** The person said yes in their browser: the device is now theirs. */
   async approve(user: SignedIn, code: unknown) {
-    if (typeof code !== 'string' || !/^[A-Za-z0-9_-]{32}$/.test(code)) {
-      throw AccountError.linkExpired()
-    }
+    if (typeof code !== 'string' || !PAIRING_CODE.test(code)) throw AccountError.linkExpired()
     await db.transaction(async (trx) => {
       const pair = await trx
         .from('invade_pairing')
@@ -444,7 +440,6 @@ class AccountService {
         .where('code_hash', digest(code))
         .update({ approved_at: new Date(), user_id: user.id })
     })
-    return this.snapshot(user)
   }
 
   /** The app disconnects itself; its device, games and local data are untouched. */
@@ -483,6 +478,7 @@ class AccountService {
         .forUpdate()
         .first()
       if (current?.user_id === user.id && current.removed_at && options.auto) return
+      const moved = Boolean(current && current.user_id !== user.id)
       await trx
         .knexQuery()
         .table('invade_owned_account')
@@ -492,11 +488,12 @@ class AccountService {
           device_id: deviceId,
           verified_at: new Date(),
           removed_at: null,
+          shown: true,
         })
         .onConflict('puuid')
-        .merge(['user_id', 'device_id', 'verified_at', 'removed_at'])
-      added = !current || current.user_id !== user.id || Boolean(current.removed_at)
-      if (current && current.user_id !== user.id) {
+        .merge(['user_id', 'device_id', 'verified_at', 'removed_at', ...(moved ? ['shown'] : [])])
+      added = !current || moved || Boolean(current.removed_at)
+      if (moved) {
         // The newest proof wins: whoever plays it on their own computer now. The other person's
         // main moves on if it was this one.
         logger.info({ previous: current.user_id, user: user.id }, 'League account changed owner')
@@ -512,53 +509,18 @@ class AccountService {
   }
 
   /**
-   * The stored player a desktop favorite names, as the app may know it only by the client's raw
-   * PUUID or by Riot ID. A player Invade never saw is looked up once (account-v1).
+   * Deletes the account and everything attached to it: its clips and their files, its follows
+   * (both ways), its saved items and its builds. League data and the desktop apps stay.
    */
-  async resolveProfile(ref: ProfileRef, options: { lookup: boolean }): Promise<string> {
-    if (isPuuid(ref.puuid) && (await db.from('riot_player').where('puuid', ref.puuid).first())) {
-      return ref.puuid
-    }
-    if (isUuid(ref.puuid)) {
-      const alias = await db
-        .from('riot_puuid_alias')
-        .where('raw_puuid', ref.puuid.toLowerCase())
-        .whereNot('status', 'conflict')
-        .first()
-      if (alias) return alias.puuid
-    }
-    const gameName = cleanName(ref.gameName, 32)
-    const tagLine = cleanName(ref.tagLine, 8)
-    if (!gameName || !tagLine) throw AccountError.notFound('This player is not on Invade yet.')
-    let platform: string | undefined
-    try {
-      platform = ref.platform ? normalizePlatform(ref.platform) : undefined
-    } catch {
-      platform = undefined
-    }
-    const stored = await db
-      .from('riot_player')
-      .whereRaw('game_name = ? AND tag_line = ?', [gameName, tagLine])
-      .orderByRaw('platform = ? DESC', [platform ?? ''])
-      .first()
-    if (stored) return stored.puuid
-    if (!options.lookup) throw AccountError.notFound('This player is not on Invade yet.')
-    try {
-      const player = await summonerService.resolveAndUpsert(`${gameName}-${tagLine}`, platform)
-      return player.puuid
-    } catch (error) {
-      if (riotErrorStatus(error) === 404) {
-        throw AccountError.notFound('No League account has this Riot ID.')
-      }
-      throw error
-    }
-  }
-
-  /** Deletes the account and everything attached to it, clips included. League data and the apps stay. */
   async remove(user: SignedIn) {
     const { default: clipService } = await import('#services/clips/clip_service')
-    await clipService.purge(await clipService.idsOf(user.id))
-    await db.from('invade_user').where('id', user.id).delete()
+    const clips = await clipService.idsOf(user.id)
+    await clipService.purge(clips)
+    await db.transaction(async (trx) => {
+      await savedService.forgetClips(trx, clips)
+      await followService.forget(trx, user.id)
+      await trx.from('invade_user').where('id', user.id).delete()
+    })
   }
 }
 

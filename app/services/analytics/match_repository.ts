@@ -672,6 +672,45 @@ export class MatchRepository {
   }
 
   /**
+   * The latest games of several players, `count` each, newest first: the champion, the result and
+   * when the game ended. One read by PUUID, the matches' lengths by match id.
+   */
+  async getLatestOfPlayers(puuids: string[], count: number) {
+    const ids = [...new Set(puuids)].slice(0, 500)
+    const out = new Map<string, { championId: number; win: boolean; endedAtMs: number }[]>()
+    if (!ids.length) return out
+    const list = ids.map((id) => `'${escapeClickhouseString(id)}'`).join(',')
+    const rows = await rawRows(`
+      WITH latest AS (
+        SELECT puuid, match_id, champion_id, win, game_start_ms
+        FROM participants
+        PREWHERE puuid IN (${list})
+        WHERE ${VISIBLE_QUEUES_SQL}
+        ORDER BY game_start_ms DESC, match_id DESC
+        LIMIT ${integer(count, 3)} BY puuid
+      )
+      SELECT l.puuid, l.champion_id, l.win, l.game_start_ms, m.duration_sec
+      FROM latest l
+      LEFT JOIN (
+        SELECT match_id, duration_sec FROM matches
+        WHERE match_id IN (SELECT match_id FROM latest)
+      ) m ON m.match_id = l.match_id
+      ORDER BY l.game_start_ms DESC
+    `)
+    for (const row of rows) {
+      const puuid = asString(row[0])
+      const games = out.get(puuid) ?? []
+      games.push({
+        championId: Number(row[1]),
+        win: Boolean(Number(row[2])),
+        endedAtMs: Number(row[3]) + (Number(row[4]) || 0) * 1000,
+      })
+      out.set(puuid, games)
+    }
+    return out
+  }
+
+  /**
    * Load full match details (including timeline) by match id.
    *
    * Four parallel flat reads, no joins and no GROUP BY. The timeline arrives

@@ -50,6 +50,13 @@ export function desktopClient(http: ApiClient, credentials: DeviceCredentials) {
         .headers(signedHeaders(credentials, 'POST', path, body))
         .json(body)
     },
+    put(path: string, payload: unknown) {
+      const body = typeof payload === 'string' ? payload : JSON.stringify(payload)
+      return http
+        .put(path)
+        .headers(signedHeaders(credentials, 'PUT', path, body))
+        .json(body)
+    },
   }
 }
 

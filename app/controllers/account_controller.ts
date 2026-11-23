@@ -1,7 +1,7 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import accountService from '#services/accounts/account_service'
+import savedService from '#services/social/saved'
 import sessionService, { SESSION_COOKIE, accountOrigin } from '#services/accounts/session_service'
-import { availableProviders } from '#services/accounts/oauth'
 import { AccountError } from '#services/accounts/errors'
 import { FixedWindowLimiter } from '#services/desktop/rate_limiter'
 
@@ -16,44 +16,57 @@ export function sameOrigin(ctx: HttpContext) {
   if (origin !== accountOrigin()) throw AccountError.foreignOrigin()
 }
 
-function signedIn(ctx: HttpContext) {
+export function signedIn(ctx: HttpContext) {
   if (!ctx.invadeUser) throw AccountError.signedOut()
   return ctx.invadeUser
 }
 
-async function limit(bucket: string, id: string, max: number) {
+/** Counts a person's writes in a bucket, an hour at a time. */
+export async function limit(bucket: string, id: string, max: number) {
   const result = await limiter.hit(bucket, id, max)
   if (!result.allowed) throw AccountError.rateLimited(result.retryAfter)
 }
 
+/** Where a signed-out visitor goes to sign in, and comes back to this page after. */
+const signInFirst = (ctx: HttpContext) =>
+  ctx.response.redirect(`/signin?next=${encodeURIComponent(ctx.request.url(true))}`)
+
 /**
- * The signed-in person's account on the site: the account page, the page a desktop app's link
- * opens, and the JSON routes both use. Every answer is private and never cached.
+ * The signed-in person's account on the site: their Favorites and their settings (both private),
+ * the page a desktop app's link opens, and the JSON routes they use. Every answer is private and
+ * never cached.
  */
 export default class AccountController {
-  async page(ctx: HttpContext) {
-    if (!ctx.invadeUser) return ctx.response.redirect('/signin?next=/account')
-    const error = ctx.request.input('error')
-    const { default: clipService, CLIP_LIMITS } = await import('#services/clips/clip_service')
-    return ctx.inertia.render('account/account', {
+  /** `/account`: the Favorites tab, the clips and matches the person keeps. */
+  async favorites(ctx: HttpContext) {
+    if (!ctx.invadeUser) return signInFirst(ctx)
+    const [account, saved] = await Promise.all([
+      accountService.snapshot(ctx.invadeUser),
+      savedService.list(ctx.invadeUser.id),
+    ])
+    return ctx.inertia.render('account/favorites', {
+      account,
+      saved,
+      robots: 'noindex, nofollow',
+    })
+  }
+
+  /** `/account/settings`: League accounts, sign-in, privacy, desktop apps, deletion. */
+  async settings(ctx: HttpContext) {
+    if (!ctx.invadeUser) return signInFirst(ctx)
+    return ctx.inertia.render('account/settings', {
       account: await accountService.snapshot(ctx.invadeUser),
-      clips: await clipService.ofUser(ctx.invadeUser),
-      clipLimit: CLIP_LIMITS.perAccount,
-      providers: availableProviders(),
-      error: error === 'taken' ? error : null,
       robots: 'noindex, nofollow',
     })
   }
 
   /** `/account/link/:code`: the desktop app opened this to connect itself (§10.1). */
   async linkPage(ctx: HttpContext) {
-    const code = ctx.params.code
-    if (!ctx.invadeUser) {
-      return ctx.response.redirect(`/signin?next=${encodeURIComponent(`/account/link/${code}`)}`)
-    }
+    if (!ctx.invadeUser) return signInFirst(ctx)
     return ctx.inertia.render('account/link', {
-      code,
-      pairing: await accountService.pairing(code, ctx.invadeUser),
+      code: String(ctx.params.code),
+      pairing: await accountService.pairing(ctx.params.code, ctx.invadeUser),
+      account: await accountService.viewer(ctx.invadeUser),
       robots: 'noindex, nofollow',
     })
   }
@@ -68,15 +81,15 @@ export default class AccountController {
     const user = signedIn(ctx)
     await limit('changes:user', user.id, 600)
     ctx.response.header('Cache-Control', 'no-store')
-    return ctx.response.ok(await accountService.change(user, ctx.request.body() as never))
+    return ctx.response.ok(await accountService.change(user, ctx.request.input('ops'), 'site'))
   }
 
   async approve(ctx: HttpContext) {
     sameOrigin(ctx)
     const user = signedIn(ctx)
     await limit('approve:user', user.id, 20)
-    ctx.response.header('Cache-Control', 'no-store')
-    return ctx.response.ok(await accountService.approve(user, ctx.request.input('code')))
+    await accountService.approve(user, ctx.request.input('code'))
+    return ctx.response.noContent()
   }
 
   /** Deletes the account for good; the browser is signed out. */

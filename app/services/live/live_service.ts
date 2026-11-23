@@ -80,6 +80,17 @@ async function pooled<T, R>(list: T[], width: number, task: (item: T) => Promise
 
 class LiveService {
   /** The game `puuid` is in now, or `game: null` between games. */
+  /**
+   * The live game a recent check found for a player, without asking Riot: what a page that never
+   * calls Riot (a profile's friends) may show. Null when nobody checked lately or they were not
+   * in a game.
+   */
+  async kept(puuid: string, platform: string): Promise<LiveGame | null> {
+    const key = `live:${normalizePlatform(platform).toLowerCase()}:${puuid}`
+    const kept = await cache.get<LiveCheck>({ key }).catch(() => undefined)
+    return kept?.game ?? null
+  }
+
   async check(puuid: string, again = false): Promise<LiveCheck> {
     const player = await Summoner.findBy('puuid', puuid)
     if (!player) throw new Exception('Player not found', { status: 404 })

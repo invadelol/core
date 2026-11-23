@@ -8,6 +8,7 @@ import { leagueCatalog, leagueRef } from '#services/pro_leagues'
 import { ORIGIN, breadcrumbs, count, meta, notFoundPage, percent, today } from '#services/page_meta'
 import esportsService from '#services/esports_service'
 import esportsLandingService from '#services/esports_landing_service'
+import followService from '#services/social/follows'
 
 /** What the league pages read of a league's players (`proService.league`). */
 interface LeaguePlayer {
@@ -245,7 +246,7 @@ export default class ProsController {
   }
 
   /** `/pro/:slug`: a pro, every account they play on, their teams, games and builds. */
-  async show({ inertia, params, response }: HttpContext) {
+  async show({ inertia, invadeUser, params, response }: HttpContext) {
     const pro = await proService.player(String(params.slug))
     if (!pro) return notFoundPage({ inertia, response })
     // What the page draws: its builds, not the summaries the share card and the team page use.
@@ -271,11 +272,12 @@ export default class ProsController {
     crumbs.push({ name: pro.name, path: `/pro/${pro.slug}` })
     // Its games as stored matches, drawn and opened like a profile's; their team's roster and
     // the champion they play most, which the hero stands them before.
-    const [games, team, signature, cutout] = await Promise.all([
+    const [games, team, signature, cutout, follow] = await Promise.all([
       proService.recentMatches(pro.games),
       pro.team ? proService.team(pro.team.slug).catch(() => null) : null,
       proService.signature(pro.id),
       pro.photo ? proPhotoService.cutout(pro.slug) : false,
+      followService.state(invadeUser?.id ?? null, 'pro', pro.slug),
     ])
     const roster = team
       ? {
@@ -300,6 +302,7 @@ export default class ProsController {
         }
       : null
     return inertia.render('esports/pro', {
+      follow,
       pro: shown,
       games,
       roster,
