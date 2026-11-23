@@ -156,8 +156,10 @@ test.group('Clips', (group) => {
     await db.from('invade_clip').where('id', created.body().clip.id).delete()
 
     const clip = await post(http, app)
+    assert.equal(clip.status, 'ready')
     assert.equal(clip.title, 'he really thought he had me')
     assert.equal(clip.moment, 'Solo kill on Lee Sin')
+    assert.equal(clip.momentAt, 552_300)
     // Inside the window only, known kinds only, champions only (no Riot ID kept).
     assert.deepEqual(
       clip.events.map((e: { kind: string; killer: number | null }) => [e.kind, e.killer]),
@@ -191,13 +193,15 @@ test.group('Clips', (group) => {
     assert,
   }) => {
     const { player, app } = await poster(http)
+    const briar = await accounts.person('Briar')
     game([{ puuid: player.puuid, gameName: 'Ember', championId: 81 }])
     const first = await post(http, app)
+    await site(http, briar).post(`/api/clips/${first.id}/comments`).json({ body: 'clean' })
     const again = await app.post('/api/desktop/clips', details({ title: 'again' }))
     again.assertStatus(409)
     assert.equal(again.body().code, 'E_CLIP_EXISTS')
     assert.equal(again.body().existing.id, first.id)
-    assert.equal(again.body().existing.comments, 0)
+    assert.equal(again.body().existing.comments, 1)
 
     const second = await post(http, app, { title: 'again', replace: true })
     assert.notEqual(second.id, first.id)
@@ -208,6 +212,10 @@ test.group('Clips', (group) => {
       left.map((c) => c.id),
       [second.id]
     )
+    // The old clip's comments and files went with it.
+    assert.lengthOf(await db.from('invade_clip_comment').where('clip_id', first.id), 0)
+    const file = await http.get(`/clips/${first.id}.mp4`)
+    file.assertStatus(404)
   })
 
   test('the files are checked where they are', async ({ client: http, assert }) => {
@@ -258,6 +266,8 @@ test.group('Clips', (group) => {
       const stranger = await site(http, other).get(path)
       stranger.assertStatus(404)
     }
+    const cover = await http.get(`/og/clip/${clip.id}.jpg`)
+    cover.assertStatus(404)
     const own = await site(http, person).get(`/clip/${clip.id}`)
     own.assertStatus(200)
     const listed = await http.get(`/api/clips?match=${MATCH}`)
@@ -266,6 +276,42 @@ test.group('Clips', (group) => {
     assert.lengthOf(seen.clips, 0)
     const theirOwn = await loadProfileClips(person.id, person.id)
     assert.lengthOf(theirOwn.clips, 1)
+  })
+
+  test('a link-only clip opens from its link, its preview too, and is listed nowhere', async ({
+    client: http,
+    assert,
+  }) => {
+    const { player, app } = await poster(http)
+    game([{ puuid: player.puuid, gameName: 'Ember', championId: 81 }])
+    const clip = await post(http, app, { visibility: 'link' })
+    const page = await http.get(`/clip/${clip.id}`)
+    page.assertStatus(200)
+    assert.include(page.text(), 'noindex')
+    const cover = await http.get(`/og/clip/${clip.id}.jpg`)
+    cover.assertStatus(200)
+    assert.equal(cover.header('content-type'), 'image/jpeg')
+    const listed = await http.get(`/api/clips?match=${MATCH}`)
+    assert.lengthOf(listed.body().clips, 0)
+    const profile = await http.get(`/api/clips?puuid=${player.puuid}`)
+    assert.lengthOf(profile.body().clips, 0)
+  })
+
+  test('a League profile shows clips only when their poster lets it', async ({
+    client: http,
+    assert,
+  }) => {
+    const { person, player, app } = await poster(http)
+    game([{ puuid: player.puuid, gameName: 'Ember', championId: 81 }])
+    const clip = await post(http, app)
+    const shown = await http.get(`/api/clips?puuid=${player.puuid}`)
+    assert.deepEqual(
+      shown.body().clips.map((c: { id: string }) => c.id),
+      [clip.id]
+    )
+    await db.from('invade_user').where('id', person.id).update({ clips_on_profile: false })
+    const hidden = await http.get(`/api/clips?puuid=${player.puuid}`)
+    assert.lengthOf(hidden.body().clips, 0)
   })
 
   test('comments: one level of replies, as the clip allows', async ({ client: http, assert }) => {
@@ -298,6 +344,13 @@ test.group('Clips', (group) => {
     const [thread] = reply.body().comments
     assert.lengthOf(thread.replies, 1)
     assert.isTrue(thread.replies[0].byAuthor)
+    // The comment's writer is told about the reply, as a player of the game.
+    const told = await notificationsOf(copper.id)
+    assert.deepEqual(
+      told.items.map((n) => [n.kind, n.text, n.clip?.id]),
+      [['reply', 'you walked into the E', clip.id]]
+    )
+    assert.deepInclude(told.items[0].actor, { championId: 81, inGame: true })
 
     // A reply is never answered itself.
     const deeper = await site(http, copper)

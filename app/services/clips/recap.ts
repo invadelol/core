@@ -23,6 +23,10 @@ type TimelineEvent = RiotAPITypes.MatchV5.EventDTO & { shutdownBounty?: number }
 /** One entry of a kill's `victimDamageDealt` / `victimDamageReceived` (typed as strings upstream). */
 type DamageEntry = Partial<RiotAPITypes.MatchV5.VictimDamageDTO>
 
+type Timeline = RiotAPITypes.MatchV5.MatchTimelineDTO
+/** A champion's ability names by key (`q`, `w`, `e`, `r`). */
+type Abilities = Partial<Record<string, string>>
+
 const damageOf = (entries: TimelineEvent['victimDamageDealt']) =>
   (entries ?? []) as unknown as DamageEntry[]
 
@@ -33,7 +37,7 @@ const sourceOf = (entry: DamageEntry) => {
 }
 
 /** Damage entries grouped by source, biggest first, named with the champion's abilities. */
-function lines(entries: DamageEntry[], abilities: Partial<Record<string, string>>): DamageLine[] {
+function lines(entries: DamageEntry[], abilities: Abilities): DamageLine[] {
   const by = new Map<string, DamageLine>()
   for (const entry of entries) {
     const source = sourceOf(entry)
@@ -41,6 +45,8 @@ function lines(entries: DamageEntry[], abilities: Partial<Record<string, string>
       (Number(entry.physicalDamage) || 0) +
       (Number(entry.magicDamage) || 0) +
       (Number(entry.trueDamage) || 0)
+    // A hit that did nothing (a shield took it all) is not one.
+    if (damage <= 0) continue
     const line = by.get(source) ?? {
       source,
       name:
@@ -56,7 +62,7 @@ function lines(entries: DamageEntry[], abilities: Partial<Record<string, string>
     line.damage += damage
     by.set(source, line)
   }
-  return [...by.values()].filter((l) => l.damage > 0).sort((a, b) => b.damage - a.damage)
+  return [...by.values()].sort((a, b) => b.damage - a.damage)
 }
 
 export interface RecapClip {
@@ -68,38 +74,41 @@ export interface RecapClip {
   durationMs: number
 }
 
-/** The kills of the clip's window its player took part in, with their damage both ways. */
-export async function readRecap(clip: RecapClip): Promise<KillRecap[]> {
-  const cluster = riotApiService.platformToRegion(clip.platform) as never
-  const timeline = await inBackground(() =>
-    riotApiService.client.matchV5.getMatchTimelineById({ matchId: clip.matchId, cluster })
-  )
+/** The seats of a timeline and the kills of the clip's window its player took part in. */
+function killsOf(timeline: Timeline, clip: RecapClip) {
   const seats = new Map<number, string>(
     (timeline.info?.participants ?? []).map((p) => [p.participantId, p.puuid] as const)
   )
   const player = [...seats].find(([, puuid]) => puuid === clip.puuid)?.[0]
-  if (player === undefined) return []
   const from = clip.startMs - EVENT_MARGIN_MS
   const to = clip.startMs + clip.durationMs + EVENT_MARGIN_MS
+  const kills =
+    player === undefined
+      ? []
+      : (timeline.info?.frames ?? [])
+          .flatMap((frame): TimelineEvent[] => frame.events ?? [])
+          .filter((e) => e.type === 'CHAMPION_KILL' && e.timestamp >= from && e.timestamp <= to)
+          .filter(
+            (e) =>
+              e.killerId === player ||
+              e.victimId === player ||
+              (e.assistingParticipantIds ?? []).includes(player)
+          )
+  return { seats, kills }
+}
 
-  const kills = (timeline.info?.frames ?? [])
-    .flatMap((frame): TimelineEvent[] => frame.events ?? [])
-    .filter((e) => e.type === 'CHAMPION_KILL' && e.timestamp >= from && e.timestamp <= to)
-    .filter(
-      (e) =>
-        e.killerId === player ||
-        e.victimId === player ||
-        (e.assistingParticipantIds ?? []).includes(player)
-    )
-  if (!kills.length) return []
-
-  const champions = await championsOf(clip.matchId, seats)
-  const text = new Map<number, Partial<Record<string, string>>>()
-  for (const id of new Set(champions.values())) {
-    const found = await riotAssets.championText(String(id)).catch(() => null)
-    text.set(id, found?.abilities ?? {})
-  }
-  return kills.flatMap((kill) => {
+/**
+ * The recap of a clip from its game's timeline: each kill of the clip's window its player took
+ * part in, with the damage both ways. `champions`: each seat's champion; `abilities`: each
+ * champion's ability names by key.
+ */
+export function recapFrom(
+  timeline: Timeline,
+  clip: RecapClip,
+  champions: Map<number, number>,
+  abilities: Map<number, Abilities>
+): KillRecap[] {
+  return killsOf(timeline, clip).kills.flatMap((kill) => {
     const killer = champions.get(kill.killerId ?? 0)
     const victim = champions.get(kill.victimId ?? 0)
     if (!killer || !victim) return []
@@ -113,15 +122,32 @@ export async function readRecap(clip: RecapClip): Promise<KillRecap[]> {
         bounty: (kill.bounty ?? 0) + (kill.shutdownBounty ?? 0),
         dealt: lines(
           received.filter((d) => d.participantId === kill.killerId),
-          text.get(killer) ?? {}
+          abilities.get(killer) ?? {}
         ),
         taken: lines(
           dealt.filter((d) => d.participantId === kill.killerId),
-          text.get(victim) ?? {}
+          abilities.get(victim) ?? {}
         ),
       },
     ]
   })
+}
+
+/** Reads the clip's game's timeline from Riot (lowest priority), then its recap. */
+export async function readRecap(clip: RecapClip): Promise<KillRecap[]> {
+  const cluster = riotApiService.platformToRegion(clip.platform) as never
+  const timeline = await inBackground(() =>
+    riotApiService.client.matchV5.getMatchTimelineById({ matchId: clip.matchId, cluster })
+  )
+  const { seats, kills } = killsOf(timeline, clip)
+  if (!kills.length) return []
+  const champions = await championsOf(clip.matchId, seats)
+  const abilities = new Map<number, Abilities>()
+  for (const id of new Set(champions.values())) {
+    const found = await riotAssets.championText(String(id)).catch(() => null)
+    abilities.set(id, found?.abilities ?? {})
+  }
+  return recapFrom(timeline, clip, champions, abilities)
 }
 
 /** Each seat's champion, from the stored game. */
