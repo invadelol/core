@@ -146,6 +146,7 @@ test.group('Riot asset paths', () => {
       emblem: 'emerald',
       ability: '266-q',
       stat: 'ad',
+      gem: 'epic',
     }
     for (const kind of ASSET_KINDS.filter((k) => k !== 'augment')) {
       const sources = fallbackSources(kind, ids[kind] ?? '1')

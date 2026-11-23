@@ -13,6 +13,7 @@ import {
   MANIFEST_TTL,
   MASTERY_CREST_MAX,
   MAX_ASSET_BYTES,
+  RARITY_GEMS,
   STAND_IN_TTL,
   STAT_ICONS,
   TIERS,
@@ -225,6 +226,24 @@ export class RiotAssetsService {
   }
 
   /**
+   * A game-data file (`v1/skins.json`) of the live patch, or of the `back`-th patch before it,
+   * parsed by `parse` and cached like the manifests (`name` keys the cache). Null while game data
+   * is unreachable, or when Data Dragon lists no such patch.
+   */
+  async gameFile<T>(
+    name: string,
+    file: string,
+    parse: (raw: any) => T | null,
+    back = 0
+  ): Promise<{ patch: string; value: T } | null> {
+    const releases = await this.releases()
+    const release = releases[back] ?? (back === 0 ? LATEST : null)
+    if (!release) return null
+    const value = await this.cached(`riot:${name}:${release.cdragon}`, release, file, parse)
+    return value === null ? null : { patch: release.cdragon, value }
+  }
+
+  /**
    * A champion's title and the names of its passive and abilities on the live patch (its own
    * file, as its art is read), or null while game data is unreachable.
    */
@@ -239,8 +258,15 @@ export class RiotAssetsService {
     if (kind === 'rank' || kind === 'emblem') return [...TIERS]
     if (kind === 'mastery') return Array.from({ length: MASTERY_CREST_MAX + 1 }, (_, n) => `${n}`)
     if (kind === 'stat') return Object.keys(STAT_ICONS)
+    if (kind === 'gem') return [...RARITY_GEMS]
     const release = await this.live()
-    if (kind !== 'splash' && kind !== 'centered' && kind !== 'loading' && kind !== 'ability') {
+    if (
+      kind !== 'splash' &&
+      kind !== 'centered' &&
+      kind !== 'loading' &&
+      kind !== 'tile' &&
+      kind !== 'ability'
+    ) {
       return Object.keys(await this.manifest(kind, release))
     }
     const champions = Object.keys(await this.manifest('champion', release))
@@ -322,11 +348,18 @@ export class RiotAssetsService {
       kind === 'emblem' ||
       kind === 'map' ||
       kind === 'mastery' ||
-      kind === 'stat'
+      kind === 'stat' ||
+      kind === 'gem'
     ) {
       return fallbackSources(kind, id, release)
     }
-    if (kind === 'splash' || kind === 'centered' || kind === 'loading' || kind === 'ability') {
+    if (
+      kind === 'splash' ||
+      kind === 'centered' ||
+      kind === 'loading' ||
+      kind === 'tile' ||
+      kind === 'ability'
+    ) {
       const champion = await this.champion(id.split('-')[0], release)
       return championSources(kind, id, champion, release)
     }
@@ -351,8 +384,8 @@ export class RiotAssetsService {
   /** The art paths in one champion's own file, shared by its splashes and abilities. */
   private champion(id: string, release: Release): Promise<ChampionArt | null> {
     // v2: the file's skins are kept too (a skin's splash, the share card's skin list); v3: with
-    // their rarity, lines and chromas (the patch notes' skins).
-    const key = `riot:champion:v3:${release.cdragon}:${id}`
+    // their rarity, lines and chromas (the patch notes' skins); v4: with their tiles.
+    const key = `riot:champion:v4:${release.cdragon}:${id}`
     return this.cached(key, release, `v1/champions/${id}.json`, parseChampion)
   }
 
