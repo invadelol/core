@@ -315,7 +315,7 @@ export async function like(user: SignedIn, kind: 'review' | 'list', id: unknown,
 }
 
 /** A new list of the person's. */
-export async function createList(user: SignedIn, input: { title: string; body?: string }) {
+export async function createList(user: SignedIn, input: { title: string; body?: string | null }) {
   const title = cleanText(input.title, SKIN_LIMITS.listTitle, false)
   const body = cleanText(input.body ?? '', SKIN_LIMITS.listBody, true)
   if (!title)
@@ -342,7 +342,7 @@ export async function createList(user: SignedIn, input: { title: string; body?: 
 export async function updateList(
   user: SignedIn,
   listId: unknown,
-  input: { title: string; body?: string }
+  input: { title: string; body?: string | null }
 ) {
   const title = cleanText(input.title, SKIN_LIMITS.listTitle, false)
   const body = cleanText(input.body ?? '', SKIN_LIMITS.listBody, true)
