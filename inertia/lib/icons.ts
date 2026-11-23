@@ -43,7 +43,6 @@ import {
   Layers,
   LayoutGrid,
   Link,
-  Link2,
   List,
   ListPlus,
   Lock,
@@ -170,9 +169,6 @@ export const ICONS = {
   image: Image,
   /** A clip only its owner sees, one only its link opens. */
   lock: Lock,
-  link: Link2,
-  follow: UserPlus,
-  following: UserCheck,
   minimap: MapIcon,
   scroll: ScrollText,
   keyboard: Keyboard,

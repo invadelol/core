@@ -84,7 +84,7 @@ export class ProfileSeed {
   pros: string[] = []
 
   async person(name = 'Ember'): Promise<Person> {
-    const { userId } = await sessionService.signIn('discord', randomUUID(), name, null)
+    const userId = await sessionService.signIn(randomUUID(), name)
     const handle = `t${randomUUID().replaceAll('-', '').slice(0, 12)}`
     await db.from('invade_user').where('id', userId).update({ handle })
     this.users.push(userId)
