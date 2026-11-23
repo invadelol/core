@@ -61,6 +61,8 @@ export interface ProfilePage {
   friends: { friends: OverviewData['friends']; playingNow: OverviewData['friends'] } | null
   pro: ProTabs | null
   customize: CustomizeData | null
+  /** Champion names by id, so names render on the server too. */
+  names: Record<number, string>
 }
 
 type ProData = NonNullable<Awaited<ReturnType<typeof proService.player>>>
@@ -220,13 +222,16 @@ class ProfileService {
     }
 
     const on = settings.showcases.filter((s) => s.on).map((s) => s.key)
-    const needs = (key: (typeof on)[number]) => shownTab === 'overview' && on.includes(key)
-    const [favorites, season, skins, pro, customize] = await Promise.all([
+    // The owner previews every showcase while customising: theirs are all loaded.
+    const needs = (key: (typeof on)[number]) =>
+      shownTab === 'overview' && (owner || on.includes(key))
+    const [favorites, season, skins, pro, customize, names] = await Promise.all([
       needs('favorites') ? favoriteSkins(user.id, settings.favorites) : [],
       needs('season') && main ? this.season(main.puuid) : null,
       shownTab === 'skins' ? profileSkins(user.id, viewerId, settings.favorites) : null,
       verified && PRO_TABS.includes(shownTab) ? this.proTabs(verified.data) : null,
       owner ? this.customize(user.id, stored, backdropChampion, icon) : null,
+      championNames(),
     ])
 
     return {
@@ -253,6 +258,7 @@ class ProfileService {
         shownTab === 'friends' ? { friends: social.friends, playingNow: social.playingNow } : null,
       pro,
       customize,
+      names: Object.fromEntries(Object.entries(names).map(([id, [name]]) => [id, name])),
     }
   }
 
@@ -388,11 +394,14 @@ class ProfileService {
       skinCatalogue.get(),
       collectionService.owned(userId),
     ])
+    // The current backdrop first, then the newest bought.
     const backdrops = catalogue
       .pick(owned.keys())
       .sort(
         (a, b) =>
-          (owned.get(b.id)?.getTime() ?? 0) - (owned.get(a.id)?.getTime() ?? 0) || b.id - a.id
+          Number(b.id === settings.backdrop) - Number(a.id === settings.backdrop) ||
+          (owned.get(b.id)?.getTime() ?? 0) - (owned.get(a.id)?.getTime() ?? 0) ||
+          b.id - a.id
       )
       .map((skin) => ({ id: skin.id, championId: skin.championId, num: skin.num, name: skin.name }))
     return { settings, backdrops, fallbackChampion, iconId }
