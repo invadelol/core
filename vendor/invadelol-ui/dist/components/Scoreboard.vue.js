@@ -1,11 +1,13 @@
 import '../styles/base.css';
 import '../styles/primitives.css';
 import '../styles/detail.css';
-import { defineComponent as us, computed as p, shallowRef as ms, watch as bs, useId as _s, openBlock as n, createElementBlock as o, createElementVNode as l, toDisplayString as i, unref as s, createVNode as u, Fragment as b, renderList as y, normalizeClass as f, createCommentVNode as v, createBlock as hs, createTextVNode as _, withCtx as vs, normalizeStyle as j } from "vue";
+import { defineComponent as us, computed as p, shallowRef as ms, watch as bs, useId as _s, openBlock as n, createElementBlock as o, createElementVNode as l, toDisplayString as i, unref as t, createVNode as u, Fragment as b, renderList as I, normalizeClass as y, createCommentVNode as v, createBlock as hs, createTextVNode as _, withCtx as vs, normalizeStyle as A } from "vue";
 import { useInvadeUi as gs, useFormat as ks, useNames as ps } from "../context.js";
 import { hideBroken as g } from "../dom.js";
-import { teamsOf as ys, riotId as fs, side as F } from "../logic/detail.js";
-import { positionName as ws, topBadges as Is, BADGES as D } from "../logic/labels.js";
+import { teamsOf as ys, riotId as fs, side as j } from "../logic/detail.js";
+import { positionName as ws, BADGES as F } from "../logic/labels.js";
+import Is from "./MatchTags.vue.js";
+/* empty css               */
 import { provideStatGroups as $s } from "../fit.js";
 import { detailTeamRating as Ns } from "../logic/team.js";
 import xs from "./Icon.vue.js";
@@ -13,9 +15,9 @@ import Cs from "./Link.vue.js";
 import Ds from "./ObjectiveIcon.vue.js";
 import Ss from "./PerfDial.vue.js";
 /* empty css              */
-import Bs from "./PlayerDetail.vue.js";
+import Ts from "./PlayerDetail.vue.js";
 import h from "./StatLabel.vue.js";
-import Ts from "./TeamBadge.vue.js";
+import Bs from "./TeamBadge.vue.js";
 /* empty css               */
 /* empty css                 */
 /* empty css                       */
@@ -26,27 +28,27 @@ const zs = { class: "iv-sb-wrap" }, Es = { class: "iv-table iv-sb" }, Gs = { col
 }, Us = { class: "iv-sb-obj" }, Ws = ["title"], Ys = ["title"], qs = ["src", "alt", "title"], Js = { class: "iv-sb-tot" }, Qs = ["title"], Xs = ["onClick"], Zs = { class: "iv-sb-who" }, st = ["title"], tt = { class: "iv-sb-art" }, lt = ["src"], et = { class: "iv-sb-load" }, at = ["src", "alt", "title"], it = ["src", "title"], nt = { key: 1 }, ot = ["src", "title"], dt = { class: "iv-sb-name" }, ct = { class: "iv-sb-line" }, rt = { key: 0 }, ut = {
   key: 0,
   class: "iv-badge brand"
-}, mt = { class: "iv-sb-line iv-sb-sub" }, bt = ["title"], _t = ["title"], ht = { class: "num iv-sb-kda" }, vt = ["title"], gt = { class: "iv-sb-share" }, kt = { class: "iv-sb-bar" }, pt = ["title"], yt = { class: "iv-sb-bar taken" }, ft = ["title"], wt = { class: "num iv-sb-cs" }, It = ["title"], $t = { class: "iv-sb-itd" }, Nt = { class: "iv-sb-items" }, xt = ["src", "alt", "title"], Ct = { class: "num iv-sb-score" }, Dt = {
+}, mt = { class: "iv-sb-line iv-sb-sub" }, bt = ["title"], _t = { class: "num iv-sb-kda" }, ht = ["title"], vt = { class: "iv-sb-share" }, gt = { class: "iv-sb-bar" }, kt = ["title"], pt = { class: "iv-sb-bar taken" }, yt = ["title"], ft = { class: "num iv-sb-cs" }, wt = ["title"], It = { class: "iv-sb-itd" }, $t = { class: "iv-sb-items" }, Nt = ["src", "alt", "title"], xt = { class: "num iv-sb-score" }, Ct = {
   key: 0,
   class: "iv-sb-perf"
-}, St = ["title"], Bt = ["title"], Tt = { key: 2 }, zt = {
+}, Dt = ["title"], St = ["title"], Tt = { key: 2 }, Bt = {
   key: 1,
   class: "iv-pf-dim"
-}, Et = { class: "iv-sb-more" }, Gt = ["aria-expanded", "aria-controls", "aria-label", "onClick"], Vt = {
+}, zt = { class: "iv-sb-more" }, Et = ["aria-expanded", "aria-controls", "aria-label", "onClick"], Gt = {
   key: 0,
   class: "iv-sb-detail"
-}, Rt = ["id"], Mt = { class: "iv-sb-detail-in" }, el = /* @__PURE__ */ us({
+}, Vt = ["id"], Rt = { class: "iv-sb-detail-in" }, al = /* @__PURE__ */ us({
   __name: "Scoreboard",
   props: {
     detail: {},
     puuid: {}
   },
   setup($) {
-    const m = $, T = gs(), { t: e } = T, { compact: C, kdaRatio: H, num: w, ordinal: z, pct: N, score100: O, signedGold: U } = ks(), { champIcon: E, champName: k, itemIcon: W, itemName: G, runeIcon: Y, runeName: q, spellIcon: J, spellName: V, styleIcon: Q, styleName: X } = ps();
+    const m = $, T = gs(), { t: e } = T, { compact: C, kdaRatio: H, num: f, ordinal: B, pct: N, score100: O, signedGold: U } = ks(), { champIcon: z, champName: k, itemIcon: W, itemName: E, runeIcon: Y, runeName: q, spellIcon: J, spellName: G, styleIcon: Q, styleName: X } = ps();
     $s();
-    const S = p(() => m.detail.players.find((a) => a.puuid === m.puuid)), Z = p(() => ys(m.detail, S.value)), R = p(() => Ns(m.detail, m.puuid)), ss = p(() => Math.max(1, ...m.detail.players.map((a) => a.damage))), ts = p(() => Math.max(1, ...m.detail.players.map((a) => a.damageTaken))), M = p(() => Math.max(1, m.detail.duration / 60)), ls = (a) => {
-      const d = (r) => N(r / Math.max(1, a.damage));
-      return `${w(a.damage)} · ${e("{share} of the team", { share: N(a.damageShare) })} · ${e("{physical} physical · {magic} magic · {true} true", { physical: d(a.physical), magic: d(a.magic), true: d(a.trueDamage) })}`;
+    const D = p(() => m.detail.players.find((a) => a.puuid === m.puuid)), Z = p(() => ys(m.detail, D.value)), V = p(() => Ns(m.detail, m.puuid)), ss = p(() => Math.max(1, ...m.detail.players.map((a) => a.damage))), ts = p(() => Math.max(1, ...m.detail.players.map((a) => a.damageTaken))), R = p(() => Math.max(1, m.detail.duration / 60)), ls = (a) => {
+      const d = (c) => N(c / Math.max(1, a.damage));
+      return `${f(a.damage)} · ${e("{share} of the team", { share: N(a.damageShare) })} · ${e("{physical} physical · {magic} magic · {true} true", { physical: d(a.physical), magic: d(a.magic), true: d(a.trueDamage) })}`;
     }, es = p(() => m.detail.players.some((a) => a.placement > 0));
     function as(a) {
       return [
@@ -56,13 +58,13 @@ const zs = { class: "iv-sb-wrap" }, Es = { class: "iv-table iv-sb" }, Gs = { col
         { id: "grubs", label: e("Voidgrubs"), n: a.grubs },
         { id: "herald", label: e("Rift Herald"), n: a.heralds },
         { id: "inhib", label: e("Inhibitors"), n: a.inhibitors }
-      ].filter((r) => r.n !== null);
+      ].filter((c) => c.n !== null);
     }
-    const is = (a, d) => es.value && d ? e("{place} place", { place: z(d) }) : m.detail.remake ? e("Remake") : a.win ? e("Victory") : e("Defeat"), K = (a) => F(a) === "blue" ? e("Blue side") : F(a) === "red" ? e("Red side") : "", L = (a) => a.bans.filter((d) => d > 0), ns = (a) => a >= 1e3 ? "iv-up" : a <= -1e3 ? "iv-down" : "", I = ms(null);
-    bs(() => m.detail, () => I.value = null);
-    const P = (a) => I.value = I.value === a.participantId ? null : a.participantId, os = (a, d) => {
-      a.target.closest("a, button") || P(d);
-    }, A = _s(), ds = (a) => a.puuid && a.puuid !== m.puuid ? { kind: "player", puuid: a.puuid, gameName: a.gameName, tagLine: a.tagLine } : null;
+    const is = (a, d) => es.value && d ? e("{place} place", { place: B(d) }) : m.detail.remake ? e("Remake") : a.win ? e("Victory") : e("Defeat"), M = (a) => j(a) === "blue" ? e("Blue side") : j(a) === "red" ? e("Red side") : "", K = (a) => a.bans.filter((d) => d > 0), ns = (a) => a >= 1e3 ? "iv-up" : a <= -1e3 ? "iv-down" : "", w = ms(null);
+    bs(() => m.detail, () => w.value = null);
+    const L = (a) => w.value = w.value === a.participantId ? null : a.participantId, os = (a, d) => {
+      a.target.closest("a, button") || L(d);
+    }, P = _s(), ds = (a) => a.puuid && a.puuid !== m.puuid ? { kind: "player", puuid: a.puuid, gameName: a.gameName, tagLine: a.tagLine } : null;
     return (a, d) => (n(), o("div", zs, [
       l("table", Es, [
         d[8] || (d[8] = l("colgroup", null, [
@@ -80,167 +82,167 @@ const zs = { class: "iv-sb-wrap" }, Es = { class: "iv-table iv-sb" }, Gs = { col
         ], -1)),
         l("thead", null, [
           l("tr", null, [
-            l("th", Gs, i(s(e)("Player")), 1),
+            l("th", Gs, i(t(e)("Player")), 1),
             l("th", Vs, [
               u(h, {
                 stat: "kda",
-                label: s(e)("KDA"),
+                label: t(e)("KDA"),
                 group: "head"
               }, null, 8, ["label"])
             ]),
             l("th", Rs, [
               u(h, {
                 stat: "damage",
-                label: s(e)("Damage"),
+                label: t(e)("Damage"),
                 group: "head"
               }, null, 8, ["label"])
             ]),
             l("th", Ms, [
               u(h, {
                 stat: "taken",
-                label: s(e)("Taken"),
+                label: t(e)("Taken"),
                 group: "head"
               }, null, 8, ["label"])
             ]),
             l("th", Ks, [
               u(h, {
                 stat: "gold",
-                label: s(e)("Gold"),
+                label: t(e)("Gold"),
                 group: "head"
               }, null, 8, ["label"])
             ]),
             l("th", Ls, [
               u(h, {
                 stat: "cs",
-                label: s(e)("CS"),
+                label: t(e)("CS"),
                 group: "head"
               }, null, 8, ["label"])
             ]),
             l("th", Ps, [
               u(h, {
                 stat: "vision",
-                label: s(e)("Vision"),
+                label: t(e)("Vision"),
                 group: "head"
               }, null, 8, ["label"])
             ]),
-            l("th", null, i(s(e)("Items")), 1),
+            l("th", null, i(t(e)("Items")), 1),
             l("th", {
               class: "num",
-              title: s(e)("Invade score")
-            }, i(s(e)("Score")), 9, As),
+              title: t(e)("Invade score")
+            }, i(t(e)("Score")), 9, As),
             d[4] || (d[4] = l("th", null, null, -1))
           ])
         ]),
-        (n(!0), o(b, null, y(Z.value, ({ team: r, players: cs, placement: rs }) => (n(), o("tbody", {
-          key: r.teamId,
-          class: f(r.win ? "won" : "lost")
+        (n(!0), o(b, null, I(Z.value, ({ team: c, players: cs, placement: rs }) => (n(), o("tbody", {
+          key: c.teamId,
+          class: y(c.win ? "won" : "lost")
         }, [
           l("tr", js, [
             l("td", Fs, [
               l("div", Hs, [
                 l("b", {
-                  class: f(["iv-sb-res", $.detail.remake ? "" : r.win ? "win" : "loss"])
-                }, i(is(r, rs)), 3),
-                K(r.teamId) ? (n(), o("span", Os, i(K(r.teamId)), 1)) : v("", !0),
-                R.value && r.teamId === S.value?.teamId ? (n(), hs(Ts, {
+                  class: y(["iv-sb-res", $.detail.remake ? "" : c.win ? "win" : "loss"])
+                }, i(is(c, rs)), 3),
+                M(c.teamId) ? (n(), o("span", Os, i(M(c.teamId)), 1)) : v("", !0),
+                V.value && c.teamId === D.value?.teamId ? (n(), hs(Bs, {
                   key: 1,
-                  verdict: R.value,
-                  win: r.win
+                  verdict: V.value,
+                  win: c.win
                 }, null, 8, ["verdict", "win"])) : v("", !0),
                 l("span", Us, [
-                  (n(!0), o(b, null, y(as(r), (t) => (n(), o("span", {
-                    key: t.id,
-                    title: t.label,
-                    class: f({ none: !t.n })
+                  (n(!0), o(b, null, I(as(c), (s) => (n(), o("span", {
+                    key: s.id,
+                    title: s.label,
+                    class: y({ none: !s.n })
                   }, [
                     u(Ds, {
-                      name: t.id,
+                      name: s.id,
                       size: 16
                     }, null, 8, ["name"]),
-                    _(i(t.n), 1)
+                    _(i(s.n), 1)
                   ], 10, Ws))), 128))
                 ]),
-                L(r).length ? (n(), o("span", {
+                K(c).length ? (n(), o("span", {
                   key: 2,
                   class: "iv-sb-bans",
-                  title: s(e)("Bans")
+                  title: t(e)("Bans")
                 }, [
-                  (n(!0), o(b, null, y(L(r), (t, c) => (n(), o("img", {
-                    key: c,
-                    src: s(E)(t),
-                    alt: s(k)(t),
-                    title: s(e)("Banned: {champion}", { champion: s(k)(t) })
+                  (n(!0), o(b, null, I(K(c), (s, r) => (n(), o("img", {
+                    key: r,
+                    src: t(z)(s),
+                    alt: t(k)(s),
+                    title: t(e)("Banned: {champion}", { champion: t(k)(s) })
                   }, null, 8, qs))), 128))
                 ], 8, Ys)) : v("", !0),
                 l("span", Js, [
                   l("span", null, [
                     u(h, {
                       stat: "kda",
-                      label: s(e)("KDA"),
+                      label: t(e)("KDA"),
                       bare: ""
                     }, null, 8, ["label"]),
-                    _(i(r.kills) + " / " + i(r.deaths) + " / " + i(r.assists), 1)
+                    _(i(c.kills) + " / " + i(c.deaths) + " / " + i(c.assists), 1)
                   ]),
                   l("span", {
-                    title: s(w)(r.gold)
+                    title: t(f)(c.gold)
                   }, [
                     u(h, {
                       stat: "gold",
-                      label: s(e)("Gold"),
+                      label: t(e)("Gold"),
                       bare: ""
                     }, null, 8, ["label"]),
-                    _(i(s(C)(r.gold)), 1)
+                    _(i(t(C)(c.gold)), 1)
                   ], 8, Qs)
                 ])
               ])
             ])
           ]),
-          (n(!0), o(b, null, y(cs, (t) => (n(), o(b, {
-            key: t.participantId
+          (n(!0), o(b, null, I(cs, (s) => (n(), o(b, {
+            key: s.participantId
           }, [
             l("tr", {
-              class: f(["iv-sb-row", { self: t.puuid === $.puuid, open: I.value === t.participantId }]),
-              onClick: (c) => os(c, t)
+              class: y(["iv-sb-row", { self: s.puuid === $.puuid, open: w.value === s.participantId }]),
+              onClick: (r) => os(r, s)
             }, [
               l("td", Zs, [
                 l("span", {
                   class: "iv-sb-portrait",
-                  title: s(k)(t.championId)
+                  title: t(k)(s.championId)
                 }, [
                   l("span", tt, [
                     l("img", {
-                      src: s(E)(t.championId),
+                      src: t(z)(s.championId),
                       alt: ""
                     }, null, 8, lt)
                   ]),
-                  l("em", null, i(t.level), 1)
+                  l("em", null, i(s.level), 1)
                 ], 8, st),
                 l("span", et, [
-                  (n(!0), o(b, null, y(t.spells, (c, x) => (n(), o("img", {
+                  (n(!0), o(b, null, I(s.spells, (r, x) => (n(), o("img", {
                     key: x,
-                    src: s(J)(c),
-                    alt: s(V)(c),
-                    title: s(V)(c),
+                    src: t(J)(r),
+                    alt: t(G)(r),
+                    title: t(G)(r),
                     onError: d[0] || (d[0] = //@ts-ignore
-                    (...B) => s(g) && s(g)(...B))
+                    (...S) => t(g) && t(g)(...S))
                   }, null, 40, at))), 128)),
-                  t.perks[0] ? (n(), o("img", {
+                  s.perks[0] ? (n(), o("img", {
                     key: 0,
-                    src: s(Y)(t.perks[0]),
-                    title: s(q)(t.perks[0]),
+                    src: t(Y)(s.perks[0]),
+                    title: t(q)(s.perks[0]),
                     alt: "",
                     class: "key",
                     onError: d[1] || (d[1] = //@ts-ignore
-                    (...c) => s(g) && s(g)(...c))
+                    (...r) => t(g) && t(g)(...r))
                   }, null, 40, it)) : (n(), o("i", nt)),
-                  t.styles[1] ? (n(), o("img", {
+                  s.styles[1] ? (n(), o("img", {
                     key: 2,
-                    src: s(Q)(t.styles[1]),
-                    title: s(X)(t.styles[1]),
+                    src: t(Q)(s.styles[1]),
+                    title: t(X)(s.styles[1]),
                     alt: "",
                     class: "sub",
                     onError: d[2] || (d[2] = //@ts-ignore
-                    (...c) => s(g) && s(g)(...c))
+                    (...r) => t(g) && t(g)(...r))
                   }, null, 40, ot)) : v("", !0)
                 ])
               ]),
@@ -248,178 +250,177 @@ const zs = { class: "iv-sb-wrap" }, Es = { class: "iv-table iv-sb" }, Gs = { col
                 l("span", ct, [
                   u(Cs, {
                     class: "iv-sb-link",
-                    to: ds(t),
-                    title: s(fs)(t) || s(k)(t.championId)
+                    to: ds(s),
+                    title: t(fs)(s) || t(k)(s.championId)
                   }, {
                     default: vs(() => [
-                      _(i(t.gameName || s(k)(t.championId)), 1),
-                      t.tagLine ? (n(), o("small", rt, "#" + i(t.tagLine), 1)) : v("", !0)
+                      _(i(s.gameName || t(k)(s.championId)), 1),
+                      s.tagLine ? (n(), o("small", rt, "#" + i(s.tagLine), 1)) : v("", !0)
                     ]),
                     _: 2
                   }, 1032, ["to", "title"]),
-                  t.puuid && t.puuid === s(T).viewer.value && t.puuid !== $.puuid ? (n(), o("span", ut, i(s(e)("You")), 1)) : v("", !0)
+                  s.puuid && s.puuid === t(T).viewer.value && s.puuid !== $.puuid ? (n(), o("span", ut, i(t(e)("You")), 1)) : v("", !0)
                 ]),
                 l("span", mt, [
                   l("small", null, [
-                    t.position ? (n(), o(b, { key: 0 }, [
-                      _(i(s(ws)(t.position, s(e))), 1)
+                    s.position ? (n(), o(b, { key: 0 }, [
+                      _(i(t(ws)(s.position, t(e))), 1)
                     ], 64)) : (n(), o(b, { key: 1 }, [
-                      _(i(s(k)(t.championId)), 1)
+                      _(i(t(k)(s.championId)), 1)
                     ], 64)),
-                    t.gold15 !== null ? (n(), o(b, { key: 2 }, [
+                    s.gold15 !== null ? (n(), o(b, { key: 2 }, [
                       d[5] || (d[5] = _(" · ", -1)),
                       l("span", {
-                        class: f(ns(t.gold15)),
-                        title: s(e)("Gold lead over the lane opponent at 15 minutes")
-                      }, i(s(e)("{gold} gold @15", { gold: s(U)(t.gold15) })), 11, bt)
+                        class: y(ns(s.gold15)),
+                        title: t(e)("Gold lead over the lane opponent at 15 minutes")
+                      }, i(t(e)("{gold} gold @15", { gold: t(U)(s.gold15) })), 11, bt)
                     ], 64)) : v("", !0)
                   ]),
-                  (n(!0), o(b, null, y(s(Is)(t.badges), (c) => (n(), o("span", {
-                    key: c,
-                    class: "iv-badge",
-                    title: s(e)(s(D)[c].tip)
-                  }, i(s(e)(s(D)[c].label)), 9, _t))), 128))
+                  u(Is, {
+                    badges: s.badges,
+                    max: 3
+                  }, null, 8, ["badges"])
                 ])
               ]),
-              l("td", ht, [
+              l("td", _t, [
                 l("b", null, [
-                  _(i(t.kills), 1),
+                  _(i(s.kills), 1),
                   d[6] || (d[6] = l("i", null, "/", -1)),
-                  _(i(t.deaths), 1),
+                  _(i(s.deaths), 1),
                   d[7] || (d[7] = l("i", null, "/", -1)),
-                  _(i(t.assists), 1)
+                  _(i(s.assists), 1)
                 ]),
-                l("small", null, i(s(H)(t.kills, t.deaths, t.assists)) + " · " + i(s(N)(t.kp)) + " " + i(s(e)("KP")), 1)
+                l("small", null, i(t(H)(s.kills, s.deaths, s.assists)) + " · " + i(t(N)(s.kp)) + " " + i(t(e)("KP")), 1)
               ]),
               l("td", {
                 class: "num iv-sb-dmg",
-                title: ls(t)
+                title: ls(s)
               }, [
                 u(h, {
                   class: "iv-sb-tag",
                   stat: "damage",
-                  label: s(e)("Damage"),
+                  label: t(e)("Damage"),
                   size: 12,
                   bare: ""
                 }, null, 8, ["label"]),
                 l("b", null, [
-                  l("small", gt, i(s(N)(t.damageShare)), 1),
-                  _(i(s(C)(t.damage)), 1)
+                  l("small", vt, i(t(N)(s.damageShare)), 1),
+                  _(i(t(C)(s.damage)), 1)
                 ]),
-                l("i", kt, [
+                l("i", gt, [
                   l("em", {
-                    style: j({ width: `${t.damage / ss.value * 100}%` })
+                    style: A({ width: `${s.damage / ss.value * 100}%` })
                   }, null, 4)
                 ])
-              ], 8, vt),
+              ], 8, ht),
               l("td", {
                 class: "num iv-sb-dmg iv-sb-taken",
-                title: s(w)(t.damageTaken)
+                title: t(f)(s.damageTaken)
               }, [
-                l("b", null, i(s(C)(t.damageTaken)), 1),
-                l("i", yt, [
+                l("b", null, i(t(C)(s.damageTaken)), 1),
+                l("i", pt, [
                   l("em", {
-                    style: j({ width: `${t.damageTaken / ts.value * 100}%` })
+                    style: A({ width: `${s.damageTaken / ts.value * 100}%` })
                   }, null, 4)
                 ])
-              ], 8, pt),
+              ], 8, kt),
               l("td", {
                 class: "num iv-sb-gold",
-                title: `${s(e)("{share} of the team", { share: s(N)(t.goldShare) })} · ${s(e)("Gold per minute")}: ${s(w)(t.gold / M.value)}`
+                title: `${t(e)("{share} of the team", { share: t(N)(s.goldShare) })} · ${t(e)("Gold per minute")}: ${t(f)(s.gold / R.value)}`
               }, [
                 u(h, {
                   class: "iv-sb-tag",
                   stat: "gold",
-                  label: s(e)("Gold"),
+                  label: t(e)("Gold"),
                   size: 12,
                   bare: ""
                 }, null, 8, ["label"]),
-                l("b", null, i(s(C)(t.gold)), 1),
-                l("small", null, i(s(w)(t.gold / M.value)), 1)
-              ], 8, ft),
-              l("td", wt, [
+                l("b", null, i(t(C)(s.gold)), 1),
+                l("small", null, i(t(f)(s.gold / R.value)), 1)
+              ], 8, yt),
+              l("td", ft, [
                 u(h, {
                   class: "iv-sb-tag",
                   stat: "cs",
-                  label: s(e)("CS"),
+                  label: t(e)("CS"),
                   size: 12,
                   bare: ""
                 }, null, 8, ["label"]),
-                l("b", null, i(t.cs), 1),
-                l("small", null, i(s(w)(t.csMin, 1)), 1)
+                l("b", null, i(s.cs), 1),
+                l("small", null, i(t(f)(s.csMin, 1)), 1)
               ]),
               l("td", {
                 class: "num iv-sb-vis",
-                title: s(e)("{placed} placed · {killed} destroyed · {control} control wards", { placed: t.wardsPlaced, killed: t.wardsKilled, control: t.controlWards })
+                title: t(e)("{placed} placed · {killed} destroyed · {control} control wards", { placed: s.wardsPlaced, killed: s.wardsKilled, control: s.controlWards })
               }, [
-                l("b", null, i(t.vision), 1),
-                l("small", null, i(t.wardsPlaced) + " / " + i(t.wardsKilled), 1)
-              ], 8, It),
-              l("td", $t, [
-                l("span", Nt, [
-                  (n(!0), o(b, null, y(t.items, (c, x) => (n(), o(b, { key: x }, [
-                    c ? (n(), o("img", {
+                l("b", null, i(s.vision), 1),
+                l("small", null, i(s.wardsPlaced) + " / " + i(s.wardsKilled), 1)
+              ], 8, wt),
+              l("td", It, [
+                l("span", $t, [
+                  (n(!0), o(b, null, I(s.items, (r, x) => (n(), o(b, { key: x }, [
+                    r ? (n(), o("img", {
                       key: 0,
-                      src: s(W)(c),
-                      alt: s(G)(c),
-                      title: s(G)(c),
-                      class: f({ trinket: x === 6 }),
+                      src: t(W)(r),
+                      alt: t(E)(r),
+                      title: t(E)(r),
+                      class: y({ trinket: x === 6 }),
                       onError: d[3] || (d[3] = //@ts-ignore
-                      (...B) => s(g) && s(g)(...B))
-                    }, null, 42, xt)) : (n(), o("i", {
+                      (...S) => t(g) && t(g)(...S))
+                    }, null, 42, Nt)) : (n(), o("i", {
                       key: 1,
-                      class: f({ trinket: x === 6 })
+                      class: y({ trinket: x === 6 })
                     }, null, 2))
                   ], 64))), 128))
                 ])
               ]),
-              l("td", Ct, [
-                t.score !== null ? (n(), o("span", Dt, [
-                  t.badges.includes("mvp") ? (n(), o("span", {
+              l("td", xt, [
+                s.score !== null ? (n(), o("span", Ct, [
+                  s.badges.includes("mvp") ? (n(), o("span", {
                     key: 0,
-                    class: "iv-badge gold",
-                    title: s(e)(s(D).mvp.tip)
-                  }, i(s(e)("MVP")), 9, St)) : t.badges.includes("ace") ? (n(), o("span", {
+                    class: "iv-badge brand",
+                    title: t(e)(t(F).mvp.tip)
+                  }, i(t(e)("MVP")), 9, Dt)) : s.badges.includes("ace") ? (n(), o("span", {
                     key: 1,
                     class: "iv-badge",
-                    title: s(e)(s(D).ace.tip)
-                  }, i(s(e)("ACE")), 9, Bt)) : (n(), o("small", Tt, i(s(z)(t.rank)), 1)),
+                    title: t(e)(t(F).ace.tip)
+                  }, i(t(e)("ACE")), 9, St)) : (n(), o("small", Tt, i(t(B)(s.rank)), 1)),
                   u(Ss, {
-                    score: s(O)(t.score),
-                    rank: t.rank,
+                    score: t(O)(s.score),
+                    rank: s.rank,
                     size: "sm"
                   }, null, 8, ["score", "rank"])
-                ])) : (n(), o("span", zt, "–"))
+                ])) : (n(), o("span", Bt, "–"))
               ]),
-              l("td", Et, [
+              l("td", zt, [
                 l("button", {
                   type: "button",
                   class: "iv-sb-toggle",
-                  "aria-expanded": I.value === t.participantId,
-                  "aria-controls": `${s(A)}-${t.participantId}`,
-                  "aria-label": s(e)("Details of {name}", { name: t.gameName || s(k)(t.championId) }),
-                  onClick: (c) => P(t)
+                  "aria-expanded": w.value === s.participantId,
+                  "aria-controls": `${t(P)}-${s.participantId}`,
+                  "aria-label": t(e)("Details of {name}", { name: s.gameName || t(k)(s.championId) }),
+                  onClick: (r) => L(s)
                 }, [
                   u(xs, {
                     name: "down",
                     size: 14
                   })
-                ], 8, Gt)
+                ], 8, Et)
               ])
             ], 10, Xs),
-            I.value === t.participantId ? (n(), o("tr", Vt, [
+            w.value === s.participantId ? (n(), o("tr", Gt, [
               l("td", {
-                id: `${s(A)}-${t.participantId}`,
+                id: `${t(P)}-${s.participantId}`,
                 colspan: "11"
               }, [
-                l("div", Mt, [
-                  u(Bs, {
+                l("div", Rt, [
+                  u(Ts, {
                     detail: $.detail,
-                    player: t,
-                    me: S.value
+                    player: s,
+                    me: D.value
                   }, null, 8, ["detail", "player", "me"])
                 ])
-              ], 8, Rt)
+              ], 8, Vt)
             ])) : v("", !0)
           ], 64))), 128))
         ], 2))), 128))
@@ -428,5 +429,5 @@ const zs = { class: "iv-sb-wrap" }, Es = { class: "iv-table iv-sb" }, Gs = { col
   }
 });
 export {
-  el as default
+  al as default
 };

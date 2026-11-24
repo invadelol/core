@@ -1,9 +1,9 @@
 import '../styles/base.css';
 import '../styles/primitives.css';
 import '../styles/profile.css';
-import { defineComponent as x, computed as u, openBlock as t, createElementBlock as o, createCommentVNode as c, createElementVNode as l, unref as s, toDisplayString as a, createVNode as h, createTextVNode as p, Fragment as k, renderList as z, normalizeClass as N, normalizeStyle as S } from "vue";
+import { defineComponent as z, computed as p, openBlock as a, createElementBlock as n, createCommentVNode as c, createElementVNode as l, unref as t, toDisplayString as s, Fragment as m, renderList as h, createVNode as y, createTextVNode as u, normalizeClass as N, normalizeStyle as S } from "vue";
 import { useInvadeUi as C, useFormat as I } from "../context.js";
-import { tierColor as U, rankLabel as y, count as V } from "../logic/labels.js";
+import { tierColor as U, rankLabel as g, count as V } from "../logic/labels.js";
 import D from "./Icon.vue.js";
 import F from "./RankCrest.vue.js";
 /* empty css               */
@@ -25,85 +25,90 @@ const P = { class: "iv-pf-head" }, B = ["src"], E = ["src"], M = { class: "iv-pf
 }, A = {
   key: 2,
   class: "iv-pf-lp"
-}, J = { class: "iv-unit" }, oe = /* @__PURE__ */ x({
+}, J = { class: "iv-unit" }, oe = /* @__PURE__ */ z({
   __name: "PlayerHeader",
   props: {
     profile: {},
-    games: {}
+    games: {},
+    badges: {}
   },
   setup(d) {
-    const m = d, v = C(), { t: n } = v, { ago: g, pct: w } = I(), r = u(() => m.profile.card), b = u(
+    const v = d, k = C(), { t: o } = k, { ago: b, pct: w } = I(), r = p(() => v.profile.card), L = p(
       () => [
-        { id: "solo", label: n("Solo/Duo"), rank: r.value.solo },
-        { id: "flex", label: n("Flex"), rank: r.value.flex }
+        { id: "solo", label: o("Solo/Duo"), rank: r.value.solo },
+        { id: "flex", label: o("Flex"), rank: r.value.flex }
       ]
-    ), _ = u(() => {
-      const i = m.games[0];
-      return i ? g(Math.min(Date.now(), i.creation + i.duration * 1e3)) : "";
-    }), f = u(() => {
-      const i = m.profile.champions[0]?.championId ?? r.value.mastery[0]?.championId;
-      return i ? v.assetUrl("splash", i) : void 0;
-    }), L = (i) => i?.previous ? n("Last season: {tier}", { tier: y({ ...i, tier: i.previous, division: "" }, !1, n) }) : void 0;
-    return (i, K) => (t(), o("section", P, [
-      f.value ? (t(), o("img", {
+    ), f = p(() => {
+      const i = v.games[0];
+      return i ? b(Math.min(Date.now(), i.creation + i.duration * 1e3)) : "";
+    }), _ = p(() => {
+      const i = v.profile.champions[0]?.championId ?? r.value.mastery[0]?.championId;
+      return i ? k.assetUrl("splash", i) : void 0;
+    }), x = (i) => i?.previous ? o("Last season: {tier}", { tier: g({ ...i, tier: i.previous, division: "" }, !1, o) }) : void 0;
+    return (i, K) => (a(), n("section", P, [
+      _.value ? (a(), n("img", {
         key: 0,
         class: "iv-pf-splash",
-        src: f.value,
+        src: _.value,
         alt: "",
         loading: "lazy",
         decoding: "async"
       }, null, 8, B)) : c("", !0),
       l("img", {
         class: "iv-pf-icon",
-        src: s(v).assetUrl("profileIcon", r.value.icon),
+        src: t(k).assetUrl("profileIcon", r.value.icon),
         alt: ""
       }, null, 8, E),
       l("div", M, [
         l("h2", null, [
-          l("span", Y, a(r.value.gameName), 1),
-          l("small", null, "#" + a(r.value.tagLine), 1),
-          d.profile.isSelf ? (t(), o("span", $, a(s(n)("You")), 1)) : d.profile.isOwn ? (t(), o("span", G, a(s(n)("Your account")), 1)) : c("", !0)
+          l("span", Y, s(r.value.gameName), 1),
+          l("small", null, "#" + s(r.value.tagLine), 1),
+          d.profile.isSelf ? (a(), n("span", $, s(t(o)("You")), 1)) : d.profile.isOwn ? (a(), n("span", G, s(t(o)("Your account")), 1)) : c("", !0),
+          (a(!0), n(m, null, h(d.badges, (e) => (a(), n("span", {
+            key: e,
+            class: "iv-badge"
+          }, s(e), 1))), 128))
         ]),
         l("p", H, [
-          l("span", null, a(s(n)("Level {n}", { n: r.value.level })), 1),
-          _.value ? (t(), o("span", O, a(s(n)("Last game {when}", { when: _.value })), 1)) : c("", !0),
-          r.value.private ? (t(), o("span", T, [
-            h(D, {
+          l("span", null, s(t(o)("Level {n}", { n: r.value.level })), 1),
+          f.value ? (a(), n("span", O, s(t(o)("Last game {when}", { when: f.value })), 1)) : c("", !0),
+          r.value.private ? (a(), n("span", T, [
+            y(D, {
               name: "eye",
               size: 12
             }),
-            p(a(s(n)("Private profile")), 1)
+            u(s(t(o)("Private profile")), 1)
           ])) : c("", !0)
         ])
       ]),
       l("div", W, [
-        (t(!0), o(k, null, z(b.value, (e) => (t(), o("div", {
+        (a(!0), n(m, null, h(L.value, (e) => (a(), n("div", {
           key: e.id,
           class: N(["iv-pf-rank", { none: !e.rank }]),
-          title: L(e.rank)
+          title: x(e.rank)
         }, [
-          h(F, {
+          y(F, {
             tier: e.rank?.tier,
             size: e.rank ? 40 : 28,
             emblem: ""
           }, null, 8, ["tier", "size"]),
           l("div", null, [
             l("p", null, [
-              e.rank ? (t(), o("b", {
+              e.rank ? (a(), n("b", {
                 key: 0,
-                style: S({ color: s(U)(e.rank.tier) })
-              }, a(s(y)(e.rank, !1, s(n))), 5)) : (t(), o("b", q, a(s(n)("Unranked")), 1)),
-              e.rank ? (t(), o("span", A, [
-                p(a(e.rank.lp), 1),
-                l("span", J, a(s(n)("LP")), 1)
+                style: S({ color: t(U)(e.rank.tier) })
+              }, s(t(g)(e.rank, !1, t(o))), 5)) : (a(), n("b", q, s(t(o)("Unranked")), 1)),
+              e.rank ? (a(), n("span", A, [
+                u(s(e.rank.lp), 1),
+                l("span", J, s(t(o)("LP")), 1)
               ])) : c("", !0)
             ]),
             l("small", null, [
-              p(a(e.label) + " ", 1),
-              e.rank && e.rank.losses ? (t(), o(k, { key: 0 }, [
-                p(" · " + a(s(n)("{w}W {l}L", { w: e.rank.wins, l: e.rank.losses })) + " · " + a(s(w)(e.rank.wins / Math.max(1, e.rank.wins + e.rank.losses))), 1)
-              ], 64)) : e.rank ? (t(), o(k, { key: 1 }, [
-                p(" · " + a(s(V)(e.rank.wins, "wins", s(n))), 1)
+              u(s(e.label) + " ", 1),
+              e.rank && e.rank.losses ? (a(), n(m, { key: 0 }, [
+                u(" · " + s(t(o)("{w}W {l}L", { w: e.rank.wins, l: e.rank.losses })) + " · " + s(t(w)(e.rank.wins / Math.max(1, e.rank.wins + e.rank.losses))), 1)
+              ], 64)) : e.rank ? (a(), n(m, { key: 1 }, [
+                u(" · " + s(t(V)(e.rank.wins, "wins", t(o))), 1)
               ], 64)) : c("", !0)
             ])
           ])

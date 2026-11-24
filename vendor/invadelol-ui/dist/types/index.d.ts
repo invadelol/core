@@ -34,6 +34,7 @@ export { default as StatIcon, type StatIconName } from './components/StatIcon.vu
 export { default as StatLabel } from './components/StatLabel.vue';
 export { default as MatchRow } from './components/MatchRow.vue';
 export { default as MatchRowSkeleton } from './components/MatchRowSkeleton.vue';
+export { default as MatchTags } from './components/MatchTags.vue';
 export { default as TeamBadge } from './components/TeamBadge.vue';
 export { default as MatchList } from './components/MatchList.vue';
 export { default as MoreMatches } from './components/MoreMatches.vue';
