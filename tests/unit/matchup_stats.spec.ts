@@ -5,6 +5,9 @@ import {
   earlyFromCellsSql,
   firstBloodCellsSql,
   firstBloodFromCellsSql,
+  laneCountedPatchesSql,
+  laneEarlyCellsSql,
+  laneEarlyFromCellsSql,
   laneOpponentsSql,
   lanePairCellsSql,
   lanePairs,
@@ -16,7 +19,7 @@ import {
   type Filter,
   type RoleStat,
 } from '#services/champion_stats'
-import { matchupReport } from '#services/matchup_stats'
+import { lanePhase, matchupReport } from '#services/matchup_stats'
 
 const FILTER: Filter = { patch: '16.21', patches: ['16.21'], bracket: 'all', region: null }
 const PATCHES = [
@@ -133,6 +136,82 @@ test.group('Matchup stats', () => {
     }
     assert.include(earlyFromCellsSql(narrow), 'GROUP BY minute ORDER BY minute')
     assert.notInclude(earlyFromCellsSql(FILTER), 'seed_tier IN')
+  })
+
+  test('counts the lane phase of every lane pair at 15 minutes, a platform at a time', ({
+    assert,
+  }) => {
+    const sql = laneEarlyCellsSql()
+    // The timeline and the events by their key, the lineups and results by the game ids.
+    assert.equal(
+      sql.match(/platform = \{platform:String\} AND game_start_ms >= \{patchStart:UInt64\}/g)
+        ?.length,
+      2
+    )
+    assert.equal(sql.match(/startsWith\(match_id, \{prefix:String\}\)/g)?.length, 2)
+    assert.include(sql, 'intDiv(frame_ms, 60000) = 15')
+    assert.include(sql, "kind = 'kill' AND t_ms < 900000")
+    // Against the other team's player in the role, both frames present, per opponent.
+    assert.include(sql, 'o.3 = a.3 AND o.2 != a.2')
+    assert.include(sql, 'b.1 != 0 AND x.1 != 0 AND y.1 != 0')
+    assert.include(sql, 'GROUP BY s.seed_tier, s.platform, a.3, a.4, b.4')
+    // A kill without a champion counts for no team.
+    assert.include(sql, 'e.1 != 0 AND (e.1 <= 5) = (a.2 = 100)')
+    const narrow: Filter = {
+      patch: '16.21',
+      patches: ['16.21'],
+      bracket: 'master_plus',
+      region: 'kr',
+    }
+    const read = laneEarlyFromCellsSql(narrow)
+    assert.include(read, 'FROM stats_lane_early')
+    assert.include(read, "seed_tier IN ('MASTER','GRANDMASTER','CHALLENGER')")
+    assert.include(read, "platform IN ('KR')")
+    assert.include(read, 'position = {position:String} AND champion = {champion:UInt16}')
+    assert.include(read, 'GROUP BY opponent')
+    assert.include(laneCountedPatchesSql(), 'FROM stats_lane_counts')
+  })
+
+  test('averages the lane phase per game', ({ assert }) => {
+    assert.deepEqual(lanePhase([157, 400, -1_000, 120_000, -40_000, 230, 900, 2_000]), {
+      games: 400,
+      goldDiff: 300,
+      xpDiff: -100,
+      csDiff: -2.5,
+      kp: 0.45,
+      ahead: 0.575,
+    })
+    // No team kill: no participation to read.
+    assert.isNull(lanePhase([157, 10, 0, 0, 0, 5, 0, 0])!.kp)
+    assert.isNull(lanePhase([157, 0, 0, 0, 0, 0, 0, 0]))
+  })
+
+  test('adds the lane phase to the opponents that have it', ({ assert }) => {
+    const report = matchupReport(
+      FILTER,
+      103,
+      'MIDDLE',
+      [
+        [777, 300, 140],
+        [157, 400, 210],
+      ],
+      stat(800, 0.5),
+      PATCHES,
+      [[157, 380, 760, 38_000, 19_000, 200, 760, 1_900]]
+    )
+    const [yasuo, yone] = report.matchups
+    assert.deepEqual(yasuo.lane, {
+      games: 380,
+      goldDiff: 100,
+      xpDiff: 50,
+      csDiff: 2,
+      kp: 0.4,
+      ahead: round4(200 / 380),
+    })
+    assert.notProperty(yone, 'lane')
+    // Without lane cells the answer is the one it always was.
+    const plain = matchupReport(FILTER, 103, 'MIDDLE', [[157, 400, 210]], stat(800, 0.5), PATCHES)
+    assert.notProperty(plain.matchups[0], 'lane')
   })
 
   test('keeps each champion-role opponents as one flat list', ({ assert }) => {

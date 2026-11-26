@@ -22,6 +22,7 @@ import {
   firstBlood,
   firstBloodFromCellsSql,
   firstBloodSql,
+  laneEarlyFromCellsSql,
   laneOpponentsSql,
   lanePairs,
   lanePairsSql,
@@ -51,10 +52,10 @@ import {
   type Position,
   type Summary,
 } from '#services/champion_stats'
-import { matchupReport } from '#services/matchup_stats'
+import { matchupReport, type LanePhaseRow } from '#services/matchup_stats'
 import { tierListReport } from '#services/tier_list_stats'
 import statsQueue from '#services/stats_queue'
-import { areEventsCounted, isCounted } from '#services/stats_cells'
+import { areEventsCounted, areLanesCounted, isCounted } from '#services/stats_cells'
 import { championSlug } from '../../inertia/lib/champions.js'
 import { patchRange, patchValue, previousRange } from '../../inertia/lib/patches.js'
 
@@ -93,6 +94,8 @@ export class ChampionStatsService {
   #pairs = statsCache('lane-pairs', 4)
   /** One champion's opponents from the counted cells: a burst of asks reads them once. */
   #opponents = new AnswerCache(2048, 10 * 60_000)
+  /** One champion's lane phase against each opponent, from the counted cells. */
+  #lanePhases = new AnswerCache(2048, 10 * 60_000)
 
   /**
    * The filters of an address: `?rank=emerald_plus&patch=16.20&region=euw`, defaults filled. The
@@ -201,13 +204,36 @@ export class ChampionStatsService {
    * asked for. The same games and pairs as the Matchups tab, counted for every champion at once.
    */
   async report(filter: Filter, champion: number, position: Position) {
-    const [opponents, summary, patches] = await Promise.all([
+    const [opponents, summary, patches, lanes] = await Promise.all([
       this.opponents(filter, champion, position),
       this.summary(filter),
       this.patches(),
+      // An extra: the matchups answer without it rather than not at all.
+      this.lanePhases(filter, champion, position).catch(() => [] as LanePhaseRow[]),
     ])
     const stat = summary.roles.find((r) => r.champion === champion && r.position === position)
-    return matchupReport(filter, champion, position, opponents, stat ?? null, patches)
+    return matchupReport(filter, champion, position, opponents, stat ?? null, patches, lanes)
+  }
+
+  /**
+   * One champion's lane phase at 15 minutes against each opponent: a few hundred counted rows
+   * (milliseconds) once the patch's lane cells are counted, else none (the timeline is never read
+   * for it at request time).
+   */
+  private async lanePhases(
+    filter: Filter,
+    champion: number,
+    position: Position
+  ): Promise<LanePhaseRow[]> {
+    if (!(await areLanesCounted(filter.patches))) return []
+    return this.#lanePhases.get(`${key(filter)}:${champion}:${position}`, async () => {
+      const found = await rows(laneEarlyFromCellsSql(filter), {
+        patches: filter.patches,
+        champion,
+        position,
+      })
+      return found.map((r) => r.map(num) as LanePhaseRow)
+    })
   }
 
   /**

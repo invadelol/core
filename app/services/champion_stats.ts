@@ -452,6 +452,76 @@ export function eventCountedPatchesSql() {
   return `SELECT patch, toUnixTimestamp(max(refreshed)) FROM stats_event_counts GROUP BY patch`
 }
 
+/** The minute of the lane phase figures of every lane pair (`stats_lane_early`). */
+export const LANE_MINUTE = 15
+
+/**
+ * Every lane pair of one platform's crawled games of a patch at 15 minutes, counted per cell: the
+ * rows of `stats_lane_early`. Per player against the other team's player in the role (the pairs
+ * of `lanePairCellsSql`, in the games with both frames): games, the CS, gold and experience gaps
+ * (signed), the games it led in gold and their wins, then its kills and assists before 15 minutes
+ * and its team's kills (participants 1 to 5 are team 100; a kill without a champion, killer 0,
+ * counts for nobody). A lineup player is (participant, team, position, champion).
+ */
+export function laneEarlyCellsSql() {
+  return `
+    SELECT {patch:String}, s.seed_tier, s.platform, a.3, a.4, b.4, toUInt32(count()),
+           sum(toInt64(x.2) - toInt64(y.2)), sum(toInt64(x.3) - toInt64(y.3)),
+           sum(toInt64(x.4) - toInt64(y.4)),
+           toUInt32(countIf(x.3 > y.3)), toUInt32(countIf(x.3 > y.3 AND won)),
+           toUInt32(sum(length(arrayFilter(e -> e.1 = a.1 OR has(e.2, a.1), k.kills)))),
+           toUInt32(sum(length(arrayFilter(e -> e.1 != 0 AND (e.1 <= 5) = (a.2 = 100), k.kills))))
+    FROM (
+      SELECT match_id,
+             groupArray((participant_id, toUInt32(cs + jungle_cs), gold_total, xp)) AS players
+      FROM (
+        SELECT match_id, participant_id, cs, jungle_cs, gold_total, xp
+        FROM match_timeline
+        WHERE ${platformGamesSql()}
+          AND intDiv(frame_ms, 60000) = ${LANE_MINUTE}
+        LIMIT 1 BY match_id, participant_id
+      )
+      GROUP BY match_id
+    ) AS f
+    LEFT JOIN (
+      SELECT match_id, groupArray((killer, assists)) AS kills
+      FROM (
+        SELECT DISTINCT match_id, t_ms, killer, victim, assists FROM match_events
+        WHERE ${platformGamesSql()} AND kind = 'kill' AND t_ms < ${LANE_MINUTE * 60_000}
+      )
+      GROUP BY match_id
+    ) AS k USING (match_id)
+    ${platformLineupsSql()}
+    LEFT ARRAY JOIN [arrayFirst(o -> o.3 = a.3 AND o.2 != a.2, l.players)] AS b
+    LEFT ARRAY JOIN [arrayFirst(p -> p.1 = a.1, f.players)] AS x
+    LEFT ARRAY JOIN [arrayFirst(p -> p.1 = b.1, f.players)] AS y
+    LEFT ARRAY JOIN [if(a.2 = 100, m.t1_win, m.t2_win)] AS won
+    WHERE a.3 != '' AND b.1 != 0 AND x.1 != 0 AND y.1 != 0
+    GROUP BY s.seed_tier, s.platform, a.3, a.4, b.4
+  `
+}
+
+/**
+ * One champion's lane phase against each opponent from the counted cells (`{champion:UInt16}`,
+ * `{position:String}`): opponent, games, CS, gold and experience gaps summed, games ahead in gold,
+ * kills and assists, team kills.
+ */
+export function laneEarlyFromCellsSql(filter: Filter) {
+  return `
+    SELECT opponent, sum(games), sum(cs_diff), sum(gold_diff), sum(xp_diff), sum(ahead),
+           sum(involved), sum(team_kills)
+    FROM stats_lane_early
+    WHERE patch IN {patches:Array(String)} AND position = {position:String} AND champion = {champion:UInt16}
+      ${cellsSql(filter)}
+    GROUP BY opponent
+  `
+}
+
+/** The patches counted into the lane phase cells, with when (seconds). */
+export function laneCountedPatchesSql() {
+  return `SELECT patch, toUnixTimestamp(max(refreshed)) FROM stats_lane_counts GROUP BY patch`
+}
+
 /**
  * The first 15 skill points of each game (1 Q, 2 W, 3 E, 4 R) from the player's skill order on
  * their participant row, joined to the game by one hash of (match, participant): order, games,

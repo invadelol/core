@@ -9,6 +9,8 @@ import {
   earlyCellsSql,
   eventCountedPatchesSql,
   firstBloodCellsSql,
+  laneCountedPatchesSql,
+  laneEarlyCellsSql,
   lanePairCellsSql,
   roleCellsSql,
 } from '#services/champion_stats'
@@ -43,6 +45,8 @@ const TABLES = ['stats_lane_pairs', 'stats_champion_roles', 'stats_cell_counts']
  */
 const EVENT_TABLES = ['stats_early', 'stats_first_blood'] as const
 const EVENTS_EVERY_MS = 24 * 3600_000
+/** The lane phase of every lane pair (migration 0015): the timeline and kills again, as often. */
+const LANE_TABLE = 'stats_lane_early'
 
 /** Long statements report progress so the HTTP connection is never idle long enough to drop. */
 const LONG = {
@@ -54,6 +58,7 @@ const LONG = {
 
 const counted = new AnswerCache(1, 60_000)
 const eventsCounted = new AnswerCache(1, 60_000)
+const lanesCounted = new AnswerCache(1, 60_000)
 
 /** When each counted patch was last counted (ms); none while the tables cannot be read. */
 export function countedPatches(): Promise<Map<string, number>> {
@@ -75,6 +80,26 @@ export function eventCountedPatches(): Promise<Map<string, number>> {
     })
     return new Map(found.map(([patch, at]) => [String(patch), Number(at) * 1000]))
   })
+}
+
+/**
+ * When each patch was last counted into the lane phase cells (ms); null while they cannot be
+ * read (before migration 0015 runs): then nothing is counted into them and nothing reads them.
+ */
+export function laneCountedPatches(): Promise<Map<string, number> | null> {
+  return lanesCounted.get('counted', async () => {
+    const found = await rows(laneCountedPatchesSql()).catch((error) => {
+      logger.warn({ err: error }, 'lane cells unreadable: no lane phase in the matchups')
+      return null
+    })
+    return found && new Map(found.map(([patch, at]) => [String(patch), Number(at) * 1000]))
+  })
+}
+
+/** Whether the lane phase of `patch` (or of every one of a range) is counted. */
+export async function areLanesCounted(patch: string | readonly string[]) {
+  const done = await laneCountedPatches()
+  return !!done && (typeof patch === 'string' ? [patch] : patch).every((p) => done.has(p))
 }
 
 /** Whether the early game and first blood of `patch` (or of every one of a range) are read from the counted cells. */
@@ -146,6 +171,46 @@ export async function countPatchEvents(patch: string) {
 }
 
 /**
+ * Counts one patch's lane phase of every lane pair into its cells, a platform at a time, swaps
+ * them in, then notes when (`stats_lane_counts`).
+ */
+export async function countPatchLanes(patch: string) {
+  if (!/^\d{1,2}\.\d{1,2}$/.test(patch)) throw new Error(`not a patch: ${patch}`)
+  const partition = `'${patch}'`
+  await command(`ALTER TABLE ${LANE_TABLE}_next DROP PARTITION ${partition}`)
+  const start = await patchStart(patch)
+  const found = await rows(
+    'SELECT DISTINCT platform FROM match_seed WHERE patch = {patch:String}',
+    { patch }
+  )
+  for (const platform of found.map(([p]) => String(p))) {
+    const params = { patch, platform, prefix: `${platform}_`, patchStart: start }
+    await command(`INSERT INTO ${LANE_TABLE}_next ${laneEarlyCellsSql()}`, params)
+  }
+  await command(`ALTER TABLE ${LANE_TABLE} REPLACE PARTITION ${partition} FROM ${LANE_TABLE}_next`)
+  await command(`ALTER TABLE ${LANE_TABLE}_next DROP PARTITION ${partition}`)
+  await command('INSERT INTO stats_lane_counts SELECT {patch:String}, now()', { patch })
+}
+
+/**
+ * The lane phase of the patches that are due, like the early game: the newest never counted or
+ * counted over a day ago, the older ones never counted. Nothing while the cells cannot be read.
+ */
+export async function countDuePatchLanes(patches: string[]) {
+  const done = await laneCountedPatches()
+  const counts: { patch: string; ms: number }[] = []
+  if (!done) return counts
+  for (const [i, patch] of patches.entries()) {
+    const at = done.get(patch)
+    if (at && (i >= LIVE_PATCHES || Date.now() - at < EVENTS_EVERY_MS)) continue
+    const started = Date.now()
+    await countPatchLanes(patch)
+    counts.push({ patch, ms: Date.now() - started })
+  }
+  return counts
+}
+
+/**
  * The early game and first blood of the patches that are due: the newest never counted or
  * counted over a day ago, the older ones never counted. The patch list is newest first.
  */
@@ -201,6 +266,8 @@ export function startCellCounter(list = countablePatches, delayMs = 30_000) {
       if (counts.length) logger.info({ counts }, 'stats cells counted')
       const events = await countDuePatchEvents(patches.map((p) => p.patch))
       if (events.length) logger.info({ counts: events }, 'event cells counted')
+      const lanes = await countDuePatchLanes(patches.map((p) => p.patch))
+      if (lanes.length) logger.info({ counts: lanes }, 'lane cells counted')
     } catch (error) {
       logger.warn({ err: error }, 'stats cells count failed')
     } finally {
