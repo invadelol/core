@@ -172,6 +172,8 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
+    /* A league with no game to show is shorter: its row neighbour keeps its own height. */
+    align-items: start;
   }
   .vb .es-lgh {
     display: flex;
