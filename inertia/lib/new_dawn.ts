@@ -63,11 +63,18 @@ export type Face = keyof typeof FACES
 
 /* ── The page ───────────────────────────────────────────────────── */
 
+/** When the hub last took in something Riot said (UTC). Move it with every edit to the hub. */
+const UPDATED_AT = new Date('2026-11-21T16:22:00Z')
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const two = (n: number) => String(n).padStart(2, '0')
+/** The day as the page writes it, without the year ("21 Nov"). */
+export const UPDATED_DAY = `${UPDATED_AT.getUTCDate()} ${MONTHS[UPDATED_AT.getUTCMonth()]}`
+
 export const NEW_DAWN = {
-  /** When the hub last took in something Riot said (shown under the tabs). */
-  updated: "Updated 16 Nov 2026, 18:10, from Riot's own posts and videos",
+  /** The line under the tabs, from `UPDATED_AT`. */
+  updated: `Updated ${UPDATED_DAY} ${UPDATED_AT.getUTCFullYear()}, ${two(UPDATED_AT.getUTCHours())}:${two(UPDATED_AT.getUTCMinutes())}, from Riot's own posts and videos`,
   /** The same, for search engines (`dateModified`). */
-  modified: '2026-11-16T18:10:00Z',
+  modified: UPDATED_AT.toISOString().replace('.000Z', 'Z'),
   lead: [
     "Riot's 2027 update to League: a modernized client built into the game and a visually revamped Summoner's Rift. ",
     'Full reveal in early January',
@@ -143,7 +150,7 @@ export const TEASER = {
   ] as Moment[],
   godHand: {
     second: 99,
-    text: 'At 1:39 a Blitzcrank player picks an option called God Hand, then fights up close; at 1:40 Vayne dashes through a wall. Riot had not explained these choices by 21 Nov.',
+    text: `At 1:39 a Blitzcrank player picks an option called God Hand, then fights up close; at 1:40 Vayne dashes through a wall. Riot had not explained these choices by ${UPDATED_DAY}.`,
     sources: [
       { label: 'PC Gamer', href: PCG_URL },
       { label: 'Inven Global', href: INVEN_URL },
@@ -838,7 +845,7 @@ export const FAQ: Question[] = [
     q: 'What is God Hand?',
     a: [
       'A choice a Blitzcrank player picks at 1:39 in the teaser before fighting up close. ',
-      'Riot had not explained it by 21 Nov',
+      `Riot had not explained it by ${UPDATED_DAY}`,
       '; on 16 Nov Meddler hinted at new content that "adds complexity".',
     ],
     sources: [S_TEASER_GOD_HAND, { label: 'Meddler on Reddit, 16 Nov', href: IG_RUNES_URL }],
@@ -849,7 +856,7 @@ export const FAQ: Question[] = [
     a: [
       '',
       "Sign up on Riot's New Dawn page.",
-      ' Playtests start "shortly after" the January reveal. Regions, dates and numbers were not given by 21 Nov.',
+      ` Playtests start "shortly after" the January reveal. Regions, dates and numbers were not given by ${UPDATED_DAY}.`,
     ],
     sources: [S_TLDW, { label: "Riot's New Dawn page", href: RIOT_PAGE_URL }],
     visual: { kind: 'still', pic: 'video-season-2027' },
