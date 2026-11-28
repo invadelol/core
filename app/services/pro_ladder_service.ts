@@ -43,6 +43,22 @@ export function rankScore(
   return t * 400 + (4 - d) * 100 + (lp ?? 0)
 }
 
+const isKnown = (lp: number | null | undefined): lp is number => lp !== null && lp !== undefined
+
+/**
+ * `rankScore` for ordering a ladder: the same scale, but an account whose LP is unknown reads half
+ * a point under 0 LP of its own division, so it sorts after every known LP of that division and
+ * never ties with a real 0 LP (nor passes into the division below).
+ */
+export function rankSortScore(
+  tier: string | null | undefined,
+  division: number | string | null | undefined,
+  lp: number | null | undefined
+): number | null {
+  const score = rankScore(tier, division, lp ?? 0)
+  return score !== null && !isKnown(lp) ? score - 0.5 : score
+}
+
 /** How one account moved: its LP (on `rankScore`'s scale) since `since` (ms). */
 export interface AccountMove {
   lp: number
@@ -56,7 +72,8 @@ export interface LadderAccount {
   platform: string
   tier: string
   division: number | null
-  lp: number
+  /** Null when the crawler read no LP for this account: shown as none, never as 0. */
+  lp: number | null
   /** This account's ranked record this season, when the crawler read it. */
   wins: number | null
   losses: number | null
@@ -101,15 +118,15 @@ const CURRENT_TEAM = `
   ) ct ON true`
 
 /**
- * `rankScore` of an account in SQL (`a`), so the account picked as a pro's best is the one the
+ * `rankSortScore` of an account in SQL (`a`), so the account picked as a pro's best is the one the
  * ladder ranks by: Master and above by LP whatever the tier and the server (Riot sends their
  * division as I, which some writers keep and others leave empty), the others by tier, division
- * then LP.
+ * then LP, an unknown LP after the known ones of its division.
  */
 export const RANK_SCORE_SQL = `(CASE WHEN a.tier IN ('MASTER','GRANDMASTER','CHALLENGER')
-    THEN 2800 + coalesce(a.lp, 0)
+    THEN 2800 + coalesce(a.lp, -0.5)
     ELSE (array_position(ARRAY[${TIERS.map((t) => `'${t}'`).join(',')}]::text[], a.tier) - 1) * 400
-      + (4 - coalesce(a.division, 4)) * 100 + coalesce(a.lp, 0) END)`
+      + (4 - coalesce(a.division, 4)) * 100 + coalesce(a.lp, -0.5) END)`
 
 export class ProLadderService {
   #ladders = new AnswerCache(64, 5 * 60_000)
@@ -129,7 +146,8 @@ export class ProLadderService {
     )
     const out: Record<string, number> = {}
     for (const r of rows) {
-      const score = rankScore(r.tier, r.division, r.lp)
+      // An unknown LP is no rank to compare against tomorrow, not 0 LP.
+      const score = isKnown(r.lp) ? rankScore(r.tier, r.division, r.lp) : null
       if (score !== null) out[r.id] = score
     }
     return out
@@ -176,7 +194,7 @@ export class ProLadderService {
     ])
     const scoreNow = new Map<string, number>()
     for (const r of current.rows) {
-      const s = rankScore(r.tier, r.division, r.lp)
+      const s = isKnown(r.lp) ? rankScore(r.tier, r.division, r.lp) : null
       if (s !== null) scoreNow.set(r.id, s)
     }
     for (const id of ids) {
@@ -265,12 +283,10 @@ export class ProLadderService {
        ORDER BY p.id, ${RANK_SCORE_SQL} DESC NULLS LAST`,
       params
     )
-    const entries = rows
-      .map((r: Record<string, any>) => ({
-        r,
-        score: rankScore(r.tier, r.division, r.lp) ?? 0,
-      }))
-      .sort((a: { score: number }, b: { score: number }) => b.score - a.score)
+    const entries = sortLadder(rows as RankedRow[]).map((r) => ({
+      r: r as Record<string, any>,
+      score: rankSortScore(r.tier, r.division, r.lp) ?? 0,
+    }))
     const moves = await this.movement(entries.map((e: { r: any }) => e.r.account_id)).catch(
       () => new Map<string, AccountMove>()
     )
@@ -307,17 +323,7 @@ export class ProLadderService {
           ...(photo ? { photo } : {}),
         },
         league: ofTeam ? leagueRef(ofTeam) : null,
-        account: {
-          id: r.account_id,
-          gameName: r.game_name,
-          tagLine: r.tag_line,
-          platform: r.platform,
-          tier: r.tier,
-          division: r.division ?? null,
-          lp: r.lp ?? 0,
-          wins: r.wins ?? null,
-          losses: r.losses ?? null,
-        },
+        account: ladderAccount(r),
         move: move ? { places: placeBefore[i] - (i + 1), lp: move.lp } : null,
       }
     })
@@ -352,6 +358,39 @@ export class ProLadderService {
   async leagues() {
     const { listed } = await leagueCatalog()
     return listed.map(leagueRef)
+  }
+}
+
+/** What the ladder orders a row by: its account's rank. */
+interface RankedRow {
+  tier: string | null
+  division: number | string | null
+  lp: number | null | undefined
+}
+
+/**
+ * Rows best first: by tier, then division, then LP (Master and above by LP alone), an account
+ * with no known LP after the others of its division. Equal ranks keep their order.
+ */
+export function sortLadder<T extends RankedRow>(rows: T[]): T[] {
+  return rows
+    .map((row, i) => ({ row, i, score: rankSortScore(row.tier, row.division, row.lp) ?? 0 }))
+    .sort((a, b) => b.score - a.score || a.i - b.i)
+    .map((e) => e.row)
+}
+
+/** A ladder row's account as the pages read it; an LP the crawler did not read stays null. */
+export function ladderAccount(r: Record<string, any>): LadderAccount {
+  return {
+    id: r.account_id,
+    gameName: r.game_name,
+    tagLine: r.tag_line,
+    platform: r.platform,
+    tier: r.tier,
+    division: r.division ?? null,
+    lp: r.lp ?? null,
+    wins: r.wins ?? null,
+    losses: r.losses ?? null,
   }
 }
 

@@ -54,7 +54,8 @@ interface Row {
     platform: string
     tier: string
     division: number | null
-    lp: number
+    /** Null when no LP was read for the account: none is shown. */
+    lp: number | null
     wins: number | null
     losses: number | null
   } | null
@@ -326,8 +327,10 @@ const podium = computed<PodiumPlayer[]>(() =>
           <span v-if="r.account" class="row" style="gap: 8px">
             <RankEmblem :tier="r.account.tier" :size="26" />
             <span class="col">
-              <span class="h5 num">{{ n(r.account.lp) }} LP</span>
-              <span class="meta">{{ rankWords(r.account.tier, r.account.division) }}</span>
+              <span v-if="r.account.lp !== null" class="h5 num">{{ n(r.account.lp) }} LP</span>
+              <span :class="r.account.lp !== null ? 'meta' : 'h5'">{{
+                rankWords(r.account.tier, r.account.division)
+              }}</span>
             </span>
           </span>
           <span v-else class="meta">Unranked</span>
