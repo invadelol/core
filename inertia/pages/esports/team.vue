@@ -16,7 +16,7 @@ import Flag from '../../components/pros/Flag.vue'
 import { champIcon } from '../../lib/assets.js'
 import { countryName } from '../../lib/board.js'
 import { laneOf, n, rankWords, roleLabel } from '../../lib/ladders.js'
-import { profilePath } from '../../lib/format.js'
+import { ordinal, profilePath } from '../../lib/format.js'
 import { rememberTeam } from '../../lib/recent.js'
 import { matchList, type ProMatch } from '../../lib/pro_matches.js'
 import { lpText } from '../../lib/esports_landing.js'
@@ -135,8 +135,6 @@ const nameOf = (id: number) => props.names[id]?.[0] ?? ''
 const day = (ms: number) =>
   new Date(ms).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
-const ordinal = (k: number) =>
-  `${k}${k % 10 === 1 && k !== 11 ? 'st' : k % 10 === 2 && k !== 12 ? 'nd' : k % 10 === 3 && k !== 13 ? 'rd' : 'th'}`
 const gamePath = (g: Game) => {
   const at = g.account.lastIndexOf('#')
   return at > 0

@@ -31,5 +31,4 @@ export interface PodiumPlayer {
 }
 
 /** "st", "nd", "rd", "th" after a place. */
-export const ord = (place: number) =>
-  place % 100 >= 11 && place % 100 <= 13 ? 'th' : (['th', 'st', 'nd', 'rd'][place % 10] ?? 'th')
+export { ordinalSuffix as ord } from '../../lib/format.js'

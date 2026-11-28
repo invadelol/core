@@ -41,6 +41,7 @@ import {
   type SpellStats,
 } from '../../lib/champions.js'
 import { patchName } from '../../lib/patches.js'
+import { ordinal } from '../../lib/format.js'
 import { p1, thousands, withQuery } from '../../lib/tier_lists.js'
 import { rememberChampion } from '../../lib/recent.js'
 
@@ -200,7 +201,6 @@ const matchupHref = (id: number) =>
   })
 
 /* ── Head ───────────────────────────────────────────────────── */
-const ORD = (n: number) => (({ 1: '1st', 2: '2nd', 3: '3rd' }) as Record<number, string>)[n] ?? `${n}th`
 const title = computed(() => {
   const t = props.text?.title
   return t ? t.charAt(0).toUpperCase() + t.slice(1) : null
@@ -209,7 +209,7 @@ const share = computed(() => props.roles.find((r) => r.position === props.positi
 const sentence = computed(() => {
   const parts: string[] = []
   if (title.value) parts.push(`${title.value}.`)
-  if (props.stat?.rank) parts.push(`${ORD(props.stat.rank)} of the ${roleWord.value} lane,`)
+  if (props.stat?.rank) parts.push(`${ordinal(props.stat.rank)} of the ${roleWord.value} lane,`)
   if (share.value !== undefined) parts.push(`played ${roleWord.value} in ${Math.round(share.value * 100)}% of their games.`)
   return parts.join(' ').replace(/,$/, '.')
 })
