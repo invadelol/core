@@ -9,6 +9,7 @@ import NdVote from './NdVote.vue'
 import NdPlayer from './NdPlayer.vue'
 import { currentOf, playInView, playing } from './teaser.js'
 import { DISCORD_URL } from '../../lib/links.js'
+import { SHOW_RUNES } from '../../lib/features.js'
 import { champIcon } from '../../lib/assets.js'
 import { emblemBackgroundFluid } from '../../lib/facet.js'
 import {
@@ -332,7 +333,7 @@ onBeforeUnmount(() => observer?.disconnect())
       <article class="card nw-b nw-runes">
         <div class="bh">
           <h3 class="h3">Runes</h3>
-          <Link class="more" href="/tier-list/runes" prefetch
+          <Link v-if="SHOW_RUNES" class="more" href="/tier-list/runes" prefetch
             >Runes tier list<Icon name="chevr" :size="14"
           /></Link>
         </div>
@@ -387,9 +388,6 @@ onBeforeUnmount(() => observer?.disconnect())
           <b>{{ MAYHEM.title }}</b>
           <p>{{ MAYHEM.line }}</p>
         </div>
-        <Link class="more" href="/tier-list/aram" prefetch
-          >ARAM tier list<Icon name="chevr" :size="14"
-        /></Link>
       </article>
     </div>
   </section>
