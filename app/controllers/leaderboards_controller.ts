@@ -716,6 +716,10 @@ export default class LeaderboardsController {
     const filtered = Boolean(server || role || team || q || page > 1 || sortProp(order).sort)
     const players = all.length
     const lead = podium[0]
+    const leadLp =
+      lead?.account?.lp === null || lead?.account?.lp === undefined
+        ? ''
+        : ` with ${count(lead.account.lp)} LP`
     return inertia.render('leaderboards/pros', {
       leagues: catalog.listed.map(leagueRef),
       servers: servers.map(({ slug, label, pros }) => ({ slug, label, pros })),
@@ -754,8 +758,8 @@ export default class LeaderboardsController {
           : 'Pro ladder: every pro ranked by LP',
         description: lead
           ? league
-            ? `${count(players)} ${league.code} players ranked by their best solo queue account. ${lead.pro.name} leads with ${count(lead.account!.lp)} LP.`
-            : `${count(players)} pros in Master and above, ranked by their best account. ${lead.pro.name} leads with ${count(lead.account!.lp)} LP.`
+            ? `${count(players)} ${league.code} players ranked by their best solo queue account. ${lead.pro.name} leads${leadLp}.`
+            : `${count(players)} pros in Master and above, ranked by their best account. ${lead.pro.name} leads${leadLp}.`
           : 'Every pro ranked by LP, with their moves of the last 24 hours.',
         path,
         image: `/og/pros/${league ? league.slug : 'all'}.jpg`,
