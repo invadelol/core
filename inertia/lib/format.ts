@@ -77,6 +77,18 @@ export function timeAgo(ms: number) {
  */
 export const UI_LOCALE = 'en-US'
 
+/** "st", "nd", "rd" or "th" for a place: 1st, 2nd, 3rd, 4th, 11th, 12th, 13th, 21st, 22nd, 101st, 111th. */
+export function ordinalSuffix(place: number) {
+  const n = Math.abs(Math.trunc(place))
+  if (n % 100 >= 11 && n % 100 <= 13) return 'th'
+  return ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'
+}
+
+/** A place with its English suffix: "1st", "22nd", "113th". */
+export function ordinal(place: number) {
+  return `${place}${ordinalSuffix(place)}`
+}
+
 export function shortDate(value: string | number | Date) {
   return new Date(Number(value) || value).toLocaleDateString(UI_LOCALE, {
     month: 'short',

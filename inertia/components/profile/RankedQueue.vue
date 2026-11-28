@@ -14,6 +14,7 @@ import {
   LP_RANGES,
   type LpRange,
 } from '../../lib/lp_line.js'
+import { ordinalSuffix } from '../../lib/format.js'
 import type { Rank } from '../../lib/types.js'
 
 /**
@@ -125,10 +126,7 @@ function leave(event: PointerEvent) {
   if (event.pointerType === 'mouse') hover.value = null
 }
 const tip = computed(() => (hover.value === null ? null : (line.value?.dots[hover.value] ?? null)))
-const ordinal = (n: number) => {
-  const s = n % 100 >= 11 && n % 100 <= 13 ? 'th' : (['th', 'st', 'nd', 'rd'][n % 10] ?? 'th')
-  return `${n.toLocaleString('en-US')}${s}`
-}
+const ordinal = (n: number) => `${n.toLocaleString('en-US')}${ordinalSuffix(n)}`
 </script>
 
 <template>

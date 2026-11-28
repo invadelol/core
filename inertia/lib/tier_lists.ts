@@ -39,8 +39,7 @@ export function barWidth(value: number, lo: number, hi: number) {
   return Math.max(3, Math.min(100, ((value - lo) / (hi - lo)) * 100))
 }
 
-/** "1st", "2nd", "3rd", "4th" */
-export const ordinal = (n: number) => (({ 1: '1st', 2: '2nd', 3: '3rd' }) as Record<number, string>)[n] ?? `${n}th`
+export { ordinal } from './format.js'
 
 /** The rows that moved most since the patch before: `up` most first, `down` most first. */
 export function movers<T>(rows: T[], change: (r: T) => number | null, up = 6, down = 3) {

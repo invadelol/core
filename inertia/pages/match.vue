@@ -14,7 +14,7 @@ import Skeleton from '../components/ui/Skeleton.vue'
 import SortHead from '../components/ui/SortHead.vue'
 import { useSort } from '../components/ui/sort.js'
 import { assetUrl, champIcon, championName, championSplash } from '../lib/assets.js'
-import { decodeSlug, parseSlug, profilePath } from '../lib/format.js'
+import { decodeSlug, ordinal, parseSlug, profilePath } from '../lib/format.js'
 import { detailOf } from '../lib/match.js'
 import { patchName } from '../lib/patch.js'
 import { SERVER } from '../lib/board.js'
@@ -230,7 +230,7 @@ const STATS = computed(() => {
 /** The shared views keep the score on 0–10; the dial reads 0–100. */
 const score100 = (p: Player) => (p.score === null ? null : Math.round(p.score * 10))
 const placeWord = (rank: number) =>
-  rank ? `${rank}${rank === 1 ? 'st' : rank === 2 ? 'nd' : rank === 3 ? 'rd' : 'th'}` : ''
+  rank ? ordinal(rank) : ''
 const best = computed(() => detail.value?.players.find((p) => p.rank === 1) ?? null)
 const teamDamage = (p: Player) => sideOf(p.teamId).reduce((s, o) => s + o.damage, 0)
 const maxDamage = computed(() =>
